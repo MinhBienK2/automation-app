@@ -36,6 +36,7 @@ describe("App workflow UI", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   test("lists workflows and creates a workflow", async () => {
@@ -145,5 +146,26 @@ describe("App workflow UI", () => {
     expect(
       await screen.findByText("Failed at step 1: XPath not found"),
     ).toBeInTheDocument();
+  });
+
+  test("asks for confirmation before deleting a step", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "get_workflow") return { workflow, steps: [sleepStep] };
+      if (command === "delete_step") return undefined;
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete Step" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith("Delete this step?");
+    expect(invokeMock).not.toHaveBeenCalledWith("delete_step", {
+      stepId: "step-1",
+    });
   });
 });

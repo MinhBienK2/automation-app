@@ -198,6 +198,7 @@ function App() {
   }
 
   async function deleteStep(stepId: string) {
+    if (!window.confirm("Delete this step?")) return;
     await invoke("delete_step", { stepId });
     await reloadSelectedWorkflow();
   }
