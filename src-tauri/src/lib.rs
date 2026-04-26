@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use tauri::Manager;
 
+pub mod domain;
+
 const APP_DATA_FOLDER: &str = "workflow-automation-manager";
 
 #[tauri::command]
