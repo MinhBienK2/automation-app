@@ -3,8 +3,12 @@ use tauri::State;
 
 use crate::{
     app_state::{AppState, RunStateDto},
-    domain::{ActionConfig, ActionType, ScrollDirection, ValidationError, Workflow},
+    domain::{
+        ActionConfig, ActionType, RunError, RunStatus, ScrollDirection, ValidationError, Workflow,
+        WorkflowStep,
+    },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
+    runner::{BrowserRunner, RunnerOptions, RunnerOutcome, RunnerStatus},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -139,22 +143,44 @@ pub async fn get_run_state_impl(state: &AppState) -> RunStateDto {
 }
 
 pub async fn run_workflow_impl(
-    _state: &AppState,
-    _workflow_id: &str,
+    state: &AppState,
+    workflow_id: &str,
 ) -> Result<RunStateDto, CommandError> {
-    Err(CommandError::message("Runner is not implemented yet"))
+    let detail = state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+
+    start_background_run(state, detail.steps).await
 }
 
 pub async fn test_step_impl(
-    _state: &AppState,
-    _workflow_id: &str,
-    _step_id: &str,
+    state: &AppState,
+    workflow_id: &str,
+    step_id: &str,
 ) -> Result<RunStateDto, CommandError> {
-    Err(CommandError::message("Runner is not implemented yet"))
+    let detail = state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+    let selected_index = detail
+        .steps
+        .iter()
+        .position(|step| step.id == step_id)
+        .ok_or_else(|| CommandError::message("Step not found"))?;
+
+    start_background_run(state, detail.steps[..=selected_index].to_vec()).await
 }
 
-pub async fn stop_run_impl(_state: &AppState) -> Result<RunStateDto, CommandError> {
-    Err(CommandError::message("No active run to stop"))
+pub async fn stop_run_impl(state: &AppState) -> Result<RunStateDto, CommandError> {
+    state
+        .stop_active_run()
+        .await
+        .ok_or_else(|| CommandError::message("No active run to stop"))
 }
 
 #[tauri::command]
@@ -268,5 +294,70 @@ fn default_config(action_type: ActionType) -> ActionConfig {
             direction: ScrollDirection::Down,
             pixels: 500,
         },
+    }
+}
+
+async fn start_background_run(
+    state: &AppState,
+    steps: Vec<WorkflowStep>,
+) -> Result<RunStateDto, CommandError> {
+    let cancellation = state
+        .begin_run()
+        .await
+        .ok_or_else(|| CommandError::message("A workflow is already running"))?;
+    let run_state = state.run_state().await;
+    let task_state = state.clone();
+    let action_configs = steps
+        .iter()
+        .map(|step| step.config.clone())
+        .collect::<Vec<_>>();
+
+    tokio::spawn(async move {
+        let runner = BrowserRunner::new(RunnerOptions {
+            headed: true,
+            chrome_executable: None,
+        });
+        let result = runner.run_steps(action_configs, cancellation).await;
+        complete_background_run(task_state, steps, result).await;
+    });
+
+    Ok(run_state)
+}
+
+async fn complete_background_run(
+    state: AppState,
+    steps: Vec<WorkflowStep>,
+    result: Result<RunnerOutcome, crate::runner::RunnerError>,
+) {
+    match result {
+        Ok(outcome) => {
+            let (status, error) = match outcome.status {
+                RunnerStatus::Success => (RunStatus::Success, None),
+                RunnerStatus::Stopped => (RunStatus::Stopped, None),
+                RunnerStatus::Failed => {
+                    let failed_step = outcome.failed_step.as_ref();
+                    let error = failed_step.map(|failed_step| {
+                        let action_type = steps
+                            .get(failed_step.step_number.saturating_sub(1))
+                            .map(|step| step.action_type.as_str())
+                            .unwrap_or("unknown");
+
+                        RunError::new(
+                            failed_step.step_number,
+                            action_type,
+                            failed_step.reason.clone(),
+                        )
+                    });
+                    (RunStatus::Failed, error)
+                }
+            };
+
+            state.finish_run(status, error, outcome.session).await;
+        }
+        Err(error) => {
+            state
+                .fail_run_without_session(RunError::new(0, "runner", error.to_string()))
+                .await;
+        }
     }
 }

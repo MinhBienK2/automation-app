@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf, time::Duration};
 
 use uuid::Uuid;
 use workflow_automation_manager_lib::{
@@ -12,6 +12,38 @@ async fn test_state() -> (AppState, PathBuf) {
     let state = AppState::initialize(&db_path).await.expect("init state");
 
     (state, db_path)
+}
+
+fn write_command_test_page() -> String {
+    let path = std::env::temp_dir().join(format!("wam-command-page-{}.html", Uuid::new_v4()));
+    fs::write(
+        &path,
+        r#"
+        <!doctype html>
+        <html>
+          <body style="height: 1800px">
+            <input id="email" name="email" value="" />
+            <button id="submit" onclick="document.getElementById('result').textContent = document.getElementById('email').value">Submit</button>
+            <div id="result">idle</div>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write command test page");
+
+    format!("file://{}", path.display())
+}
+
+async fn poll_status(state: &AppState, expected: RunStatus) {
+    for _ in 0..50 {
+        let run_state = commands::get_run_state_impl(state).await;
+        if run_state.status == expected {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+
+    panic!("run state did not become {expected:?}");
 }
 
 #[tokio::test]
@@ -114,24 +146,163 @@ async fn reorder_and_delete_commands_work() {
 }
 
 #[tokio::test]
-async fn run_commands_are_safe_placeholders_until_runner_exists() {
+async fn run_workflow_starts_background_run_and_finishes_successfully() {
     let (state, _db_path) = test_state().await;
 
-    let run_error = commands::run_workflow_impl(&state, "workflow-id")
+    let workflow = commands::create_workflow_impl(&state, "Run success")
         .await
-        .expect_err("runner should be unavailable");
-    assert_eq!(run_error.message, "Runner is not implemented yet");
+        .expect("create");
+    let open = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+        .await
+        .expect("open");
+    commands::update_step_impl(
+        &state,
+        &open.id,
+        ActionConfig::OpenUrl {
+            url: write_command_test_page(),
+        },
+    )
+    .await
+    .expect("update open");
+    let type_text = commands::add_step_impl(&state, &workflow.id, ActionType::TypeText)
+        .await
+        .expect("type");
+    commands::update_step_impl(
+        &state,
+        &type_text.id,
+        ActionConfig::TypeText {
+            xpath: "//*[@name=\"email\"]".to_string(),
+            text: "user@example.com".to_string(),
+        },
+    )
+    .await
+    .expect("update type");
+    let click = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
+        .await
+        .expect("click");
+    commands::update_step_impl(
+        &state,
+        &click.id,
+        ActionConfig::Click {
+            xpath: "//*[@id=\"submit\"]".to_string(),
+        },
+    )
+    .await
+    .expect("update click");
 
-    let test_error = commands::test_step_impl(&state, "workflow-id", "step-id")
+    let run_state = commands::run_workflow_impl(&state, &workflow.id)
         .await
-        .expect_err("runner should be unavailable");
-    assert_eq!(test_error.message, "Runner is not implemented yet");
+        .expect("start run");
+    assert_eq!(run_state.status, RunStatus::Running);
 
-    let stop_error = commands::stop_run_impl(&state)
+    poll_status(&state, RunStatus::Success).await;
+}
+
+#[tokio::test]
+async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
+    let (state, _db_path) = test_state().await;
+
+    let workflow = commands::create_workflow_impl(&state, "Test step")
         .await
-        .expect_err("no run should be active");
-    assert_eq!(stop_error.message, "No active run to stop");
+        .expect("create");
+    let open = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+        .await
+        .expect("open");
+    commands::update_step_impl(
+        &state,
+        &open.id,
+        ActionConfig::OpenUrl {
+            url: write_command_test_page(),
+        },
+    )
+    .await
+    .expect("update open");
+    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("sleep");
+    commands::update_step_impl(&state, &sleep.id, ActionConfig::Sleep { seconds: 0.2 })
+        .await
+        .expect("update sleep");
+    let bad_click = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
+        .await
+        .expect("bad click");
+    commands::update_step_impl(
+        &state,
+        &bad_click.id,
+        ActionConfig::Click {
+            xpath: "//*[@id=\"missing\"]".to_string(),
+        },
+    )
+    .await
+    .expect("update bad click");
+
+    assert_eq!(
+        commands::test_step_impl(&state, &workflow.id, &sleep.id)
+            .await
+            .expect("start test")
+            .status,
+        RunStatus::Running
+    );
+    poll_status(&state, RunStatus::Success).await;
+
+    assert_eq!(
+        commands::run_workflow_impl(&state, &workflow.id)
+            .await
+            .expect("start full run")
+            .status,
+        RunStatus::Running
+    );
+    poll_status(&state, RunStatus::Failed).await;
 
     let run_state = commands::get_run_state_impl(&state).await;
-    assert_eq!(run_state.status, RunStatus::Idle);
+    let error = run_state.error.expect("failure payload");
+    assert_eq!(error.step_number, 3);
+    assert_eq!(error.action_type, "click");
+    assert_eq!(error.reason, "XPath not found");
+}
+
+#[tokio::test]
+async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
+    let (state, _db_path) = test_state().await;
+
+    let workflow = commands::create_workflow_impl(&state, "Stop run")
+        .await
+        .expect("create");
+    let open = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+        .await
+        .expect("open");
+    commands::update_step_impl(
+        &state,
+        &open.id,
+        ActionConfig::OpenUrl {
+            url: write_command_test_page(),
+        },
+    )
+    .await
+    .expect("update open");
+    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("sleep");
+    commands::update_step_impl(&state, &sleep.id, ActionConfig::Sleep { seconds: 10.0 })
+        .await
+        .expect("update sleep");
+
+    assert_eq!(
+        commands::run_workflow_impl(&state, &workflow.id)
+            .await
+            .expect("start run")
+            .status,
+        RunStatus::Running
+    );
+
+    let second_run = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect_err("second run rejected");
+    assert_eq!(second_run.message, "A workflow is already running");
+
+    let stopped = commands::stop_run_impl(&state).await.expect("stop run");
+    assert_eq!(stopped.status, RunStatus::Stopped);
+
+    let run_state = commands::get_run_state_impl(&state).await;
+    assert_eq!(run_state.status, RunStatus::Stopped);
 }

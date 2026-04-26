@@ -109,6 +109,16 @@ function App() {
     void refreshRunState();
   }, []);
 
+  useEffect(() => {
+    if (runState.status !== "running") return;
+
+    const intervalId = window.setInterval(() => {
+      void refreshRunState();
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
+  }, [runState.status]);
+
   async function loadWorkflows() {
     const items = await invoke<WorkflowSummary[]>("list_workflows");
     setWorkflows(items);

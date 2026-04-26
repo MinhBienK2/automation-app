@@ -173,7 +173,11 @@ impl BrowserSession {
             builder = builder.with_head();
         }
 
-        if let Some(executable) = &options.chrome_executable {
+        let chrome_executable = options
+            .chrome_executable
+            .clone()
+            .or_else(default_chrome_executable);
+        if let Some(executable) = &chrome_executable {
             builder = builder.chrome_executable(executable);
         }
 
@@ -308,6 +312,17 @@ async fn ensure_js_action(page: &Page, script: &str) -> Result<(), RunnerError> 
 
 fn json_string(value: &str) -> Result<String, RunnerError> {
     Ok(serde_json::to_string(value)?)
+}
+
+fn default_chrome_executable() -> Option<PathBuf> {
+    [
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|path| path.exists())
 }
 
 #[derive(Debug, Deserialize)]

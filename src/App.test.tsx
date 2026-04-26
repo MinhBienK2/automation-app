@@ -110,4 +110,40 @@ describe("App workflow UI", () => {
       await screen.findByText("Seconds must be greater than 0"),
     ).toBeInTheDocument();
   });
+
+  test("disables run actions while running and polls final failure", async () => {
+    let runStateCalls = 0;
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_workflow") return { workflow, steps: [sleepStep] };
+      if (command === "get_run_state") {
+        runStateCalls += 1;
+        return runStateCalls < 3
+          ? { status: "running", error: null }
+          : {
+              status: "failed",
+              error: {
+                step_number: 1,
+                action_type: "sleep",
+                reason: "XPath not found",
+              },
+            };
+      }
+      if (command === "run_workflow") return { status: "running", error: null };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("button", { name: "Run Workflow" }));
+
+    expect(screen.getByRole("button", { name: "Run Workflow" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Test Step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+
+    expect(
+      await screen.findByText("Failed at step 1: XPath not found"),
+    ).toBeInTheDocument();
+  });
 });
