@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::{Deserialize, Serialize};
 use serde_json::Error as JsonError;
 use sqlx::{Row, SqlitePool};
 use thiserror::Error;
@@ -15,7 +16,7 @@ pub enum RepositoryError {
     Json(#[from] JsonError),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowSummary {
     pub id: String,
     pub name: String,
@@ -24,7 +25,7 @@ pub struct WorkflowSummary {
     pub updated_at: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkflowDetail {
     pub workflow: Workflow,
     pub steps: Vec<WorkflowStep>,

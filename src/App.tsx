@@ -2,13 +2,24 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
+type WorkflowSummary = {
+  id: string;
+  name: string;
+  step_count: number;
+};
+
 function App() {
   const [bridgeStatus, setBridgeStatus] = useState("checking");
+  const [workflowStatus, setWorkflowStatus] = useState("loading");
 
   useEffect(() => {
     invoke<string>("ping")
       .then((message) => setBridgeStatus(message))
       .catch(() => setBridgeStatus("error"));
+
+    invoke<WorkflowSummary[]>("list_workflows")
+      .then((workflows) => setWorkflowStatus(`${workflows.length} saved`))
+      .catch(() => setWorkflowStatus("error"));
   }, []);
 
   return (
@@ -25,6 +36,11 @@ function App() {
       <section className="status-panel" aria-label="Bridge status">
         <span>Rust bridge</span>
         <strong>{bridgeStatus}</strong>
+      </section>
+
+      <section className="status-panel" aria-label="Workflow command status">
+        <span>Workflow command</span>
+        <strong>{workflowStatus}</strong>
       </section>
     </main>
   );
