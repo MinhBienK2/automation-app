@@ -29,6 +29,16 @@ const sleepStep = {
   updated_at: "1",
 };
 
+const clickStep = {
+  id: "step-2",
+  workflow_id: "workflow-1",
+  order_index: 1,
+  action_type: "click",
+  config: { type: "click", config: { xpath: "//*[@id=\"submit\"]" } },
+  created_at: "1",
+  updated_at: "1",
+};
+
 describe("App workflow UI", () => {
   beforeEach(() => {
     invokeMock.mockReset();
@@ -110,6 +120,24 @@ describe("App workflow UI", () => {
     expect(
       await screen.findByText("Seconds must be greater than 0"),
     ).toBeInTheDocument();
+  });
+
+  test("selects an existing step and shows its detail form", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "get_workflow") return { workflow, steps: [sleepStep, clickStep] };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    expect(await screen.findByLabelText("Seconds")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Click/ }));
+
+    expect(await screen.findByLabelText("XPath")).toHaveValue('//*[@id="submit"]');
   });
 
   test("disables run actions while running and polls final failure", async () => {

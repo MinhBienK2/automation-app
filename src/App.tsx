@@ -564,19 +564,26 @@ function SortableStepItem({
   };
 
   return (
-    <button
-      className={isSelected ? "step-item step-item-selected" : "step-item"}
-      ref={setNodeRef}
-      style={style}
-      type="button"
-      onClick={() => onSelectStep(step.id)}
-      {...attributes}
-      {...listeners}
-    >
-      <span>{index + 1}</span>
-      <strong>{actionLabels[step.action_type]}</strong>
-      <small>{stepSummary(step)}</small>
-    </button>
+    <div className="step-item-wrap" ref={setNodeRef} style={style}>
+      <button
+        className={isSelected ? "step-item step-item-selected" : "step-item"}
+        type="button"
+        onClick={() => onSelectStep(step.id)}
+      >
+        <span>{index + 1}</span>
+        <strong>{actionLabels[step.action_type]}</strong>
+        <small>{stepSummary(step)}</small>
+      </button>
+      <button
+        aria-label={`Drag step ${index + 1}`}
+        className="step-drag-handle"
+        type="button"
+        {...attributes}
+        {...listeners}
+      >
+        ::
+      </button>
+    </div>
   );
 }
 

@@ -185,6 +185,12 @@ p {
   gap: 8px;
 }
 
+.step-item-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 8px;
+}
+
 .step-item {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
@@ -192,6 +198,18 @@ p {
   min-height: 58px;
   padding: 10px;
   text-align: left;
+}
+
+.step-drag-handle {
+  min-height: 58px;
+  padding: 0;
+  color: #64748b;
+  cursor: grab;
+  font-weight: 800;
+}
+
+.step-drag-handle:active {
+  cursor: grabbing;
 }
 
 .step-item span {
