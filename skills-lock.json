@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "agents-md": {
+      "source": "getsentry/skills",
+      "sourceType": "github",
+      "computedHash": "2c9df6461b050a8010354c5c41aaf1c93487363d8fd0e04121e91829d0007201"
+    },
     "rust-async-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",
