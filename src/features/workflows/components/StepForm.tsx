@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ActionConfig, WorkflowStep } from "../../../types/workflow";
 import { actionLabels, commandMessage } from "../../../lib/workflowUi";
+import { updateActionConfigField } from "../lib/workflowStepForm";
 
 type StepFormProps = {
   step: WorkflowStep;
@@ -73,10 +74,7 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           <input
             value={config.config.url}
             onChange={(event) =>
-              onChange({
-                type: "open_url",
-                config: { url: event.currentTarget.value },
-              })
+              onChange(updateActionConfigField(config, "url", event.currentTarget.value))
             }
           />
         </label>
@@ -91,10 +89,9 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             type="number"
             value={config.config.seconds}
             onChange={(event) =>
-              onChange({
-                type: "sleep",
-                config: { seconds: Number(event.currentTarget.value) },
-              })
+              onChange(
+                updateActionConfigField(config, "seconds", event.currentTarget.value),
+              )
             }
           />
         </label>
@@ -105,15 +102,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           <label>
             XPath
             <input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange({
-                  type: "type_text",
-                  config: {
-                    ...config.config,
-                    xpath: event.currentTarget.value,
-                  },
-                })
+            value={config.config.xpath}
+            onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "xpath", event.currentTarget.value),
+                )
               }
             />
           </label>
@@ -122,13 +115,9 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             <textarea
               value={config.config.text}
               onChange={(event) =>
-                onChange({
-                  type: "type_text",
-                  config: {
-                    ...config.config,
-                    text: event.currentTarget.value,
-                  },
-                })
+                onChange(
+                  updateActionConfigField(config, "text", event.currentTarget.value),
+                )
               }
             />
           </label>
@@ -141,10 +130,7 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           <input
             value={config.config.xpath}
             onChange={(event) =>
-              onChange({
-                type: "click",
-                config: { xpath: event.currentTarget.value },
-              })
+              onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
             }
           />
         </label>
@@ -157,13 +143,9 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             <select
               value={config.config.direction}
               onChange={(event) =>
-                onChange({
-                  type: "scroll",
-                  config: {
-                    ...config.config,
-                    direction: event.currentTarget.value as "up" | "down",
-                  },
-                })
+                onChange(
+                  updateActionConfigField(config, "direction", event.currentTarget.value),
+                )
               }
             >
               <option value="down">Down</option>
@@ -177,13 +159,9 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               type="number"
               value={config.config.pixels}
               onChange={(event) =>
-                onChange({
-                  type: "scroll",
-                  config: {
-                    ...config.config,
-                    pixels: Number(event.currentTarget.value),
-                  },
-                })
+                onChange(
+                  updateActionConfigField(config, "pixels", event.currentTarget.value),
+                )
               }
             />
           </label>
