@@ -19,8 +19,6 @@ type WorkflowDetailPageProps = {
   appError: string;
   runState: RunState;
   onBack: () => void;
-  onWorkflowNameChange: (name: string) => void;
-  onRenameWorkflow: () => void;
   onSelectStep: (stepId: string) => void;
   onNewActionTypeChange: (actionType: ActionType) => void;
   onAddStep: (event: React.FormEvent) => void;
@@ -42,8 +40,6 @@ export function WorkflowDetailPage({
   appError,
   runState,
   onBack,
-  onWorkflowNameChange,
-  onRenameWorkflow,
   onSelectStep,
   onNewActionTypeChange,
   onAddStep,
@@ -67,50 +63,41 @@ export function WorkflowDetailPage({
             <h1>{detail.workflow.name}</h1>
           </div>
         </div>
-
-        <div className="workflow-name-card panel">
-          <label>
-            Workflow name
-            <input
-              value={detail.workflow.name}
-              onChange={(event) => onWorkflowNameChange(event.currentTarget.value)}
-            />
-          </label>
-          <button className="primary-button" type="button" onClick={onRenameWorkflow}>
-            Save Name
-          </button>
+        <div className="workflow-command-panel panel">
+          <RunStatusBar state={runState} error={appError} />
+          <div className="run-actions">
+            <button
+              className="primary-button"
+              type="button"
+              onClick={onRunWorkflow}
+              disabled={isRunning}
+            >
+              Run Workflow
+            </button>
+            <button
+              type="button"
+              onClick={() => onTestStep()}
+              title="Runs from step 1 through the selected step."
+              disabled={isRunning || !selectedStep}
+            >
+              Test to Here
+            </button>
+            <button
+              type="button"
+              onClick={onTestAllSteps}
+              title="Runs every step in this workflow."
+              disabled={isRunning || detail.steps.length === 0}
+            >
+              Test All
+            </button>
+            {isRunning ? (
+              <button className="secondary-danger" type="button" onClick={onStopRun}>
+                Stop
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
-
-      <section className="workflow-command-panel panel">
-        <RunStatusBar state={runState} error={appError} />
-        <div className="run-actions">
-          <button className="primary-button" type="button" onClick={onRunWorkflow} disabled={isRunning}>
-            Run Workflow
-          </button>
-          <button
-            type="button"
-            onClick={() => onTestStep()}
-            title="Runs from step 1 through the selected step."
-            disabled={isRunning || !selectedStep}
-          >
-            Test to Here
-          </button>
-          <button
-            type="button"
-            onClick={onTestAllSteps}
-            title="Runs every step in this workflow."
-            disabled={isRunning || detail.steps.length === 0}
-          >
-            Test All
-          </button>
-          {isRunning ? (
-            <button className="secondary-danger" type="button" onClick={onStopRun}>
-              Stop
-            </button>
-          ) : null}
-        </div>
-      </section>
 
       <div className="builder-grid">
         <StepList

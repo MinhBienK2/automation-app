@@ -70,7 +70,9 @@ describe("App workflow UI", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Workflows" })).toBeInTheDocument();
-    expect(screen.getByLabelText("New workflow name")).toBeInTheDocument();
+    expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Main navigation" }))
+      .toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "View Details" }));
 
@@ -81,12 +83,13 @@ describe("App workflow UI", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
 
-    expect(await screen.findByLabelText("New workflow name")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Create Workflow" }))
+      .toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Back to Workflows" }))
       .not.toBeInTheDocument();
   });
 
-  test("lists workflows and creates a workflow", async () => {
+  test("lists workflows and creates a workflow from a dialog", async () => {
     invokeMock.mockImplementation(async (command) => {
       if (command === "list_workflows") return [];
       if (command === "get_run_state") return { status: "idle", error: null };
@@ -98,9 +101,13 @@ describe("App workflow UI", () => {
     render(<App />);
 
     expect(await screen.findByText("No workflows yet")).toBeInTheDocument();
+    expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText("New workflow name"), "Login flow");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Workflow" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
+
+    await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("create_workflow", {
@@ -109,6 +116,55 @@ describe("App workflow UI", () => {
     });
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
+  });
+
+  test("renames a workflow from the list edit dialog", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "rename_workflow") return undefined;
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Edit Login flow" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit Workflow" });
+
+    await userEvent.clear(within(dialog).getByLabelText("Workflow name"));
+    await userEvent.type(within(dialog).getByLabelText("Workflow name"), "Updated login flow");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("rename_workflow", {
+        id: "workflow-1",
+        name: "Updated login flow",
+      });
+    });
+  });
+
+  test("toggles the application sidebar", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    const toggle = await screen.findByRole("button", { name: "Collapse sidebar" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).not.toHaveTextContent("Collapse sidebar");
+    expect(within(toggle).getByTestId("sidebar-toggle-icon")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+
+    await userEvent.click(toggle);
+
+    const collapsedToggle = screen.getByRole("button", { name: "Expand sidebar" });
+    expect(collapsedToggle).toHaveAttribute("aria-expanded", "false");
+    expect(collapsedToggle).not.toHaveTextContent("Expand sidebar");
   });
 
   test("clears a previous workflow run error when creating a new workflow", async () => {
@@ -151,8 +207,10 @@ describe("App workflow UI", () => {
       .toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
-    await userEvent.type(await screen.findByLabelText("New workflow name"), "Checkout flow");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Create Workflow" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
+    await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Checkout flow");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
     expect(await screen.findByRole("heading", { name: "Checkout flow" }))
       .toBeInTheDocument();
@@ -186,6 +244,25 @@ describe("App workflow UI", () => {
         actionType: "sleep",
       });
     });
+  });
+
+  test("shows workflow detail header without inline workflow name editing", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "get_workflow") return { workflow, steps: [sleepStep] };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    expect(await screen.findByRole("heading", { name: "Login flow" }))
+      .toBeInTheDocument();
+    expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
+    expect(screen.getByText("Status")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Workflow" })).toBeInTheDocument();
   });
 
   test("shows validation errors from save step", async () => {

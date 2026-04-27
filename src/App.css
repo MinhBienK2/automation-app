@@ -1,6 +1,7 @@
 :root {
   color: #fafafa;
   background: #171717;
+  color-scheme: dark;
   font-family:
     "Circular", "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui,
     -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -58,6 +59,25 @@ textarea {
   background: #0f0f0f;
   color: #fafafa;
   outline: none;
+}
+
+select {
+  appearance: none;
+  padding-right: 36px;
+  background-color: #0f0f0f;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #b4b4b4 50%),
+    linear-gradient(135deg, #b4b4b4 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 17px,
+    calc(100% - 12px) 17px;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+}
+
+select option {
+  background: #0f0f0f;
+  color: #fafafa;
 }
 
 input:focus,
@@ -127,14 +147,125 @@ small {
 }
 
 .app-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
   min-height: 100vh;
   background: #171717;
+}
+
+.app-shell-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 18px;
+  min-height: 100vh;
+  padding: 18px 12px;
+  border-right: 1px solid #242424;
+  background: #0f0f0f;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 6px;
+}
+
+.sidebar-mark {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(62, 207, 142, 0.48);
+  border-radius: 8px;
+  color: #3ecf8e;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sidebar-title {
+  overflow: hidden;
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.sidebar-nav-item,
+.sidebar-toggle {
+  width: 100%;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-color: #2e2e2e;
+  text-align: left;
+}
+
+.sidebar-nav-item-active {
+  border-color: rgba(62, 207, 142, 0.48);
+  color: #3ecf8e;
+}
+
+.sidebar-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  justify-self: center;
+  color: #b4b4b4;
+}
+
+.app-shell-collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 0;
+}
+
+.app-shell-collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar-item-icon,
+.sidebar-toggle-icon {
+  flex: 0 0 auto;
+}
+
+.app-shell-collapsed .sidebar-title,
+.app-shell-collapsed .sidebar-nav-item span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.app-content {
+  min-width: 0;
 }
 
 .app-screen {
   display: grid;
   gap: 24px;
-  width: min(1240px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 28px 0 40px;
 }
@@ -179,6 +310,13 @@ small {
   justify-content: flex-end;
 }
 
+.page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .header-stats span {
   display: inline-flex;
   min-height: 32px;
@@ -190,17 +328,10 @@ small {
   font-size: 13px;
 }
 
-.workflow-list-layout {
-  display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
-}
-
 .create-form,
+.workflow-dialog-form,
 .add-step-form,
-.step-form,
-.workflow-name-card {
+.step-form {
   display: grid;
   gap: 14px;
 }
@@ -243,7 +374,16 @@ small {
 }
 
 .workflow-card .row-actions {
-  width: 240px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 340px;
+}
+
+.workflow-command-panel .run-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workflow-command-panel .run-actions:has(.secondary-danger) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .primary-button {
@@ -273,6 +413,33 @@ small {
   font-size: 14px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 15 15 / 72%);
+}
+
+.workflow-dialog {
+  display: grid;
+  gap: 18px;
+  width: min(480px, 100%);
+  padding: 20px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.modal-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .empty-state {
   display: grid;
   gap: 8px;
@@ -285,17 +452,13 @@ small {
   min-width: 0;
 }
 
-.workflow-name-card {
-  width: min(420px, 100%);
-  padding: 16px;
-}
-
 .workflow-command-panel {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(360px, auto);
+  grid-template-columns: minmax(180px, 0.8fr) minmax(360px, auto);
   gap: 16px;
   align-items: center;
   padding: 14px;
+  width: min(620px, 100%);
 }
 
 .run-status {
@@ -564,6 +727,18 @@ small {
 }
 
 @media (max-width: 860px) {
+  .app-shell,
+  .app-shell-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    position: static;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #242424;
+  }
+
   .app-screen {
     width: min(100% - 24px, 680px);
     padding-top: 20px;
@@ -576,20 +751,23 @@ small {
     display: grid;
   }
 
-  .workflow-list-layout,
   .builder-grid,
   .monitor-grid {
     grid-template-columns: 1fr;
   }
 
   .workflow-card .row-actions,
-  .workflow-command-panel {
+  .workflow-command-panel,
+  .page-header-actions {
     width: 100%;
   }
 
+  .workflow-card .row-actions,
   .run-actions,
   .row-actions,
-  .form-actions {
+  .form-actions,
+  .workflow-command-panel .run-actions,
+  .workflow-command-panel .run-actions:has(.secondary-danger) {
     grid-template-columns: 1fr;
   }
 }
