@@ -1,50 +1,12 @@
-use std::{fs, path::PathBuf, time::Duration};
+mod support;
 
-use uuid::Uuid;
+use std::time::Duration;
+
+use support::{poll_status, test_state, test_state_with_runner, FakeRunExecutor};
 use workflow_automation_manager_lib::{
-    app_state::AppState,
     commands,
     domain::{ActionConfig, ActionType, RunStatus, ScrollDirection},
 };
-
-async fn test_state() -> (AppState, PathBuf) {
-    let db_path = std::env::temp_dir().join(format!("wam-command-test-{}.sqlite", Uuid::new_v4()));
-    let state = AppState::initialize(&db_path).await.expect("init state");
-
-    (state, db_path)
-}
-
-fn write_command_test_page() -> String {
-    let path = std::env::temp_dir().join(format!("wam-command-page-{}.html", Uuid::new_v4()));
-    fs::write(
-        &path,
-        r#"
-        <!doctype html>
-        <html>
-          <body style="height: 1800px">
-            <input id="email" name="email" value="" />
-            <button id="submit" onclick="document.getElementById('result').textContent = document.getElementById('email').value">Submit</button>
-            <div id="result">idle</div>
-          </body>
-        </html>
-        "#,
-    )
-    .expect("write command test page");
-
-    format!("file://{}", path.display())
-}
-
-async fn poll_status(state: &AppState, expected: RunStatus) {
-    for _ in 0..50 {
-        let run_state = commands::get_run_state_impl(state).await;
-        if run_state.status == expected {
-            return;
-        }
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
-
-    panic!("run state did not become {expected:?}");
-}
 
 #[tokio::test]
 async fn command_api_rejects_invalid_workflow_name() {
@@ -180,7 +142,7 @@ async fn reorder_and_delete_commands_work() {
 
 #[tokio::test]
 async fn run_workflow_starts_background_run_and_finishes_successfully() {
-    let (state, _db_path) = test_state().await;
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
 
     let workflow = commands::create_workflow_impl(&state, "Run success")
         .await
@@ -193,7 +155,7 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
         &open.id,
         "Open URL",
         ActionConfig::OpenUrl {
-            url: write_command_test_page(),
+            url: "https://example.com".to_string(),
         },
     )
     .await
@@ -235,8 +197,37 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
 }
 
 #[tokio::test]
+async fn run_workflow_finishes_successfully_with_injected_runner() {
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
+
+    let workflow = commands::create_workflow_impl(&state, "Run success")
+        .await
+        .expect("create");
+    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("sleep");
+    commands::update_step_impl(
+        &state,
+        &sleep.id,
+        "Sleep",
+        ActionConfig::Sleep { seconds: 1.0 },
+    )
+    .await
+    .expect("update sleep");
+
+    let run_state = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("start run");
+    assert_eq!(run_state.status, RunStatus::Running);
+
+    poll_status(&state, RunStatus::Success).await;
+    let finished = commands::get_run_state_impl(&state).await;
+    assert_eq!(finished.completed_step_ids, vec![sleep.id]);
+}
+
+#[tokio::test]
 async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
-    let (state, _db_path) = test_state().await;
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
 
     let workflow = commands::create_workflow_impl(&state, "Test step")
         .await
@@ -249,7 +240,7 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
         &open.id,
         "Open URL",
         ActionConfig::OpenUrl {
-            url: write_command_test_page(),
+            url: "https://example.com".to_string(),
         },
     )
     .await
@@ -288,28 +279,54 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
     );
     poll_status(&state, RunStatus::Success).await;
 
-    assert_eq!(
-        commands::run_workflow_impl(&state, &workflow.id)
-            .await
-            .expect("start full run")
-            .status,
-        RunStatus::Running
-    );
+    let run_state = commands::get_run_state_impl(&state).await;
+    let run_state_json = serde_json::to_string(&run_state).expect("serialize run state");
+    assert!(run_state_json.contains("\"mode\":\"test_step\""));
+    assert!(run_state_json.contains("\"completed_step_ids\""));
+    assert!(run_state.error.is_none());
+}
+
+#[tokio::test]
+async fn run_workflow_maps_fake_runner_failure_to_step_error() {
+    let (state, _db_path) =
+        test_state_with_runner(FakeRunExecutor::failed(2, "XPath not found")).await;
+
+    let workflow = commands::create_workflow_impl(&state, "Run failure")
+        .await
+        .expect("create");
+    let first = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("first");
+    let second = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
+        .await
+        .expect("second");
+    commands::update_step_impl(
+        &state,
+        &second.id,
+        "Click login",
+        ActionConfig::Click {
+            xpath: "//*[@id=\"missing\"]".to_string(),
+        },
+    )
+    .await
+    .expect("update second");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("start run");
     poll_status(&state, RunStatus::Failed).await;
 
     let run_state = commands::get_run_state_impl(&state).await;
-    let run_state_json = serde_json::to_string(&run_state).expect("serialize run state");
-    assert!(run_state_json.contains("\"mode\":\"run_workflow\""));
-    assert!(run_state_json.contains("\"completed_step_ids\""));
     let error = run_state.error.expect("failure payload");
-    assert_eq!(error.step_number, 3);
-    assert_eq!(error.action_type, "click");
+    assert_eq!(error.step_id.as_deref(), Some(second.id.as_str()));
+    assert_eq!(error.step_number, 2);
     assert_eq!(error.reason, "XPath not found");
+    assert!(run_state.completed_step_ids.contains(&first.id));
 }
 
 #[tokio::test]
 async fn test_step_exposes_target_current_and_completed_progress() {
-    let (state, _db_path) = test_state().await;
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::stopped_on_cancel()).await;
 
     let workflow = commands::create_workflow_impl(&state, "Progress")
         .await
@@ -352,7 +369,7 @@ async fn test_step_exposes_target_current_and_completed_progress() {
 
 #[tokio::test]
 async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
-    let (state, _db_path) = test_state().await;
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::stopped_on_cancel()).await;
 
     let workflow = commands::create_workflow_impl(&state, "Stop run")
         .await
@@ -365,7 +382,7 @@ async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
         &open.id,
         "Open URL",
         ActionConfig::OpenUrl {
-            url: write_command_test_page(),
+            url: "https://example.com".to_string(),
         },
     )
     .await

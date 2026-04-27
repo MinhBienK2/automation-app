@@ -6,7 +6,7 @@ use crate::{
     db::{create_sqlite_pool, run_migrations},
     domain::{RunError, RunMode, RunStatus},
     repositories::WorkflowRepository,
-    runner::{BrowserSession, RunnerCancellation},
+    runner::{BrowserRunExecutor, BrowserSession, RunExecutor, RunnerCancellation},
 };
 
 #[derive(Debug, Clone)]
@@ -17,6 +17,7 @@ pub struct AppState {
 #[derive(Debug)]
 struct AppStateInner {
     repository: WorkflowRepository,
+    run_executor: Arc<dyn RunExecutor>,
     run_state: Mutex<RunStateDto>,
     active_run: Mutex<Option<ActiveRun>>,
     retained_sessions: Mutex<Vec<BrowserSession>>,
@@ -54,12 +55,20 @@ impl RunStateDto {
 
 impl AppState {
     pub async fn initialize(db_path: &Path) -> Result<Self, AppStateError> {
+        Self::initialize_with_runner(db_path, Arc::new(BrowserRunExecutor::default())).await
+    }
+
+    pub async fn initialize_with_runner(
+        db_path: &Path,
+        run_executor: Arc<dyn RunExecutor>,
+    ) -> Result<Self, AppStateError> {
         let pool = create_sqlite_pool(db_path).await?;
         run_migrations(&pool).await?;
 
         Ok(Self {
             inner: Arc::new(AppStateInner {
                 repository: WorkflowRepository::new(pool),
+                run_executor,
                 run_state: Mutex::new(RunStateDto::idle()),
                 active_run: Mutex::new(None),
                 retained_sessions: Mutex::new(Vec::new()),
@@ -69,6 +78,10 @@ impl AppState {
 
     pub fn repository(&self) -> &WorkflowRepository {
         &self.inner.repository
+    }
+
+    pub fn run_executor(&self) -> Arc<dyn RunExecutor> {
+        self.inner.run_executor.clone()
     }
 
     pub async fn run_state(&self) -> RunStateDto {
@@ -126,9 +139,11 @@ impl AppState {
         &self,
         status: RunStatus,
         error: Option<RunError>,
-        session: BrowserSession,
+        session: Option<BrowserSession>,
     ) {
-        self.inner.retained_sessions.lock().await.push(session);
+        if let Some(session) = session {
+            self.inner.retained_sessions.lock().await.push(session);
+        }
         *self.inner.active_run.lock().await = None;
         let mut run_state = self.inner.run_state.lock().await;
         run_state.status = status;

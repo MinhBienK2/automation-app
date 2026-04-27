@@ -1,5 +1,7 @@
 use std::{
+    future::Future,
     path::PathBuf,
+    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -50,6 +52,71 @@ pub enum RunnerProgress {
     StepCompleted { step_number: usize },
 }
 
+pub type ProgressCallback = Box<dyn FnMut(RunnerProgress) + Send + 'static>;
+pub type RunExecutorFuture =
+    Pin<Box<dyn Future<Output = Result<RunExecution, RunnerError>> + Send + 'static>>;
+
+#[derive(Debug)]
+pub struct RunExecution {
+    pub status: RunnerStatus,
+    pub failed_step: Option<FailedStep>,
+    pub session: Option<BrowserSession>,
+}
+
+pub trait RunExecutor: std::fmt::Debug + Send + Sync {
+    fn run_steps(
+        &self,
+        steps: Vec<ActionConfig>,
+        cancellation: RunnerCancellation,
+        progress: ProgressCallback,
+    ) -> RunExecutorFuture;
+}
+
+#[derive(Debug, Clone)]
+pub struct BrowserRunExecutor {
+    options: RunnerOptions,
+}
+
+impl BrowserRunExecutor {
+    pub fn new(options: RunnerOptions) -> Self {
+        Self { options }
+    }
+}
+
+impl Default for BrowserRunExecutor {
+    fn default() -> Self {
+        Self {
+            options: RunnerOptions {
+                headed: true,
+                chrome_executable: None,
+            },
+        }
+    }
+}
+
+impl RunExecutor for BrowserRunExecutor {
+    fn run_steps(
+        &self,
+        steps: Vec<ActionConfig>,
+        cancellation: RunnerCancellation,
+        mut progress: ProgressCallback,
+    ) -> RunExecutorFuture {
+        let runner = BrowserRunner::new(self.options.clone());
+
+        Box::pin(async move {
+            let outcome = runner
+                .run_steps_with_progress(steps, cancellation, &mut progress)
+                .await?;
+
+            Ok(RunExecution {
+                status: outcome.status,
+                failed_step: outcome.failed_step,
+                session: Some(outcome.session),
+            })
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RunnerCancellation {
     inner: Arc<CancellationInner>,
@@ -76,11 +143,11 @@ impl RunnerCancellation {
         self.inner.notify.notify_waiters();
     }
 
-    fn is_cancelled(&self) -> bool {
+    pub fn is_cancelled(&self) -> bool {
         self.inner.cancelled.load(Ordering::SeqCst)
     }
 
-    async fn cancelled(&self) {
+    pub async fn cancelled(&self) {
         if self.is_cancelled() {
             return;
         }

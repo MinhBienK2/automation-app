@@ -1,0 +1,125 @@
+use crate::{
+    app_state::{AppState, RunStateDto},
+    commands::CommandError,
+    domain::{
+        ActionConfig, ActionType, RunError, RunMode, RunStatus, ScrollDirection, WorkflowStep,
+    },
+    runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
+};
+
+pub fn default_config(action_type: ActionType) -> ActionConfig {
+    match action_type {
+        ActionType::OpenUrl => ActionConfig::OpenUrl { url: String::new() },
+        ActionType::Sleep => ActionConfig::Sleep { seconds: 1.0 },
+        ActionType::TypeText => ActionConfig::TypeText {
+            xpath: String::new(),
+            text: String::new(),
+        },
+        ActionType::Click => ActionConfig::Click {
+            xpath: String::new(),
+        },
+        ActionType::Scroll => ActionConfig::Scroll {
+            direction: ScrollDirection::Down,
+            pixels: 500,
+        },
+    }
+}
+
+pub async fn start_background_run(
+    state: &AppState,
+    steps: Vec<WorkflowStep>,
+    mode: RunMode,
+    target_step_id: Option<String>,
+) -> Result<RunStateDto, CommandError> {
+    let cancellation = state
+        .begin_run(mode, target_step_id)
+        .await
+        .ok_or_else(|| CommandError::message("A workflow is already running"))?;
+    let run_state = state.run_state().await;
+    let task_state = state.clone();
+    let run_executor = state.run_executor();
+    let action_configs = steps
+        .iter()
+        .map(|step| step.config.clone())
+        .collect::<Vec<_>>();
+
+    tokio::spawn(async move {
+        let (progress_tx, mut progress_rx) =
+            tokio::sync::mpsc::unbounded_channel::<RunnerProgress>();
+        let progress_state = task_state.clone();
+        let progress_steps = steps.clone();
+        let progress_task = tokio::spawn(async move {
+            while let Some(progress) = progress_rx.recv().await {
+                match progress {
+                    RunnerProgress::StepStarted { step_number } => {
+                        if let Some(step) = progress_steps.get(step_number.saturating_sub(1)) {
+                            progress_state
+                                .mark_step_running(step.id.clone(), step_number)
+                                .await;
+                        }
+                    }
+                    RunnerProgress::StepCompleted { step_number } => {
+                        if let Some(step) = progress_steps.get(step_number.saturating_sub(1)) {
+                            progress_state.mark_step_completed(step.id.clone()).await;
+                        }
+                    }
+                }
+            }
+        });
+        let result = run_executor
+            .run_steps(
+                action_configs,
+                cancellation,
+                Box::new(move |progress| {
+                    let _ = progress_tx.send(progress);
+                }),
+            )
+            .await;
+        let _ = progress_task.await;
+        complete_background_run(task_state, steps, result).await;
+    });
+
+    Ok(run_state)
+}
+
+async fn complete_background_run(
+    state: AppState,
+    steps: Vec<WorkflowStep>,
+    result: Result<RunExecution, RunnerError>,
+) {
+    match result {
+        Ok(outcome) => {
+            let (status, error) = match outcome.status {
+                RunnerStatus::Success => (RunStatus::Success, None),
+                RunnerStatus::Stopped => (RunStatus::Stopped, None),
+                RunnerStatus::Failed => {
+                    let error = outcome.failed_step.as_ref().map(|failed_step| {
+                        if let Some(step) = steps.get(failed_step.step_number.saturating_sub(1)) {
+                            RunError::for_step(
+                                step.id.clone(),
+                                failed_step.step_number,
+                                step.name.clone(),
+                                step.action_type.as_str(),
+                                failed_step.reason.clone(),
+                            )
+                        } else {
+                            RunError::new(
+                                failed_step.step_number,
+                                "unknown",
+                                failed_step.reason.clone(),
+                            )
+                        }
+                    });
+                    (RunStatus::Failed, error)
+                }
+            };
+
+            state.finish_run(status, error, outcome.session).await;
+        }
+        Err(error) => {
+            state
+                .fail_run_without_session(RunError::new(0, "runner", error.to_string()))
+                .await;
+        }
+    }
+}

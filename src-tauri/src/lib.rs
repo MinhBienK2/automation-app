@@ -8,6 +8,7 @@ pub mod db;
 pub mod domain;
 pub mod repositories;
 pub mod runner;
+pub mod services;
 
 const APP_DATA_FOLDER: &str = "workflow-automation-manager";
 

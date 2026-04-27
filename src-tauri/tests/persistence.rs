@@ -1,21 +1,7 @@
-use std::path::PathBuf;
+mod support;
 
-use uuid::Uuid;
-use workflow_automation_manager_lib::{
-    db::{create_sqlite_pool, run_migrations},
-    domain::{ActionConfig, ScrollDirection},
-    repositories::WorkflowRepository,
-};
-
-async fn test_repository() -> (WorkflowRepository, PathBuf) {
-    let db_path = std::env::temp_dir().join(format!("wam-test-{}.sqlite", Uuid::new_v4()));
-    let pool = create_sqlite_pool(&db_path)
-        .await
-        .expect("create sqlite pool");
-    run_migrations(&pool).await.expect("run migrations");
-
-    (WorkflowRepository::new(pool), db_path)
-}
+use support::test_repository;
+use workflow_automation_manager_lib::domain::{ActionConfig, ScrollDirection};
 
 #[tokio::test]
 async fn workflow_crud_and_step_count_work() {
