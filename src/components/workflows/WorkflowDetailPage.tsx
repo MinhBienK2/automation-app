@@ -6,6 +6,7 @@ import type {
   WorkflowDetail,
   WorkflowStep,
 } from "../../types/workflow";
+import { PageHeader } from "../layout/PageHeader";
 import { RunStatusBar } from "./RunStatusBar";
 import { StepForm } from "./StepForm";
 import { StepList } from "./StepList";
@@ -51,20 +52,21 @@ export function WorkflowDetailPage({
   onStopRun,
   onDragEnd,
 }: WorkflowDetailPageProps) {
+  const stepCountLabel = `${detail.steps.length} ${
+    detail.steps.length === 1 ? "step" : "steps"
+  }`;
+
   return (
     <section className="app-screen workflow-detail-screen">
-      <header className="detail-header">
-        <div className="detail-title-group">
-          <button className="ghost-button" type="button" onClick={onBack}>
-            Back to Workflows
-          </button>
-          <div>
-            <p className="eyebrow">Workflow Detail</p>
-            <h1>{detail.workflow.name}</h1>
-          </div>
-        </div>
-        <div className="workflow-command-panel panel">
-          <RunStatusBar state={runState} error={appError} />
+      <PageHeader
+        ariaLabel="Workflow detail header"
+        backLabel="Back to Workflows"
+        eyebrow="Workflow Detail"
+        meta={[stepCountLabel, `Updated ${detail.workflow.updated_at}`]}
+        status={<RunStatusBar state={runState} error={appError} />}
+        title={detail.workflow.name}
+        onBack={onBack}
+        actions={
           <div className="run-actions">
             <button
               className="primary-button"
@@ -96,8 +98,8 @@ export function WorkflowDetailPage({
               </button>
             ) : null}
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <div className="builder-grid">
         <StepList

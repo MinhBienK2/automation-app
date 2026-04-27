@@ -270,14 +270,137 @@ small {
   padding: 28px 0 40px;
 }
 
-.app-header,
-.detail-header {
+.app-header {
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid #242424;
+}
+
+.page-detail-header {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #242424;
+}
+
+.page-detail-title-row,
+.page-detail-controls-row {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+}
+
+.page-detail-title-row {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-detail-title-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.page-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-breadcrumb-link {
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #898989;
+  font-size: 15px;
+}
+
+.page-breadcrumb-link:hover:not(:disabled) {
+  border-color: transparent;
+  color: #fafafa;
+}
+
+.page-breadcrumb-separator {
+  color: #4d4d4d;
+  font-size: 15px;
+}
+
+.page-breadcrumb-current {
+  overflow: hidden;
+  color: #fafafa;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-kind-badge {
+  margin: 0;
+  padding: 7px 11px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.page-detail-controls-row {
+  align-items: stretch;
+}
+
+.page-back-button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.page-back-button span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #363636;
+  border-radius: 9999px;
+  color: #3ecf8e;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.page-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: center;
+  align-items: center;
+  min-width: 0;
+}
+
+.page-header-meta span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  color: #b4b4b4;
+  font-size: 13px;
+}
+
+.page-header-status {
+  width: min(360px, 100%);
+}
+
+.page-detail-header .page-header-actions {
+  margin-left: auto;
+  align-content: center;
+  align-items: center;
 }
 
 .eyebrow {
@@ -378,12 +501,14 @@ small {
   width: 340px;
 }
 
-.workflow-command-panel .run-actions {
+.page-detail-header .run-actions {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(420px, 100%);
 }
 
-.workflow-command-panel .run-actions:has(.secondary-danger) {
+.page-detail-header .run-actions:has(.secondary-danger) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(520px, 100%);
 }
 
 .primary-button {
@@ -446,26 +571,16 @@ small {
   padding: 18px;
 }
 
-.detail-title-group {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
-}
-
-.workflow-command-panel {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(360px, auto);
-  gap: 16px;
-  align-items: center;
-  padding: 14px;
-  width: min(620px, 100%);
-}
-
 .run-status {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 4px 10px;
   align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
   color: #b4b4b4;
 }
 
@@ -745,8 +860,9 @@ small {
   }
 
   .app-header,
-  .detail-header,
-  .workflow-command-panel,
+  .page-detail-header,
+  .page-detail-title-row,
+  .page-detail-controls-row,
   .workflow-card {
     display: grid;
   }
@@ -757,17 +873,36 @@ small {
   }
 
   .workflow-card .row-actions,
-  .workflow-command-panel,
+  .page-header-status,
   .page-header-actions {
     width: 100%;
+    justify-items: stretch;
+  }
+
+  .page-detail-header .page-header-actions {
+    margin-left: 0;
+  }
+
+  .page-detail-title-main {
+    display: grid;
+    gap: 10px;
+  }
+
+  .page-breadcrumb {
+    flex-wrap: wrap;
+  }
+
+  .page-breadcrumb-current {
+    white-space: normal;
   }
 
   .workflow-card .row-actions,
   .run-actions,
   .row-actions,
   .form-actions,
-  .workflow-command-panel .run-actions,
-  .workflow-command-panel .run-actions:has(.secondary-danger) {
+  .page-detail-header .run-actions,
+  .page-detail-header .run-actions:has(.secondary-danger) {
     grid-template-columns: 1fr;
+    width: 100%;
   }
 }

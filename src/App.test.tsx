@@ -78,7 +78,7 @@ describe("App workflow UI", () => {
 
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Login flow" })).toBeInTheDocument();
+    expect(screen.getByText("Login flow")).toHaveAttribute("aria-current", "page");
     expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
@@ -212,8 +212,10 @@ describe("App workflow UI", () => {
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Checkout flow");
     await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
-    expect(await screen.findByRole("heading", { name: "Checkout flow" }))
-      .toBeInTheDocument();
+    expect(await screen.findByText("Checkout flow")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(screen.queryByText("Failed at step 1: XPath not found"))
       .not.toBeInTheDocument();
   });
@@ -258,11 +260,37 @@ describe("App workflow UI", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
-    expect(await screen.findByRole("heading", { name: "Login flow" }))
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const titleRow = within(header).getByRole("group", {
+      name: "Workflow title row",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+
+    expect(within(titleRow).getByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
+    const breadcrumb = within(titleRow).getByRole("navigation", {
+      name: "Workflow breadcrumb",
+    });
+    expect(within(breadcrumb).getByRole("button", { name: "Workflows" }))
+      .toBeInTheDocument();
+    expect(within(breadcrumb).getByText("Login flow")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(titleRow).queryByRole("heading", { name: "Login flow" }))
+      .not.toBeInTheDocument();
+    expect(within(titleRow).getByText("Workflow Detail")).toBeInTheDocument();
+    expect(within(controlsRow).getByText("1 step")).toBeInTheDocument();
+    expect(within(controlsRow).getByText("Updated 1")).toBeInTheDocument();
+    expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
+    expect(within(controlsRow).getByText("idle")).toBeInTheDocument();
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
-    expect(screen.getByText("Status")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Run Workflow" })).toBeInTheDocument();
+    expect(within(controlsRow).getByRole("button", { name: "Run Workflow" }))
+      .toBeInTheDocument();
   });
 
   test("shows validation errors from save step", async () => {
