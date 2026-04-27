@@ -3,16 +3,26 @@ import type { ActionConfig } from "../../../types/workflow";
 export type ActionConfigField =
   | "behavior"
   | "block"
+  | "button"
+  | "click_count"
   | "direction"
   | "iframe_xpath"
   | "inline"
   | "max_attempts"
   | "mode"
+  | "offset_x"
+  | "offset_y"
   | "pixels"
+  | "position"
+  | "post_click_wait_ms"
+  | "retry_interval_ms"
+  | "scroll_into_view"
   | "seconds"
   | "text"
+  | "timeout_ms"
   | "url"
   | "wait_ms"
+  | "wait_until"
   | "xpath";
 
 export function updateActionConfigField(
@@ -31,10 +41,49 @@ export function updateActionConfigField(
         config: { ...config.config, [field]: value },
       };
     case "click":
-      return { type: "click", config: { xpath: value } };
+      return updateClickConfigField(config, field, value);
     case "scroll":
       return updateScrollConfigField(config, field, value);
   }
+}
+
+function updateClickConfigField(
+  config: Extract<ActionConfig, { type: "click" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (
+    field === "click_count" ||
+    field === "offset_x" ||
+    field === "offset_y" ||
+    field === "timeout_ms" ||
+    field === "retry_interval_ms" ||
+    field === "post_click_wait_ms"
+  ) {
+    return {
+      type: "click",
+      config: { ...config.config, [field]: Number(value) },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "click",
+      config: { ...config.config, [field]: value || null },
+    };
+  }
+
+  if (field === "scroll_into_view") {
+    return {
+      type: "click",
+      config: { ...config.config, scroll_into_view: value === "true" },
+    };
+  }
+
+  return {
+    type: "click",
+    config: { ...config.config, [field]: value },
+  };
 }
 
 function updateScrollConfigField(

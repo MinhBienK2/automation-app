@@ -77,6 +77,41 @@ pub enum ScrollInline {
     Nearest,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClickMode {
+    Real,
+    ForceDom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClickButton {
+    Left,
+    Right,
+    Middle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClickPosition {
+    Center,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    Offset,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClickWaitUntil {
+    Attached,
+    Visible,
+    Enabled,
+    Clickable,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "config", rename_all = "snake_case")]
 pub enum ActionConfig {
@@ -92,6 +127,34 @@ pub enum ActionConfig {
     },
     Click {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        mode: Option<ClickMode>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        button: Option<ClickButton>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        click_count: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scroll_into_view: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        block: Option<ScrollBlock>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        inline: Option<ScrollInline>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        position: Option<ClickPosition>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset_x: Option<f64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        offset_y: Option<f64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        retry_interval_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        post_click_wait_ms: Option<u64>,
     },
     Scroll {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -141,9 +204,32 @@ impl ActionConfig {
             Self::TypeText { text, .. } if text.is_empty() => {
                 Err(ValidationError::new("text", "Text is required"))
             }
-            Self::Click { xpath } if xpath.trim().is_empty() => {
+            Self::Click { xpath, .. } if xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
+            Self::Click {
+                click_count: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "click_count",
+                "Click count must be greater than 0",
+            )),
+            Self::Click {
+                position: Some(ClickPosition::Offset),
+                offset_x,
+                offset_y,
+                ..
+            } if offset_x.is_none() || offset_y.is_none() => Err(ValidationError::new(
+                "offset",
+                "Offset X and Y are required",
+            )),
+            Self::Click {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
             Self::Scroll { pixels, .. } if *pixels <= 0 => Err(ValidationError::new(
                 "pixels",
                 "Pixels must be greater than 0",

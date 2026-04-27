@@ -63,4 +63,27 @@ describe("workflow step form config helpers", () => {
       config: { direction: "down", pixels: 300, max_attempts: 5 },
     });
   });
+
+  test("updates advanced click fields without dropping the xpath", () => {
+    const config: ActionConfig = {
+      type: "click",
+      config: { xpath: "//*[@id='submit']" },
+    };
+
+    expect(updateActionConfigField(config, "click_count", "2")).toEqual({
+      type: "click",
+      config: { xpath: "//*[@id='submit']", click_count: 2 },
+    });
+    expect(updateActionConfigField(config, "iframe_xpath", "//*[@id='frame']")).toEqual({
+      type: "click",
+      config: {
+        xpath: "//*[@id='submit']",
+        iframe_xpath: "//*[@id='frame']",
+      },
+    });
+    expect(updateActionConfigField(config, "mode", "force_dom")).toEqual({
+      type: "click",
+      config: { xpath: "//*[@id='submit']", mode: "force_dom" },
+    });
+  });
 });

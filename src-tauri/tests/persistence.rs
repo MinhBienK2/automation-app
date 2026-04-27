@@ -108,6 +108,20 @@ async fn reorder_persists_and_delete_compacts_order_indexes() {
             &workflow.id,
             ActionConfig::Click {
                 xpath: "//*[@id=\"submit\"]".to_string(),
+                iframe_xpath: None,
+                mode: None,
+                button: None,
+                click_count: None,
+                scroll_into_view: None,
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
+                wait_until: None,
+                timeout_ms: None,
+                retry_interval_ms: None,
+                post_click_wait_ms: None,
             },
         )
         .await

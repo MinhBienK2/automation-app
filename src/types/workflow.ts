@@ -22,7 +22,33 @@ export type ActionConfig =
   | { type: "open_url"; config: { url: string } }
   | { type: "sleep"; config: { seconds: number } }
   | { type: "type_text"; config: { xpath: string; text: string } }
-  | { type: "click"; config: { xpath: string } }
+  | {
+      type: "click";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        mode?: "real" | "force_dom" | null;
+        button?: "left" | "right" | "middle" | null;
+        click_count?: number | null;
+        scroll_into_view?: boolean | null;
+        block?: "start" | "center" | "end" | "nearest" | null;
+        inline?: "start" | "center" | "end" | "nearest" | null;
+        position?:
+          | "center"
+          | "top_left"
+          | "top_right"
+          | "bottom_left"
+          | "bottom_right"
+          | "offset"
+          | null;
+        offset_x?: number | null;
+        offset_y?: number | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+        retry_interval_ms?: number | null;
+        post_click_wait_ms?: number | null;
+      };
+    }
   | {
       type: "scroll";
       config: {

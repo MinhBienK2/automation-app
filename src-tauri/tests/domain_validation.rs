@@ -1,6 +1,7 @@
 use workflow_automation_manager_lib::domain::{
-    ActionConfig, RunError, RunStatus, ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline,
-    ScrollMode, ValidationError, Workflow, WorkflowStep,
+    ActionConfig, ClickButton, ClickMode, ClickPosition, ClickWaitUntil, RunError, RunStatus,
+    ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, ValidationError,
+    Workflow, WorkflowStep,
 };
 
 fn assert_validation_message(error: ValidationError, field: &str, message: &str) {
@@ -69,6 +70,20 @@ fn action_config_validation_covers_required_fields() {
     assert_validation_message(
         ActionConfig::Click {
             xpath: String::new(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         }
         .validate()
         .expect_err("blank XPath should fail"),
@@ -109,6 +124,20 @@ fn valid_action_configs_pass_validation() {
         },
         ActionConfig::Click {
             xpath: "//*[@type=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
         ActionConfig::Scroll {
             mode: None,
@@ -142,6 +171,20 @@ fn every_action_config_round_trips_through_json() {
         },
         ActionConfig::Click {
             xpath: "//*[@type=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
         ActionConfig::Scroll {
             mode: None,
@@ -207,6 +250,84 @@ fn scroll_config_supports_advanced_modes_and_backwards_compatibility() {
 }
 
 #[test]
+fn click_config_supports_real_user_options_and_backwards_compatibility() {
+    let legacy_json = r#"{"type":"click","config":{"xpath":"//*[@id=\"submit\"]"}}"#;
+    let legacy: ActionConfig = serde_json::from_str(legacy_json).expect("legacy click");
+
+    assert_eq!(
+        legacy,
+        ActionConfig::Click {
+            xpath: "//*[@id=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
+        }
+    );
+
+    let advanced = ActionConfig::Click {
+        xpath: "//*[@id=\"submit\"]".to_string(),
+        iframe_xpath: Some("//*[@id=\"frame\"]".to_string()),
+        mode: Some(ClickMode::Real),
+        button: Some(ClickButton::Left),
+        click_count: Some(2),
+        scroll_into_view: Some(true),
+        block: Some(ScrollBlock::Center),
+        inline: Some(ScrollInline::Nearest),
+        position: Some(ClickPosition::Offset),
+        offset_x: Some(12.0),
+        offset_y: Some(8.0),
+        wait_until: Some(ClickWaitUntil::Clickable),
+        timeout_ms: Some(5000),
+        retry_interval_ms: Some(100),
+        post_click_wait_ms: Some(50),
+    };
+
+    advanced.validate().expect("advanced click is valid");
+    let json = serde_json::to_string(&advanced).expect("serialize advanced click");
+    assert!(json.contains("\"mode\":\"real\""));
+    assert!(json.contains("\"click_count\":2"));
+    assert!(json.contains("\"iframe_xpath\""));
+}
+
+#[test]
+fn click_config_validates_real_user_options() {
+    assert_validation_message(
+        ActionConfig::Click {
+            xpath: "//*[@id=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: Some(0),
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
+        }
+        .validate()
+        .expect_err("zero click count should fail"),
+        "click_count",
+        "Click count must be greater than 0",
+    );
+}
+
+#[test]
 fn scroll_modes_validate_required_xpath_and_attempts() {
     assert_validation_message(
         ActionConfig::Scroll {
@@ -254,6 +375,20 @@ fn workflow_step_uses_action_type_from_config() {
         0,
         ActionConfig::Click {
             xpath: "//*[@id=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
     );
 

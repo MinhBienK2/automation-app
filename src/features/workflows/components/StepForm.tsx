@@ -125,15 +125,145 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
       );
     case "click":
       return (
-        <label>
-          XPath
-          <input
-            value={config.config.xpath}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-            }
-          />
-        </label>
+        <>
+          <label>
+            XPath
+            <input
+              value={config.config.xpath}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+              }
+            />
+          </label>
+          <label>
+            Mode
+            <select
+              value={config.config.mode ?? "real"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
+              }
+            >
+              <option value="real">Real click</option>
+              <option value="force_dom">Force DOM click</option>
+            </select>
+          </label>
+          <label>
+            Click count
+            <select
+              value={config.config.click_count ?? 1}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "click_count", event.currentTarget.value),
+                )
+              }
+            >
+              <option value="1">Single</option>
+              <option value="2">Double</option>
+            </select>
+          </label>
+          <label>
+            Iframe XPath
+            <input
+              value={config.config.iframe_xpath ?? ""}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
+                )
+              }
+              placeholder="Optional iframe XPath"
+            />
+          </label>
+          <label>
+            Position
+            <select
+              value={config.config.position ?? "center"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "position", event.currentTarget.value))
+              }
+            >
+              <option value="center">Center</option>
+              <option value="top_left">Top left</option>
+              <option value="top_right">Top right</option>
+              <option value="bottom_left">Bottom left</option>
+              <option value="bottom_right">Bottom right</option>
+              <option value="offset">Offset</option>
+            </select>
+          </label>
+          {config.config.position === "offset" ? (
+            <>
+              <label>
+                Offset X
+                <input
+                  type="number"
+                  value={config.config.offset_x ?? 0}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "offset_x", event.currentTarget.value),
+                    )
+                  }
+                />
+              </label>
+              <label>
+                Offset Y
+                <input
+                  type="number"
+                  value={config.config.offset_y ?? 0}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "offset_y", event.currentTarget.value),
+                    )
+                  }
+                />
+              </label>
+            </>
+          ) : null}
+          <label>
+            Wait until
+            <select
+              value={config.config.wait_until ?? "clickable"}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "wait_until", event.currentTarget.value),
+                )
+              }
+            >
+              <option value="clickable">Clickable</option>
+              <option value="visible">Visible</option>
+              <option value="enabled">Enabled</option>
+              <option value="attached">Attached</option>
+            </select>
+          </label>
+          <label>
+            Timeout ms
+            <input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 5000}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
+                )
+              }
+            />
+          </label>
+          <label>
+            Retry interval ms
+            <input
+              min="0"
+              type="number"
+              value={config.config.retry_interval_ms ?? 100}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "retry_interval_ms",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            />
+          </label>
+        </>
       );
     case "scroll":
       const mode = config.config.mode ?? "page";

@@ -97,6 +97,20 @@ async fn update_step_can_save_custom_step_name() {
         "Click login button",
         ActionConfig::Click {
             xpath: "//*[@id=\"login\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
     )
     .await
@@ -199,6 +213,20 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
         "Click",
         ActionConfig::Click {
             xpath: "//*[@id=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
     )
     .await
@@ -281,6 +309,20 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
         "Click",
         ActionConfig::Click {
             xpath: "//*[@id=\"missing\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
     )
     .await
@@ -322,6 +364,20 @@ async fn run_workflow_maps_fake_runner_failure_to_step_error() {
         "Click login",
         ActionConfig::Click {
             xpath: "//*[@id=\"missing\"]".to_string(),
+            iframe_xpath: None,
+            mode: None,
+            button: None,
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
         },
     )
     .await

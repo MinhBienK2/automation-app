@@ -11,6 +11,8 @@ use std::{
 
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
+    layout::Point,
+    types::ClickOptions,
     Page,
 };
 use futures::StreamExt;
@@ -19,7 +21,8 @@ use tokio::{sync::Notify, task::JoinHandle};
 use uuid::Uuid;
 
 use crate::domain::{
-    ActionConfig, ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode,
+    ActionConfig, ClickMode, ClickPosition, ClickWaitUntil, ScrollBehavior, ScrollBlock,
+    ScrollDirection, ScrollInline, ScrollMode,
 };
 
 #[derive(Debug, Clone)]
@@ -346,19 +349,59 @@ async fn execute_action(
             ensure_js_action(page, &script).await?;
             Ok(ActionExecution::Complete)
         }
-        ActionConfig::Click { xpath } => {
-            let xpath = json_string(&xpath)?;
-            let script = format!(
-                r#"
-                (() => {{
-                  const node = document.evaluate({xpath}, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                  if (!node) return {{ ok: false, reason: "XPath not found" }};
-                  node.click();
-                  return {{ ok: true, reason: "" }};
-                }})()
-                "#
-            );
-            ensure_js_action(page, &script).await?;
+        ActionConfig::Click {
+            xpath,
+            iframe_xpath,
+            mode,
+            button: _,
+            click_count,
+            scroll_into_view,
+            block,
+            inline,
+            position,
+            offset_x,
+            offset_y,
+            wait_until,
+            timeout_ms,
+            retry_interval_ms,
+            post_click_wait_ms,
+        } => {
+            if matches!(mode, Some(ClickMode::ForceDom)) {
+                let script = force_dom_click_script(&xpath, iframe_xpath.as_deref())?;
+                ensure_js_action(page, &script).await?;
+            } else {
+                let script = click_script(ClickScriptOptions {
+                    xpath: &xpath,
+                    iframe_xpath: iframe_xpath.as_deref(),
+                    mode,
+                    scroll_into_view,
+                    block,
+                    inline,
+                    position,
+                    offset_x,
+                    offset_y,
+                    wait_until,
+                    timeout_ms,
+                    retry_interval_ms,
+                })?;
+                let target: ClickTargetResult = page.evaluate(script).await?.into_value()?;
+                if !target.ok {
+                    return Err(RunnerError::ActionFailed(target.reason));
+                }
+                page.click_with(
+                    Point::new(target.x, target.y),
+                    ClickOptions::builder()
+                        .click_count(i64::from(click_count.unwrap_or(1).max(1)))
+                        .build(),
+                )
+                .await?;
+            }
+            if let Some(wait_ms) = post_click_wait_ms {
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_millis(wait_ms)) => {},
+                    _ = cancellation.cancelled() => return Ok(ActionExecution::Stopped),
+                }
+            }
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Scroll {
@@ -447,6 +490,141 @@ fn type_text_script(xpath: &str, text: &str) -> Result<String, RunnerError> {
           }}
 
           return {{ ok: false, reason: "Element cannot receive text" }};
+        }})()
+        "#
+    ))
+}
+
+struct ClickScriptOptions<'a> {
+    xpath: &'a str,
+    iframe_xpath: Option<&'a str>,
+    mode: Option<ClickMode>,
+    scroll_into_view: Option<bool>,
+    block: Option<ScrollBlock>,
+    inline: Option<ScrollInline>,
+    position: Option<ClickPosition>,
+    offset_x: Option<f64>,
+    offset_y: Option<f64>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+    retry_interval_ms: Option<u64>,
+}
+
+fn force_dom_click_script(xpath: &str, iframe_xpath: Option<&str>) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+
+    Ok(format!(
+        r#"
+        (() => {{
+          const xpath = {xpath};
+          const iframeXPath = {iframe_xpath};
+          const evaluateXPath = (path, rootDocument) => rootDocument.evaluate(path, rootDocument, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+          let rootDocument = document;
+          if (iframeXPath) {{
+            const iframe = evaluateXPath(iframeXPath, document);
+            if (!iframe) return {{ ok: false, reason: "Iframe XPath not found" }};
+            if (!iframe.contentDocument) return {{ ok: false, reason: "Iframe document is not accessible" }};
+            rootDocument = iframe.contentDocument;
+          }}
+          const node = evaluateXPath(xpath, rootDocument);
+          if (!node) return {{ ok: false, reason: "XPath not found" }};
+          node.click();
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
+fn click_script(options: ClickScriptOptions<'_>) -> Result<String, RunnerError> {
+    let xpath = json_string(options.xpath)?;
+    let iframe_xpath = optional_json_string(options.iframe_xpath)?;
+    let _mode = click_mode_value(options.mode);
+    let scroll_into_view = options.scroll_into_view.unwrap_or(true);
+    let block = scroll_block_value(options.block);
+    let inline = scroll_inline_value(options.inline);
+    let position = click_position_value(options.position);
+    let offset_x = options.offset_x.unwrap_or(0.0);
+    let offset_y = options.offset_y.unwrap_or(0.0);
+    let wait_until = click_wait_until_value(options.wait_until);
+    let timeout_ms = options.timeout_ms.unwrap_or(5000).max(1);
+    let retry_interval_ms = options.retry_interval_ms.unwrap_or(100);
+
+    Ok(format!(
+        r#"
+        (async () => {{
+          const xpath = {xpath};
+          const iframeXPath = {iframe_xpath};
+          const scrollIntoView = {scroll_into_view};
+          const block = "{block}";
+          const inline = "{inline}";
+          const position = "{position}";
+          const offsetX = {offset_x};
+          const offsetY = {offset_y};
+          const waitUntil = "{wait_until}";
+          const deadline = Date.now() + {timeout_ms};
+          const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const evaluateXPath = (path, rootDocument) => rootDocument.evaluate(path, rootDocument, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+          const resolveDocument = () => {{
+            if (!iframeXPath) return {{ ok: true, document: document, iframe: null }};
+            const iframe = evaluateXPath(iframeXPath, document);
+            if (!iframe) return {{ ok: false, reason: "Iframe XPath not found" }};
+            if (!iframe.contentDocument) return {{ ok: false, reason: "Iframe document is not accessible" }};
+            return {{ ok: true, document: iframe.contentDocument, iframe }};
+          }};
+          const isVisible = (node) => {{
+            if (!node || !node.getBoundingClientRect) return false;
+            const rect = node.getBoundingClientRect();
+            const view = node.ownerDocument.defaultView;
+            const style = view.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && rect.bottom > 0 && rect.right > 0 && rect.top < view.innerHeight && rect.left < view.innerWidth;
+          }};
+          const isEnabled = (node) => !node.disabled && node.getAttribute?.("aria-disabled") !== "true";
+          const pointFor = (node, iframe) => {{
+            const rect = node.getBoundingClientRect();
+            let x = rect.left + rect.width / 2;
+            let y = rect.top + rect.height / 2;
+            if (position === "top_left") {{ x = rect.left + 1; y = rect.top + 1; }}
+            if (position === "top_right") {{ x = rect.right - 1; y = rect.top + 1; }}
+            if (position === "bottom_left") {{ x = rect.left + 1; y = rect.bottom - 1; }}
+            if (position === "bottom_right") {{ x = rect.right - 1; y = rect.bottom - 1; }}
+            if (position === "offset") {{ x = rect.left + offsetX; y = rect.top + offsetY; }}
+            if (iframe) {{
+              const frameRect = iframe.getBoundingClientRect();
+              x += frameRect.left;
+              y += frameRect.top;
+            }}
+            return {{ x, y }};
+          }};
+          const receivesEvents = (node, point, rootDocument, iframe) => {{
+            const localX = iframe ? point.x - iframe.getBoundingClientRect().left : point.x;
+            const localY = iframe ? point.y - iframe.getBoundingClientRect().top : point.y;
+            const topNode = rootDocument.elementFromPoint(localX, localY);
+            return topNode === node || node.contains?.(topNode);
+          }};
+
+          let lastReason = "Element did not become clickable before timeout";
+          while (Date.now() <= deadline) {{
+            const resolved = resolveDocument();
+            if (!resolved.ok) return {{ ok: false, reason: resolved.reason, x: 0, y: 0 }};
+            const node = evaluateXPath(xpath, resolved.document);
+            if (!node) {{
+              lastReason = "XPath not found";
+            }} else {{
+              if (scrollIntoView && node.scrollIntoView) node.scrollIntoView({{ block, inline, behavior: "instant" }});
+              await wait(0);
+              const visible = isVisible(node);
+              const enabled = isEnabled(node);
+              const point = pointFor(node, resolved.iframe);
+              if (waitUntil === "attached") return {{ ok: true, reason: "", ...point }};
+              if (!visible) lastReason = "Element is not visible";
+              else if ((waitUntil === "enabled" || waitUntil === "clickable") && !enabled) lastReason = "Element is disabled";
+              else if (waitUntil === "clickable" && !receivesEvents(node, point, resolved.document, resolved.iframe)) lastReason = "Element is covered";
+              else return {{ ok: true, reason: "", ...point }};
+            }}
+            await wait({retry_interval_ms});
+          }}
+          return {{ ok: false, reason: lastReason, x: 0, y: 0 }};
         }})()
         "#
     ))
@@ -630,6 +808,33 @@ fn scroll_inline_value(inline: Option<ScrollInline>) -> &'static str {
     }
 }
 
+fn click_mode_value(mode: Option<ClickMode>) -> &'static str {
+    match mode.unwrap_or(ClickMode::Real) {
+        ClickMode::Real => "real",
+        ClickMode::ForceDom => "force_dom",
+    }
+}
+
+fn click_position_value(position: Option<ClickPosition>) -> &'static str {
+    match position.unwrap_or(ClickPosition::Center) {
+        ClickPosition::Center => "center",
+        ClickPosition::TopLeft => "top_left",
+        ClickPosition::TopRight => "top_right",
+        ClickPosition::BottomLeft => "bottom_left",
+        ClickPosition::BottomRight => "bottom_right",
+        ClickPosition::Offset => "offset",
+    }
+}
+
+fn click_wait_until_value(wait_until: Option<ClickWaitUntil>) -> &'static str {
+    match wait_until.unwrap_or(ClickWaitUntil::Clickable) {
+        ClickWaitUntil::Attached => "attached",
+        ClickWaitUntil::Visible => "visible",
+        ClickWaitUntil::Enabled => "enabled",
+        ClickWaitUntil::Clickable => "clickable",
+    }
+}
+
 fn default_chrome_executable() -> Option<PathBuf> {
     [
         "/usr/bin/google-chrome",
@@ -645,6 +850,14 @@ fn default_chrome_executable() -> Option<PathBuf> {
 struct JsActionResult {
     ok: bool,
     reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClickTargetResult {
+    ok: bool,
+    reason: String,
+    x: f64,
+    y: f64,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -757,5 +970,29 @@ mod tests {
 
         assert!(script.contains("for (let attempt = 0; attempt < 5; attempt++)"));
         assert!(script.contains("Element not visible after scrolling"));
+    }
+
+    #[test]
+    fn click_script_supports_real_user_actionability_checks() {
+        let script = click_script(ClickScriptOptions {
+            xpath: "//*[@id='submit']",
+            iframe_xpath: Some("//*[@id='frame']"),
+            mode: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: Some(5000),
+            retry_interval_ms: Some(100),
+        })
+        .unwrap();
+
+        assert!(script.contains("scrollIntoView"));
+        assert!(script.contains("elementFromPoint"));
+        assert!(script.contains("Element is covered"));
+        assert!(script.contains("Iframe XPath not found"));
     }
 }

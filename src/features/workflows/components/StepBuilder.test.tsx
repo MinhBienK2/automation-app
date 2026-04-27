@@ -121,6 +121,40 @@ describe("Workflow step builder integration", () => {
     expect(screen.queryByLabelText("Seconds")).not.toBeInTheDocument();
   });
 
+  test("shows real click controls and saves advanced click config", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([clickStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.selectOptions(await screen.findByLabelText("Mode"), "force_dom");
+    await userEvent.selectOptions(screen.getByLabelText("Click count"), "2");
+    await userEvent.clear(screen.getByLabelText("Iframe XPath"));
+    fireEvent.change(screen.getByLabelText("Iframe XPath"), {
+      target: { value: "//*[@id='frame']" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-2",
+        name: "Click login button",
+        config: {
+          type: "click",
+          config: {
+            xpath: '//*[@id="submit"]',
+            mode: "force_dom",
+            click_count: 2,
+            iframe_xpath: "//*[@id='frame']",
+          },
+        },
+      });
+    });
+  });
+
   test("asks for confirmation before deleting a step", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     mockTauriCommands({
