@@ -19,6 +19,14 @@ const workflow = {
   updated_at: "1",
 };
 
+const newWorkflow = {
+  id: "workflow-2",
+  name: "Checkout flow",
+  step_count: 0,
+  created_at: "2",
+  updated_at: "2",
+};
+
 const sleepStep = {
   id: "step-1",
   name: "Wait for page",
@@ -51,11 +59,39 @@ describe("App workflow UI", () => {
     vi.restoreAllMocks();
   });
 
+  test("opens workflow details on a separate screen and returns to the list", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "get_workflow") return { workflow, steps: [sleepStep] };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Workflows" })).toBeInTheDocument();
+    expect(screen.getByLabelText("New workflow name")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "View Details" }));
+
+    expect(await screen.findByRole("button", { name: "Back to Workflows" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Login flow" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
+
+    expect(await screen.findByLabelText("New workflow name")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Back to Workflows" }))
+      .not.toBeInTheDocument();
+  });
+
   test("lists workflows and creates a workflow", async () => {
     invokeMock.mockImplementation(async (command) => {
       if (command === "list_workflows") return [];
       if (command === "get_run_state") return { status: "idle", error: null };
       if (command === "create_workflow") return workflow;
+      if (command === "get_workflow") return { workflow, steps: [] };
       throw new Error(`Unexpected command: ${command}`);
     });
 
@@ -63,7 +99,7 @@ describe("App workflow UI", () => {
 
     expect(await screen.findByText("No workflows yet")).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText("Workflow name"), "Login flow");
+    await userEvent.type(screen.getByLabelText("New workflow name"), "Login flow");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => {
@@ -71,6 +107,57 @@ describe("App workflow UI", () => {
         name: "Login flow",
       });
     });
+    expect(await screen.findByRole("button", { name: "Back to Workflows" }))
+      .toBeInTheDocument();
+  });
+
+  test("clears a previous workflow run error when creating a new workflow", async () => {
+    invokeMock.mockImplementation(async (command, args) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "get_workflow") {
+        const id = (args as { id: string }).id;
+        return id === "workflow-2"
+          ? { workflow: newWorkflow, steps: [] }
+          : { workflow, steps: [sleepStep] };
+      }
+      if (command === "run_workflow") {
+        return {
+          status: "failed",
+          mode: "run_workflow",
+          target_step_id: null,
+          current_step_id: null,
+          current_step_number: null,
+          completed_step_ids: [],
+          error: {
+            step_id: "step-1",
+            step_number: 1,
+            step_name: "Wait for page",
+            action_type: "sleep",
+            reason: "XPath not found",
+          },
+        };
+      }
+      if (command === "create_workflow") return newWorkflow;
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(screen.getByRole("button", { name: "Run Workflow" }));
+
+    expect(await screen.findByText("Failed at step 1: XPath not found"))
+      .toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
+    await userEvent.type(await screen.findByLabelText("New workflow name"), "Checkout flow");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByRole("heading", { name: "Checkout flow" }))
+      .toBeInTheDocument();
+    expect(screen.queryByText("Failed at step 1: XPath not found"))
+      .not.toBeInTheDocument();
   });
 
   test("opens builder and adds a sleep step", async () => {
@@ -87,7 +174,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     expect(await screen.findByText("Steps")).toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Action type"), "sleep");
@@ -114,7 +201,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     await userEvent.clear(await screen.findByLabelText("Seconds"));
     await userEvent.type(screen.getByLabelText("Seconds"), "0");
     await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
@@ -134,7 +221,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     expect(await screen.findByLabelText("Seconds")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Click/ }));
@@ -167,7 +254,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     await userEvent.click(screen.getByRole("button", { name: /Click/ }));
     await userEvent.clear(await screen.findByLabelText("Step name"));
     await userEvent.type(screen.getByLabelText("Step name"), "Submit login form");
@@ -236,7 +323,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     await userEvent.click(screen.getByRole("button", { name: /Click login button/ }));
     await userEvent.click(screen.getByRole("button", { name: "Test to Here" }));
 
@@ -271,7 +358,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
     const testToHere = screen.getByRole("button", { name: "Test to Here" });
     expect(testToHere).toHaveAttribute(
@@ -326,7 +413,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     await userEvent.click(screen.getByRole("button", { name: "Run Workflow" }));
 
     expect(screen.getByRole("button", { name: "Run Workflow" })).toBeDisabled();
@@ -351,7 +438,7 @@ describe("App workflow UI", () => {
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     await userEvent.click(screen.getByRole("button", { name: "Delete Step" }));
 
     expect(confirmSpy).toHaveBeenCalledWith("Delete this step?");
