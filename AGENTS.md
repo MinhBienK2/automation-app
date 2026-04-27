@@ -24,6 +24,11 @@ Expected flow:
 
 Exceptions: docs-only changes, formatting-only changes, comment-only changes, generated code, trivial configuration updates, and throwaway prototypes. If skipping TDD for a code change, state why in the final response.
 
+## Design System Requirement
+Before changing `src/App.css`, layout structure, or user-facing component styling, agents MUST read `DESIGN.md` and follow its design system for colors, typography, spacing, borders, radius, responsive behavior, and component treatment.
+
+Preserve the existing Supabase-inspired dark theme unless the user explicitly requests a different visual direction. For UI changes, final summaries should mention whether `DESIGN.md` was consulted and call out any intentional deviations.
+
 ## Project Structure
 - Frontend UI lives in `src/App.tsx` and `src/App.css`; tests use Vitest and Testing Library in `src/App.test.tsx`.
 - Tauri commands live in `src-tauri/src/commands.rs`; keep command-facing errors serializable through `CommandError`.
