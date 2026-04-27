@@ -19,11 +19,13 @@
 - Domain validation belongs in `src-tauri/src/domain/`; persistence belongs in `src-tauri/src/repositories/` and SQL migrations.
 - Browser execution code belongs in `src-tauri/src/runner/`; preserve stop/run state behavior when changing runner flow.
 - MVP plans and smoke checklist live under `docs/superpowers/` and `README.md`.
+- Design direction lives in `DESIGN.md`; reference it for visual styling, layout, typography, and component UI work.
 
 ## Key Conventions
 - Keep Rust domain types `Serialize`/`Deserialize` compatible with the TypeScript shapes used by Tauri `invoke`.
 - Add or update focused tests when changing validation, commands, persistence, runner behavior, or user-visible workflow UI.
 - Prefer existing action config variants and command names; update both Rust and TypeScript types when adding an action.
+- Read `DESIGN.md` before changing `src/App.css`, layout structure, or user-facing component styling.
 - Keep the desktop smoke checklist in `README.md` accurate when workflow behavior changes.
 
 ## Commit Attribution
