@@ -13,6 +13,17 @@
 | Rust single test | `cd src-tauri && cargo test test_name` |
 | Rust format check | `cd src-tauri && cargo fmt --check` |
 
+## TDD Requirement
+Before implementing any feature, bug fix, refactor, or behavior change, agents MUST use `.agents/skills/test-driven-development`.
+
+Expected flow:
+1. Add or update a focused failing test first.
+2. Run the relevant test and confirm it fails for the expected reason.
+3. Implement the smallest change needed.
+4. Re-run the focused test and relevant checks.
+
+Exceptions: docs-only changes, formatting-only changes, comment-only changes, generated code, trivial configuration updates, and throwaway prototypes. If skipping TDD for a code change, state why in the final response.
+
 ## Project Structure
 - Frontend UI lives in `src/App.tsx` and `src/App.css`; tests use Vitest and Testing Library in `src/App.test.tsx`.
 - Tauri commands live in `src-tauri/src/commands.rs`; keep command-facing errors serializable through `CommandError`.

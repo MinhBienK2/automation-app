@@ -11,10 +11,11 @@ Do not start the next mini-plan until the current mini-plan reaches its DONE gat
 For each mini-plan:
 
 1. Implement only that plan's scope.
-2. Run the listed checks.
-3. Fix failures inside the same scope.
-4. Commit the finished scope.
-5. Move to the next plan only after the DONE gate is satisfied.
+2. For behavior changes, start with `.agents/skills/test-driven-development` and include RED/GREEN verification in the task notes or final summary.
+3. Run the listed checks.
+4. Fix failures inside the same scope.
+5. Commit the finished scope.
+6. Move to the next plan only after the DONE gate is satisfied.
 
 ## Plan Order
 
