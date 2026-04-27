@@ -167,6 +167,21 @@ describe("App workflow UI", () => {
     expect(collapsedToggle).not.toHaveTextContent("Expand sidebar");
   });
 
+  test("renders the sidebar and scrollable content as separate layout regions", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole("complementary", { name: "Application sidebar" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Application content" }))
+      .toHaveClass("app-content");
+  });
+
   test("clears a previous workflow run error when creating a new workflow", async () => {
     invokeMock.mockImplementation(async (command, args) => {
       if (command === "list_workflows") return [workflow];

@@ -5,11 +5,11 @@ import type {
   RunState,
   WorkflowDetail,
   WorkflowStep,
-} from "../../types/workflow";
-import { PageHeader } from "../layout/PageHeader";
-import { RunStatusBar } from "./RunStatusBar";
-import { StepForm } from "./StepForm";
-import { StepList } from "./StepList";
+} from "../../../types/workflow";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { RunStatusBar } from "../components/RunStatusBar";
+import { StepForm } from "../components/StepForm";
+import { StepList } from "../components/StepList";
 
 type WorkflowDetailPageProps = {
   detail: WorkflowDetail;

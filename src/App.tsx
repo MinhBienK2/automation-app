@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { WorkflowDetailPage } from "./components/workflows/WorkflowDetailPage";
-import { WorkflowListPage } from "./components/workflows/WorkflowListPage";
-import { TestStepMonitor } from "./components/workflows/TestStepMonitor";
+import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
+import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
+import { TestStepMonitor } from "./features/workflows/components/TestStepMonitor";
+import { AppShell } from "./layouts/AppShell";
 import {
   addStep as addWorkflowStep,
   createWorkflow as createWorkflowCommand,
@@ -35,58 +36,6 @@ import "./App.css";
 
 type AppScreen = "list" | "detail";
 type WorkflowDialogMode = "create" | "edit" | null;
-
-function WorkflowNavIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="sidebar-item-icon"
-      fill="none"
-      height="18"
-      viewBox="0 0 18 18"
-      width="18"
-    >
-      <path
-        d="M4 4.5h10M4 9h10M4 13.5h10"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
-
-function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className="sidebar-toggle-icon"
-      data-testid="sidebar-toggle-icon"
-      fill="none"
-      height="18"
-      viewBox="0 0 18 18"
-      width="18"
-    >
-      {collapsed ? (
-        <path
-          d="M7 4.5 11.5 9 7 13.5"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.8"
-        />
-      ) : (
-        <path
-          d="M11 4.5 6.5 9l4.5 4.5"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.8"
-        />
-      )}
-    </svg>
-  );
-}
 
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
@@ -334,88 +283,64 @@ function App() {
   const isRunning = runState.status === "running";
 
   return (
-    <main className={sidebarCollapsed ? "app-shell app-shell-collapsed" : "app-shell"}>
-      <aside className="app-sidebar">
-        <div className="sidebar-brand">
-          <span className="sidebar-mark">W</span>
-          <span className="sidebar-title">Workflow Manager</span>
-        </div>
-        <nav aria-label="Main navigation" className="sidebar-nav">
-          <button
-            className="sidebar-nav-item sidebar-nav-item-active"
-            type="button"
-            onClick={backToList}
-          >
-            <WorkflowNavIcon />
-            <span>Workflows</span>
-          </button>
-        </nav>
-        <button
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!sidebarCollapsed}
-          className="sidebar-toggle"
-          type="button"
-          onClick={() => setSidebarCollapsed((current) => !current)}
-        >
-          <SidebarToggleIcon collapsed={sidebarCollapsed} />
-        </button>
-      </aside>
-
-      <section className="app-content">
-        {screen === "detail" && detail ? (
-          <>
-            <WorkflowDetailPage
-              detail={detail}
-              selectedStep={selectedStep}
-              selectedStepId={selectedStepId}
-              newActionType={newActionType}
-              isRunning={isRunning}
-              appError={appError}
-              runState={runState}
-              onBack={backToList}
-              onSelectStep={setSelectedStepId}
-              onNewActionTypeChange={setNewActionType}
-              onAddStep={addStep}
-              onDeleteStep={deleteStep}
-              onSaveStep={async (stepId, name, config: ActionConfig) => {
-                setAppError("");
-                await updateStep(stepId, name, config);
-                await reloadSelectedWorkflow(stepId);
-              }}
-              onRunWorkflow={runWorkflow}
-              onTestStep={testStep}
-              onTestAllSteps={testAllSteps}
-              onStopRun={stopRun}
-              onDragEnd={handleDragEnd}
-            />
-            {monitorOpen ? (
-              <TestStepMonitor
-                runState={runState}
-                scope={monitorScope}
-                steps={detail.steps.filter((step) => monitorStepIds.includes(step.id))}
-                totalSteps={detail.steps.length}
-                onClose={() => setMonitorOpen(false)}
-                onStop={stopRun}
-              />
-            ) : null}
-          </>
-        ) : (
-          <WorkflowListPage
-            workflows={workflows}
-            workflowDialogMode={workflowDialogMode}
-            workflowNameDraft={workflowNameDraft}
+    <AppShell
+      sidebarCollapsed={sidebarCollapsed}
+      onBackToList={backToList}
+      onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
+    >
+      {screen === "detail" && detail ? (
+        <>
+          <WorkflowDetailPage
+            detail={detail}
+            selectedStep={selectedStep}
+            selectedStepId={selectedStepId}
+            newActionType={newActionType}
+            isRunning={isRunning}
             appError={appError}
-            onWorkflowNameDraftChange={setWorkflowNameDraft}
-            onSubmitWorkflowDialog={submitWorkflowDialog}
-            onOpenCreateWorkflow={openCreateWorkflowDialog}
-            onOpenEditWorkflow={openEditWorkflowDialog}
-            onCloseWorkflowDialog={closeWorkflowDialog}
-            onOpenWorkflow={openWorkflow}
-            onDeleteWorkflow={deleteWorkflow}
+            runState={runState}
+            onBack={backToList}
+            onSelectStep={setSelectedStepId}
+            onNewActionTypeChange={setNewActionType}
+            onAddStep={addStep}
+            onDeleteStep={deleteStep}
+            onSaveStep={async (stepId, name, config: ActionConfig) => {
+              setAppError("");
+              await updateStep(stepId, name, config);
+              await reloadSelectedWorkflow(stepId);
+            }}
+            onRunWorkflow={runWorkflow}
+            onTestStep={testStep}
+            onTestAllSteps={testAllSteps}
+            onStopRun={stopRun}
+            onDragEnd={handleDragEnd}
           />
-        )}
-      </section>
-    </main>
+          {monitorOpen ? (
+            <TestStepMonitor
+              runState={runState}
+              scope={monitorScope}
+              steps={detail.steps.filter((step) => monitorStepIds.includes(step.id))}
+              totalSteps={detail.steps.length}
+              onClose={() => setMonitorOpen(false)}
+              onStop={stopRun}
+            />
+          ) : null}
+        </>
+      ) : (
+        <WorkflowListPage
+          workflows={workflows}
+          workflowDialogMode={workflowDialogMode}
+          workflowNameDraft={workflowNameDraft}
+          appError={appError}
+          onWorkflowNameDraftChange={setWorkflowNameDraft}
+          onSubmitWorkflowDialog={submitWorkflowDialog}
+          onOpenCreateWorkflow={openCreateWorkflowDialog}
+          onOpenEditWorkflow={openEditWorkflowDialog}
+          onCloseWorkflowDialog={closeWorkflowDialog}
+          onOpenWorkflow={openWorkflow}
+          onDeleteWorkflow={deleteWorkflow}
+        />
+      )}
+    </AppShell>
   );
 }
 

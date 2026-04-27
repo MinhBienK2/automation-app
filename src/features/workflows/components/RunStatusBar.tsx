@@ -1,4 +1,4 @@
-import type { RunState } from "../../types/workflow";
+import type { RunState } from "../../../types/workflow";
 
 type RunStatusBarProps = {
   state: RunState;

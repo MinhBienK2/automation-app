@@ -17,6 +17,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow: hidden;
   background: #171717;
 }
 
@@ -149,7 +150,8 @@ small {
 .app-shell {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #171717;
 }
 
@@ -163,7 +165,9 @@ small {
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 18px;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   padding: 18px 12px;
   border-right: 1px solid #242424;
   background: #0f0f0f;
@@ -259,7 +263,10 @@ small {
 }
 
 .app-content {
+  height: 100vh;
   min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .app-screen {

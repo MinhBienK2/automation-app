@@ -14,8 +14,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { ActionType, WorkflowStep } from "../../types/workflow";
-import { actionLabels, actionOptions, stepSummary } from "../../lib/workflowUi";
+import type { ActionType, WorkflowStep } from "../../../types/workflow";
+import { actionLabels, actionOptions, stepSummary } from "../../../lib/workflowUi";
 
 type StepListProps = {
   steps: WorkflowStep[];

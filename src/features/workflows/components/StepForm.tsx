@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { ActionConfig, WorkflowStep } from "../../types/workflow";
-import { actionLabels, commandMessage } from "../../lib/workflowUi";
+import type { ActionConfig, WorkflowStep } from "../../../types/workflow";
+import { actionLabels, commandMessage } from "../../../lib/workflowUi";
 
 type StepFormProps = {
   step: WorkflowStep;

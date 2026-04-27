@@ -1,10 +1,10 @@
-import type { RunState, WorkflowStep } from "../../types/workflow";
+import type { RunState, WorkflowStep } from "../../../types/workflow";
 import {
   actionLabels,
   monitorStepStatus,
   stepSummary,
   suggestionsFor,
-} from "../../lib/workflowUi";
+} from "../../../lib/workflowUi";
 
 type TestStepMonitorProps = {
   steps: WorkflowStep[];

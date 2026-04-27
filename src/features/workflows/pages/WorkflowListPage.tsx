@@ -1,4 +1,4 @@
-import type { WorkflowSummary } from "../../types/workflow";
+import type { WorkflowSummary } from "../../../types/workflow";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
