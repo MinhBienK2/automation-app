@@ -238,7 +238,7 @@ describe("App workflow UI", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Open" }));
     await userEvent.click(screen.getByRole("button", { name: /Click login button/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Test Step" }));
+    await userEvent.click(screen.getByRole("button", { name: "Test to Here" }));
 
     const monitor = await screen.findByRole("dialog", { name: "Test Step Monitor" });
     expect(monitor).toBeInTheDocument();
@@ -250,6 +250,56 @@ describe("App workflow UI", () => {
       .toBeInTheDocument();
     expect(screen.getByText("Add a Sleep step before this step if the element loads slowly."))
       .toBeInTheDocument();
+  });
+
+  test("explains selected-step testing and can test all steps", async () => {
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_workflow") return { workflow, steps: [sleepStep, clickStep] };
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "test_step") return {
+        status: "running",
+        mode: "test_step",
+        target_step_id: "step-2",
+        current_step_id: "step-1",
+        current_step_number: 1,
+        completed_step_ids: [],
+        error: null,
+      };
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+
+    const testToHere = screen.getByRole("button", { name: "Test to Here" });
+    expect(testToHere).toHaveAttribute(
+      "title",
+      "Runs from step 1 through the selected step.",
+    );
+    expect(screen.getByRole("button", { name: "Test All" })).toHaveAttribute(
+      "title",
+      "Runs every step in this workflow.",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Click login button/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Test All" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("test_step", {
+        workflowId: "workflow-1",
+        stepId: "step-2",
+      });
+    });
+
+    const monitor = await screen.findByRole("dialog", { name: "Test Step Monitor" });
+    expect(within(monitor).getByText("Testing steps 1-2 of 2")).toBeInTheDocument();
+    expect(
+      within(monitor).getByText(
+        "This test runs every step in the workflow.",
+      ),
+    ).toBeInTheDocument();
   });
 
   test("disables run actions while running and polls final failure", async () => {
@@ -280,7 +330,8 @@ describe("App workflow UI", () => {
     await userEvent.click(screen.getByRole("button", { name: "Run Workflow" }));
 
     expect(screen.getByRole("button", { name: "Run Workflow" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Test Step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Test to Here" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Test All" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
 
     expect(

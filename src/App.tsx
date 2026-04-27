@@ -116,6 +116,7 @@ function App() {
   });
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [monitorStepIds, setMonitorStepIds] = useState<string[]>([]);
+  const [monitorScope, setMonitorScope] = useState("");
   const [newWorkflowName, setNewWorkflowName] = useState("");
   const [newActionType, setNewActionType] = useState<ActionType>("open_url");
   const [appError, setAppError] = useState("");
@@ -238,18 +239,19 @@ function App() {
     }
   }
 
-  async function testStep() {
-    if (!detail || !selectedStepId) return;
+  async function testStep(targetStepId = selectedStepId, scope = "selected") {
+    if (!detail || !targetStepId) return;
     setAppError("");
-    const selectedIndex = detail.steps.findIndex((step) => step.id === selectedStepId);
+    const selectedIndex = detail.steps.findIndex((step) => step.id === targetStepId);
     if (selectedIndex < 0) return;
     setMonitorStepIds(detail.steps.slice(0, selectedIndex + 1).map((step) => step.id));
+    setMonitorScope(scope);
     setMonitorOpen(true);
 
     try {
       const state = await invoke<RunState>("test_step", {
         workflowId: detail.workflow.id,
-        stepId: selectedStepId,
+        stepId: targetStepId,
       });
       setRunState(normalizeRunState(state));
     } catch (error) {
@@ -266,6 +268,11 @@ function App() {
     } catch (error) {
       setAppError(commandMessage(error));
     }
+  }
+
+  async function testAllSteps() {
+    if (!detail?.steps.length) return;
+    await testStep(detail.steps[detail.steps.length - 1].id, "all");
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -329,13 +336,16 @@ function App() {
               }}
               onRunWorkflow={runWorkflow}
               onTestStep={testStep}
+              onTestAllSteps={testAllSteps}
               onStopRun={stopRun}
               onDragEnd={handleDragEnd}
             />
             {monitorOpen ? (
               <TestStepMonitor
                 runState={runState}
+                scope={monitorScope}
                 steps={detail.steps.filter((step) => monitorStepIds.includes(step.id))}
+                totalSteps={detail.steps.length}
                 onClose={() => setMonitorOpen(false)}
                 onStop={stopRun}
               />
@@ -444,6 +454,7 @@ type WorkflowBuilderProps = {
   onSaveStep: (stepId: string, name: string, config: ActionConfig) => Promise<void>;
   onRunWorkflow: () => void;
   onTestStep: () => void;
+  onTestAllSteps: () => void;
   onStopRun: () => void;
   onDragEnd: (event: DragEndEvent) => void;
 };
@@ -465,6 +476,7 @@ function WorkflowBuilder({
   onSaveStep,
   onRunWorkflow,
   onTestStep,
+  onTestAllSteps,
   onStopRun,
   onDragEnd,
 }: WorkflowBuilderProps) {
@@ -499,10 +511,19 @@ function WorkflowBuilder({
           </button>
           <button
             type="button"
-            onClick={onTestStep}
+            onClick={() => onTestStep()}
+            title="Runs from step 1 through the selected step."
             disabled={isRunning || !selectedStep}
           >
-            Test Step
+            Test to Here
+          </button>
+          <button
+            type="button"
+            onClick={onTestAllSteps}
+            title="Runs every step in this workflow."
+            disabled={isRunning || detail.steps.length === 0}
+          >
+            Test All
           </button>
           {isRunning ? (
             <button type="button" onClick={onStopRun}>
@@ -814,6 +835,8 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
 
 type TestStepMonitorProps = {
   steps: WorkflowStep[];
+  totalSteps: number;
+  scope: string;
   runState: RunState;
   onClose: () => void;
   onStop: () => void;
@@ -821,6 +844,8 @@ type TestStepMonitorProps = {
 
 function TestStepMonitor({
   steps,
+  totalSteps,
+  scope,
   runState,
   onClose,
   onStop,
@@ -859,6 +884,14 @@ function TestStepMonitor({
         <div className="monitor-grid">
           <section className="monitor-progress">
             <h3>Step Progress</h3>
+            <p className="monitor-range">
+              Testing steps 1-{steps.length} of {totalSteps}
+            </p>
+            <p className="monitor-range">
+              {scope === "all"
+                ? "This test runs every step in the workflow."
+                : "This test runs from step 1 through the selected step only."}
+            </p>
             <div className="monitor-step-list">
               {steps.map((step, index) => {
                 const status = monitorStepStatus(step, runState);
