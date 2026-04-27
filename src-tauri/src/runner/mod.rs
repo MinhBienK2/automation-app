@@ -44,6 +44,12 @@ pub struct RunnerOutcome {
     pub session: BrowserSession,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RunnerProgress {
+    StepStarted { step_number: usize },
+    StepCompleted { step_number: usize },
+}
+
 #[derive(Debug, Clone)]
 pub struct RunnerCancellation {
     inner: Arc<CancellationInner>,
@@ -103,6 +109,16 @@ impl BrowserRunner {
         steps: Vec<ActionConfig>,
         cancellation: RunnerCancellation,
     ) -> Result<RunnerOutcome, RunnerError> {
+        self.run_steps_with_progress(steps, cancellation, |_| {})
+            .await
+    }
+
+    pub async fn run_steps_with_progress(
+        &self,
+        steps: Vec<ActionConfig>,
+        cancellation: RunnerCancellation,
+        mut progress: impl FnMut(RunnerProgress) + Send,
+    ) -> Result<RunnerOutcome, RunnerError> {
         let session = BrowserSession::launch(&self.options).await?;
 
         for (index, step) in steps.into_iter().enumerate() {
@@ -115,10 +131,13 @@ impl BrowserRunner {
             }
 
             let step_number = index + 1;
+            progress(RunnerProgress::StepStarted { step_number });
             let result = execute_action(&session.page, step, &cancellation).await;
 
             match result {
-                Ok(ActionExecution::Complete) => {}
+                Ok(ActionExecution::Complete) => {
+                    progress(RunnerProgress::StepCompleted { step_number });
+                }
                 Ok(ActionExecution::Stopped) => {
                     return Ok(RunnerOutcome {
                         status: RunnerStatus::Stopped,

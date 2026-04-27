@@ -68,6 +68,7 @@ async fn step_config_round_trips_through_json() {
 
     repo.update_step(
         &step.id,
+        "Scroll page",
         ActionConfig::Scroll {
             direction: ScrollDirection::Down,
             pixels: 500,

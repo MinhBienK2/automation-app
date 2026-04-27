@@ -4,11 +4,11 @@ use tauri::State;
 use crate::{
     app_state::{AppState, RunStateDto},
     domain::{
-        ActionConfig, ActionType, RunError, RunStatus, ScrollDirection, ValidationError, Workflow,
-        WorkflowStep,
+        ActionConfig, ActionType, RunError, RunMode, RunStatus, ScrollDirection, ValidationError,
+        Workflow, WorkflowStep,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
-    runner::{BrowserRunner, RunnerOptions, RunnerOutcome, RunnerStatus},
+    runner::{BrowserRunner, RunnerOptions, RunnerOutcome, RunnerProgress, RunnerStatus},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,13 +107,14 @@ pub async fn add_step_impl(
 pub async fn update_step_impl(
     state: &AppState,
     step_id: &str,
+    name: &str,
     config: ActionConfig,
 ) -> Result<(), CommandError> {
     config.validate().map_err(CommandError::validation)?;
 
     state
         .repository()
-        .update_step(step_id, config)
+        .update_step(step_id, name, config)
         .await
         .map_err(CommandError::from)
 }
@@ -153,7 +154,7 @@ pub async fn run_workflow_impl(
         .map_err(CommandError::from)?
         .ok_or_else(|| CommandError::message("Workflow not found"))?;
 
-    start_background_run(state, detail.steps).await
+    start_background_run(state, detail.steps, RunMode::RunWorkflow, None).await
 }
 
 pub async fn test_step_impl(
@@ -173,7 +174,13 @@ pub async fn test_step_impl(
         .position(|step| step.id == step_id)
         .ok_or_else(|| CommandError::message("Step not found"))?;
 
-    start_background_run(state, detail.steps[..=selected_index].to_vec()).await
+    start_background_run(
+        state,
+        detail.steps[..=selected_index].to_vec(),
+        RunMode::TestStep,
+        Some(step_id.to_string()),
+    )
+    .await
 }
 
 pub async fn stop_run_impl(state: &AppState) -> Result<RunStateDto, CommandError> {
@@ -233,9 +240,10 @@ pub async fn add_step(
 pub async fn update_step(
     state: State<'_, AppState>,
     step_id: String,
+    name: String,
     config: ActionConfig,
 ) -> Result<(), CommandError> {
-    update_step_impl(&state, &step_id, config).await
+    update_step_impl(&state, &step_id, &name, config).await
 }
 
 #[tauri::command]
@@ -300,9 +308,11 @@ fn default_config(action_type: ActionType) -> ActionConfig {
 async fn start_background_run(
     state: &AppState,
     steps: Vec<WorkflowStep>,
+    mode: RunMode,
+    target_step_id: Option<String>,
 ) -> Result<RunStateDto, CommandError> {
     let cancellation = state
-        .begin_run()
+        .begin_run(mode, target_step_id)
         .await
         .ok_or_else(|| CommandError::message("A workflow is already running"))?;
     let run_state = state.run_state().await;
@@ -317,7 +327,34 @@ async fn start_background_run(
             headed: true,
             chrome_executable: None,
         });
-        let result = runner.run_steps(action_configs, cancellation).await;
+        let (progress_tx, mut progress_rx) =
+            tokio::sync::mpsc::unbounded_channel::<RunnerProgress>();
+        let progress_state = task_state.clone();
+        let progress_steps = steps.clone();
+        let progress_task = tokio::spawn(async move {
+            while let Some(progress) = progress_rx.recv().await {
+                match progress {
+                    RunnerProgress::StepStarted { step_number } => {
+                        if let Some(step) = progress_steps.get(step_number.saturating_sub(1)) {
+                            progress_state
+                                .mark_step_running(step.id.clone(), step_number)
+                                .await;
+                        }
+                    }
+                    RunnerProgress::StepCompleted { step_number } => {
+                        if let Some(step) = progress_steps.get(step_number.saturating_sub(1)) {
+                            progress_state.mark_step_completed(step.id.clone()).await;
+                        }
+                    }
+                }
+            }
+        });
+        let result = runner
+            .run_steps_with_progress(action_configs, cancellation, move |progress| {
+                let _ = progress_tx.send(progress);
+            })
+            .await;
+        let _ = progress_task.await;
         complete_background_run(task_state, steps, result).await;
     });
 
@@ -337,16 +374,25 @@ async fn complete_background_run(
                 RunnerStatus::Failed => {
                     let failed_step = outcome.failed_step.as_ref();
                     let error = failed_step.map(|failed_step| {
-                        let action_type = steps
+                        let step = steps
                             .get(failed_step.step_number.saturating_sub(1))
-                            .map(|step| step.action_type.as_str())
-                            .unwrap_or("unknown");
+                            .cloned();
 
-                        RunError::new(
-                            failed_step.step_number,
-                            action_type,
-                            failed_step.reason.clone(),
-                        )
+                        if let Some(step) = step {
+                            RunError::for_step(
+                                step.id,
+                                failed_step.step_number,
+                                step.name,
+                                step.action_type.as_str(),
+                                failed_step.reason.clone(),
+                            )
+                        } else {
+                            RunError::new(
+                                failed_step.step_number,
+                                "unknown",
+                                failed_step.reason.clone(),
+                            )
+                        }
                     });
                     (RunStatus::Failed, error)
                 }

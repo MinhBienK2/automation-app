@@ -22,6 +22,16 @@ impl ActionType {
             Self::Scroll => "scroll",
         }
     }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::OpenUrl => "Open URL",
+            Self::Sleep => "Sleep",
+            Self::TypeText => "Type Text",
+            Self::Click => "Click",
+            Self::Scroll => "Scroll",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

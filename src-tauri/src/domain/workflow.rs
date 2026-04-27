@@ -35,6 +35,7 @@ impl Workflow {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkflowStep {
     pub id: String,
+    pub name: String,
     pub workflow_id: String,
     pub order_index: i64,
     pub action_type: ActionType,
@@ -50,6 +51,7 @@ impl WorkflowStep {
 
         Self {
             id: Uuid::new_v4().to_string(),
+            name: action_type.label().to_string(),
             workflow_id: workflow_id.into(),
             order_index,
             action_type,

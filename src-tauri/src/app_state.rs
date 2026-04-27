@@ -4,7 +4,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     db::{create_sqlite_pool, run_migrations},
-    domain::{RunError, RunStatus},
+    domain::{RunError, RunMode, RunStatus},
     repositories::WorkflowRepository,
     runner::{BrowserSession, RunnerCancellation},
 };
@@ -30,7 +30,26 @@ pub struct ActiveRun {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RunStateDto {
     pub status: RunStatus,
+    pub mode: RunMode,
+    pub target_step_id: Option<String>,
+    pub current_step_id: Option<String>,
+    pub current_step_number: Option<usize>,
+    pub completed_step_ids: Vec<String>,
     pub error: Option<crate::domain::RunError>,
+}
+
+impl RunStateDto {
+    fn idle() -> Self {
+        Self {
+            status: RunStatus::Idle,
+            mode: RunMode::None,
+            target_step_id: None,
+            current_step_id: None,
+            current_step_number: None,
+            completed_step_ids: Vec::new(),
+            error: None,
+        }
+    }
 }
 
 impl AppState {
@@ -41,10 +60,7 @@ impl AppState {
         Ok(Self {
             inner: Arc::new(AppStateInner {
                 repository: WorkflowRepository::new(pool),
-                run_state: Mutex::new(RunStateDto {
-                    status: RunStatus::Idle,
-                    error: None,
-                }),
+                run_state: Mutex::new(RunStateDto::idle()),
                 active_run: Mutex::new(None),
                 retained_sessions: Mutex::new(Vec::new()),
             }),
@@ -59,7 +75,11 @@ impl AppState {
         self.inner.run_state.lock().await.clone()
     }
 
-    pub async fn begin_run(&self) -> Option<RunnerCancellation> {
+    pub async fn begin_run(
+        &self,
+        mode: RunMode,
+        target_step_id: Option<String>,
+    ) -> Option<RunnerCancellation> {
         let mut active_run = self.inner.active_run.lock().await;
         if active_run.is_some() {
             return None;
@@ -71,6 +91,11 @@ impl AppState {
         });
         *self.inner.run_state.lock().await = RunStateDto {
             status: RunStatus::Running,
+            mode,
+            target_step_id,
+            current_step_id: None,
+            current_step_number: None,
+            completed_step_ids: Vec::new(),
             error: None,
         };
 
@@ -82,8 +107,14 @@ impl AppState {
         let active_run = active_run.as_ref()?;
         active_run.cancellation.cancel();
 
+        let current = self.inner.run_state.lock().await.clone();
         let stopped = RunStateDto {
             status: RunStatus::Stopped,
+            mode: current.mode,
+            target_step_id: current.target_step_id,
+            current_step_id: current.current_step_id,
+            current_step_number: current.current_step_number,
+            completed_step_ids: current.completed_step_ids,
             error: None,
         };
         *self.inner.run_state.lock().await = stopped.clone();
@@ -99,15 +130,33 @@ impl AppState {
     ) {
         self.inner.retained_sessions.lock().await.push(session);
         *self.inner.active_run.lock().await = None;
-        *self.inner.run_state.lock().await = RunStateDto { status, error };
+        let mut run_state = self.inner.run_state.lock().await;
+        run_state.status = status;
+        run_state.current_step_id = None;
+        run_state.current_step_number = None;
+        run_state.error = error;
     }
 
     pub async fn fail_run_without_session(&self, error: RunError) {
         *self.inner.active_run.lock().await = None;
-        *self.inner.run_state.lock().await = RunStateDto {
-            status: RunStatus::Failed,
-            error: Some(error),
-        };
+        let mut run_state = self.inner.run_state.lock().await;
+        run_state.status = RunStatus::Failed;
+        run_state.current_step_id = None;
+        run_state.current_step_number = None;
+        run_state.error = Some(error);
+    }
+
+    pub async fn mark_step_running(&self, step_id: String, step_number: usize) {
+        let mut run_state = self.inner.run_state.lock().await;
+        run_state.current_step_id = Some(step_id);
+        run_state.current_step_number = Some(step_number);
+    }
+
+    pub async fn mark_step_completed(&self, step_id: String) {
+        let mut run_state = self.inner.run_state.lock().await;
+        if !run_state.completed_step_ids.contains(&step_id) {
+            run_state.completed_step_ids.push(step_id);
+        }
     }
 }
 

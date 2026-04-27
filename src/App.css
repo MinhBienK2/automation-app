@@ -93,7 +93,9 @@ label {
 }
 
 h1,
-h2 {
+h2,
+h3,
+h4 {
   margin: 0;
   color: #111827;
   letter-spacing: 0;
@@ -106,6 +108,14 @@ h1 {
 
 h2 {
   font-size: 20px;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+h4 {
+  font-size: 14px;
 }
 
 p {
@@ -272,4 +282,157 @@ p {
 .secondary-danger {
   border-color: #fecaca;
   background: #fff1f2;
+}
+
+.monitor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 58%);
+}
+
+.monitor-dialog {
+  display: grid;
+  gap: 18px;
+  width: min(960px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #171717;
+  color: #fafafa;
+}
+
+.monitor-dialog h2,
+.monitor-dialog h3,
+.monitor-dialog h4,
+.monitor-dialog strong {
+  color: #fafafa;
+}
+
+.monitor-dialog p,
+.monitor-dialog small,
+.monitor-dialog li,
+.monitor-dialog em {
+  color: #b4b4b4;
+}
+
+.monitor-header,
+.monitor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monitor-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 16px;
+}
+
+.monitor-progress,
+.monitor-detail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.monitor-step-list {
+  display: grid;
+  gap: 8px;
+}
+
+.monitor-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  background: #171717;
+}
+
+.monitor-step span {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #242424;
+  color: #fafafa;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.monitor-step strong,
+.monitor-step small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-step em {
+  font-style: normal;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.monitor-step-running {
+  border-color: rgba(62, 207, 142, 0.55);
+}
+
+.monitor-step-passed span {
+  background: #0f766e;
+}
+
+.monitor-step-failed {
+  border-color: #991b1b;
+}
+
+.monitor-step-failed span {
+  background: #991b1b;
+}
+
+.monitor-error,
+.monitor-success,
+.monitor-stopped {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #363636;
+  border-radius: 6px;
+  background: #171717;
+}
+
+.monitor-error {
+  border-color: #991b1b;
+}
+
+.monitor-error ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.monitor-actions {
+  justify-content: end;
+}
+
+@media (max-width: 760px) {
+  .monitor-grid {
+    grid-template-columns: 1fr;
+  }
 }

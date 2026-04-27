@@ -21,6 +21,7 @@ import "./App.css";
 
 type ActionType = "open_url" | "sleep" | "type_text" | "click" | "scroll";
 type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
+type RunMode = "none" | "run_workflow" | "test_step";
 
 type WorkflowSummary = {
   id: string;
@@ -46,6 +47,7 @@ type ActionConfig =
 
 type WorkflowStep = {
   id: string;
+  name: string;
   workflow_id: string;
   order_index: number;
   action_type: ActionType;
@@ -61,8 +63,15 @@ type WorkflowDetail = {
 
 type RunState = {
   status: RunStatus;
+  mode: RunMode;
+  target_step_id: string | null;
+  current_step_id: string | null;
+  current_step_number: number | null;
+  completed_step_ids: string[];
   error: null | {
+    step_id?: string | null;
     step_number: number;
+    step_name?: string | null;
     action_type: string;
     reason: string;
   };
@@ -98,8 +107,15 @@ function App() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [runState, setRunState] = useState<RunState>({
     status: "idle",
+    mode: "none",
+    target_step_id: null,
+    current_step_id: null,
+    current_step_number: null,
+    completed_step_ids: [],
     error: null,
   });
+  const [monitorOpen, setMonitorOpen] = useState(false);
+  const [monitorStepIds, setMonitorStepIds] = useState<string[]>([]);
   const [newWorkflowName, setNewWorkflowName] = useState("");
   const [newActionType, setNewActionType] = useState<ActionType>("open_url");
   const [appError, setAppError] = useState("");
@@ -126,7 +142,7 @@ function App() {
 
   async function refreshRunState() {
     const state = await invoke<RunState>("get_run_state");
-    setRunState(state);
+    setRunState(normalizeRunState(state));
   }
 
   async function openWorkflow(id: string, preferredStepId?: string | null) {
@@ -216,7 +232,7 @@ function App() {
       const state = await invoke<RunState>("run_workflow", {
         workflowId: detail.workflow.id,
       });
-      setRunState(state);
+      setRunState(normalizeRunState(state));
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -225,13 +241,17 @@ function App() {
   async function testStep() {
     if (!detail || !selectedStepId) return;
     setAppError("");
+    const selectedIndex = detail.steps.findIndex((step) => step.id === selectedStepId);
+    if (selectedIndex < 0) return;
+    setMonitorStepIds(detail.steps.slice(0, selectedIndex + 1).map((step) => step.id));
+    setMonitorOpen(true);
 
     try {
       const state = await invoke<RunState>("test_step", {
         workflowId: detail.workflow.id,
         stepId: selectedStepId,
       });
-      setRunState(state);
+      setRunState(normalizeRunState(state));
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -242,7 +262,7 @@ function App() {
 
     try {
       const state = await invoke<RunState>("stop_run");
-      setRunState(state);
+      setRunState(normalizeRunState(state));
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -285,32 +305,42 @@ function App() {
 
       <section className="builder-panel">
         {detail ? (
-          <WorkflowBuilder
-            detail={detail}
-            selectedStep={selectedStep}
-            selectedStepId={selectedStepId}
-            newActionType={newActionType}
-            isRunning={isRunning}
-            appError={appError}
-            runState={runState}
-            onWorkflowNameChange={(name) =>
-              setDetail({ ...detail, workflow: { ...detail.workflow, name } })
-            }
-            onRenameWorkflow={renameWorkflow}
-            onSelectStep={setSelectedStepId}
-            onNewActionTypeChange={setNewActionType}
-            onAddStep={addStep}
-            onDeleteStep={deleteStep}
-            onSaveStep={async (stepId, config) => {
-              setAppError("");
-              await invoke("update_step", { stepId, config });
-              await reloadSelectedWorkflow(stepId);
-            }}
-            onRunWorkflow={runWorkflow}
-            onTestStep={testStep}
-            onStopRun={stopRun}
-            onDragEnd={handleDragEnd}
-          />
+          <>
+            <WorkflowBuilder
+              detail={detail}
+              selectedStep={selectedStep}
+              selectedStepId={selectedStepId}
+              newActionType={newActionType}
+              isRunning={isRunning}
+              appError={appError}
+              runState={runState}
+              onWorkflowNameChange={(name) =>
+                setDetail({ ...detail, workflow: { ...detail.workflow, name } })
+              }
+              onRenameWorkflow={renameWorkflow}
+              onSelectStep={setSelectedStepId}
+              onNewActionTypeChange={setNewActionType}
+              onAddStep={addStep}
+              onDeleteStep={deleteStep}
+              onSaveStep={async (stepId, name, config) => {
+                setAppError("");
+                await invoke("update_step", { stepId, name, config });
+                await reloadSelectedWorkflow(stepId);
+              }}
+              onRunWorkflow={runWorkflow}
+              onTestStep={testStep}
+              onStopRun={stopRun}
+              onDragEnd={handleDragEnd}
+            />
+            {monitorOpen ? (
+              <TestStepMonitor
+                runState={runState}
+                steps={detail.steps.filter((step) => monitorStepIds.includes(step.id))}
+                onClose={() => setMonitorOpen(false)}
+                onStop={stopRun}
+              />
+            ) : null}
+          </>
         ) : (
           <div className="empty-builder">
             <h2>Workflow Builder</h2>
@@ -411,7 +441,7 @@ type WorkflowBuilderProps = {
   onNewActionTypeChange: (actionType: ActionType) => void;
   onAddStep: (event: React.FormEvent) => void;
   onDeleteStep: (stepId: string) => void;
-  onSaveStep: (stepId: string, config: ActionConfig) => Promise<void>;
+  onSaveStep: (stepId: string, name: string, config: ActionConfig) => Promise<void>;
   onRunWorkflow: () => void;
   onTestStep: () => void;
   onStopRun: () => void;
@@ -576,8 +606,10 @@ function SortableStepItem({
         onClick={() => onSelectStep(step.id)}
       >
         <span>{index + 1}</span>
-        <strong>{actionLabels[step.action_type]}</strong>
-        <small>{stepSummary(step)}</small>
+        <strong>{step.name || actionLabels[step.action_type]}</strong>
+        <small>
+          {actionLabels[step.action_type]} · {stepSummary(step)}
+        </small>
       </button>
       <button
         aria-label={`Drag step ${index + 1}`}
@@ -595,10 +627,11 @@ function SortableStepItem({
 type StepFormProps = {
   step: WorkflowStep;
   onDeleteStep: (stepId: string) => void;
-  onSaveStep: (stepId: string, config: ActionConfig) => Promise<void>;
+  onSaveStep: (stepId: string, name: string, config: ActionConfig) => Promise<void>;
 };
 
 function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
+  const [name, setName] = useState(step.name || actionLabels[step.action_type]);
   const [config, setConfig] = useState<ActionConfig>(step.config);
   const [fieldError, setFieldError] = useState("");
 
@@ -607,7 +640,7 @@ function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
     setFieldError("");
 
     try {
-      await onSaveStep(step.id, config);
+      await onSaveStep(step.id, name, config);
     } catch (error) {
       setFieldError(commandMessage(error));
     }
@@ -619,6 +652,14 @@ function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
         <p className="eyebrow">Step Detail</p>
         <h2>{actionLabels[step.action_type]}</h2>
       </div>
+
+      <label>
+        Step name
+        <input
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+        />
+      </label>
 
       <ActionFields config={config} onChange={setConfig} />
 
@@ -771,6 +812,119 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
   }
 }
 
+type TestStepMonitorProps = {
+  steps: WorkflowStep[];
+  runState: RunState;
+  onClose: () => void;
+  onStop: () => void;
+};
+
+function TestStepMonitor({
+  steps,
+  runState,
+  onClose,
+  onStop,
+}: TestStepMonitorProps) {
+  const activeStep =
+    steps.find((step) => step.id === runState.current_step_id) ??
+    steps.find((step) => step.id === runState.error?.step_id) ??
+    steps[steps.length - 1] ??
+    null;
+  const failedStep = runState.error
+    ? steps.find((step) => step.id === runState.error?.step_id) ?? activeStep
+    : null;
+  const detailStep = failedStep ?? activeStep;
+  const suggestions = runState.error
+    ? suggestionsFor(runState.error.reason, runState.error.action_type)
+    : [];
+
+  return (
+    <div className="monitor-backdrop">
+      <section
+        aria-modal="true"
+        aria-label="Test Step Monitor"
+        className="monitor-dialog"
+        role="dialog"
+      >
+        <div className="monitor-header">
+          <div>
+            <p className="eyebrow">Test Step</p>
+            <h2>Test Step Monitor</h2>
+          </div>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="monitor-grid">
+          <section className="monitor-progress">
+            <h3>Step Progress</h3>
+            <div className="monitor-step-list">
+              {steps.map((step, index) => {
+                const status = monitorStepStatus(step, runState);
+                return (
+                  <article className={`monitor-step monitor-step-${status}`} key={step.id}>
+                    <span>{index + 1}</span>
+                    <div>
+                      <strong>{step.name || actionLabels[step.action_type]}</strong>
+                      <small>{actionLabels[step.action_type]}</small>
+                    </div>
+                    <em>{status}</em>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="monitor-detail">
+            <h3>Step Detail</h3>
+            {detailStep ? (
+              <>
+                <strong>{detailStep.name || actionLabels[detailStep.action_type]}</strong>
+                <p>
+                  {actionLabels[detailStep.action_type]} · {stepSummary(detailStep)}
+                </p>
+              </>
+            ) : null}
+
+            {runState.status === "success" ? (
+              <p className="monitor-success">Test completed through selected step.</p>
+            ) : null}
+            {runState.status === "stopped" ? (
+              <p className="monitor-stopped">
+                Test stopped. Chromium remains open for inspection.
+              </p>
+            ) : null}
+            {runState.status === "failed" && runState.error ? (
+              <div className="monitor-error">
+                <strong>
+                  Failed at step {runState.error.step_number}:{" "}
+                  {runState.error.step_name ?? detailStep?.name ?? "Unknown step"}
+                </strong>
+                <p>Reason: {runState.error.reason}</p>
+                <h4>Suggestions</h4>
+                <ul>
+                  {suggestions.map((suggestion) => (
+                    <li key={suggestion}>{suggestion}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <div className="monitor-actions">
+          {runState.status === "running" ? (
+            <button type="button" onClick={onStop}>
+              Stop
+            </button>
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 type RunStatusBarProps = {
   state: RunState;
   error: string;
@@ -817,6 +971,64 @@ function commandMessage(error: unknown) {
   }
 
   return "Unexpected error";
+}
+
+function normalizeRunState(state: RunState): RunState {
+  return {
+    status: state.status,
+    mode: state.mode ?? "none",
+    target_step_id: state.target_step_id ?? null,
+    current_step_id: state.current_step_id ?? null,
+    current_step_number: state.current_step_number ?? null,
+    completed_step_ids: state.completed_step_ids ?? [],
+    error: state.error ?? null,
+  };
+}
+
+function monitorStepStatus(step: WorkflowStep, state: RunState) {
+  if (state.error?.step_id === step.id) return "failed";
+  if (state.current_step_id === step.id) return "running";
+  if (state.completed_step_ids.includes(step.id)) return "passed";
+  return "pending";
+}
+
+function suggestionsFor(reason: string, actionType: string) {
+  if (reason.includes("XPath not found")) {
+    return [
+      "Check the XPath in the Chromium window that remains open.",
+      "Add a Sleep step before this step if the element loads slowly.",
+      "Prefer XPath based on id, name, placeholder, text, or stable attributes.",
+      "Avoid absolute XPath such as /html/body/div[2]/...",
+    ];
+  }
+  if (reason.includes("Element cannot receive text")) {
+    return [
+      "Make sure the XPath points to an input, textarea, or editable element.",
+      "Check whether the XPath points to a label, div, button, or wrapper instead of the field.",
+    ];
+  }
+  if (reason.includes("URL") || actionType === "open_url") {
+    return [
+      "Use a full URL with http:// or https://.",
+      "Check for extra whitespace or missing characters.",
+    ];
+  }
+  if (reason.includes("Seconds")) {
+    return [
+      "Use a Sleep value greater than 0.",
+      "Try 0.5, 1, or 2 seconds depending on page speed.",
+    ];
+  }
+  if (reason.includes("Pixels")) {
+    return [
+      "Use a Scroll pixels value greater than 0.",
+      "Try 300 to 800 pixels for a single scroll.",
+    ];
+  }
+  return [
+    "Close old test browsers and try again.",
+    "Check that Chrome or Chromium can start on this machine.",
+  ];
 }
 
 export default App;

@@ -124,7 +124,7 @@ impl WorkflowRepository {
 
         let step_rows = sqlx::query(
             r#"
-            SELECT id, workflow_id, order_index, config_json, created_at, updated_at
+            SELECT id, name, workflow_id, order_index, config_json, created_at, updated_at
             FROM workflow_steps
             WHERE workflow_id = ?1
             ORDER BY order_index ASC
@@ -142,6 +142,7 @@ impl WorkflowRepository {
 
             steps.push(WorkflowStep {
                 id: row.get("id"),
+                name: step_name(row.get("name"), action_type),
                 workflow_id: row.get("workflow_id"),
                 order_index: row.get("order_index"),
                 action_type,
@@ -203,6 +204,7 @@ impl WorkflowRepository {
         let now = now_timestamp();
         let step = WorkflowStep {
             id: Uuid::new_v4().to_string(),
+            name: config.action_type().label().to_string(),
             workflow_id: workflow_id.to_string(),
             order_index,
             action_type: config.action_type(),
@@ -220,6 +222,7 @@ impl WorkflowRepository {
     pub async fn update_step(
         &self,
         step_id: &str,
+        name: &str,
         config: ActionConfig,
     ) -> Result<(), RepositoryError> {
         let workflow_id: String =
@@ -231,10 +234,11 @@ impl WorkflowRepository {
         sqlx::query(
             r#"
             UPDATE workflow_steps
-            SET type = ?1, config_json = ?2, updated_at = ?3
-            WHERE id = ?4
+            SET name = ?1, type = ?2, config_json = ?3, updated_at = ?4
+            WHERE id = ?5
             "#,
         )
+        .bind(step_name(name.to_string(), config.action_type()))
         .bind(config.action_type().as_str())
         .bind(serde_json::to_string(&config)?)
         .bind(now_timestamp())
@@ -316,11 +320,12 @@ async fn insert_step(pool: &SqlitePool, step: &WorkflowStep) -> Result<(), Repos
     sqlx::query(
         r#"
         INSERT INTO workflow_steps
-          (id, workflow_id, order_index, type, config_json, created_at, updated_at)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+          (id, name, workflow_id, order_index, type, config_json, created_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
         "#,
     )
     .bind(&step.id)
+    .bind(&step.name)
     .bind(&step.workflow_id)
     .bind(step.order_index)
     .bind(step.action_type.as_str())
@@ -331,6 +336,15 @@ async fn insert_step(pool: &SqlitePool, step: &WorkflowStep) -> Result<(), Repos
     .await?;
 
     Ok(())
+}
+
+fn step_name(name: String, action_type: crate::domain::ActionType) -> String {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        action_type.label().to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 async fn compact_order_indexes(

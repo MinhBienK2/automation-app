@@ -72,6 +72,7 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
     commands::update_step_impl(
         &state,
         &step.id,
+        "",
         ActionConfig::Scroll {
             direction: ScrollDirection::Down,
             pixels: 500,
@@ -98,6 +99,38 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
     let json = serde_json::to_string(&detail).expect("serialize detail");
     assert!(json.contains("\"workflow\""));
     assert!(json.contains("\"steps\""));
+    assert!(json.contains("\"name\":\"Scroll\""));
+}
+
+#[tokio::test]
+async fn update_step_can_save_custom_step_name() {
+    let (state, _db_path) = test_state().await;
+
+    let workflow = commands::create_workflow_impl(&state, "Named steps")
+        .await
+        .expect("create");
+    let step = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
+        .await
+        .expect("add");
+
+    commands::update_step_impl(
+        &state,
+        &step.id,
+        "Click login button",
+        ActionConfig::Click {
+            xpath: "//*[@id=\"login\"]".to_string(),
+        },
+    )
+    .await
+    .expect("update");
+
+    let detail = commands::get_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("get")
+        .expect("workflow exists");
+    let json = serde_json::to_string(&detail.steps[0]).expect("serialize step");
+
+    assert!(json.contains("\"name\":\"Click login button\""));
 }
 
 #[tokio::test]
@@ -158,6 +191,7 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
     commands::update_step_impl(
         &state,
         &open.id,
+        "Open URL",
         ActionConfig::OpenUrl {
             url: write_command_test_page(),
         },
@@ -170,6 +204,7 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
     commands::update_step_impl(
         &state,
         &type_text.id,
+        "Type Text",
         ActionConfig::TypeText {
             xpath: "//*[@name=\"email\"]".to_string(),
             text: "user@example.com".to_string(),
@@ -183,6 +218,7 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
     commands::update_step_impl(
         &state,
         &click.id,
+        "Click",
         ActionConfig::Click {
             xpath: "//*[@id=\"submit\"]".to_string(),
         },
@@ -211,6 +247,7 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
     commands::update_step_impl(
         &state,
         &open.id,
+        "Open URL",
         ActionConfig::OpenUrl {
             url: write_command_test_page(),
         },
@@ -220,15 +257,21 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
     let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
         .await
         .expect("sleep");
-    commands::update_step_impl(&state, &sleep.id, ActionConfig::Sleep { seconds: 0.2 })
-        .await
-        .expect("update sleep");
+    commands::update_step_impl(
+        &state,
+        &sleep.id,
+        "Sleep",
+        ActionConfig::Sleep { seconds: 0.2 },
+    )
+    .await
+    .expect("update sleep");
     let bad_click = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
         .await
         .expect("bad click");
     commands::update_step_impl(
         &state,
         &bad_click.id,
+        "Click",
         ActionConfig::Click {
             xpath: "//*[@id=\"missing\"]".to_string(),
         },
@@ -255,10 +298,56 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
     poll_status(&state, RunStatus::Failed).await;
 
     let run_state = commands::get_run_state_impl(&state).await;
+    let run_state_json = serde_json::to_string(&run_state).expect("serialize run state");
+    assert!(run_state_json.contains("\"mode\":\"run_workflow\""));
+    assert!(run_state_json.contains("\"completed_step_ids\""));
     let error = run_state.error.expect("failure payload");
     assert_eq!(error.step_number, 3);
     assert_eq!(error.action_type, "click");
     assert_eq!(error.reason, "XPath not found");
+}
+
+#[tokio::test]
+async fn test_step_exposes_target_current_and_completed_progress() {
+    let (state, _db_path) = test_state().await;
+
+    let workflow = commands::create_workflow_impl(&state, "Progress")
+        .await
+        .expect("create");
+    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("sleep");
+    commands::update_step_impl(
+        &state,
+        &sleep.id,
+        "Wait long enough",
+        ActionConfig::Sleep { seconds: 10.0 },
+    )
+    .await
+    .expect("update sleep");
+
+    let started = commands::test_step_impl(&state, &workflow.id, &sleep.id)
+        .await
+        .expect("start test");
+    let started_json = serde_json::to_string(&started).expect("serialize started");
+
+    assert_eq!(started.status, RunStatus::Running);
+    assert!(started_json.contains("\"mode\":\"test_step\""));
+    assert!(started_json.contains(&format!("\"target_step_id\":\"{}\"", sleep.id)));
+
+    let mut running_json = String::new();
+    for _ in 0..50 {
+        running_json =
+            serde_json::to_string(&commands::get_run_state_impl(&state).await).expect("serialize");
+        if running_json.contains(&format!("\"current_step_id\":\"{}\"", sleep.id)) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(running_json.contains(&format!("\"current_step_id\":\"{}\"", sleep.id)));
+    assert!(running_json.contains("\"current_step_number\":1"));
+
+    commands::stop_run_impl(&state).await.expect("stop");
 }
 
 #[tokio::test]
@@ -274,6 +363,7 @@ async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
     commands::update_step_impl(
         &state,
         &open.id,
+        "Open URL",
         ActionConfig::OpenUrl {
             url: write_command_test_page(),
         },
@@ -283,9 +373,14 @@ async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
     let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
         .await
         .expect("sleep");
-    commands::update_step_impl(&state, &sleep.id, ActionConfig::Sleep { seconds: 10.0 })
-        .await
-        .expect("update sleep");
+    commands::update_step_impl(
+        &state,
+        &sleep.id,
+        "Sleep",
+        ActionConfig::Sleep { seconds: 10.0 },
+    )
+    .await
+    .expect("update sleep");
 
     assert_eq!(
         commands::run_workflow_impl(&state, &workflow.id)
