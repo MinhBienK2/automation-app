@@ -56,8 +56,16 @@ async fn step_config_round_trips_through_json() {
         &step.id,
         "Scroll page",
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         },
     )
     .await
@@ -72,8 +80,16 @@ async fn step_config_round_trips_through_json() {
     assert_eq!(
         detail.steps[0].config,
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         }
     );
 }

@@ -1,5 +1,6 @@
 use workflow_automation_manager_lib::domain::{
-    ActionConfig, RunError, RunStatus, ScrollDirection, ValidationError, Workflow, WorkflowStep,
+    ActionConfig, RunError, RunStatus, ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline,
+    ScrollMode, ValidationError, Workflow, WorkflowStep,
 };
 
 fn assert_validation_message(error: ValidationError, field: &str, message: &str) {
@@ -77,8 +78,16 @@ fn action_config_validation_covers_required_fields() {
 
     assert_validation_message(
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 0,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         }
         .validate()
         .expect_err("zero pixels should fail"),
@@ -102,8 +111,16 @@ fn valid_action_configs_pass_validation() {
             xpath: "//*[@type=\"submit\"]".to_string(),
         },
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         },
     ];
 
@@ -127,8 +144,16 @@ fn every_action_config_round_trips_through_json() {
             xpath: "//*[@type=\"submit\"]".to_string(),
         },
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Up,
             pixels: 300,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         },
     ];
 
@@ -138,6 +163,88 @@ fn every_action_config_round_trips_through_json() {
 
         assert_eq!(decoded, config);
     }
+}
+
+#[test]
+fn scroll_config_supports_advanced_modes_and_backwards_compatibility() {
+    let legacy_json = r#"{"type":"scroll","config":{"direction":"down","pixels":300}}"#;
+    let legacy: ActionConfig = serde_json::from_str(legacy_json).expect("legacy scroll");
+
+    assert_eq!(
+        legacy,
+        ActionConfig::Scroll {
+            mode: None,
+            direction: ScrollDirection::Down,
+            pixels: 300,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
+        }
+    );
+
+    let advanced = ActionConfig::Scroll {
+        mode: Some(ScrollMode::UntilVisible),
+        direction: ScrollDirection::Right,
+        pixels: 250,
+        xpath: Some("//*[@id=\"target\"]".to_string()),
+        iframe_xpath: Some("//*[@id=\"frame\"]".to_string()),
+        behavior: Some(ScrollBehavior::Instant),
+        block: Some(ScrollBlock::Center),
+        inline: Some(ScrollInline::Nearest),
+        max_attempts: Some(8),
+        wait_ms: Some(150),
+    };
+
+    advanced.validate().expect("advanced scroll is valid");
+    let json = serde_json::to_string(&advanced).expect("serialize advanced scroll");
+    assert!(json.contains("\"mode\":\"until_visible\""));
+    assert!(json.contains("\"direction\":\"right\""));
+    assert!(json.contains("\"iframe_xpath\""));
+}
+
+#[test]
+fn scroll_modes_validate_required_xpath_and_attempts() {
+    assert_validation_message(
+        ActionConfig::Scroll {
+            mode: Some(ScrollMode::IntoView),
+            direction: ScrollDirection::Down,
+            pixels: 300,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
+        }
+        .validate()
+        .expect_err("into view requires xpath"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::Scroll {
+            mode: Some(ScrollMode::UntilVisible),
+            direction: ScrollDirection::Down,
+            pixels: 300,
+            xpath: Some("//*[@id=\"target\"]".to_string()),
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: Some(0),
+            wait_ms: None,
+        }
+        .validate()
+        .expect_err("until visible requires attempts"),
+        "max_attempts",
+        "Max attempts must be greater than 0",
+    );
 }
 
 #[test]

@@ -41,8 +41,14 @@ export function stepSummary(step: WorkflowStep) {
       return step.config.config.xpath || "No XPath";
     case "click":
       return step.config.config.xpath || "No XPath";
-    case "scroll":
-      return `${step.config.config.direction} ${step.config.config.pixels}px`;
+    case "scroll": {
+      const mode = step.config.config.mode ?? "page";
+      if (mode === "into_view") return step.config.config.xpath || "No XPath";
+      if (mode === "until_visible") {
+        return `until visible ${step.config.config.xpath || "No XPath"}`;
+      }
+      return `${mode} ${step.config.config.direction} ${step.config.config.pixels}px`;
+    }
   }
 }
 

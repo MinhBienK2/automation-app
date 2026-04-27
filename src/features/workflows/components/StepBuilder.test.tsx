@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
@@ -12,6 +12,7 @@ import {
   workflowDetailScenario,
 } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+import type { WorkflowStep } from "../../../types/workflow";
 
 describe("Workflow step builder integration", () => {
   beforeEach(() => {
@@ -135,6 +136,53 @@ describe("Workflow step builder integration", () => {
     expect(confirmSpy).toHaveBeenCalledWith("Delete this step?");
     expect(invokeMock).not.toHaveBeenCalledWith("delete_step", {
       stepId: "step-1",
+    });
+  });
+
+  test("shows advanced scroll controls and saves until-visible config", async () => {
+    const scrollStep: WorkflowStep = {
+      id: "step-scroll",
+      name: "Scroll to result",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "scroll",
+      config: { type: "scroll", config: { direction: "down", pixels: 300 } },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([scrollStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.selectOptions(await screen.findByLabelText("Mode"), "until_visible");
+    await userEvent.selectOptions(screen.getByLabelText("Direction"), "right");
+    await userEvent.clear(screen.getByLabelText("XPath"));
+    fireEvent.change(screen.getByLabelText("XPath"), {
+      target: { value: "//*[@id='target']" },
+    });
+    await userEvent.clear(screen.getByLabelText("Max attempts"));
+    await userEvent.type(screen.getByLabelText("Max attempts"), "5");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-scroll",
+        name: "Scroll to result",
+        config: {
+          type: "scroll",
+          config: {
+            direction: "right",
+            pixels: 300,
+            mode: "until_visible",
+            xpath: "//*[@id='target']",
+            max_attempts: 5,
+          },
+        },
+      });
     });
   });
 });

@@ -136,35 +136,160 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
         </label>
       );
     case "scroll":
+      const mode = config.config.mode ?? "page";
       return (
         <>
           <label>
-            Direction
+            Mode
             <select
-              value={config.config.direction}
+              value={mode}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
+              }
+            >
+              <option value="page">Page</option>
+              <option value="container">Container</option>
+              <option value="into_view">Into View</option>
+              <option value="until_visible">Until Visible</option>
+            </select>
+          </label>
+          {mode !== "into_view" ? (
+            <>
+              <label>
+                Direction
+                <select
+                  value={config.config.direction}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "direction", event.currentTarget.value),
+                    )
+                  }
+                >
+                  <option value="down">Down</option>
+                  <option value="up">Up</option>
+                  <option value="right">Right</option>
+                  <option value="left">Left</option>
+                </select>
+              </label>
+              <label>
+                Pixels
+                <input
+                  min="1"
+                  type="number"
+                  value={config.config.pixels}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "pixels", event.currentTarget.value),
+                    )
+                  }
+                />
+              </label>
+            </>
+          ) : null}
+          {mode !== "page" ? (
+            <label>
+              XPath
+              <input
+                value={config.config.xpath ?? ""}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+                }
+                placeholder="//*[@id='target']"
+              />
+            </label>
+          ) : null}
+          {mode === "until_visible" ? (
+            <>
+              <label>
+                Max attempts
+                <input
+                  min="1"
+                  type="number"
+                  value={config.config.max_attempts ?? 10}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "max_attempts", event.currentTarget.value),
+                    )
+                  }
+                />
+              </label>
+              <label>
+                Wait ms
+                <input
+                  min="0"
+                  type="number"
+                  value={config.config.wait_ms ?? 250}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "wait_ms", event.currentTarget.value),
+                    )
+                  }
+                />
+              </label>
+            </>
+          ) : null}
+          <label>
+            Iframe XPath
+            <input
+              value={config.config.iframe_xpath ?? ""}
               onChange={(event) =>
                 onChange(
-                  updateActionConfigField(config, "direction", event.currentTarget.value),
+                  updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
+                )
+              }
+              placeholder="Optional iframe XPath"
+            />
+          </label>
+          <label>
+            Behavior
+            <select
+              value={config.config.behavior ?? "instant"}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "behavior", event.currentTarget.value),
                 )
               }
             >
-              <option value="down">Down</option>
-              <option value="up">Up</option>
+              <option value="instant">Instant</option>
+              <option value="smooth">Smooth</option>
             </select>
           </label>
-          <label>
-            Pixels
-            <input
-              min="1"
-              type="number"
-              value={config.config.pixels}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "pixels", event.currentTarget.value),
-                )
-              }
-            />
-          </label>
+          {mode === "into_view" ? (
+            <>
+              <label>
+                Block
+                <select
+                  value={config.config.block ?? "center"}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "block", event.currentTarget.value),
+                    )
+                  }
+                >
+                  <option value="start">Start</option>
+                  <option value="center">Center</option>
+                  <option value="end">End</option>
+                  <option value="nearest">Nearest</option>
+                </select>
+              </label>
+              <label>
+                Inline
+                <select
+                  value={config.config.inline ?? "nearest"}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "inline", event.currentTarget.value),
+                    )
+                  }
+                >
+                  <option value="start">Start</option>
+                  <option value="center">Center</option>
+                  <option value="end">End</option>
+                  <option value="nearest">Nearest</option>
+                </select>
+              </label>
+            </>
+          ) : null}
         </>
       );
   }

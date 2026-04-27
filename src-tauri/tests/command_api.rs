@@ -36,8 +36,16 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
         &step.id,
         "",
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         },
     )
     .await
@@ -53,8 +61,16 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
     assert_eq!(
         detail.steps[0].config,
         ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         }
     );
 

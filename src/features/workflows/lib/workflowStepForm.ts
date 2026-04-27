@@ -1,11 +1,18 @@
 import type { ActionConfig } from "../../../types/workflow";
 
 export type ActionConfigField =
+  | "behavior"
+  | "block"
   | "direction"
+  | "iframe_xpath"
+  | "inline"
+  | "max_attempts"
+  | "mode"
   | "pixels"
   | "seconds"
   | "text"
   | "url"
+  | "wait_ms"
   | "xpath";
 
 export function updateActionConfigField(
@@ -26,12 +33,31 @@ export function updateActionConfigField(
     case "click":
       return { type: "click", config: { xpath: value } };
     case "scroll":
-      return {
-        type: "scroll",
-        config:
-          field === "direction"
-            ? { ...config.config, direction: value as "up" | "down" }
-            : { ...config.config, pixels: Number(value) },
-      };
+      return updateScrollConfigField(config, field, value);
   }
+}
+
+function updateScrollConfigField(
+  config: Extract<ActionConfig, { type: "scroll" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "pixels" || field === "max_attempts" || field === "wait_ms") {
+    return {
+      type: "scroll",
+      config: { ...config.config, [field]: Number(value) },
+    };
+  }
+
+  if (field === "xpath" || field === "iframe_xpath") {
+    return {
+      type: "scroll",
+      config: { ...config.config, [field]: value || null },
+    };
+  }
+
+  return {
+    type: "scroll",
+    config: { ...config.config, [field]: value },
+  };
 }

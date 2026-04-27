@@ -39,4 +39,28 @@ describe("workflow step form config helpers", () => {
       config: { direction: "down", pixels: 800 },
     });
   });
+
+  test("updates advanced scroll fields without dropping legacy fields", () => {
+    const config: ActionConfig = {
+      type: "scroll",
+      config: { direction: "down", pixels: 300 },
+    };
+
+    expect(updateActionConfigField(config, "mode", "until_visible")).toEqual({
+      type: "scroll",
+      config: { mode: "until_visible", direction: "down", pixels: 300 },
+    });
+    expect(updateActionConfigField(config, "xpath", "//*[@id='target']")).toEqual({
+      type: "scroll",
+      config: {
+        direction: "down",
+        pixels: 300,
+        xpath: "//*[@id='target']",
+      },
+    });
+    expect(updateActionConfigField(config, "max_attempts", "5")).toEqual({
+      type: "scroll",
+      config: { direction: "down", pixels: 300, max_attempts: 5 },
+    });
+  });
 });

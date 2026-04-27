@@ -39,6 +39,42 @@ impl ActionType {
 pub enum ScrollDirection {
     Up,
     Down,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScrollMode {
+    Page,
+    Container,
+    IntoView,
+    UntilVisible,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScrollBehavior {
+    Instant,
+    Smooth,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScrollBlock {
+    Start,
+    Center,
+    End,
+    Nearest,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScrollInline {
+    Start,
+    Center,
+    End,
+    Nearest,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -58,8 +94,24 @@ pub enum ActionConfig {
         xpath: String,
     },
     Scroll {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        mode: Option<ScrollMode>,
         direction: ScrollDirection,
         pixels: i64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        behavior: Option<ScrollBehavior>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        block: Option<ScrollBlock>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        inline: Option<ScrollInline>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_attempts: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_ms: Option<u64>,
     },
 }
 
@@ -95,6 +147,26 @@ impl ActionConfig {
             Self::Scroll { pixels, .. } if *pixels <= 0 => Err(ValidationError::new(
                 "pixels",
                 "Pixels must be greater than 0",
+            )),
+            Self::Scroll {
+                mode: Some(ScrollMode::IntoView),
+                xpath,
+                ..
+            }
+            | Self::Scroll {
+                mode: Some(ScrollMode::UntilVisible),
+                xpath,
+                ..
+            } if xpath.as_deref().unwrap_or_default().trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::Scroll {
+                mode: Some(ScrollMode::UntilVisible),
+                max_attempts: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "max_attempts",
+                "Max attempts must be greater than 0",
             )),
             _ => Ok(()),
         }

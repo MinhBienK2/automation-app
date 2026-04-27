@@ -19,8 +19,16 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             xpath: String::new(),
         },
         ActionType::Scroll => ActionConfig::Scroll {
+            mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
+            xpath: None,
+            iframe_xpath: None,
+            behavior: None,
+            block: None,
+            inline: None,
+            max_attempts: None,
+            wait_ms: None,
         },
     }
 }

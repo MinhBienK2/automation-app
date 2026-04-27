@@ -23,7 +23,21 @@ export type ActionConfig =
   | { type: "sleep"; config: { seconds: number } }
   | { type: "type_text"; config: { xpath: string; text: string } }
   | { type: "click"; config: { xpath: string } }
-  | { type: "scroll"; config: { direction: "up" | "down"; pixels: number } };
+  | {
+      type: "scroll";
+      config: {
+        mode?: "page" | "container" | "into_view" | "until_visible";
+        direction: "up" | "down" | "left" | "right";
+        pixels: number;
+        xpath?: string | null;
+        iframe_xpath?: string | null;
+        behavior?: "instant" | "smooth" | null;
+        block?: "start" | "center" | "end" | "nearest" | null;
+        inline?: "start" | "center" | "end" | "nearest" | null;
+        max_attempts?: number | null;
+        wait_ms?: number | null;
+      };
+    };
 
 export type WorkflowStep = {
   id: string;
