@@ -129,17 +129,22 @@ function App() {
     setRunState(state);
   }
 
-  async function openWorkflow(id: string) {
+  async function openWorkflow(id: string, preferredStepId?: string | null) {
     const loaded = await invoke<WorkflowDetail | null>("get_workflow", { id });
     setSelectedWorkflowId(id);
     setDetail(loaded);
-    setSelectedStepId(loaded?.steps[0]?.id ?? null);
+    const preferredStepExists = loaded?.steps.some(
+      (step) => step.id === preferredStepId,
+    );
+    setSelectedStepId(
+      preferredStepExists ? (preferredStepId ?? null) : (loaded?.steps[0]?.id ?? null),
+    );
     setAppError("");
   }
 
-  async function reloadSelectedWorkflow() {
+  async function reloadSelectedWorkflow(preferredStepId = selectedStepId) {
     if (!selectedWorkflowId) return;
-    await openWorkflow(selectedWorkflowId);
+    await openWorkflow(selectedWorkflowId, preferredStepId);
     await loadWorkflows();
   }
 
@@ -299,7 +304,7 @@ function App() {
             onSaveStep={async (stepId, config) => {
               setAppError("");
               await invoke("update_step", { stepId, config });
-              await reloadSelectedWorkflow();
+              await reloadSelectedWorkflow(stepId);
             }}
             onRunWorkflow={runWorkflow}
             onTestStep={testStep}

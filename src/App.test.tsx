@@ -140,6 +140,37 @@ describe("App workflow UI", () => {
     expect(await screen.findByLabelText("XPath")).toHaveValue('//*[@id="submit"]');
   });
 
+  test("keeps the current step selected after saving it", async () => {
+    const savedClickStep = {
+      ...clickStep,
+      config: { type: "click", config: { xpath: "saved-xpath" } },
+    };
+    let saved = false;
+    invokeMock.mockImplementation(async (command) => {
+      if (command === "list_workflows") return [workflow];
+      if (command === "get_run_state") return { status: "idle", error: null };
+      if (command === "get_workflow") {
+        return { workflow, steps: [sleepStep, saved ? savedClickStep : clickStep] };
+      }
+      if (command === "update_step") {
+        saved = true;
+        return undefined;
+      }
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("button", { name: /Click/ }));
+    await userEvent.clear(await screen.findByLabelText("XPath"));
+    await userEvent.type(screen.getByLabelText("XPath"), "saved-xpath");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    expect(await screen.findByLabelText("XPath")).toHaveValue("saved-xpath");
+    expect(screen.queryByLabelText("Seconds")).not.toBeInTheDocument();
+  });
+
   test("disables run actions while running and polls final failure", async () => {
     let runStateCalls = 0;
     invokeMock.mockImplementation(async (command) => {
