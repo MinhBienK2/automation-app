@@ -955,6 +955,144 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           />
         </Label>
       );
+    case "upload_file":
+      return (
+        <>
+          <Label>
+            XPath
+            <Input
+              value={config.config.xpath}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Files
+            <Textarea
+              value={config.config.files.join("\n")}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "files", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <ElementOptionalFields config={config} onChange={onChange} />
+        </>
+      );
+    case "submit_form":
+      return (
+        <>
+          <Label>
+            XPath
+            <Input
+              value={config.config.xpath ?? ""}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+              }
+              placeholder="Optional form or field XPath"
+            />
+          </Label>
+          <ElementOptionalFields config={config} onChange={onChange} />
+        </>
+      );
+    case "select_custom_option":
+      return (
+        <>
+          <Label>
+            Trigger XPath
+            <Input
+              value={config.config.trigger_xpath}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "trigger_xpath",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            />
+          </Label>
+          <Label>
+            Option text
+            <Input
+              value={config.config.option_text}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "option_text", event.currentTarget.value),
+                )
+              }
+            />
+          </Label>
+          <Label>
+            Iframe XPath
+            <Input
+              value={config.config.iframe_xpath ?? ""}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
+                )
+              }
+              placeholder="Optional iframe XPath"
+            />
+          </Label>
+          <Label>
+            Timeout ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 5000}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
+                )
+              }
+            />
+          </Label>
+        </>
+      );
+    case "set_contenteditable":
+      return (
+        <>
+          <Label>
+            XPath
+            <Input
+              value={config.config.xpath}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Text
+            <Textarea
+              value={config.config.text}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "text", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Clear before input
+            <Select
+              value={String(config.config.clear_before_input)}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "clear_before_input",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            >
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </Select>
+          </Label>
+          <ElementOptionalFields config={config} onChange={onChange} />
+        </>
+      );
   }
 }
 
@@ -976,7 +1114,10 @@ type ElementConfig = Extract<
       | "check"
       | "uncheck"
       | "toggle_checkbox"
-      | "select_radio";
+      | "select_radio"
+      | "upload_file"
+      | "submit_form"
+      | "set_contenteditable";
   }
 >;
 

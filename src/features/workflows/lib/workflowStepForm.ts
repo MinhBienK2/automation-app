@@ -10,6 +10,7 @@ export type ActionConfigField =
   | "delay_ms"
   | "direction"
   | "duration_ms"
+  | "files"
   | "iframe_xpath"
   | "inline"
   | "key"
@@ -20,6 +21,7 @@ export type ActionConfigField =
   | "mode"
   | "offset_x"
   | "offset_y"
+  | "option_text"
   | "pixels"
   | "position"
   | "post_click_wait_ms"
@@ -36,7 +38,8 @@ export type ActionConfigField =
   | "value"
   | "wait_ms"
   | "wait_until"
-  | "xpath";
+  | "xpath"
+  | "trigger_xpath";
 
 export function updateActionConfigField(
   config: ActionConfig,
@@ -99,6 +102,14 @@ export function updateActionConfigField(
       return updateTypeSequenceConfigField(config, field, value);
     case "set_clipboard":
       return { type: "set_clipboard", config: { text: value } };
+    case "upload_file":
+      return updateUploadFileConfigField(config, field, value);
+    case "submit_form":
+      return updateSubmitFormConfigField(config, field, value);
+    case "select_custom_option":
+      return updateSelectCustomOptionConfigField(config, field, value);
+    case "set_contenteditable":
+      return updateSetContenteditableConfigField(config, field, value);
   }
 }
 
@@ -344,4 +355,100 @@ function updateTypeSequenceConfigField(
   }
 
   return { type: "type_sequence", config: { ...config.config, [field]: value } };
+}
+
+function updateUploadFileConfigField(
+  config: Extract<ActionConfig, { type: "upload_file" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "files") {
+    return {
+      type: "upload_file",
+      config: {
+        ...config.config,
+        files: value
+          .split(/\r?\n/)
+          .map((file) => file.trim())
+          .filter(Boolean),
+      },
+    };
+  }
+
+  if (field === "timeout_ms") {
+    return { type: "upload_file", config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "iframe_xpath") {
+    return { type: "upload_file", config: { ...config.config, iframe_xpath: value || null } };
+  }
+
+  return { type: "upload_file", config: { ...config.config, [field]: value } };
+}
+
+function updateSubmitFormConfigField(
+  config: Extract<ActionConfig, { type: "submit_form" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: "submit_form", config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "xpath" || field === "iframe_xpath") {
+    return { type: "submit_form", config: { ...config.config, [field]: value || null } };
+  }
+
+  return { type: "submit_form", config: { ...config.config, [field]: value } };
+}
+
+function updateSelectCustomOptionConfigField(
+  config: Extract<ActionConfig, { type: "select_custom_option" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return {
+      type: "select_custom_option",
+      config: { ...config.config, timeout_ms: Number(value) },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "select_custom_option",
+      config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  return { type: "select_custom_option", config: { ...config.config, [field]: value } };
+}
+
+function updateSetContenteditableConfigField(
+  config: Extract<ActionConfig, { type: "set_contenteditable" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return {
+      type: "set_contenteditable",
+      config: { ...config.config, timeout_ms: Number(value) },
+    };
+  }
+
+  if (field === "clear_before_input") {
+    return {
+      type: "set_contenteditable",
+      config: { ...config.config, clear_before_input: value === "true" },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "set_contenteditable",
+      config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  return { type: "set_contenteditable", config: { ...config.config, [field]: value } };
 }

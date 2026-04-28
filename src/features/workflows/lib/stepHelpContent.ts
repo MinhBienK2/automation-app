@@ -28,7 +28,11 @@ type PhaseOneActionType =
   | "check"
   | "uncheck"
   | "toggle_checkbox"
-  | "select_radio";
+  | "select_radio"
+  | "upload_file"
+  | "submit_form"
+  | "select_custom_option"
+  | "set_contenteditable";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -457,6 +461,20 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   uncheck: elementHelp("Uncheck", "ensure a checkbox is unchecked", "tắt checkbox", "checkbox"),
   toggle_checkbox: elementHelp("Toggle Checkbox", "toggle a checkbox", "đảo trạng thái checkbox", "checkbox"),
   select_radio: elementHelp("Select Radio", "select a radio option", "chọn radio", "radio"),
+  upload_file: elementHelp("Upload File", "upload local files", "upload file", "file"),
+  submit_form: elementHelp("Submit Form", "submit a form", "submit form", "submit"),
+  select_custom_option: elementHelp(
+    "Select Custom Option",
+    "select a custom dropdown option",
+    "chọn option trong custom dropdown",
+    "combobox",
+  ),
+  set_contenteditable: elementHelp(
+    "Set Contenteditable",
+    "set rich text content",
+    "nhập nội dung contenteditable",
+    "editor",
+  ),
   drag_and_drop: {
     vi: {
       title: "Trợ giúp Drag and Drop",

@@ -31,6 +31,10 @@ pub enum ActionType {
     Uncheck,
     ToggleCheckbox,
     SelectRadio,
+    UploadFile,
+    SubmitForm,
+    SelectCustomOption,
+    SetContenteditable,
 }
 
 impl ActionType {
@@ -62,6 +66,10 @@ impl ActionType {
             Self::Uncheck => "uncheck",
             Self::ToggleCheckbox => "toggle_checkbox",
             Self::SelectRadio => "select_radio",
+            Self::UploadFile => "upload_file",
+            Self::SubmitForm => "submit_form",
+            Self::SelectCustomOption => "select_custom_option",
+            Self::SetContenteditable => "set_contenteditable",
         }
     }
 
@@ -93,6 +101,10 @@ impl ActionType {
             Self::Uncheck => "Uncheck",
             Self::ToggleCheckbox => "Toggle Checkbox",
             Self::SelectRadio => "Select Radio",
+            Self::UploadFile => "Upload File",
+            Self::SubmitForm => "Submit Form",
+            Self::SelectCustomOption => "Select Custom Option",
+            Self::SetContenteditable => "Set Contenteditable",
         }
     }
 }
@@ -480,6 +492,46 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
     },
+    UploadFile {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        files: Vec<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    SubmitForm {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    SelectCustomOption {
+        trigger_xpath: String,
+        option_text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    SetContenteditable {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        text: String,
+        #[serde(default)]
+        clear_before_input: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
 }
 
 impl ActionConfig {
@@ -511,6 +563,10 @@ impl ActionConfig {
             Self::Uncheck { .. } => ActionType::Uncheck,
             Self::ToggleCheckbox { .. } => ActionType::ToggleCheckbox,
             Self::SelectRadio { .. } => ActionType::SelectRadio,
+            Self::UploadFile { .. } => ActionType::UploadFile,
+            Self::SubmitForm { .. } => ActionType::SubmitForm,
+            Self::SelectCustomOption { .. } => ActionType::SelectCustomOption,
+            Self::SetContenteditable { .. } => ActionType::SetContenteditable,
         }
     }
 
@@ -750,6 +806,34 @@ impl ActionConfig {
             Self::SetClipboard { text } if text.is_empty() => {
                 Err(ValidationError::new("text", "Text is required"))
             }
+            Self::UploadFile { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::UploadFile { files, .. } if files.is_empty() => Err(ValidationError::new(
+                "files",
+                "At least one file is required",
+            )),
+            Self::UploadFile { files, .. } if files.iter().any(|file| file.trim().is_empty()) => {
+                Err(ValidationError::new("files", "File path is required"))
+            }
+            Self::SubmitForm {
+                xpath: Some(xpath), ..
+            } if xpath.trim().is_empty() => Err(ValidationError::new("xpath", "XPath is required")),
+            Self::SelectCustomOption { trigger_xpath, .. } if trigger_xpath.trim().is_empty() => {
+                Err(ValidationError::new(
+                    "trigger_xpath",
+                    "Trigger XPath is required",
+                ))
+            }
+            Self::SelectCustomOption { option_text, .. } if option_text.trim().is_empty() => Err(
+                ValidationError::new("option_text", "Option text is required"),
+            ),
+            Self::SetContenteditable { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::SetContenteditable { text, .. } if text.is_empty() => {
+                Err(ValidationError::new("text", "Text is required"))
+            }
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..
@@ -791,6 +875,22 @@ impl ActionConfig {
                 ..
             }
             | Self::SelectRadio {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::UploadFile {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::SubmitForm {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::SelectCustomOption {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::SetContenteditable {
                 timeout_ms: Some(0),
                 ..
             } => Err(ValidationError::new(

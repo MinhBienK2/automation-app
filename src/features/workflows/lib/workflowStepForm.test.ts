@@ -175,4 +175,60 @@ describe("workflow step form config helpers", () => {
       },
     });
   });
+
+  test("updates phase two form and file configs with typed values", () => {
+    const uploadConfig: ActionConfig = {
+      type: "upload_file",
+      config: {
+        xpath: "//*[@id='file']",
+        files: ["/tmp/a.txt"],
+      },
+    };
+    const submitConfig: ActionConfig = {
+      type: "submit_form",
+      config: {},
+    };
+    const customSelectConfig: ActionConfig = {
+      type: "select_custom_option",
+      config: {
+        trigger_xpath: "//*[@role='combobox']",
+        option_text: "Old",
+      },
+    };
+    const editableConfig: ActionConfig = {
+      type: "set_contenteditable",
+      config: {
+        xpath: "//*[@contenteditable='true']",
+        text: "Old",
+        clear_before_input: true,
+      },
+    };
+
+    expect(updateActionConfigField(uploadConfig, "files", "/tmp/a.txt\n/tmp/b.txt")).toEqual({
+      type: "upload_file",
+      config: {
+        xpath: "//*[@id='file']",
+        files: ["/tmp/a.txt", "/tmp/b.txt"],
+      },
+    });
+    expect(updateActionConfigField(submitConfig, "xpath", "//*[@id='login']")).toEqual({
+      type: "submit_form",
+      config: { xpath: "//*[@id='login']" },
+    });
+    expect(updateActionConfigField(customSelectConfig, "option_text", "Vietnam")).toEqual({
+      type: "select_custom_option",
+      config: {
+        trigger_xpath: "//*[@role='combobox']",
+        option_text: "Vietnam",
+      },
+    });
+    expect(updateActionConfigField(editableConfig, "clear_before_input", "false")).toEqual({
+      type: "set_contenteditable",
+      config: {
+        xpath: "//*[@contenteditable='true']",
+        text: "Old",
+        clear_before_input: false,
+      },
+    });
+  });
 });

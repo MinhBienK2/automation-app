@@ -93,6 +93,14 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "select_radio",
     );
+    expect(screen.getByRole("option", { name: "Upload File" })).toHaveAttribute(
+      "data-value",
+      "upload_file",
+    );
+    expect(screen.getByRole("option", { name: "Set Contenteditable" })).toHaveAttribute(
+      "data-value",
+      "set_contenteditable",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -488,6 +496,52 @@ describe("Workflow step builder integration", () => {
             source_xpath: "//*[@id='card']",
             target_xpath: "//*[@id='lane']",
             timeout_ms: 3000,
+          },
+        },
+      });
+    });
+  });
+
+  test("saves an upload file phase two action config", async () => {
+    const uploadStep: WorkflowStep = {
+      id: "step-upload",
+      name: "Upload invoice",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "upload_file",
+      config: {
+        type: "upload_file",
+        config: {
+          xpath: "//*[@id='file']",
+          files: ["/tmp/a.txt"],
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([uploadStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Files"));
+    fireEvent.change(screen.getByLabelText("Files"), {
+      target: { value: "/tmp/a.txt\n/tmp/b.txt" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-upload",
+        name: "Upload invoice",
+        config: {
+          type: "upload_file",
+          config: {
+            xpath: "//*[@id='file']",
+            files: ["/tmp/a.txt", "/tmp/b.txt"],
           },
         },
       });

@@ -67,6 +67,38 @@ fn write_phase_one_test_page() -> String {
     format!("file://{}", path.display())
 }
 
+fn write_phase_two_test_page() -> (String, String) {
+    let page_path = std::env::temp_dir().join(format!("wam-phase-two-{}.html", Uuid::new_v4()));
+    let upload_path = std::env::temp_dir().join(format!("wam-upload-{}.txt", Uuid::new_v4()));
+    fs::write(&upload_path, "upload contents").expect("write upload file");
+    fs::write(
+        &page_path,
+        r#"
+        <!doctype html>
+        <html>
+          <body>
+            <form id="form" onsubmit="event.preventDefault(); document.getElementById('submit-result').textContent = 'submitted'">
+              <input id="file" type="file" onchange="document.getElementById('upload-result').textContent = this.files[0]?.name || 'none'" />
+              <button id="submit" type="submit">Submit</button>
+            </form>
+            <button id="combo" role="combobox" onclick="document.getElementById('option-vn').hidden = false">Country</button>
+            <button id="option-vn" role="option" hidden onclick="document.getElementById('custom-result').textContent = 'Vietnam'">Vietnam</button>
+            <div id="editor" contenteditable="true">Old</div>
+            <div id="upload-result">idle</div>
+            <div id="custom-result">idle</div>
+            <div id="submit-result">idle</div>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write phase two test page");
+
+    (
+        format!("file://{}", page_path.display()),
+        upload_path.display().to_string(),
+    )
+}
+
 fn runner() -> BrowserRunner {
     BrowserRunner::new(RunnerOptions {
         headed: true,
@@ -406,6 +438,91 @@ async fn runner_executes_phase_one_human_interaction_actions_against_visible_chr
             .await
             .expect("drop result"),
         "dropped"
+    );
+
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_two_form_and_file_actions_against_visible_chromium() {
+    let (url, upload_file) = write_phase_two_test_page();
+    let upload_name = PathBuf::from(&upload_file)
+        .file_name()
+        .expect("upload file name")
+        .to_string_lossy()
+        .to_string();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::UploadFile {
+                    xpath: "//*[@id=\"file\"]".to_string(),
+                    iframe_xpath: None,
+                    files: vec![upload_file],
+                    wait_until: Some(ClickWaitUntil::Visible),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SetContenteditable {
+                    xpath: "//*[@id=\"editor\"]".to_string(),
+                    iframe_xpath: None,
+                    text: "New editor text".to_string(),
+                    clear_before_input: true,
+                    wait_until: Some(ClickWaitUntil::Visible),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SelectCustomOption {
+                    trigger_xpath: "//*[@id=\"combo\"]".to_string(),
+                    option_text: "Vietnam".to_string(),
+                    iframe_xpath: None,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SubmitForm {
+                    xpath: Some("//*[@id=\"form\"]".to_string()),
+                    iframe_xpath: None,
+                    wait_until: Some(ClickWaitUntil::Visible),
+                    timeout_ms: Some(3000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase two steps");
+
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('file').files[0].name")
+            .await
+            .expect("uploaded file name"),
+        upload_name
+    );
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('editor').textContent")
+            .await
+            .expect("editor content"),
+        "New editor text"
+    );
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('custom-result').textContent")
+            .await
+            .expect("custom select result"),
+        "Vietnam"
+    );
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('submit-result').textContent")
+            .await
+            .expect("submit result"),
+        "submitted"
     );
 
     outcome.session.close().await.expect("close browser");

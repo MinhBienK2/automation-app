@@ -4,10 +4,13 @@ mod scroll;
 mod type_text;
 mod user_interaction;
 
-use std::time::Duration;
+use std::{path::Path, time::Duration};
 
 use chromiumoxide::{
-    cdp::browser_protocol::input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
+    cdp::browser_protocol::{
+        dom::SetFileInputFilesParams,
+        input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
+    },
     layout::Point,
     Page,
 };
@@ -22,7 +25,8 @@ use self::{
     user_interaction::{
         blur_element_script, clear_input_script, drag_and_drop_script, focus_element_script,
         hotkey_script, hover_script, input_text_script, paste_clipboard_script, press_key_script,
-        select_option_script, select_radio_script, set_checkbox_script, set_clipboard_script,
+        select_custom_option_script, select_option_script, select_radio_script,
+        set_checkbox_script, set_clipboard_script, set_contenteditable_script, submit_form_script,
         toggle_checkbox_script, type_sequence_script, wait_script, InputTextScriptOptions,
         WaitScriptOptions,
     },
@@ -455,7 +459,104 @@ pub(super) async fn execute_action(
             ensure_js_action(page, &script).await?;
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::UploadFile {
+            xpath,
+            iframe_xpath,
+            files,
+            wait_until: _,
+            timeout_ms: _,
+        } => {
+            upload_file(page, &xpath, iframe_xpath.as_deref(), &files).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SubmitForm {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = submit_form_script(
+                xpath.as_deref(),
+                iframe_xpath.as_deref(),
+                wait_until,
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SelectCustomOption {
+            trigger_xpath,
+            option_text,
+            iframe_xpath,
+            timeout_ms,
+        } => {
+            let script = select_custom_option_script(
+                &trigger_xpath,
+                &option_text,
+                iframe_xpath.as_deref(),
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetContenteditable {
+            xpath,
+            iframe_xpath,
+            text,
+            clear_before_input,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = set_contenteditable_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &text,
+                clear_before_input,
+                wait_until,
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
     }
+}
+
+async fn upload_file(
+    page: &Page,
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    files: &[String],
+) -> Result<(), RunnerError> {
+    if iframe_xpath.is_some() {
+        return Err(RunnerError::ActionFailed(
+            "File upload inside iframe is not supported yet".to_string(),
+        ));
+    }
+
+    for file in files {
+        if !Path::new(file).is_file() {
+            return Err(RunnerError::ActionFailed("File not found".to_string()));
+        }
+    }
+
+    let mut matches = page
+        .find_xpaths(xpath)
+        .await
+        .map_err(|_| RunnerError::ActionFailed("XPath not found".to_string()))?;
+    let element = matches
+        .pop()
+        .ok_or_else(|| RunnerError::ActionFailed("XPath not found".to_string()))?;
+
+    page.execute(
+        SetFileInputFilesParams::builder()
+            .files(files.iter().cloned())
+            .object_id(element.remote_object_id)
+            .build()
+            .map_err(RunnerError::ActionFailed)?,
+    )
+    .await?;
+
+    Ok(())
 }
 
 async fn dispatch_mouse_click(

@@ -24,7 +24,11 @@ export type ActionType =
   | "check"
   | "uncheck"
   | "toggle_checkbox"
-  | "select_radio";
+  | "select_radio"
+  | "upload_file"
+  | "submit_form"
+  | "select_custom_option"
+  | "set_contenteditable";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -231,6 +235,45 @@ export type ActionConfig =
   | {
       type: "select_radio";
       config: ElementTargetActionConfig;
+    }
+  | {
+      type: "upload_file";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        files: string[];
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "submit_form";
+      config: {
+        xpath?: string | null;
+        iframe_xpath?: string | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "select_custom_option";
+      config: {
+        trigger_xpath: string;
+        option_text: string;
+        iframe_xpath?: string | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "set_contenteditable";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        text: string;
+        clear_before_input: boolean;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
     };
 
 type ElementTargetActionConfig = {

@@ -174,6 +174,33 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             wait_until: None,
             timeout_ms: None,
         },
+        ActionType::UploadFile => ActionConfig::UploadFile {
+            xpath: String::new(),
+            iframe_xpath: None,
+            files: Vec::new(),
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::SubmitForm => ActionConfig::SubmitForm {
+            xpath: None,
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::SelectCustomOption => ActionConfig::SelectCustomOption {
+            trigger_xpath: String::new(),
+            option_text: String::new(),
+            iframe_xpath: None,
+            timeout_ms: None,
+        },
+        ActionType::SetContenteditable => ActionConfig::SetContenteditable {
+            xpath: String::new(),
+            iframe_xpath: None,
+            text: String::new(),
+            clear_before_input: true,
+            wait_until: None,
+            timeout_ms: None,
+        },
     }
 }
 

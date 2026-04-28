@@ -590,6 +590,126 @@ fn phase_one_action_types_have_default_configs() {
 }
 
 #[test]
+fn phase_two_form_and_file_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::UploadFile {
+            xpath: "//*[@id=\"file\"]".to_string(),
+            iframe_xpath: None,
+            files: vec!["/tmp/example.txt".to_string()],
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::SubmitForm {
+            xpath: Some("//*[@id=\"login-form\"]".to_string()),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::SelectCustomOption {
+            trigger_xpath: "//*[@role=\"combobox\"]".to_string(),
+            option_text: "Vietnam".to_string(),
+            iframe_xpath: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::SetContenteditable {
+            xpath: "//*[@contenteditable=\"true\"]".to_string(),
+            iframe_xpath: None,
+            text: "Hello editor".to_string(),
+            clear_before_input: true,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("phase two config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_two_form_and_file_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::UploadFile {
+            xpath: String::new(),
+            iframe_xpath: None,
+            files: vec!["/tmp/example.txt".to_string()],
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("upload requires xpath"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::UploadFile {
+            xpath: "//*[@id=\"file\"]".to_string(),
+            iframe_xpath: None,
+            files: vec![],
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("upload requires files"),
+        "files",
+        "At least one file is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SelectCustomOption {
+            trigger_xpath: String::new(),
+            option_text: "Vietnam".to_string(),
+            iframe_xpath: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("custom select requires trigger xpath"),
+        "trigger_xpath",
+        "Trigger XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetContenteditable {
+            xpath: "//*[@contenteditable=\"true\"]".to_string(),
+            iframe_xpath: None,
+            text: String::new(),
+            clear_before_input: true,
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("contenteditable requires text"),
+        "text",
+        "Text is required",
+    );
+}
+
+#[test]
+fn phase_two_action_types_have_default_configs() {
+    assert_eq!(
+        default_config(ActionType::UploadFile).action_type(),
+        ActionType::UploadFile
+    );
+    assert_eq!(
+        default_config(ActionType::SubmitForm).action_type(),
+        ActionType::SubmitForm
+    );
+    assert_eq!(
+        default_config(ActionType::SelectCustomOption).action_type(),
+        ActionType::SelectCustomOption
+    );
+    assert_eq!(
+        default_config(ActionType::SetContenteditable).action_type(),
+        ActionType::SetContenteditable
+    );
+}
+
+#[test]
 fn scroll_config_supports_advanced_modes_and_backwards_compatibility() {
     let legacy_json = r#"{"type":"scroll","config":{"direction":"down","pixels":300}}"#;
     let legacy: ActionConfig = serde_json::from_str(legacy_json).expect("legacy scroll");

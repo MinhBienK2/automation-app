@@ -32,6 +32,10 @@ export const actionLabels: Record<ActionType, string> = {
   uncheck: "Uncheck",
   toggle_checkbox: "Toggle Checkbox",
   select_radio: "Select Radio",
+  upload_file: "Upload File",
+  submit_form: "Submit Form",
+  select_custom_option: "Select Custom Option",
+  set_contenteditable: "Set Contenteditable",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -47,6 +51,10 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
       "uncheck",
       "toggle_checkbox",
       "select_radio",
+      "upload_file",
+      "submit_form",
+      "select_custom_option",
+      "set_contenteditable",
       "set_checkbox",
     ],
   },
@@ -148,6 +156,14 @@ export function stepSummary(step: WorkflowStep) {
     case "toggle_checkbox":
       return step.config.config.xpath || "No XPath";
     case "select_radio":
+      return step.config.config.xpath || "No XPath";
+    case "upload_file":
+      return `${step.config.config.files.length} file(s)`;
+    case "submit_form":
+      return step.config.config.xpath || "Nearest form";
+    case "select_custom_option":
+      return step.config.config.option_text || "No option";
+    case "set_contenteditable":
       return step.config.config.xpath || "No XPath";
   }
 }
