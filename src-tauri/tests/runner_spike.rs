@@ -2,7 +2,10 @@ use std::{fs, path::PathBuf, time::Duration};
 
 use uuid::Uuid;
 use workflow_automation_manager_lib::{
-    domain::{ActionConfig, ClickWaitUntil, ScrollDirection, WaitCondition},
+    domain::{
+        ActionConfig, AssertElementState, AssertTextMatchMode, ClickWaitUntil, ScrollDirection,
+        StopWorkflowStatus, WaitCondition, WorkflowCondition,
+    },
     runner::{BrowserRunner, RunnerCancellation, RunnerOptions, RunnerStatus},
 };
 
@@ -193,6 +196,32 @@ fn write_phase_three_frame_dialog_download_page() -> (String, String) {
         format!("file://{}", page_path.display()),
         download_dir.display().to_string(),
     )
+}
+
+fn write_phase_five_logic_page() -> String {
+    let page_path = std::env::temp_dir().join(format!("wam-phase-five-{}.html", Uuid::new_v4()));
+    fs::write(
+        &page_path,
+        r#"
+        <!doctype html>
+        <html>
+          <body>
+            <input id="name" />
+            <button id="increment" onclick="document.getElementById('count').textContent = String(Number(document.getElementById('count').textContent) + 1)">Increment</button>
+            <div id="status">Ready</div>
+            <div id="count">0</div>
+            <script>
+              setTimeout(() => {
+                document.getElementById('status').textContent = 'Eventually Ready';
+              }, 250);
+            </script>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write phase five logic page");
+
+    format!("file://{}", page_path.display())
 }
 
 fn runner() -> BrowserRunner {
@@ -902,6 +931,143 @@ async fn runner_executes_phase_three_frame_dialog_download_actions_against_visib
         .expect("download path output");
     assert!(PathBuf::from(download_path).is_file());
     assert!(download_path.starts_with(&download_dir));
+
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
+    let url = write_phase_five_logic_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::SetVariable {
+                    name: "customer".to_string(),
+                    value: "Ada".to_string(),
+                },
+                ActionConfig::InputText {
+                    xpath: "//*[@id=\"name\"]".to_string(),
+                    iframe_xpath: None,
+                    text: "Hello {{customer}}".to_string(),
+                    clear_before_input: true,
+                    typing_mode: None,
+                    delay_ms: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertElement {
+                    xpath: "//*[@id=\"name\"]".to_string(),
+                    iframe_xpath: None,
+                    state: AssertElementState::Visible,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"status\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "Ready".to_string(),
+                    match_mode: AssertTextMatchMode::Contains,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::IfCondition {
+                    condition: WorkflowCondition::OutputEquals {
+                        name: "customer".to_string(),
+                        value: "Ada".to_string(),
+                    },
+                    then_steps: vec![ActionConfig::SetVariable {
+                        name: "branch".to_string(),
+                        value: "then".to_string(),
+                    }],
+                    else_steps: vec![ActionConfig::StopWorkflow {
+                        status: StopWorkflowStatus::Failure,
+                        reason: Some("wrong branch".to_string()),
+                    }],
+                },
+                ActionConfig::RepeatTimes {
+                    times: 2,
+                    steps: vec![ActionConfig::Click {
+                        xpath: "//*[@id=\"increment\"]".to_string(),
+                        iframe_xpath: None,
+                        mode: None,
+                        button: None,
+                        click_count: None,
+                        scroll_into_view: None,
+                        block: None,
+                        inline: None,
+                        position: None,
+                        offset_x: None,
+                        offset_y: None,
+                        wait_until: None,
+                        timeout_ms: Some(3000),
+                        retry_interval_ms: None,
+                        post_click_wait_ms: None,
+                    }],
+                },
+                ActionConfig::RepeatForEach {
+                    item_name: "item".to_string(),
+                    items: vec!["One".to_string(), "Two".to_string()],
+                    steps: vec![ActionConfig::SetVariable {
+                        name: "last_item".to_string(),
+                        value: "{{item}}".to_string(),
+                    }],
+                },
+                ActionConfig::RetryBlock {
+                    max_attempts: 3,
+                    delay_ms: Some(200),
+                    steps: vec![ActionConfig::AssertText {
+                        xpath: Some("//*[@id=\"status\"]".to_string()),
+                        iframe_xpath: None,
+                        text: "Eventually Ready".to_string(),
+                        match_mode: AssertTextMatchMode::Equals,
+                        timeout_ms: Some(100),
+                    }],
+                },
+                ActionConfig::StopWorkflow {
+                    status: StopWorkflowStatus::Success,
+                    reason: Some("done".to_string()),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"status\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "this should not run".to_string(),
+                    match_mode: AssertTextMatchMode::Contains,
+                    timeout_ms: Some(100),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase five logic steps");
+
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('name').value")
+            .await
+            .expect("input value"),
+        "Hello Ada"
+    );
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('count').textContent")
+            .await
+            .expect("count"),
+        "2"
+    );
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+    assert_eq!(outputs["customer"], "Ada");
+    assert_eq!(outputs["branch"], "then");
+    assert_eq!(outputs["last_item"], "Two");
 
     outcome.session.close().await.expect("close browser");
 }

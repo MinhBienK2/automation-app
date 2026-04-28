@@ -487,6 +487,131 @@ fn phase_three_frame_dialog_download_configs_validate_required_fields() {
 }
 
 #[test]
+fn phase_five_logic_configs_validate_and_round_trip() {
+    let nested_step = ActionConfig::SetVariable {
+        name: "status".to_string(),
+        value: "ready".to_string(),
+    };
+    let configs = [
+        ActionConfig::SetVariable {
+            name: "customer".to_string(),
+            value: "Ada".to_string(),
+        },
+        ActionConfig::AssertElement {
+            xpath: "//*[@id=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            state: workflow_automation_manager_lib::domain::AssertElementState::Visible,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::AssertText {
+            xpath: Some("//*[@id=\"message\"]".to_string()),
+            iframe_xpath: None,
+            text: "Saved".to_string(),
+            match_mode: workflow_automation_manager_lib::domain::AssertTextMatchMode::Contains,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::IfCondition {
+            condition: workflow_automation_manager_lib::domain::WorkflowCondition::OutputEquals {
+                name: "status".to_string(),
+                value: "ready".to_string(),
+            },
+            then_steps: vec![nested_step.clone()],
+            else_steps: vec![],
+        },
+        ActionConfig::RepeatTimes {
+            times: 2,
+            steps: vec![nested_step.clone()],
+        },
+        ActionConfig::RepeatForEach {
+            item_name: "item".to_string(),
+            items: vec!["one".to_string(), "two".to_string()],
+            steps: vec![nested_step.clone()],
+        },
+        ActionConfig::RetryBlock {
+            max_attempts: 3,
+            delay_ms: Some(100),
+            steps: vec![nested_step.clone()],
+        },
+        ActionConfig::StopWorkflow {
+            status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Success,
+            reason: Some("done".to_string()),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_five_logic_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::SetVariable {
+            name: String::new(),
+            value: "Ada".to_string(),
+        }
+        .validate()
+        .expect_err("blank variable name should fail"),
+        "name",
+        "Variable name is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::AssertText {
+            xpath: None,
+            iframe_xpath: None,
+            text: String::new(),
+            match_mode: workflow_automation_manager_lib::domain::AssertTextMatchMode::Contains,
+            timeout_ms: Some(3000),
+        }
+        .validate()
+        .expect_err("blank assert text should fail"),
+        "text",
+        "Expected text is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::AssertElement {
+            xpath: String::new(),
+            iframe_xpath: None,
+            state: workflow_automation_manager_lib::domain::AssertElementState::Visible,
+            timeout_ms: Some(3000),
+        }
+        .validate()
+        .expect_err("blank assert element xpath should fail"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::RepeatTimes {
+            times: 0,
+            steps: vec![],
+        }
+        .validate()
+        .expect_err("zero repeat count should fail"),
+        "times",
+        "Repeat count must be greater than 0",
+    );
+
+    assert_validation_message(
+        ActionConfig::RetryBlock {
+            max_attempts: 0,
+            delay_ms: Some(100),
+            steps: vec![],
+        }
+        .validate()
+        .expect_err("zero retry attempts should fail"),
+        "max_attempts",
+        "Max attempts must be greater than 0",
+    );
+}
+
+#[test]
 fn user_action_taxonomy_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::Navigate {

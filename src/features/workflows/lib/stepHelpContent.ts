@@ -49,7 +49,15 @@ type PhaseOneActionType =
   | "accept_dialog"
   | "dismiss_dialog"
   | "set_download_directory"
-  | "wait_for_download";
+  | "wait_for_download"
+  | "set_variable"
+  | "assert_element"
+  | "assert_text"
+  | "if_condition"
+  | "repeat_times"
+  | "repeat_for_each"
+  | "retry_block"
+  | "stop_workflow";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -528,6 +536,14 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
     "chờ file tải xong",
     "download",
   ),
+  set_variable: elementHelp("Set Variable", "save a reusable value", "lưu biến", "variable"),
+  assert_element: elementHelp("Assert Element", "require an element state", "kiểm tra element", "assert"),
+  assert_text: elementHelp("Assert Text", "require expected text", "kiểm tra text", "assert"),
+  if_condition: elementHelp("If Condition", "run steps when a condition matches", "rẽ nhánh", "logic"),
+  repeat_times: elementHelp("Repeat Times", "repeat nested steps", "lặp số lần", "loop"),
+  repeat_for_each: elementHelp("Repeat For Each", "repeat steps for each item", "lặp từng item", "loop"),
+  retry_block: elementHelp("Retry Block", "retry nested steps after failure", "thử lại block", "retry"),
+  stop_workflow: elementHelp("Stop Workflow", "stop the workflow intentionally", "dừng workflow", "stop"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

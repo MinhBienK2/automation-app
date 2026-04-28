@@ -52,6 +52,14 @@ pub enum ActionType {
     DismissDialog,
     SetDownloadDirectory,
     WaitForDownload,
+    SetVariable,
+    AssertElement,
+    AssertText,
+    IfCondition,
+    RepeatTimes,
+    RepeatForEach,
+    RetryBlock,
+    StopWorkflow,
 }
 
 impl ActionType {
@@ -104,6 +112,14 @@ impl ActionType {
             Self::DismissDialog => "dismiss_dialog",
             Self::SetDownloadDirectory => "set_download_directory",
             Self::WaitForDownload => "wait_for_download",
+            Self::SetVariable => "set_variable",
+            Self::AssertElement => "assert_element",
+            Self::AssertText => "assert_text",
+            Self::IfCondition => "if_condition",
+            Self::RepeatTimes => "repeat_times",
+            Self::RepeatForEach => "repeat_for_each",
+            Self::RetryBlock => "retry_block",
+            Self::StopWorkflow => "stop_workflow",
         }
     }
 
@@ -156,8 +172,50 @@ impl ActionType {
             Self::DismissDialog => "Dismiss Dialog",
             Self::SetDownloadDirectory => "Set Download Directory",
             Self::WaitForDownload => "Wait For Download",
+            Self::SetVariable => "Set Variable",
+            Self::AssertElement => "Assert Element",
+            Self::AssertText => "Assert Text",
+            Self::IfCondition => "If Condition",
+            Self::RepeatTimes => "Repeat Times",
+            Self::RepeatForEach => "Repeat For Each",
+            Self::RetryBlock => "Retry Block",
+            Self::StopWorkflow => "Stop Workflow",
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AssertElementState {
+    Attached,
+    Visible,
+    Hidden,
+    Enabled,
+    Disabled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AssertTextMatchMode {
+    Contains,
+    Equals,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StopWorkflowStatus {
+    Success,
+    Failure,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum WorkflowCondition {
+    OutputEquals { name: String, value: String },
+    OutputContains { name: String, value: String },
+    TextVisible { text: String },
+    UrlContains { value: String },
+    ElementVisible { xpath: String },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -662,6 +720,58 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
     },
+    SetVariable {
+        name: String,
+        value: String,
+    },
+    AssertElement {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        state: AssertElementState,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    AssertText {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        text: String,
+        match_mode: AssertTextMatchMode,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    IfCondition {
+        condition: WorkflowCondition,
+        #[serde(default)]
+        then_steps: Vec<ActionConfig>,
+        #[serde(default)]
+        else_steps: Vec<ActionConfig>,
+    },
+    RepeatTimes {
+        times: u32,
+        #[serde(default)]
+        steps: Vec<ActionConfig>,
+    },
+    RepeatForEach {
+        item_name: String,
+        items: Vec<String>,
+        #[serde(default)]
+        steps: Vec<ActionConfig>,
+    },
+    RetryBlock {
+        max_attempts: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delay_ms: Option<u64>,
+        #[serde(default)]
+        steps: Vec<ActionConfig>,
+    },
+    StopWorkflow {
+        status: StopWorkflowStatus,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
 }
 
 impl ActionConfig {
@@ -714,6 +824,14 @@ impl ActionConfig {
             Self::DismissDialog { .. } => ActionType::DismissDialog,
             Self::SetDownloadDirectory { .. } => ActionType::SetDownloadDirectory,
             Self::WaitForDownload { .. } => ActionType::WaitForDownload,
+            Self::SetVariable { .. } => ActionType::SetVariable,
+            Self::AssertElement { .. } => ActionType::AssertElement,
+            Self::AssertText { .. } => ActionType::AssertText,
+            Self::IfCondition { .. } => ActionType::IfCondition,
+            Self::RepeatTimes { .. } => ActionType::RepeatTimes,
+            Self::RepeatForEach { .. } => ActionType::RepeatForEach,
+            Self::RetryBlock { .. } => ActionType::RetryBlock,
+            Self::StopWorkflow { .. } => ActionType::StopWorkflow,
         }
     }
 
@@ -1034,6 +1152,33 @@ impl ActionConfig {
                 "timeout_ms",
                 "Timeout must be greater than 0",
             )),
+            Self::SetVariable { name, .. } if name.trim().is_empty() => {
+                Err(ValidationError::new("name", "Variable name is required"))
+            }
+            Self::AssertElement { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::AssertText { text, .. } if text.trim().is_empty() => {
+                Err(ValidationError::new("text", "Expected text is required"))
+            }
+            Self::IfCondition { condition, .. } => validate_condition(condition),
+            Self::RepeatTimes { times: 0, .. } => Err(ValidationError::new(
+                "times",
+                "Repeat count must be greater than 0",
+            )),
+            Self::RepeatForEach { item_name, .. } if item_name.trim().is_empty() => {
+                Err(ValidationError::new("item_name", "Item name is required"))
+            }
+            Self::RepeatForEach { items, .. } if items.is_empty() => Err(ValidationError::new(
+                "items",
+                "At least one item is required",
+            )),
+            Self::RetryBlock {
+                max_attempts: 0, ..
+            } => Err(ValidationError::new(
+                "max_attempts",
+                "Max attempts must be greater than 0",
+            )),
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..
@@ -1119,5 +1264,32 @@ impl ActionConfig {
             )),
             _ => Ok(()),
         }
+    }
+}
+
+fn validate_condition(condition: &WorkflowCondition) -> Result<(), ValidationError> {
+    match condition {
+        WorkflowCondition::OutputEquals { name, .. }
+        | WorkflowCondition::OutputContains { name, .. }
+            if name.trim().is_empty() =>
+        {
+            Err(ValidationError::new("name", "Output name is required"))
+        }
+        WorkflowCondition::OutputEquals { value, .. }
+        | WorkflowCondition::OutputContains { value, .. }
+            if value.trim().is_empty() =>
+        {
+            Err(ValidationError::new("value", "Condition value is required"))
+        }
+        WorkflowCondition::TextVisible { text } if text.trim().is_empty() => {
+            Err(ValidationError::new("text", "Condition text is required"))
+        }
+        WorkflowCondition::UrlContains { value } if value.trim().is_empty() => {
+            Err(ValidationError::new("value", "URL condition is required"))
+        }
+        WorkflowCondition::ElementVisible { xpath } if xpath.trim().is_empty() => {
+            Err(ValidationError::new("xpath", "XPath is required"))
+        }
+        _ => Ok(()),
     }
 }

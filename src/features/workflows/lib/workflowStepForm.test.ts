@@ -357,4 +357,48 @@ describe("workflow step form config helpers", () => {
       config: { output_name: "download_path", timeout_ms: 3000 },
     });
   });
+
+  test("updates phase five variable assertion and control configs with typed values", () => {
+    const setVariableConfig: ActionConfig = {
+      type: "set_variable",
+      config: { name: "customer", value: "Old" },
+    };
+    const assertTextConfig: ActionConfig = {
+      type: "assert_text",
+      config: { text: "Saved", match_mode: "contains" },
+    };
+    const assertElementConfig: ActionConfig = {
+      type: "assert_element",
+      config: { xpath: "//*[@id='save']", state: "visible" },
+    };
+    const repeatTimesConfig: ActionConfig = {
+      type: "repeat_times",
+      config: { times: 1, steps: [] },
+    };
+    const stopWorkflowConfig: ActionConfig = {
+      type: "stop_workflow",
+      config: { status: "success" },
+    };
+
+    expect(updateActionConfigField(setVariableConfig, "value", "Ada")).toEqual({
+      type: "set_variable",
+      config: { name: "customer", value: "Ada" },
+    });
+    expect(updateActionConfigField(assertTextConfig, "xpath", "//*[@id='status']")).toEqual({
+      type: "assert_text",
+      config: { text: "Saved", match_mode: "contains", xpath: "//*[@id='status']" },
+    });
+    expect(updateActionConfigField(assertElementConfig, "timeout_ms", "3000")).toEqual({
+      type: "assert_element",
+      config: { xpath: "//*[@id='save']", state: "visible", timeout_ms: 3000 },
+    });
+    expect(updateActionConfigField(repeatTimesConfig, "times", "2")).toEqual({
+      type: "repeat_times",
+      config: { times: 2, steps: [] },
+    });
+    expect(updateActionConfigField(stopWorkflowConfig, "reason", "Already complete")).toEqual({
+      type: "stop_workflow",
+      config: { status: "success", reason: "Already complete" },
+    });
+  });
 });

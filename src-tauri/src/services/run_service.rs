@@ -253,6 +253,49 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             output_name: "download_path".to_string(),
             timeout_ms: None,
         },
+        ActionType::SetVariable => ActionConfig::SetVariable {
+            name: "name".to_string(),
+            value: String::new(),
+        },
+        ActionType::AssertElement => ActionConfig::AssertElement {
+            xpath: String::new(),
+            iframe_xpath: None,
+            state: crate::domain::AssertElementState::Visible,
+            timeout_ms: None,
+        },
+        ActionType::AssertText => ActionConfig::AssertText {
+            xpath: None,
+            iframe_xpath: None,
+            text: String::new(),
+            match_mode: crate::domain::AssertTextMatchMode::Contains,
+            timeout_ms: None,
+        },
+        ActionType::IfCondition => ActionConfig::IfCondition {
+            condition: crate::domain::WorkflowCondition::OutputEquals {
+                name: "name".to_string(),
+                value: String::new(),
+            },
+            then_steps: Vec::new(),
+            else_steps: Vec::new(),
+        },
+        ActionType::RepeatTimes => ActionConfig::RepeatTimes {
+            times: 1,
+            steps: Vec::new(),
+        },
+        ActionType::RepeatForEach => ActionConfig::RepeatForEach {
+            item_name: "item".to_string(),
+            items: Vec::new(),
+            steps: Vec::new(),
+        },
+        ActionType::RetryBlock => ActionConfig::RetryBlock {
+            max_attempts: 3,
+            delay_ms: None,
+            steps: Vec::new(),
+        },
+        ActionType::StopWorkflow => ActionConfig::StopWorkflow {
+            status: crate::domain::StopWorkflowStatus::Success,
+            reason: None,
+        },
     }
 }
 

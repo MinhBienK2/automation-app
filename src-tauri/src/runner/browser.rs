@@ -104,6 +104,14 @@ impl BrowserRunner {
                         session,
                     });
                 }
+                Ok(ActionExecution::StopSuccess) => {
+                    progress(RunnerProgress::StepCompleted { step_number });
+                    return Ok(RunnerOutcome {
+                        status: RunnerStatus::Success,
+                        failed_step: None,
+                        session,
+                    });
+                }
                 Err(RunnerError::ActionFailed(reason)) => {
                     return Ok(RunnerOutcome {
                         status: RunnerStatus::Failed,

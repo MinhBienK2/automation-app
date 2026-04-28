@@ -15,12 +15,16 @@ export type ActionConfigField =
   | "iframe_xpath"
   | "index"
   | "inline"
+  | "items"
+  | "item_name"
   | "key"
   | "keys"
+  | "match_mode"
   | "match_by"
   | "max_attempts"
   | "method"
   | "mode"
+  | "name"
   | "offset_x"
   | "offset_y"
   | "option_text"
@@ -30,9 +34,11 @@ export type ActionConfigField =
   | "position"
   | "post_click_wait_ms"
   | "prompt_text"
+  | "reason"
   | "retry_interval_ms"
   | "scroll_into_view"
   | "seconds"
+  | "status"
   | "source_xpath"
   | "state"
   | "target_xpath"
@@ -45,6 +51,7 @@ export type ActionConfigField =
   | "wait_until"
   | "xpath"
   | "trigger_xpath"
+  | "times"
   | "full_page";
 
 export function updateActionConfigField(
@@ -145,6 +152,40 @@ export function updateActionConfigField(
       return { type: "set_download_directory", config: { path: value } };
     case "wait_for_download":
       return updateWaitForDownloadConfigField(config, field, value);
+    case "set_variable":
+      return { type: "set_variable", config: { ...config.config, [field]: value } };
+    case "assert_element":
+      return updateAssertElementConfigField(config, field, value);
+    case "assert_text":
+      return updateAssertTextConfigField(config, field, value);
+    case "if_condition":
+      return config;
+    case "repeat_times":
+      return { type: "repeat_times", config: { ...config.config, times: Number(value) } };
+    case "repeat_for_each":
+      if (field === "items") {
+        return {
+          type: "repeat_for_each",
+          config: {
+            ...config.config,
+            items: value
+              .split(/\r?\n/)
+              .map((item) => item.trim())
+              .filter(Boolean),
+          },
+        };
+      }
+      return { type: "repeat_for_each", config: { ...config.config, [field]: value } };
+    case "retry_block":
+      if (field === "max_attempts" || field === "delay_ms") {
+        return { type: "retry_block", config: { ...config.config, [field]: Number(value) } };
+      }
+      return config;
+    case "stop_workflow":
+      if (field === "reason") {
+        return { type: "stop_workflow", config: { ...config.config, reason: value || null } };
+      }
+      return { type: "stop_workflow", config: { ...config.config, [field]: value } };
   }
 }
 
@@ -564,4 +605,36 @@ function updateWaitForDownloadConfigField(
   }
 
   return { type: "wait_for_download", config: { ...config.config, [field]: value } };
+}
+
+function updateAssertElementConfigField(
+  config: Extract<ActionConfig, { type: "assert_element" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: "assert_element", config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "iframe_xpath") {
+    return { type: "assert_element", config: { ...config.config, iframe_xpath: value || null } };
+  }
+
+  return { type: "assert_element", config: { ...config.config, [field]: value } };
+}
+
+function updateAssertTextConfigField(
+  config: Extract<ActionConfig, { type: "assert_text" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: "assert_text", config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "xpath" || field === "iframe_xpath") {
+    return { type: "assert_text", config: { ...config.config, [field]: value || null } };
+  }
+
+  return { type: "assert_text", config: { ...config.config, [field]: value } };
 }

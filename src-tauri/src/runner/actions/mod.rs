@@ -5,7 +5,7 @@ mod scroll;
 mod type_text;
 mod user_interaction;
 
-use std::{path::Path, time::Duration};
+use std::{future::Future, path::Path, pin::Pin, time::Duration};
 
 use chromiumoxide::{
     cdp::browser_protocol::{
@@ -21,12 +21,15 @@ use chromiumoxide::{
     Page,
 };
 
-use crate::domain::{ActionConfig, ClickButton, ClickMode, WaitCondition};
+use crate::domain::{
+    ActionConfig, AssertElementState, AssertTextMatchMode, ClickButton, ClickMode,
+    StopWorkflowStatus, WaitCondition, WorkflowCondition,
+};
 
 use self::{
     click::{click_script, force_dom_click_script, ClickScriptOptions, ClickTargetResult},
     data_capture::{extract_data_script, store_output_script, ExtractKind},
-    js::ensure_js_action,
+    js::{ensure_js_action, json_string, optional_json_string},
     scroll::{scroll_script, ScrollScriptOptions},
     type_text::type_text_script,
     user_interaction::{
@@ -43,6 +46,7 @@ use super::{browser::BrowserSession, cancellation::RunnerCancellation, error::Ru
 pub(super) enum ActionExecution {
     Complete,
     Stopped,
+    StopSuccess,
 }
 
 pub(super) async fn execute_action(
@@ -53,10 +57,12 @@ pub(super) async fn execute_action(
     let page = session.current_page()?;
     match config {
         ActionConfig::Navigate { url, .. } => {
+            let url = render_template(&page, &url).await?;
             page.goto(url).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::OpenUrl { url } => {
+            let url = render_template(&page, &url).await?;
             page.goto(url).await?;
             Ok(ActionExecution::Complete)
         }
@@ -106,6 +112,7 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
+            let text = render_template(&page, &text).await?;
             let script = input_text_script(InputTextScriptOptions {
                 xpath: &xpath,
                 iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
@@ -120,6 +127,7 @@ pub(super) async fn execute_action(
             Ok(ActionExecution::Complete)
         }
         ActionConfig::TypeText { xpath, text } => {
+            let text = render_template(&page, &text).await?;
             let script = type_text_script(&xpath, &text)?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
@@ -402,6 +410,7 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
+            let text = render_template(&page, &text).await?;
             let script = type_sequence_script(
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
@@ -414,6 +423,7 @@ pub(super) async fn execute_action(
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SetClipboard { text } => {
+            let text = render_template(&page, &text).await?;
             let script = set_clipboard_script(&text)?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
@@ -549,6 +559,7 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
+            let text = render_template(&page, &text).await?;
             let script = set_contenteditable_script(
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
@@ -709,7 +720,134 @@ pub(super) async fn execute_action(
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::SetVariable { name, value } => {
+            let value = render_template(&page, &value).await?;
+            let script = store_output_script(&name, &value)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::AssertElement {
+            xpath,
+            iframe_xpath,
+            state,
+            timeout_ms,
+        } => {
+            let condition = match state {
+                AssertElementState::Attached => WaitCondition::ElementAttached,
+                AssertElementState::Visible => WaitCondition::ElementVisible,
+                AssertElementState::Hidden => WaitCondition::ElementHidden,
+                AssertElementState::Enabled => WaitCondition::ElementEnabled,
+                AssertElementState::Disabled => WaitCondition::ElementDisabled,
+            };
+            let script = assert_element_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                condition,
+                timeout_ms,
+            )?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::AssertText {
+            xpath,
+            iframe_xpath,
+            text,
+            match_mode,
+            timeout_ms,
+        } => {
+            let text = render_template(&page, &text).await?;
+            let script = assert_text_script(
+                xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
+                &text,
+                match_mode,
+                timeout_ms,
+            )?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::IfCondition {
+            condition,
+            then_steps,
+            else_steps,
+        } => {
+            let matches = evaluate_condition(&page, &condition).await?;
+            let steps = if matches { then_steps } else { else_steps };
+            execute_inline_steps(session, steps, cancellation).await
+        }
+        ActionConfig::RepeatTimes { times, steps } => {
+            for _ in 0..times {
+                match execute_inline_steps(session, steps.clone(), cancellation).await? {
+                    ActionExecution::Complete => {}
+                    execution => return Ok(execution),
+                }
+            }
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::RepeatForEach {
+            item_name,
+            items,
+            steps,
+        } => {
+            for item in items {
+                let script = store_output_script(&item_name, &item)?;
+                ensure_js_action(&page, &script).await?;
+                match execute_inline_steps(session, steps.clone(), cancellation).await? {
+                    ActionExecution::Complete => {}
+                    execution => return Ok(execution),
+                }
+            }
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::RetryBlock {
+            max_attempts,
+            delay_ms,
+            steps,
+        } => {
+            let mut last_error = None;
+            for attempt in 1..=max_attempts {
+                match execute_inline_steps(session, steps.clone(), cancellation).await {
+                    Ok(ActionExecution::Complete) => return Ok(ActionExecution::Complete),
+                    Ok(execution) => return Ok(execution),
+                    Err(RunnerError::ActionFailed(reason)) => {
+                        last_error = Some(reason);
+                        if attempt < max_attempts {
+                            tokio::select! {
+                                _ = tokio::time::sleep(Duration::from_millis(delay_ms.unwrap_or(0))) => {},
+                                _ = cancellation.cancelled() => return Ok(ActionExecution::Stopped),
+                            }
+                        }
+                    }
+                    Err(error) => return Err(error),
+                }
+            }
+            Err(RunnerError::ActionFailed(
+                last_error.unwrap_or_else(|| "Retry block failed".to_string()),
+            ))
+        }
+        ActionConfig::StopWorkflow { status, reason } => match status {
+            StopWorkflowStatus::Success => Ok(ActionExecution::StopSuccess),
+            StopWorkflowStatus::Failure => Err(RunnerError::ActionFailed(
+                reason.unwrap_or_else(|| "Workflow stopped".to_string()),
+            )),
+        },
     }
+}
+
+fn execute_inline_steps<'a>(
+    session: &'a mut BrowserSession,
+    steps: Vec<ActionConfig>,
+    cancellation: &'a RunnerCancellation,
+) -> Pin<Box<dyn Future<Output = Result<ActionExecution, RunnerError>> + Send + 'a>> {
+    Box::pin(async move {
+        for step in steps {
+            match execute_action(session, step, cancellation).await? {
+                ActionExecution::Complete => {}
+                execution => return Ok(execution),
+            }
+        }
+        Ok(ActionExecution::Complete)
+    })
 }
 
 fn effective_frame<'a>(
@@ -717,6 +855,176 @@ fn effective_frame<'a>(
     session: &'a BrowserSession,
 ) -> Option<&'a str> {
     explicit_iframe_xpath.or_else(|| session.frame_xpath())
+}
+
+async fn render_template(page: &Page, template: &str) -> Result<String, RunnerError> {
+    let template = json_string(template)?;
+    let script = format!(
+        r#"
+        (() => {{
+          const template = {template};
+          const outputs = window.__wamOutputs || {{}};
+          return template.replace(/\{{\{{\s*([a-zA-Z0-9_.-]+)\s*\}}\}}/g, (_, name) => {{
+            const value = outputs[name];
+            if (value === undefined || value === null) return "";
+            if (typeof value === "object") return JSON.stringify(value);
+            return String(value);
+          }});
+        }})()
+        "#
+    );
+    Ok(page.evaluate(script).await?.into_value()?)
+}
+
+async fn evaluate_condition(
+    page: &Page,
+    condition: &WorkflowCondition,
+) -> Result<bool, RunnerError> {
+    let script = match condition {
+        WorkflowCondition::OutputEquals { name, value } => {
+            let name = json_string(name)?;
+            let value = json_string(value)?;
+            format!(r#"(() => String((window.__wamOutputs || {{}})[{name}] ?? "") === {value})()"#)
+        }
+        WorkflowCondition::OutputContains { name, value } => {
+            let name = json_string(name)?;
+            let value = json_string(value)?;
+            format!(
+                r#"(() => String((window.__wamOutputs || {{}})[{name}] ?? "").includes({value}))()"#
+            )
+        }
+        WorkflowCondition::TextVisible { text } => {
+            let text = json_string(text)?;
+            format!(r#"(() => document.body.innerText.includes({text}))()"#)
+        }
+        WorkflowCondition::UrlContains { value } => {
+            let value = json_string(value)?;
+            format!(r#"(() => window.location.href.includes({value}))()"#)
+        }
+        WorkflowCondition::ElementVisible { xpath } => {
+            let xpath = json_string(xpath)?;
+            format!(
+                r#"(() => {{
+                  const node = document.evaluate({xpath}, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                  if (!node || !(node instanceof Element)) return false;
+                  const style = window.getComputedStyle(node);
+                  const rect = node.getBoundingClientRect();
+                  return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+                }})()"#
+            )
+        }
+    };
+    Ok(page.evaluate(script).await?.into_value()?)
+}
+
+fn assert_element_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    condition: WaitCondition,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let condition = json_string(condition_name(condition))?;
+    let timeout_ms = timeout_ms.unwrap_or(5_000);
+    Ok(format!(
+        r#"
+        (async () => {{
+          const xpath = {xpath};
+          const iframeXPath = {iframe_xpath};
+          const condition = {condition};
+          const timeoutMs = {timeout_ms};
+          const deadline = Date.now() + timeoutMs;
+          const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const docFor = () => {{
+            if (!iframeXPath) return document;
+            const frame = document.evaluate(iframeXPath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            return frame && frame.contentDocument ? frame.contentDocument : null;
+          }};
+          const find = (doc) => doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+          const visible = (node) => {{
+            if (!node || !(node instanceof Element)) return false;
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            const rect = node.getBoundingClientRect();
+            return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+          }};
+          const enabled = (node) => !node.disabled && node.getAttribute("aria-disabled") !== "true";
+          while (Date.now() <= deadline) {{
+            const doc = docFor();
+            const node = doc ? find(doc) : null;
+            const ok =
+              condition === "element_attached" ? !!node :
+              condition === "element_visible" ? visible(node) :
+              condition === "element_hidden" ? !node || !visible(node) :
+              condition === "element_enabled" ? !!node && enabled(node) :
+              condition === "element_disabled" ? !!node && !enabled(node) :
+              false;
+            if (ok) return {{ ok: true, reason: "" }};
+            await delay(100);
+          }}
+          return {{ ok: false, reason: "Assertion failed" }};
+        }})()
+        "#
+    ))
+}
+
+fn assert_text_script(
+    xpath: Option<&str>,
+    iframe_xpath: Option<&str>,
+    text: &str,
+    match_mode: AssertTextMatchMode,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let xpath = optional_json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let text = json_string(text)?;
+    let mode = json_string(match match_mode {
+        AssertTextMatchMode::Contains => "contains",
+        AssertTextMatchMode::Equals => "equals",
+    })?;
+    let timeout_ms = timeout_ms.unwrap_or(5_000);
+    Ok(format!(
+        r#"
+        (async () => {{
+          const xpath = {xpath};
+          const iframeXPath = {iframe_xpath};
+          const expected = {text};
+          const mode = {mode};
+          const timeoutMs = {timeout_ms};
+          const deadline = Date.now() + timeoutMs;
+          const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const docFor = () => {{
+            if (!iframeXPath) return document;
+            const frame = document.evaluate(iframeXPath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            return frame && frame.contentDocument ? frame.contentDocument : null;
+          }};
+          const actualText = (doc) => {{
+            if (!xpath) return doc.body ? doc.body.innerText : "";
+            const node = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            return node ? node.textContent || "" : "";
+          }};
+          while (Date.now() <= deadline) {{
+            const doc = docFor();
+            const actual = doc ? actualText(doc) : "";
+            const ok = mode === "equals" ? actual.trim() === expected : actual.includes(expected);
+            if (ok) return {{ ok: true, reason: "" }};
+            await delay(100);
+          }}
+          return {{ ok: false, reason: "Text assertion failed" }};
+        }})()
+        "#
+    ))
+}
+
+fn condition_name(condition: WaitCondition) -> &'static str {
+    match condition {
+        WaitCondition::ElementAttached => "element_attached",
+        WaitCondition::ElementVisible => "element_visible",
+        WaitCondition::ElementHidden => "element_hidden",
+        WaitCondition::ElementEnabled => "element_enabled",
+        WaitCondition::ElementDisabled => "element_disabled",
+        _ => "element_visible",
+    }
 }
 
 async fn navigate_history(page: &Page, offset: i64) -> Result<(), RunnerError> {

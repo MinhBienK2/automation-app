@@ -45,7 +45,15 @@ export type ActionType =
   | "accept_dialog"
   | "dismiss_dialog"
   | "set_download_directory"
-  | "wait_for_download";
+  | "wait_for_download"
+  | "set_variable"
+  | "assert_element"
+  | "assert_text"
+  | "if_condition"
+  | "repeat_times"
+  | "repeat_for_each"
+  | "retry_block"
+  | "stop_workflow";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -335,7 +343,55 @@ export type ActionConfig =
   | {
       type: "wait_for_download";
       config: { output_name: string; timeout_ms?: number | null };
+    }
+  | { type: "set_variable"; config: { name: string; value: string } }
+  | {
+      type: "assert_element";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "assert_text";
+      config: {
+        xpath?: string | null;
+        iframe_xpath?: string | null;
+        text: string;
+        match_mode: "contains" | "equals";
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "if_condition";
+      config: {
+        condition: WorkflowCondition;
+        then_steps: ActionConfig[];
+        else_steps: ActionConfig[];
+      };
+    }
+  | { type: "repeat_times"; config: { times: number; steps: ActionConfig[] } }
+  | {
+      type: "repeat_for_each";
+      config: { item_name: string; items: string[]; steps: ActionConfig[] };
+    }
+  | {
+      type: "retry_block";
+      config: { max_attempts: number; delay_ms?: number | null; steps: ActionConfig[] };
+    }
+  | {
+      type: "stop_workflow";
+      config: { status: "success" | "failure"; reason?: string | null };
     };
+
+export type WorkflowCondition =
+  | { kind: "output_equals"; name: string; value: string }
+  | { kind: "output_contains"; name: string; value: string }
+  | { kind: "text_visible"; text: string }
+  | { kind: "url_contains"; value: string }
+  | { kind: "element_visible"; xpath: string };
 
 type ElementTargetActionConfig = {
   xpath: string;

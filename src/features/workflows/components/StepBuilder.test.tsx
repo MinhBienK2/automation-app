@@ -125,6 +125,18 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "wait_for_download",
     );
+    expect(screen.getByRole("option", { name: "Set Variable" })).toHaveAttribute(
+      "data-value",
+      "set_variable",
+    );
+    expect(screen.getByRole("option", { name: "Assert Text" })).toHaveAttribute(
+      "data-value",
+      "assert_text",
+    );
+    expect(screen.getByRole("option", { name: "Repeat Times" })).toHaveAttribute(
+      "data-value",
+      "repeat_times",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -698,6 +710,44 @@ describe("Workflow step builder integration", () => {
             output_name: "invoice_path",
             timeout_ms: 3000,
           },
+        },
+      });
+    });
+  });
+
+  test("saves a set variable phase five action config", async () => {
+    const variableStep: WorkflowStep = {
+      id: "step-variable",
+      name: "Set customer",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "set_variable",
+      config: {
+        type: "set_variable",
+        config: { name: "customer", value: "Old" },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([variableStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Value"));
+    await userEvent.type(screen.getByLabelText("Value"), "Ada");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-variable",
+        name: "Set customer",
+        config: {
+          type: "set_variable",
+          config: { name: "customer", value: "Ada" },
         },
       });
     });
