@@ -499,6 +499,30 @@ fn click_config_validates_real_user_options() {
         "click_count",
         "Click count must be greater than 0",
     );
+
+    assert_validation_message(
+        ActionConfig::Click {
+            xpath: "//*[@id=\"submit\"]".to_string(),
+            iframe_xpath: None,
+            mode: Some(ClickMode::ForceDom),
+            button: Some(ClickButton::Right),
+            click_count: None,
+            scroll_into_view: None,
+            block: None,
+            inline: None,
+            position: None,
+            offset_x: None,
+            offset_y: None,
+            wait_until: None,
+            timeout_ms: None,
+            retry_interval_ms: None,
+            post_click_wait_ms: None,
+        }
+        .validate()
+        .expect_err("force DOM cannot right click"),
+        "button",
+        "Force DOM click only supports the left button",
+    );
 }
 
 #[test]

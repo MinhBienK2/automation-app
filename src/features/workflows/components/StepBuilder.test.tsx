@@ -88,6 +88,11 @@ describe("Workflow step builder integration", () => {
     await userEvent.clear(await screen.findByLabelText("Text"));
     await userEvent.type(screen.getByLabelText("Text"), "user@example.com");
     await userEvent.selectOptions(screen.getByLabelText("Typing mode"), "type");
+    await userEvent.clear(screen.getByLabelText("Delay ms"));
+    await userEvent.type(screen.getByLabelText("Delay ms"), "25");
+    await userEvent.selectOptions(screen.getByLabelText("Wait until"), "visible");
+    await userEvent.clear(screen.getByLabelText("Timeout ms"));
+    await userEvent.type(screen.getByLabelText("Timeout ms"), "3000");
     await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
 
     await waitFor(() => {
@@ -101,6 +106,9 @@ describe("Workflow step builder integration", () => {
             text: "user@example.com",
             clear_before_input: true,
             typing_mode: "type",
+            delay_ms: 25,
+            wait_until: "visible",
+            timeout_ms: 3000,
           },
         },
       });
@@ -194,12 +202,18 @@ describe("Workflow step builder integration", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    await userEvent.selectOptions(await screen.findByLabelText("Mode"), "force_dom");
+    await userEvent.selectOptions(await screen.findByLabelText("Mode"), "real");
+    await userEvent.selectOptions(screen.getByLabelText("Button"), "right");
     await userEvent.selectOptions(screen.getByLabelText("Click count"), "2");
+    await userEvent.selectOptions(screen.getByLabelText("Scroll into view"), "false");
+    await userEvent.selectOptions(screen.getByLabelText("Block"), "end");
+    await userEvent.selectOptions(screen.getByLabelText("Inline"), "center");
     await userEvent.clear(screen.getByLabelText("Iframe XPath"));
     fireEvent.change(screen.getByLabelText("Iframe XPath"), {
       target: { value: "//*[@id='frame']" },
     });
+    await userEvent.clear(screen.getByLabelText("Post-click wait ms"));
+    await userEvent.type(screen.getByLabelText("Post-click wait ms"), "250");
     await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
 
     await waitFor(() => {
@@ -210,9 +224,14 @@ describe("Workflow step builder integration", () => {
           type: "click",
           config: {
             xpath: '//*[@id="submit"]',
-            mode: "force_dom",
+            mode: "real",
+            button: "right",
             click_count: 2,
+            scroll_into_view: false,
+            block: "end",
+            inline: "center",
             iframe_xpath: "//*[@id='frame']",
+            post_click_wait_ms: 250,
           },
         },
       });

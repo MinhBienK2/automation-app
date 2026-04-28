@@ -460,6 +460,14 @@ impl ActionConfig {
                 "Click count must be greater than 0",
             )),
             Self::Click {
+                mode: Some(ClickMode::ForceDom),
+                button: Some(ClickButton::Right | ClickButton::Middle),
+                ..
+            } => Err(ValidationError::new(
+                "button",
+                "Force DOM click only supports the left button",
+            )),
+            Self::Click {
                 position: Some(ClickPosition::Offset),
                 offset_x,
                 offset_y,

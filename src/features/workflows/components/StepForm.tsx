@@ -289,6 +289,46 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               placeholder="Optional iframe XPath"
             />
           </label>
+          <label>
+            Delay ms
+            <input
+              min="1"
+              type="number"
+              value={config.config.delay_ms ?? 1}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
+              }
+            />
+          </label>
+          <label>
+            Wait until
+            <select
+              value={config.config.wait_until ?? "clickable"}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "wait_until", event.currentTarget.value),
+                )
+              }
+            >
+              <option value="clickable">Clickable</option>
+              <option value="visible">Visible</option>
+              <option value="enabled">Enabled</option>
+              <option value="attached">Attached</option>
+            </select>
+          </label>
+          <label>
+            Timeout ms
+            <input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 5000}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
+                )
+              }
+            />
+          </label>
         </>
       );
     case "type_text":
@@ -376,6 +416,19 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             </select>
           </label>
           <label>
+            Button
+            <select
+              value={config.config.button ?? "left"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "button", event.currentTarget.value))
+              }
+            >
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+              <option value="middle">Middle</option>
+            </select>
+          </label>
+          <label>
             Iframe XPath
             <input
               value={config.config.iframe_xpath ?? ""}
@@ -386,6 +439,52 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               }
               placeholder="Optional iframe XPath"
             />
+          </label>
+          <label>
+            Scroll into view
+            <select
+              value={String(config.config.scroll_into_view ?? true)}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "scroll_into_view",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            >
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </label>
+          <label>
+            Block
+            <select
+              value={config.config.block ?? "center"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "block", event.currentTarget.value))
+              }
+            >
+              <option value="start">Start</option>
+              <option value="center">Center</option>
+              <option value="end">End</option>
+              <option value="nearest">Nearest</option>
+            </select>
+          </label>
+          <label>
+            Inline
+            <select
+              value={config.config.inline ?? "nearest"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "inline", event.currentTarget.value))
+              }
+            >
+              <option value="start">Start</option>
+              <option value="center">Center</option>
+              <option value="end">End</option>
+              <option value="nearest">Nearest</option>
+            </select>
           </label>
           <label>
             Position
@@ -471,6 +570,23 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                   updateActionConfigField(
                     config,
                     "retry_interval_ms",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            />
+          </label>
+          <label>
+            Post-click wait ms
+            <input
+              min="0"
+              type="number"
+              value={config.config.post_click_wait_ms ?? 0}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "post_click_wait_ms",
                     event.currentTarget.value,
                   ),
                 )
@@ -766,6 +882,20 @@ function ElementOptionalFields({
           }
           placeholder="Optional iframe XPath"
         />
+      </label>
+      <label>
+        Wait until
+        <select
+          value={config.config.wait_until ?? "clickable"}
+          onChange={(event) =>
+            onChange(updateActionConfigField(config, "wait_until", event.currentTarget.value))
+          }
+        >
+          <option value="clickable">Clickable</option>
+          <option value="visible">Visible</option>
+          <option value="enabled">Enabled</option>
+          <option value="attached">Attached</option>
+        </select>
       </label>
       <label>
         Timeout ms
