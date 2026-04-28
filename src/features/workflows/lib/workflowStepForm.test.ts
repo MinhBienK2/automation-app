@@ -289,4 +289,32 @@ describe("workflow step form config helpers", () => {
       },
     });
   });
+
+  test("updates phase three browser context configs with typed values", () => {
+    const openTabConfig: ActionConfig = {
+      type: "open_new_tab",
+      config: { url: "https://example.com" },
+    };
+    const switchTabConfig: ActionConfig = {
+      type: "switch_tab",
+      config: { index: 0 },
+    };
+    const closeTabConfig: ActionConfig = {
+      type: "close_tab",
+      config: {},
+    };
+
+    expect(updateActionConfigField(openTabConfig, "url", "https://example.org")).toEqual({
+      type: "open_new_tab",
+      config: { url: "https://example.org" },
+    });
+    expect(updateActionConfigField(switchTabConfig, "index", "1")).toEqual({
+      type: "switch_tab",
+      config: { index: 1 },
+    });
+    expect(updateActionConfigField(closeTabConfig, "index", "2")).toEqual({
+      type: "close_tab",
+      config: { index: 2 },
+    });
+  });
 });

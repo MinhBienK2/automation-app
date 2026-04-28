@@ -13,6 +13,7 @@ export type ActionConfigField =
   | "duration_ms"
   | "files"
   | "iframe_xpath"
+  | "index"
   | "inline"
   | "key"
   | "keys"
@@ -123,6 +124,16 @@ export function updateActionConfigField(
       return updateExtractAttributeConfigField(config, field, value);
     case "take_screenshot":
       return updateTakeScreenshotConfigField(config, field, value);
+    case "go_back":
+    case "go_forward":
+    case "reload":
+      return config;
+    case "open_new_tab":
+      return { type: "open_new_tab", config: { url: value || null } };
+    case "switch_tab":
+      return { type: "switch_tab", config: { index: Number(value) } };
+    case "close_tab":
+      return { type: "close_tab", config: { index: value ? Number(value) : null } };
   }
 }
 

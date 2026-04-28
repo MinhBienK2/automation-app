@@ -34,7 +34,13 @@ export type ActionType =
   | "extract_input_value"
   | "extract_table"
   | "extract_list"
-  | "take_screenshot";
+  | "take_screenshot"
+  | "go_back"
+  | "go_forward"
+  | "reload"
+  | "open_new_tab"
+  | "switch_tab"
+  | "close_tab";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -310,7 +316,13 @@ export type ActionConfig =
         output_name?: string | null;
         full_page: boolean;
       };
-    };
+    }
+  | { type: "go_back"; config: Record<string, never> }
+  | { type: "go_forward"; config: Record<string, never> }
+  | { type: "reload"; config: Record<string, never> }
+  | { type: "open_new_tab"; config: { url?: string | null } }
+  | { type: "switch_tab"; config: { index: number } }
+  | { type: "close_tab"; config: { index?: number | null } };
 
 type ElementTargetActionConfig = {
   xpath: string;

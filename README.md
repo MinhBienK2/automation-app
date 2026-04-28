@@ -56,11 +56,13 @@ Use a simple page with an input, button, list, table, link, and tall body.
 1. Create a workflow.
 2. Add Open URL, Sleep, Type Text, Click, and Scroll steps.
 3. Add Extract Text, Extract Attribute, Extract Input Value, Extract List, Extract Table, and Take Screenshot steps.
-4. Reorder steps and reopen the workflow.
-5. Test a selected step.
-6. Run the full workflow.
-7. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
-8. Confirm bad XPath fails immediately with a short message.
-9. Stop during a long Sleep.
-10. Confirm Chromium remains open after success, failure, and stop.
-11. Delete the workflow.
+4. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, and Close Tab steps.
+5. Reorder steps and reopen the workflow.
+6. Test a selected step.
+7. Run the full workflow.
+8. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
+9. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
+10. Confirm bad XPath fails immediately with a short message.
+11. Stop during a long Sleep.
+12. Confirm Chromium remains open after success, failure, and stop.
+13. Delete the workflow.

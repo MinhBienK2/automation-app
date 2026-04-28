@@ -237,6 +237,12 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             output_name: Some("screenshot_path".to_string()),
             full_page: false,
         },
+        ActionType::GoBack => ActionConfig::GoBack {},
+        ActionType::GoForward => ActionConfig::GoForward {},
+        ActionType::Reload => ActionConfig::Reload {},
+        ActionType::OpenNewTab => ActionConfig::OpenNewTab { url: None },
+        ActionType::SwitchTab => ActionConfig::SwitchTab { index: 0 },
+        ActionType::CloseTab => ActionConfig::CloseTab { index: None },
     }
 }
 

@@ -42,6 +42,12 @@ export const actionLabels: Record<ActionType, string> = {
   extract_table: "Extract Table",
   extract_list: "Extract List",
   take_screenshot: "Take Screenshot",
+  go_back: "Go Back",
+  go_forward: "Go Forward",
+  reload: "Reload",
+  open_new_tab: "Open New Tab",
+  switch_tab: "Switch Tab",
+  close_tab: "Close Tab",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -90,6 +96,10 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
       "extract_list",
       "take_screenshot",
     ],
+  },
+  {
+    label: "Browser",
+    actions: ["go_back", "go_forward", "reload", "open_new_tab", "switch_tab", "close_tab"],
   },
   {
     label: "Legacy",
@@ -200,6 +210,20 @@ export function stepSummary(step: WorkflowStep) {
       return `${step.config.config.output_name || "No output"} list`;
     case "take_screenshot":
       return step.config.config.path || "No path";
+    case "go_back":
+      return "Browser back";
+    case "go_forward":
+      return "Browser forward";
+    case "reload":
+      return "Reload current tab";
+    case "open_new_tab":
+      return step.config.config.url || "Blank tab";
+    case "switch_tab":
+      return `tab ${step.config.config.index}`;
+    case "close_tab":
+      return step.config.config.index == null
+        ? "Current tab"
+        : `tab ${step.config.config.index}`;
   }
 }
 

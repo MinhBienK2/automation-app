@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, time::Duration};
 
 use uuid::Uuid;
 use workflow_automation_manager_lib::{
-    domain::{ActionConfig, ClickWaitUntil, ScrollDirection},
+    domain::{ActionConfig, ClickWaitUntil, ScrollDirection, WaitCondition},
     runner::{BrowserRunner, RunnerCancellation, RunnerOptions, RunnerStatus},
 };
 
@@ -129,6 +129,40 @@ fn write_phase_four_test_page() -> (String, String) {
     (
         format!("file://{}", page_path.display()),
         screenshot_path.display().to_string(),
+    )
+}
+
+fn write_phase_three_test_pages() -> (String, String) {
+    let page_one_path =
+        std::env::temp_dir().join(format!("wam-phase-three-one-{}.html", Uuid::new_v4()));
+    let page_two_path =
+        std::env::temp_dir().join(format!("wam-phase-three-two-{}.html", Uuid::new_v4()));
+    fs::write(
+        &page_one_path,
+        r#"
+        <!doctype html>
+        <html>
+          <head><title>Page One</title></head>
+          <body><h1 id="title">Page One</h1></body>
+        </html>
+        "#,
+    )
+    .expect("write phase three page one");
+    fs::write(
+        &page_two_path,
+        r#"
+        <!doctype html>
+        <html>
+          <head><title>Page Two</title></head>
+          <body><h1 id="title">Page Two</h1></body>
+        </html>
+        "#,
+    )
+    .expect("write phase three page two");
+
+    (
+        format!("file://{}", page_one_path.display()),
+        format!("file://{}", page_two_path.display()),
     )
 }
 
@@ -628,6 +662,86 @@ async fn runner_executes_phase_four_data_capture_actions_against_visible_chromiu
     assert_eq!(outputs["orders"][1][1], "Paid");
     assert_eq!(outputs["screenshot_path"], screenshot_path);
     assert!(PathBuf::from(&screenshot_path).is_file());
+
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_three_browser_context_actions_against_visible_chromium() {
+    let (page_one, page_two) = write_phase_three_test_pages();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl {
+                    url: page_one.clone(),
+                },
+                ActionConfig::Navigate {
+                    url: page_two.clone(),
+                    wait_until: None,
+                    timeout_ms: None,
+                },
+                ActionConfig::GoBack {},
+                ActionConfig::Wait {
+                    condition: WaitCondition::TextVisible,
+                    xpath: None,
+                    text: Some("Page One".to_string()),
+                    url: None,
+                    duration_ms: None,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::GoForward {},
+                ActionConfig::Wait {
+                    condition: WaitCondition::TextVisible,
+                    xpath: None,
+                    text: Some("Page Two".to_string()),
+                    url: None,
+                    duration_ms: None,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::Reload {},
+                ActionConfig::OpenNewTab {
+                    url: Some(page_one.clone()),
+                },
+                ActionConfig::SwitchTab { index: 0 },
+                ActionConfig::ExtractText {
+                    xpath: "//*[@id=\"title\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "tab_zero_title".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SwitchTab { index: 1 },
+                ActionConfig::ExtractText {
+                    xpath: "//*[@id=\"title\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "tab_one_title".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::CloseTab { index: Some(1) },
+                ActionConfig::ExtractText {
+                    xpath: "//*[@id=\"title\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "after_close_title".to_string(),
+                    timeout_ms: Some(3000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase three steps");
+
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+
+    assert_eq!(outputs["tab_zero_title"], "Page Two");
+    assert_eq!(outputs["after_close_title"], "Page Two");
 
     outcome.session.close().await.expect("close browser");
 }

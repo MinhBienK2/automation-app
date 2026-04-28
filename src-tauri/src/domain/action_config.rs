@@ -41,6 +41,12 @@ pub enum ActionType {
     ExtractTable,
     ExtractList,
     TakeScreenshot,
+    GoBack,
+    GoForward,
+    Reload,
+    OpenNewTab,
+    SwitchTab,
+    CloseTab,
 }
 
 impl ActionType {
@@ -82,6 +88,12 @@ impl ActionType {
             Self::ExtractTable => "extract_table",
             Self::ExtractList => "extract_list",
             Self::TakeScreenshot => "take_screenshot",
+            Self::GoBack => "go_back",
+            Self::GoForward => "go_forward",
+            Self::Reload => "reload",
+            Self::OpenNewTab => "open_new_tab",
+            Self::SwitchTab => "switch_tab",
+            Self::CloseTab => "close_tab",
         }
     }
 
@@ -123,6 +135,12 @@ impl ActionType {
             Self::ExtractTable => "Extract Table",
             Self::ExtractList => "Extract List",
             Self::TakeScreenshot => "Take Screenshot",
+            Self::GoBack => "Go Back",
+            Self::GoForward => "Go Forward",
+            Self::Reload => "Reload",
+            Self::OpenNewTab => "Open New Tab",
+            Self::SwitchTab => "Switch Tab",
+            Self::CloseTab => "Close Tab",
         }
     }
 }
@@ -598,6 +616,20 @@ pub enum ActionConfig {
         #[serde(default)]
         full_page: bool,
     },
+    GoBack {},
+    GoForward {},
+    Reload {},
+    OpenNewTab {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        url: Option<String>,
+    },
+    SwitchTab {
+        index: usize,
+    },
+    CloseTab {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        index: Option<usize>,
+    },
 }
 
 impl ActionConfig {
@@ -639,6 +671,12 @@ impl ActionConfig {
             Self::ExtractTable { .. } => ActionType::ExtractTable,
             Self::ExtractList { .. } => ActionType::ExtractList,
             Self::TakeScreenshot { .. } => ActionType::TakeScreenshot,
+            Self::GoBack { .. } => ActionType::GoBack,
+            Self::GoForward { .. } => ActionType::GoForward,
+            Self::Reload { .. } => ActionType::Reload,
+            Self::OpenNewTab { .. } => ActionType::OpenNewTab,
+            Self::SwitchTab { .. } => ActionType::SwitchTab,
+            Self::CloseTab { .. } => ActionType::CloseTab,
         }
     }
 
@@ -940,6 +978,9 @@ impl ActionConfig {
                 "output_name",
                 "Output name is required",
             )),
+            Self::OpenNewTab { url: Some(url) } if url.trim().is_empty() => {
+                Err(ValidationError::new("url", "URL is required"))
+            }
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..

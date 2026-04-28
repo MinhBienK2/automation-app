@@ -1154,6 +1154,52 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           </Label>
         </>
       );
+    case "go_back":
+    case "go_forward":
+    case "reload":
+      return null;
+    case "open_new_tab":
+      return (
+        <Label>
+          URL
+          <Input
+            value={config.config.url ?? ""}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "url", event.currentTarget.value))
+            }
+            placeholder="Optional URL"
+          />
+        </Label>
+      );
+    case "switch_tab":
+      return (
+        <Label>
+          Tab index
+          <Input
+            min="0"
+            type="number"
+            value={config.config.index}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "index", event.currentTarget.value))
+            }
+          />
+        </Label>
+      );
+    case "close_tab":
+      return (
+        <Label>
+          Tab index
+          <Input
+            min="0"
+            type="number"
+            value={config.config.index ?? ""}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "index", event.currentTarget.value))
+            }
+            placeholder="Current tab"
+          />
+        </Label>
+      );
   }
 }
 

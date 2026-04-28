@@ -109,6 +109,14 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "take_screenshot",
     );
+    expect(screen.getByRole("option", { name: "Open New Tab" })).toHaveAttribute(
+      "data-value",
+      "open_new_tab",
+    );
+    expect(screen.getByRole("option", { name: "Switch Tab" })).toHaveAttribute(
+      "data-value",
+      "switch_tab",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -599,6 +607,44 @@ describe("Workflow step builder integration", () => {
             attribute: "data-id",
             output_name: "link_id",
           },
+        },
+      });
+    });
+  });
+
+  test("saves a switch tab phase three action config", async () => {
+    const switchTabStep: WorkflowStep = {
+      id: "step-switch-tab",
+      name: "Switch to second tab",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "switch_tab",
+      config: {
+        type: "switch_tab",
+        config: { index: 0 },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([switchTabStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Tab index"));
+    await userEvent.type(screen.getByLabelText("Tab index"), "1");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-switch-tab",
+        name: "Switch to second tab",
+        config: {
+          type: "switch_tab",
+          config: { index: 1 },
         },
       });
     });

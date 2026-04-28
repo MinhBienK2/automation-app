@@ -38,7 +38,13 @@ type PhaseOneActionType =
   | "extract_input_value"
   | "extract_table"
   | "extract_list"
-  | "take_screenshot";
+  | "take_screenshot"
+  | "go_back"
+  | "go_forward"
+  | "reload"
+  | "open_new_tab"
+  | "switch_tab"
+  | "close_tab";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -496,6 +502,12 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   ),
   extract_table: elementHelp("Extract Table", "capture table rows", "lấy bảng", "output"),
   extract_list: elementHelp("Extract List", "capture list items", "lấy danh sách", "output"),
+  go_back: elementHelp("Go Back", "go back in browser history", "quay lại trang trước", "history"),
+  go_forward: elementHelp("Go Forward", "go forward in browser history", "đi tới trang sau", "history"),
+  reload: elementHelp("Reload", "reload the current tab", "tải lại tab hiện tại", "browser"),
+  open_new_tab: elementHelp("Open New Tab", "open a new browser tab", "mở tab mới", "tab"),
+  switch_tab: elementHelp("Switch Tab", "switch to another browser tab", "chuyển tab", "tab"),
+  close_tab: elementHelp("Close Tab", "close a browser tab", "đóng tab", "tab"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

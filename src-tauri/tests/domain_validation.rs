@@ -389,6 +389,41 @@ fn phase_four_data_capture_configs_validate_required_fields() {
 }
 
 #[test]
+fn phase_three_browser_context_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::GoBack {},
+        ActionConfig::GoForward {},
+        ActionConfig::Reload {},
+        ActionConfig::OpenNewTab {
+            url: Some("https://example.com".to_string()),
+        },
+        ActionConfig::SwitchTab { index: 1 },
+        ActionConfig::CloseTab { index: Some(1) },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_three_browser_context_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::OpenNewTab {
+            url: Some(" ".to_string()),
+        }
+        .validate()
+        .expect_err("blank tab URL should fail"),
+        "url",
+        "URL is required",
+    );
+}
+
+#[test]
 fn user_action_taxonomy_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::Navigate {

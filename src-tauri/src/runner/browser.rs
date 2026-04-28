@@ -73,7 +73,7 @@ impl BrowserRunner {
         cancellation: RunnerCancellation,
         mut progress: impl FnMut(RunnerProgress) + Send,
     ) -> Result<RunnerOutcome, RunnerError> {
-        let session = BrowserSession::launch(&self.options).await?;
+        let mut session = BrowserSession::launch(&self.options).await?;
 
         for (index, step) in steps.into_iter().enumerate() {
             if cancellation.is_cancelled() {
@@ -86,7 +86,7 @@ impl BrowserRunner {
 
             let step_number = index + 1;
             progress(RunnerProgress::StepStarted { step_number });
-            let result = execute_action(&session.page, step, &cancellation).await;
+            let result = execute_action(&mut session, step, &cancellation).await;
 
             match result {
                 Ok(ActionExecution::Complete) => {
@@ -124,7 +124,8 @@ impl BrowserRunner {
 #[derive(Debug)]
 pub struct BrowserSession {
     browser: Option<Browser>,
-    page: Page,
+    pages: Vec<Page>,
+    current_page_index: usize,
     handler: JoinHandle<()>,
     user_data_dir: Option<PathBuf>,
     open: bool,
@@ -168,7 +169,8 @@ impl BrowserSession {
 
         Ok(Self {
             browser: Some(browser),
-            page,
+            pages: vec![page],
+            current_page_index: 0,
             handler: handler_task,
             user_data_dir: Some(user_data_dir),
             open: true,
@@ -179,12 +181,72 @@ impl BrowserSession {
         self.open
     }
 
+    pub(super) fn current_page(&self) -> Result<Page, RunnerError> {
+        self.pages
+            .get(self.current_page_index)
+            .cloned()
+            .ok_or_else(|| RunnerError::ActionFailed("No active tab".to_string()))
+    }
+
+    pub(super) async fn open_new_tab(&mut self, url: Option<&str>) -> Result<(), RunnerError> {
+        let browser = self
+            .browser
+            .as_ref()
+            .ok_or_else(|| RunnerError::ActionFailed("Browser is closed".to_string()))?;
+        let page = browser.new_page(url.unwrap_or("about:blank")).await?;
+        page.bring_to_front().await?;
+        self.pages.push(page);
+        self.current_page_index = self.pages.len() - 1;
+        Ok(())
+    }
+
+    pub(super) async fn switch_tab(&mut self, index: usize) -> Result<(), RunnerError> {
+        let page = self
+            .pages
+            .get(index)
+            .ok_or_else(|| RunnerError::ActionFailed("Tab index not found".to_string()))?;
+        page.bring_to_front().await?;
+        self.current_page_index = index;
+        Ok(())
+    }
+
+    pub(super) async fn close_tab(&mut self, index: Option<usize>) -> Result<(), RunnerError> {
+        if self.pages.len() <= 1 {
+            return Err(RunnerError::ActionFailed(
+                "Cannot close the last tab".to_string(),
+            ));
+        }
+
+        let index = index.unwrap_or(self.current_page_index);
+        if index >= self.pages.len() {
+            return Err(RunnerError::ActionFailed("Tab index not found".to_string()));
+        }
+
+        let page = self.pages.remove(index);
+        page.close().await?;
+        if self.current_page_index >= self.pages.len() {
+            self.current_page_index = self.pages.len() - 1;
+        } else if index < self.current_page_index {
+            self.current_page_index -= 1;
+        }
+        self.pages[self.current_page_index].bring_to_front().await?;
+        Ok(())
+    }
+
     pub async fn evaluate_string(&self, expression: &str) -> Result<String, RunnerError> {
-        Ok(self.page.evaluate(expression).await?.into_value()?)
+        Ok(self
+            .current_page()?
+            .evaluate(expression)
+            .await?
+            .into_value()?)
     }
 
     pub async fn evaluate_i64(&self, expression: &str) -> Result<i64, RunnerError> {
-        Ok(self.page.evaluate(expression).await?.into_value()?)
+        Ok(self
+            .current_page()?
+            .evaluate(expression)
+            .await?
+            .into_value()?)
     }
 
     pub async fn close(&mut self) -> Result<(), RunnerError> {

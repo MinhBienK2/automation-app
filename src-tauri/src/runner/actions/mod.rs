@@ -11,7 +11,7 @@ use chromiumoxide::{
     cdp::browser_protocol::{
         dom::SetFileInputFilesParams,
         input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
-        page::CaptureScreenshotFormat,
+        page::{CaptureScreenshotFormat, GetNavigationHistoryParams, NavigateToHistoryEntryParams},
     },
     layout::Point,
     page::ScreenshotParams,
@@ -35,7 +35,7 @@ use self::{
         WaitScriptOptions,
     },
 };
-use super::{cancellation::RunnerCancellation, error::RunnerError};
+use super::{browser::BrowserSession, cancellation::RunnerCancellation, error::RunnerError};
 
 pub(super) enum ActionExecution {
     Complete,
@@ -43,10 +43,11 @@ pub(super) enum ActionExecution {
 }
 
 pub(super) async fn execute_action(
-    page: &Page,
+    session: &mut BrowserSession,
     config: ActionConfig,
     cancellation: &RunnerCancellation,
 ) -> Result<ActionExecution, RunnerError> {
+    let page = session.current_page()?;
     match config {
         ActionConfig::Navigate { url, .. } => {
             page.goto(url).await?;
@@ -89,7 +90,7 @@ pub(super) async fn execute_action(
                 duration_ms,
                 timeout_ms,
             })?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::InputText {
@@ -112,12 +113,12 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             })?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::TypeText { xpath, text } => {
             let script = type_text_script(&xpath, &text)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ClearInput {
@@ -134,7 +135,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Click {
@@ -156,7 +157,7 @@ pub(super) async fn execute_action(
         } => {
             if matches!(mode, Some(ClickMode::ForceDom)) {
                 let script = force_dom_click_script(&xpath, iframe_xpath.as_deref())?;
-                ensure_js_action(page, &script).await?;
+                ensure_js_action(&page, &script).await?;
             } else {
                 let script = click_script(ClickScriptOptions {
                     xpath: &xpath,
@@ -177,7 +178,7 @@ pub(super) async fn execute_action(
                     return Err(RunnerError::ActionFailed(target.reason));
                 }
                 dispatch_mouse_click(
-                    page,
+                    &page,
                     Point::new(target.x, target.y),
                     button,
                     click_count.unwrap_or(1).max(1),
@@ -216,7 +217,7 @@ pub(super) async fn execute_action(
                 max_attempts,
                 wait_ms,
             })?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SelectOption {
@@ -235,7 +236,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SetCheckbox {
@@ -252,17 +253,17 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::PressKey { key } => {
             let script = press_key_script(&key)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Hotkey { keys } => {
             let script = hotkey_script(&keys)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Hover {
@@ -272,7 +273,7 @@ pub(super) async fn execute_action(
             timeout_ms,
         } => {
             let script = hover_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::DoubleClick {
@@ -299,7 +300,7 @@ pub(super) async fn execute_action(
             if !target.ok {
                 return Err(RunnerError::ActionFailed(target.reason));
             }
-            dispatch_mouse_click(page, Point::new(target.x, target.y), None, 2).await?;
+            dispatch_mouse_click(&page, Point::new(target.x, target.y), None, 2).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::RightClick {
@@ -327,7 +328,7 @@ pub(super) async fn execute_action(
                 return Err(RunnerError::ActionFailed(target.reason));
             }
             dispatch_mouse_click(
-                page,
+                &page,
                 Point::new(target.x, target.y),
                 Some(ClickButton::Right),
                 1,
@@ -349,7 +350,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::FocusElement {
@@ -360,7 +361,7 @@ pub(super) async fn execute_action(
         } => {
             let script =
                 focus_element_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::BlurElement {
@@ -371,7 +372,7 @@ pub(super) async fn execute_action(
         } => {
             let script =
                 blur_element_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::TypeSequence {
@@ -390,12 +391,12 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SetClipboard { text } => {
             let script = set_clipboard_script(&text)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::PasteClipboard {
@@ -406,7 +407,7 @@ pub(super) async fn execute_action(
         } => {
             let script =
                 paste_clipboard_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Check {
@@ -422,7 +423,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Uncheck {
@@ -438,7 +439,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ToggleCheckbox {
@@ -449,7 +450,7 @@ pub(super) async fn execute_action(
         } => {
             let script =
                 toggle_checkbox_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SelectRadio {
@@ -460,7 +461,7 @@ pub(super) async fn execute_action(
         } => {
             let script =
                 select_radio_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::UploadFile {
@@ -470,7 +471,7 @@ pub(super) async fn execute_action(
             wait_until: _,
             timeout_ms: _,
         } => {
-            upload_file(page, &xpath, iframe_xpath.as_deref(), &files).await?;
+            upload_file(&page, &xpath, iframe_xpath.as_deref(), &files).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SubmitForm {
@@ -485,7 +486,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SelectCustomOption {
@@ -500,7 +501,7 @@ pub(super) async fn execute_action(
                 iframe_xpath.as_deref(),
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SetContenteditable {
@@ -519,7 +520,7 @@ pub(super) async fn execute_action(
                 wait_until,
                 timeout_ms,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ExtractText {
@@ -535,7 +536,7 @@ pub(super) async fn execute_action(
                 timeout_ms,
                 ExtractKind::Text,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ExtractAttribute {
@@ -552,7 +553,7 @@ pub(super) async fn execute_action(
                 timeout_ms,
                 ExtractKind::Attribute(&attribute),
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ExtractInputValue {
@@ -568,7 +569,7 @@ pub(super) async fn execute_action(
                 timeout_ms,
                 ExtractKind::InputValue,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ExtractTable {
@@ -584,7 +585,7 @@ pub(super) async fn execute_action(
                 timeout_ms,
                 ExtractKind::Table,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ExtractList {
@@ -600,7 +601,7 @@ pub(super) async fn execute_action(
                 timeout_ms,
                 ExtractKind::List,
             )?;
-            ensure_js_action(page, &script).await?;
+            ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::TakeScreenshot {
@@ -608,14 +609,51 @@ pub(super) async fn execute_action(
             output_name,
             full_page,
         } => {
-            take_screenshot(page, &path, full_page).await?;
+            take_screenshot(&page, &path, full_page).await?;
             if let Some(output_name) = output_name {
                 let script = store_output_script(&output_name, &path)?;
-                ensure_js_action(page, &script).await?;
+                ensure_js_action(&page, &script).await?;
             }
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::GoBack {} => {
+            navigate_history(&page, -1).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::GoForward {} => {
+            navigate_history(&page, 1).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::Reload {} => {
+            page.reload().await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::OpenNewTab { url } => {
+            session.open_new_tab(url.as_deref()).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SwitchTab { index } => {
+            session.switch_tab(index).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::CloseTab { index } => {
+            session.close_tab(index).await?;
+            Ok(ActionExecution::Complete)
+        }
     }
+}
+
+async fn navigate_history(page: &Page, offset: i64) -> Result<(), RunnerError> {
+    let history = page.execute(GetNavigationHistoryParams {}).await?;
+    let target_index = history.current_index + offset;
+    let entry = history
+        .entries
+        .get(usize::try_from(target_index).unwrap_or(usize::MAX))
+        .ok_or_else(|| RunnerError::ActionFailed("History entry not found".to_string()))?;
+    page.execute(NavigateToHistoryEntryParams::new(entry.id))
+        .await?;
+    let _ = page.wait_for_navigation().await;
+    Ok(())
 }
 
 async fn take_screenshot(page: &Page, path: &str, full_page: bool) -> Result<(), RunnerError> {
