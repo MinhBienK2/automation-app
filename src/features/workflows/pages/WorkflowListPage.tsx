@@ -1,4 +1,15 @@
 import type { WorkflowSummary } from "../../../types/workflow";
+import { Button } from "../../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
@@ -31,6 +42,14 @@ export function WorkflowListPage({
     (total, workflow) => total + workflow.step_count,
     0,
   );
+  const workflowDialogTitle =
+    workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow";
+  const workflowDialogDescription =
+    workflowDialogMode === "create"
+      ? "Name the workflow before adding automation steps."
+      : "Rename the workflow without changing its existing steps.";
+  const workflowNameLabel =
+    workflowDialogMode === "create" ? "New workflow name" : "Workflow name";
 
   return (
     <section className="app-screen workflow-list-screen">
@@ -44,9 +63,14 @@ export function WorkflowListPage({
             <span>{workflows.length} workflows</span>
             <span>{totalSteps} steps</span>
           </div>
-          <button className="primary-button" type="button" onClick={onOpenCreateWorkflow}>
+          <Button
+            className="primary-button"
+            shape="pill"
+            type="button"
+            onClick={onOpenCreateWorkflow}
+          >
             Create Workflow
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -67,78 +91,76 @@ export function WorkflowListPage({
                 <small>Updated {workflow.updated_at}</small>
               </div>
               <div className="row-actions">
-                <button
+                <Button
                   className="primary-button"
+                  shape="pill"
                   type="button"
                   onClick={() => onOpenWorkflow(workflow.id)}
                 >
                   View Details
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   type="button"
                   aria-label={`Edit ${workflow.name}`}
                   onClick={() => onOpenEditWorkflow(workflow)}
                 >
                   Edit
-                </button>
-                <button
+                </Button>
+                <Button
                   className="secondary-danger"
+                  variant="destructive"
                   type="button"
                   onClick={() => onDeleteWorkflow(workflow.id)}
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             </article>
           ))
         )}
       </section>
 
-      {workflowDialogMode ? (
-        <div className="modal-backdrop">
-          <section
-            aria-modal="true"
-            aria-label={workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow"}
-            className="workflow-dialog"
-            role="dialog"
-          >
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">Workflow</p>
-                <h2>
-                  {workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow"}
-                </h2>
-              </div>
-              <button className="ghost-button" type="button" onClick={onCloseWorkflowDialog}>
-                Close
-              </button>
-            </div>
+      <Dialog
+        open={Boolean(workflowDialogMode)}
+        onOpenChange={(open) => {
+          if (!open) onCloseWorkflowDialog();
+        }}
+      >
+        {workflowDialogMode ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Workflow</p>
+              <DialogTitle>{workflowDialogTitle}</DialogTitle>
+              <DialogDescription>{workflowDialogDescription}</DialogDescription>
+            </DialogHeader>
 
             <form className="workflow-dialog-form" onSubmit={onSubmitWorkflowDialog}>
-              <label>
-                {workflowDialogMode === "create" ? "New workflow name" : "Workflow name"}
-                <input
-                  autoFocus
-                  value={workflowNameDraft}
-                  onChange={(event) =>
-                    onWorkflowNameDraftChange(event.currentTarget.value)
-                  }
-                  placeholder="Login flow"
-                />
-              </label>
+              <Label htmlFor="workflow-name">
+                {workflowNameLabel}
+              </Label>
+              <Input
+                autoFocus
+                id="workflow-name"
+                value={workflowNameDraft}
+                onChange={(event) =>
+                  onWorkflowNameDraftChange(event.currentTarget.value)
+                }
+                placeholder="Login flow"
+              />
               {appError ? <p className="field-error">{appError}</p> : null}
-              <div className="form-actions">
-                <button className="primary-button" type="submit">
+              <DialogFooter className="form-actions">
+                <Button className="primary-button" shape="pill" type="submit">
                   {workflowDialogMode === "create" ? "Create" : "Save Changes"}
-                </button>
-                <button type="button" onClick={onCloseWorkflowDialog}>
+                </Button>
+                <Button variant="secondary" type="button" onClick={onCloseWorkflowDialog}>
                   Cancel
-                </button>
-              </div>
+                </Button>
+              </DialogFooter>
             </form>
-          </section>
-        </div>
-      ) : null}
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </section>
   );
 }
