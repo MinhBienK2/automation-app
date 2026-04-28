@@ -48,6 +48,11 @@ export const actionLabels: Record<ActionType, string> = {
   open_new_tab: "Open New Tab",
   switch_tab: "Switch Tab",
   close_tab: "Close Tab",
+  switch_frame: "Switch Frame",
+  accept_dialog: "Accept Dialog",
+  dismiss_dialog: "Dismiss Dialog",
+  set_download_directory: "Set Download Directory",
+  wait_for_download: "Wait For Download",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -99,7 +104,19 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   },
   {
     label: "Browser",
-    actions: ["go_back", "go_forward", "reload", "open_new_tab", "switch_tab", "close_tab"],
+    actions: [
+      "go_back",
+      "go_forward",
+      "reload",
+      "open_new_tab",
+      "switch_tab",
+      "close_tab",
+      "switch_frame",
+      "accept_dialog",
+      "dismiss_dialog",
+      "set_download_directory",
+      "wait_for_download",
+    ],
   },
   {
     label: "Legacy",
@@ -224,6 +241,16 @@ export function stepSummary(step: WorkflowStep) {
       return step.config.config.index == null
         ? "Current tab"
         : `tab ${step.config.config.index}`;
+    case "switch_frame":
+      return step.config.config.xpath || "Top frame";
+    case "accept_dialog":
+      return step.config.config.prompt_text || "Accept dialog";
+    case "dismiss_dialog":
+      return "Dismiss dialog";
+    case "set_download_directory":
+      return step.config.config.path || "No directory";
+    case "wait_for_download":
+      return step.config.config.output_name || "No output";
   }
 }
 

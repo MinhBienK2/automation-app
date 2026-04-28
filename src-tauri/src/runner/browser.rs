@@ -1,7 +1,12 @@
-use std::{path::PathBuf, time::Duration};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
+};
 
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
+    cdp::browser_protocol::browser::{SetDownloadBehaviorBehavior, SetDownloadBehaviorParams},
     Page,
 };
 use futures::StreamExt;
@@ -126,6 +131,9 @@ pub struct BrowserSession {
     browser: Option<Browser>,
     pages: Vec<Page>,
     current_page_index: usize,
+    active_frame_xpath: Option<String>,
+    download_directory: Option<PathBuf>,
+    known_downloads: HashSet<PathBuf>,
     handler: JoinHandle<()>,
     user_data_dir: Option<PathBuf>,
     open: bool,
@@ -171,6 +179,9 @@ impl BrowserSession {
             browser: Some(browser),
             pages: vec![page],
             current_page_index: 0,
+            active_frame_xpath: None,
+            download_directory: None,
+            known_downloads: HashSet::new(),
             handler: handler_task,
             user_data_dir: Some(user_data_dir),
             open: true,
@@ -197,6 +208,7 @@ impl BrowserSession {
         page.bring_to_front().await?;
         self.pages.push(page);
         self.current_page_index = self.pages.len() - 1;
+        self.active_frame_xpath = None;
         Ok(())
     }
 
@@ -207,6 +219,7 @@ impl BrowserSession {
             .ok_or_else(|| RunnerError::ActionFailed("Tab index not found".to_string()))?;
         page.bring_to_front().await?;
         self.current_page_index = index;
+        self.active_frame_xpath = None;
         Ok(())
     }
 
@@ -230,7 +243,65 @@ impl BrowserSession {
             self.current_page_index -= 1;
         }
         self.pages[self.current_page_index].bring_to_front().await?;
+        self.active_frame_xpath = None;
         Ok(())
+    }
+
+    pub(super) fn frame_xpath(&self) -> Option<&str> {
+        self.active_frame_xpath.as_deref()
+    }
+
+    pub(super) fn switch_frame(&mut self, xpath: Option<String>) {
+        self.active_frame_xpath = xpath.filter(|xpath| !xpath.trim().is_empty());
+    }
+
+    pub(super) async fn set_download_directory(&mut self, path: &str) -> Result<(), RunnerError> {
+        let browser = self
+            .browser
+            .as_ref()
+            .ok_or_else(|| RunnerError::ActionFailed("Browser is closed".to_string()))?;
+        let directory = PathBuf::from(path);
+        std::fs::create_dir_all(&directory)?;
+        let command = SetDownloadBehaviorParams::builder()
+            .behavior(SetDownloadBehaviorBehavior::Allow)
+            .download_path(directory.to_string_lossy().to_string())
+            .events_enabled(false)
+            .build()
+            .map_err(RunnerError::ActionFailed)?;
+        browser.execute(command).await?;
+        self.known_downloads = stable_files_in(&directory)?;
+        self.download_directory = Some(directory);
+        Ok(())
+    }
+
+    pub(super) async fn wait_for_download(
+        &mut self,
+        timeout_ms: Option<u64>,
+    ) -> Result<PathBuf, RunnerError> {
+        let directory = self.download_directory.clone().ok_or_else(|| {
+            RunnerError::ActionFailed("Download directory has not been set".to_string())
+        })?;
+        let deadline = Instant::now() + Duration::from_millis(timeout_ms.unwrap_or(30_000));
+
+        loop {
+            let current_files = stable_files_in(&directory)?;
+            if let Some(path) = current_files
+                .difference(&self.known_downloads)
+                .next()
+                .cloned()
+            {
+                self.known_downloads = current_files;
+                return Ok(path);
+            }
+
+            if Instant::now() >= deadline {
+                return Err(RunnerError::ActionFailed(
+                    "Download did not complete before timeout".to_string(),
+                ));
+            }
+
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
     }
 
     pub async fn evaluate_string(&self, expression: &str) -> Result<String, RunnerError> {
@@ -265,6 +336,24 @@ impl BrowserSession {
 
         Ok(())
     }
+}
+
+fn stable_files_in(directory: &Path) -> Result<HashSet<PathBuf>, RunnerError> {
+    let mut files = HashSet::new();
+    for entry in std::fs::read_dir(directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && !is_temporary_download(&path) {
+            files.insert(path);
+        }
+    }
+    Ok(files)
+}
+
+fn is_temporary_download(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("crdownload"))
 }
 
 fn default_chrome_executable() -> Option<PathBuf> {

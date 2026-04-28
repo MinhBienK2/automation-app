@@ -117,6 +117,14 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "switch_tab",
     );
+    expect(screen.getByRole("option", { name: "Switch Frame" })).toHaveAttribute(
+      "data-value",
+      "switch_frame",
+    );
+    expect(screen.getByRole("option", { name: "Wait For Download" })).toHaveAttribute(
+      "data-value",
+      "wait_for_download",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -645,6 +653,51 @@ describe("Workflow step builder integration", () => {
         config: {
           type: "switch_tab",
           config: { index: 1 },
+        },
+      });
+    });
+  });
+
+  test("saves a wait for download phase three action config", async () => {
+    const downloadStep: WorkflowStep = {
+      id: "step-download",
+      name: "Capture download",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "wait_for_download",
+      config: {
+        type: "wait_for_download",
+        config: {
+          output_name: "download_path",
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([downloadStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Output name"));
+    await userEvent.type(screen.getByLabelText("Output name"), "invoice_path");
+    await userEvent.clear(screen.getByLabelText("Timeout ms"));
+    await userEvent.type(screen.getByLabelText("Timeout ms"), "3000");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-download",
+        name: "Capture download",
+        config: {
+          type: "wait_for_download",
+          config: {
+            output_name: "invoice_path",
+            timeout_ms: 3000,
+          },
         },
       });
     });

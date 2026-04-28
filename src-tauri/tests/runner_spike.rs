@@ -166,6 +166,35 @@ fn write_phase_three_test_pages() -> (String, String) {
     )
 }
 
+fn write_phase_three_frame_dialog_download_page() -> (String, String) {
+    let page_path =
+        std::env::temp_dir().join(format!("wam-phase-three-context-{}.html", Uuid::new_v4()));
+    let download_dir = std::env::temp_dir().join(format!("wam-downloads-{}", Uuid::new_v4()));
+    fs::create_dir_all(&download_dir).expect("create download dir");
+    fs::write(
+        &page_path,
+        r#"
+        <!doctype html>
+        <html>
+          <body>
+            <iframe id="checkout-frame" srcdoc='<input id="frame-input" /><div id="frame-label">Frame Ready</div>'></iframe>
+            <button id="prompt" onclick="setTimeout(() => { document.getElementById('prompt-result').textContent = window.prompt('Approve?', '') || 'empty'; }, 0)">Prompt</button>
+            <button id="confirm" onclick="setTimeout(() => { document.getElementById('confirm-result').textContent = window.confirm('Cancel?') ? 'accepted' : 'dismissed'; }, 0)">Confirm</button>
+            <a id="download" download="invoice.txt" href="data:text/plain,invoice-42">Download</a>
+            <div id="prompt-result">idle</div>
+            <div id="confirm-result">idle</div>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write phase three context page");
+
+    (
+        format!("file://{}", page_path.display()),
+        download_dir.display().to_string(),
+    )
+}
+
 fn runner() -> BrowserRunner {
     BrowserRunner::new(RunnerOptions {
         headed: true,
@@ -742,6 +771,137 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
 
     assert_eq!(outputs["tab_zero_title"], "Page Two");
     assert_eq!(outputs["after_close_title"], "Page Two");
+
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_three_frame_dialog_download_actions_against_visible_chromium() {
+    let (url, download_dir) = write_phase_three_frame_dialog_download_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::SwitchFrame {
+                    xpath: Some("//*[@id=\"checkout-frame\"]".to_string()),
+                },
+                ActionConfig::InputText {
+                    xpath: "//*[@id=\"frame-input\"]".to_string(),
+                    iframe_xpath: None,
+                    text: "frame value".to_string(),
+                    clear_before_input: true,
+                    typing_mode: None,
+                    delay_ms: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::ExtractInputValue {
+                    xpath: "//*[@id=\"frame-input\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "frame_value".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SwitchFrame { xpath: None },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"prompt\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: Some(100),
+                },
+                ActionConfig::AcceptDialog {
+                    prompt_text: Some("approved".to_string()),
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"confirm\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: Some(100),
+                },
+                ActionConfig::DismissDialog {},
+                ActionConfig::SetDownloadDirectory {
+                    path: download_dir.clone(),
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"download\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::WaitForDownload {
+                    output_name: "download_path".to_string(),
+                    timeout_ms: Some(5000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase three frame dialog download steps");
+
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('prompt-result').textContent")
+            .await
+            .expect("prompt result"),
+        "approved"
+    );
+    assert_eq!(
+        outcome
+            .session
+            .evaluate_string("document.getElementById('confirm-result').textContent")
+            .await
+            .expect("confirm result"),
+        "dismissed"
+    );
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+    assert_eq!(outputs["frame_value"], "frame value");
+    let download_path = outputs["download_path"]
+        .as_str()
+        .expect("download path output");
+    assert!(PathBuf::from(download_path).is_file());
+    assert!(download_path.starts_with(&download_dir));
 
     outcome.session.close().await.expect("close browser");
 }

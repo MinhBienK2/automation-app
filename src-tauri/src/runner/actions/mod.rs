@@ -11,7 +11,10 @@ use chromiumoxide::{
     cdp::browser_protocol::{
         dom::SetFileInputFilesParams,
         input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
-        page::{CaptureScreenshotFormat, GetNavigationHistoryParams, NavigateToHistoryEntryParams},
+        page::{
+            CaptureScreenshotFormat, GetNavigationHistoryParams, HandleJavaScriptDialogParams,
+            NavigateToHistoryEntryParams,
+        },
     },
     layout::Point,
     page::ScreenshotParams,
@@ -105,7 +108,7 @@ pub(super) async fn execute_action(
         } => {
             let script = input_text_script(InputTextScriptOptions {
                 xpath: &xpath,
-                iframe_xpath: iframe_xpath.as_deref(),
+                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
                 text: &text,
                 clear_before_input,
                 typing_mode,
@@ -130,7 +133,7 @@ pub(super) async fn execute_action(
         } => {
             let script = clear_input_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 method,
                 wait_until,
                 timeout_ms,
@@ -156,12 +159,15 @@ pub(super) async fn execute_action(
             post_click_wait_ms,
         } => {
             if matches!(mode, Some(ClickMode::ForceDom)) {
-                let script = force_dom_click_script(&xpath, iframe_xpath.as_deref())?;
+                let script = force_dom_click_script(
+                    &xpath,
+                    effective_frame(iframe_xpath.as_deref(), session),
+                )?;
                 ensure_js_action(&page, &script).await?;
             } else {
                 let script = click_script(ClickScriptOptions {
                     xpath: &xpath,
-                    iframe_xpath: iframe_xpath.as_deref(),
+                    iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
                     mode,
                     scroll_into_view,
                     block,
@@ -210,7 +216,7 @@ pub(super) async fn execute_action(
                 direction,
                 pixels,
                 xpath: xpath.as_deref(),
-                iframe_xpath: iframe_xpath.as_deref(),
+                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
                 behavior,
                 block,
                 inline,
@@ -230,7 +236,7 @@ pub(super) async fn execute_action(
         } => {
             let script = select_option_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 match_by,
                 &value,
                 wait_until,
@@ -248,7 +254,7 @@ pub(super) async fn execute_action(
         } => {
             let script = set_checkbox_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 state,
                 wait_until,
                 timeout_ms,
@@ -272,7 +278,12 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
-            let script = hover_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            let script = hover_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                wait_until,
+                timeout_ms,
+            )?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
@@ -284,7 +295,7 @@ pub(super) async fn execute_action(
         } => {
             let script = click_script(ClickScriptOptions {
                 xpath: &xpath,
-                iframe_xpath: iframe_xpath.as_deref(),
+                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
                 mode: None,
                 scroll_into_view: Some(true),
                 block: None,
@@ -311,7 +322,7 @@ pub(super) async fn execute_action(
         } => {
             let script = click_script(ClickScriptOptions {
                 xpath: &xpath,
-                iframe_xpath: iframe_xpath.as_deref(),
+                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
                 mode: None,
                 scroll_into_view: Some(true),
                 block: None,
@@ -346,7 +357,7 @@ pub(super) async fn execute_action(
             let script = drag_and_drop_script(
                 &source_xpath,
                 &target_xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 wait_until,
                 timeout_ms,
             )?;
@@ -359,8 +370,12 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
-            let script =
-                focus_element_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            let script = focus_element_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                wait_until,
+                timeout_ms,
+            )?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
@@ -370,8 +385,12 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
-            let script =
-                blur_element_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            let script = blur_element_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                wait_until,
+                timeout_ms,
+            )?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
@@ -385,7 +404,7 @@ pub(super) async fn execute_action(
         } => {
             let script = type_sequence_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &text,
                 delay_ms,
                 wait_until,
@@ -405,8 +424,12 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
-            let script =
-                paste_clipboard_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            let script = paste_clipboard_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                wait_until,
+                timeout_ms,
+            )?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
@@ -418,7 +441,7 @@ pub(super) async fn execute_action(
         } => {
             let script = set_checkbox_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 crate::domain::CheckboxState::Checked,
                 wait_until,
                 timeout_ms,
@@ -434,7 +457,7 @@ pub(super) async fn execute_action(
         } => {
             let script = set_checkbox_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 crate::domain::CheckboxState::Unchecked,
                 wait_until,
                 timeout_ms,
@@ -448,8 +471,12 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
-            let script =
-                toggle_checkbox_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            let script = toggle_checkbox_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                wait_until,
+                timeout_ms,
+            )?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
@@ -459,8 +486,12 @@ pub(super) async fn execute_action(
             wait_until,
             timeout_ms,
         } => {
-            let script =
-                select_radio_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            let script = select_radio_script(
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                wait_until,
+                timeout_ms,
+            )?;
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
@@ -471,7 +502,13 @@ pub(super) async fn execute_action(
             wait_until: _,
             timeout_ms: _,
         } => {
-            upload_file(&page, &xpath, iframe_xpath.as_deref(), &files).await?;
+            upload_file(
+                &page,
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+                &files,
+            )
+            .await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SubmitForm {
@@ -482,7 +519,7 @@ pub(super) async fn execute_action(
         } => {
             let script = submit_form_script(
                 xpath.as_deref(),
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 wait_until,
                 timeout_ms,
             )?;
@@ -498,7 +535,7 @@ pub(super) async fn execute_action(
             let script = select_custom_option_script(
                 &trigger_xpath,
                 &option_text,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 timeout_ms,
             )?;
             ensure_js_action(&page, &script).await?;
@@ -514,7 +551,7 @@ pub(super) async fn execute_action(
         } => {
             let script = set_contenteditable_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &text,
                 clear_before_input,
                 wait_until,
@@ -531,7 +568,7 @@ pub(super) async fn execute_action(
         } => {
             let script = extract_data_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &output_name,
                 timeout_ms,
                 ExtractKind::Text,
@@ -548,7 +585,7 @@ pub(super) async fn execute_action(
         } => {
             let script = extract_data_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &output_name,
                 timeout_ms,
                 ExtractKind::Attribute(&attribute),
@@ -564,7 +601,7 @@ pub(super) async fn execute_action(
         } => {
             let script = extract_data_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &output_name,
                 timeout_ms,
                 ExtractKind::InputValue,
@@ -580,7 +617,7 @@ pub(super) async fn execute_action(
         } => {
             let script = extract_data_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &output_name,
                 timeout_ms,
                 ExtractKind::Table,
@@ -596,7 +633,7 @@ pub(super) async fn execute_action(
         } => {
             let script = extract_data_script(
                 &xpath,
-                iframe_xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
                 &output_name,
                 timeout_ms,
                 ExtractKind::List,
@@ -640,7 +677,46 @@ pub(super) async fn execute_action(
             session.close_tab(index).await?;
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::SwitchFrame { xpath } => {
+            session.switch_frame(xpath);
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::AcceptDialog { prompt_text } => {
+            let mut builder = HandleJavaScriptDialogParams::builder().accept(true);
+            if let Some(prompt_text) = prompt_text {
+                builder = builder.prompt_text(prompt_text);
+            }
+            page.execute(builder.build().map_err(RunnerError::ActionFailed)?)
+                .await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::DismissDialog {} => {
+            page.execute(HandleJavaScriptDialogParams::new(false))
+                .await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetDownloadDirectory { path } => {
+            session.set_download_directory(&path).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::WaitForDownload {
+            output_name,
+            timeout_ms,
+        } => {
+            let path = session.wait_for_download(timeout_ms).await?;
+            let path = path.to_string_lossy();
+            let script = store_output_script(&output_name, &path)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
     }
+}
+
+fn effective_frame<'a>(
+    explicit_iframe_xpath: Option<&'a str>,
+    session: &'a BrowserSession,
+) -> Option<&'a str> {
+    explicit_iframe_xpath.or_else(|| session.frame_xpath())
 }
 
 async fn navigate_history(page: &Page, offset: i64) -> Result<(), RunnerError> {

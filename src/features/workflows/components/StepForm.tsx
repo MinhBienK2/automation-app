@@ -1200,6 +1200,77 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           />
         </Label>
       );
+    case "switch_frame":
+      return (
+        <Label>
+          XPath
+          <Input
+            value={config.config.xpath ?? ""}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+            }
+            placeholder="Blank uses top frame"
+          />
+        </Label>
+      );
+    case "accept_dialog":
+      return (
+        <Label>
+          Prompt text
+          <Input
+            value={config.config.prompt_text ?? ""}
+            onChange={(event) =>
+              onChange(
+                updateActionConfigField(config, "prompt_text", event.currentTarget.value),
+              )
+            }
+            placeholder="Optional prompt response"
+          />
+        </Label>
+      );
+    case "dismiss_dialog":
+      return null;
+    case "set_download_directory":
+      return (
+        <Label>
+          Path
+          <Input
+            value={config.config.path}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "path", event.currentTarget.value))
+            }
+          />
+        </Label>
+      );
+    case "wait_for_download":
+      return (
+        <>
+          <Label>
+            Output name
+            <Input
+              value={config.config.output_name}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "output_name", event.currentTarget.value),
+                )
+              }
+            />
+          </Label>
+          <Label>
+            Timeout ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 30000}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
+                )
+              }
+            />
+          </Label>
+        </>
+      );
   }
 }
 

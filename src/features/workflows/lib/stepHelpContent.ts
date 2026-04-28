@@ -44,7 +44,12 @@ type PhaseOneActionType =
   | "reload"
   | "open_new_tab"
   | "switch_tab"
-  | "close_tab";
+  | "close_tab"
+  | "switch_frame"
+  | "accept_dialog"
+  | "dismiss_dialog"
+  | "set_download_directory"
+  | "wait_for_download";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -508,6 +513,21 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   open_new_tab: elementHelp("Open New Tab", "open a new browser tab", "mở tab mới", "tab"),
   switch_tab: elementHelp("Switch Tab", "switch to another browser tab", "chuyển tab", "tab"),
   close_tab: elementHelp("Close Tab", "close a browser tab", "đóng tab", "tab"),
+  switch_frame: elementHelp("Switch Frame", "set the active iframe context", "chọn iframe", "iframe"),
+  accept_dialog: elementHelp("Accept Dialog", "accept an alert, confirm, or prompt", "đồng ý dialog", "dialog"),
+  dismiss_dialog: elementHelp("Dismiss Dialog", "dismiss an alert, confirm, or prompt", "hủy dialog", "dialog"),
+  set_download_directory: elementHelp(
+    "Set Download Directory",
+    "choose where downloads are saved",
+    "chọn thư mục tải xuống",
+    "download",
+  ),
+  wait_for_download: elementHelp(
+    "Wait For Download",
+    "wait until a new downloaded file exists",
+    "chờ file tải xong",
+    "download",
+  ),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

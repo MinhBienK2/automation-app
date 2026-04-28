@@ -317,4 +317,44 @@ describe("workflow step form config helpers", () => {
       config: { index: 2 },
     });
   });
+
+  test("updates phase three frame dialog and download configs with typed values", () => {
+    const frameConfig: ActionConfig = {
+      type: "switch_frame",
+      config: {},
+    };
+    const acceptConfig: ActionConfig = {
+      type: "accept_dialog",
+      config: {},
+    };
+    const downloadDirConfig: ActionConfig = {
+      type: "set_download_directory",
+      config: { path: "/tmp/old" },
+    };
+    const waitDownloadConfig: ActionConfig = {
+      type: "wait_for_download",
+      config: { output_name: "download_path" },
+    };
+
+    expect(updateActionConfigField(frameConfig, "xpath", "//*[@id='frame']")).toEqual({
+      type: "switch_frame",
+      config: { xpath: "//*[@id='frame']" },
+    });
+    expect(updateActionConfigField(frameConfig, "xpath", "")).toEqual({
+      type: "switch_frame",
+      config: { xpath: null },
+    });
+    expect(updateActionConfigField(acceptConfig, "prompt_text", "approved")).toEqual({
+      type: "accept_dialog",
+      config: { prompt_text: "approved" },
+    });
+    expect(updateActionConfigField(downloadDirConfig, "path", "/tmp/new")).toEqual({
+      type: "set_download_directory",
+      config: { path: "/tmp/new" },
+    });
+    expect(updateActionConfigField(waitDownloadConfig, "timeout_ms", "3000")).toEqual({
+      type: "wait_for_download",
+      config: { output_name: "download_path", timeout_ms: 3000 },
+    });
+  });
 });

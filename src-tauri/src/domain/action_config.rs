@@ -47,6 +47,11 @@ pub enum ActionType {
     OpenNewTab,
     SwitchTab,
     CloseTab,
+    SwitchFrame,
+    AcceptDialog,
+    DismissDialog,
+    SetDownloadDirectory,
+    WaitForDownload,
 }
 
 impl ActionType {
@@ -94,6 +99,11 @@ impl ActionType {
             Self::OpenNewTab => "open_new_tab",
             Self::SwitchTab => "switch_tab",
             Self::CloseTab => "close_tab",
+            Self::SwitchFrame => "switch_frame",
+            Self::AcceptDialog => "accept_dialog",
+            Self::DismissDialog => "dismiss_dialog",
+            Self::SetDownloadDirectory => "set_download_directory",
+            Self::WaitForDownload => "wait_for_download",
         }
     }
 
@@ -141,6 +151,11 @@ impl ActionType {
             Self::OpenNewTab => "Open New Tab",
             Self::SwitchTab => "Switch Tab",
             Self::CloseTab => "Close Tab",
+            Self::SwitchFrame => "Switch Frame",
+            Self::AcceptDialog => "Accept Dialog",
+            Self::DismissDialog => "Dismiss Dialog",
+            Self::SetDownloadDirectory => "Set Download Directory",
+            Self::WaitForDownload => "Wait For Download",
         }
     }
 }
@@ -630,6 +645,23 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         index: Option<usize>,
     },
+    SwitchFrame {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        xpath: Option<String>,
+    },
+    AcceptDialog {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        prompt_text: Option<String>,
+    },
+    DismissDialog {},
+    SetDownloadDirectory {
+        path: String,
+    },
+    WaitForDownload {
+        output_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
 }
 
 impl ActionConfig {
@@ -677,6 +709,11 @@ impl ActionConfig {
             Self::OpenNewTab { .. } => ActionType::OpenNewTab,
             Self::SwitchTab { .. } => ActionType::SwitchTab,
             Self::CloseTab { .. } => ActionType::CloseTab,
+            Self::SwitchFrame { .. } => ActionType::SwitchFrame,
+            Self::AcceptDialog { .. } => ActionType::AcceptDialog,
+            Self::DismissDialog { .. } => ActionType::DismissDialog,
+            Self::SetDownloadDirectory { .. } => ActionType::SetDownloadDirectory,
+            Self::WaitForDownload { .. } => ActionType::WaitForDownload,
         }
     }
 
@@ -981,6 +1018,22 @@ impl ActionConfig {
             Self::OpenNewTab { url: Some(url) } if url.trim().is_empty() => {
                 Err(ValidationError::new("url", "URL is required"))
             }
+            Self::SwitchFrame { xpath: Some(xpath) } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::SetDownloadDirectory { path } if path.trim().is_empty() => Err(
+                ValidationError::new("path", "Download directory is required"),
+            ),
+            Self::WaitForDownload { output_name, .. } if output_name.trim().is_empty() => Err(
+                ValidationError::new("output_name", "Output name is required"),
+            ),
+            Self::WaitForDownload {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..

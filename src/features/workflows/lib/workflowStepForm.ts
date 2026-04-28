@@ -29,6 +29,7 @@ export type ActionConfigField =
   | "pixels"
   | "position"
   | "post_click_wait_ms"
+  | "prompt_text"
   | "retry_interval_ms"
   | "scroll_into_view"
   | "seconds"
@@ -134,6 +135,16 @@ export function updateActionConfigField(
       return { type: "switch_tab", config: { index: Number(value) } };
     case "close_tab":
       return { type: "close_tab", config: { index: value ? Number(value) : null } };
+    case "switch_frame":
+      return { type: "switch_frame", config: { xpath: value || null } };
+    case "accept_dialog":
+      return { type: "accept_dialog", config: { prompt_text: value || null } };
+    case "dismiss_dialog":
+      return config;
+    case "set_download_directory":
+      return { type: "set_download_directory", config: { path: value } };
+    case "wait_for_download":
+      return updateWaitForDownloadConfigField(config, field, value);
   }
 }
 
@@ -538,4 +549,19 @@ function updateTakeScreenshotConfigField(
   }
 
   return { type: "take_screenshot", config: { ...config.config, [field]: value } };
+}
+
+function updateWaitForDownloadConfigField(
+  config: Extract<ActionConfig, { type: "wait_for_download" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return {
+      type: "wait_for_download",
+      config: { ...config.config, timeout_ms: Number(value) },
+    };
+  }
+
+  return { type: "wait_for_download", config: { ...config.config, [field]: value } };
 }

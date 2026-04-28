@@ -424,6 +424,69 @@ fn phase_three_browser_context_configs_validate_required_fields() {
 }
 
 #[test]
+fn phase_three_frame_dialog_download_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::SwitchFrame {
+            xpath: Some("//*[@id=\"checkout-frame\"]".to_string()),
+        },
+        ActionConfig::SwitchFrame { xpath: None },
+        ActionConfig::AcceptDialog {
+            prompt_text: Some("approved".to_string()),
+        },
+        ActionConfig::DismissDialog {},
+        ActionConfig::SetDownloadDirectory {
+            path: "/tmp/wam-downloads".to_string(),
+        },
+        ActionConfig::WaitForDownload {
+            output_name: "download_path".to_string(),
+            timeout_ms: Some(3000),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_three_frame_dialog_download_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::SwitchFrame {
+            xpath: Some(" ".to_string()),
+        }
+        .validate()
+        .expect_err("blank frame XPath should fail"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetDownloadDirectory {
+            path: String::new(),
+        }
+        .validate()
+        .expect_err("blank download directory should fail"),
+        "path",
+        "Download directory is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::WaitForDownload {
+            output_name: String::new(),
+            timeout_ms: Some(3000),
+        }
+        .validate()
+        .expect_err("blank output name should fail"),
+        "output_name",
+        "Output name is required",
+    );
+}
+
+#[test]
 fn user_action_taxonomy_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::Navigate {

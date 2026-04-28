@@ -243,6 +243,16 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
         ActionType::OpenNewTab => ActionConfig::OpenNewTab { url: None },
         ActionType::SwitchTab => ActionConfig::SwitchTab { index: 0 },
         ActionType::CloseTab => ActionConfig::CloseTab { index: None },
+        ActionType::SwitchFrame => ActionConfig::SwitchFrame { xpath: None },
+        ActionType::AcceptDialog => ActionConfig::AcceptDialog { prompt_text: None },
+        ActionType::DismissDialog => ActionConfig::DismissDialog {},
+        ActionType::SetDownloadDirectory => ActionConfig::SetDownloadDirectory {
+            path: String::new(),
+        },
+        ActionType::WaitForDownload => ActionConfig::WaitForDownload {
+            output_name: "download_path".to_string(),
+            timeout_ms: None,
+        },
     }
 }
 

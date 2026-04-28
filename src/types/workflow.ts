@@ -40,7 +40,12 @@ export type ActionType =
   | "reload"
   | "open_new_tab"
   | "switch_tab"
-  | "close_tab";
+  | "close_tab"
+  | "switch_frame"
+  | "accept_dialog"
+  | "dismiss_dialog"
+  | "set_download_directory"
+  | "wait_for_download";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -322,7 +327,15 @@ export type ActionConfig =
   | { type: "reload"; config: Record<string, never> }
   | { type: "open_new_tab"; config: { url?: string | null } }
   | { type: "switch_tab"; config: { index: number } }
-  | { type: "close_tab"; config: { index?: number | null } };
+  | { type: "close_tab"; config: { index?: number | null } }
+  | { type: "switch_frame"; config: { xpath?: string | null } }
+  | { type: "accept_dialog"; config: { prompt_text?: string | null } }
+  | { type: "dismiss_dialog"; config: Record<string, never> }
+  | { type: "set_download_directory"; config: { path: string } }
+  | {
+      type: "wait_for_download";
+      config: { output_name: string; timeout_ms?: number | null };
+    };
 
 type ElementTargetActionConfig = {
   xpath: string;
