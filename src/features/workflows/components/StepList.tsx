@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ActionType, WorkflowStep } from "../../../types/workflow";
-import { actionLabels, actionOptions, stepSummary } from "../../../lib/workflowUi";
+import { actionGroups, actionLabels, stepSummary } from "../../../lib/workflowUi";
 
 type StepListProps = {
   steps: WorkflowStep[];
@@ -89,10 +89,14 @@ export function StepList({
               onNewActionTypeChange(event.currentTarget.value as ActionType)
             }
           >
-            {actionOptions.map((actionType) => (
-              <option key={actionType} value={actionType}>
-                {actionLabels[actionType]}
-              </option>
+            {actionGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.actions.map((actionType) => (
+                  <option key={actionType} value={actionType}>
+                    {actionLabels[actionType]}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>

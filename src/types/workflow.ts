@@ -1,4 +1,18 @@
-export type ActionType = "open_url" | "sleep" | "type_text" | "click" | "scroll";
+export type ActionType =
+  | "navigate"
+  | "open_url"
+  | "sleep"
+  | "wait"
+  | "input_text"
+  | "type_text"
+  | "clear_input"
+  | "click"
+  | "scroll"
+  | "select_option"
+  | "set_checkbox"
+  | "press_key"
+  | "hotkey"
+  | "hover";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -19,9 +33,61 @@ export type Workflow = {
 };
 
 export type ActionConfig =
+  | {
+      type: "navigate";
+      config: {
+        url: string;
+        wait_until?: "load" | "dom_content_loaded" | "network_idle" | null;
+        timeout_ms?: number | null;
+      };
+    }
   | { type: "open_url"; config: { url: string } }
   | { type: "sleep"; config: { seconds: number } }
+  | {
+      type: "wait";
+      config: {
+        condition:
+          | "duration"
+          | "element_visible"
+          | "element_hidden"
+          | "element_attached"
+          | "element_detached"
+          | "text_visible"
+          | "url_contains"
+          | "page_load"
+          | "element_enabled"
+          | "element_disabled";
+        xpath?: string | null;
+        text?: string | null;
+        url?: string | null;
+        duration_ms?: number | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "input_text";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        text: string;
+        clear_before_input: boolean;
+        typing_mode?: "set_value" | "type" | null;
+        delay_ms?: number | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
   | { type: "type_text"; config: { xpath: string; text: string } }
+  | {
+      type: "clear_input";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        method?: "select_all" | "backspace" | "dom" | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
   | {
       type: "click";
       config: {
@@ -62,6 +128,38 @@ export type ActionConfig =
         inline?: "start" | "center" | "end" | "nearest" | null;
         max_attempts?: number | null;
         wait_ms?: number | null;
+      };
+    }
+  | {
+      type: "select_option";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        match_by: "label" | "value";
+        value: string;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "set_checkbox";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        state: "checked" | "unchecked";
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | { type: "press_key"; config: { key: string } }
+  | { type: "hotkey"; config: { keys: string[] } }
+  | {
+      type: "hover";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
       };
     };
 

@@ -6,20 +6,46 @@ import type {
 } from "../types/workflow";
 
 export const actionLabels: Record<ActionType, string> = {
+  navigate: "Navigate",
   open_url: "Open URL",
   sleep: "Sleep",
+  wait: "Wait",
+  input_text: "Input Text",
   type_text: "Type Text",
+  clear_input: "Clear Input",
   click: "Click",
   scroll: "Scroll",
+  select_option: "Select Option",
+  set_checkbox: "Set Checkbox",
+  press_key: "Press Key",
+  hotkey: "Hotkey",
+  hover: "Hover",
 };
 
-export const actionOptions: ActionType[] = [
-  "open_url",
-  "sleep",
-  "type_text",
-  "click",
-  "scroll",
+export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
+  {
+    label: "Core",
+    actions: ["navigate", "click", "input_text", "clear_input", "scroll", "wait"],
+  },
+  {
+    label: "Forms",
+    actions: ["select_option", "set_checkbox"],
+  },
+  {
+    label: "Keyboard",
+    actions: ["press_key", "hotkey"],
+  },
+  {
+    label: "Mouse",
+    actions: ["hover"],
+  },
+  {
+    label: "Legacy",
+    actions: ["open_url", "sleep", "type_text"],
+  },
 ];
+
+export const actionOptions: ActionType[] = actionGroups.flatMap((group) => group.actions);
 
 export const initialRunState: RunState = {
   status: "idle",
@@ -33,11 +59,22 @@ export const initialRunState: RunState = {
 
 export function stepSummary(step: WorkflowStep) {
   switch (step.config.type) {
+    case "navigate":
+      return step.config.config.url || "No URL";
     case "open_url":
       return step.config.config.url || "No URL";
     case "sleep":
       return `${step.config.config.seconds}s`;
+    case "wait":
+      if (step.config.config.condition === "duration") {
+        return `${step.config.config.duration_ms ?? 0}ms`;
+      }
+      return step.config.config.condition;
+    case "input_text":
+      return step.config.config.xpath || "No XPath";
     case "type_text":
+      return step.config.config.xpath || "No XPath";
+    case "clear_input":
       return step.config.config.xpath || "No XPath";
     case "click":
       return step.config.config.xpath || "No XPath";
@@ -49,6 +86,16 @@ export function stepSummary(step: WorkflowStep) {
       }
       return `${mode} ${step.config.config.direction} ${step.config.config.pixels}px`;
     }
+    case "select_option":
+      return `${step.config.config.match_by}: ${step.config.config.value || "No value"}`;
+    case "set_checkbox":
+      return `${step.config.config.state} ${step.config.config.xpath || "No XPath"}`;
+    case "press_key":
+      return step.config.config.key || "No key";
+    case "hotkey":
+      return step.config.config.keys.join("+") || "No keys";
+    case "hover":
+      return step.config.config.xpath || "No XPath";
   }
 }
 

@@ -2,18 +2,49 @@ use crate::{
     app_state::{AppState, RunStateDto},
     commands::CommandError,
     domain::{
-        ActionConfig, ActionType, RunError, RunMode, RunStatus, ScrollDirection, WorkflowStep,
+        ActionConfig, ActionType, CheckboxState, ClearInputMethod, InputTypingMode, RunError,
+        RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, WaitCondition, WorkflowStep,
     },
     runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
 };
 
 pub fn default_config(action_type: ActionType) -> ActionConfig {
     match action_type {
+        ActionType::Navigate => ActionConfig::Navigate {
+            url: String::new(),
+            wait_until: None,
+            timeout_ms: None,
+        },
         ActionType::OpenUrl => ActionConfig::OpenUrl { url: String::new() },
         ActionType::Sleep => ActionConfig::Sleep { seconds: 1.0 },
+        ActionType::Wait => ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(1000),
+            timeout_ms: None,
+        },
+        ActionType::InputText => ActionConfig::InputText {
+            xpath: String::new(),
+            iframe_xpath: None,
+            text: String::new(),
+            clear_before_input: true,
+            typing_mode: Some(InputTypingMode::SetValue),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
         ActionType::TypeText => ActionConfig::TypeText {
             xpath: String::new(),
             text: String::new(),
+        },
+        ActionType::ClearInput => ActionConfig::ClearInput {
+            xpath: String::new(),
+            iframe_xpath: None,
+            method: Some(ClearInputMethod::SelectAll),
+            wait_until: None,
+            timeout_ms: None,
         },
         ActionType::Click => ActionConfig::Click {
             xpath: String::new(),
@@ -43,6 +74,33 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             inline: None,
             max_attempts: None,
             wait_ms: None,
+        },
+        ActionType::SelectOption => ActionConfig::SelectOption {
+            xpath: String::new(),
+            iframe_xpath: None,
+            match_by: SelectOptionMatchBy::Label,
+            value: String::new(),
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::SetCheckbox => ActionConfig::SetCheckbox {
+            xpath: String::new(),
+            iframe_xpath: None,
+            state: CheckboxState::Checked,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::PressKey => ActionConfig::PressKey {
+            key: "Enter".to_string(),
+        },
+        ActionType::Hotkey => ActionConfig::Hotkey {
+            keys: vec!["Control".to_string(), "S".to_string()],
+        },
+        ActionType::Hover => ActionConfig::Hover {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
         },
     }
 }

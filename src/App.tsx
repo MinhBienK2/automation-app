@@ -54,7 +54,7 @@ function App() {
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
-  const [newActionType, setNewActionType] = useState<ActionType>("open_url");
+  const [newActionType, setNewActionType] = useState<ActionType>("navigate");
   const [appError, setAppError] = useState("");
 
   useEffect(() => {

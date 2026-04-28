@@ -86,4 +86,41 @@ describe("workflow step form config helpers", () => {
       config: { xpath: "//*[@id='submit']", mode: "force_dom" },
     });
   });
+
+  test("updates new taxonomy action fields without dropping existing config", () => {
+    const inputConfig: ActionConfig = {
+      type: "input_text",
+      config: {
+        xpath: "//*[@name='email']",
+        text: "old",
+        clear_before_input: true,
+      },
+    };
+    const waitConfig: ActionConfig = {
+      type: "wait",
+      config: { condition: "duration", duration_ms: 1000 },
+    };
+    const hotkeyConfig: ActionConfig = {
+      type: "hotkey",
+      config: { keys: ["Control"] },
+    };
+
+    expect(updateActionConfigField(inputConfig, "typing_mode", "type")).toEqual({
+      type: "input_text",
+      config: {
+        xpath: "//*[@name='email']",
+        text: "old",
+        clear_before_input: true,
+        typing_mode: "type",
+      },
+    });
+    expect(updateActionConfigField(waitConfig, "duration_ms", "2500")).toEqual({
+      type: "wait",
+      config: { condition: "duration", duration_ms: 2500 },
+    });
+    expect(updateActionConfigField(hotkeyConfig, "keys", "Control+S")).toEqual({
+      type: "hotkey",
+      config: { keys: ["Control", "S"] },
+    });
+  });
 });

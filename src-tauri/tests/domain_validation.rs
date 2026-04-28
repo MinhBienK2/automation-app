@@ -1,8 +1,10 @@
 use workflow_automation_manager_lib::domain::{
-    ActionConfig, ClickButton, ClickMode, ClickPosition, ClickWaitUntil, RunError, RunStatus,
-    ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, ValidationError,
-    Workflow, WorkflowStep,
+    ActionConfig, ActionType, CheckboxState, ClearInputMethod, ClickButton, ClickMode,
+    ClickPosition, ClickWaitUntil, InputTypingMode, RunError, RunStatus, ScrollBehavior,
+    ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy, ValidationError,
+    WaitCondition, Workflow, WorkflowStep,
 };
+use workflow_automation_manager_lib::services::run_service::default_config;
 
 fn assert_validation_message(error: ValidationError, field: &str, message: &str) {
     assert_eq!(error.field, field);
@@ -206,6 +208,178 @@ fn every_action_config_round_trips_through_json() {
 
         assert_eq!(decoded, config);
     }
+}
+
+#[test]
+fn user_action_taxonomy_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::Navigate {
+            url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: Some(5000),
+        },
+        ActionConfig::InputText {
+            xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
+            text: "user@example.com".to_string(),
+            clear_before_input: true,
+            typing_mode: Some(InputTypingMode::SetValue),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionConfig::ClearInput {
+            xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
+            method: Some(ClearInputMethod::SelectAll),
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionConfig::Wait {
+            condition: WaitCondition::ElementVisible,
+            xpath: Some("//*[@id=\"ready\"]".to_string()),
+            text: None,
+            url: None,
+            duration_ms: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::SelectOption {
+            xpath: "//*[@name=\"country\"]".to_string(),
+            iframe_xpath: None,
+            match_by: SelectOptionMatchBy::Label,
+            value: "Vietnam".to_string(),
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionConfig::SetCheckbox {
+            xpath: "//*[@name=\"terms\"]".to_string(),
+            iframe_xpath: None,
+            state: CheckboxState::Checked,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionConfig::PressKey {
+            key: "Enter".to_string(),
+        },
+        ActionConfig::Hotkey {
+            keys: vec!["Control".to_string(), "S".to_string()],
+        },
+        ActionConfig::Hover {
+            xpath: "//*[@id=\"menu\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+    ];
+
+    for config in configs {
+        config
+            .validate()
+            .expect("new taxonomy config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn user_action_taxonomy_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::Navigate {
+            url: " ".to_string(),
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank URL should fail"),
+        "url",
+        "URL is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(0),
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("zero duration should fail"),
+        "duration_ms",
+        "Duration must be greater than 0",
+    );
+
+    assert_validation_message(
+        ActionConfig::Wait {
+            condition: WaitCondition::ElementVisible,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("element wait without XPath should fail"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SelectOption {
+            xpath: "//*[@name=\"country\"]".to_string(),
+            iframe_xpath: None,
+            match_by: SelectOptionMatchBy::Label,
+            value: " ".to_string(),
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank select option value should fail"),
+        "value",
+        "Option value is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::Hotkey { keys: vec![] }
+            .validate()
+            .expect_err("empty hotkey should fail"),
+        "keys",
+        "At least one key is required",
+    );
+}
+
+#[test]
+fn new_action_types_have_default_configs() {
+    assert_eq!(
+        default_config(ActionType::Navigate),
+        ActionConfig::Navigate {
+            url: String::new(),
+            wait_until: None,
+            timeout_ms: None,
+        }
+    );
+    assert_eq!(
+        default_config(ActionType::Wait),
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(1000),
+            timeout_ms: None,
+        }
+    );
+    assert_eq!(
+        default_config(ActionType::SetCheckbox).action_type(),
+        ActionType::SetCheckbox
+    );
+    assert_eq!(
+        default_config(ActionType::Hotkey).action_type(),
+        ActionType::Hotkey
+    );
 }
 
 #[test]

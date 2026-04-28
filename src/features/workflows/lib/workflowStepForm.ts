@@ -4,11 +4,19 @@ export type ActionConfigField =
   | "behavior"
   | "block"
   | "button"
+  | "clear_before_input"
   | "click_count"
+  | "condition"
+  | "delay_ms"
   | "direction"
+  | "duration_ms"
   | "iframe_xpath"
   | "inline"
+  | "key"
+  | "keys"
+  | "match_by"
   | "max_attempts"
+  | "method"
   | "mode"
   | "offset_x"
   | "offset_y"
@@ -18,9 +26,12 @@ export type ActionConfigField =
   | "retry_interval_ms"
   | "scroll_into_view"
   | "seconds"
+  | "state"
   | "text"
   | "timeout_ms"
+  | "typing_mode"
   | "url"
+  | "value"
   | "wait_ms"
   | "wait_until"
   | "xpath";
@@ -31,20 +42,103 @@ export function updateActionConfigField(
   value: string,
 ): ActionConfig {
   switch (config.type) {
+    case "navigate":
+      return updateNavigateConfigField(config, field, value);
     case "open_url":
       return { type: "open_url", config: { url: value } };
     case "sleep":
       return { type: "sleep", config: { seconds: Number(value) } };
+    case "wait":
+      return updateWaitConfigField(config, field, value);
+    case "input_text":
+      return updateInputTextConfigField(config, field, value);
     case "type_text":
       return {
         type: "type_text",
         config: { ...config.config, [field]: value },
       };
+    case "clear_input":
+      return updateElementConfigField(config, field, value);
     case "click":
       return updateClickConfigField(config, field, value);
     case "scroll":
       return updateScrollConfigField(config, field, value);
+    case "select_option":
+      return updateSelectOptionConfigField(config, field, value);
+    case "set_checkbox":
+      return updateElementConfigField(config, field, value);
+    case "press_key":
+      return { type: "press_key", config: { key: value } };
+    case "hotkey":
+      return {
+        type: "hotkey",
+        config: {
+          keys: value
+            .split("+")
+            .map((key) => key.trim())
+            .filter(Boolean),
+        },
+      };
+    case "hover":
+      return updateElementConfigField(config, field, value);
   }
+}
+
+function updateNavigateConfigField(
+  config: Extract<ActionConfig, { type: "navigate" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: "navigate", config: { ...config.config, [field]: Number(value) } };
+  }
+
+  return { type: "navigate", config: { ...config.config, [field]: value } };
+}
+
+function updateWaitConfigField(
+  config: Extract<ActionConfig, { type: "wait" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "duration_ms" || field === "timeout_ms") {
+    return { type: "wait", config: { ...config.config, [field]: Number(value) } };
+  }
+
+  if (field === "xpath" || field === "text" || field === "url") {
+    return { type: "wait", config: { ...config.config, [field]: value || null } };
+  }
+
+  return { type: "wait", config: { ...config.config, [field]: value } };
+}
+
+function updateInputTextConfigField(
+  config: Extract<ActionConfig, { type: "input_text" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "delay_ms" || field === "timeout_ms") {
+    return {
+      type: "input_text",
+      config: { ...config.config, [field]: Number(value) },
+    };
+  }
+
+  if (field === "clear_before_input") {
+    return {
+      type: "input_text",
+      config: { ...config.config, clear_before_input: value === "true" },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "input_text",
+      config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  return { type: "input_text", config: { ...config.config, [field]: value } };
 }
 
 function updateClickConfigField(
@@ -109,4 +203,62 @@ function updateScrollConfigField(
     type: "scroll",
     config: { ...config.config, [field]: value },
   };
+}
+
+function updateSelectOptionConfigField(
+  config: Extract<ActionConfig, { type: "select_option" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return {
+      type: "select_option",
+      config: { ...config.config, timeout_ms: Number(value) },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "select_option",
+      config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  return {
+    type: "select_option",
+    config: { ...config.config, [field]: value },
+  };
+}
+
+function updateElementConfigField(
+  config: Extract<ActionConfig, { type: "clear_input" | "set_checkbox" | "hover" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  switch (config.type) {
+    case "clear_input":
+      if (field === "timeout_ms") {
+        return { type: "clear_input", config: { ...config.config, timeout_ms: Number(value) } };
+      }
+      if (field === "iframe_xpath") {
+        return { type: "clear_input", config: { ...config.config, iframe_xpath: value || null } };
+      }
+      return { type: "clear_input", config: { ...config.config, [field]: value } };
+    case "set_checkbox":
+      if (field === "timeout_ms") {
+        return { type: "set_checkbox", config: { ...config.config, timeout_ms: Number(value) } };
+      }
+      if (field === "iframe_xpath") {
+        return { type: "set_checkbox", config: { ...config.config, iframe_xpath: value || null } };
+      }
+      return { type: "set_checkbox", config: { ...config.config, [field]: value } };
+    case "hover":
+      if (field === "timeout_ms") {
+        return { type: "hover", config: { ...config.config, timeout_ms: Number(value) } };
+      }
+      if (field === "iframe_xpath") {
+        return { type: "hover", config: { ...config.config, iframe_xpath: value || null } };
+      }
+      return { type: "hover", config: { ...config.config, [field]: value } };
+  }
 }

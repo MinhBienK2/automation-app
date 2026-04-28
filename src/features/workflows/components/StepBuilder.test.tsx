@@ -43,6 +43,70 @@ describe("Workflow step builder integration", () => {
     });
   });
 
+  test("groups real user action types in the action picker", async () => {
+    mockTauriCommands(workflowDetailScenario([]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    const actionType = await screen.findByLabelText("Action type");
+    expect(actionType.querySelector('optgroup[label="Core"]')).toBeInTheDocument();
+    expect(actionType.querySelector('optgroup[label="Forms"]')).toBeInTheDocument();
+    expect(actionType.querySelector('optgroup[label="Keyboard"]')).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Navigate" })).toHaveValue("navigate");
+    expect(screen.getByRole("option", { name: "Input Text" })).toHaveValue("input_text");
+    expect(screen.getByRole("option", { name: "Hotkey" })).toHaveValue("hotkey");
+  });
+
+  test("saves input text config from the taxonomy form", async () => {
+    const inputStep: WorkflowStep = {
+      id: "step-input",
+      name: "Input email",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "input_text",
+      config: {
+        type: "input_text",
+        config: {
+          xpath: "//*[@name='email']",
+          text: "",
+          clear_before_input: true,
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([inputStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Text"));
+    await userEvent.type(screen.getByLabelText("Text"), "user@example.com");
+    await userEvent.selectOptions(screen.getByLabelText("Typing mode"), "type");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-input",
+        name: "Input email",
+        config: {
+          type: "input_text",
+          config: {
+            xpath: "//*[@name='email']",
+            text: "user@example.com",
+            clear_before_input: true,
+            typing_mode: "type",
+          },
+        },
+      });
+    });
+  });
+
   test("shows validation errors from save step", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
