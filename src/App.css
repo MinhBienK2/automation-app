@@ -495,6 +495,25 @@ small {
   white-space: nowrap;
 }
 
+.step-form-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.step-help-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-color: rgba(62, 207, 142, 0.36);
+  border-radius: 9999px;
+  color: #3ecf8e;
+}
+
 .row-actions,
 .run-actions,
 .form-actions {
@@ -570,6 +589,93 @@ small {
   align-items: start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.step-help-dialog {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+  width: min(760px, 100%);
+  height: min(760px, calc(100dvh - 48px));
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.help-language-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(280px, 100%);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  background: #0f0f0f;
+}
+
+.help-language-switch button {
+  min-height: 32px;
+  border-color: transparent;
+  border-radius: 9999px;
+  background: transparent;
+  color: #b4b4b4;
+}
+
+.help-language-switch .help-language-active {
+  border-color: rgba(62, 207, 142, 0.48);
+  color: #3ecf8e;
+}
+
+.step-help-body {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.help-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.help-section h3 {
+  font-size: 15px;
+}
+
+.help-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: #b4b4b4;
+}
+
+.help-section li {
+  line-height: 1.5;
+}
+
+.help-field-list {
+  display: grid;
+  gap: 10px;
+}
+
+.help-field-item {
+  display: grid;
+  gap: 4px;
+}
+
+.help-field-item strong {
+  color: #fafafa;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .empty-state {

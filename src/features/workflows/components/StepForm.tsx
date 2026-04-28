@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { ActionConfig, WorkflowStep } from "../../../types/workflow";
 import { actionLabels, commandMessage } from "../../../lib/workflowUi";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import type { StepHelpLanguage } from "../lib/stepHelpContent";
+import { StepHelpModal } from "./StepHelpModal";
 
 type StepFormProps = {
   step: WorkflowStep;
@@ -13,6 +15,8 @@ export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
   const [name, setName] = useState(step.name || actionLabels[step.action_type]);
   const [config, setConfig] = useState<ActionConfig>(step.config);
   const [fieldError, setFieldError] = useState("");
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [helpLanguage, setHelpLanguage] = useState<StepHelpLanguage>("vi");
 
   async function saveStep(event: React.FormEvent) {
     event.preventDefault();
@@ -26,37 +30,57 @@ export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
   }
 
   return (
-    <form className="step-form" onSubmit={saveStep}>
-      <div>
-        <p className="eyebrow">Step Detail</p>
-        <h2>{actionLabels[step.action_type]}</h2>
-      </div>
+    <>
+      <form className="step-form" onSubmit={saveStep}>
+        <div className="step-form-header">
+          <div>
+            <p className="eyebrow">Step Detail</p>
+            <h2>{actionLabels[step.action_type]}</h2>
+          </div>
+          <button
+            aria-label={`Open ${actionLabels[step.action_type]} help`}
+            className="step-help-button"
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+          >
+            ?
+          </button>
+        </div>
 
-      <label>
-        Step name
-        <input
-          value={name}
-          onChange={(event) => setName(event.currentTarget.value)}
+        <label>
+          Step name
+          <input
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+          />
+        </label>
+
+        <ActionFields config={config} onChange={setConfig} />
+
+        {fieldError ? <p className="field-error">{fieldError}</p> : null}
+
+        <div className="form-actions">
+          <button className="primary-button" type="submit">
+            Save Step
+          </button>
+          <button
+            className="secondary-danger"
+            type="button"
+            onClick={() => onDeleteStep(step.id)}
+          >
+            Delete Step
+          </button>
+        </div>
+      </form>
+      {isHelpOpen ? (
+        <StepHelpModal
+          actionType={config.type}
+          language={helpLanguage}
+          onClose={() => setIsHelpOpen(false)}
+          onLanguageChange={setHelpLanguage}
         />
-      </label>
-
-      <ActionFields config={config} onChange={setConfig} />
-
-      {fieldError ? <p className="field-error">{fieldError}</p> : null}
-
-      <div className="form-actions">
-        <button className="primary-button" type="submit">
-          Save Step
-        </button>
-        <button
-          className="secondary-danger"
-          type="button"
-          onClick={() => onDeleteStep(step.id)}
-        >
-          Delete Step
-        </button>
-      </div>
-    </form>
+      ) : null}
+    </>
   );
 }
 

@@ -302,4 +302,43 @@ describe("Workflow step builder integration", () => {
       });
     });
   });
+
+  test("opens bilingual help for the selected scroll step", async () => {
+    const scrollStep: WorkflowStep = {
+      id: "step-scroll",
+      name: "Scroll to quiz",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "scroll",
+      config: {
+        type: "scroll",
+        config: {
+          mode: "until_visible",
+          direction: "down",
+          pixels: 250,
+          xpath: "//h2[normalize-space(.)='HTML Quiz Test']",
+          iframe_xpath: "//*[@id='main']/div[3]/iframe",
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands(workflowDetailScenario([scrollStep]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open Scroll help" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Scroll Help" });
+    expect(dialog).toHaveTextContent("Cuộn cho đến khi element đích hiện ra");
+    expect(dialog).toHaveTextContent("không phải box scroll");
+
+    await userEvent.click(screen.getByRole("button", { name: "English" }));
+
+    expect(dialog).toHaveTextContent("Scroll until the target element becomes visible");
+    expect(dialog).toHaveTextContent("not the scroll box");
+  });
 });
