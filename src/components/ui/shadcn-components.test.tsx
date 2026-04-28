@@ -65,6 +65,9 @@ describe("shadcn UI components", () => {
     expect(
       screen.getByRole("dialog", { name: "Create Workflow" }),
     ).toBeInTheDocument();
+    const closeButton = screen.getByRole("button", { name: "Close dialog" });
+    expect(closeButton).toHaveTextContent("×");
+    expect(closeButton.querySelector("svg")).not.toBeInTheDocument();
   });
 
   test("renders the remaining shared primitives", async () => {

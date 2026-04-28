@@ -57,7 +57,7 @@ describe("Workflow detail integration", () => {
     });
 
     expect(within(titleRow).getByRole("button", { name: "Back to Workflows" }))
-      .toHaveAttribute("data-slot", "button");
+      .toHaveClass("page-back-button");
     const breadcrumb = within(titleRow).getByRole("navigation", {
       name: "Workflow breadcrumb",
     });

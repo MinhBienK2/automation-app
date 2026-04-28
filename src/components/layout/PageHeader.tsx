@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "../ui/button";
 
 type PageHeaderProps = {
@@ -33,7 +34,7 @@ export function PageHeader({
               type="button"
               onClick={onBack}
             >
-              <span aria-hidden="true">‹</span>
+              <ArrowLeft aria-hidden="true" />
               {backLabel}
             </Button>
           ) : null}

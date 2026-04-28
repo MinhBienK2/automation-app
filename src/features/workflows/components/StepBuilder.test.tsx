@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
@@ -32,7 +32,8 @@ describe("Workflow step builder integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     expect(await screen.findByText("Steps")).toBeInTheDocument();
 
-    await userEvent.selectOptions(screen.getByLabelText("Action type"), "sleep");
+    await userEvent.click(screen.getByLabelText("Action type"));
+    await userEvent.click(screen.getByRole("option", { name: "Sleep" }));
     await userEvent.click(screen.getByRole("button", { name: "Add Step" }));
 
     await waitFor(() => {
@@ -51,13 +52,26 @@ describe("Workflow step builder integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
     const actionType = await screen.findByLabelText("Action type");
-    expect(actionType).toHaveAttribute("data-slot", "select");
-    expect(actionType.querySelector('optgroup[label="Core"]')).toBeInTheDocument();
-    expect(actionType.querySelector('optgroup[label="Forms"]')).toBeInTheDocument();
-    expect(actionType.querySelector('optgroup[label="Keyboard"]')).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Navigate" })).toHaveValue("navigate");
-    expect(screen.getByRole("option", { name: "Input Text" })).toHaveValue("input_text");
-    expect(screen.getByRole("option", { name: "Hotkey" })).toHaveValue("hotkey");
+    expect(actionType).toHaveAttribute("data-slot", "action-picker-trigger");
+    expect(actionType).toHaveAttribute("aria-haspopup", "listbox");
+
+    await userEvent.click(actionType);
+
+    expect(screen.getByRole("group", { name: "Core" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Forms" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Keyboard" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Navigate" })).toHaveAttribute(
+      "data-value",
+      "navigate",
+    );
+    expect(screen.getByRole("option", { name: "Input Text" })).toHaveAttribute(
+      "data-value",
+      "input_text",
+    );
+    expect(screen.getByRole("option", { name: "Hotkey" })).toHaveAttribute(
+      "data-value",
+      "hotkey",
+    );
   });
 
   test("saves input text config from the taxonomy form", async () => {
@@ -343,6 +357,10 @@ describe("Workflow step builder integration", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Scroll Help" });
     expect(dialog).toHaveAttribute("data-slot", "dialog-content");
+    expect(within(dialog).queryByRole("button", { name: "Close" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Close dialog" }))
+      .toBeInTheDocument();
     expect(dialog).toHaveTextContent("Cuộn cho đến khi element đích hiện ra");
     expect(dialog).toHaveTextContent("không phải box scroll");
 

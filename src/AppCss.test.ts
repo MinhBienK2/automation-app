@@ -7,6 +7,10 @@ const buttonSource = readFileSync(
   join(process.cwd(), "src/components/ui/button.tsx"),
   "utf8",
 );
+const dialogSource = readFileSync(
+  join(process.cwd(), "src/components/ui/dialog.tsx"),
+  "utf8",
+);
 const cssFiles = [
   "src/App.css",
   "src/styles/base.css",
@@ -66,5 +70,18 @@ describe("App CSS", () => {
     expect(root).toContain("--app-radius-pill: 9999px");
     expect(buttonSource).toContain("var(--app-accent-border)");
     expect(buttonSource).not.toContain("#3ecf8e");
+  });
+
+  test("keeps workflow detail overlays and compact controls contained", () => {
+    const actionMenu = cssRule(".action-picker-menu");
+    const monitorStepStatus = cssRule(".monitor-step-status");
+    const pageBackButton = cssRule(".page-back-button");
+
+    expect(actionMenu).toContain("max-height: min(360px, calc(100dvh - 220px))");
+    expect(actionMenu).toContain("overflow-y: auto");
+    expect(monitorStepStatus).toContain("min-width: 74px");
+    expect(pageBackButton).toContain("border: 1px solid #2e2e2e");
+    expect(dialogSource).toContain('aria-label="Close dialog"');
+    expect(dialogSource).not.toContain("bg-white");
   });
 });

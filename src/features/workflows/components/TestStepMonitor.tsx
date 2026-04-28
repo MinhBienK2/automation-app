@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog";
@@ -58,10 +59,10 @@ export function TestStepMonitor({
           <div>
             <p className="eyebrow">Test Step</p>
             <DialogTitle>Test Step Monitor</DialogTitle>
+            <DialogDescription className="sr-only">
+              Shows the current test progress and failure suggestions.
+            </DialogDescription>
           </div>
-          <Button variant="secondary" type="button" onClick={onClose}>
-            Close
-          </Button>
         </DialogHeader>
 
         <div className="monitor-grid">
@@ -91,7 +92,10 @@ export function TestStepMonitor({
                           <strong>{step.name || actionLabels[step.action_type]}</strong>
                           <small>{actionLabels[step.action_type]}</small>
                         </div>
-                        <Badge variant={status === "failed" ? "destructive" : "secondary"}>
+                        <Badge
+                          className="monitor-step-status"
+                          variant={status === "failed" ? "destructive" : "secondary"}
+                        >
                           {status}
                         </Badge>
                       </article>

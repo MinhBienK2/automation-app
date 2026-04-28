@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import type { ActionType } from "../../../types/workflow";
 import { actionLabels } from "../../../lib/workflowUi";
-import { Button } from "../../../components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -44,9 +43,6 @@ export function StepHelpModal({
               {content.summary}
             </DialogDescription>
           </div>
-          <Button variant="ghost" type="button" onClick={onClose}>
-            Close
-          </Button>
         </DialogHeader>
 
         <Tabs

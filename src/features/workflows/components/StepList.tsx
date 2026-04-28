@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -19,7 +20,6 @@ import { actionGroups, actionLabels, stepSummary } from "../../../lib/workflowUi
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Label } from "../../../components/ui/label";
-import { Select } from "../../../components/ui/select";
 
 type StepListProps = {
   steps: WorkflowStep[];
@@ -85,30 +85,117 @@ export function StepList({
       )}
 
       <form className="add-step-form" onSubmit={onAddStep}>
-        <Label>
-          Action type
-          <Select
-            value={newActionType}
-            onChange={(event) =>
-              onNewActionTypeChange(event.currentTarget.value as ActionType)
-            }
-          >
-            {actionGroups.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.actions.map((actionType) => (
-                  <option key={actionType} value={actionType}>
-                    {actionLabels[actionType]}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </Select>
-        </Label>
+        <ActionTypePicker
+          value={newActionType}
+          onChange={onNewActionTypeChange}
+        />
         <Button shape="pill" type="submit">
           Add Step
         </Button>
       </form>
     </section>
+  );
+}
+
+type ActionTypePickerProps = {
+  value: ActionType;
+  onChange: (actionType: ActionType) => void;
+};
+
+function ActionTypePicker({ value, onChange }: ActionTypePickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const pickerId = useId();
+  const labelId = `${pickerId}-label`;
+  const listboxId = `${pickerId}-listbox`;
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="action-picker-field" ref={rootRef}>
+      <Label id={labelId}>Action type</Label>
+      <div className="action-picker">
+        <Button
+          aria-controls={isOpen ? listboxId : undefined}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-label="Action type"
+          className="action-picker-trigger"
+          data-slot="action-picker-trigger"
+          type="button"
+          variant="secondary"
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <span>{actionLabels[value]}</span>
+          <span aria-hidden="true" className="action-picker-chevron">
+            ▾
+          </span>
+        </Button>
+
+        {isOpen ? (
+          <div
+            aria-labelledby={labelId}
+            className="action-picker-menu"
+            id={listboxId}
+            role="listbox"
+            tabIndex={-1}
+          >
+            {actionGroups.map((group) => (
+              <div
+                aria-label={group.label}
+                className="action-picker-group"
+                key={group.label}
+                role="group"
+              >
+                <p className="action-picker-group-label">{group.label}</p>
+                {group.actions.map((actionType) => (
+                  <button
+                    aria-selected={actionType === value}
+                    className={
+                      actionType === value
+                        ? "action-picker-option action-picker-option-selected"
+                        : "action-picker-option"
+                    }
+                    data-value={actionType}
+                    key={actionType}
+                    role="option"
+                    type="button"
+                    onClick={() => {
+                      onChange(actionType);
+                      setIsOpen(false);
+                    }}
+                  >
+                    {actionLabels[actionType]}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

@@ -68,6 +68,10 @@ describe("Test step monitor integration", () => {
     const monitor = await screen.findByRole("dialog", { name: "Test Step Monitor" });
     expect(monitor).toBeInTheDocument();
     expect(monitor).toHaveAttribute("data-slot", "dialog-content");
+    expect(within(monitor).queryByRole("button", { name: "Close" }))
+      .not.toBeInTheDocument();
+    expect(within(monitor).getByRole("button", { name: "Close dialog" }))
+      .toBeInTheDocument();
     expect(within(monitor).getAllByText("Wait for page").length).toBeGreaterThan(0);
     expect(within(monitor).getAllByText("Click login button").length).toBeGreaterThan(0);
     expect(await screen.findByText("Failed at step 2: Click login button"))

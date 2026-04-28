@@ -6,6 +6,77 @@
   gap: 14px;
 }
 
+.action-picker-field {
+  display: grid;
+  gap: 6px;
+}
+
+.action-picker {
+  position: relative;
+}
+
+.action-picker-trigger {
+  width: 100%;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.action-picker-trigger span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-picker-chevron {
+  color: #898989;
+  font-size: 12px;
+}
+
+.action-picker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-height: min(360px, calc(100dvh - 220px));
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #363636;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.action-picker-group {
+  display: grid;
+  gap: 4px;
+}
+
+.action-picker-group-label {
+  padding: 6px 8px 2px;
+  color: #898989;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.action-picker-option {
+  justify-content: start;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  color: #b4b4b4;
+  text-align: left;
+}
+
+.action-picker-option:hover,
+.action-picker-option-selected {
+  border-color: rgba(62, 207, 142, 0.48);
+  color: #3ecf8e;
+}
+
 .create-form {
   padding: 18px;
 }
