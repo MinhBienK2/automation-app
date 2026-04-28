@@ -284,6 +284,111 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
 }
 
 #[test]
+fn phase_four_data_capture_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::ExtractText {
+            xpath: "//*[@id=\"title\"]".to_string(),
+            iframe_xpath: None,
+            output_name: "title".to_string(),
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::ExtractAttribute {
+            xpath: "//*[@id=\"link\"]".to_string(),
+            iframe_xpath: None,
+            attribute: "href".to_string(),
+            output_name: "link_href".to_string(),
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::ExtractInputValue {
+            xpath: "//*[@id=\"email\"]".to_string(),
+            iframe_xpath: None,
+            output_name: "email".to_string(),
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::ExtractTable {
+            xpath: "//*[@id=\"orders\"]".to_string(),
+            iframe_xpath: None,
+            output_name: "orders".to_string(),
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::ExtractList {
+            xpath: "//*[@id=\"items\"]".to_string(),
+            iframe_xpath: None,
+            output_name: "items".to_string(),
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::TakeScreenshot {
+            path: "/tmp/wam-phase-four.png".to_string(),
+            output_name: Some("screenshot_path".to_string()),
+            full_page: true,
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_four_data_capture_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::ExtractText {
+            xpath: String::new(),
+            iframe_xpath: None,
+            output_name: "title".to_string(),
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank XPath should fail"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::ExtractAttribute {
+            xpath: "//*[@id=\"link\"]".to_string(),
+            iframe_xpath: None,
+            attribute: String::new(),
+            output_name: "link_href".to_string(),
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank attribute should fail"),
+        "attribute",
+        "Attribute is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::ExtractList {
+            xpath: "//*[@id=\"items\"]".to_string(),
+            iframe_xpath: None,
+            output_name: String::new(),
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank output name should fail"),
+        "output_name",
+        "Output name is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::TakeScreenshot {
+            path: String::new(),
+            output_name: Some("screenshot_path".to_string()),
+            full_page: false,
+        }
+        .validate()
+        .expect_err("blank screenshot path should fail"),
+        "path",
+        "Screenshot path is required",
+    );
+}
+
+#[test]
 fn user_action_taxonomy_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::Navigate {

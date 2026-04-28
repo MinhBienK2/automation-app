@@ -35,6 +35,12 @@ pub enum ActionType {
     SubmitForm,
     SelectCustomOption,
     SetContenteditable,
+    ExtractText,
+    ExtractAttribute,
+    ExtractInputValue,
+    ExtractTable,
+    ExtractList,
+    TakeScreenshot,
 }
 
 impl ActionType {
@@ -70,6 +76,12 @@ impl ActionType {
             Self::SubmitForm => "submit_form",
             Self::SelectCustomOption => "select_custom_option",
             Self::SetContenteditable => "set_contenteditable",
+            Self::ExtractText => "extract_text",
+            Self::ExtractAttribute => "extract_attribute",
+            Self::ExtractInputValue => "extract_input_value",
+            Self::ExtractTable => "extract_table",
+            Self::ExtractList => "extract_list",
+            Self::TakeScreenshot => "take_screenshot",
         }
     }
 
@@ -105,6 +117,12 @@ impl ActionType {
             Self::SubmitForm => "Submit Form",
             Self::SelectCustomOption => "Select Custom Option",
             Self::SetContenteditable => "Set Contenteditable",
+            Self::ExtractText => "Extract Text",
+            Self::ExtractAttribute => "Extract Attribute",
+            Self::ExtractInputValue => "Extract Input Value",
+            Self::ExtractTable => "Extract Table",
+            Self::ExtractList => "Extract List",
+            Self::TakeScreenshot => "Take Screenshot",
         }
     }
 }
@@ -532,6 +550,54 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
     },
+    ExtractText {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        output_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    ExtractAttribute {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        attribute: String,
+        output_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    ExtractInputValue {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        output_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    ExtractTable {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        output_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    ExtractList {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        output_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    TakeScreenshot {
+        path: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output_name: Option<String>,
+        #[serde(default)]
+        full_page: bool,
+    },
 }
 
 impl ActionConfig {
@@ -567,6 +633,12 @@ impl ActionConfig {
             Self::SubmitForm { .. } => ActionType::SubmitForm,
             Self::SelectCustomOption { .. } => ActionType::SelectCustomOption,
             Self::SetContenteditable { .. } => ActionType::SetContenteditable,
+            Self::ExtractText { .. } => ActionType::ExtractText,
+            Self::ExtractAttribute { .. } => ActionType::ExtractAttribute,
+            Self::ExtractInputValue { .. } => ActionType::ExtractInputValue,
+            Self::ExtractTable { .. } => ActionType::ExtractTable,
+            Self::ExtractList { .. } => ActionType::ExtractList,
+            Self::TakeScreenshot { .. } => ActionType::TakeScreenshot,
         }
     }
 
@@ -834,6 +906,40 @@ impl ActionConfig {
             Self::SetContenteditable { text, .. } if text.is_empty() => {
                 Err(ValidationError::new("text", "Text is required"))
             }
+            Self::ExtractText { xpath, .. }
+            | Self::ExtractAttribute { xpath, .. }
+            | Self::ExtractInputValue { xpath, .. }
+            | Self::ExtractTable { xpath, .. }
+            | Self::ExtractList { xpath, .. }
+                if xpath.trim().is_empty() =>
+            {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::ExtractAttribute { attribute, .. } if attribute.trim().is_empty() => {
+                Err(ValidationError::new("attribute", "Attribute is required"))
+            }
+            Self::ExtractText { output_name, .. }
+            | Self::ExtractAttribute { output_name, .. }
+            | Self::ExtractInputValue { output_name, .. }
+            | Self::ExtractTable { output_name, .. }
+            | Self::ExtractList { output_name, .. }
+                if output_name.trim().is_empty() =>
+            {
+                Err(ValidationError::new(
+                    "output_name",
+                    "Output name is required",
+                ))
+            }
+            Self::TakeScreenshot { path, .. } if path.trim().is_empty() => {
+                Err(ValidationError::new("path", "Screenshot path is required"))
+            }
+            Self::TakeScreenshot {
+                output_name: Some(output_name),
+                ..
+            } if output_name.trim().is_empty() => Err(ValidationError::new(
+                "output_name",
+                "Output name is required",
+            )),
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..
@@ -891,6 +997,26 @@ impl ActionConfig {
                 ..
             }
             | Self::SetContenteditable {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ExtractText {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ExtractAttribute {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ExtractInputValue {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ExtractTable {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ExtractList {
                 timeout_ms: Some(0),
                 ..
             } => Err(ValidationError::new(

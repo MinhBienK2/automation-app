@@ -51,14 +51,16 @@ cargo clippy --all-targets --all-features
 
 ## MVP Smoke Checklist
 
-Use a simple page with an input, button, and tall body.
+Use a simple page with an input, button, list, table, link, and tall body.
 
 1. Create a workflow.
 2. Add Open URL, Sleep, Type Text, Click, and Scroll steps.
-3. Reorder steps and reopen the workflow.
-4. Test a selected step.
-5. Run the full workflow.
-6. Confirm bad XPath fails immediately with a short message.
-7. Stop during a long Sleep.
-8. Confirm Chromium remains open after success, failure, and stop.
-9. Delete the workflow.
+3. Add Extract Text, Extract Attribute, Extract Input Value, Extract List, Extract Table, and Take Screenshot steps.
+4. Reorder steps and reopen the workflow.
+5. Test a selected step.
+6. Run the full workflow.
+7. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
+8. Confirm bad XPath fails immediately with a short message.
+9. Stop during a long Sleep.
+10. Confirm Chromium remains open after success, failure, and stop.
+11. Delete the workflow.

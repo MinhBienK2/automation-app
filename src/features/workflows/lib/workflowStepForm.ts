@@ -1,6 +1,7 @@
 import type { ActionConfig } from "../../../types/workflow";
 
 export type ActionConfigField =
+  | "attribute"
   | "behavior"
   | "block"
   | "button"
@@ -22,6 +23,8 @@ export type ActionConfigField =
   | "offset_x"
   | "offset_y"
   | "option_text"
+  | "output_name"
+  | "path"
   | "pixels"
   | "position"
   | "post_click_wait_ms"
@@ -39,7 +42,8 @@ export type ActionConfigField =
   | "wait_ms"
   | "wait_until"
   | "xpath"
-  | "trigger_xpath";
+  | "trigger_xpath"
+  | "full_page";
 
 export function updateActionConfigField(
   config: ActionConfig,
@@ -110,6 +114,15 @@ export function updateActionConfigField(
       return updateSelectCustomOptionConfigField(config, field, value);
     case "set_contenteditable":
       return updateSetContenteditableConfigField(config, field, value);
+    case "extract_text":
+    case "extract_input_value":
+    case "extract_table":
+    case "extract_list":
+      return updateDataCaptureConfigField(config, field, value);
+    case "extract_attribute":
+      return updateExtractAttributeConfigField(config, field, value);
+    case "take_screenshot":
+      return updateTakeScreenshotConfigField(config, field, value);
   }
 }
 
@@ -451,4 +464,67 @@ function updateSetContenteditableConfigField(
   }
 
   return { type: "set_contenteditable", config: { ...config.config, [field]: value } };
+}
+
+function updateDataCaptureConfigField(
+  config: Extract<
+    ActionConfig,
+    { type: "extract_text" | "extract_input_value" | "extract_table" | "extract_list" }
+  >,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: config.type, config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "iframe_xpath") {
+    return { type: config.type, config: { ...config.config, iframe_xpath: value || null } };
+  }
+
+  return { type: config.type, config: { ...config.config, [field]: value } };
+}
+
+function updateExtractAttributeConfigField(
+  config: Extract<ActionConfig, { type: "extract_attribute" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return {
+      type: "extract_attribute",
+      config: { ...config.config, timeout_ms: Number(value) },
+    };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "extract_attribute",
+      config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  return { type: "extract_attribute", config: { ...config.config, [field]: value } };
+}
+
+function updateTakeScreenshotConfigField(
+  config: Extract<ActionConfig, { type: "take_screenshot" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "full_page") {
+    return {
+      type: "take_screenshot",
+      config: { ...config.config, full_page: value === "true" },
+    };
+  }
+
+  if (field === "output_name") {
+    return {
+      type: "take_screenshot",
+      config: { ...config.config, output_name: value || null },
+    };
+  }
+
+  return { type: "take_screenshot", config: { ...config.config, [field]: value } };
 }

@@ -101,6 +101,14 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "set_contenteditable",
     );
+    expect(screen.getByRole("option", { name: "Extract Text" })).toHaveAttribute(
+      "data-value",
+      "extract_text",
+    );
+    expect(screen.getByRole("option", { name: "Take Screenshot" })).toHaveAttribute(
+      "data-value",
+      "take_screenshot",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -542,6 +550,54 @@ describe("Workflow step builder integration", () => {
           config: {
             xpath: "//*[@id='file']",
             files: ["/tmp/a.txt", "/tmp/b.txt"],
+          },
+        },
+      });
+    });
+  });
+
+  test("saves an extract attribute phase four action config", async () => {
+    const extractStep: WorkflowStep = {
+      id: "step-extract",
+      name: "Capture link",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "extract_attribute",
+      config: {
+        type: "extract_attribute",
+        config: {
+          xpath: "//*[@id='link']",
+          attribute: "href",
+          output_name: "link_href",
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([extractStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Attribute"));
+    await userEvent.type(screen.getByLabelText("Attribute"), "data-id");
+    await userEvent.clear(screen.getByLabelText("Output name"));
+    await userEvent.type(screen.getByLabelText("Output name"), "link_id");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-extract",
+        name: "Capture link",
+        config: {
+          type: "extract_attribute",
+          config: {
+            xpath: "//*[@id='link']",
+            attribute: "data-id",
+            output_name: "link_id",
           },
         },
       });

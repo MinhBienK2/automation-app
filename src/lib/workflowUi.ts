@@ -36,6 +36,12 @@ export const actionLabels: Record<ActionType, string> = {
   submit_form: "Submit Form",
   select_custom_option: "Select Custom Option",
   set_contenteditable: "Set Contenteditable",
+  extract_text: "Extract Text",
+  extract_attribute: "Extract Attribute",
+  extract_input_value: "Extract Input Value",
+  extract_table: "Extract Table",
+  extract_list: "Extract List",
+  take_screenshot: "Take Screenshot",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -73,6 +79,17 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Mouse",
     actions: ["hover", "double_click", "right_click", "drag_and_drop"],
+  },
+  {
+    label: "Data",
+    actions: [
+      "extract_text",
+      "extract_attribute",
+      "extract_input_value",
+      "extract_table",
+      "extract_list",
+      "take_screenshot",
+    ],
   },
   {
     label: "Legacy",
@@ -165,6 +182,24 @@ export function stepSummary(step: WorkflowStep) {
       return step.config.config.option_text || "No option";
     case "set_contenteditable":
       return step.config.config.xpath || "No XPath";
+    case "extract_text":
+      return `${step.config.config.output_name || "No output"} <- ${
+        step.config.config.xpath || "No XPath"
+      }`;
+    case "extract_attribute":
+      return `${step.config.config.output_name || "No output"} <- ${
+        step.config.config.attribute || "No attribute"
+      }`;
+    case "extract_input_value":
+      return `${step.config.config.output_name || "No output"} <- ${
+        step.config.config.xpath || "No XPath"
+      }`;
+    case "extract_table":
+      return `${step.config.config.output_name || "No output"} table`;
+    case "extract_list":
+      return `${step.config.config.output_name || "No output"} list`;
+    case "take_screenshot":
+      return step.config.config.path || "No path";
   }
 }
 

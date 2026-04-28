@@ -231,4 +231,62 @@ describe("workflow step form config helpers", () => {
       },
     });
   });
+
+  test("updates phase four data capture configs with typed values", () => {
+    const extractTextConfig: ActionConfig = {
+      type: "extract_text",
+      config: {
+        xpath: "//*[@id='title']",
+        output_name: "title",
+      },
+    };
+    const extractAttributeConfig: ActionConfig = {
+      type: "extract_attribute",
+      config: {
+        xpath: "//*[@id='link']",
+        attribute: "href",
+        output_name: "link_href",
+      },
+    };
+    const screenshotConfig: ActionConfig = {
+      type: "take_screenshot",
+      config: {
+        path: "/tmp/old.png",
+        output_name: "screenshot_path",
+        full_page: false,
+      },
+    };
+
+    expect(updateActionConfigField(extractTextConfig, "output_name", "page_title")).toEqual({
+      type: "extract_text",
+      config: {
+        xpath: "//*[@id='title']",
+        output_name: "page_title",
+      },
+    });
+    expect(updateActionConfigField(extractAttributeConfig, "attribute", "data-id")).toEqual({
+      type: "extract_attribute",
+      config: {
+        xpath: "//*[@id='link']",
+        attribute: "data-id",
+        output_name: "link_href",
+      },
+    });
+    expect(updateActionConfigField(screenshotConfig, "full_page", "true")).toEqual({
+      type: "take_screenshot",
+      config: {
+        path: "/tmp/old.png",
+        output_name: "screenshot_path",
+        full_page: true,
+      },
+    });
+    expect(updateActionConfigField(screenshotConfig, "path", "/tmp/new.png")).toEqual({
+      type: "take_screenshot",
+      config: {
+        path: "/tmp/new.png",
+        output_name: "screenshot_path",
+        full_page: false,
+      },
+    });
+  });
 });

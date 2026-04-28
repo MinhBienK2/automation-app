@@ -32,7 +32,13 @@ type PhaseOneActionType =
   | "upload_file"
   | "submit_form"
   | "select_custom_option"
-  | "set_contenteditable";
+  | "set_contenteditable"
+  | "extract_text"
+  | "extract_attribute"
+  | "extract_input_value"
+  | "extract_table"
+  | "extract_list"
+  | "take_screenshot";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -475,6 +481,47 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
     "nhập nội dung contenteditable",
     "editor",
   ),
+  extract_text: elementHelp("Extract Text", "capture visible text", "lấy text", "output"),
+  extract_attribute: elementHelp(
+    "Extract Attribute",
+    "capture an element attribute",
+    "lấy attribute",
+    "output",
+  ),
+  extract_input_value: elementHelp(
+    "Extract Input Value",
+    "capture an input value",
+    "lấy giá trị input",
+    "output",
+  ),
+  extract_table: elementHelp("Extract Table", "capture table rows", "lấy bảng", "output"),
+  extract_list: elementHelp("Extract List", "capture list items", "lấy danh sách", "output"),
+  take_screenshot: {
+    vi: {
+      title: "Trợ giúp Take Screenshot",
+      summary: "Chụp ảnh trang hiện tại và lưu đường dẫn vào output nếu có Output name.",
+      useWhen: ["Dùng để lưu bằng chứng màn hình sau một thao tác quan trọng."],
+      fields: [
+        { name: "Path", description: "Đường dẫn file PNG cần ghi." },
+        { name: "Output name", description: "Tên biến output để lưu lại đường dẫn ảnh." },
+        { name: "Full page", description: "Yes chụp toàn trang; No chụp viewport hiện tại." },
+      ],
+      examples: ["Path: /tmp/workflow-result.png, Output name: screenshot_path"],
+      commonMistakes: ["Thư mục cha của Path phải tồn tại.", "File cũ cùng đường dẫn sẽ bị ghi đè."],
+    },
+    en: {
+      title: "Take Screenshot Help",
+      summary: "Capture the current page and save the path into outputs when Output name is set.",
+      useWhen: ["Use to keep visual evidence after an important workflow action."],
+      fields: [
+        { name: "Path", description: "PNG file path to write." },
+        { name: "Output name", description: "Output variable name that stores the screenshot path." },
+        { name: "Full page", description: "Yes captures the full page; No captures the current viewport." },
+      ],
+      examples: ["Path: /tmp/workflow-result.png, Output name: screenshot_path"],
+      commonMistakes: ["The parent folder of Path must exist.", "An existing file at the same path is overwritten."],
+    },
+  },
   drag_and_drop: {
     vi: {
       title: "Trợ giúp Drag and Drop",

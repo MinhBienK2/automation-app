@@ -99,6 +99,39 @@ fn write_phase_two_test_page() -> (String, String) {
     )
 }
 
+fn write_phase_four_test_page() -> (String, String) {
+    let page_path = std::env::temp_dir().join(format!("wam-phase-four-{}.html", Uuid::new_v4()));
+    let screenshot_path =
+        std::env::temp_dir().join(format!("wam-screenshot-{}.png", Uuid::new_v4()));
+    fs::write(
+        &page_path,
+        r#"
+        <!doctype html>
+        <html>
+          <body>
+            <h1 id="title">Quarterly Report</h1>
+            <a id="link" href="/orders/42" data-id="order-42">Order link</a>
+            <input id="email" value="user@example.com" />
+            <ul id="items">
+              <li>Alpha</li>
+              <li>Beta</li>
+            </ul>
+            <table id="orders">
+              <tr><th>ID</th><th>Status</th></tr>
+              <tr><td>42</td><td>Paid</td></tr>
+            </table>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write phase four test page");
+
+    (
+        format!("file://{}", page_path.display()),
+        screenshot_path.display().to_string(),
+    )
+}
+
 fn runner() -> BrowserRunner {
     BrowserRunner::new(RunnerOptions {
         headed: true,
@@ -524,6 +557,77 @@ async fn runner_executes_phase_two_form_and_file_actions_against_visible_chromiu
             .expect("submit result"),
         "submitted"
     );
+
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_four_data_capture_actions_against_visible_chromium() {
+    let (url, screenshot_path) = write_phase_four_test_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::ExtractText {
+                    xpath: "//*[@id=\"title\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "title".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::ExtractAttribute {
+                    xpath: "//*[@id=\"link\"]".to_string(),
+                    iframe_xpath: None,
+                    attribute: "data-id".to_string(),
+                    output_name: "link_id".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::ExtractInputValue {
+                    xpath: "//*[@id=\"email\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "email".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::ExtractList {
+                    xpath: "//*[@id=\"items\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "items".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::ExtractTable {
+                    xpath: "//*[@id=\"orders\"]".to_string(),
+                    iframe_xpath: None,
+                    output_name: "orders".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::TakeScreenshot {
+                    path: screenshot_path.clone(),
+                    output_name: Some("screenshot_path".to_string()),
+                    full_page: false,
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase four steps");
+
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+
+    assert_eq!(outputs["title"], "Quarterly Report");
+    assert_eq!(outputs["link_id"], "order-42");
+    assert_eq!(outputs["email"], "user@example.com");
+    assert_eq!(outputs["items"][0], "Alpha");
+    assert_eq!(outputs["orders"][1][1], "Paid");
+    assert_eq!(outputs["screenshot_path"], screenshot_path);
+    assert!(PathBuf::from(&screenshot_path).is_file());
 
     outcome.session.close().await.expect("close browser");
 }

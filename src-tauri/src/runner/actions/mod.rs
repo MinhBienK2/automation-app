@@ -1,4 +1,5 @@
 mod click;
+mod data_capture;
 mod js;
 mod scroll;
 mod type_text;
@@ -10,8 +11,10 @@ use chromiumoxide::{
     cdp::browser_protocol::{
         dom::SetFileInputFilesParams,
         input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
+        page::CaptureScreenshotFormat,
     },
     layout::Point,
+    page::ScreenshotParams,
     Page,
 };
 
@@ -19,6 +22,7 @@ use crate::domain::{ActionConfig, ClickButton, ClickMode, WaitCondition};
 
 use self::{
     click::{click_script, force_dom_click_script, ClickScriptOptions, ClickTargetResult},
+    data_capture::{extract_data_script, store_output_script, ExtractKind},
     js::ensure_js_action,
     scroll::{scroll_script, ScrollScriptOptions},
     type_text::type_text_script,
@@ -518,7 +522,121 @@ pub(super) async fn execute_action(
             ensure_js_action(page, &script).await?;
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::ExtractText {
+            xpath,
+            iframe_xpath,
+            output_name,
+            timeout_ms,
+        } => {
+            let script = extract_data_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &output_name,
+                timeout_ms,
+                ExtractKind::Text,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::ExtractAttribute {
+            xpath,
+            iframe_xpath,
+            attribute,
+            output_name,
+            timeout_ms,
+        } => {
+            let script = extract_data_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &output_name,
+                timeout_ms,
+                ExtractKind::Attribute(&attribute),
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::ExtractInputValue {
+            xpath,
+            iframe_xpath,
+            output_name,
+            timeout_ms,
+        } => {
+            let script = extract_data_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &output_name,
+                timeout_ms,
+                ExtractKind::InputValue,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::ExtractTable {
+            xpath,
+            iframe_xpath,
+            output_name,
+            timeout_ms,
+        } => {
+            let script = extract_data_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &output_name,
+                timeout_ms,
+                ExtractKind::Table,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::ExtractList {
+            xpath,
+            iframe_xpath,
+            output_name,
+            timeout_ms,
+        } => {
+            let script = extract_data_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &output_name,
+                timeout_ms,
+                ExtractKind::List,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::TakeScreenshot {
+            path,
+            output_name,
+            full_page,
+        } => {
+            take_screenshot(page, &path, full_page).await?;
+            if let Some(output_name) = output_name {
+                let script = store_output_script(&output_name, &path)?;
+                ensure_js_action(page, &script).await?;
+            }
+            Ok(ActionExecution::Complete)
+        }
     }
+}
+
+async fn take_screenshot(page: &Page, path: &str, full_page: bool) -> Result<(), RunnerError> {
+    if let Some(parent) = Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() && !parent.exists() {
+            return Err(RunnerError::ActionFailed(
+                "Screenshot directory not found".to_string(),
+            ));
+        }
+    }
+
+    let image = page
+        .screenshot(
+            ScreenshotParams::builder()
+                .format(CaptureScreenshotFormat::Png)
+                .full_page(full_page)
+                .build(),
+        )
+        .await?;
+    std::fs::write(path, image)?;
+    Ok(())
 }
 
 async fn upload_file(

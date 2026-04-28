@@ -28,7 +28,13 @@ export type ActionType =
   | "upload_file"
   | "submit_form"
   | "select_custom_option"
-  | "set_contenteditable";
+  | "set_contenteditable"
+  | "extract_text"
+  | "extract_attribute"
+  | "extract_input_value"
+  | "extract_table"
+  | "extract_list"
+  | "take_screenshot";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -274,12 +280,49 @@ export type ActionConfig =
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
+    }
+  | {
+      type: "extract_text";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_attribute";
+      config: DataCaptureElementConfig & {
+        attribute: string;
+      };
+    }
+  | {
+      type: "extract_input_value";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_table";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "extract_list";
+      config: DataCaptureElementConfig;
+    }
+  | {
+      type: "take_screenshot";
+      config: {
+        path: string;
+        output_name?: string | null;
+        full_page: boolean;
+      };
     };
 
 type ElementTargetActionConfig = {
   xpath: string;
   iframe_xpath?: string | null;
   wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+  timeout_ms?: number | null;
+};
+
+type DataCaptureElementConfig = {
+  xpath: string;
+  iframe_xpath?: string | null;
+  output_name: string;
   timeout_ms?: number | null;
 };
 

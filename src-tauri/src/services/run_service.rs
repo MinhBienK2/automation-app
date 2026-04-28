@@ -201,6 +201,42 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             wait_until: None,
             timeout_ms: None,
         },
+        ActionType::ExtractText => ActionConfig::ExtractText {
+            xpath: String::new(),
+            iframe_xpath: None,
+            output_name: "text".to_string(),
+            timeout_ms: None,
+        },
+        ActionType::ExtractAttribute => ActionConfig::ExtractAttribute {
+            xpath: String::new(),
+            iframe_xpath: None,
+            attribute: String::new(),
+            output_name: "attribute".to_string(),
+            timeout_ms: None,
+        },
+        ActionType::ExtractInputValue => ActionConfig::ExtractInputValue {
+            xpath: String::new(),
+            iframe_xpath: None,
+            output_name: "input_value".to_string(),
+            timeout_ms: None,
+        },
+        ActionType::ExtractTable => ActionConfig::ExtractTable {
+            xpath: String::new(),
+            iframe_xpath: None,
+            output_name: "table".to_string(),
+            timeout_ms: None,
+        },
+        ActionType::ExtractList => ActionConfig::ExtractList {
+            xpath: String::new(),
+            iframe_xpath: None,
+            output_name: "list".to_string(),
+            timeout_ms: None,
+        },
+        ActionType::TakeScreenshot => ActionConfig::TakeScreenshot {
+            path: String::new(),
+            output_name: Some("screenshot_path".to_string()),
+            full_page: false,
+        },
     }
 }
 
