@@ -10,6 +10,7 @@ export type ActionConfigField =
   | "condition"
   | "delay_ms"
   | "direction"
+  | "domain"
   | "duration_ms"
   | "files"
   | "iframe_xpath"
@@ -186,6 +187,21 @@ export function updateActionConfigField(
         return { type: "stop_workflow", config: { ...config.config, reason: value || null } };
       }
       return { type: "stop_workflow", config: { ...config.config, [field]: value } };
+    case "use_profile":
+      return { type: "use_profile", config: { name: value } };
+    case "save_session":
+      return { type: "save_session", config: { path: value } };
+    case "load_session":
+      return { type: "load_session", config: { path: value } };
+    case "set_cookie":
+      if (field === "domain" || field === "path") {
+        return { type: "set_cookie", config: { ...config.config, [field]: value || null } };
+      }
+      return { type: "set_cookie", config: { ...config.config, [field]: value } };
+    case "clear_cookies":
+      return { type: "clear_cookies", config: { domain: value || null } };
+    case "set_secret":
+      return { type: "set_secret", config: { ...config.config, [field]: value } };
   }
 }
 

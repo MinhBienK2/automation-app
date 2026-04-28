@@ -401,4 +401,40 @@ describe("workflow step form config helpers", () => {
       config: { status: "success", reason: "Already complete" },
     });
   });
+
+  test("updates phase six session profile cookie and secret configs with typed values", () => {
+    const profileConfig: ActionConfig = {
+      type: "use_profile",
+      config: { name: "account-a" },
+    };
+    const sessionConfig: ActionConfig = {
+      type: "save_session",
+      config: { path: "/tmp/old.json" },
+    };
+    const cookieConfig: ActionConfig = {
+      type: "set_cookie",
+      config: { name: "token", value: "old" },
+    };
+    const secretConfig: ActionConfig = {
+      type: "set_secret",
+      config: { name: "password", value: "old" },
+    };
+
+    expect(updateActionConfigField(profileConfig, "name", "account-b")).toEqual({
+      type: "use_profile",
+      config: { name: "account-b" },
+    });
+    expect(updateActionConfigField(sessionConfig, "path", "/tmp/session.json")).toEqual({
+      type: "save_session",
+      config: { path: "/tmp/session.json" },
+    });
+    expect(updateActionConfigField(cookieConfig, "domain", "example.com")).toEqual({
+      type: "set_cookie",
+      config: { name: "token", value: "old", domain: "example.com" },
+    });
+    expect(updateActionConfigField(secretConfig, "value", "new-secret")).toEqual({
+      type: "set_secret",
+      config: { name: "password", value: "new-secret" },
+    });
+  });
 });

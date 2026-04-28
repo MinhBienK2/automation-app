@@ -60,6 +60,12 @@ pub enum ActionType {
     RepeatForEach,
     RetryBlock,
     StopWorkflow,
+    UseProfile,
+    SaveSession,
+    LoadSession,
+    SetCookie,
+    ClearCookies,
+    SetSecret,
 }
 
 impl ActionType {
@@ -120,6 +126,12 @@ impl ActionType {
             Self::RepeatForEach => "repeat_for_each",
             Self::RetryBlock => "retry_block",
             Self::StopWorkflow => "stop_workflow",
+            Self::UseProfile => "use_profile",
+            Self::SaveSession => "save_session",
+            Self::LoadSession => "load_session",
+            Self::SetCookie => "set_cookie",
+            Self::ClearCookies => "clear_cookies",
+            Self::SetSecret => "set_secret",
         }
     }
 
@@ -180,6 +192,12 @@ impl ActionType {
             Self::RepeatForEach => "Repeat For Each",
             Self::RetryBlock => "Retry Block",
             Self::StopWorkflow => "Stop Workflow",
+            Self::UseProfile => "Use Profile",
+            Self::SaveSession => "Save Session",
+            Self::LoadSession => "Load Session",
+            Self::SetCookie => "Set Cookie",
+            Self::ClearCookies => "Clear Cookies",
+            Self::SetSecret => "Set Secret",
         }
     }
 }
@@ -772,6 +790,31 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
     },
+    UseProfile {
+        name: String,
+    },
+    SaveSession {
+        path: String,
+    },
+    LoadSession {
+        path: String,
+    },
+    SetCookie {
+        name: String,
+        value: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        domain: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+    },
+    ClearCookies {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        domain: Option<String>,
+    },
+    SetSecret {
+        name: String,
+        value: String,
+    },
 }
 
 impl ActionConfig {
@@ -832,6 +875,12 @@ impl ActionConfig {
             Self::RepeatForEach { .. } => ActionType::RepeatForEach,
             Self::RetryBlock { .. } => ActionType::RetryBlock,
             Self::StopWorkflow { .. } => ActionType::StopWorkflow,
+            Self::UseProfile { .. } => ActionType::UseProfile,
+            Self::SaveSession { .. } => ActionType::SaveSession,
+            Self::LoadSession { .. } => ActionType::LoadSession,
+            Self::SetCookie { .. } => ActionType::SetCookie,
+            Self::ClearCookies { .. } => ActionType::ClearCookies,
+            Self::SetSecret { .. } => ActionType::SetSecret,
         }
     }
 
@@ -1179,6 +1228,24 @@ impl ActionConfig {
                 "max_attempts",
                 "Max attempts must be greater than 0",
             )),
+            Self::UseProfile { name } if name.trim().is_empty() => {
+                Err(ValidationError::new("name", "Profile name is required"))
+            }
+            Self::SaveSession { path } | Self::LoadSession { path } if path.trim().is_empty() => {
+                Err(ValidationError::new("path", "Session path is required"))
+            }
+            Self::SetCookie { name, .. } if name.trim().is_empty() => {
+                Err(ValidationError::new("name", "Cookie name is required"))
+            }
+            Self::SetCookie { value, .. } if value.is_empty() => {
+                Err(ValidationError::new("value", "Cookie value is required"))
+            }
+            Self::SetSecret { name, .. } if name.trim().is_empty() => {
+                Err(ValidationError::new("name", "Secret name is required"))
+            }
+            Self::SetSecret { value, .. } if value.is_empty() => {
+                Err(ValidationError::new("value", "Secret value is required"))
+            }
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..

@@ -58,16 +58,18 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 3. Add Extract Text, Extract Attribute, Extract Input Value, Extract List, Extract Table, and Take Screenshot steps.
 4. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Switch Frame, Accept Dialog, Dismiss Dialog, Set Download Directory, and Wait For Download steps.
 5. Add Set Variable, Assert Element, Assert Text, If Condition, Repeat Times, Repeat For Each, Retry Block, and Stop Workflow steps.
-6. Reorder steps and reopen the workflow.
-7. Test a selected step.
-8. Run the full workflow.
-9. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
-10. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
-11. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
-12. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
-13. Confirm download actions save a new file in the configured directory and store its path in outputs.
-14. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
-15. Confirm bad XPath fails immediately with a short message.
-16. Stop during a long Sleep.
-17. Confirm Chromium remains open after success, failure, and stop.
-18. Delete the workflow.
+6. Add Use Profile, Save Session, Load Session, Set Cookie, Clear Cookies, and Set Secret steps.
+7. Reorder steps and reopen the workflow.
+8. Test a selected step.
+9. Run the full workflow.
+10. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
+11. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
+12. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
+13. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
+14. Confirm download actions save a new file in the configured directory and store its path in outputs.
+15. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
+16. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
+17. Confirm bad XPath fails immediately with a short message.
+18. Stop during a long Sleep.
+19. Confirm Chromium remains open after success, failure, and stop.
+20. Delete the workflow.

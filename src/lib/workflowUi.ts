@@ -61,6 +61,12 @@ export const actionLabels: Record<ActionType, string> = {
   repeat_for_each: "Repeat For Each",
   retry_block: "Retry Block",
   stop_workflow: "Stop Workflow",
+  use_profile: "Use Profile",
+  save_session: "Save Session",
+  load_session: "Load Session",
+  set_cookie: "Set Cookie",
+  clear_cookies: "Clear Cookies",
+  set_secret: "Set Secret",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -137,6 +143,17 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
       "repeat_for_each",
       "retry_block",
       "stop_workflow",
+    ],
+  },
+  {
+    label: "Session",
+    actions: [
+      "use_profile",
+      "save_session",
+      "load_session",
+      "set_cookie",
+      "clear_cookies",
+      "set_secret",
     ],
   },
   {
@@ -288,6 +305,17 @@ export function stepSummary(step: WorkflowStep) {
       return `${step.config.config.max_attempts} attempt(s)`;
     case "stop_workflow":
       return step.config.config.status;
+    case "use_profile":
+      return step.config.config.name || "No profile";
+    case "save_session":
+    case "load_session":
+      return step.config.config.path || "No path";
+    case "set_cookie":
+      return `${step.config.config.name || "No cookie"} = ${step.config.config.value ? "[redacted]" : "empty"}`;
+    case "clear_cookies":
+      return step.config.config.domain || "All visible cookies";
+    case "set_secret":
+      return `${step.config.config.name || "No secret"} = [redacted]`;
   }
 }
 

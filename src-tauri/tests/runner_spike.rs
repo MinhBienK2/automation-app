@@ -1,4 +1,11 @@
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+    fs,
+    io::{Read, Write},
+    net::TcpListener,
+    path::PathBuf,
+    thread,
+    time::Duration,
+};
 
 use uuid::Uuid;
 use workflow_automation_manager_lib::{
@@ -222,6 +229,46 @@ fn write_phase_five_logic_page() -> String {
     .expect("write phase five logic page");
 
     format!("file://{}", page_path.display())
+}
+
+fn write_phase_six_session_page() -> (String, String) {
+    let session_path = std::env::temp_dir().join(format!("wam-session-{}.json", Uuid::new_v4()));
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind phase six server");
+    let address = listener.local_addr().expect("phase six server address");
+    let html = r#"
+        <!doctype html>
+        <html>
+          <body>
+            <input id="password" />
+            <button id="save-local" onclick="localStorage.setItem('profileKey', 'kept')">Save Local</button>
+            <button id="read-local" onclick="document.getElementById('status').textContent = localStorage.getItem('profileKey') || ''">Read Local</button>
+            <button id="read-cookie" onclick="document.getElementById('cookie').textContent = document.cookie">Read Cookie</button>
+            <div id="status"></div>
+            <div id="cookie"></div>
+          </body>
+        </html>
+        "#
+    .as_bytes()
+    .to_vec();
+    thread::spawn(move || {
+        for stream in listener.incoming().take(16) {
+            let mut stream = stream.expect("phase six server stream");
+            let mut buffer = [0; 1024];
+            let _ = stream.read(&mut buffer);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n",
+                html.len()
+            );
+            if stream.write_all(response.as_bytes()).is_ok() {
+                let _ = stream.write_all(&html);
+            }
+        }
+    });
+
+    (
+        format!("http://{address}/"),
+        session_path.display().to_string(),
+    )
 }
 
 fn runner() -> BrowserRunner {
@@ -1070,4 +1117,177 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
     assert_eq!(outputs["last_item"], "Two");
 
     outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_six_session_profile_secret_actions_against_visible_chromium() {
+    let (url, session_path) = write_phase_six_session_page();
+    let profile = format!("phase-six-{}", Uuid::new_v4());
+    let cancel = RunnerCancellation::new();
+
+    let mut first = runner()
+        .run_steps(
+            vec![
+                ActionConfig::UseProfile {
+                    name: profile.clone(),
+                },
+                ActionConfig::OpenUrl { url: url.clone() },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"save-local\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::SaveSession {
+                    path: session_path.clone(),
+                },
+            ],
+            cancel.clone(),
+        )
+        .await
+        .expect("run first phase six profile steps");
+    assert_eq!(first.status, RunnerStatus::Success);
+    first.session.close().await.expect("close first browser");
+
+    let mut second = runner()
+        .run_steps(
+            vec![
+                ActionConfig::UseProfile {
+                    name: profile.clone(),
+                },
+                ActionConfig::OpenUrl { url: url.clone() },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"read-local\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"status\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "kept".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SetSecret {
+                    name: "password".to_string(),
+                    value: "s3cret".to_string(),
+                },
+                ActionConfig::InputText {
+                    xpath: "//*[@id=\"password\"]".to_string(),
+                    iframe_xpath: None,
+                    text: "{{secret:password}}".to_string(),
+                    clear_before_input: true,
+                    typing_mode: None,
+                    delay_ms: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::SetCookie {
+                    name: "token".to_string(),
+                    value: "abc".to_string(),
+                    domain: None,
+                    path: Some("/".to_string()),
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"read-cookie\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"cookie\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "token=abc".to_string(),
+                    match_mode: AssertTextMatchMode::Contains,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::ClearCookies { domain: None },
+            ],
+            cancel.clone(),
+        )
+        .await
+        .expect("run second phase six profile steps");
+    assert_eq!(second.failed_step, None);
+    assert_eq!(second.status, RunnerStatus::Success);
+    assert_eq!(
+        second
+            .session
+            .evaluate_string("document.getElementById('password').value")
+            .await
+            .expect("password value"),
+        "s3cret"
+    );
+    second.session.close().await.expect("close second browser");
+
+    let mut third = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::LoadSession { path: session_path },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"read-local\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"status\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "kept".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run third phase six session steps");
+    assert_eq!(third.status, RunnerStatus::Success);
+    third.session.close().await.expect("close third browser");
 }

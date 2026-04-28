@@ -78,7 +78,13 @@ impl BrowserRunner {
         cancellation: RunnerCancellation,
         mut progress: impl FnMut(RunnerProgress) + Send,
     ) -> Result<RunnerOutcome, RunnerError> {
-        let mut session = BrowserSession::launch(&self.options).await?;
+        let profile_name = steps.iter().find_map(|step| match step {
+            ActionConfig::UseProfile { name } if !name.trim().is_empty() => {
+                Some(name.trim().to_string())
+            }
+            _ => None,
+        });
+        let mut session = BrowserSession::launch(&self.options, profile_name.as_deref()).await?;
 
         for (index, step) in steps.into_iter().enumerate() {
             if cancellation.is_cancelled() {
@@ -144,12 +150,19 @@ pub struct BrowserSession {
     known_downloads: HashSet<PathBuf>,
     handler: JoinHandle<()>,
     user_data_dir: Option<PathBuf>,
+    persistent_user_data_dir: bool,
     open: bool,
 }
 
 impl BrowserSession {
-    async fn launch(options: &RunnerOptions) -> Result<Self, RunnerError> {
-        let user_data_dir = std::env::temp_dir().join(format!("wam-chrome-{}", Uuid::new_v4()));
+    async fn launch(
+        options: &RunnerOptions,
+        profile_name: Option<&str>,
+    ) -> Result<Self, RunnerError> {
+        let persistent_user_data_dir = profile_name.is_some();
+        let user_data_dir = profile_name
+            .map(profile_user_data_dir)
+            .unwrap_or_else(|| std::env::temp_dir().join(format!("wam-chrome-{}", Uuid::new_v4())));
         std::fs::create_dir_all(&user_data_dir)?;
 
         let mut builder = BrowserConfig::builder()
@@ -192,6 +205,7 @@ impl BrowserSession {
             known_downloads: HashSet::new(),
             handler: handler_task,
             user_data_dir: Some(user_data_dir),
+            persistent_user_data_dir,
             open: true,
         })
     }
@@ -339,11 +353,33 @@ impl BrowserSession {
         self.handler.abort();
 
         if let Some(path) = self.user_data_dir.take() {
-            let _ = std::fs::remove_dir_all(path);
+            if !self.persistent_user_data_dir {
+                let _ = std::fs::remove_dir_all(path);
+            }
         }
 
         Ok(())
     }
+}
+
+fn profile_user_data_dir(name: &str) -> PathBuf {
+    let safe_name = name
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || character == '-' || character == '_' {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+    std::env::temp_dir()
+        .join("wam-profiles")
+        .join(if safe_name.is_empty() {
+            "default".to_string()
+        } else {
+            safe_name
+        })
 }
 
 fn stable_files_in(directory: &Path) -> Result<HashSet<PathBuf>, RunnerError> {

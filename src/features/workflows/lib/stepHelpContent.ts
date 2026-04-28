@@ -57,7 +57,13 @@ type PhaseOneActionType =
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
-  | "stop_workflow";
+  | "stop_workflow"
+  | "use_profile"
+  | "save_session"
+  | "load_session"
+  | "set_cookie"
+  | "clear_cookies"
+  | "set_secret";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -544,6 +550,12 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   repeat_for_each: elementHelp("Repeat For Each", "repeat steps for each item", "lặp từng item", "loop"),
   retry_block: elementHelp("Retry Block", "retry nested steps after failure", "thử lại block", "retry"),
   stop_workflow: elementHelp("Stop Workflow", "stop the workflow intentionally", "dừng workflow", "stop"),
+  use_profile: elementHelp("Use Profile", "run with a persistent browser profile", "dùng profile", "session"),
+  save_session: elementHelp("Save Session", "save browser storage state", "lưu phiên", "session"),
+  load_session: elementHelp("Load Session", "restore browser storage state", "khôi phục phiên", "session"),
+  set_cookie: elementHelp("Set Cookie", "set a visible browser cookie", "đặt cookie", "cookie"),
+  clear_cookies: elementHelp("Clear Cookies", "clear visible browser cookies", "xóa cookie", "cookie"),
+  set_secret: elementHelp("Set Secret", "store a redacted secret variable", "lưu secret", "secret"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

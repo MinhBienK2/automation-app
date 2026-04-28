@@ -1493,6 +1493,109 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           </Label>
         </>
       );
+    case "use_profile":
+      return (
+        <Label>
+          Name
+          <Input
+            value={config.config.name}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "name", event.currentTarget.value))
+            }
+          />
+        </Label>
+      );
+    case "save_session":
+    case "load_session":
+      return (
+        <Label>
+          Path
+          <Input
+            value={config.config.path}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "path", event.currentTarget.value))
+            }
+          />
+        </Label>
+      );
+    case "set_cookie":
+      return (
+        <>
+          <Label>
+            Name
+            <Input
+              value={config.config.name}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "name", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Value
+            <Textarea
+              value={config.config.value}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Domain
+            <Input
+              value={config.config.domain ?? ""}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "domain", event.currentTarget.value))
+              }
+              placeholder="Current host"
+            />
+          </Label>
+          <Label>
+            Path
+            <Input
+              value={config.config.path ?? "/"}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "path", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
+    case "clear_cookies":
+      return (
+        <Label>
+          Domain
+          <Input
+            value={config.config.domain ?? ""}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "domain", event.currentTarget.value))
+            }
+            placeholder="Blank clears visible cookies"
+          />
+        </Label>
+      );
+    case "set_secret":
+      return (
+        <>
+          <Label>
+            Name
+            <Input
+              value={config.config.name}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "name", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Value
+            <Textarea
+              value={config.config.value}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
   }
 }
 

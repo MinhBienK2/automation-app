@@ -53,7 +53,13 @@ export type ActionType =
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
-  | "stop_workflow";
+  | "stop_workflow"
+  | "use_profile"
+  | "save_session"
+  | "load_session"
+  | "set_cookie"
+  | "clear_cookies"
+  | "set_secret";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -384,7 +390,16 @@ export type ActionConfig =
   | {
       type: "stop_workflow";
       config: { status: "success" | "failure"; reason?: string | null };
-    };
+    }
+  | { type: "use_profile"; config: { name: string } }
+  | { type: "save_session"; config: { path: string } }
+  | { type: "load_session"; config: { path: string } }
+  | {
+      type: "set_cookie";
+      config: { name: string; value: string; domain?: string | null; path?: string | null };
+    }
+  | { type: "clear_cookies"; config: { domain?: string | null } }
+  | { type: "set_secret"; config: { name: string; value: string } };
 
 export type WorkflowCondition =
   | { kind: "output_equals"; name: string; value: string }

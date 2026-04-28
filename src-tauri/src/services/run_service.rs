@@ -296,6 +296,26 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             status: crate::domain::StopWorkflowStatus::Success,
             reason: None,
         },
+        ActionType::UseProfile => ActionConfig::UseProfile {
+            name: "default".to_string(),
+        },
+        ActionType::SaveSession => ActionConfig::SaveSession {
+            path: String::new(),
+        },
+        ActionType::LoadSession => ActionConfig::LoadSession {
+            path: String::new(),
+        },
+        ActionType::SetCookie => ActionConfig::SetCookie {
+            name: String::new(),
+            value: String::new(),
+            domain: None,
+            path: Some("/".to_string()),
+        },
+        ActionType::ClearCookies => ActionConfig::ClearCookies { domain: None },
+        ActionType::SetSecret => ActionConfig::SetSecret {
+            name: "secret".to_string(),
+            value: String::new(),
+        },
     }
 }
 

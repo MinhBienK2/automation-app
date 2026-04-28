@@ -137,6 +137,14 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "repeat_times",
     );
+    expect(screen.getByRole("option", { name: "Use Profile" })).toHaveAttribute(
+      "data-value",
+      "use_profile",
+    );
+    expect(screen.getByRole("option", { name: "Set Secret" })).toHaveAttribute(
+      "data-value",
+      "set_secret",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -748,6 +756,44 @@ describe("Workflow step builder integration", () => {
         config: {
           type: "set_variable",
           config: { name: "customer", value: "Ada" },
+        },
+      });
+    });
+  });
+
+  test("saves a set secret phase six action config", async () => {
+    const secretStep: WorkflowStep = {
+      id: "step-secret",
+      name: "Set password",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "set_secret",
+      config: {
+        type: "set_secret",
+        config: { name: "password", value: "old" },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([secretStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Value"));
+    await userEvent.type(screen.getByLabelText("Value"), "new-secret");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-secret",
+        name: "Set password",
+        config: {
+          type: "set_secret",
+          config: { name: "password", value: "new-secret" },
         },
       });
     });

@@ -831,6 +831,38 @@ pub(super) async fn execute_action(
                 reason.unwrap_or_else(|| "Workflow stopped".to_string()),
             )),
         },
+        ActionConfig::UseProfile { .. } => Ok(ActionExecution::Complete),
+        ActionConfig::SaveSession { path } => {
+            save_session(&page, &path).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::LoadSession { path } => {
+            load_session(&page, &path).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetCookie {
+            name,
+            value,
+            domain,
+            path,
+        } => {
+            let value = render_template(&page, &value).await?;
+            let script = set_cookie_script(&name, &value, domain.as_deref(), path.as_deref())?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::ClearCookies { domain } => {
+            let script = clear_cookies_script(domain.as_deref())?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetSecret { name, value } => {
+            let value = render_template(&page, &value).await?;
+            let secret_name = format!("secret:{name}");
+            let script = store_output_script(&secret_name, &value)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
     }
 }
 
@@ -864,7 +896,7 @@ async fn render_template(page: &Page, template: &str) -> Result<String, RunnerEr
         (() => {{
           const template = {template};
           const outputs = window.__wamOutputs || {{}};
-          return template.replace(/\{{\{{\s*([a-zA-Z0-9_.-]+)\s*\}}\}}/g, (_, name) => {{
+          return template.replace(/\{{\{{\s*([a-zA-Z0-9_.:-]+)\s*\}}\}}/g, (_, name) => {{
             const value = outputs[name];
             if (value === undefined || value === null) return "";
             if (typeof value === "object") return JSON.stringify(value);
@@ -1025,6 +1057,87 @@ fn condition_name(condition: WaitCondition) -> &'static str {
         WaitCondition::ElementDisabled => "element_disabled",
         _ => "element_visible",
     }
+}
+
+async fn save_session(page: &Page, path: &str) -> Result<(), RunnerError> {
+    if let Some(parent) = Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    let script = r#"
+        (() => JSON.stringify({
+          localStorage: Object.fromEntries(Object.entries(localStorage)),
+          sessionStorage: Object.fromEntries(Object.entries(sessionStorage)),
+          cookies: document.cookie
+        }))()
+    "#;
+    let state: String = page.evaluate(script).await?.into_value()?;
+    std::fs::write(path, state)?;
+    Ok(())
+}
+
+async fn load_session(page: &Page, path: &str) -> Result<(), RunnerError> {
+    let state = std::fs::read_to_string(path)?;
+    let state = json_string(&state)?;
+    let script = format!(
+        r#"
+        (() => {{
+          const state = JSON.parse({state});
+          for (const [key, value] of Object.entries(state.localStorage || {{}})) {{
+            localStorage.setItem(key, value);
+          }}
+          for (const [key, value] of Object.entries(state.sessionStorage || {{}})) {{
+            sessionStorage.setItem(key, value);
+          }}
+          for (const cookie of String(state.cookies || "").split(";")) {{
+            const trimmed = cookie.trim();
+            if (trimmed) document.cookie = `${{trimmed}}; path=/`;
+          }}
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    );
+    ensure_js_action(page, &script).await
+}
+
+fn set_cookie_script(
+    name: &str,
+    value: &str,
+    domain: Option<&str>,
+    path: Option<&str>,
+) -> Result<String, RunnerError> {
+    let name = json_string(name)?;
+    let value = json_string(value)?;
+    let domain = optional_json_string(domain)?;
+    let path = json_string(path.unwrap_or("/"))?;
+    Ok(format!(
+        r#"
+        (() => {{
+          const parts = [`${{{name}}}=${{encodeURIComponent({value})}}`, `path=${{{path}}}`];
+          if ({domain}) parts.push(`domain=${{{domain}}}`);
+          document.cookie = parts.join("; ");
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
+fn clear_cookies_script(domain: Option<&str>) -> Result<String, RunnerError> {
+    let domain = optional_json_string(domain)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          const cookies = document.cookie ? document.cookie.split(";") : [];
+          for (const cookie of cookies) {{
+            const name = cookie.split("=")[0].trim();
+            document.cookie = `${{name}}=; Max-Age=0; path=/`;
+            if ({domain}) document.cookie = `${{name}}=; Max-Age=0; path=/; domain=${{{domain}}}`;
+          }}
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
 }
 
 async fn navigate_history(page: &Page, offset: i64) -> Result<(), RunnerError> {

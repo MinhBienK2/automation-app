@@ -612,6 +612,87 @@ fn phase_five_logic_configs_validate_required_fields() {
 }
 
 #[test]
+fn phase_six_session_profile_secret_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::UseProfile {
+            name: "account-a".to_string(),
+        },
+        ActionConfig::SaveSession {
+            path: "/tmp/session.json".to_string(),
+        },
+        ActionConfig::LoadSession {
+            path: "/tmp/session.json".to_string(),
+        },
+        ActionConfig::SetCookie {
+            name: "token".to_string(),
+            value: "abc".to_string(),
+            domain: None,
+            path: Some("/".to_string()),
+        },
+        ActionConfig::ClearCookies { domain: None },
+        ActionConfig::SetSecret {
+            name: "password".to_string(),
+            value: "secret".to_string(),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_six_session_profile_secret_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::UseProfile {
+            name: String::new(),
+        }
+        .validate()
+        .expect_err("blank profile should fail"),
+        "name",
+        "Profile name is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SaveSession {
+            path: String::new(),
+        }
+        .validate()
+        .expect_err("blank save session path should fail"),
+        "path",
+        "Session path is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetCookie {
+            name: String::new(),
+            value: "abc".to_string(),
+            domain: None,
+            path: None,
+        }
+        .validate()
+        .expect_err("blank cookie name should fail"),
+        "name",
+        "Cookie name is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetSecret {
+            name: "password".to_string(),
+            value: String::new(),
+        }
+        .validate()
+        .expect_err("blank secret value should fail"),
+        "value",
+        "Secret value is required",
+    );
+}
+
+#[test]
 fn user_action_taxonomy_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::Navigate {
