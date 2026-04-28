@@ -48,15 +48,23 @@
   background: #0f0f0f;
 }
 
+.action-picker-menu-up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 .action-picker-group {
   display: grid;
-  gap: 4px;
+  gap: 5px;
+  padding-top: 4px;
 }
 
 .action-picker-group-label {
-  padding: 6px 8px 2px;
-  color: #898989;
+  padding: 7px 8px 5px;
+  border-bottom: 1px solid #2e2e2e;
+  color: #3ecf8e;
   font-size: 12px;
+  font-weight: 500;
   text-transform: uppercase;
 }
 
@@ -188,12 +196,20 @@
   align-items: start;
 }
 
-.step-list-panel,
+.step-list-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 16px;
+}
+
 .step-detail-panel {
   display: grid;
   align-content: start;
   gap: 16px;
   padding: 16px;
+  position: sticky;
+  top: 20px;
 }
 
 .panel-heading {
@@ -203,6 +219,15 @@
   gap: 12px;
 }
 
+.builder-steps-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .panel-heading span {
   color: #898989;
   font-size: 13px;
@@ -210,26 +235,34 @@
 
 .step-list {
   display: grid;
-  gap: 8px;
+  max-height: min(560px, calc(100dvh - 360px));
+  overflow-y: auto;
+  gap: 6px;
+  padding-right: 2px;
+  scrollbar-width: none;
+}
+
+.step-list::-webkit-scrollbar {
+  display: none;
 }
 
 .step-item-wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 6px;
 }
 
 .step-item {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 4px 10px;
-  min-height: 62px;
-  padding: 10px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 2px 8px;
+  min-height: 44px;
+  padding: 7px 8px;
   text-align: left;
 }
 
 .step-drag-handle {
-  min-height: 62px;
+  min-height: 44px;
   padding: 0;
   color: #898989;
   cursor: grab;
@@ -244,8 +277,8 @@
   grid-row: span 2;
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border: 1px solid #363636;
   border-radius: 9999px;
   background: #171717;
@@ -264,7 +297,12 @@
 
 .step-item strong {
   color: #fafafa;
+  font-size: 13px;
   font-weight: 400;
+}
+
+.step-item small {
+  font-size: 11px;
 }
 
 .step-item-selected {

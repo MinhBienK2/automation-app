@@ -17,6 +17,7 @@ import type { WorkflowStep } from "../../../types/workflow";
 describe("Workflow step builder integration", () => {
   beforeEach(() => {
     resetTauriInvoke();
+    vi.restoreAllMocks();
   });
 
   test("opens builder and adds a sleep step", async () => {
@@ -30,7 +31,7 @@ describe("Workflow step builder integration", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    expect(await screen.findByText("Steps")).toBeInTheDocument();
+    expect(await screen.findByText("Builder Steps")).toBeInTheDocument();
 
     await userEvent.click(screen.getByLabelText("Action type"));
     await userEvent.click(screen.getByRole("option", { name: "Sleep" }));
@@ -57,9 +58,13 @@ describe("Workflow step builder integration", () => {
 
     await userEvent.click(actionType);
 
-    expect(screen.getByRole("group", { name: "Core" })).toBeInTheDocument();
+    const coreGroup = screen.getByRole("group", { name: "Core" });
+    expect(coreGroup).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Forms" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Keyboard" })).toBeInTheDocument();
+    expect(within(coreGroup).getByText("Core")).toHaveClass(
+      "action-picker-group-label",
+    );
     expect(screen.getByRole("option", { name: "Navigate" })).toHaveAttribute(
       "data-value",
       "navigate",
@@ -72,6 +77,52 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "hotkey",
     );
+  });
+
+  test("flips the action picker upward when there is not enough room below", async () => {
+    mockTauriCommands(workflowDetailScenario([]));
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 260,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    const actionType = await screen.findByLabelText("Action type");
+    vi.spyOn(actionType, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 210,
+      top: 210,
+      bottom: 250,
+      left: 0,
+      right: 380,
+      width: 380,
+      height: 40,
+      toJSON: () => ({}),
+    });
+
+    await userEvent.click(actionType);
+
+    expect(screen.getByRole("listbox", { name: "Action type" })).toHaveClass(
+      "action-picker-menu-up",
+    );
+  });
+
+  test("shows a compact builder steps header with total beside the title", async () => {
+    mockTauriCommands(workflowDetailScenario([sleepStep, clickStep]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    const panel = screen.getByRole("region", { name: "Builder Steps" });
+    const heading = within(panel).getByRole("heading", { name: "Builder Steps" });
+
+    expect(heading).toHaveClass("builder-steps-title");
+    expect(within(panel).getByText("2 total")).toHaveAttribute("data-slot", "badge");
+    expect(within(panel).queryByText("Builder")).not.toBeInTheDocument();
   });
 
   test("saves input text config from the taxonomy form", async () => {

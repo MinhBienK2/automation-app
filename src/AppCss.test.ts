@@ -74,13 +74,33 @@ describe("App CSS", () => {
 
   test("keeps workflow detail overlays and compact controls contained", () => {
     const actionMenu = cssRule(".action-picker-menu");
+    const actionGroupLabel = cssRule(".action-picker-group-label");
+    const actionOption = cssRule(".action-picker-option");
     const monitorStepStatus = cssRule(".monitor-step-status");
     const pageBackButton = cssRule(".page-back-button");
+    const stepList = cssRule(".step-list");
+    const stepDetailPanel = cssRule(".step-detail-panel");
+    const stepItem = cssRule(".step-item");
+    const stepDragHandle = cssRule(".step-drag-handle");
+    const builderTitle = cssRule(".builder-steps-title");
 
     expect(actionMenu).toContain("max-height: min(360px, calc(100dvh - 220px))");
     expect(actionMenu).toContain("overflow-y: auto");
+    expect(actionGroupLabel).toContain("color: #3ecf8e");
+    expect(actionGroupLabel).toContain("border-bottom: 1px solid #2e2e2e");
+    expect(actionOption).toContain("color: #b4b4b4");
     expect(monitorStepStatus).toContain("min-width: 74px");
     expect(pageBackButton).toContain("border: 1px solid #2e2e2e");
+    expect(stepList).toContain("max-height: min(560px, calc(100dvh - 360px))");
+    expect(stepList).toContain("overflow-y: auto");
+    expect(stepList).toContain("scrollbar-width: none");
+    expect(css).toContain(".step-list::-webkit-scrollbar");
+    expect(css).toContain("display: none");
+    expect(stepDetailPanel).toContain("position: sticky");
+    expect(stepDetailPanel).toContain("top: 20px");
+    expect(stepItem).toContain("min-height: 44px");
+    expect(stepDragHandle).toContain("min-height: 44px");
+    expect(builderTitle).toContain("font-size: 17px");
     expect(dialogSource).toContain('aria-label="Close dialog"');
     expect(dialogSource).not.toContain("bg-white");
   });

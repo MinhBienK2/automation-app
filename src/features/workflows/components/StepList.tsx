@@ -48,12 +48,9 @@ export function StepList({
   );
 
   return (
-    <section className="step-list-panel panel">
+    <section aria-label="Builder Steps" className="step-list-panel panel">
       <div className="panel-heading">
-        <div>
-          <p className="eyebrow">Builder</p>
-          <h2>Steps</h2>
-        </div>
+        <h2 className="builder-steps-title">Builder Steps</h2>
         <Badge variant="secondary">{steps.length} total</Badge>
       </div>
 
@@ -104,6 +101,7 @@ type ActionTypePickerProps = {
 
 function ActionTypePicker({ value, onChange }: ActionTypePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [placement, setPlacement] = useState<"down" | "up">("down");
   const pickerId = useId();
   const labelId = `${pickerId}-label`;
   const listboxId = `${pickerId}-listbox`;
@@ -133,6 +131,17 @@ function ActionTypePicker({ value, onChange }: ActionTypePickerProps) {
     };
   }, [isOpen]);
 
+  function toggleMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    if (!isOpen) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setPlacement(spaceBelow < 320 && spaceAbove > spaceBelow ? "up" : "down");
+    }
+
+    setIsOpen((current) => !current);
+  }
+
   return (
     <div className="action-picker-field" ref={rootRef}>
       <Label id={labelId}>Action type</Label>
@@ -146,7 +155,7 @@ function ActionTypePicker({ value, onChange }: ActionTypePickerProps) {
           data-slot="action-picker-trigger"
           type="button"
           variant="secondary"
-          onClick={() => setIsOpen((current) => !current)}
+          onClick={toggleMenu}
         >
           <span>{actionLabels[value]}</span>
           <span aria-hidden="true" className="action-picker-chevron">
@@ -157,7 +166,11 @@ function ActionTypePicker({ value, onChange }: ActionTypePickerProps) {
         {isOpen ? (
           <div
             aria-labelledby={labelId}
-            className="action-picker-menu"
+            className={
+              placement === "up"
+                ? "action-picker-menu action-picker-menu-up"
+                : "action-picker-menu"
+            }
             id={listboxId}
             role="listbox"
             tabIndex={-1}

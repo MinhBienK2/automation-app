@@ -29,6 +29,14 @@
     grid-template-columns: 1fr;
   }
 
+  .step-detail-panel {
+    position: static;
+  }
+
+  .step-list {
+    max-height: none;
+  }
+
   .workflow-card .row-actions,
   .page-header-status,
   .page-header-actions {
