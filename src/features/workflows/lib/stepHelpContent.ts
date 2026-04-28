@@ -9,6 +9,7 @@ export type StepHelpContent = {
   fields: Array<{
     name: string;
     description: string;
+    details?: string[];
   }>;
   examples: string[];
   commonMistakes: string[];
@@ -36,7 +37,7 @@ const timeoutField = {
   en: "Timeout ms is the maximum time to wait before failing. 5000 means 5 seconds.",
 };
 
-export const stepHelpContent: Record<ActionType, BilingualStepHelp> = {
+const baseStepHelpContent: Record<ActionType, BilingualStepHelp> = {
   navigate: {
     vi: {
       title: "Trợ giúp Navigate",
@@ -432,3 +433,399 @@ export const stepHelpContent: Record<ActionType, BilingualStepHelp> = {
     },
   },
 };
+
+function addFieldDetails(
+  content: Record<ActionType, BilingualStepHelp>,
+): Record<ActionType, BilingualStepHelp> {
+  const result = {} as Record<ActionType, BilingualStepHelp>;
+
+  for (const actionType of Object.keys(content) as ActionType[]) {
+    result[actionType] = {
+      vi: addLanguageFieldDetails(actionType, "vi", content[actionType].vi),
+      en: addLanguageFieldDetails(actionType, "en", content[actionType].en),
+    };
+  }
+
+  return result;
+}
+
+function addLanguageFieldDetails(
+  actionType: ActionType,
+  language: StepHelpLanguage,
+  content: StepHelpContent,
+): StepHelpContent {
+  return {
+    ...content,
+    fields: content.fields.map((field) => ({
+      ...field,
+      details: field.details ?? fieldDetails(actionType, language, field.name),
+    })),
+  };
+}
+
+function fieldDetails(
+  actionType: ActionType,
+  language: StepHelpLanguage,
+  fieldName: string,
+) {
+  const key = `${actionType}:${fieldName}`;
+  const specific = specificFieldDetails[language][key];
+  if (specific) return specific;
+
+  return commonFieldDetails[language][fieldName] ?? commonFieldDetails[language].default;
+}
+
+const specificFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
+  vi: {
+    "scroll:Mode": [
+      "Page: cuộn trang chính. Nếu có Iframe XPath, app cuộn document bên trong iframe đó.",
+      "Container: XPath là box/thẻ có scrollbar riêng, ví dụ một div danh sách có overflow.",
+      "Into View: XPath là element bạn muốn đưa vào vùng nhìn thấy; mode này không dùng Direction/Pixels.",
+      "Until Visible: XPath là element đích cần thấy. App sẽ cuộn theo Direction/Pixels nhiều lần tới khi element visible hoặc hết Max attempts.",
+    ],
+    "scroll:XPath": [
+      "Với Container, XPath là vùng cần cuộn, ví dụ //*[@id='scroll-box'].",
+      "Với Into View, XPath là element muốn kéo vào màn hình.",
+      "Với Until Visible, XPath là element đích cần thấy, không phải box scroll.",
+      "Nếu đang dùng Iframe XPath, XPath này được lấy bên trong iframe, không phải từ trang cha.",
+    ],
+    "click:Mode": [
+      "Real click tạo mouse event thật hơn, phù hợp với đa số button/link và kiểm tra element có bị che hay không.",
+      "Force DOM click gọi trực tiếp element.click(), có thể hữu ích với UI khó click nhưng kém giống người dùng thật.",
+      "Nên thử Real click trước. Chỉ dùng Force DOM khi bạn hiểu website vẫn xử lý click() trực tiếp.",
+    ],
+    "wait:Condition": [
+      "Duration chỉ chờ theo thời gian cố định, giống Sleep nhưng dùng mili-giây.",
+      "Element visible/hidden kiểm tra element có đang nhìn thấy hay không.",
+      "Element attached/detached kiểm tra element có tồn tại trong DOM hay không, kể cả chưa visible.",
+      "URL contains chờ địa chỉ trình duyệt chứa một đoạn text, hữu ích sau login hoặc chuyển trang.",
+    ],
+  },
+  en: {
+    "scroll:Mode": [
+      "Page: scrolls the main page. If Iframe XPath is set, it scrolls the document inside that iframe.",
+      "Container: XPath is the scrollable box, for example a list div with overflow.",
+      "Into View: XPath is the element you want to bring into view; this mode does not use Direction/Pixels.",
+      "Until Visible: XPath is the target element. The app scrolls by Direction/Pixels until it is visible or Max attempts is exhausted.",
+    ],
+    "scroll:XPath": [
+      "For Container, XPath is the scroll area, for example //*[@id='scroll-box'].",
+      "For Into View, XPath is the element to bring into the viewport.",
+      "For Until Visible, XPath is the target element to see, not the scroll box.",
+      "When Iframe XPath is set, this XPath is copied from inside the iframe, not from the parent page.",
+    ],
+    "click:Mode": [
+      "Real click sends browser-like mouse events and checks whether the element can receive the click.",
+      "Force DOM click directly calls element.click(); it can help with difficult UI but is less like a real user.",
+      "Try Real click first. Use Force DOM only when the website handles click() directly.",
+    ],
+    "wait:Condition": [
+      "Duration waits for fixed time, like Sleep, but in milliseconds.",
+      "Element visible/hidden checks whether an element can or cannot be seen.",
+      "Element attached/detached checks whether the element exists in the DOM, even if it is not visible.",
+      "URL contains waits until the browser URL contains text, useful after login or navigation.",
+    ],
+  },
+};
+
+const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
+  vi: {
+    default: [
+      "Field này ảnh hưởng trực tiếp tới cách step chạy trong browser.",
+      "Nếu step fail, hãy kiểm tra lại giá trị field này trước khi tăng timeout.",
+    ],
+    URL: [
+      "Nên nhập URL đầy đủ như https://example.com/path.",
+      "Nếu URL thiếu https:// hoặc có khoảng trắng thừa, browser có thể mở sai trang.",
+    ],
+    "Wait until": [
+      "Attached nghĩa là element tồn tại trong DOM, nhưng có thể chưa nhìn thấy.",
+      "Visible nghĩa là element có kích thước và nằm trong viewport.",
+      "Enabled nghĩa là element không bị disabled.",
+      "Clickable là lựa chọn an toàn nhất cho thao tác click/input vì element phải có thể nhận hành động.",
+    ],
+    "Timeout ms": [
+      "Đơn vị là mili-giây: 1000 = 1 giây, 5000 = 5 giây.",
+      "Timeout quá ngắn dễ fail trên mạng chậm; timeout quá dài làm workflow đợi lâu khi XPath sai.",
+    ],
+    Seconds: [
+      "Dùng số nhỏ trước, ví dụ 0.5 hoặc 1, rồi tăng nếu trang tải chậm.",
+      "Sleep không kiểm tra điều kiện thật; nếu có thể, Wait thường ổn định hơn.",
+    ],
+    Condition: [
+      "Chọn điều kiện đúng giúp workflow ổn định hơn Sleep cố định.",
+      "Nếu cần chờ element trong iframe, hiện Wait chưa có Iframe XPath; hãy dùng timing phù hợp hoặc step khác hỗ trợ iframe.",
+    ],
+    "Duration ms": [
+      "Đơn vị là mili-giây, ví dụ 500 là nửa giây.",
+      "Chỉ dùng khi Condition là Duration.",
+    ],
+    XPath: [
+      "XPath nên trỏ đúng element cần thao tác, không trỏ vào wrapper quá rộng nếu không cần.",
+      "Ưu tiên XPath ổn định dựa trên id, name, placeholder, aria-label, text, hoặc attribute ít thay đổi.",
+      "Tránh XPath tuyệt đối quá dài như /html/body/div[3]/div[2] nếu website hay đổi layout.",
+    ],
+    Text: [
+      "Đây là nội dung app sẽ nhập hoặc chờ thấy, tùy step.",
+      "Kiểm tra khoảng trắng, chữ hoa/thường, và ký tự đặc biệt nếu kết quả không đúng.",
+    ],
+    "URL contains": [
+      "Chỉ nhập đoạn URL cần khớp, ví dụ /dashboard, không nhất thiết nhập cả URL.",
+      "Hữu ích sau khi login, redirect, hoặc click chuyển trang.",
+    ],
+    "Clear before input": [
+      "Yes phù hợp khi field có giá trị cũ hoặc browser tự fill.",
+      "No phù hợp khi bạn muốn nhập nối thêm vào nội dung hiện có.",
+    ],
+    "Typing mode": [
+      "Set value nhanh và ổn định với nhiều form thông thường.",
+      "Type keys giống người dùng hơn, phù hợp với field có autocomplete, mask, hoặc listener theo phím.",
+    ],
+    "Iframe XPath": [
+      "Field này chọn thẻ iframe trên trang cha.",
+      "Sau khi có Iframe XPath, XPath chính phải được lấy từ bên trong iframe đó.",
+      "Nếu element không nằm trong iframe thì để trống field này.",
+    ],
+    "Delay ms": [
+      "Chỉ quan trọng khi dùng Type keys.",
+      "Tăng delay nếu website xử lý từng phím chậm hoặc có autocomplete.",
+    ],
+    Method: [
+      "Select all thường giống thao tác người dùng và an toàn cho input thông thường.",
+      "Backspace hữu ích khi website cần sự kiện phím.",
+      "DOM value nhanh nhưng có thể không kích hoạt đầy đủ listener của một số framework.",
+    ],
+    "Click count": [
+      "Single là click một lần, dùng cho đa số button/link.",
+      "Double dùng cho UI yêu cầu double-click như mở item trong danh sách.",
+    ],
+    Button: [
+      "Left là nút chuột trái thông thường.",
+      "Right mở context menu nếu website có hỗ trợ.",
+      "Middle hiếm dùng, thường dành cho hành vi mở tab/link đặc biệt.",
+    ],
+    "Scroll into view": [
+      "Yes giúp đưa element vào màn hình trước khi click.",
+      "Nếu website tự quản lý scroll hoặc click theo vị trí đặc biệt, có thể thử No.",
+    ],
+    "Block / Inline": [
+      "Block điều khiển căn dọc: start, center, end, nearest.",
+      "Inline điều khiển căn ngang: start, center, end, nearest.",
+      "Center thường dễ hiểu nhất; nearest ít làm trang nhảy hơn.",
+    ],
+    Position: [
+      "Center click vào giữa element, phù hợp với đa số trường hợp.",
+      "Top/Bottom corners hữu ích khi element lớn hoặc có vùng click riêng.",
+      "Offset cho phép click vào tọa độ cụ thể bên trong element.",
+    ],
+    "Offset X / Offset Y": [
+      "Chỉ dùng khi Position là Offset.",
+      "X/Y tính từ góc trên bên trái của element.",
+      "Dùng khi cần click chính xác vào một điểm bên trong canvas, map, hoặc control phức tạp.",
+    ],
+    "Retry interval ms": [
+      "Khoảng nghỉ giữa các lần thử lại khi element chưa sẵn sàng.",
+      "Giá trị nhỏ phản ứng nhanh hơn; giá trị lớn giảm tải cho trang.",
+    ],
+    "Post-click wait ms": [
+      "Chờ thêm sau click trước khi step tiếp theo chạy.",
+      "Hữu ích khi click mở modal, dropdown, animation, hoặc trigger request ngắn.",
+    ],
+    Mode: [
+      "Mode quyết định ý nghĩa của các field còn lại.",
+      "Khi đổi Mode, hãy đọc lại mô tả XPath vì mỗi mode có thể hiểu XPath khác nhau.",
+    ],
+    Direction: [
+      "Down/Up cuộn theo chiều dọc; Left/Right cuộn theo chiều ngang.",
+      "Direction dùng trong Page, Container, và Until Visible.",
+    ],
+    Pixels: [
+      "Pixels là khoảng cách cuộn mỗi lần.",
+      "250-800 thường hợp lý; quá nhỏ sẽ cần nhiều attempts, quá lớn có thể nhảy qua nội dung.",
+    ],
+    "Max attempts": [
+      "Số lần app thử cuộn trong Until Visible.",
+      "Tổng quãng cuộn xấp xỉ Pixels nhân Max attempts.",
+    ],
+    "Wait ms": [
+      "Khoảng nghỉ giữa mỗi lần cuộn để browser kịp render nội dung mới.",
+      "Tăng giá trị này nếu trang lazy-load hoặc animation chậm.",
+    ],
+    Behavior: [
+      "Instant nhanh và dễ đoán hơn cho automation.",
+      "Smooth nhìn tự nhiên hơn nhưng có thể làm step kéo dài hơn.",
+    ],
+    "Match by": [
+      "Label khớp chữ người dùng nhìn thấy trong dropdown.",
+      "Value khớp attribute value trong HTML, thường ổn định hơn nếu bạn biết value.",
+    ],
+    Value: [
+      "Giá trị này phải khớp với Label hoặc Value tùy Match by.",
+      "Nếu không chọn được, inspect option để kiểm tra text hiển thị và value thật.",
+    ],
+    State: [
+      "Checked đảm bảo checkbox được bật.",
+      "Unchecked đảm bảo checkbox được tắt.",
+      "Step này đặt trạng thái cuối cùng, không đơn giản là click toggle.",
+    ],
+    Key: [
+      "Nhập tên phím theo cách browser hiểu, ví dụ Enter, Escape, Tab, ArrowDown.",
+      "Dùng khi focus hiện tại đang ở đúng element cần nhận phím.",
+    ],
+    Keys: [
+      "Nhập tổ hợp bằng dấu +, ví dụ Control+S hoặc Meta+K.",
+      "Control thường là Ctrl; Meta thường là Command trên macOS.",
+    ],
+  },
+  en: {
+    default: [
+      "This field directly changes how the step runs in the browser.",
+      "If the step fails, check this field before only increasing timeout.",
+    ],
+    URL: [
+      "Use a full URL such as https://example.com/path.",
+      "Missing https:// or extra spaces can make the browser open the wrong page.",
+    ],
+    "Wait until": [
+      "Attached means the element exists in the DOM but may not be visible.",
+      "Visible means the element has size and is inside the viewport.",
+      "Enabled means the element is not disabled.",
+      "Clickable is the safest choice for click/input because the element must receive the action.",
+    ],
+    "Timeout ms": [
+      "Unit is milliseconds: 1000 = 1 second, 5000 = 5 seconds.",
+      "Too short can fail on slow pages; too long makes wrong XPath failures slower.",
+    ],
+    Seconds: [
+      "Start small, such as 0.5 or 1, then increase if the page is slow.",
+      "Sleep does not check a real condition; Wait is usually more stable when possible.",
+    ],
+    Condition: [
+      "Choosing the right condition makes workflows more stable than fixed Sleep.",
+      "Wait currently has no Iframe XPath; use timing carefully or a step that supports iframe when needed.",
+    ],
+    "Duration ms": [
+      "Unit is milliseconds, for example 500 is half a second.",
+      "Only used when Condition is Duration.",
+    ],
+    XPath: [
+      "XPath should point to the exact element you want to act on, not a broad wrapper unless intended.",
+      "Prefer stable XPath based on id, name, placeholder, aria-label, text, or stable attributes.",
+      "Avoid long absolute XPath such as /html/body/div[3]/div[2] when the page layout changes often.",
+    ],
+    Text: [
+      "This is the text the app enters or waits for, depending on the step.",
+      "Check whitespace, letter case, and special characters if the result is wrong.",
+    ],
+    "URL contains": [
+      "Enter only the URL fragment to match, such as /dashboard; a full URL is not required.",
+      "Useful after login, redirects, or clicks that navigate.",
+    ],
+    "Clear before input": [
+      "Yes is best when the field has an old value or browser autofill.",
+      "No is best when you want to append to the existing value.",
+    ],
+    "Typing mode": [
+      "Set value is fast and stable for many normal forms.",
+      "Type keys behaves more like a user and helps with autocomplete, masks, or key listeners.",
+    ],
+    "Iframe XPath": [
+      "This selects the iframe element on the parent page.",
+      "After setting Iframe XPath, the main XPath must be copied from inside that iframe.",
+      "Leave this empty when the element is not inside an iframe.",
+    ],
+    "Delay ms": [
+      "Only important when using Type keys.",
+      "Increase delay if the site handles each key slowly or has autocomplete.",
+    ],
+    Method: [
+      "Select all behaves like a user and is safe for normal inputs.",
+      "Backspace is useful when the website needs key events.",
+      "DOM value is fast but may not trigger every framework listener.",
+    ],
+    "Click count": [
+      "Single clicks once and fits most buttons/links.",
+      "Double is for UI that requires double-click, such as opening a list item.",
+    ],
+    Button: [
+      "Left is the normal mouse button.",
+      "Right opens a context menu if the website supports it.",
+      "Middle is rare and mostly for special link/tab behavior.",
+    ],
+    "Scroll into view": [
+      "Yes brings the element into the visible area before clicking.",
+      "Try No when the website manages scroll itself or expects a special position.",
+    ],
+    "Block / Inline": [
+      "Block controls vertical alignment: start, center, end, nearest.",
+      "Inline controls horizontal alignment: start, center, end, nearest.",
+      "Center is easiest to reason about; nearest moves the page less.",
+    ],
+    Position: [
+      "Center clicks the middle of the element and fits most cases.",
+      "Corner positions help when a large element has a specific clickable area.",
+      "Offset lets you click exact coordinates inside the element.",
+    ],
+    "Offset X / Offset Y": [
+      "Only used when Position is Offset.",
+      "X/Y are measured from the element's top-left corner.",
+      "Use for canvas, maps, or complex controls that need precise clicks.",
+    ],
+    "Retry interval ms": [
+      "Delay between retries while the element is not ready.",
+      "Smaller values react faster; larger values reduce pressure on the page.",
+    ],
+    "Post-click wait ms": [
+      "Extra wait after click before the next step runs.",
+      "Useful when click opens a modal, dropdown, animation, or short request.",
+    ],
+    Mode: [
+      "Mode decides how the other fields are interpreted.",
+      "When changing Mode, reread XPath guidance because each mode can use XPath differently.",
+    ],
+    Direction: [
+      "Down/Up scroll vertically; Left/Right scroll horizontally.",
+      "Direction is used by Page, Container, and Until Visible.",
+    ],
+    Pixels: [
+      "Pixels is the distance per scroll attempt.",
+      "250-800 is usually reasonable; too small needs many attempts, too large can jump past content.",
+    ],
+    "Max attempts": [
+      "How many times the app tries to scroll in Until Visible.",
+      "Total scroll distance is roughly Pixels multiplied by Max attempts.",
+    ],
+    "Wait ms": [
+      "Delay between scroll attempts so the browser can render new content.",
+      "Increase this for lazy-loaded pages or slow animations.",
+    ],
+    Behavior: [
+      "Instant is faster and more predictable for automation.",
+      "Smooth looks more natural but can make the step take longer.",
+    ],
+    "Match by": [
+      "Label matches the visible option text.",
+      "Value matches the HTML value attribute and is often stable when you know it.",
+    ],
+    Value: [
+      "This must match either Label or Value depending on Match by.",
+      "If selection fails, inspect the option to check visible text and actual value.",
+    ],
+    State: [
+      "Checked ensures the checkbox is on.",
+      "Unchecked ensures the checkbox is off.",
+      "This sets the final state; it is not just a toggle click.",
+    ],
+    Key: [
+      "Use browser key names such as Enter, Escape, Tab, ArrowDown.",
+      "Use when the current focus is already on the element that should receive the key.",
+    ],
+    Keys: [
+      "Enter the combination with +, for example Control+S or Meta+K.",
+      "Control usually means Ctrl; Meta usually means Command on macOS.",
+    ],
+  },
+};
+
+export const stepHelpContent: Record<ActionType, BilingualStepHelp> =
+  addFieldDetails(baseStepHelpContent);

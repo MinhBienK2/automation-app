@@ -1,0 +1,65 @@
+@media (max-width: 860px) {
+  .app-shell,
+  .app-shell-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    position: static;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #242424;
+  }
+
+  .app-screen {
+    width: min(100% - 24px, 680px);
+    padding-top: 20px;
+  }
+
+  .app-header,
+  .page-detail-header,
+  .page-detail-title-row,
+  .page-detail-controls-row,
+  .workflow-card {
+    display: grid;
+  }
+
+  .builder-grid,
+  .monitor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-card .row-actions,
+  .page-header-status,
+  .page-header-actions {
+    width: 100%;
+    justify-items: stretch;
+  }
+
+  .page-detail-header .page-header-actions {
+    margin-left: 0;
+  }
+
+  .page-detail-title-main {
+    display: grid;
+    gap: 10px;
+  }
+
+  .page-breadcrumb {
+    flex-wrap: wrap;
+  }
+
+  .page-breadcrumb-current {
+    white-space: normal;
+  }
+
+  .workflow-card .row-actions,
+  .run-actions,
+  .row-actions,
+  .form-actions,
+  .page-detail-header .run-actions,
+  .page-detail-header .run-actions:has(.secondary-danger) {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+}

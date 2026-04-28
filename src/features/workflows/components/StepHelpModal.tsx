@@ -75,6 +75,13 @@ export function StepHelpModal({
                 <div className="help-field-item" key={field.name}>
                   <strong>{field.name}</strong>
                   <p>{field.description}</p>
+                  {field.details?.length ? (
+                    <ul className="help-field-details">
+                      {field.details.map((detail) => (
+                        <li key={detail}>{detail}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ))}
             </div>
