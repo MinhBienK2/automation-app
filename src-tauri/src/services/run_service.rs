@@ -102,6 +102,78 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             wait_until: None,
             timeout_ms: None,
         },
+        ActionType::DoubleClick => ActionConfig::DoubleClick {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::RightClick => ActionConfig::RightClick {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::DragAndDrop => ActionConfig::DragAndDrop {
+            source_xpath: String::new(),
+            target_xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::FocusElement => ActionConfig::FocusElement {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::BlurElement => ActionConfig::BlurElement {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::TypeSequence => ActionConfig::TypeSequence {
+            xpath: String::new(),
+            iframe_xpath: None,
+            text: String::new(),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::SetClipboard => ActionConfig::SetClipboard {
+            text: String::new(),
+        },
+        ActionType::PasteClipboard => ActionConfig::PasteClipboard {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::Check => ActionConfig::Check {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::Uncheck => ActionConfig::Uncheck {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::ToggleCheckbox => ActionConfig::ToggleCheckbox {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
+        ActionType::SelectRadio => ActionConfig::SelectRadio {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        },
     }
 }
 

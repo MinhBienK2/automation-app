@@ -12,7 +12,19 @@ export type ActionType =
   | "set_checkbox"
   | "press_key"
   | "hotkey"
-  | "hover";
+  | "hover"
+  | "double_click"
+  | "right_click"
+  | "drag_and_drop"
+  | "focus_element"
+  | "blur_element"
+  | "type_sequence"
+  | "set_clipboard"
+  | "paste_clipboard"
+  | "check"
+  | "uncheck"
+  | "toggle_checkbox"
+  | "select_radio";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -161,7 +173,72 @@ export type ActionConfig =
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
+    }
+  | {
+      type: "double_click";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "right_click";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "drag_and_drop";
+      config: {
+        source_xpath: string;
+        target_xpath: string;
+        iframe_xpath?: string | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "focus_element";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "blur_element";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "type_sequence";
+      config: {
+        xpath: string;
+        iframe_xpath?: string | null;
+        text: string;
+        delay_ms?: number | null;
+        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | { type: "set_clipboard"; config: { text: string } }
+  | {
+      type: "paste_clipboard";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "check";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "uncheck";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "toggle_checkbox";
+      config: ElementTargetActionConfig;
+    }
+  | {
+      type: "select_radio";
+      config: ElementTargetActionConfig;
     };
+
+type ElementTargetActionConfig = {
+  xpath: string;
+  iframe_xpath?: string | null;
+  wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+  timeout_ms?: number | null;
+};
 
 export type WorkflowStep = {
   id: string;

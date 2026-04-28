@@ -19,6 +19,18 @@ pub enum ActionType {
     PressKey,
     Hotkey,
     Hover,
+    DoubleClick,
+    RightClick,
+    DragAndDrop,
+    FocusElement,
+    BlurElement,
+    TypeSequence,
+    SetClipboard,
+    PasteClipboard,
+    Check,
+    Uncheck,
+    ToggleCheckbox,
+    SelectRadio,
 }
 
 impl ActionType {
@@ -38,6 +50,18 @@ impl ActionType {
             Self::PressKey => "press_key",
             Self::Hotkey => "hotkey",
             Self::Hover => "hover",
+            Self::DoubleClick => "double_click",
+            Self::RightClick => "right_click",
+            Self::DragAndDrop => "drag_and_drop",
+            Self::FocusElement => "focus_element",
+            Self::BlurElement => "blur_element",
+            Self::TypeSequence => "type_sequence",
+            Self::SetClipboard => "set_clipboard",
+            Self::PasteClipboard => "paste_clipboard",
+            Self::Check => "check",
+            Self::Uncheck => "uncheck",
+            Self::ToggleCheckbox => "toggle_checkbox",
+            Self::SelectRadio => "select_radio",
         }
     }
 
@@ -57,6 +81,18 @@ impl ActionType {
             Self::PressKey => "Press Key",
             Self::Hotkey => "Hotkey",
             Self::Hover => "Hover",
+            Self::DoubleClick => "Double Click",
+            Self::RightClick => "Right Click",
+            Self::DragAndDrop => "Drag and Drop",
+            Self::FocusElement => "Focus Element",
+            Self::BlurElement => "Blur Element",
+            Self::TypeSequence => "Type Sequence",
+            Self::SetClipboard => "Set Clipboard",
+            Self::PasteClipboard => "Paste Clipboard",
+            Self::Check => "Check",
+            Self::Uncheck => "Uncheck",
+            Self::ToggleCheckbox => "Toggle Checkbox",
+            Self::SelectRadio => "Select Radio",
         }
     }
 }
@@ -338,6 +374,112 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
     },
+    DoubleClick {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    RightClick {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    DragAndDrop {
+        source_xpath: String,
+        target_xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    FocusElement {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    BlurElement {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    TypeSequence {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delay_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    SetClipboard {
+        text: String,
+    },
+    PasteClipboard {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    Check {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    Uncheck {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    ToggleCheckbox {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    SelectRadio {
+        xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        iframe_xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_until: Option<ClickWaitUntil>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
 }
 
 impl ActionConfig {
@@ -357,6 +499,18 @@ impl ActionConfig {
             Self::PressKey { .. } => ActionType::PressKey,
             Self::Hotkey { .. } => ActionType::Hotkey,
             Self::Hover { .. } => ActionType::Hover,
+            Self::DoubleClick { .. } => ActionType::DoubleClick,
+            Self::RightClick { .. } => ActionType::RightClick,
+            Self::DragAndDrop { .. } => ActionType::DragAndDrop,
+            Self::FocusElement { .. } => ActionType::FocusElement,
+            Self::BlurElement { .. } => ActionType::BlurElement,
+            Self::TypeSequence { .. } => ActionType::TypeSequence,
+            Self::SetClipboard { .. } => ActionType::SetClipboard,
+            Self::PasteClipboard { .. } => ActionType::PasteClipboard,
+            Self::Check { .. } => ActionType::Check,
+            Self::Uncheck { .. } => ActionType::Uncheck,
+            Self::ToggleCheckbox { .. } => ActionType::ToggleCheckbox,
+            Self::SelectRadio { .. } => ActionType::SelectRadio,
         }
     }
 
@@ -542,6 +696,101 @@ impl ActionConfig {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::Hover {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
+            Self::DoubleClick { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::RightClick { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::FocusElement { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::BlurElement { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::PasteClipboard { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::Check { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::Uncheck { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::ToggleCheckbox { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::SelectRadio { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::DragAndDrop { source_xpath, .. } if source_xpath.trim().is_empty() => Err(
+                ValidationError::new("source_xpath", "Source XPath is required"),
+            ),
+            Self::DragAndDrop { target_xpath, .. } if target_xpath.trim().is_empty() => Err(
+                ValidationError::new("target_xpath", "Target XPath is required"),
+            ),
+            Self::TypeSequence { xpath, .. } if xpath.trim().is_empty() => {
+                Err(ValidationError::new("xpath", "XPath is required"))
+            }
+            Self::TypeSequence { text, .. } if text.is_empty() => {
+                Err(ValidationError::new("text", "Text is required"))
+            }
+            Self::TypeSequence {
+                delay_ms: Some(0), ..
+            } => Err(ValidationError::new(
+                "delay_ms",
+                "Delay must be greater than 0",
+            )),
+            Self::SetClipboard { text } if text.is_empty() => {
+                Err(ValidationError::new("text", "Text is required"))
+            }
+            Self::DoubleClick {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::RightClick {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::DragAndDrop {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::FocusElement {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::BlurElement {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::TypeSequence {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::PasteClipboard {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::Check {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::Uncheck {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ToggleCheckbox {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::SelectRadio {
                 timeout_ms: Some(0),
                 ..
             } => Err(ValidationError::new(

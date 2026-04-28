@@ -467,6 +467,389 @@ pub(super) fn hover_script(
     ))
 }
 
+pub(super) fn focus_element_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    element_method_script(
+        xpath,
+        iframe_xpath,
+        wait_until,
+        timeout_ms,
+        "focus",
+        "focus",
+    )
+}
+
+pub(super) fn blur_element_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    element_method_script(xpath, iframe_xpath, wait_until, timeout_ms, "blur", "blur")
+}
+
+pub(super) fn type_sequence_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    text: &str,
+    delay_ms: Option<u64>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let text = json_string(text)?;
+    let delay_ms = delay_ms.unwrap_or(0);
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const xpath = {xpath};
+          const iframeXpath = {iframe_xpath};
+          const text = {text};
+          const delayMs = {delay_ms};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const enabled = (node) => !node.disabled && node.getAttribute("aria-disabled") !== "true" && !node.readOnly;
+          const ready = (node) => waitUntil === "attached" || (waitUntil === "visible" && visible(node)) || (waitUntil !== "visible" && enabled(node));
+          const inputSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+          const textareaSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+          const currentValue = (node) => "value" in node ? node.value : node.textContent || "";
+          const setValue = (node, value) => {{
+            if (node instanceof HTMLTextAreaElement && textareaSetter) textareaSetter.call(node, value);
+            else if (node instanceof HTMLInputElement && inputSetter) inputSetter.call(node, value);
+            else if ("value" in node) node.value = value;
+            else if (node.isContentEditable) node.textContent = value;
+            else return false;
+            return true;
+          }};
+          const typeInto = async (node) => {{
+            node.focus?.();
+            for (const character of text) {{
+              node.dispatchEvent(new KeyboardEvent("keydown", {{ key: character, bubbles: true }}));
+              const next = currentValue(node) + character;
+              if (!setValue(node, next)) return false;
+              node.dispatchEvent(new InputEvent("input", {{ bubbles: true, inputType: "insertText", data: character }}));
+              node.dispatchEvent(new KeyboardEvent("keyup", {{ key: character, bubbles: true }}));
+              if (delayMs > 0) await new Promise((done) => setTimeout(done, delayMs));
+            }}
+            node.dispatchEvent(new Event("change", {{ bubbles: true }}));
+            return true;
+          }};
+          const tick = async () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const node = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!node) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!ready(node)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element cannot receive text" }});
+              return setTimeout(tick, 50);
+            }}
+            const ok = await typeInto(node);
+            return resolve(ok ? {{ ok: true, reason: "" }} : {{ ok: false, reason: "Element cannot receive text" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
+}
+
+pub(super) fn set_clipboard_script(text: &str) -> Result<String, RunnerError> {
+    let text = json_string(text)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          window.__wamClipboard = {text};
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
+pub(super) fn paste_clipboard_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const xpath = {xpath};
+          const iframeXpath = {iframe_xpath};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const text = window.__wamClipboard || "";
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const enabled = (node) => !node.disabled && node.getAttribute("aria-disabled") !== "true" && !node.readOnly;
+          const ready = (node) => waitUntil === "attached" || (waitUntil === "visible" && visible(node)) || (waitUntil !== "visible" && enabled(node));
+          const inputSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+          const textareaSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+          const setValue = (node, value) => {{
+            if (node instanceof HTMLTextAreaElement && textareaSetter) textareaSetter.call(node, value);
+            else if (node instanceof HTMLInputElement && inputSetter) textareaSetter ? inputSetter.call(node, value) : node.value = value;
+            else if ("value" in node) node.value = value;
+            else if (node.isContentEditable) node.textContent = value;
+            else return false;
+            return true;
+          }};
+          const tick = () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const node = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!node) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!ready(node)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element cannot receive text" }});
+              return setTimeout(tick, 50);
+            }}
+            node.focus?.();
+            const next = ("value" in node ? node.value : node.textContent || "") + text;
+            if (!setValue(node, next)) return resolve({{ ok: false, reason: "Element cannot receive text" }});
+            node.dispatchEvent(new ClipboardEvent("paste", {{ bubbles: true, clipboardData: new DataTransfer() }}));
+            node.dispatchEvent(new InputEvent("input", {{ bubbles: true, inputType: "insertFromPaste", data: text }}));
+            node.dispatchEvent(new Event("change", {{ bubbles: true }}));
+            return resolve({{ ok: true, reason: "" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
+}
+
+pub(super) fn toggle_checkbox_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    checkbox_or_radio_script(
+        xpath,
+        iframe_xpath,
+        wait_until,
+        timeout_ms,
+        "checkbox",
+        None,
+    )
+}
+
+pub(super) fn select_radio_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    checkbox_or_radio_script(
+        xpath,
+        iframe_xpath,
+        wait_until,
+        timeout_ms,
+        "radio",
+        Some(true),
+    )
+}
+
+pub(super) fn drag_and_drop_script(
+    source_xpath: &str,
+    target_xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let source_xpath = json_string(source_xpath)?;
+    let target_xpath = json_string(target_xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const sourceXpath = {source_xpath};
+          const targetXpath = {target_xpath};
+          const iframeXpath = {iframe_xpath};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const ready = (node) => waitUntil === "attached" || visible(node);
+          const tick = () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const source = doc.evaluate(sourceXpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            const target = doc.evaluate(targetXpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!source) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Source XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!target) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Target XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!ready(source) || !ready(target)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element is not visible" }});
+              return setTimeout(tick, 50);
+            }}
+            const dataTransfer = new DataTransfer();
+            source.dispatchEvent(new DragEvent("dragstart", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            target.dispatchEvent(new DragEvent("dragenter", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            target.dispatchEvent(new DragEvent("dragover", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            target.dispatchEvent(new DragEvent("drop", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            source.dispatchEvent(new DragEvent("dragend", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            return resolve({{ ok: true, reason: "" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
+}
+
+fn element_method_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+    method: &str,
+    event_name: &str,
+) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const xpath = {xpath};
+          const iframeXpath = {iframe_xpath};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const enabled = (node) => !node.disabled && node.getAttribute("aria-disabled") !== "true";
+          const ready = (node) => waitUntil === "attached" || (waitUntil === "visible" && visible(node)) || (waitUntil !== "visible" && enabled(node));
+          const tick = () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const node = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!node) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!ready(node)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element is not visible" }});
+              return setTimeout(tick, 50);
+            }}
+            node.{method}?.();
+            node.dispatchEvent(new Event("{event_name}", {{ bubbles: true }}));
+            return resolve({{ ok: true, reason: "" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
+}
+
+fn checkbox_or_radio_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+    expected_type: &str,
+    desired_checked: Option<bool>,
+) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    let desired_checked = desired_checked
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const xpath = {xpath};
+          const iframeXpath = {iframe_xpath};
+          const expectedType = "{expected_type}";
+          const desiredChecked = {desired_checked};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const enabled = (node) => !node.disabled && node.getAttribute("aria-disabled") !== "true";
+          const ready = (node) => waitUntil === "attached" || (waitUntil === "visible" && visible(node)) || (waitUntil !== "visible" && enabled(node));
+          const tick = () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const node = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!node) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!(node instanceof HTMLInputElement) || node.type !== expectedType) return resolve({{ ok: false, reason: `Element is not a ${{expectedType}}` }});
+            if (!ready(node)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element is disabled" }});
+              return setTimeout(tick, 50);
+            }}
+            if (desiredChecked === null || node.checked !== desiredChecked) node.click();
+            return resolve({{ ok: true, reason: "" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
+}
+
 fn wait_condition_value(condition: WaitCondition) -> &'static str {
     match condition {
         WaitCondition::Duration => "duration",
@@ -615,5 +998,71 @@ mod tests {
         assert!(hotkey.contains("ctrlKey"));
         assert!(hover.contains("mouseover"));
         assert!(hover.contains("timeoutMs"));
+    }
+
+    #[test]
+    fn phase_one_scripts_express_human_interaction_actions() {
+        let focus = focus_element_script(
+            "//*[@name='email']",
+            None,
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+        let blur = blur_element_script(
+            "//*[@name='email']",
+            None,
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+        let sequence = type_sequence_script(
+            "//*[@name='search']",
+            None,
+            "abc",
+            Some(10),
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+        let paste = paste_clipboard_script(
+            "//*[@name='notes']",
+            None,
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+        let toggle = toggle_checkbox_script(
+            "//*[@name='terms']",
+            None,
+            Some(ClickWaitUntil::Enabled),
+            Some(3000),
+        )
+        .unwrap();
+        let radio = select_radio_script(
+            "//*[@value='email']",
+            None,
+            Some(ClickWaitUntil::Enabled),
+            Some(3000),
+        )
+        .unwrap();
+        let drag = drag_and_drop_script(
+            "//*[@id='source']",
+            "//*[@id='target']",
+            None,
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+
+        assert!(focus.contains(".focus"));
+        assert!(blur.contains(".blur"));
+        assert!(sequence.contains("KeyboardEvent"));
+        assert!(sequence.contains("inputType: \"insertText\""));
+        assert!(paste.contains("__wamClipboard"));
+        assert!(toggle.contains("node.click"));
+        assert!(radio.contains("radio"));
+        assert!(drag.contains("dragstart"));
+        assert!(drag.contains("drop"));
     }
 }

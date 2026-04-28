@@ -26,7 +26,9 @@ export type ActionConfigField =
   | "retry_interval_ms"
   | "scroll_into_view"
   | "seconds"
+  | "source_xpath"
   | "state"
+  | "target_xpath"
   | "text"
   | "timeout_ms"
   | "typing_mode"
@@ -81,6 +83,22 @@ export function updateActionConfigField(
       };
     case "hover":
       return updateElementConfigField(config, field, value);
+    case "double_click":
+    case "right_click":
+    case "focus_element":
+    case "blur_element":
+    case "paste_clipboard":
+    case "check":
+    case "uncheck":
+    case "toggle_checkbox":
+    case "select_radio":
+      return updatePhaseOneElementConfigField(config, field, value);
+    case "drag_and_drop":
+      return updateDragAndDropConfigField(config, field, value);
+    case "type_sequence":
+      return updateTypeSequenceConfigField(config, field, value);
+    case "set_clipboard":
+      return { type: "set_clipboard", config: { text: value } };
   }
 }
 
@@ -261,4 +279,69 @@ function updateElementConfigField(
       }
       return { type: "hover", config: { ...config.config, [field]: value } };
   }
+}
+
+function updatePhaseOneElementConfigField(
+  config: Extract<
+    ActionConfig,
+    {
+      type:
+        | "double_click"
+        | "right_click"
+        | "focus_element"
+        | "blur_element"
+        | "paste_clipboard"
+        | "check"
+        | "uncheck"
+        | "toggle_checkbox"
+        | "select_radio";
+    }
+  >,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: config.type, config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "iframe_xpath") {
+    return { type: config.type, config: { ...config.config, iframe_xpath: value || null } };
+  }
+
+  return { type: config.type, config: { ...config.config, [field]: value } };
+}
+
+function updateDragAndDropConfigField(
+  config: Extract<ActionConfig, { type: "drag_and_drop" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: "drag_and_drop", config: { ...config.config, timeout_ms: Number(value) } };
+  }
+
+  if (field === "iframe_xpath") {
+    return {
+      type: "drag_and_drop",
+      config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  return { type: "drag_and_drop", config: { ...config.config, [field]: value } };
+}
+
+function updateTypeSequenceConfigField(
+  config: Extract<ActionConfig, { type: "type_sequence" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "delay_ms" || field === "timeout_ms") {
+    return { type: "type_sequence", config: { ...config.config, [field]: Number(value) } };
+  }
+
+  if (field === "iframe_xpath") {
+    return { type: "type_sequence", config: { ...config.config, iframe_xpath: value || null } };
+  }
+
+  return { type: "type_sequence", config: { ...config.config, [field]: value } };
 }

@@ -383,6 +383,213 @@ fn new_action_types_have_default_configs() {
 }
 
 #[test]
+fn phase_one_human_interaction_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::DoubleClick {
+            xpath: "//*[@id=\"item\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::RightClick {
+            xpath: "//*[@id=\"menu-target\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::DragAndDrop {
+            source_xpath: "//*[@id=\"source\"]".to_string(),
+            target_xpath: "//*[@id=\"target\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::FocusElement {
+            xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::BlurElement {
+            xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::TypeSequence {
+            xpath: "//*[@name=\"search\"]".to_string(),
+            iframe_xpath: None,
+            text: "abc".to_string(),
+            delay_ms: Some(5),
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::SetClipboard {
+            text: "paste me".to_string(),
+        },
+        ActionConfig::PasteClipboard {
+            xpath: "//*[@name=\"notes\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::Check {
+            xpath: "//*[@name=\"terms\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::Uncheck {
+            xpath: "//*[@name=\"terms\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::ToggleCheckbox {
+            xpath: "//*[@name=\"terms\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+        ActionConfig::SelectRadio {
+            xpath: "//*[@value=\"email\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: Some(3000),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("phase one config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_one_human_interaction_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::DoubleClick {
+            xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("double click requires xpath"),
+        "xpath",
+        "XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::DragAndDrop {
+            source_xpath: String::new(),
+            target_xpath: "//*[@id=\"target\"]".to_string(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("drag and drop requires source xpath"),
+        "source_xpath",
+        "Source XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::DragAndDrop {
+            source_xpath: "//*[@id=\"source\"]".to_string(),
+            target_xpath: String::new(),
+            iframe_xpath: None,
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("drag and drop requires target xpath"),
+        "target_xpath",
+        "Target XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::TypeSequence {
+            xpath: "//*[@name=\"search\"]".to_string(),
+            iframe_xpath: None,
+            text: String::new(),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("type sequence requires text"),
+        "text",
+        "Text is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetClipboard {
+            text: String::new(),
+        }
+        .validate()
+        .expect_err("set clipboard requires text"),
+        "text",
+        "Text is required",
+    );
+}
+
+#[test]
+fn phase_one_action_types_have_default_configs() {
+    assert_eq!(
+        default_config(ActionType::DoubleClick).action_type(),
+        ActionType::DoubleClick
+    );
+    assert_eq!(
+        default_config(ActionType::RightClick).action_type(),
+        ActionType::RightClick
+    );
+    assert_eq!(
+        default_config(ActionType::DragAndDrop).action_type(),
+        ActionType::DragAndDrop
+    );
+    assert_eq!(
+        default_config(ActionType::FocusElement).action_type(),
+        ActionType::FocusElement
+    );
+    assert_eq!(
+        default_config(ActionType::BlurElement).action_type(),
+        ActionType::BlurElement
+    );
+    assert_eq!(
+        default_config(ActionType::TypeSequence).action_type(),
+        ActionType::TypeSequence
+    );
+    assert_eq!(
+        default_config(ActionType::SetClipboard).action_type(),
+        ActionType::SetClipboard
+    );
+    assert_eq!(
+        default_config(ActionType::PasteClipboard).action_type(),
+        ActionType::PasteClipboard
+    );
+    assert_eq!(
+        default_config(ActionType::Check).action_type(),
+        ActionType::Check
+    );
+    assert_eq!(
+        default_config(ActionType::Uncheck).action_type(),
+        ActionType::Uncheck
+    );
+    assert_eq!(
+        default_config(ActionType::ToggleCheckbox).action_type(),
+        ActionType::ToggleCheckbox
+    );
+    assert_eq!(
+        default_config(ActionType::SelectRadio).action_type(),
+        ActionType::SelectRadio
+    );
+}
+
+#[test]
 fn scroll_config_supports_advanced_modes_and_backwards_compatibility() {
     let legacy_json = r#"{"type":"scroll","config":{"direction":"down","pixels":300}}"#;
     let legacy: ActionConfig = serde_json::from_str(legacy_json).expect("legacy scroll");

@@ -20,6 +20,18 @@ export const actionLabels: Record<ActionType, string> = {
   press_key: "Press Key",
   hotkey: "Hotkey",
   hover: "Hover",
+  double_click: "Double Click",
+  right_click: "Right Click",
+  drag_and_drop: "Drag and Drop",
+  focus_element: "Focus Element",
+  blur_element: "Blur Element",
+  type_sequence: "Type Sequence",
+  set_clipboard: "Set Clipboard",
+  paste_clipboard: "Paste Clipboard",
+  check: "Check",
+  uncheck: "Uncheck",
+  toggle_checkbox: "Toggle Checkbox",
+  select_radio: "Select Radio",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -29,15 +41,30 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   },
   {
     label: "Forms",
-    actions: ["select_option", "set_checkbox"],
+    actions: [
+      "select_option",
+      "check",
+      "uncheck",
+      "toggle_checkbox",
+      "select_radio",
+      "set_checkbox",
+    ],
   },
   {
     label: "Keyboard",
-    actions: ["press_key", "hotkey"],
+    actions: [
+      "press_key",
+      "hotkey",
+      "type_sequence",
+      "focus_element",
+      "blur_element",
+      "set_clipboard",
+      "paste_clipboard",
+    ],
   },
   {
     label: "Mouse",
-    actions: ["hover"],
+    actions: ["hover", "double_click", "right_click", "drag_and_drop"],
   },
   {
     label: "Legacy",
@@ -95,6 +122,32 @@ export function stepSummary(step: WorkflowStep) {
     case "hotkey":
       return step.config.config.keys.join("+") || "No keys";
     case "hover":
+      return step.config.config.xpath || "No XPath";
+    case "double_click":
+      return step.config.config.xpath || "No XPath";
+    case "right_click":
+      return step.config.config.xpath || "No XPath";
+    case "drag_and_drop":
+      return `${step.config.config.source_xpath || "No source"} -> ${
+        step.config.config.target_xpath || "No target"
+      }`;
+    case "focus_element":
+      return step.config.config.xpath || "No XPath";
+    case "blur_element":
+      return step.config.config.xpath || "No XPath";
+    case "type_sequence":
+      return step.config.config.xpath || "No XPath";
+    case "set_clipboard":
+      return step.config.config.text || "No text";
+    case "paste_clipboard":
+      return step.config.config.xpath || "No XPath";
+    case "check":
+      return step.config.config.xpath || "No XPath";
+    case "uncheck":
+      return step.config.config.xpath || "No XPath";
+    case "toggle_checkbox":
+      return step.config.config.xpath || "No XPath";
+    case "select_radio":
       return step.config.config.xpath || "No XPath";
   }
 }

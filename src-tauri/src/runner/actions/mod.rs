@@ -20,8 +20,10 @@ use self::{
     scroll::{scroll_script, ScrollScriptOptions},
     type_text::type_text_script,
     user_interaction::{
-        clear_input_script, hotkey_script, hover_script, input_text_script, press_key_script,
-        select_option_script, set_checkbox_script, wait_script, InputTextScriptOptions,
+        blur_element_script, clear_input_script, drag_and_drop_script, focus_element_script,
+        hotkey_script, hover_script, input_text_script, paste_clipboard_script, press_key_script,
+        select_option_script, select_radio_script, set_checkbox_script, set_clipboard_script,
+        toggle_checkbox_script, type_sequence_script, wait_script, InputTextScriptOptions,
         WaitScriptOptions,
     },
 };
@@ -262,6 +264,194 @@ pub(super) async fn execute_action(
             timeout_ms,
         } => {
             let script = hover_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::DoubleClick {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = click_script(ClickScriptOptions {
+                xpath: &xpath,
+                iframe_xpath: iframe_xpath.as_deref(),
+                mode: None,
+                scroll_into_view: Some(true),
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
+                wait_until,
+                timeout_ms,
+                retry_interval_ms: None,
+            })?;
+            let target: ClickTargetResult = page.evaluate(script).await?.into_value()?;
+            if !target.ok {
+                return Err(RunnerError::ActionFailed(target.reason));
+            }
+            dispatch_mouse_click(page, Point::new(target.x, target.y), None, 2).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::RightClick {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = click_script(ClickScriptOptions {
+                xpath: &xpath,
+                iframe_xpath: iframe_xpath.as_deref(),
+                mode: None,
+                scroll_into_view: Some(true),
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
+                wait_until,
+                timeout_ms,
+                retry_interval_ms: None,
+            })?;
+            let target: ClickTargetResult = page.evaluate(script).await?.into_value()?;
+            if !target.ok {
+                return Err(RunnerError::ActionFailed(target.reason));
+            }
+            dispatch_mouse_click(
+                page,
+                Point::new(target.x, target.y),
+                Some(ClickButton::Right),
+                1,
+            )
+            .await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::DragAndDrop {
+            source_xpath,
+            target_xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = drag_and_drop_script(
+                &source_xpath,
+                &target_xpath,
+                iframe_xpath.as_deref(),
+                wait_until,
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::FocusElement {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script =
+                focus_element_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::BlurElement {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script =
+                blur_element_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::TypeSequence {
+            xpath,
+            iframe_xpath,
+            text,
+            delay_ms,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = type_sequence_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                &text,
+                delay_ms,
+                wait_until,
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetClipboard { text } => {
+            let script = set_clipboard_script(&text)?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::PasteClipboard {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script =
+                paste_clipboard_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::Check {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = set_checkbox_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                crate::domain::CheckboxState::Checked,
+                wait_until,
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::Uncheck {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script = set_checkbox_script(
+                &xpath,
+                iframe_xpath.as_deref(),
+                crate::domain::CheckboxState::Unchecked,
+                wait_until,
+                timeout_ms,
+            )?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::ToggleCheckbox {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script =
+                toggle_checkbox_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
+            ensure_js_action(page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SelectRadio {
+            xpath,
+            iframe_xpath,
+            wait_until,
+            timeout_ms,
+        } => {
+            let script =
+                select_radio_script(&xpath, iframe_xpath.as_deref(), wait_until, timeout_ms)?;
             ensure_js_action(page, &script).await?;
             Ok(ActionExecution::Complete)
         }

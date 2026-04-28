@@ -16,6 +16,19 @@ export type StepHelpContent = {
 };
 
 type BilingualStepHelp = Record<StepHelpLanguage, StepHelpContent>;
+type PhaseOneActionType =
+  | "double_click"
+  | "right_click"
+  | "drag_and_drop"
+  | "focus_element"
+  | "blur_element"
+  | "type_sequence"
+  | "set_clipboard"
+  | "paste_clipboard"
+  | "check"
+  | "uncheck"
+  | "toggle_checkbox"
+  | "select_radio";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -37,7 +50,7 @@ const timeoutField = {
   en: "Timeout ms is the maximum time to wait before failing. 5000 means 5 seconds.",
 };
 
-const baseStepHelpContent: Record<ActionType, BilingualStepHelp> = {
+const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, BilingualStepHelp> = {
   navigate: {
     vi: {
       title: "Trợ giúp Navigate",
@@ -434,6 +447,134 @@ const baseStepHelpContent: Record<ActionType, BilingualStepHelp> = {
   },
 };
 
+const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
+  double_click: elementHelp("Double Click", "double click", "click hai lần", "double-click"),
+  right_click: elementHelp("Right Click", "right click", "click chuột phải", "context menu"),
+  focus_element: elementHelp("Focus Element", "focus", "focus vào element", "keyboard input"),
+  blur_element: elementHelp("Blur Element", "blur", "bỏ focus khỏi element", "validation"),
+  paste_clipboard: elementHelp("Paste Clipboard", "paste clipboard text", "dán clipboard", "paste"),
+  check: elementHelp("Check", "ensure a checkbox is checked", "bật checkbox", "checkbox"),
+  uncheck: elementHelp("Uncheck", "ensure a checkbox is unchecked", "tắt checkbox", "checkbox"),
+  toggle_checkbox: elementHelp("Toggle Checkbox", "toggle a checkbox", "đảo trạng thái checkbox", "checkbox"),
+  select_radio: elementHelp("Select Radio", "select a radio option", "chọn radio", "radio"),
+  drag_and_drop: {
+    vi: {
+      title: "Trợ giúp Drag and Drop",
+      summary: "Kéo một element nguồn và thả vào element đích.",
+      useWhen: ["Dùng để sắp xếp card, kéo item vào vùng drop, hoặc thao tác UI dạng kanban."],
+      fields: [
+        { name: "Source XPath", description: "XPath của element cần kéo." },
+        { name: "Target XPath", description: "XPath của vùng hoặc element đích để thả." },
+        { name: "Iframe XPath", description: iframeField.vi },
+        { name: "Wait until", description: waitUntilField.vi },
+        { name: "Timeout ms", description: timeoutField.vi },
+      ],
+      examples: ["Source XPath: //*[@id='card-1'], Target XPath: //*[@id='done-lane']"],
+      commonMistakes: ["XPath nguồn và đích phải là hai element khác nhau.", "Một số app custom có thể cần selector ổn định hơn absolute XPath."],
+    },
+    en: {
+      title: "Drag and Drop Help",
+      summary: "Drag a source element and drop it onto a target element.",
+      useWhen: ["Use for reordering cards, moving items into drop zones, or kanban-style UIs."],
+      fields: [
+        { name: "Source XPath", description: "XPath of the element to drag." },
+        { name: "Target XPath", description: "XPath of the drop target element or area." },
+        { name: "Iframe XPath", description: iframeField.en },
+        { name: "Wait until", description: waitUntilField.en },
+        { name: "Timeout ms", description: timeoutField.en },
+      ],
+      examples: ["Source XPath: //*[@id='card-1'], Target XPath: //*[@id='done-lane']"],
+      commonMistakes: ["Source and target XPath should point to different elements.", "Some custom apps need a more stable selector than absolute XPath."],
+    },
+  },
+  type_sequence: {
+    vi: {
+      title: "Trợ giúp Type Sequence",
+      summary: "Gõ từng ký tự vào element giống thao tác bàn phím.",
+      useWhen: ["Dùng cho autocomplete, command palette, rich text editor, hoặc field phụ thuộc key events."],
+      fields: [
+        { name: "XPath", description: xpathField.vi },
+        { name: "Text", description: "Chuỗi ký tự cần gõ." },
+        { name: "Delay ms", description: "Độ trễ giữa các ký tự." },
+        { name: "Iframe XPath", description: iframeField.vi },
+        { name: "Wait until", description: waitUntilField.vi },
+        { name: "Timeout ms", description: timeoutField.vi },
+      ],
+      examples: ["XPath: //*[@role='combobox'], Text: apple, Delay ms: 25"],
+      commonMistakes: ["Dùng Input Text cho field thường sẽ nhanh và ổn định hơn.", "Delay 0 không hợp lệ; bỏ trống nếu không cần delay."],
+    },
+    en: {
+      title: "Type Sequence Help",
+      summary: "Type text character by character with keyboard-like events.",
+      useWhen: ["Use for autocomplete, command palettes, rich text editors, or fields that depend on key events."],
+      fields: [
+        { name: "XPath", description: xpathField.en },
+        { name: "Text", description: "The characters to type." },
+        { name: "Delay ms", description: "Delay between characters." },
+        { name: "Iframe XPath", description: iframeField.en },
+        { name: "Wait until", description: waitUntilField.en },
+        { name: "Timeout ms", description: timeoutField.en },
+      ],
+      examples: ["XPath: //*[@role='combobox'], Text: apple, Delay ms: 25"],
+      commonMistakes: ["Input Text is faster and more stable for normal fields.", "Delay 0 is invalid; leave it blank when no delay is needed."],
+    },
+  },
+  set_clipboard: {
+    vi: {
+      title: "Trợ giúp Set Clipboard",
+      summary: "Đặt nội dung clipboard nội bộ của workflow để dùng ở step Paste Clipboard.",
+      useWhen: ["Dùng khi website xử lý paste tốt hơn nhập từng ký tự.", "Dùng trước Paste Clipboard."],
+      fields: [{ name: "Text", description: "Nội dung cần đưa vào clipboard workflow." }],
+      examples: ["Text: Nội dung cần dán"],
+      commonMistakes: ["Step này chỉ chuẩn bị nội dung; dùng Paste Clipboard để dán vào field."],
+    },
+    en: {
+      title: "Set Clipboard Help",
+      summary: "Set the workflow clipboard text for a later Paste Clipboard step.",
+      useWhen: ["Use when the site handles paste better than typing.", "Use before Paste Clipboard."],
+      fields: [{ name: "Text", description: "The text to place into the workflow clipboard." }],
+      examples: ["Text: Text to paste"],
+      commonMistakes: ["This only prepares the text; use Paste Clipboard to put it into a field."],
+    },
+  },
+};
+
+function elementHelp(
+  title: string,
+  enSummary: string,
+  viSummary: string,
+  example: string,
+): BilingualStepHelp {
+  return {
+    vi: {
+      title: `Trợ giúp ${title}`,
+      summary: `Thực hiện ${viSummary} trên element theo XPath.`,
+      useWhen: [`Dùng khi workflow cần ${viSummary} giống người dùng thật.`],
+      fields: [
+        { name: "XPath", description: xpathField.vi },
+        { name: "Iframe XPath", description: iframeField.vi },
+        { name: "Wait until", description: waitUntilField.vi },
+        { name: "Timeout ms", description: timeoutField.vi },
+      ],
+      examples: [`XPath: //*[@data-action='${example}']`],
+      commonMistakes: ["XPath phải trỏ đúng element thật đang nhận thao tác."],
+    },
+    en: {
+      title: `${title} Help`,
+      summary: `Perform ${enSummary} on an element selected by XPath.`,
+      useWhen: [`Use when the workflow needs to ${enSummary} like a real user.`],
+      fields: [
+        { name: "XPath", description: xpathField.en },
+        { name: "Iframe XPath", description: iframeField.en },
+        { name: "Wait until", description: waitUntilField.en },
+        { name: "Timeout ms", description: timeoutField.en },
+      ],
+      examples: [`XPath: //*[@data-action='${example}']`],
+      commonMistakes: ["XPath must point to the real element that receives the action."],
+    },
+  };
+}
+
 function addFieldDetails(
   content: Record<ActionType, BilingualStepHelp>,
 ): Record<ActionType, BilingualStepHelp> {
@@ -828,4 +969,4 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
 };
 
 export const stepHelpContent: Record<ActionType, BilingualStepHelp> =
-  addFieldDetails(baseStepHelpContent);
+  addFieldDetails({ ...baseStepHelpContent, ...phaseOneStepHelpContent });

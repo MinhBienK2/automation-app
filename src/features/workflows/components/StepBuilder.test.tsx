@@ -77,6 +77,22 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "hotkey",
     );
+    expect(screen.getByRole("option", { name: "Double Click" })).toHaveAttribute(
+      "data-value",
+      "double_click",
+    );
+    expect(screen.getByRole("option", { name: "Drag and Drop" })).toHaveAttribute(
+      "data-value",
+      "drag_and_drop",
+    );
+    expect(screen.getByRole("option", { name: "Check" })).toHaveAttribute(
+      "data-value",
+      "check",
+    );
+    expect(screen.getByRole("option", { name: "Select Radio" })).toHaveAttribute(
+      "data-value",
+      "select_radio",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -423,5 +439,58 @@ describe("Workflow step builder integration", () => {
 
     expect(dialog).toHaveTextContent("Scroll until the target element becomes visible");
     expect(dialog).toHaveTextContent("not the scroll box");
+  });
+
+  test("saves a drag and drop phase one action config", async () => {
+    const dragStep: WorkflowStep = {
+      id: "step-drag",
+      name: "Move card",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "drag_and_drop",
+      config: {
+        type: "drag_and_drop",
+        config: {
+          source_xpath: "//*[@id='source']",
+          target_xpath: "//*[@id='target']",
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([dragStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Source XPath"));
+    fireEvent.change(screen.getByLabelText("Source XPath"), {
+      target: { value: "//*[@id='card']" },
+    });
+    await userEvent.clear(screen.getByLabelText("Target XPath"));
+    fireEvent.change(screen.getByLabelText("Target XPath"), {
+      target: { value: "//*[@id='lane']" },
+    });
+    await userEvent.clear(screen.getByLabelText("Timeout ms"));
+    await userEvent.type(screen.getByLabelText("Timeout ms"), "3000");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-drag",
+        name: "Move card",
+        config: {
+          type: "drag_and_drop",
+          config: {
+            source_xpath: "//*[@id='card']",
+            target_xpath: "//*[@id='lane']",
+            timeout_ms: 3000,
+          },
+        },
+      });
+    });
   });
 });

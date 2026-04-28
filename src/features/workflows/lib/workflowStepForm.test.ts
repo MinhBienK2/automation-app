@@ -123,4 +123,56 @@ describe("workflow step form config helpers", () => {
       config: { keys: ["Control", "S"] },
     });
   });
+
+  test("updates phase one human interaction configs with typed values", () => {
+    const typeSequenceConfig: ActionConfig = {
+      type: "type_sequence",
+      config: {
+        xpath: "//*[@name='search']",
+        text: "old",
+      },
+    };
+    const dragConfig: ActionConfig = {
+      type: "drag_and_drop",
+      config: {
+        source_xpath: "//*[@id='source']",
+        target_xpath: "//*[@id='target']",
+      },
+    };
+    const setClipboardConfig: ActionConfig = {
+      type: "set_clipboard",
+      config: { text: "old" },
+    };
+    const pasteClipboardConfig: ActionConfig = {
+      type: "paste_clipboard",
+      config: { xpath: "//*[@name='notes']" },
+    };
+
+    expect(updateActionConfigField(typeSequenceConfig, "delay_ms", "25")).toEqual({
+      type: "type_sequence",
+      config: {
+        xpath: "//*[@name='search']",
+        text: "old",
+        delay_ms: 25,
+      },
+    });
+    expect(updateActionConfigField(dragConfig, "source_xpath", "//*[@id='card']")).toEqual({
+      type: "drag_and_drop",
+      config: {
+        source_xpath: "//*[@id='card']",
+        target_xpath: "//*[@id='target']",
+      },
+    });
+    expect(updateActionConfigField(setClipboardConfig, "text", "new text")).toEqual({
+      type: "set_clipboard",
+      config: { text: "new text" },
+    });
+    expect(updateActionConfigField(pasteClipboardConfig, "timeout_ms", "3000")).toEqual({
+      type: "paste_clipboard",
+      config: {
+        xpath: "//*[@name='notes']",
+        timeout_ms: 3000,
+      },
+    });
+  });
 });

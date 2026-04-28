@@ -862,19 +862,146 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
       );
     case "hover":
       return <ElementTargetFields config={config} onChange={onChange} />;
+    case "double_click":
+    case "right_click":
+    case "focus_element":
+    case "blur_element":
+    case "paste_clipboard":
+    case "check":
+    case "uncheck":
+    case "toggle_checkbox":
+    case "select_radio":
+      return <ElementTargetFields config={config} onChange={onChange} />;
+    case "drag_and_drop":
+      return (
+        <>
+          <Label>
+            Source XPath
+            <Input
+              value={config.config.source_xpath}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "source_xpath",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            />
+          </Label>
+          <Label>
+            Target XPath
+            <Input
+              value={config.config.target_xpath}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(
+                    config,
+                    "target_xpath",
+                    event.currentTarget.value,
+                  ),
+                )
+              }
+            />
+          </Label>
+          <ElementOptionalFields config={config} onChange={onChange} />
+        </>
+      );
+    case "type_sequence":
+      return (
+        <>
+          <Label>
+            XPath
+            <Input
+              value={config.config.xpath}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Text
+            <Textarea
+              value={config.config.text}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "text", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Delay ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.delay_ms ?? 1}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <ElementOptionalFields config={config} onChange={onChange} />
+        </>
+      );
+    case "set_clipboard":
+      return (
+        <Label>
+          Text
+          <Textarea
+            value={config.config.text}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "text", event.currentTarget.value))
+            }
+          />
+        </Label>
+      );
   }
 }
 
 type ElementConfig = Extract<
   ActionConfig,
-  { type: "clear_input" | "set_checkbox" | "hover" | "select_option" }
+  {
+    type:
+      | "clear_input"
+      | "set_checkbox"
+      | "hover"
+      | "select_option"
+      | "double_click"
+      | "right_click"
+      | "drag_and_drop"
+      | "focus_element"
+      | "blur_element"
+      | "type_sequence"
+      | "paste_clipboard"
+      | "check"
+      | "uncheck"
+      | "toggle_checkbox"
+      | "select_radio";
+  }
 >;
 
 function ElementTargetFields({
   config,
   onChange,
 }: {
-  config: Extract<ActionConfig, { type: "clear_input" | "set_checkbox" | "hover" }>;
+  config: Extract<
+    ActionConfig,
+    {
+      type:
+        | "clear_input"
+        | "set_checkbox"
+        | "hover"
+        | "double_click"
+        | "right_click"
+        | "focus_element"
+        | "blur_element"
+        | "paste_clipboard"
+        | "check"
+        | "uncheck"
+        | "toggle_checkbox"
+        | "select_radio";
+    }
+  >;
   onChange: (config: ActionConfig) => void;
 }) {
   return (
