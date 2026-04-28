@@ -3,6 +3,10 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const appCss = readFileSync(join(process.cwd(), "src/App.css"), "utf8");
+const buttonSource = readFileSync(
+  join(process.cwd(), "src/components/ui/button.tsx"),
+  "utf8",
+);
 const cssFiles = [
   "src/App.css",
   "src/styles/base.css",
@@ -40,5 +44,21 @@ describe("App CSS", () => {
     expect(dialog).toContain("grid-template-rows: auto auto minmax(0, 1fr)");
     expect(dialog).toContain("height: min(760px, calc(100dvh - 48px))");
     expect(body).toContain("overflow-y: auto");
+  });
+
+  test("removes legacy backdrop CSS after Radix dialog migration", () => {
+    expect(css).not.toContain(".modal-backdrop");
+    expect(css).not.toContain(".monitor-backdrop");
+  });
+
+  test("exposes design tokens for shared UI primitives", () => {
+    const root = cssRule(":root");
+
+    expect(root).toContain("--app-bg: #171717");
+    expect(root).toContain("--app-surface: #0f0f0f");
+    expect(root).toContain("--app-accent: #3ecf8e");
+    expect(root).toContain("--app-radius-pill: 9999px");
+    expect(buttonSource).toContain("var(--app-accent-border)");
+    expect(buttonSource).not.toContain("#3ecf8e");
   });
 });

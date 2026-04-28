@@ -1,5 +1,6 @@
 import type { WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
+import { Card } from "../../../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -82,7 +83,7 @@ export function WorkflowListPage({
           </div>
         ) : (
           workflows.map((workflow) => (
-            <article className="workflow-card" key={workflow.id}>
+            <Card className="workflow-card" key={workflow.id}>
               <div className="workflow-card-main">
                 <div>
                   <h2>{workflow.name}</h2>
@@ -116,7 +117,7 @@ export function WorkflowListPage({
                   Delete
                 </Button>
               </div>
-            </article>
+            </Card>
           ))
         )}
       </section>

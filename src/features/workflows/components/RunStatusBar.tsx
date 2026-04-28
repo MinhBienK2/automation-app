@@ -1,4 +1,5 @@
 import type { RunState } from "../../../types/workflow";
+import { Badge } from "../../../components/ui/badge";
 
 type RunStatusBarProps = {
   state: RunState;
@@ -14,7 +15,9 @@ export function RunStatusBar({ state, error }: RunStatusBarProps) {
   return (
     <div className="run-status">
       <span>Status</span>
-      <strong>{state.status}</strong>
+      <Badge variant={state.status === "failed" ? "destructive" : "default"}>
+        {state.status}
+      </Badge>
       {failure ? <p>{failure}</p> : null}
       {error ? <p>{error}</p> : null}
     </div>

@@ -1,4 +1,24 @@
 :root {
+  --app-bg: #171717;
+  --app-surface: #0f0f0f;
+  --app-surface-muted: #242424;
+  --app-border: #2e2e2e;
+  --app-border-strong: #363636;
+  --app-border-hover: #4d4d4d;
+  --app-text: #fafafa;
+  --app-text-secondary: #b4b4b4;
+  --app-text-muted: #898989;
+  --app-accent: #3ecf8e;
+  --app-accent-border: rgba(62, 207, 142, 0.48);
+  --app-accent-border-strong: rgba(62, 207, 142, 0.68);
+  --app-focus-ring: rgba(62, 207, 142, 0.18);
+  --app-danger-text: #ffb4a8;
+  --app-danger-border: rgba(255, 99, 71, 0.38);
+  --app-danger-border-strong: rgba(255, 99, 71, 0.64);
+  --app-radius-sm: 6px;
+  --app-radius-md: 8px;
+  --app-radius-pill: 9999px;
+
   color: #fafafa;
   background: #171717;
   color-scheme: dark;

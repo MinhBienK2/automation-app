@@ -51,6 +51,7 @@ describe("Workflow step builder integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
     const actionType = await screen.findByLabelText("Action type");
+    expect(actionType).toHaveAttribute("data-slot", "select");
     expect(actionType.querySelector('optgroup[label="Core"]')).toBeInTheDocument();
     expect(actionType.querySelector('optgroup[label="Forms"]')).toBeInTheDocument();
     expect(actionType.querySelector('optgroup[label="Keyboard"]')).toBeInTheDocument();
@@ -148,7 +149,15 @@ describe("Workflow step builder integration", () => {
     expect(await screen.findByLabelText("Step name")).toHaveValue(
       "Click login button",
     );
+    expect(screen.getByRole("button", { name: /Click login button/ }))
+      .toHaveAttribute("data-slot", "button");
     expect(await screen.findByLabelText("XPath")).toHaveValue('//*[@id="submit"]');
+    expect(screen.getByLabelText("Step name")).toHaveAttribute("data-slot", "input");
+    expect(screen.getByLabelText("Mode")).toHaveAttribute("data-slot", "select");
+    expect(screen.getByRole("button", { name: "Save Step" })).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
   });
 
   test("saves the step name with the selected step config", async () => {
@@ -333,10 +342,15 @@ describe("Workflow step builder integration", () => {
     );
 
     const dialog = await screen.findByRole("dialog", { name: "Scroll Help" });
+    expect(dialog).toHaveAttribute("data-slot", "dialog-content");
     expect(dialog).toHaveTextContent("Cuộn cho đến khi element đích hiện ra");
     expect(dialog).toHaveTextContent("không phải box scroll");
 
-    await userEvent.click(screen.getByRole("button", { name: "English" }));
+    await userEvent.click(screen.getByRole("tab", { name: "English" }));
+    expect(screen.getByRole("tab", { name: "English" })).toHaveAttribute(
+      "data-slot",
+      "tabs-trigger",
+    );
 
     expect(dialog).toHaveTextContent("Scroll until the target element becomes visible");
     expect(dialog).toHaveTextContent("not the scroll box");

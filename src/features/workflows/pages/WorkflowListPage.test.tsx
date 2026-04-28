@@ -53,6 +53,9 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    expect((await screen.findByText("Login flow")).closest("[data-slot='card']"))
+      .toBeInTheDocument();
+
     await userEvent.click(await screen.findByRole("button", { name: "Edit Login flow" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit Workflow" });
 

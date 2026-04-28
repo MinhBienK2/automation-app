@@ -73,7 +73,10 @@ describe("Workflow detail integration", () => {
     expect(within(controlsRow).getByText("1 step")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Updated 1")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("idle")).toBeInTheDocument();
+    expect(within(controlsRow).getByText("idle")).toHaveAttribute(
+      "data-slot",
+      "badge",
+    );
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
     expect(within(controlsRow).getByRole("button", { name: "Run Workflow" }))
       .toBeInTheDocument();

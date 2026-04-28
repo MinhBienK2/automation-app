@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test } from "vitest";
 import { Button } from "./button";
+import { Badge } from "./badge";
+import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +14,16 @@ import {
 } from "./dialog";
 import { Input } from "./input";
 import { Label } from "./label";
+import { ScrollArea } from "./scroll-area";
+import { Select } from "./select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { Textarea } from "./textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./tooltip";
 
 describe("shadcn UI components", () => {
   test("renders form primitives with the project design tokens", () => {
@@ -53,5 +65,52 @@ describe("shadcn UI components", () => {
     expect(
       screen.getByRole("dialog", { name: "Create Workflow" }),
     ).toBeInTheDocument();
+  });
+
+  test("renders the remaining shared primitives", async () => {
+    render(
+      <TooltipProvider>
+        <Card>
+          <CardHeader>
+            <CardTitle>Step Detail</CardTitle>
+            <Badge>running</Badge>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="condition">Condition</Label>
+            <Select id="condition" defaultValue="duration">
+              <option value="duration">Duration</option>
+              <option value="element_visible">Element visible</option>
+            </Select>
+            <Textarea aria-label="Step notes" defaultValue="Check selector" />
+            <Tabs defaultValue="vi">
+              <TabsList>
+                <TabsTrigger value="vi">Tiếng Việt</TabsTrigger>
+                <TabsTrigger value="en">English</TabsTrigger>
+              </TabsList>
+              <TabsContent value="vi">Nội dung</TabsContent>
+              <TabsContent value="en">Content</TabsContent>
+            </Tabs>
+            <ScrollArea>
+              <p>Scrollable help</p>
+            </ScrollArea>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button">Help</Button>
+              </TooltipTrigger>
+              <TooltipContent>Open help</TooltipContent>
+            </Tooltip>
+          </CardContent>
+        </Card>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Step Detail")).toBeInTheDocument();
+    expect(screen.getByText("running")).toHaveAttribute("data-slot", "badge");
+    expect(screen.getByLabelText("Condition")).toHaveValue("duration");
+    expect(screen.getByLabelText("Step notes")).toHaveValue("Check selector");
+
+    await userEvent.click(screen.getByRole("tab", { name: "English" }));
+
+    expect(screen.getByText("Content")).toBeInTheDocument();
   });
 });

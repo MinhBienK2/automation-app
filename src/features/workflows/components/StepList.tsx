@@ -16,6 +16,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { ActionType, WorkflowStep } from "../../../types/workflow";
 import { actionGroups, actionLabels, stepSummary } from "../../../lib/workflowUi";
+import { Badge } from "../../../components/ui/badge";
+import { Button } from "../../../components/ui/button";
+import { Label } from "../../../components/ui/label";
+import { Select } from "../../../components/ui/select";
 
 type StepListProps = {
   steps: WorkflowStep[];
@@ -50,7 +54,7 @@ export function StepList({
           <p className="eyebrow">Builder</p>
           <h2>Steps</h2>
         </div>
-        <span>{steps.length} total</span>
+        <Badge variant="secondary">{steps.length} total</Badge>
       </div>
 
       {steps.length === 0 ? (
@@ -81,9 +85,9 @@ export function StepList({
       )}
 
       <form className="add-step-form" onSubmit={onAddStep}>
-        <label>
+        <Label>
           Action type
-          <select
+          <Select
             value={newActionType}
             onChange={(event) =>
               onNewActionTypeChange(event.currentTarget.value as ActionType)
@@ -98,11 +102,11 @@ export function StepList({
                 ))}
               </optgroup>
             ))}
-          </select>
-        </label>
-        <button className="primary-button" type="submit">
+          </Select>
+        </Label>
+        <Button className="primary-button" shape="pill" type="submit">
           Add Step
-        </button>
+        </Button>
       </form>
     </section>
   );
@@ -130,7 +134,7 @@ function SortableStepItem({
 
   return (
     <div className="step-item-wrap" ref={setNodeRef} style={style}>
-      <button
+      <Button
         className={isSelected ? "step-item step-item-selected" : "step-item"}
         type="button"
         onClick={() => onSelectStep(step.id)}
@@ -140,16 +144,18 @@ function SortableStepItem({
         <small>
           {actionLabels[step.action_type]} - {stepSummary(step)}
         </small>
-      </button>
-      <button
+      </Button>
+      <Button
         aria-label={`Drag step ${index + 1}`}
         className="step-drag-handle"
+        variant="ghost"
+        size="icon"
         type="button"
         {...attributes}
         {...listeners}
       >
         ::
-      </button>
+      </Button>
     </div>
   );
 }

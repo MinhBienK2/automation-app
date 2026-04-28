@@ -10,7 +10,7 @@ function Label({
     <LabelPrimitive.Root
       data-slot="label"
       className={cn(
-        "grid gap-1.5 text-[13px] font-medium text-[#b4b4b4]",
+        "grid gap-1.5 text-[13px] font-medium text-[var(--app-text-secondary)]",
         className,
       )}
       {...props}

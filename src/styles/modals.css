@@ -1,13 +1,3 @@
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 12;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgb(15 15 15 / 72%);
-}
-
 .workflow-dialog {
   display: grid;
   gap: 18px;

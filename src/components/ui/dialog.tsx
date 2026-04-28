@@ -35,7 +35,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-40 bg-[#0f0f0f]/75 backdrop-blur-[1px]",
+        "fixed inset-0 z-40 bg-[var(--app-surface)]/75 backdrop-blur-[1px]",
         className,
       )}
       {...props}
@@ -54,14 +54,14 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[min(480px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-lg border border-[#2e2e2e] bg-[#171717] p-5 text-[#fafafa] outline-none",
-          "focus-visible:border-[rgba(62,207,142,0.48)]",
+          "fixed left-1/2 top-1/2 z-50 grid w-[min(480px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[var(--app-radius-md)] border border-[var(--app-border)] bg-[var(--app-bg)] p-5 text-[var(--app-text)] outline-none",
+          "focus-visible:border-[var(--app-accent-border)]",
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-md border border-transparent bg-transparent text-[#b4b4b4] transition-colors hover:border-[#363636] hover:text-[#fafafa] focus-visible:border-[rgba(62,207,142,0.68)] focus-visible:outline-none">
+        <DialogPrimitive.Close className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-[var(--app-radius-sm)] border border-transparent bg-transparent text-[var(--app-text-secondary)] transition-colors hover:border-[var(--app-border-strong)] hover:text-[var(--app-text)] focus-visible:border-[var(--app-accent-border-strong)] focus-visible:outline-none">
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
@@ -103,7 +103,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-[22px] font-normal leading-tight text-[#fafafa]", className)}
+      className={cn("text-[22px] font-normal leading-tight text-[var(--app-text)]", className)}
       {...props}
     />
   );
@@ -116,7 +116,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-sm leading-6 text-[#b4b4b4]", className)}
+      className={cn("text-sm leading-6 text-[var(--app-text-secondary)]", className)}
       {...props}
     />
   );

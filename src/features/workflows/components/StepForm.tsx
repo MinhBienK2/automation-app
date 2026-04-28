@@ -1,6 +1,11 @@
 import { useState } from "react";
 import type { ActionConfig, WorkflowStep } from "../../../types/workflow";
 import { actionLabels, commandMessage } from "../../../lib/workflowUi";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { Select } from "../../../components/ui/select";
+import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import type { StepHelpLanguage } from "../lib/stepHelpContent";
 import { StepHelpModal } from "./StepHelpModal";
@@ -37,39 +42,39 @@ export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
             <p className="eyebrow">Step Detail</p>
             <h2>{actionLabels[step.action_type]}</h2>
           </div>
-          <button
+          <Button
             aria-label={`Open ${actionLabels[step.action_type]} help`}
             className="step-help-button"
             type="button"
             onClick={() => setIsHelpOpen(true)}
           >
             ?
-          </button>
+          </Button>
         </div>
 
-        <label>
+        <Label>
           Step name
-          <input
+          <Input
             value={name}
             onChange={(event) => setName(event.currentTarget.value)}
           />
-        </label>
+        </Label>
 
         <ActionFields config={config} onChange={setConfig} />
 
         {fieldError ? <p className="field-error">{fieldError}</p> : null}
 
         <div className="form-actions">
-          <button className="primary-button" type="submit">
+          <Button className="primary-button" type="submit">
             Save Step
-          </button>
-          <button
+          </Button>
+          <Button
             className="secondary-danger"
             type="button"
             onClick={() => onDeleteStep(step.id)}
           >
             Delete Step
-          </button>
+          </Button>
         </div>
       </form>
       {isHelpOpen ? (
@@ -94,18 +99,18 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
     case "navigate":
       return (
         <>
-          <label>
+          <Label>
             URL
-            <input
+            <Input
               value={config.config.url}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "url", event.currentTarget.value))
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Wait until
-            <select
+            <Select
               value={config.config.wait_until ?? "load"}
               onChange={(event) =>
                 onChange(
@@ -116,11 +121,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="load">Load</option>
               <option value="dom_content_loaded">DOMContentLoaded</option>
               <option value="network_idle">Network idle</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Timeout ms
-            <input
+            <Input
               min="1"
               type="number"
               value={config.config.timeout_ms ?? 30000}
@@ -130,26 +135,26 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
+          </Label>
         </>
       );
     case "open_url":
       return (
-        <label>
+        <Label>
           URL
-          <input
+          <Input
             value={config.config.url}
             onChange={(event) =>
               onChange(updateActionConfigField(config, "url", event.currentTarget.value))
             }
           />
-        </label>
+        </Label>
       );
     case "sleep":
       return (
-        <label>
+        <Label>
           Seconds
-          <input
+          <Input
             min="0"
             step="0.1"
             type="number"
@@ -160,14 +165,14 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               )
             }
           />
-        </label>
+        </Label>
       );
     case "wait":
       return (
         <>
-          <label>
+          <Label>
             Condition
-            <select
+            <Select
               value={config.config.condition}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "condition", event.currentTarget.value))
@@ -183,12 +188,12 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="page_load">Page load</option>
               <option value="element_enabled">Element enabled</option>
               <option value="element_disabled">Element disabled</option>
-            </select>
-          </label>
+            </Select>
+          </Label>
           {config.config.condition === "duration" ? (
-            <label>
+            <Label>
               Duration ms
-              <input
+              <Input
                 min="1"
                 type="number"
                 value={config.config.duration_ms ?? 1000}
@@ -198,44 +203,44 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                   )
                 }
               />
-            </label>
+            </Label>
           ) : null}
           {config.config.condition.startsWith("element_") ? (
-            <label>
+            <Label>
               XPath
-              <input
+              <Input
                 value={config.config.xpath ?? ""}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
                 }
               />
-            </label>
+            </Label>
           ) : null}
           {config.config.condition === "text_visible" ? (
-            <label>
+            <Label>
               Text
-              <input
+              <Input
                 value={config.config.text ?? ""}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "text", event.currentTarget.value))
                 }
               />
-            </label>
+            </Label>
           ) : null}
           {config.config.condition === "url_contains" ? (
-            <label>
+            <Label>
               URL contains
-              <input
+              <Input
                 value={config.config.url ?? ""}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "url", event.currentTarget.value))
                 }
               />
-            </label>
+            </Label>
           ) : null}
-          <label>
+          <Label>
             Timeout ms
-            <input
+            <Input
               min="1"
               type="number"
               value={config.config.timeout_ms ?? 5000}
@@ -245,33 +250,33 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
+          </Label>
         </>
       );
     case "input_text":
       return (
         <>
-          <label>
+          <Label>
             XPath
-            <input
+            <Input
               value={config.config.xpath}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Text
-            <textarea
+            <Textarea
               value={config.config.text}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "text", event.currentTarget.value))
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Clear before input
-            <select
+            <Select
               value={String(config.config.clear_before_input)}
               onChange={(event) =>
                 onChange(
@@ -285,11 +290,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="true">Yes</option>
               <option value="false">No</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Typing mode
-            <select
+            <Select
               value={config.config.typing_mode ?? "set_value"}
               onChange={(event) =>
                 onChange(
@@ -299,11 +304,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="set_value">Set value</option>
               <option value="type">Type keys</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Iframe XPath
-            <input
+            <Input
               value={config.config.iframe_xpath ?? ""}
               onChange={(event) =>
                 onChange(
@@ -312,10 +317,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               }
               placeholder="Optional iframe XPath"
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Delay ms
-            <input
+            <Input
               min="1"
               type="number"
               value={config.config.delay_ms ?? 1}
@@ -323,10 +328,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Wait until
-            <select
+            <Select
               value={config.config.wait_until ?? "clickable"}
               onChange={(event) =>
                 onChange(
@@ -338,11 +343,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="visible">Visible</option>
               <option value="enabled">Enabled</option>
               <option value="attached">Attached</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Timeout ms
-            <input
+            <Input
               min="1"
               type="number"
               value={config.config.timeout_ms ?? 5000}
@@ -352,15 +357,15 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
+          </Label>
         </>
       );
     case "type_text":
       return (
         <>
-          <label>
+          <Label>
             XPath
-            <input
+            <Input
             value={config.config.xpath}
             onChange={(event) =>
                 onChange(
@@ -368,10 +373,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Text
-            <textarea
+            <Textarea
               value={config.config.text}
               onChange={(event) =>
                 onChange(
@@ -379,16 +384,16 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
+          </Label>
         </>
       );
     case "clear_input":
       return (
         <>
           <ElementTargetFields config={config} onChange={onChange} />
-          <label>
+          <Label>
             Method
-            <select
+            <Select
               value={config.config.method ?? "select_all"}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "method", event.currentTarget.value))
@@ -397,25 +402,25 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="select_all">Select all</option>
               <option value="backspace">Backspace</option>
               <option value="dom">DOM value</option>
-            </select>
-          </label>
+            </Select>
+          </Label>
         </>
       );
     case "click":
       return (
         <>
-          <label>
+          <Label>
             XPath
-            <input
+            <Input
               value={config.config.xpath}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Mode
-            <select
+            <Select
               value={config.config.mode ?? "real"}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
@@ -423,11 +428,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="real">Real click</option>
               <option value="force_dom">Force DOM click</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Click count
-            <select
+            <Select
               value={config.config.click_count ?? 1}
               onChange={(event) =>
                 onChange(
@@ -437,11 +442,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="1">Single</option>
               <option value="2">Double</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Button
-            <select
+            <Select
               value={config.config.button ?? "left"}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "button", event.currentTarget.value))
@@ -450,11 +455,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="left">Left</option>
               <option value="right">Right</option>
               <option value="middle">Middle</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Iframe XPath
-            <input
+            <Input
               value={config.config.iframe_xpath ?? ""}
               onChange={(event) =>
                 onChange(
@@ -463,10 +468,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               }
               placeholder="Optional iframe XPath"
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Scroll into view
-            <select
+            <Select
               value={String(config.config.scroll_into_view ?? true)}
               onChange={(event) =>
                 onChange(
@@ -480,11 +485,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="true">Yes</option>
               <option value="false">No</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Block
-            <select
+            <Select
               value={config.config.block ?? "center"}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "block", event.currentTarget.value))
@@ -494,11 +499,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="center">Center</option>
               <option value="end">End</option>
               <option value="nearest">Nearest</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Inline
-            <select
+            <Select
               value={config.config.inline ?? "nearest"}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "inline", event.currentTarget.value))
@@ -508,11 +513,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="center">Center</option>
               <option value="end">End</option>
               <option value="nearest">Nearest</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Position
-            <select
+            <Select
               value={config.config.position ?? "center"}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "position", event.currentTarget.value))
@@ -524,13 +529,13 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="bottom_left">Bottom left</option>
               <option value="bottom_right">Bottom right</option>
               <option value="offset">Offset</option>
-            </select>
-          </label>
+            </Select>
+          </Label>
           {config.config.position === "offset" ? (
             <>
-              <label>
+              <Label>
                 Offset X
-                <input
+                <Input
                   type="number"
                   value={config.config.offset_x ?? 0}
                   onChange={(event) =>
@@ -539,10 +544,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                     )
                   }
                 />
-              </label>
-              <label>
+              </Label>
+              <Label>
                 Offset Y
-                <input
+                <Input
                   type="number"
                   value={config.config.offset_y ?? 0}
                   onChange={(event) =>
@@ -551,12 +556,12 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                     )
                   }
                 />
-              </label>
+              </Label>
             </>
           ) : null}
-          <label>
+          <Label>
             Wait until
-            <select
+            <Select
               value={config.config.wait_until ?? "clickable"}
               onChange={(event) =>
                 onChange(
@@ -568,11 +573,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="visible">Visible</option>
               <option value="enabled">Enabled</option>
               <option value="attached">Attached</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Timeout ms
-            <input
+            <Input
               min="1"
               type="number"
               value={config.config.timeout_ms ?? 5000}
@@ -582,10 +587,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Retry interval ms
-            <input
+            <Input
               min="0"
               type="number"
               value={config.config.retry_interval_ms ?? 100}
@@ -599,10 +604,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Post-click wait ms
-            <input
+            <Input
               min="0"
               type="number"
               value={config.config.post_click_wait_ms ?? 0}
@@ -616,16 +621,16 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                 )
               }
             />
-          </label>
+          </Label>
         </>
       );
     case "scroll":
       const mode = config.config.mode ?? "page";
       return (
         <>
-          <label>
+          <Label>
             Mode
-            <select
+            <Select
               value={mode}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
@@ -635,13 +640,13 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               <option value="container">Container</option>
               <option value="into_view">Into View</option>
               <option value="until_visible">Until Visible</option>
-            </select>
-          </label>
+            </Select>
+          </Label>
           {mode !== "into_view" ? (
             <>
-              <label>
+              <Label>
                 Direction
-                <select
+                <Select
                   value={config.config.direction}
                   onChange={(event) =>
                     onChange(
@@ -653,11 +658,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                   <option value="up">Up</option>
                   <option value="right">Right</option>
                   <option value="left">Left</option>
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Pixels
-                <input
+                <Input
                   min="1"
                   type="number"
                   value={config.config.pixels}
@@ -667,26 +672,26 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                     )
                   }
                 />
-              </label>
+              </Label>
             </>
           ) : null}
           {mode !== "page" ? (
-            <label>
+            <Label>
               XPath
-              <input
+              <Input
                 value={config.config.xpath ?? ""}
                 onChange={(event) =>
                   onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
                 }
                 placeholder="//*[@id='target']"
               />
-            </label>
+            </Label>
           ) : null}
           {mode === "until_visible" ? (
             <>
-              <label>
+              <Label>
                 Max attempts
-                <input
+                <Input
                   min="1"
                   type="number"
                   value={config.config.max_attempts ?? 10}
@@ -696,10 +701,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                     )
                   }
                 />
-              </label>
-              <label>
+              </Label>
+              <Label>
                 Wait ms
-                <input
+                <Input
                   min="0"
                   type="number"
                   value={config.config.wait_ms ?? 250}
@@ -709,12 +714,12 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                     )
                   }
                 />
-              </label>
+              </Label>
             </>
           ) : null}
-          <label>
+          <Label>
             Iframe XPath
-            <input
+            <Input
               value={config.config.iframe_xpath ?? ""}
               onChange={(event) =>
                 onChange(
@@ -723,10 +728,10 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               }
               placeholder="Optional iframe XPath"
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Behavior
-            <select
+            <Select
               value={config.config.behavior ?? "instant"}
               onChange={(event) =>
                 onChange(
@@ -736,13 +741,13 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="instant">Instant</option>
               <option value="smooth">Smooth</option>
-            </select>
-          </label>
+            </Select>
+          </Label>
           {mode === "into_view" ? (
             <>
-              <label>
+              <Label>
                 Block
-                <select
+                <Select
                   value={config.config.block ?? "center"}
                   onChange={(event) =>
                     onChange(
@@ -754,11 +759,11 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                   <option value="center">Center</option>
                   <option value="end">End</option>
                   <option value="nearest">Nearest</option>
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Inline
-                <select
+                <Select
                   value={config.config.inline ?? "nearest"}
                   onChange={(event) =>
                     onChange(
@@ -770,8 +775,8 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
                   <option value="center">Center</option>
                   <option value="end">End</option>
                   <option value="nearest">Nearest</option>
-                </select>
-              </label>
+                </Select>
+              </Label>
             </>
           ) : null}
         </>
@@ -779,18 +784,18 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
     case "select_option":
       return (
         <>
-          <label>
+          <Label>
             XPath
-            <input
+            <Input
               value={config.config.xpath}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
               }
             />
-          </label>
-          <label>
+          </Label>
+          <Label>
             Match by
-            <select
+            <Select
               value={config.config.match_by}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "match_by", event.currentTarget.value))
@@ -798,17 +803,17 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="label">Label</option>
               <option value="value">Value</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Value
-            <input
+            <Input
               value={config.config.value}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "value", event.currentTarget.value))
               }
             />
-          </label>
+          </Label>
           <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
@@ -816,9 +821,9 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
       return (
         <>
           <ElementTargetFields config={config} onChange={onChange} />
-          <label>
+          <Label>
             State
-            <select
+            <Select
               value={config.config.state}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "state", event.currentTarget.value))
@@ -826,34 +831,34 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
             >
               <option value="checked">Checked</option>
               <option value="unchecked">Unchecked</option>
-            </select>
-          </label>
+            </Select>
+          </Label>
         </>
       );
     case "press_key":
       return (
-        <label>
+        <Label>
           Key
-          <input
+          <Input
             value={config.config.key}
             onChange={(event) =>
               onChange(updateActionConfigField(config, "key", event.currentTarget.value))
             }
           />
-        </label>
+        </Label>
       );
     case "hotkey":
       return (
-        <label>
+        <Label>
           Keys
-          <input
+          <Input
             value={config.config.keys.join("+")}
             onChange={(event) =>
               onChange(updateActionConfigField(config, "keys", event.currentTarget.value))
             }
             placeholder="Control+S"
           />
-        </label>
+        </Label>
       );
     case "hover":
       return <ElementTargetFields config={config} onChange={onChange} />;
@@ -874,15 +879,15 @@ function ElementTargetFields({
 }) {
   return (
     <>
-      <label>
+      <Label>
         XPath
-        <input
+        <Input
           value={config.config.xpath}
           onChange={(event) =>
             onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
           }
         />
-      </label>
+      </Label>
       <ElementOptionalFields config={config} onChange={onChange} />
     </>
   );
@@ -897,19 +902,19 @@ function ElementOptionalFields({
 }) {
   return (
     <>
-      <label>
+      <Label>
         Iframe XPath
-        <input
+        <Input
           value={config.config.iframe_xpath ?? ""}
           onChange={(event) =>
             onChange(updateActionConfigField(config, "iframe_xpath", event.currentTarget.value))
           }
           placeholder="Optional iframe XPath"
         />
-      </label>
-      <label>
+      </Label>
+      <Label>
         Wait until
-        <select
+        <Select
           value={config.config.wait_until ?? "clickable"}
           onChange={(event) =>
             onChange(updateActionConfigField(config, "wait_until", event.currentTarget.value))
@@ -919,11 +924,11 @@ function ElementOptionalFields({
           <option value="visible">Visible</option>
           <option value="enabled">Enabled</option>
           <option value="attached">Attached</option>
-        </select>
-      </label>
-      <label>
+        </Select>
+      </Label>
+      <Label>
         Timeout ms
-        <input
+        <Input
           min="1"
           type="number"
           value={config.config.timeout_ms ?? 5000}
@@ -931,7 +936,7 @@ function ElementOptionalFields({
             onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
           }
         />
-      </label>
+      </Label>
     </>
   );
 }
