@@ -1,3 +1,5 @@
+import { Button } from "../components/ui/button";
+
 type AppSidebarProps = {
   collapsed: boolean;
   onBackToList: () => void;
@@ -64,24 +66,27 @@ export function AppSidebar({ collapsed, onBackToList, onToggle }: AppSidebarProp
         <span className="sidebar-title">Workflow Manager</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
-        <button
+        <Button
           className="sidebar-nav-item sidebar-nav-item-active"
+          variant="secondary"
           type="button"
           onClick={onBackToList}
         >
           <WorkflowNavIcon />
           <span>Workflows</span>
-        </button>
+        </Button>
       </nav>
-      <button
+      <Button
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-expanded={!collapsed}
         className="sidebar-toggle"
+        variant="secondary"
+        size="icon"
         type="button"
         onClick={onToggle}
       >
         <SidebarToggleIcon collapsed={collapsed} />
-      </button>
+      </Button>
     </aside>
   );
 }

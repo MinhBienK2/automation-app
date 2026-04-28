@@ -57,12 +57,12 @@ describe("Workflow detail integration", () => {
     });
 
     expect(within(titleRow).getByRole("button", { name: "Back to Workflows" }))
-      .toBeInTheDocument();
+      .toHaveAttribute("data-slot", "button");
     const breadcrumb = within(titleRow).getByRole("navigation", {
       name: "Workflow breadcrumb",
     });
     expect(within(breadcrumb).getByRole("button", { name: "Workflows" }))
-      .toBeInTheDocument();
+      .toHaveAttribute("data-slot", "button");
     expect(within(breadcrumb).getByText("Login flow")).toHaveAttribute(
       "aria-current",
       "page",
@@ -79,7 +79,7 @@ describe("Workflow detail integration", () => {
     );
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
     expect(within(controlsRow).getByRole("button", { name: "Run Workflow" }))
-      .toBeInTheDocument();
+      .toHaveAttribute("data-slot", "button");
   });
 
   test("disables run actions while running and polls final failure", async () => {
@@ -112,7 +112,10 @@ describe("Workflow detail integration", () => {
     expect(screen.getByRole("button", { name: "Run Workflow" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Test to Here" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Test All" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop" })).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
 
     expect(
       await screen.findByText("Failed at step 1: XPath not found"),

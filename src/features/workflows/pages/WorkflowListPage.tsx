@@ -64,12 +64,7 @@ export function WorkflowListPage({
             <span>{workflows.length} workflows</span>
             <span>{totalSteps} steps</span>
           </div>
-          <Button
-            className="primary-button"
-            shape="pill"
-            type="button"
-            onClick={onOpenCreateWorkflow}
-          >
+          <Button shape="pill" type="button" onClick={onOpenCreateWorkflow}>
             Create Workflow
           </Button>
         </div>
@@ -92,12 +87,7 @@ export function WorkflowListPage({
                 <small>Updated {workflow.updated_at}</small>
               </div>
               <div className="row-actions">
-                <Button
-                  className="primary-button"
-                  shape="pill"
-                  type="button"
-                  onClick={() => onOpenWorkflow(workflow.id)}
-                >
+                <Button shape="pill" type="button" onClick={() => onOpenWorkflow(workflow.id)}>
                   View Details
                 </Button>
                 <Button
@@ -108,12 +98,7 @@ export function WorkflowListPage({
                 >
                   Edit
                 </Button>
-                <Button
-                  className="secondary-danger"
-                  variant="destructive"
-                  type="button"
-                  onClick={() => onDeleteWorkflow(workflow.id)}
-                >
+                <Button variant="destructive" type="button" onClick={() => onDeleteWorkflow(workflow.id)}>
                   Delete
                 </Button>
               </div>
@@ -151,7 +136,7 @@ export function WorkflowListPage({
               />
               {appError ? <p className="field-error">{appError}</p> : null}
               <DialogFooter className="form-actions">
-                <Button className="primary-button" shape="pill" type="submit">
+                <Button shape="pill" type="submit">
                   {workflowDialogMode === "create" ? "Create" : "Save Changes"}
                 </Button>
                 <Button variant="secondary" type="button" onClick={onCloseWorkflowDialog}>

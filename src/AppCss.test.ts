@@ -51,6 +51,12 @@ describe("App CSS", () => {
     expect(css).not.toContain(".monitor-backdrop");
   });
 
+  test("removes legacy button class CSS after shared Button migration", () => {
+    expect(css).not.toContain(".primary-button {");
+    expect(css).not.toContain(".ghost-button {");
+    expect(css).not.toContain(".secondary-danger {");
+  });
+
   test("exposes design tokens for shared UI primitives", () => {
     const root = cssRule(":root");
 

@@ -104,7 +104,7 @@ export function StepList({
             ))}
           </Select>
         </Label>
-        <Button className="primary-button" shape="pill" type="submit">
+        <Button shape="pill" type="submit">
           Add Step
         </Button>
       </form>

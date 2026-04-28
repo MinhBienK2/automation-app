@@ -7,6 +7,7 @@ import type {
   WorkflowStep,
 } from "../../../types/workflow";
 import { PageHeader } from "../../../components/layout/PageHeader";
+import { Button } from "../../../components/ui/button";
 import { RunStatusBar } from "../components/RunStatusBar";
 import { StepForm } from "../components/StepForm";
 import { StepList } from "../components/StepList";
@@ -67,35 +68,37 @@ export function WorkflowDetailPage({
         title={detail.workflow.name}
         onBack={onBack}
         actions={
-          <div className="run-actions">
-            <button
-              className="primary-button"
+          <div className={isRunning ? "run-actions run-actions-with-stop" : "run-actions"}>
+            <Button
+              shape="pill"
               type="button"
               onClick={onRunWorkflow}
               disabled={isRunning}
             >
               Run Workflow
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               type="button"
               onClick={() => onTestStep()}
               title="Runs from step 1 through the selected step."
               disabled={isRunning || !selectedStep}
             >
               Test to Here
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               type="button"
               onClick={onTestAllSteps}
               title="Runs every step in this workflow."
               disabled={isRunning || detail.steps.length === 0}
             >
               Test All
-            </button>
+            </Button>
             {isRunning ? (
-              <button className="secondary-danger" type="button" onClick={onStopRun}>
+              <Button variant="destructive" type="button" onClick={onStopRun}>
                 Stop
-              </button>
+              </Button>
             ) : null}
           </div>
         }

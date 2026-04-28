@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "../ui/button";
 
 type PageHeaderProps = {
   ariaLabel: string;
@@ -26,15 +27,25 @@ export function PageHeader({
       <div aria-label="Workflow title row" className="page-detail-title-row" role="group">
         <div className="page-detail-title-main">
           {backLabel && onBack ? (
-            <button className="ghost-button page-back-button" type="button" onClick={onBack}>
+            <Button
+              className="page-back-button"
+              variant="ghost"
+              type="button"
+              onClick={onBack}
+            >
               <span aria-hidden="true">‹</span>
               {backLabel}
-            </button>
+            </Button>
           ) : null}
           <nav aria-label="Workflow breadcrumb" className="page-breadcrumb">
-            <button className="page-breadcrumb-link" type="button" onClick={onBack}>
+            <Button
+              className="page-breadcrumb-link"
+              variant="ghost"
+              type="button"
+              onClick={onBack}
+            >
               Workflows
-            </button>
+            </Button>
             <span aria-hidden="true" className="page-breadcrumb-separator">
               /
             </span>

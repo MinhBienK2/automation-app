@@ -65,11 +65,11 @@ export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
         {fieldError ? <p className="field-error">{fieldError}</p> : null}
 
         <div className="form-actions">
-          <Button className="primary-button" type="submit">
+          <Button shape="pill" type="submit">
             Save Step
           </Button>
           <Button
-            className="secondary-danger"
+            variant="destructive"
             type="button"
             onClick={() => onDeleteStep(step.id)}
           >

@@ -72,31 +72,9 @@
   width: min(420px, 100%);
 }
 
-.page-detail-header .run-actions:has(.secondary-danger) {
+.page-detail-header .run-actions-with-stop {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   width: min(520px, 100%);
-}
-
-.primary-button {
-  border-color: rgba(62, 207, 142, 0.48);
-  border-radius: 9999px;
-  color: #fafafa;
-}
-
-.primary-button:hover:not(:disabled) {
-  border-color: #3ecf8e;
-}
-
-.ghost-button {
-  border-color: transparent;
-  background: transparent;
-  color: #b4b4b4;
-}
-
-.secondary-danger {
-  border-color: rgba(185, 28, 28, 0.58);
-  background: rgba(127, 29, 29, 0.18);
-  color: #fca5a5;
 }
 
 .field-error {

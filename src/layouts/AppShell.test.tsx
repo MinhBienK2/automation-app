@@ -17,6 +17,7 @@ describe("App shell", () => {
     renderApp();
 
     const toggle = await screen.findByRole("button", { name: "Collapse sidebar" });
+    expect(toggle).toHaveAttribute("data-slot", "button");
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(toggle).not.toHaveTextContent("Collapse sidebar");
     expect(within(toggle).getByTestId("sidebar-toggle-icon")).toHaveAttribute(
@@ -38,6 +39,10 @@ describe("App shell", () => {
 
     expect(await screen.findByRole("complementary", { name: "Application sidebar" }))
       .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Workflows" })).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
     expect(screen.getByRole("region", { name: "Application content" }))
       .toHaveClass("app-content");
   });

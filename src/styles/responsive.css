@@ -58,7 +58,7 @@
   .row-actions,
   .form-actions,
   .page-detail-header .run-actions,
-  .page-detail-header .run-actions:has(.secondary-danger) {
+  .page-detail-header .run-actions-with-stop {
     grid-template-columns: 1fr;
     width: 100%;
   }

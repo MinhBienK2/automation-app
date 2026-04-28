@@ -44,7 +44,7 @@ export function StepHelpModal({
               {content.summary}
             </DialogDescription>
           </div>
-          <Button className="ghost-button" variant="ghost" type="button" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             Close
           </Button>
         </DialogHeader>
