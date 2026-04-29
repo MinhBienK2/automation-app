@@ -366,6 +366,27 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             },
             timeout_ms: Some(60_000),
         },
+        ActionType::FallbackSelector => ActionConfig::FallbackSelector {
+            output_name: "target_xpath".to_string(),
+            xpaths: vec!["//*[@id='target']".to_string()],
+            timeout_ms: Some(1000),
+        },
+        ActionType::RetryStep => ActionConfig::RetryStep {
+            max_attempts: 3,
+            delay_ms: Some(100),
+            step: Box::new(ActionConfig::Wait {
+                condition: WaitCondition::Duration,
+                xpath: None,
+                text: None,
+                url: None,
+                duration_ms: Some(100),
+                timeout_ms: None,
+            }),
+        },
+        ActionType::Checkpoint => ActionConfig::Checkpoint {
+            name: "checkpoint".to_string(),
+            screenshot_path: None,
+        },
     }
 }
 

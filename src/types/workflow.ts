@@ -68,7 +68,10 @@ export type ActionType =
   | "grant_permission"
   | "detect_challenge"
   | "pause_for_human"
-  | "resume_when_condition";
+  | "resume_when_condition"
+  | "fallback_selector"
+  | "retry_step"
+  | "checkpoint";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -444,6 +447,18 @@ export type ActionConfig =
   | {
       type: "resume_when_condition";
       config: { condition: WorkflowCondition; timeout_ms?: number | null };
+    }
+  | {
+      type: "fallback_selector";
+      config: { output_name: string; xpaths: string[]; timeout_ms?: number | null };
+    }
+  | {
+      type: "retry_step";
+      config: { max_attempts: number; delay_ms?: number | null; step: ActionConfig };
+    }
+  | {
+      type: "checkpoint";
+      config: { name: string; screenshot_path?: string | null };
     };
 
 export type HeaderPair = {

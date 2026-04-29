@@ -350,6 +350,35 @@ fn write_phase_eight_challenge_page() -> String {
     format!("file://{}", path.display())
 }
 
+fn write_phase_nine_reliability_page() -> (String, String) {
+    let path = std::env::temp_dir().join(format!("wam-phase-nine-{}.html", Uuid::new_v4()));
+    let checkpoint_path =
+        std::env::temp_dir().join(format!("wam-phase-nine-checkpoint-{}.png", Uuid::new_v4()));
+    fs::write(
+        &path,
+        r#"
+        <!doctype html>
+        <html>
+          <body>
+            <button id="real-save" onclick="document.getElementById('status').textContent = 'Saved'">Save</button>
+            <div id="status">Loading</div>
+            <script>
+              setTimeout(() => {
+                document.getElementById('status').textContent = 'Ready';
+              }, 350);
+            </script>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write phase nine reliability page");
+
+    (
+        format!("file://{}", path.display()),
+        checkpoint_path.display().to_string(),
+    )
+}
+
 fn runner() -> BrowserRunner {
     BrowserRunner::new(RunnerOptions {
         headed: true,
@@ -1513,5 +1542,128 @@ async fn runner_executes_phase_eight_human_verification_actions_against_visible_
         outputs["human_verification_pause"],
         "Manual verification required"
     );
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_nine_reliability_actions_against_visible_chromium() {
+    let (url, checkpoint_path) = write_phase_nine_reliability_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::FallbackSelector {
+                    output_name: "save_xpath".to_string(),
+                    xpaths: vec![
+                        "//*[@id=\"missing-save\"]".to_string(),
+                        "//*[@id=\"real-save\"]".to_string(),
+                    ],
+                    timeout_ms: Some(1000),
+                },
+                ActionConfig::RetryStep {
+                    max_attempts: 5,
+                    delay_ms: Some(150),
+                    step: Box::new(ActionConfig::AssertText {
+                        xpath: Some("//*[@id=\"status\"]".to_string()),
+                        iframe_xpath: None,
+                        text: "Ready".to_string(),
+                        match_mode: AssertTextMatchMode::Equals,
+                        timeout_ms: Some(100),
+                    }),
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"real-save\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::Checkpoint {
+                    name: "after_save".to_string(),
+                    screenshot_path: Some(checkpoint_path.clone()),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"status\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "Saved".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase nine reliability steps");
+
+    assert_eq!(outcome.failed_step, None);
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    assert!(PathBuf::from(&checkpoint_path).exists());
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+    assert_eq!(outputs["save_xpath"], "//*[@id=\"real-save\"]");
+    assert_eq!(outputs["checkpoint:after_save"], checkpoint_path);
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_adds_failure_screenshot_path_to_failed_step_reason() {
+    let (url, _) = write_phase_nine_reliability_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"missing\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(200),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run failing phase nine steps");
+
+    assert_eq!(outcome.status, RunnerStatus::Failed);
+    let failed = outcome.failed_step.expect("failed step");
+    assert!(failed.reason.contains("Failure screenshot: "));
+    let screenshot_path = failed
+        .reason
+        .split("Failure screenshot: ")
+        .nth(1)
+        .expect("screenshot path")
+        .trim();
+    assert!(PathBuf::from(screenshot_path).exists());
     outcome.session.close().await.expect("close browser");
 }

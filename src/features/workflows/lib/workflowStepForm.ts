@@ -69,7 +69,9 @@ export type ActionConfigField =
   | "touch"
   | "user_agent"
   | "username"
-  | "width";
+  | "width"
+  | "xpaths"
+  | "screenshot_path";
 
 export function updateActionConfigField(
   config: ActionConfig,
@@ -269,6 +271,33 @@ export function updateActionConfigField(
         };
       }
       return config;
+    case "fallback_selector":
+      if (field === "xpaths") {
+        return {
+          type: "fallback_selector",
+          config: { ...config.config, xpaths: parseLineList(value) },
+        };
+      }
+      if (field === "timeout_ms") {
+        return {
+          type: "fallback_selector",
+          config: { ...config.config, timeout_ms: Number(value) },
+        };
+      }
+      return { type: "fallback_selector", config: { ...config.config, output_name: value } };
+    case "retry_step":
+      if (field === "max_attempts" || field === "delay_ms") {
+        return { type: "retry_step", config: { ...config.config, [field]: Number(value) } };
+      }
+      return config;
+    case "checkpoint":
+      if (field === "screenshot_path") {
+        return {
+          type: "checkpoint",
+          config: { ...config.config, screenshot_path: value || null },
+        };
+      }
+      return { type: "checkpoint", config: { ...config.config, name: value } };
   }
 }
 

@@ -954,6 +954,35 @@ pub(super) async fn execute_action(
             wait_for_workflow_condition(&page, &condition, timeout_ms, cancellation).await?;
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::FallbackSelector {
+            output_name,
+            xpaths,
+            timeout_ms,
+        } => {
+            let script = fallback_selector_script(&output_name, &xpaths, timeout_ms)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::RetryStep {
+            max_attempts,
+            delay_ms,
+            step,
+        } => retry_single_step(session, max_attempts, delay_ms, *step, cancellation).await,
+        ActionConfig::Checkpoint {
+            name,
+            screenshot_path,
+        } => {
+            if let Some(path) = screenshot_path.as_deref() {
+                take_screenshot(&page, path, true).await?;
+                let output_name = format!("checkpoint:{name}");
+                let script = store_output_script(&output_name, path)?;
+                ensure_js_action(&page, &script).await?;
+            } else {
+                let script = store_output_script(&format!("checkpoint:{name}"), "reached")?;
+                ensure_js_action(&page, &script).await?;
+            }
+            Ok(ActionExecution::Complete)
+        }
     }
 }
 
@@ -966,6 +995,70 @@ fn headers_value(headers: &[HeaderPair]) -> Headers {
         );
     }
     Headers::new(serde_json::Value::Object(value))
+}
+
+fn fallback_selector_script(
+    output_name: &str,
+    xpaths: &[String],
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let output_name = json_string(output_name)?;
+    let xpaths = serde_json::to_string(xpaths)?;
+    let timeout_ms = timeout_ms.unwrap_or(1000);
+    Ok(format!(
+        r#"
+        (async () => {{
+          const outputName = {output_name};
+          const xpaths = {xpaths};
+          const deadline = Date.now() + {timeout_ms};
+          const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const find = () => {{
+            for (const xpath of xpaths) {{
+              const node = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+              if (node) return xpath;
+            }}
+            return "";
+          }};
+          let found = find();
+          while (!found && Date.now() <= deadline) {{
+            await delay(100);
+            found = find();
+          }}
+          if (!found) return {{ ok: false, reason: "No fallback XPath matched" }};
+          window.__wamOutputs = window.__wamOutputs || {{}};
+          window.__wamOutputs[outputName] = found;
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
+fn retry_single_step<'a>(
+    session: &'a mut BrowserSession,
+    max_attempts: u32,
+    delay_ms: Option<u64>,
+    step: ActionConfig,
+    cancellation: &'a RunnerCancellation,
+) -> Pin<Box<dyn Future<Output = Result<ActionExecution, RunnerError>> + Send + 'a>> {
+    Box::pin(async move {
+        let mut last_error = None;
+        for attempt in 1..=max_attempts {
+            match execute_action(session, step.clone(), cancellation).await {
+                Ok(execution) => return Ok(execution),
+                Err(RunnerError::ActionFailed(error)) => {
+                    last_error = Some(error);
+                    if attempt < max_attempts {
+                        tokio::time::sleep(Duration::from_millis(delay_ms.unwrap_or(100))).await;
+                    }
+                }
+                Err(error) => return Err(error),
+            }
+        }
+
+        Err(RunnerError::ActionFailed(
+            last_error.unwrap_or_else(|| "Retry step failed".to_string()),
+        ))
+    })
 }
 
 fn detect_challenge_script(

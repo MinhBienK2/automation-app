@@ -75,6 +75,9 @@ pub enum ActionType {
     DetectChallenge,
     PauseForHuman,
     ResumeWhenCondition,
+    FallbackSelector,
+    RetryStep,
+    Checkpoint,
 }
 
 impl ActionType {
@@ -150,6 +153,9 @@ impl ActionType {
             Self::DetectChallenge => "detect_challenge",
             Self::PauseForHuman => "pause_for_human",
             Self::ResumeWhenCondition => "resume_when_condition",
+            Self::FallbackSelector => "fallback_selector",
+            Self::RetryStep => "retry_step",
+            Self::Checkpoint => "checkpoint",
         }
     }
 
@@ -225,6 +231,9 @@ impl ActionType {
             Self::DetectChallenge => "Detect Challenge",
             Self::PauseForHuman => "Pause For Human",
             Self::ResumeWhenCondition => "Resume When Condition",
+            Self::FallbackSelector => "Fallback Selector",
+            Self::RetryStep => "Retry Step",
+            Self::Checkpoint => "Checkpoint",
         }
     }
 }
@@ -896,6 +905,23 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
     },
+    FallbackSelector {
+        output_name: String,
+        xpaths: Vec<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    RetryStep {
+        max_attempts: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        delay_ms: Option<u64>,
+        step: Box<ActionConfig>,
+    },
+    Checkpoint {
+        name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        screenshot_path: Option<String>,
+    },
 }
 
 impl ActionConfig {
@@ -971,6 +997,9 @@ impl ActionConfig {
             Self::DetectChallenge { .. } => ActionType::DetectChallenge,
             Self::PauseForHuman { .. } => ActionType::PauseForHuman,
             Self::ResumeWhenCondition { .. } => ActionType::ResumeWhenCondition,
+            Self::FallbackSelector { .. } => ActionType::FallbackSelector,
+            Self::RetryStep { .. } => ActionType::RetryStep,
+            Self::Checkpoint { .. } => ActionType::Checkpoint,
         }
     }
 
@@ -1447,6 +1476,47 @@ impl ActionConfig {
                 "Timeout must be greater than 0",
             )),
             Self::ResumeWhenCondition { condition, .. } => validate_condition(condition),
+            Self::FallbackSelector { output_name, .. } if output_name.trim().is_empty() => Err(
+                ValidationError::new("output_name", "Output name is required"),
+            ),
+            Self::FallbackSelector { xpaths, .. } if xpaths.is_empty() => Err(
+                ValidationError::new("xpaths", "At least one fallback XPath is required"),
+            ),
+            Self::FallbackSelector { xpaths, .. }
+                if xpaths.iter().any(|xpath| xpath.trim().is_empty()) =>
+            {
+                Err(ValidationError::new("xpaths", "Fallback XPath is required"))
+            }
+            Self::FallbackSelector {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
+            Self::RetryStep {
+                max_attempts: 0, ..
+            } => Err(ValidationError::new(
+                "max_attempts",
+                "Max attempts must be greater than 0",
+            )),
+            Self::RetryStep {
+                delay_ms: Some(0), ..
+            } => Err(ValidationError::new(
+                "delay_ms",
+                "Delay must be greater than 0",
+            )),
+            Self::RetryStep { step, .. } => step.validate(),
+            Self::Checkpoint { name, .. } if name.trim().is_empty() => {
+                Err(ValidationError::new("name", "Checkpoint name is required"))
+            }
+            Self::Checkpoint {
+                screenshot_path: Some(path),
+                ..
+            } if path.trim().is_empty() => Err(ValidationError::new(
+                "screenshot_path",
+                "Screenshot path is required",
+            )),
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..

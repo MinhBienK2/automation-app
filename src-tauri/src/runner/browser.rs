@@ -114,6 +114,11 @@ impl BrowserRunner {
                     });
                 }
                 Err(RunnerError::ActionFailed(reason)) => {
+                    let reason = session
+                        .capture_failure_screenshot()
+                        .await
+                        .map(|path| format!("{reason}\nFailure screenshot: {}", path.display()))
+                        .unwrap_or(reason);
                     return Ok(RunnerOutcome {
                         status: RunnerStatus::Failed,
                         failed_step: Some(FailedStep {
@@ -341,6 +346,23 @@ impl BrowserSession {
             .evaluate(expression)
             .await?
             .into_value()?)
+    }
+
+    async fn capture_failure_screenshot(&self) -> Result<PathBuf, RunnerError> {
+        let page = self.current_page()?;
+        let path = std::env::temp_dir().join(format!("wam-failure-{}.png", Uuid::new_v4()));
+        let image = page
+            .screenshot(
+                chromiumoxide::page::ScreenshotParams::builder()
+                    .format(
+                        chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat::Png,
+                    )
+                    .full_page(true)
+                    .build(),
+            )
+            .await?;
+        std::fs::write(&path, image)?;
+        Ok(path)
     }
 
     pub async fn close(&mut self) -> Result<(), RunnerError> {

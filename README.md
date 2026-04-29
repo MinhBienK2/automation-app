@@ -61,19 +61,21 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 6. Add Use Profile, Save Session, Load Session, Set Cookie, Clear Cookies, and Set Secret steps.
 7. Add Use Proxy, Set User Agent, Set Viewport, Set Geolocation, Set Extra Headers, and Grant Permission steps.
 8. Add Detect Challenge, Pause For Human, and Resume When Condition steps.
-9. Reorder steps and reopen the workflow.
-10. Test a selected step.
-11. Run the full workflow.
-12. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
-13. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
-14. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
-15. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
-16. Confirm download actions save a new file in the configured directory and store its path in outputs.
-17. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
-18. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
-19. Confirm user agent, viewport, geolocation, permission grants, and extra headers are visible to the target page.
-20. Confirm challenge detection writes an output, human verification pause is logged, and resume waits for the expected condition.
-21. Confirm bad XPath fails immediately with a short message.
-22. Stop during a long Sleep.
-23. Confirm Chromium remains open after success, failure, and stop.
-24. Delete the workflow.
+9. Add Fallback Selector, Retry Step, and Checkpoint steps.
+10. Reorder steps and reopen the workflow.
+11. Test a selected step.
+12. Run the full workflow.
+13. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
+14. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
+15. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
+16. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
+17. Confirm download actions save a new file in the configured directory and store its path in outputs.
+18. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
+19. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
+20. Confirm user agent, viewport, geolocation, permission grants, and extra headers are visible to the target page.
+21. Confirm challenge detection writes an output, human verification pause is logged, and resume waits for the expected condition.
+22. Confirm fallback selector stores the selected XPath, retry step retries the nested action, checkpoint screenshot exists, and failed steps include a failure screenshot path.
+23. Confirm bad XPath fails immediately with a short message.
+24. Stop during a long Sleep.
+25. Confirm Chromium remains open after success, failure, and stop.
+26. Delete the workflow.

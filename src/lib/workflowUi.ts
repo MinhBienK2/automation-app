@@ -76,6 +76,9 @@ export const actionLabels: Record<ActionType, string> = {
   detect_challenge: "Detect Challenge",
   pause_for_human: "Pause For Human",
   resume_when_condition: "Resume When Condition",
+  fallback_selector: "Fallback Selector",
+  retry_step: "Retry Step",
+  checkpoint: "Checkpoint",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -179,6 +182,10 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Human Verification",
     actions: ["detect_challenge", "pause_for_human", "resume_when_condition"],
+  },
+  {
+    label: "Reliability",
+    actions: ["fallback_selector", "retry_step", "checkpoint"],
   },
   {
     label: "Legacy",
@@ -358,6 +365,12 @@ export function stepSummary(step: WorkflowStep) {
       return step.config.config.reason || "No reason";
     case "resume_when_condition":
       return step.config.config.condition.kind;
+    case "fallback_selector":
+      return `${step.config.config.output_name} from ${step.config.config.xpaths.length} selector(s)`;
+    case "retry_step":
+      return `${step.config.config.max_attempts} attempt(s)`;
+    case "checkpoint":
+      return step.config.config.name || "No checkpoint";
   }
 }
 

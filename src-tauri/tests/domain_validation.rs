@@ -1,6 +1,6 @@
 use workflow_automation_manager_lib::domain::{
-    ActionConfig, ActionType, CheckboxState, ClearInputMethod, ClickButton, ClickMode,
-    ClickPosition, ClickWaitUntil, HeaderPair, InputTypingMode, RunError, RunStatus,
+    ActionConfig, ActionType, AssertTextMatchMode, CheckboxState, ClearInputMethod, ClickButton,
+    ClickMode, ClickPosition, ClickWaitUntil, HeaderPair, InputTypingMode, RunError, RunStatus,
     ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy,
     ValidationError, WaitCondition, Workflow, WorkflowCondition, WorkflowStep,
 };
@@ -883,6 +883,93 @@ fn phase_eight_human_verification_configs_validate_required_fields() {
         .expect_err("invalid resume condition should fail"),
         "text",
         "Condition text is required",
+    );
+}
+
+#[test]
+fn phase_nine_reliability_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::FallbackSelector {
+            output_name: "target_xpath".to_string(),
+            xpaths: vec![
+                "//*[@data-testid='save']".to_string(),
+                "//*[@id='save']".to_string(),
+            ],
+            timeout_ms: Some(1000),
+        },
+        ActionConfig::RetryStep {
+            max_attempts: 3,
+            delay_ms: Some(100),
+            step: Box::new(ActionConfig::AssertText {
+                xpath: Some("//*[@id='status']".to_string()),
+                iframe_xpath: None,
+                text: "Ready".to_string(),
+                match_mode: AssertTextMatchMode::Contains,
+                timeout_ms: Some(500),
+            }),
+        },
+        ActionConfig::Checkpoint {
+            name: "after_login".to_string(),
+            screenshot_path: Some("/tmp/after-login.png".to_string()),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_nine_reliability_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::FallbackSelector {
+            output_name: String::new(),
+            xpaths: vec!["//*[@id='save']".to_string()],
+            timeout_ms: Some(1000),
+        }
+        .validate()
+        .expect_err("blank fallback output should fail"),
+        "output_name",
+        "Output name is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::FallbackSelector {
+            output_name: "target_xpath".to_string(),
+            xpaths: vec![],
+            timeout_ms: Some(1000),
+        }
+        .validate()
+        .expect_err("empty fallback selectors should fail"),
+        "xpaths",
+        "At least one fallback XPath is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::RetryStep {
+            max_attempts: 0,
+            delay_ms: None,
+            step: Box::new(ActionConfig::Sleep { seconds: 0.1 }),
+        }
+        .validate()
+        .expect_err("zero retry step attempts should fail"),
+        "max_attempts",
+        "Max attempts must be greater than 0",
+    );
+
+    assert_validation_message(
+        ActionConfig::Checkpoint {
+            name: String::new(),
+            screenshot_path: None,
+        }
+        .validate()
+        .expect_err("blank checkpoint name should fail"),
+        "name",
+        "Checkpoint name is required",
     );
 }
 

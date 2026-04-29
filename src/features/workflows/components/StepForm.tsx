@@ -1861,6 +1861,92 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           />
         </Label>
       );
+    case "fallback_selector":
+      return (
+        <>
+          <Label>
+            Output name
+            <Input
+              value={config.config.output_name}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "output_name", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            XPaths
+            <Textarea
+              value={config.config.xpaths.join("\n")}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpaths", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Timeout ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 1000}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
+    case "retry_step":
+      return (
+        <>
+          <Label>
+            Max attempts
+            <Input
+              min="1"
+              type="number"
+              value={config.config.max_attempts}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "max_attempts", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Delay ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.delay_ms ?? 100}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
+    case "checkpoint":
+      return (
+        <>
+          <Label>
+            Name
+            <Input
+              value={config.config.name}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "name", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Screenshot path
+            <Input
+              value={config.config.screenshot_path ?? ""}
+              onChange={(event) =>
+                onChange(
+                  updateActionConfigField(config, "screenshot_path", event.currentTarget.value),
+                )
+              }
+            />
+          </Label>
+        </>
+      );
   }
 }
 

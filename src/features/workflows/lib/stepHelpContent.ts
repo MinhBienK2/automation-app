@@ -72,7 +72,10 @@ type PhaseOneActionType =
   | "grant_permission"
   | "detect_challenge"
   | "pause_for_human"
-  | "resume_when_condition";
+  | "resume_when_condition"
+  | "fallback_selector"
+  | "retry_step"
+  | "checkpoint";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -574,6 +577,9 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   detect_challenge: elementHelp("Detect Challenge", "detect human verification UI", "phát hiện xác minh", "challenge"),
   pause_for_human: elementHelp("Pause For Human", "pause for manual verification", "tạm dừng cho người xử lý", "human"),
   resume_when_condition: elementHelp("Resume When Condition", "resume after a clear condition", "tiếp tục khi đủ điều kiện", "resume"),
+  fallback_selector: elementHelp("Fallback Selector", "choose the first matching selector", "chọn selector dự phòng đầu tiên khớp", "fallback"),
+  retry_step: elementHelp("Retry Step", "retry one flaky step", "thử lại một step dễ lỗi", "retry"),
+  checkpoint: elementHelp("Checkpoint", "mark progress and optionally capture a screenshot", "đánh dấu tiến trình và có thể chụp ảnh", "checkpoint"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

@@ -171,6 +171,19 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "resume_when_condition",
     );
+    expect(screen.getByRole("group", { name: "Reliability" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Fallback Selector" })).toHaveAttribute(
+      "data-value",
+      "fallback_selector",
+    );
+    expect(screen.getByRole("option", { name: "Retry Step" })).toHaveAttribute(
+      "data-value",
+      "retry_step",
+    );
+    expect(screen.getByRole("option", { name: "Checkpoint" })).toHaveAttribute(
+      "data-value",
+      "checkpoint",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -371,6 +384,55 @@ describe("Workflow step builder integration", () => {
           config: {
             output_name: "challenge_found",
             patterns: ["captcha", "verify you are human"],
+            timeout_ms: 1500,
+          },
+        },
+      });
+    });
+  });
+
+  test("saves phase nine reliability config from the form", async () => {
+    const fallbackStep: WorkflowStep = {
+      id: "step-fallback",
+      name: "Find save button",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "fallback_selector",
+      config: {
+        type: "fallback_selector",
+        config: {
+          output_name: "save_xpath",
+          xpaths: ["//*[@id='old-save']"],
+          timeout_ms: 1000,
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([fallbackStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    fireEvent.change(await screen.findByLabelText("XPaths"), {
+      target: { value: "//*[@id='missing']\n//*[@id='save']" },
+    });
+    await userEvent.clear(screen.getByLabelText("Timeout ms"));
+    await userEvent.type(screen.getByLabelText("Timeout ms"), "1500");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-fallback",
+        name: "Find save button",
+        config: {
+          type: "fallback_selector",
+          config: {
+            output_name: "save_xpath",
+            xpaths: ["//*[@id='missing']", "//*[@id='save']"],
             timeout_ms: 1500,
           },
         },

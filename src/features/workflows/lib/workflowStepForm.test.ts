@@ -547,4 +547,54 @@ describe("workflow step form config helpers", () => {
       },
     });
   });
+
+  test("updates phase nine reliability configs with typed values", () => {
+    const fallbackConfig: ActionConfig = {
+      type: "fallback_selector",
+      config: {
+        output_name: "target_xpath",
+        xpaths: ["//*[@id='old']"],
+      },
+    };
+    const retryConfig: ActionConfig = {
+      type: "retry_step",
+      config: {
+        max_attempts: 2,
+        delay_ms: 100,
+        step: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+      },
+    };
+    const checkpointConfig: ActionConfig = {
+      type: "checkpoint",
+      config: { name: "after_submit", screenshot_path: null },
+    };
+
+    expect(updateActionConfigField(fallbackConfig, "xpaths", "//*[@id='missing']\n//*[@id='real']")).toEqual({
+      type: "fallback_selector",
+      config: {
+        output_name: "target_xpath",
+        xpaths: ["//*[@id='missing']", "//*[@id='real']"],
+      },
+    });
+    expect(updateActionConfigField(fallbackConfig, "timeout_ms", "1500")).toEqual({
+      type: "fallback_selector",
+      config: {
+        output_name: "target_xpath",
+        xpaths: ["//*[@id='old']"],
+        timeout_ms: 1500,
+      },
+    });
+    expect(updateActionConfigField(retryConfig, "max_attempts", "4")).toEqual({
+      type: "retry_step",
+      config: {
+        max_attempts: 4,
+        delay_ms: 100,
+        step: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+      },
+    });
+    expect(updateActionConfigField(checkpointConfig, "screenshot_path", "/tmp/checkpoint.png")).toEqual({
+      type: "checkpoint",
+      config: { name: "after_submit", screenshot_path: "/tmp/checkpoint.png" },
+    });
+  });
 });
