@@ -15,7 +15,8 @@
 
 ## Add Step
 
-- UI sends workflow id and action type to `add_step`.
+- UI opens an Add Step palette from the `Builder Steps` panel, then sends workflow id and selected action type to `add_step`.
+- The Add Step palette defaults to the `All` category so every action type is visible before filtering.
 - Backend creates the default config in `src-tauri/src/services/run_service.rs`.
 - Repository appends at `MAX(order_index) + 1`.
 - Step name defaults to the action label.
@@ -25,6 +26,14 @@
 - UI edits name and action-specific config.
 - `update_step` validates config before persistence.
 - Repository stores config JSON and trims blank step names back to the action label.
+- Successful step saves show a temporary success message so the user gets immediate confirmation without blocking the UI.
+
+## Duplicate Step
+
+- UI duplicates from the selected step detail form.
+- Duplicate creates a new step with the same action type through `add_step`.
+- UI then saves the current form name plus ` Copy` and current form config onto the new step through `update_step`.
+- The duplicated step becomes the selected step after the workflow reloads.
 
 ## Reorder Or Delete Step
 
@@ -58,4 +67,3 @@
 - Step order must remain stable, ordered, and contiguous.
 - Run/test status must not mislead the user after success, failure, or stop.
 - Command-facing errors must remain serializable through `CommandError`.
-

@@ -9,8 +9,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/App.tsx`: top-level state orchestration.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: workflow workspace.
-- `src/features/workflows/components/StepList.tsx`: ordered step list and add-step form.
-- `src/features/workflows/components/StepForm.tsx`: selected step editing.
+- `src/features/workflows/components/StepList.tsx`: ordered step list and Add Step palette.
+- `src/features/workflows/components/StepForm.tsx`: selected step editing, save confirmation, and duplicate action.
 - `src/features/workflows/components/TestStepMonitor.tsx`: test progress modal.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
 - `src/lib/workflowApi.ts`: Tauri invoke wrappers.
@@ -21,6 +21,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 
 - User interaction state.
 - Form rendering and local validation display.
+- UI-only action browsing for the Add Step palette.
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 
@@ -37,4 +38,3 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Update focused component/page tests.
 - Read `DESIGN.md` before layout or styling changes.
 - Keep command names centralized in `workflowApi.ts`.
-

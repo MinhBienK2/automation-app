@@ -16,15 +16,18 @@ type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
   selectedStep: WorkflowStep | null;
   selectedStepId: string | null;
-  newActionType: ActionType;
   isRunning: boolean;
   appError: string;
   runState: RunState;
   onBack: () => void;
   onSelectStep: (stepId: string) => void;
-  onNewActionTypeChange: (actionType: ActionType) => void;
-  onAddStep: (event: React.FormEvent) => void;
+  onAddStep: (actionType: ActionType) => void;
   onDeleteStep: (stepId: string) => void;
+  onDuplicateStep: (
+    step: WorkflowStep,
+    name: string,
+    config: ActionConfig,
+  ) => Promise<void>;
   onSaveStep: (stepId: string, name: string, config: ActionConfig) => Promise<void>;
   onRunWorkflow: () => void;
   onTestStep: () => void;
@@ -37,15 +40,14 @@ export function WorkflowDetailPage({
   detail,
   selectedStep,
   selectedStepId,
-  newActionType,
   isRunning,
   appError,
   runState,
   onBack,
   onSelectStep,
-  onNewActionTypeChange,
   onAddStep,
   onDeleteStep,
+  onDuplicateStep,
   onSaveStep,
   onRunWorkflow,
   onTestStep,
@@ -108,9 +110,7 @@ export function WorkflowDetailPage({
         <StepList
           steps={detail.steps}
           selectedStepId={selectedStepId}
-          newActionType={newActionType}
           onSelectStep={onSelectStep}
-          onNewActionTypeChange={onNewActionTypeChange}
           onAddStep={onAddStep}
           onDragEnd={onDragEnd}
         />
@@ -121,6 +121,7 @@ export function WorkflowDetailPage({
               key={selectedStep.id}
               step={selectedStep}
               onDeleteStep={onDeleteStep}
+              onDuplicateStep={onDuplicateStep}
               onSaveStep={onSaveStep}
             />
           ) : (

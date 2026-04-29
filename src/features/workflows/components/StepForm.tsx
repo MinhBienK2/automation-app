@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ActionConfig, WorkflowStep } from "../../../types/workflow";
 import { actionLabels, commandMessage } from "../../../lib/workflowUi";
 import { Button } from "../../../components/ui/button";
@@ -13,22 +13,51 @@ import { StepHelpModal } from "./StepHelpModal";
 type StepFormProps = {
   step: WorkflowStep;
   onDeleteStep: (stepId: string) => void;
+  onDuplicateStep: (step: WorkflowStep, name: string, config: ActionConfig) => Promise<void>;
   onSaveStep: (stepId: string, name: string, config: ActionConfig) => Promise<void>;
 };
 
-export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
+export function StepForm({
+  step,
+  onDeleteStep,
+  onDuplicateStep,
+  onSaveStep,
+}: StepFormProps) {
   const [name, setName] = useState(step.name || actionLabels[step.action_type]);
   const [config, setConfig] = useState<ActionConfig>(step.config);
   const [fieldError, setFieldError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [helpLanguage, setHelpLanguage] = useState<StepHelpLanguage>("vi");
+  const successTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current !== null) {
+        window.clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function showSuccessMessage(message: string) {
+    if (successTimeoutRef.current !== null) {
+      window.clearTimeout(successTimeoutRef.current);
+    }
+    setSuccessMessage(message);
+    successTimeoutRef.current = window.setTimeout(() => {
+      setSuccessMessage("");
+      successTimeoutRef.current = null;
+    }, 2500);
+  }
 
   async function saveStep(event: React.FormEvent) {
     event.preventDefault();
     setFieldError("");
+    setSuccessMessage("");
 
     try {
       await onSaveStep(step.id, name, config);
+      showSuccessMessage("Step saved successfully.");
     } catch (error) {
       setFieldError(commandMessage(error));
     }
@@ -69,6 +98,18 @@ export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
             Save Step
           </Button>
           <Button
+            variant="secondary"
+            type="button"
+            onClick={() => {
+              setFieldError("");
+              void onDuplicateStep(step, name, config).catch((error) => {
+                setFieldError(commandMessage(error));
+              });
+            }}
+          >
+            Duplicate Step
+          </Button>
+          <Button
             variant="destructive"
             type="button"
             onClick={() => onDeleteStep(step.id)}
@@ -77,6 +118,11 @@ export function StepForm({ step, onDeleteStep, onSaveStep }: StepFormProps) {
           </Button>
         </div>
       </form>
+      {successMessage ? (
+        <div className="toast-alert" role="status">
+          {successMessage}
+        </div>
+      ) : null}
       {isHelpOpen ? (
         <StepHelpModal
           actionType={config.type}

@@ -1,88 +1,81 @@
 .create-form,
 .workflow-dialog-form,
-.add-step-form,
 .step-form {
   display: grid;
   gap: 14px;
 }
 
-.action-picker-field {
+.add-step-palette {
+  width: min(760px, calc(100vw - 48px));
+  max-height: min(760px, calc(100dvh - 48px));
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.add-step-palette-body {
   display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.action-category-list,
+.action-result-list {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  max-height: min(430px, calc(100dvh - 300px));
+  overflow-y: auto;
   gap: 6px;
 }
 
-.action-picker {
-  position: relative;
+.action-result-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.action-picker-trigger {
-  width: 100%;
-  justify-content: space-between;
+.action-category {
+  justify-content: start;
+  min-height: 34px;
+  padding: 0 10px;
+  color: #b4b4b4;
+}
+
+.action-category-active,
+.action-category:hover {
+  border-color: rgba(62, 207, 142, 0.48);
+  color: #3ecf8e;
+}
+
+.action-result {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 10px;
+  white-space: normal;
   text-align: left;
 }
 
-.action-picker-trigger span:first-child {
+.action-result span,
+.action-result small {
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.action-picker-chevron {
+.action-result span {
+  color: #fafafa;
+}
+
+.action-result small {
   color: #898989;
   font-size: 12px;
+  line-height: 1.3;
 }
 
-.action-picker-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  max-height: min(360px, calc(100dvh - 220px));
-  overflow-y: auto;
-  padding: 8px;
-  border: 1px solid #363636;
-  border-radius: 8px;
-  background: #0f0f0f;
-}
-
-.action-picker-menu-up {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
-
-.action-picker-group {
-  display: grid;
-  gap: 5px;
-  padding-top: 4px;
-}
-
-.action-picker-group-label {
-  padding: 7px 8px 5px;
-  border-bottom: 1px solid #2e2e2e;
-  color: #3ecf8e;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.action-picker-option {
-  justify-content: start;
-  width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
-  border-color: transparent;
-  background: transparent;
-  color: #b4b4b4;
-  text-align: left;
-}
-
-.action-picker-option:hover,
-.action-picker-option-selected {
+.action-result:hover {
   border-color: rgba(62, 207, 142, 0.48);
-  color: #3ecf8e;
 }
 
 .create-form {
@@ -137,8 +130,16 @@
 .run-actions,
 .form-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.row-actions,
+.run-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .workflow-card .row-actions {
@@ -160,6 +161,20 @@
   color: #fca5a5;
   font-size: 14px;
 }
+
+.toast-alert {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 70;
+  padding: 10px 12px;
+  border: 1px solid rgba(62, 207, 142, 0.48);
+  border-radius: 8px;
+  background: #0f0f0f;
+  color: #3ecf8e;
+  font-size: 14px;
+}
+
 .empty-state {
   display: grid;
   gap: 8px;

@@ -30,6 +30,7 @@ import type {
   ActionType,
   RunState,
   WorkflowDetail,
+  WorkflowStep,
   WorkflowSummary,
 } from "./types/workflow";
 import "./App.css";
@@ -54,7 +55,6 @@ function App() {
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
-  const [newActionType, setNewActionType] = useState<ActionType>("navigate");
   const [appError, setAppError] = useState("");
 
   useEffect(() => {
@@ -185,13 +185,12 @@ function App() {
     await loadWorkflows();
   }
 
-  async function addStep(event: React.FormEvent) {
-    event.preventDefault();
+  async function addStep(actionType: ActionType) {
     if (!detail) return;
     setAppError("");
 
     try {
-      const step = await addWorkflowStep(detail.workflow.id, newActionType);
+      const step = await addWorkflowStep(detail.workflow.id, actionType);
       await reloadSelectedWorkflow(step.id);
     } catch (error) {
       setAppError(commandMessage(error));
@@ -203,6 +202,24 @@ function App() {
 
     await deleteWorkflowStep(stepId);
     await reloadSelectedWorkflow();
+  }
+
+  async function duplicateStep(
+    sourceStep: WorkflowStep,
+    name: string,
+    config: ActionConfig,
+  ) {
+    if (!detail) return;
+    setAppError("");
+
+    try {
+      const step = await addWorkflowStep(detail.workflow.id, sourceStep.action_type);
+      await updateStep(step.id, `${name} Copy`, config);
+      await reloadSelectedWorkflow(step.id);
+    } catch (error) {
+      setAppError(commandMessage(error));
+      throw error;
+    }
   }
 
   async function runWorkflow() {
@@ -294,15 +311,14 @@ function App() {
             detail={detail}
             selectedStep={selectedStep}
             selectedStepId={selectedStepId}
-            newActionType={newActionType}
             isRunning={isRunning}
             appError={appError}
             runState={runState}
             onBack={backToList}
             onSelectStep={setSelectedStepId}
-            onNewActionTypeChange={setNewActionType}
             onAddStep={addStep}
             onDeleteStep={deleteStep}
+            onDuplicateStep={duplicateStep}
             onSaveStep={async (stepId, name, config: ActionConfig) => {
               setAppError("");
               await updateStep(stepId, name, config);

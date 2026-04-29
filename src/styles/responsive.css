@@ -70,4 +70,23 @@
     grid-template-columns: 1fr;
     width: 100%;
   }
+
+  .add-step-palette {
+    width: min(100vw - 24px, 680px);
+  }
+
+  .add-step-palette-body,
+  .action-result-list {
+    grid-template-columns: 1fr;
+  }
+
+  .action-category-list {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .action-category {
+    flex: 0 0 auto;
+  }
 }

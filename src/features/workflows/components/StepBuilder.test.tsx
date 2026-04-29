@@ -1,4 +1,10 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
@@ -33,9 +39,15 @@ describe("Workflow step builder integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     expect(await screen.findByText("Builder Steps")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByLabelText("Action type"));
-    await userEvent.click(screen.getByRole("option", { name: "Sleep" }));
     await userEvent.click(screen.getByRole("button", { name: "Add Step" }));
+    const palette = await screen.findByRole("dialog", {
+      name: "Choose an action type",
+    });
+    await userEvent.type(within(palette).getByLabelText("Search actions"), "sleep");
+    await userEvent.click(within(palette).getByRole("button", { name: /Sleep/ }));
+
+    expect(screen.queryByRole("dialog", { name: "Choose an action type" }))
+      .not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("add_step", {
@@ -45,189 +57,54 @@ describe("Workflow step builder integration", () => {
     });
   });
 
-  test("groups real user action types in the action picker", async () => {
+  test("filters add step palette actions by category and search", async () => {
     mockTauriCommands(workflowDetailScenario([]));
 
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add Step" }));
 
-    const actionType = await screen.findByLabelText("Action type");
-    expect(actionType).toHaveAttribute("data-slot", "action-picker-trigger");
-    expect(actionType).toHaveAttribute("aria-haspopup", "listbox");
+    const palette = await screen.findByRole("dialog", {
+      name: "Choose an action type",
+    });
 
-    await userEvent.click(actionType);
+    expect(within(palette).getByRole("button", { name: "All" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(within(palette).getByRole("button", { name: /Navigate/ }))
+      .toHaveAttribute("data-value", "navigate");
+    expect(within(palette).getByRole("button", { name: /Sleep/ }))
+      .toHaveAttribute("data-value", "sleep");
+    expect(within(palette).getByRole("button", { name: /Use Proxy/ }))
+      .toHaveAttribute("data-value", "use_proxy");
+    expect(within(palette).getByRole("button", { name: /Take Screenshot/ }))
+      .toHaveAttribute("data-value", "take_screenshot");
 
-    const coreGroup = screen.getByRole("group", { name: "Core" });
-    expect(coreGroup).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Forms" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Keyboard" })).toBeInTheDocument();
-    expect(within(coreGroup).getByText("Core")).toHaveClass(
-      "action-picker-group-label",
-    );
-    expect(screen.getByRole("option", { name: "Navigate" })).toHaveAttribute(
-      "data-value",
-      "navigate",
-    );
-    expect(screen.getByRole("option", { name: "Input Text" })).toHaveAttribute(
-      "data-value",
-      "input_text",
-    );
-    expect(screen.getByRole("option", { name: "Hotkey" })).toHaveAttribute(
-      "data-value",
-      "hotkey",
-    );
-    expect(screen.getByRole("option", { name: "Double Click" })).toHaveAttribute(
-      "data-value",
-      "double_click",
-    );
-    expect(screen.getByRole("option", { name: "Drag and Drop" })).toHaveAttribute(
-      "data-value",
-      "drag_and_drop",
-    );
-    expect(screen.getByRole("option", { name: "Check" })).toHaveAttribute(
-      "data-value",
-      "check",
-    );
-    expect(screen.getByRole("option", { name: "Select Radio" })).toHaveAttribute(
-      "data-value",
-      "select_radio",
-    );
-    expect(screen.getByRole("option", { name: "Upload File" })).toHaveAttribute(
-      "data-value",
-      "upload_file",
-    );
-    expect(screen.getByRole("option", { name: "Set Contenteditable" })).toHaveAttribute(
-      "data-value",
-      "set_contenteditable",
-    );
-    expect(screen.getByRole("option", { name: "Extract Text" })).toHaveAttribute(
+    await userEvent.click(within(palette).getByRole("button", { name: "Data" }));
+
+    expect(within(palette).getByRole("button", { name: /Extract Text/ }))
+      .toHaveAttribute(
       "data-value",
       "extract_text",
     );
-    expect(screen.getByRole("option", { name: "Take Screenshot" })).toHaveAttribute(
+    expect(within(palette).getByRole("button", { name: /Take Screenshot/ }))
+      .toHaveAttribute(
       "data-value",
       "take_screenshot",
     );
-    expect(screen.getByRole("option", { name: "Open New Tab" })).toHaveAttribute(
-      "data-value",
-      "open_new_tab",
-    );
-    expect(screen.getByRole("option", { name: "Switch Tab" })).toHaveAttribute(
-      "data-value",
-      "switch_tab",
-    );
-    expect(screen.getByRole("option", { name: "Switch Frame" })).toHaveAttribute(
-      "data-value",
-      "switch_frame",
-    );
-    expect(screen.getByRole("option", { name: "Wait For Download" })).toHaveAttribute(
-      "data-value",
-      "wait_for_download",
-    );
-    expect(screen.getByRole("option", { name: "Set Variable" })).toHaveAttribute(
-      "data-value",
-      "set_variable",
-    );
-    expect(screen.getByRole("option", { name: "Assert Text" })).toHaveAttribute(
-      "data-value",
-      "assert_text",
-    );
-    expect(screen.getByRole("option", { name: "Repeat Times" })).toHaveAttribute(
-      "data-value",
-      "repeat_times",
-    );
-    expect(screen.getByRole("option", { name: "Use Profile" })).toHaveAttribute(
-      "data-value",
-      "use_profile",
-    );
-    expect(screen.getByRole("option", { name: "Set Secret" })).toHaveAttribute(
-      "data-value",
-      "set_secret",
-    );
-    expect(screen.getByRole("group", { name: "Network" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Use Proxy" })).toHaveAttribute(
-      "data-value",
-      "use_proxy",
-    );
-    expect(screen.getByRole("option", { name: "Set Viewport" })).toHaveAttribute(
-      "data-value",
-      "set_viewport",
-    );
-    expect(screen.getByRole("option", { name: "Grant Permission" })).toHaveAttribute(
-      "data-value",
-      "grant_permission",
-    );
-    expect(screen.getByRole("group", { name: "Human Verification" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Detect Challenge" })).toHaveAttribute(
-      "data-value",
-      "detect_challenge",
-    );
-    expect(screen.getByRole("option", { name: "Pause For Human" })).toHaveAttribute(
-      "data-value",
-      "pause_for_human",
-    );
-    expect(screen.getByRole("option", { name: "Resume When Condition" })).toHaveAttribute(
-      "data-value",
-      "resume_when_condition",
-    );
-    expect(screen.getByRole("group", { name: "Reliability" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Fallback Selector" })).toHaveAttribute(
-      "data-value",
-      "fallback_selector",
-    );
-    expect(screen.getByRole("option", { name: "Retry Step" })).toHaveAttribute(
-      "data-value",
-      "retry_step",
-    );
-    expect(screen.getByRole("option", { name: "Checkpoint" })).toHaveAttribute(
-      "data-value",
-      "checkpoint",
-    );
-    expect(screen.getByRole("group", { name: "Advanced" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Execute JS" })).toHaveAttribute(
-      "data-value",
-      "execute_js",
-    );
-    expect(screen.getByRole("option", { name: "Wait For Response" })).toHaveAttribute(
-      "data-value",
-      "wait_for_response",
-    );
-    expect(screen.getByRole("option", { name: "Mock Response" })).toHaveAttribute(
-      "data-value",
-      "mock_response",
-    );
-  });
+    expect(within(palette).queryByRole("button", { name: /Click/ }))
+      .not.toBeInTheDocument();
 
-  test("flips the action picker upward when there is not enough room below", async () => {
-    mockTauriCommands(workflowDetailScenario([]));
-    Object.defineProperty(window, "innerHeight", {
-      configurable: true,
-      value: 260,
-    });
+    await userEvent.type(within(palette).getByLabelText("Search actions"), "click");
 
-    renderApp();
+    const clickResult = within(palette)
+      .getAllByRole("button", { name: /Click/ })
+      .find((button) => button.getAttribute("data-value") === "click");
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-
-    const actionType = await screen.findByLabelText("Action type");
-    vi.spyOn(actionType, "getBoundingClientRect").mockReturnValue({
-      x: 0,
-      y: 210,
-      top: 210,
-      bottom: 250,
-      left: 0,
-      right: 380,
-      width: 380,
-      height: 40,
-      toJSON: () => ({}),
-    });
-
-    await userEvent.click(actionType);
-
-    expect(screen.getByRole("listbox", { name: "Action type" })).toHaveClass(
-      "action-picker-menu-up",
-    );
+    expect(clickResult)
+      .toHaveAttribute("data-value", "click");
+    expect(within(palette).queryByRole("button", { name: /Extract Text/ }))
+      .not.toBeInTheDocument();
   });
 
   test("shows a compact builder steps header with total beside the title", async () => {
@@ -537,6 +414,94 @@ describe("Workflow step builder integration", () => {
     expect(await screen.findByLabelText("XPath")).toHaveValue("saved-xpath");
     expect(screen.getByLabelText("Step name")).toHaveValue("Submit login form");
     expect(screen.queryByLabelText("Seconds")).not.toBeInTheDocument();
+    expect(screen.getByText("Step saved successfully.")).toHaveAttribute(
+      "role",
+      "status",
+    );
+    expect(screen.getByText("Step saved successfully.")).toHaveClass("toast-alert");
+    expect(
+      screen.getByText("Step saved successfully.").closest(".step-form"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("hides the save success message after a short delay", async () => {
+    let saved = false;
+    mockTauriCommands({
+      list_workflows: [workflow],
+      get_run_state: idleRunState,
+      get_workflow: () => ({
+        workflow,
+        steps: [saved ? { ...sleepStep, name: "Wait saved" } : sleepStep],
+      }),
+      update_step: () => {
+        saved = true;
+        return undefined;
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Step name"));
+    await userEvent.type(screen.getByLabelText("Step name"), "Wait saved");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    expect(await screen.findByText("Step saved successfully.")).toHaveAttribute(
+      "role",
+      "status",
+    );
+
+    await waitForElementToBeRemoved(
+      () => screen.queryByText("Step saved successfully."),
+      {
+        timeout: 3500,
+      },
+    );
+  });
+
+  test("duplicates the selected step with the current action type and form values", async () => {
+    const duplicatedStep: WorkflowStep = {
+      ...clickStep,
+      id: "step-3",
+      name: "Click login button Copy",
+      order_index: 2,
+      config: { type: "click", config: { xpath: "copied-xpath" } },
+    };
+    let duplicated = false;
+    mockTauriCommands({
+      list_workflows: [workflow],
+      get_run_state: idleRunState,
+      get_workflow: () => ({
+        workflow,
+        steps: duplicated ? [sleepStep, clickStep, duplicatedStep] : [sleepStep, clickStep],
+      }),
+      add_step: () => {
+        duplicated = true;
+        return duplicatedStep;
+      },
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(screen.getByRole("button", { name: /Click/ }));
+    await userEvent.clear(await screen.findByLabelText("XPath"));
+    await userEvent.type(screen.getByLabelText("XPath"), "copied-xpath");
+    await userEvent.click(screen.getByRole("button", { name: "Duplicate Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("add_step", {
+        workflowId: "workflow-1",
+        actionType: "click",
+      });
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-3",
+        name: "Click login button Copy",
+        config: { type: "click", config: { xpath: "copied-xpath" } },
+      });
+    });
+    expect(await screen.findByLabelText("XPath")).toHaveValue("copied-xpath");
   });
 
   test("shows real click controls and saves advanced click config", async () => {
