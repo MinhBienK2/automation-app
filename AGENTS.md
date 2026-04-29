@@ -19,9 +19,9 @@ Before implementing any feature, bug fix, refactor, or behavior change, agents M
 Exceptions: docs-only changes, formatting-only changes, comment-only changes, generated code, trivial configuration updates, and throwaway prototypes. If skipping TDD for a code change, state why in the final response.
 
 ## Docs Sync Requirement
-Before implementing any feature, bug fix, refactor, behavior change, command/API change, validation change, persistence change, runner change, or user-visible workflow change, agents MUST read the relevant files under `docs/`.
+Before code changes, agents MUST read only the relevant files under `docs/`.
 
-Flow: read `docs/README.md`, route through `docs/task-routes.md`, inspect listed source files, and follow `docs/agent-workflow.md`.
+Flow: read `docs/README.md`, route through `docs/task-routes.md`, follow `docs/agent-workflow.md`, then inspect listed source files.
 
 Exceptions: formatting-only changes, comment-only changes, generated files, dependency lockfile churn with no behavior or command changes, and throwaway prototypes. If skipping docs updates for a code change, state why in the final response.
 
@@ -38,7 +38,6 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Domain validation belongs in `src-tauri/src/domain/`; persistence belongs in `src-tauri/src/repositories/` and SQL migrations.
 - Browser execution code belongs in `src-tauri/src/runner/`; preserve stop/run state behavior when changing runner flow.
 - Agent source-of-truth docs live under `docs/`; historical plans/specs live under `docs/superpowers/`; smoke checklist lives in `README.md`.
-- Design direction lives in `DESIGN.md`; reference it for visual styling, layout, typography, and component UI work.
 
 ## Key Conventions
 - Keep Rust domain types `Serialize`/`Deserialize` compatible with the TypeScript shapes used by Tauri `invoke`.

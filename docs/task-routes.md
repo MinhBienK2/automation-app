@@ -9,6 +9,18 @@ Each route lists:
 - Checks: focused commands to run when relevant.
 - Update docs: docs likely to change if behavior/contracts change.
 
+## Understand Product Or Plan Broad Work
+
+Use for broad requests, unclear task boundaries, planning, or deciding which route applies.
+
+Read: `domain/product-model.md`, `architecture/overview.md`, `domain/user-visible-invariants.md`
+
+Verify: source files only after choosing an implementation route below.
+
+Checks: none until code or tests change.
+
+Update docs: task routes, product model, overview, or invariants only if the task changes current truth.
+
 ## Add Or Change An Action Type
 
 Read: `domain/action-taxonomy.md`, `domain/cross-feature-impact-map.md`, `architecture/frontend.md`, `architecture/domain.md`, `architecture/runner.md`, `contracts/action-configs.md`, `contracts/workflow-types.md`

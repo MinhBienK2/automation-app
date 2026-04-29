@@ -17,6 +17,8 @@ This directory is for coding agents working in this repository.
 4. Read only the domain, architecture, contract, and maintenance docs named by the route.
 5. Inspect the listed source files before editing.
 
+For broad, ambiguous, or planning tasks, use the "Understand Product Or Plan Broad Work" route first. Do not read every file in `docs/`.
+
 ## Update Rule
 
 Update `docs/` in the same change when code changes affect:
@@ -35,4 +37,3 @@ If docs and code disagree, verify current code, fix the docs for the touched are
 ## Token Budget
 
 Do not read all docs by default. `task-routes.md` is the router. Read only the files named by the route, then verify focused code.
-
