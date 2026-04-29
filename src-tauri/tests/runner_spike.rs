@@ -379,6 +379,52 @@ fn write_phase_nine_reliability_page() -> (String, String) {
     )
 }
 
+fn phase_eleven_server() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind phase eleven server");
+    let address = listener.local_addr().expect("phase eleven address");
+
+    thread::spawn(move || {
+        for stream in listener.incoming().take(8) {
+            let mut stream = stream.expect("accept phase eleven request");
+            let mut request = [0; 8192];
+            let bytes = stream
+                .read(&mut request)
+                .expect("read phase eleven request");
+            let request = String::from_utf8_lossy(&request[..bytes]);
+            let first_line = request.lines().next().unwrap_or_default();
+            let (content_type, body) = if first_line.contains("/api/live") {
+                ("application/json", r#"{"name":"live"}"#.to_string())
+            } else {
+                (
+                    "text/html",
+                    r#"<!doctype html>
+                    <html>
+                      <body>
+                        <button id="live-button" onclick="fetch('/api/live').then(r => r.json()).then(data => document.getElementById('live').textContent = data.name)">Live</button>
+                        <button id="mock-button" onclick="fetch('/api/mock').then(r => r.json()).then(data => document.getElementById('mock').textContent = data.name)">Mock</button>
+                        <button id="blocked-button" onclick="fetch('/analytics').catch(() => document.getElementById('blocked').textContent = 'blocked')">Blocked</button>
+                        <div id="live">idle</div>
+                        <div id="mock">idle</div>
+                        <div id="blocked">idle</div>
+                      </body>
+                    </html>"#
+                        .to_string(),
+                )
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("write phase eleven response");
+        }
+    });
+
+    format!("http://{}", address)
+}
+
 fn runner() -> BrowserRunner {
     BrowserRunner::new(RunnerOptions {
         headed: true,
@@ -1665,5 +1711,129 @@ async fn runner_adds_failure_screenshot_path_to_failed_step_reason() {
         .expect("screenshot path")
         .trim();
     assert!(PathBuf::from(screenshot_path).exists());
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_chromium() {
+    let url = phase_eleven_server();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::SetLocalStorage {
+                    key: "token".to_string(),
+                    value: "local".to_string(),
+                },
+                ActionConfig::SetSessionStorage {
+                    key: "token".to_string(),
+                    value: "session".to_string(),
+                },
+                ActionConfig::ExecuteJs {
+                    script: "return localStorage.getItem('token') + '|' + sessionStorage.getItem('token');".to_string(),
+                    output_name: Some("storage_tokens".to_string()),
+                    timeout_ms: Some(1000),
+                },
+                ActionConfig::MockResponse {
+                    url_contains: "/api/mock".to_string(),
+                    status: 200,
+                    body: r#"{"name":"mocked"}"#.to_string(),
+                    content_type: Some("application/json".to_string()),
+                },
+                ActionConfig::BlockRequest {
+                    url_patterns: vec!["/analytics".to_string()],
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"live-button\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::WaitForRequest {
+                    url_contains: "/api/live".to_string(),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::WaitForResponse {
+                    url_contains: "/api/live".to_string(),
+                    status: Some(200),
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"mock-button\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"blocked-button\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"mock\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "mocked".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"blocked\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "blocked".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase eleven advanced runtime steps");
+
+    assert_eq!(outcome.failed_step, None);
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+    assert_eq!(outputs["storage_tokens"], "local|session");
     outcome.session.close().await.expect("close browser");
 }

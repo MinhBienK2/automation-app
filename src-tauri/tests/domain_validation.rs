@@ -974,6 +974,98 @@ fn phase_nine_reliability_configs_validate_required_fields() {
 }
 
 #[test]
+fn phase_eleven_advanced_runtime_configs_validate_and_round_trip() {
+    let configs = vec![
+        ActionConfig::ExecuteJs {
+            script: "return document.title".to_string(),
+            output_name: Some("title".to_string()),
+            timeout_ms: Some(1000),
+        },
+        ActionConfig::WaitForRequest {
+            url_contains: "/api/orders".to_string(),
+            timeout_ms: Some(1000),
+        },
+        ActionConfig::WaitForResponse {
+            url_contains: "/api/orders".to_string(),
+            status: Some(200),
+            timeout_ms: Some(1000),
+        },
+        ActionConfig::BlockRequest {
+            url_patterns: vec!["analytics".to_string()],
+        },
+        ActionConfig::MockResponse {
+            url_contains: "/api/profile".to_string(),
+            status: 200,
+            body: "{\"ok\":true}".to_string(),
+            content_type: Some("application/json".to_string()),
+        },
+        ActionConfig::SetLocalStorage {
+            key: "token".to_string(),
+            value: "local".to_string(),
+        },
+        ActionConfig::SetSessionStorage {
+            key: "token".to_string(),
+            value: "session".to_string(),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("phase eleven config is valid");
+        let json = serde_json::to_string(&config).expect("serialize phase eleven config");
+        let decoded: ActionConfig =
+            serde_json::from_str(&json).expect("deserialize phase eleven config");
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_eleven_advanced_runtime_configs_validate_required_fields() {
+    assert_eq!(
+        ActionConfig::ExecuteJs {
+            script: " ".to_string(),
+            output_name: None,
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank script rejected")
+        .field,
+        "script"
+    );
+    assert_eq!(
+        ActionConfig::WaitForRequest {
+            url_contains: String::new(),
+            timeout_ms: None,
+        }
+        .validate()
+        .expect_err("blank request matcher rejected")
+        .field,
+        "url_contains"
+    );
+    assert_eq!(
+        ActionConfig::MockResponse {
+            url_contains: "/api".to_string(),
+            status: 0,
+            body: String::new(),
+            content_type: None,
+        }
+        .validate()
+        .expect_err("bad status rejected")
+        .field,
+        "status"
+    );
+    assert_eq!(
+        ActionConfig::SetLocalStorage {
+            key: String::new(),
+            value: "value".to_string(),
+        }
+        .validate()
+        .expect_err("blank storage key rejected")
+        .field,
+        "key"
+    );
+}
+
+#[test]
 fn user_action_taxonomy_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::Navigate {

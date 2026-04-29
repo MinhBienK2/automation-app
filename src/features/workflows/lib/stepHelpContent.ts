@@ -75,7 +75,14 @@ type PhaseOneActionType =
   | "resume_when_condition"
   | "fallback_selector"
   | "retry_step"
-  | "checkpoint";
+  | "checkpoint"
+  | "execute_js"
+  | "wait_for_request"
+  | "wait_for_response"
+  | "block_request"
+  | "mock_response"
+  | "set_local_storage"
+  | "set_session_storage";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -580,6 +587,13 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   fallback_selector: elementHelp("Fallback Selector", "choose the first matching selector", "chọn selector dự phòng đầu tiên khớp", "fallback"),
   retry_step: elementHelp("Retry Step", "retry one flaky step", "thử lại một step dễ lỗi", "retry"),
   checkpoint: elementHelp("Checkpoint", "mark progress and optionally capture a screenshot", "đánh dấu tiến trình và có thể chụp ảnh", "checkpoint"),
+  execute_js: elementHelp("Execute JS", "run advanced JavaScript", "chạy JavaScript nâng cao", "advanced"),
+  wait_for_request: elementHelp("Wait For Request", "wait for a network request", "chờ request mạng", "network"),
+  wait_for_response: elementHelp("Wait For Response", "wait for a network response", "chờ response mạng", "network"),
+  block_request: elementHelp("Block Request", "block matching fetch requests", "chặn request khớp mẫu", "network"),
+  mock_response: elementHelp("Mock Response", "mock a matching fetch response", "giả lập response khớp mẫu", "network"),
+  set_local_storage: elementHelp("Set Local Storage", "set localStorage", "đặt localStorage", "storage"),
+  set_session_storage: elementHelp("Set Session Storage", "set sessionStorage", "đặt sessionStorage", "storage"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

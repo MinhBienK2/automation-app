@@ -983,6 +983,58 @@ pub(super) async fn execute_action(
             }
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::ExecuteJs {
+            script,
+            output_name,
+            timeout_ms,
+        } => {
+            let script = execute_js_script(&script, output_name.as_deref(), timeout_ms)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::WaitForRequest {
+            url_contains,
+            timeout_ms,
+        } => {
+            let script = wait_for_network_script(&url_contains, None, timeout_ms, false)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::WaitForResponse {
+            url_contains,
+            status,
+            timeout_ms,
+        } => {
+            let script = wait_for_network_script(&url_contains, status, timeout_ms, true)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::BlockRequest { url_patterns } => {
+            let script = block_request_script(&url_patterns)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::MockResponse {
+            url_contains,
+            status,
+            body,
+            content_type,
+        } => {
+            let script =
+                mock_response_script(&url_contains, status, &body, content_type.as_deref())?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetLocalStorage { key, value } => {
+            let script = storage_script("localStorage", &key, &value)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetSessionStorage { key, value } => {
+            let script = storage_script("sessionStorage", &key, &value)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
     }
 }
 
@@ -1091,6 +1143,155 @@ fn detect_challenge_script(
           return {{ ok: true, reason: "" }};
         }})()
         "#
+    ))
+}
+
+fn execute_js_script(
+    user_script: &str,
+    output_name: Option<&str>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let user_script = json_string(user_script)?;
+    let output_name = optional_json_string(output_name)?;
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (async () => {{
+          const source = {user_script};
+          const outputName = {output_name};
+          const run = Function('"use strict"; return (async () => {{ ' + source + '\n }})();');
+          try {{
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('JavaScript timed out')), {timeout_ms}));
+            const value = await Promise.race([run(), timeout]);
+            if (outputName) {{
+              window.__wamOutputs = window.__wamOutputs || {{}};
+              window.__wamOutputs[outputName] = typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+            }}
+            return {{ ok: true, reason: "" }};
+          }} catch (error) {{
+            return {{ ok: false, reason: 'JavaScript error: ' + (error && error.message ? error.message : String(error)) }};
+          }}
+        }})()
+        "#
+    ))
+}
+
+fn storage_script(storage_name: &str, key: &str, value: &str) -> Result<String, RunnerError> {
+    let key = json_string(key)?;
+    let value = json_string(value)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          try {{
+            window.{storage_name}.setItem({key}, {value});
+            return {{ ok: true, reason: "" }};
+          }} catch (error) {{
+            return {{ ok: false, reason: 'Storage error: ' + (error && error.message ? error.message : String(error)) }};
+          }}
+        }})()
+        "#
+    ))
+}
+
+fn network_patch_script() -> &'static str {
+    r#"
+      window.__wamNetworkEvents = window.__wamNetworkEvents || [];
+      window.__wamRequestBlocks = window.__wamRequestBlocks || [];
+      window.__wamResponseMocks = window.__wamResponseMocks || [];
+      if (!window.__wamFetchPatched) {
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = async (input, init = {}) => {
+          const url = String(typeof input === 'string' ? input : input.url);
+          const method = String(init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+          window.__wamNetworkEvents.push({ type: 'request', url, method, at: Date.now() });
+          const blocked = window.__wamRequestBlocks.some((pattern) => url.includes(pattern));
+          if (blocked) {
+            window.__wamNetworkEvents.push({ type: 'response', url, method, status: 0, blocked: true, at: Date.now() });
+            throw new Error('Blocked by workflow');
+          }
+          const mock = window.__wamResponseMocks.find((candidate) => url.includes(candidate.urlContains));
+          if (mock) {
+            window.__wamNetworkEvents.push({ type: 'response', url, method, status: mock.status, mocked: true, at: Date.now() });
+            return new Response(mock.body, { status: mock.status, headers: { 'Content-Type': mock.contentType || 'text/plain' } });
+          }
+          const response = await originalFetch(input, init);
+          window.__wamNetworkEvents.push({ type: 'response', url: response.url || url, method, status: response.status, at: Date.now() });
+          return response;
+        };
+        window.__wamFetchPatched = true;
+      }
+    "#
+}
+
+fn block_request_script(url_patterns: &[String]) -> Result<String, RunnerError> {
+    let patterns = serde_json::to_string(url_patterns)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          {patch}
+          window.__wamRequestBlocks.push(...{patterns});
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#,
+        patch = network_patch_script()
+    ))
+}
+
+fn mock_response_script(
+    url_contains: &str,
+    status: u16,
+    body: &str,
+    content_type: Option<&str>,
+) -> Result<String, RunnerError> {
+    let url_contains = json_string(url_contains)?;
+    let body = json_string(body)?;
+    let content_type = optional_json_string(content_type)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          {patch}
+          window.__wamResponseMocks.push({{ urlContains: {url_contains}, status: {status}, body: {body}, contentType: {content_type} }});
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#,
+        patch = network_patch_script()
+    ))
+}
+
+fn wait_for_network_script(
+    url_contains: &str,
+    status: Option<u16>,
+    timeout_ms: Option<u64>,
+    response: bool,
+) -> Result<String, RunnerError> {
+    let url_contains = json_string(url_contains)?;
+    let status = status
+        .map(|status| status.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let event_type = if response { "response" } else { "request" };
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (async () => {{
+          {patch}
+          const urlContains = {url_contains};
+          const expectedStatus = {status};
+          const eventType = {event_type:?};
+          const deadline = Date.now() + {timeout_ms};
+          const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const matches = () => (window.__wamNetworkEvents || []).some((event) => {{
+            if (event.type !== eventType) return false;
+            if (!String(event.url || '').includes(urlContains)) return false;
+            return expectedStatus === null || Number(event.status) === Number(expectedStatus);
+          }});
+          while (Date.now() <= deadline) {{
+            if (matches()) return {{ ok: true, reason: "" }};
+            await delay(100);
+          }}
+          return {{ ok: false, reason: 'Network ' + eventType + ' was not observed before timeout' }};
+        }})()
+        "#,
+        patch = network_patch_script()
     ))
 }
 

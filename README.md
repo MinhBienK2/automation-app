@@ -63,21 +63,23 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 8. Add Detect Challenge, Pause For Human, and Resume When Condition steps.
 9. Add Fallback Selector, Retry Step, and Checkpoint steps.
 10. Export a workflow, import it back, validate an interval schedule, and run a batch with at least two input rows.
-11. Reorder steps and reopen the workflow.
-12. Test a selected step.
-13. Run the full workflow.
-14. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
-15. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
-16. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
-17. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
-18. Confirm download actions save a new file in the configured directory and store its path in outputs.
-19. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
-20. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
-21. Confirm user agent, viewport, geolocation, permission grants, and extra headers are visible to the target page.
-22. Confirm challenge detection writes an output, human verification pause is logged, and resume waits for the expected condition.
-23. Confirm fallback selector stores the selected XPath, retry step retries the nested action, checkpoint screenshot exists, and failed steps include a failure screenshot path.
-24. Confirm batch run results account for each row and separate success from failure.
-25. Confirm bad XPath fails immediately with a short message.
-26. Stop during a long Sleep.
-27. Confirm Chromium remains open after success, failure, and stop.
-28. Delete the workflow.
+11. Add Execute JS, Wait For Request, Wait For Response, Block Request, Mock Response, Set Local Storage, and Set Session Storage steps.
+12. Reorder steps and reopen the workflow.
+13. Test a selected step.
+14. Run the full workflow.
+15. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
+16. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
+17. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
+18. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
+19. Confirm download actions save a new file in the configured directory and store its path in outputs.
+20. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
+21. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
+22. Confirm user agent, viewport, geolocation, permission grants, and extra headers are visible to the target page.
+23. Confirm challenge detection writes an output, human verification pause is logged, and resume waits for the expected condition.
+24. Confirm fallback selector stores the selected XPath, retry step retries the nested action, checkpoint screenshot exists, and failed steps include a failure screenshot path.
+25. Confirm batch run results account for each row and separate success from failure.
+26. Confirm Execute JS stores output, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.
+27. Confirm bad XPath fails immediately with a short message.
+28. Stop during a long Sleep.
+29. Confirm Chromium remains open after success, failure, and stop.
+30. Delete the workflow.

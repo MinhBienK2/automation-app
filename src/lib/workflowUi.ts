@@ -79,6 +79,13 @@ export const actionLabels: Record<ActionType, string> = {
   fallback_selector: "Fallback Selector",
   retry_step: "Retry Step",
   checkpoint: "Checkpoint",
+  execute_js: "Execute JS",
+  wait_for_request: "Wait For Request",
+  wait_for_response: "Wait For Response",
+  block_request: "Block Request",
+  mock_response: "Mock Response",
+  set_local_storage: "Set Local Storage",
+  set_session_storage: "Set Session Storage",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -186,6 +193,18 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Reliability",
     actions: ["fallback_selector", "retry_step", "checkpoint"],
+  },
+  {
+    label: "Advanced",
+    actions: [
+      "execute_js",
+      "wait_for_request",
+      "wait_for_response",
+      "block_request",
+      "mock_response",
+      "set_local_storage",
+      "set_session_storage",
+    ],
   },
   {
     label: "Legacy",
@@ -371,6 +390,18 @@ export function stepSummary(step: WorkflowStep) {
       return `${step.config.config.max_attempts} attempt(s)`;
     case "checkpoint":
       return step.config.config.name || "No checkpoint";
+    case "execute_js":
+      return step.config.config.output_name || "No output";
+    case "wait_for_request":
+    case "wait_for_response":
+      return step.config.config.url_contains || "No URL matcher";
+    case "block_request":
+      return `${step.config.config.url_patterns.length} pattern(s)`;
+    case "mock_response":
+      return `${step.config.config.status} ${step.config.config.url_contains || "No URL matcher"}`;
+    case "set_local_storage":
+    case "set_session_storage":
+      return step.config.config.key || "No key";
   }
 }
 

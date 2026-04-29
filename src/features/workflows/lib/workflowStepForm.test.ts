@@ -597,4 +597,66 @@ describe("workflow step form config helpers", () => {
       config: { name: "after_submit", screenshot_path: "/tmp/checkpoint.png" },
     });
   });
+
+  test("updates phase eleven advanced runtime configs with typed values", () => {
+    const executeConfig: ActionConfig = {
+      type: "execute_js",
+      config: {
+        script: "return document.title;",
+        output_name: "title",
+        timeout_ms: 1000,
+      },
+    };
+    const waitResponseConfig: ActionConfig = {
+      type: "wait_for_response",
+      config: { url_contains: "/api/old", status: 200, timeout_ms: 1000 },
+    };
+    const blockConfig: ActionConfig = {
+      type: "block_request",
+      config: { url_patterns: ["analytics"] },
+    };
+    const mockConfig: ActionConfig = {
+      type: "mock_response",
+      config: {
+        url_contains: "/api/mock",
+        status: 200,
+        body: "{}",
+        content_type: "application/json",
+      },
+    };
+    const storageConfig: ActionConfig = {
+      type: "set_local_storage",
+      config: { key: "token", value: "old" },
+    };
+
+    expect(updateActionConfigField(executeConfig, "script", "return 42;")).toEqual({
+      type: "execute_js",
+      config: { script: "return 42;", output_name: "title", timeout_ms: 1000 },
+    });
+    expect(updateActionConfigField(executeConfig, "output_name", "")).toEqual({
+      type: "execute_js",
+      config: { script: "return document.title;", output_name: null, timeout_ms: 1000 },
+    });
+    expect(updateActionConfigField(waitResponseConfig, "status", "201")).toEqual({
+      type: "wait_for_response",
+      config: { url_contains: "/api/old", status: 201, timeout_ms: 1000 },
+    });
+    expect(updateActionConfigField(blockConfig, "url_patterns", "analytics\ntracking")).toEqual({
+      type: "block_request",
+      config: { url_patterns: ["analytics", "tracking"] },
+    });
+    expect(updateActionConfigField(mockConfig, "body", "{\"ok\":true}")).toEqual({
+      type: "mock_response",
+      config: {
+        url_contains: "/api/mock",
+        status: 200,
+        body: "{\"ok\":true}",
+        content_type: "application/json",
+      },
+    });
+    expect(updateActionConfigField(storageConfig, "value", "new")).toEqual({
+      type: "set_local_storage",
+      config: { key: "token", value: "new" },
+    });
+  });
 });

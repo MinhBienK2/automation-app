@@ -184,6 +184,19 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "checkpoint",
     );
+    expect(screen.getByRole("group", { name: "Advanced" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Execute JS" })).toHaveAttribute(
+      "data-value",
+      "execute_js",
+    );
+    expect(screen.getByRole("option", { name: "Wait For Response" })).toHaveAttribute(
+      "data-value",
+      "wait_for_response",
+    );
+    expect(screen.getByRole("option", { name: "Mock Response" })).toHaveAttribute(
+      "data-value",
+      "mock_response",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {

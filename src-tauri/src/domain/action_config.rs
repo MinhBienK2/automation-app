@@ -78,6 +78,13 @@ pub enum ActionType {
     FallbackSelector,
     RetryStep,
     Checkpoint,
+    ExecuteJs,
+    WaitForRequest,
+    WaitForResponse,
+    BlockRequest,
+    MockResponse,
+    SetLocalStorage,
+    SetSessionStorage,
 }
 
 impl ActionType {
@@ -156,6 +163,13 @@ impl ActionType {
             Self::FallbackSelector => "fallback_selector",
             Self::RetryStep => "retry_step",
             Self::Checkpoint => "checkpoint",
+            Self::ExecuteJs => "execute_js",
+            Self::WaitForRequest => "wait_for_request",
+            Self::WaitForResponse => "wait_for_response",
+            Self::BlockRequest => "block_request",
+            Self::MockResponse => "mock_response",
+            Self::SetLocalStorage => "set_local_storage",
+            Self::SetSessionStorage => "set_session_storage",
         }
     }
 
@@ -234,6 +248,13 @@ impl ActionType {
             Self::FallbackSelector => "Fallback Selector",
             Self::RetryStep => "Retry Step",
             Self::Checkpoint => "Checkpoint",
+            Self::ExecuteJs => "Execute JS",
+            Self::WaitForRequest => "Wait For Request",
+            Self::WaitForResponse => "Wait For Response",
+            Self::BlockRequest => "Block Request",
+            Self::MockResponse => "Mock Response",
+            Self::SetLocalStorage => "Set Local Storage",
+            Self::SetSessionStorage => "Set Session Storage",
         }
     }
 }
@@ -922,6 +943,43 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         screenshot_path: Option<String>,
     },
+    ExecuteJs {
+        script: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output_name: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    WaitForRequest {
+        url_contains: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    WaitForResponse {
+        url_contains: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        status: Option<u16>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    BlockRequest {
+        url_patterns: Vec<String>,
+    },
+    MockResponse {
+        url_contains: String,
+        status: u16,
+        body: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_type: Option<String>,
+    },
+    SetLocalStorage {
+        key: String,
+        value: String,
+    },
+    SetSessionStorage {
+        key: String,
+        value: String,
+    },
 }
 
 impl ActionConfig {
@@ -1000,6 +1058,13 @@ impl ActionConfig {
             Self::FallbackSelector { .. } => ActionType::FallbackSelector,
             Self::RetryStep { .. } => ActionType::RetryStep,
             Self::Checkpoint { .. } => ActionType::Checkpoint,
+            Self::ExecuteJs { .. } => ActionType::ExecuteJs,
+            Self::WaitForRequest { .. } => ActionType::WaitForRequest,
+            Self::WaitForResponse { .. } => ActionType::WaitForResponse,
+            Self::BlockRequest { .. } => ActionType::BlockRequest,
+            Self::MockResponse { .. } => ActionType::MockResponse,
+            Self::SetLocalStorage { .. } => ActionType::SetLocalStorage,
+            Self::SetSessionStorage { .. } => ActionType::SetSessionStorage,
         }
     }
 
@@ -1517,6 +1582,60 @@ impl ActionConfig {
                 "screenshot_path",
                 "Screenshot path is required",
             )),
+            Self::ExecuteJs { script, .. } if script.trim().is_empty() => {
+                Err(ValidationError::new("script", "JavaScript is required"))
+            }
+            Self::ExecuteJs {
+                output_name: Some(output_name),
+                ..
+            } if output_name.trim().is_empty() => Err(ValidationError::new(
+                "output_name",
+                "Output name is required",
+            )),
+            Self::ExecuteJs {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::WaitForRequest {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::WaitForResponse {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
+            Self::WaitForRequest { url_contains, .. }
+            | Self::WaitForResponse { url_contains, .. }
+            | Self::MockResponse { url_contains, .. }
+                if url_contains.trim().is_empty() =>
+            {
+                Err(ValidationError::new(
+                    "url_contains",
+                    "URL matcher is required",
+                ))
+            }
+            Self::BlockRequest { url_patterns } if url_patterns.is_empty() => Err(
+                ValidationError::new("url_patterns", "At least one URL pattern is required"),
+            ),
+            Self::BlockRequest { url_patterns }
+                if url_patterns.iter().any(|pattern| pattern.trim().is_empty()) =>
+            {
+                Err(ValidationError::new(
+                    "url_patterns",
+                    "URL pattern is required",
+                ))
+            }
+            Self::MockResponse { status, .. } if !(100..=599).contains(status) => Err(
+                ValidationError::new("status", "Status must be between 100 and 599"),
+            ),
+            Self::SetLocalStorage { key, .. } | Self::SetSessionStorage { key, .. }
+                if key.trim().is_empty() =>
+            {
+                Err(ValidationError::new("key", "Storage key is required"))
+            }
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..

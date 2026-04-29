@@ -387,6 +387,37 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             name: "checkpoint".to_string(),
             screenshot_path: None,
         },
+        ActionType::ExecuteJs => ActionConfig::ExecuteJs {
+            script: "return document.title;".to_string(),
+            output_name: Some("js_result".to_string()),
+            timeout_ms: Some(1000),
+        },
+        ActionType::WaitForRequest => ActionConfig::WaitForRequest {
+            url_contains: "/api/".to_string(),
+            timeout_ms: Some(5000),
+        },
+        ActionType::WaitForResponse => ActionConfig::WaitForResponse {
+            url_contains: "/api/".to_string(),
+            status: Some(200),
+            timeout_ms: Some(5000),
+        },
+        ActionType::BlockRequest => ActionConfig::BlockRequest {
+            url_patterns: vec!["analytics".to_string()],
+        },
+        ActionType::MockResponse => ActionConfig::MockResponse {
+            url_contains: "/api/mock".to_string(),
+            status: 200,
+            body: "{}".to_string(),
+            content_type: Some("application/json".to_string()),
+        },
+        ActionType::SetLocalStorage => ActionConfig::SetLocalStorage {
+            key: "key".to_string(),
+            value: "value".to_string(),
+        },
+        ActionType::SetSessionStorage => ActionConfig::SetSessionStorage {
+            key: "key".to_string(),
+            value: "value".to_string(),
+        },
     }
 }
 

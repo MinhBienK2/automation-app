@@ -71,7 +71,14 @@ export type ActionType =
   | "resume_when_condition"
   | "fallback_selector"
   | "retry_step"
-  | "checkpoint";
+  | "checkpoint"
+  | "execute_js"
+  | "wait_for_request"
+  | "wait_for_response"
+  | "block_request"
+  | "mock_response"
+  | "set_local_storage"
+  | "set_session_storage";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -459,6 +466,34 @@ export type ActionConfig =
   | {
       type: "checkpoint";
       config: { name: string; screenshot_path?: string | null };
+    }
+  | {
+      type: "execute_js";
+      config: { script: string; output_name?: string | null; timeout_ms?: number | null };
+    }
+  | {
+      type: "wait_for_request";
+      config: { url_contains: string; timeout_ms?: number | null };
+    }
+  | {
+      type: "wait_for_response";
+      config: { url_contains: string; status?: number | null; timeout_ms?: number | null };
+    }
+  | {
+      type: "block_request";
+      config: { url_patterns: string[] };
+    }
+  | {
+      type: "mock_response";
+      config: { url_contains: string; status: number; body: string; content_type?: string | null };
+    }
+  | {
+      type: "set_local_storage";
+      config: { key: string; value: string };
+    }
+  | {
+      type: "set_session_storage";
+      config: { key: string; value: string };
     };
 
 export type HeaderPair = {

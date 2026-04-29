@@ -4,10 +4,12 @@ export type ActionConfigField =
   | "attribute"
   | "behavior"
   | "block"
+  | "body"
   | "button"
   | "clear_before_input"
   | "click_count"
   | "condition"
+  | "content_type"
   | "delay_ms"
   | "direction"
   | "domain"
@@ -40,6 +42,7 @@ export type ActionConfigField =
   | "reason"
   | "retry_interval_ms"
   | "scroll_into_view"
+  | "script"
   | "seconds"
   | "status"
   | "source_xpath"
@@ -49,6 +52,8 @@ export type ActionConfigField =
   | "timeout_ms"
   | "typing_mode"
   | "url"
+  | "url_contains"
+  | "url_patterns"
   | "value"
   | "wait_ms"
   | "wait_until"
@@ -298,6 +303,44 @@ export function updateActionConfigField(
         };
       }
       return { type: "checkpoint", config: { ...config.config, name: value } };
+    case "execute_js":
+      if (field === "timeout_ms") {
+        return { type: "execute_js", config: { ...config.config, timeout_ms: Number(value) } };
+      }
+      if (field === "output_name") {
+        return { type: "execute_js", config: { ...config.config, output_name: value || null } };
+      }
+      return { type: "execute_js", config: { ...config.config, script: value } };
+    case "wait_for_request":
+      if (field === "timeout_ms") {
+        return {
+          type: "wait_for_request",
+          config: { ...config.config, timeout_ms: Number(value) },
+        };
+      }
+      return { type: "wait_for_request", config: { ...config.config, url_contains: value } };
+    case "wait_for_response":
+      if (field === "timeout_ms" || field === "status") {
+        return {
+          type: "wait_for_response",
+          config: { ...config.config, [field]: value ? Number(value) : null },
+        };
+      }
+      return { type: "wait_for_response", config: { ...config.config, url_contains: value } };
+    case "block_request":
+      return { type: "block_request", config: { url_patterns: parseLineList(value) } };
+    case "mock_response":
+      if (field === "status") {
+        return { type: "mock_response", config: { ...config.config, status: Number(value) } };
+      }
+      if (field === "content_type") {
+        return { type: "mock_response", config: { ...config.config, content_type: value || null } };
+      }
+      return { type: "mock_response", config: { ...config.config, [field]: value } };
+    case "set_local_storage":
+      return { type: "set_local_storage", config: { ...config.config, [field]: value } };
+    case "set_session_storage":
+      return { type: "set_session_storage", config: { ...config.config, [field]: value } };
   }
 }
 
