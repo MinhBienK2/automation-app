@@ -2,9 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   ActionConfig,
   ActionType,
+  BatchRunRequest,
+  BatchRunSummary,
+  OrchestrationSchedule,
   RunState,
   Workflow,
   WorkflowDetail,
+  WorkflowExport,
   WorkflowStep,
   WorkflowSummary,
 } from "../types/workflow";
@@ -59,4 +63,20 @@ export function stopRun() {
 
 export function getRunState() {
   return invoke<RunState>("get_run_state");
+}
+
+export function validateSchedule(schedule: OrchestrationSchedule) {
+  return invoke<OrchestrationSchedule>("validate_schedule", { schedule });
+}
+
+export function exportWorkflow(workflowId: string) {
+  return invoke<WorkflowExport>("export_workflow", { workflowId });
+}
+
+export function importWorkflow(exported: WorkflowExport) {
+  return invoke<WorkflowDetail>("import_workflow", { exported });
+}
+
+export function runBatchWorkflow(workflowId: string, request: BatchRunRequest) {
+  return invoke<BatchRunSummary>("run_batch_workflow", { workflowId, request });
 }

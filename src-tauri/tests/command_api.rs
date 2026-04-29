@@ -1,11 +1,14 @@
 mod support;
 
-use std::time::Duration;
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use support::{poll_status, test_state, test_state_with_runner, FakeRunExecutor};
 use workflow_automation_manager_lib::{
     commands,
-    domain::{ActionConfig, ActionType, RunStatus, ScrollDirection},
+    domain::{
+        ActionConfig, ActionType, BatchRunRequest, OrchestrationSchedule, RunStatus, ScheduleKind,
+        ScrollDirection,
+    },
 };
 
 #[tokio::test]
@@ -489,4 +492,121 @@ async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
 
     let run_state = commands::get_run_state_impl(&state).await;
     assert_eq!(run_state.status, RunStatus::Stopped);
+}
+
+#[tokio::test]
+async fn phase_ten_schedule_configs_validate() {
+    let valid = OrchestrationSchedule {
+        workflow_id: "workflow-1".to_string(),
+        enabled: true,
+        kind: ScheduleKind::Interval { every_seconds: 60 },
+    };
+
+    commands::validate_schedule_impl(valid)
+        .await
+        .expect("valid schedule");
+
+    let invalid = OrchestrationSchedule {
+        workflow_id: "workflow-1".to_string(),
+        enabled: true,
+        kind: ScheduleKind::Interval { every_seconds: 0 },
+    };
+
+    let error = commands::validate_schedule_impl(invalid)
+        .await
+        .expect_err("zero interval rejected");
+    assert_eq!(error.field.as_deref(), Some("every_seconds"));
+}
+
+#[tokio::test]
+async fn phase_ten_export_and_import_workflow_round_trip_steps() {
+    let (state, _db_path) = test_state().await;
+
+    let workflow = commands::create_workflow_impl(&state, "Export me")
+        .await
+        .expect("create");
+    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("add");
+    commands::update_step_impl(
+        &state,
+        &sleep.id,
+        "Short wait",
+        ActionConfig::Sleep { seconds: 0.5 },
+    )
+    .await
+    .expect("update");
+
+    let exported = commands::export_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("export");
+    assert_eq!(exported.version, 1);
+    assert_eq!(exported.workflow.name, "Export me");
+    assert_eq!(exported.steps.len(), 1);
+
+    let imported = commands::import_workflow_impl(&state, exported)
+        .await
+        .expect("import");
+
+    assert_ne!(imported.workflow.id, workflow.id);
+    assert_eq!(imported.workflow.name, "Export me (imported)");
+    assert_eq!(imported.steps.len(), 1);
+    assert_eq!(imported.steps[0].name, "Short wait");
+    assert_eq!(
+        imported.steps[0].config,
+        ActionConfig::Sleep { seconds: 0.5 }
+    );
+}
+
+#[tokio::test]
+async fn phase_ten_batch_runs_account_for_each_input_row() {
+    let runner = Arc::new(FakeRunExecutor::sequence(vec![
+        support::FakeRunOutcome::Success,
+        support::FakeRunOutcome::Failed {
+            step_number: 1,
+            reason: "row failed".to_string(),
+        },
+    ]));
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+
+    let workflow = commands::create_workflow_impl(&state, "Batch")
+        .await
+        .expect("create");
+    let step = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+        .await
+        .expect("add");
+    commands::update_step_impl(
+        &state,
+        &step.id,
+        "Wait",
+        ActionConfig::Sleep { seconds: 0.1 },
+    )
+    .await
+    .expect("update");
+
+    let mut first = BTreeMap::new();
+    first.insert("email".to_string(), "a@example.com".to_string());
+    let mut second = BTreeMap::new();
+    second.insert("email".to_string(), "b@example.com".to_string());
+
+    let summary = commands::run_batch_workflow_impl(
+        &state,
+        &workflow.id,
+        BatchRunRequest {
+            rows: vec![first, second],
+            concurrency_limit: Some(1),
+            headless: false,
+        },
+    )
+    .await
+    .expect("batch run");
+
+    assert_eq!(summary.total, 2);
+    assert_eq!(summary.succeeded, 1);
+    assert_eq!(summary.failed, 1);
+    assert_eq!(summary.results[0].row_index, 0);
+    assert_eq!(summary.results[0].status, RunStatus::Success);
+    assert_eq!(summary.results[1].status, RunStatus::Failed);
+    assert_eq!(summary.results[1].error.as_deref(), Some("row failed"));
+    assert_eq!(runner.run_count(), 2);
 }

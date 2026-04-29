@@ -503,6 +503,41 @@ export type WorkflowDetail = {
   steps: WorkflowStep[];
 };
 
+export type ScheduleKind =
+  | { kind: "once_at"; timestamp: string }
+  | { kind: "interval"; every_seconds: number };
+
+export type OrchestrationSchedule = {
+  workflow_id: string;
+  enabled: boolean;
+  kind: ScheduleKind;
+};
+
+export type BatchRunRequest = {
+  rows: Array<Record<string, string>>;
+  concurrency_limit?: number | null;
+  headless: boolean;
+};
+
+export type BatchRunRowResult = {
+  row_index: number;
+  status: RunStatus;
+  error?: string | null;
+};
+
+export type BatchRunSummary = {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: BatchRunRowResult[];
+};
+
+export type WorkflowExport = {
+  version: number;
+  workflow: Workflow;
+  steps: WorkflowStep[];
+};
+
 export type RunState = {
   status: RunStatus;
   mode: RunMode;

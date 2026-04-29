@@ -3,8 +3,12 @@ use tauri::State;
 
 use crate::{
     app_state::{AppState, RunStateDto},
-    domain::{ActionConfig, ActionType, RunMode, ValidationError, Workflow},
+    domain::{
+        ActionConfig, ActionType, BatchRunRequest, BatchRunRowResult, BatchRunSummary,
+        OrchestrationSchedule, RunMode, RunStatus, ValidationError, Workflow, WorkflowExport,
+    },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
+    runner::{RunnerCancellation, RunnerStatus},
     services::run_service::{default_config, start_background_run},
 };
 
@@ -187,6 +191,129 @@ pub async fn stop_run_impl(state: &AppState) -> Result<RunStateDto, CommandError
         .ok_or_else(|| CommandError::message("No active run to stop"))
 }
 
+pub async fn validate_schedule_impl(
+    schedule: OrchestrationSchedule,
+) -> Result<OrchestrationSchedule, CommandError> {
+    schedule.validate().map_err(CommandError::validation)?;
+    Ok(schedule)
+}
+
+pub async fn export_workflow_impl(
+    state: &AppState,
+    workflow_id: &str,
+) -> Result<WorkflowExport, CommandError> {
+    let detail = state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+
+    Ok(WorkflowExport {
+        version: 1,
+        workflow: detail.workflow,
+        steps: detail.steps,
+    })
+}
+
+pub async fn import_workflow_impl(
+    state: &AppState,
+    exported: WorkflowExport,
+) -> Result<WorkflowDetail, CommandError> {
+    if exported.version != 1 {
+        return Err(CommandError::message("Unsupported workflow export version"));
+    }
+
+    let imported_name = format!("{} (imported)", exported.workflow.name.trim());
+    let workflow = create_workflow_impl(state, &imported_name).await?;
+
+    for step in exported.steps {
+        step.config.validate().map_err(CommandError::validation)?;
+        let created = state
+            .repository()
+            .add_step(&workflow.id, step.config.clone())
+            .await
+            .map_err(CommandError::from)?;
+        state
+            .repository()
+            .update_step(&created.id, &step.name, step.config)
+            .await
+            .map_err(CommandError::from)?;
+    }
+
+    state
+        .repository()
+        .get_workflow(&workflow.id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found after import"))
+}
+
+pub async fn run_batch_workflow_impl(
+    state: &AppState,
+    workflow_id: &str,
+    request: BatchRunRequest,
+) -> Result<BatchRunSummary, CommandError> {
+    request.validate().map_err(CommandError::validation)?;
+
+    let detail = state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+    let run_executor = state.run_executor();
+    let base_steps = detail
+        .steps
+        .iter()
+        .map(|step| step.config.clone())
+        .collect::<Vec<_>>();
+    let mut results = Vec::with_capacity(request.rows.len());
+
+    for (row_index, row) in request.rows.into_iter().enumerate() {
+        let mut action_configs = row
+            .into_iter()
+            .map(|(name, value)| ActionConfig::SetVariable { name, value })
+            .collect::<Vec<_>>();
+        action_configs.extend(base_steps.clone());
+
+        let outcome = run_executor
+            .run_steps(action_configs, RunnerCancellation::new(), Box::new(|_| {}))
+            .await
+            .map_err(|error| CommandError::message(error.to_string()))?;
+        let (status, error) = match outcome.status {
+            RunnerStatus::Success => (RunStatus::Success, None),
+            RunnerStatus::Stopped => (RunStatus::Stopped, None),
+            RunnerStatus::Failed => (
+                RunStatus::Failed,
+                outcome.failed_step.map(|failed_step| failed_step.reason),
+            ),
+        };
+
+        results.push(BatchRunRowResult {
+            row_index,
+            status,
+            error,
+        });
+    }
+
+    let succeeded = results
+        .iter()
+        .filter(|result| result.status == RunStatus::Success)
+        .count();
+    let failed = results
+        .iter()
+        .filter(|result| result.status == RunStatus::Failed)
+        .count();
+
+    Ok(BatchRunSummary {
+        total: results.len(),
+        succeeded,
+        failed,
+        results,
+    })
+}
+
 #[tauri::command]
 pub async fn list_workflows(
     state: State<'_, AppState>,
@@ -282,4 +409,36 @@ pub async fn test_step(
 #[tauri::command]
 pub async fn stop_run(state: State<'_, AppState>) -> Result<RunStateDto, CommandError> {
     stop_run_impl(&state).await
+}
+
+#[tauri::command]
+pub async fn validate_schedule(
+    schedule: OrchestrationSchedule,
+) -> Result<OrchestrationSchedule, CommandError> {
+    validate_schedule_impl(schedule).await
+}
+
+#[tauri::command]
+pub async fn export_workflow(
+    state: State<'_, AppState>,
+    workflow_id: String,
+) -> Result<WorkflowExport, CommandError> {
+    export_workflow_impl(&state, &workflow_id).await
+}
+
+#[tauri::command]
+pub async fn import_workflow(
+    state: State<'_, AppState>,
+    exported: WorkflowExport,
+) -> Result<WorkflowDetail, CommandError> {
+    import_workflow_impl(&state, exported).await
+}
+
+#[tauri::command]
+pub async fn run_batch_workflow(
+    state: State<'_, AppState>,
+    workflow_id: String,
+    request: BatchRunRequest,
+) -> Result<BatchRunSummary, CommandError> {
+    run_batch_workflow_impl(&state, &workflow_id, request).await
 }

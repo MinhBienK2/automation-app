@@ -68,6 +68,10 @@ pub fn run() {
             commands::run_workflow,
             commands::test_step,
             commands::stop_run,
+            commands::validate_schedule,
+            commands::export_workflow,
+            commands::import_workflow,
+            commands::run_batch_workflow,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

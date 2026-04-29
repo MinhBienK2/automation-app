@@ -1,6 +1,14 @@
 #![allow(dead_code)]
 
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::VecDeque,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
 
 use uuid::Uuid;
 use workflow_automation_manager_lib::{
@@ -65,6 +73,16 @@ enum FakeRunBehavior {
         failed_step: Option<FailedStep>,
     },
     WaitForCancellation,
+    Sequence {
+        outcomes: Arc<Mutex<VecDeque<FakeRunOutcome>>>,
+        run_count: Arc<AtomicUsize>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum FakeRunOutcome {
+    Success,
+    Failed { step_number: usize, reason: String },
 }
 
 impl FakeRunExecutor {
@@ -93,6 +111,22 @@ impl FakeRunExecutor {
         Arc::new(Self {
             behavior: FakeRunBehavior::WaitForCancellation,
         })
+    }
+
+    pub fn sequence(outcomes: Vec<FakeRunOutcome>) -> Self {
+        Self {
+            behavior: FakeRunBehavior::Sequence {
+                outcomes: Arc::new(Mutex::new(VecDeque::from(outcomes))),
+                run_count: Arc::new(AtomicUsize::new(0)),
+            },
+        }
+    }
+
+    pub fn run_count(&self) -> usize {
+        match &self.behavior {
+            FakeRunBehavior::Sequence { run_count, .. } => run_count.load(Ordering::SeqCst),
+            _ => 0,
+        }
     }
 }
 
@@ -133,6 +167,40 @@ impl RunExecutor for FakeRunExecutor {
                         failed_step: None,
                         session: None,
                     })
+                }
+                FakeRunBehavior::Sequence {
+                    outcomes,
+                    run_count,
+                } => {
+                    run_count.fetch_add(1, Ordering::SeqCst);
+                    for step_number in 1..=steps.len() {
+                        progress(RunnerProgress::StepStarted { step_number });
+                        progress(RunnerProgress::StepCompleted { step_number });
+                    }
+                    let outcome = outcomes
+                        .lock()
+                        .expect("fake run outcomes lock")
+                        .pop_front()
+                        .unwrap_or(FakeRunOutcome::Success);
+
+                    match outcome {
+                        FakeRunOutcome::Success => Ok(RunExecution {
+                            status: RunnerStatus::Success,
+                            failed_step: None,
+                            session: None,
+                        }),
+                        FakeRunOutcome::Failed {
+                            step_number,
+                            reason,
+                        } => Ok(RunExecution {
+                            status: RunnerStatus::Failed,
+                            failed_step: Some(FailedStep {
+                                step_number,
+                                reason,
+                            }),
+                            session: None,
+                        }),
+                    }
                 }
             }
         })
