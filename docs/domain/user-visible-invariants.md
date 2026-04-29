@@ -26,7 +26,7 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute all steps in order.
 - Test-step runs execute from step 1 through the selected step.
-- Stop returns a stopped state and clears active-run ownership.
+- Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Browser sessions remain open after success, failure, and stop.
 - Failures identify the failed step when possible.
 
@@ -35,4 +35,3 @@ Preserve these unless the task explicitly changes them.
 - Workflow summaries include step counts.
 - Workflow detail returns ordered steps.
 - Child step changes touch the parent workflow `updated_at`.
-

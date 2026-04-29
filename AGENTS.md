@@ -7,7 +7,7 @@
 ## File-Scoped Commands
 | Task | Command |
 |------|---------|
-| Frontend test file | `npm test -- src/App.test.tsx` |
+| Frontend test file | `npm test -- path/to/file.test.tsx` |
 | Typecheck frontend | `npx tsc --noEmit` |
 | Rust test file | `cd src-tauri && cargo test --test command_api` |
 | Rust single test | `cd src-tauri && cargo test test_name` |
@@ -44,7 +44,7 @@ Before changing `src/App.css`, layout structure, or user-facing component stylin
 Preserve the existing Supabase-inspired dark theme unless the user explicitly requests a different visual direction. For UI changes, final summaries should mention whether `DESIGN.md` was consulted and call out any intentional deviations.
 
 ## Project Structure
-- Frontend UI lives in `src/App.tsx` and `src/App.css`; tests use Vitest and Testing Library in `src/App.test.tsx`.
+- Frontend UI lives in `src/App.tsx`, `src/App.css`, `src/layouts/`, and `src/features/workflows/`; tests use Vitest and Testing Library next to feature, layout, lib, and CSS files.
 - Tauri commands live in `src-tauri/src/commands.rs`; keep command-facing errors serializable through `CommandError`.
 - Domain validation belongs in `src-tauri/src/domain/`; persistence belongs in `src-tauri/src/repositories/` and SQL migrations.
 - Browser execution code belongs in `src-tauri/src/runner/`; preserve stop/run state behavior when changing runner flow.
