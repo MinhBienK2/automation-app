@@ -5,7 +5,8 @@ use crate::{
     app_state::{AppState, RunStateDto},
     domain::{
         ActionConfig, ActionType, BatchRunRequest, BatchRunRowResult, BatchRunSummary,
-        OrchestrationSchedule, RunMode, RunStatus, ValidationError, Workflow, WorkflowExport,
+        ClickWaitUntil, ElementSnapshot, GeneratedFixture, OrchestrationSchedule, RecordedEvent,
+        RunMode, RunStatus, SelectorCandidate, ValidationError, Workflow, WorkflowExport,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
     runner::{RunnerCancellation, RunnerStatus},
@@ -314,6 +315,141 @@ pub async fn run_batch_workflow_impl(
     })
 }
 
+pub async fn suggest_selectors_impl(
+    snapshot: ElementSnapshot,
+) -> Result<Vec<SelectorCandidate>, CommandError> {
+    let mut candidates = Vec::new();
+    if let Some(test_id) = snapshot
+        .test_id
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        candidates.push(SelectorCandidate {
+            selector_type: "xpath".to_string(),
+            selector: format!("//*[@data-testid='{}']", escape_xpath_literal(test_id)),
+            score: 100,
+            reason: "Uses stable test id attribute".to_string(),
+        });
+    }
+    if let Some(id) = snapshot
+        .id
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        candidates.push(SelectorCandidate {
+            selector_type: "xpath".to_string(),
+            selector: format!("//*[@id='{}']", escape_xpath_literal(id)),
+            score: 90,
+            reason: "Uses stable id attribute".to_string(),
+        });
+    }
+    if let Some(name) = snapshot
+        .name
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        candidates.push(SelectorCandidate {
+            selector_type: "xpath".to_string(),
+            selector: format!("//{}[@name='{}']", snapshot.tag, escape_xpath_literal(name)),
+            score: 80,
+            reason: "Uses form name attribute".to_string(),
+        });
+    }
+    if let Some(text) = snapshot
+        .text
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        candidates.push(SelectorCandidate {
+            selector_type: "xpath".to_string(),
+            selector: format!(
+                "//{}[normalize-space(.)='{}']",
+                snapshot.tag,
+                escape_xpath_literal(text.trim())
+            ),
+            score: 60,
+            reason: "Uses visible text and may change with copy".to_string(),
+        });
+    }
+    for class_name in snapshot
+        .classes
+        .iter()
+        .filter(|class_name| !class_name.trim().is_empty())
+        .take(2)
+    {
+        candidates.push(SelectorCandidate {
+            selector_type: "css".to_string(),
+            selector: format!("{}.{}", snapshot.tag, class_name.trim()),
+            score: 40,
+            reason: "Uses class name; verify it is stable".to_string(),
+        });
+    }
+    candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.score));
+    Ok(candidates)
+}
+
+pub async fn normalize_recorded_events_impl(
+    events: Vec<RecordedEvent>,
+) -> Result<Vec<ActionConfig>, CommandError> {
+    events
+        .into_iter()
+        .map(|event| match event {
+            RecordedEvent::Click { xpath } => Ok(ActionConfig::Click {
+                xpath,
+                iframe_xpath: None,
+                mode: None,
+                button: None,
+                click_count: None,
+                scroll_into_view: None,
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
+                wait_until: Some(ClickWaitUntil::Clickable),
+                timeout_ms: Some(5000),
+                retry_interval_ms: None,
+                post_click_wait_ms: None,
+            }),
+            RecordedEvent::InputText { xpath, text } => Ok(ActionConfig::InputText {
+                xpath,
+                iframe_xpath: None,
+                text,
+                clear_before_input: true,
+                typing_mode: None,
+                delay_ms: None,
+                wait_until: Some(ClickWaitUntil::Visible),
+                timeout_ms: Some(5000),
+            }),
+        })
+        .collect()
+}
+
+pub async fn dry_run_validate_config_impl(config: ActionConfig) -> Result<(), CommandError> {
+    config.validate().map_err(CommandError::validation)
+}
+
+pub async fn generate_fixture_impl(
+    path: String,
+    body_html: String,
+) -> Result<GeneratedFixture, CommandError> {
+    if path.trim().is_empty() {
+        return Err(CommandError {
+            message: "Fixture path is required".to_string(),
+            field: Some("path".to_string()),
+        });
+    }
+    let html = format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>{body_html}</body></html>"
+    );
+    std::fs::write(&path, html).map_err(|error| CommandError::message(error.to_string()))?;
+    Ok(GeneratedFixture { path })
+}
+
+fn escape_xpath_literal(value: &str) -> String {
+    value.replace('\'', "&apos;")
+}
+
 #[tauri::command]
 pub async fn list_workflows(
     state: State<'_, AppState>,
@@ -441,4 +577,31 @@ pub async fn run_batch_workflow(
     request: BatchRunRequest,
 ) -> Result<BatchRunSummary, CommandError> {
     run_batch_workflow_impl(&state, &workflow_id, request).await
+}
+
+#[tauri::command]
+pub async fn suggest_selectors(
+    snapshot: ElementSnapshot,
+) -> Result<Vec<SelectorCandidate>, CommandError> {
+    suggest_selectors_impl(snapshot).await
+}
+
+#[tauri::command]
+pub async fn normalize_recorded_events(
+    events: Vec<RecordedEvent>,
+) -> Result<Vec<ActionConfig>, CommandError> {
+    normalize_recorded_events_impl(events).await
+}
+
+#[tauri::command]
+pub async fn dry_run_validate_config(config: ActionConfig) -> Result<(), CommandError> {
+    dry_run_validate_config_impl(config).await
+}
+
+#[tauri::command]
+pub async fn generate_fixture(
+    path: String,
+    body_html: String,
+) -> Result<GeneratedFixture, CommandError> {
+    generate_fixture_impl(path, body_html).await
 }

@@ -6,8 +6,8 @@ use support::{poll_status, test_state, test_state_with_runner, FakeRunExecutor};
 use workflow_automation_manager_lib::{
     commands,
     domain::{
-        ActionConfig, ActionType, BatchRunRequest, OrchestrationSchedule, RunStatus, ScheduleKind,
-        ScrollDirection,
+        ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, OrchestrationSchedule,
+        RecordedEvent, RunStatus, ScheduleKind, ScrollDirection,
     },
 };
 
@@ -609,4 +609,93 @@ async fn phase_ten_batch_runs_account_for_each_input_row() {
     assert_eq!(summary.results[1].status, RunStatus::Failed);
     assert_eq!(summary.results[1].error.as_deref(), Some("row failed"));
     assert_eq!(runner.run_count(), 2);
+}
+
+#[tokio::test]
+async fn phase_twelve_suggests_selectors_and_normalizes_recorded_events() {
+    let candidates = commands::suggest_selectors_impl(ElementSnapshot {
+        tag: "button".to_string(),
+        id: Some("save".to_string()),
+        test_id: Some("save-button".to_string()),
+        name: None,
+        text: Some("Save changes".to_string()),
+        classes: vec!["btn".to_string(), "primary".to_string()],
+    })
+    .await
+    .expect("selector suggestions");
+
+    assert_eq!(candidates[0].selector, "//*[@data-testid='save-button']");
+    assert!(candidates[0].score > candidates[1].score);
+    assert!(candidates[0].reason.contains("test id"));
+
+    let steps = commands::normalize_recorded_events_impl(vec![
+        RecordedEvent::Click {
+            xpath: "//*[@data-testid='save-button']".to_string(),
+        },
+        RecordedEvent::InputText {
+            xpath: "//*[@name='email']".to_string(),
+            text: "user@example.com".to_string(),
+        },
+    ])
+    .await
+    .expect("normalize events");
+
+    assert!(matches!(steps[0], ActionConfig::Click { .. }));
+    assert!(matches!(steps[1], ActionConfig::InputText { .. }));
+}
+
+#[tokio::test]
+async fn phase_twelve_dry_run_validation_and_fixture_generation_work() {
+    commands::dry_run_validate_config_impl(ActionConfig::Click {
+        xpath: "//*[@id='save']".to_string(),
+        iframe_xpath: None,
+        mode: None,
+        button: None,
+        click_count: None,
+        scroll_into_view: None,
+        block: None,
+        inline: None,
+        position: None,
+        offset_x: None,
+        offset_y: None,
+        wait_until: None,
+        timeout_ms: None,
+        retry_interval_ms: None,
+        post_click_wait_ms: None,
+    })
+    .await
+    .expect("valid config");
+
+    let invalid = commands::dry_run_validate_config_impl(ActionConfig::Click {
+        xpath: String::new(),
+        iframe_xpath: None,
+        mode: None,
+        button: None,
+        click_count: None,
+        scroll_into_view: None,
+        block: None,
+        inline: None,
+        position: None,
+        offset_x: None,
+        offset_y: None,
+        wait_until: None,
+        timeout_ms: None,
+        retry_interval_ms: None,
+        post_click_wait_ms: None,
+    })
+    .await
+    .expect_err("invalid config rejected");
+    assert_eq!(invalid.field.as_deref(), Some("xpath"));
+
+    let path = std::env::temp_dir().join(format!("wam-fixture-{}.html", uuid::Uuid::new_v4()));
+    let fixture = commands::generate_fixture_impl(
+        path.display().to_string(),
+        "<button data-testid=\"save-button\">Save</button>".to_string(),
+    )
+    .await
+    .expect("generate fixture");
+    assert!(std::path::Path::new(&fixture.path).exists());
+    assert!(std::fs::read_to_string(&fixture.path)
+        .expect("fixture html")
+        .contains("save-button"));
 }

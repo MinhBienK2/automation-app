@@ -4,8 +4,12 @@ import type {
   ActionType,
   BatchRunRequest,
   BatchRunSummary,
+  ElementSnapshot,
+  GeneratedFixture,
   OrchestrationSchedule,
+  RecordedEvent,
   RunState,
+  SelectorCandidate,
   Workflow,
   WorkflowDetail,
   WorkflowExport,
@@ -79,4 +83,20 @@ export function importWorkflow(exported: WorkflowExport) {
 
 export function runBatchWorkflow(workflowId: string, request: BatchRunRequest) {
   return invoke<BatchRunSummary>("run_batch_workflow", { workflowId, request });
+}
+
+export function suggestSelectors(snapshot: ElementSnapshot) {
+  return invoke<SelectorCandidate[]>("suggest_selectors", { snapshot });
+}
+
+export function normalizeRecordedEvents(events: RecordedEvent[]) {
+  return invoke<ActionConfig[]>("normalize_recorded_events", { events });
+}
+
+export function dryRunValidateConfig(config: ActionConfig) {
+  return invoke("dry_run_validate_config", { config });
+}
+
+export function generateFixture(path: string, bodyHtml: string) {
+  return invoke<GeneratedFixture>("generate_fixture", { path, bodyHtml });
 }

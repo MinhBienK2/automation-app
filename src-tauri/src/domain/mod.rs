@@ -1,4 +1,5 @@
 mod action_config;
+mod builder_assist;
 mod orchestration;
 mod run;
 mod validation;
@@ -10,6 +11,7 @@ pub use action_config::{
     InputTypingMode, NavigateWaitUntil, ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline,
     ScrollMode, SelectOptionMatchBy, StopWorkflowStatus, WaitCondition, WorkflowCondition,
 };
+pub use builder_assist::{ElementSnapshot, GeneratedFixture, RecordedEvent, SelectorCandidate};
 pub use orchestration::{
     BatchRunRequest, BatchRunRowResult, BatchRunSummary, OrchestrationSchedule, ScheduleKind,
     WorkflowExport,

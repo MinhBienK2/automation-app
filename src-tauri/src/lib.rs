@@ -72,6 +72,10 @@ pub fn run() {
             commands::export_workflow,
             commands::import_workflow,
             commands::run_batch_workflow,
+            commands::suggest_selectors,
+            commands::normalize_recorded_events,
+            commands::dry_run_validate_config,
+            commands::generate_fixture,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

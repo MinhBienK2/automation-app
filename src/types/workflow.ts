@@ -573,6 +573,30 @@ export type WorkflowExport = {
   steps: WorkflowStep[];
 };
 
+export type ElementSnapshot = {
+  tag: string;
+  id?: string | null;
+  test_id?: string | null;
+  name?: string | null;
+  text?: string | null;
+  classes: string[];
+};
+
+export type SelectorCandidate = {
+  selector_type: string;
+  selector: string;
+  score: number;
+  reason: string;
+};
+
+export type RecordedEvent =
+  | { type: "click"; xpath: string }
+  | { type: "input_text"; xpath: string; text: string };
+
+export type GeneratedFixture = {
+  path: string;
+};
+
 export type RunState = {
   status: RunStatus;
   mode: RunMode;

@@ -2,8 +2,12 @@ import { describe, expect, test } from "vitest";
 import { invokeMock, resetTauriInvoke } from "../tests/mocks/tauri";
 import {
   exportWorkflow,
+  dryRunValidateConfig,
+  generateFixture,
   importWorkflow,
+  normalizeRecordedEvents,
   runBatchWorkflow,
+  suggestSelectors,
   validateSchedule,
 } from "./workflowApi";
 import type { WorkflowExport } from "../types/workflow";
@@ -36,6 +40,17 @@ describe("workflow API phase ten commands", () => {
       concurrency_limit: 1,
       headless: false,
     });
+    await suggestSelectors({
+      tag: "button",
+      id: "save",
+      test_id: "save-button",
+      name: null,
+      text: "Save",
+      classes: [],
+    });
+    await normalizeRecordedEvents([{ type: "click", xpath: "//*[@id='save']" }]);
+    await dryRunValidateConfig({ type: "sleep", config: { seconds: 1 } });
+    await generateFixture("/tmp/fixture.html", "<button>Save</button>");
 
     expect(invokeMock).toHaveBeenCalledWith("validate_schedule", {
       schedule: {
@@ -55,6 +70,26 @@ describe("workflow API phase ten commands", () => {
         concurrency_limit: 1,
         headless: false,
       },
+    });
+    expect(invokeMock).toHaveBeenCalledWith("suggest_selectors", {
+      snapshot: {
+        tag: "button",
+        id: "save",
+        test_id: "save-button",
+        name: null,
+        text: "Save",
+        classes: [],
+      },
+    });
+    expect(invokeMock).toHaveBeenCalledWith("normalize_recorded_events", {
+      events: [{ type: "click", xpath: "//*[@id='save']" }],
+    });
+    expect(invokeMock).toHaveBeenCalledWith("dry_run_validate_config", {
+      config: { type: "sleep", config: { seconds: 1 } },
+    });
+    expect(invokeMock).toHaveBeenCalledWith("generate_fixture", {
+      path: "/tmp/fixture.html",
+      bodyHtml: "<button>Save</button>",
     });
   });
 });
