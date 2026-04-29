@@ -51,7 +51,7 @@ cargo clippy --all-targets --all-features
 
 ## MVP Smoke Checklist
 
-Use a simple page with an input, button, iframe, dialog trigger, download link, list, table, link, and tall body.
+Use a simple page with an input, button, iframe, dialog trigger, download link, list, table, link, tall body, and an HTTP fixture that echoes request headers and geolocation.
 
 1. Create a workflow.
 2. Add Open URL, Sleep, Type Text, Click, and Scroll steps.
@@ -59,17 +59,19 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 4. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Switch Frame, Accept Dialog, Dismiss Dialog, Set Download Directory, and Wait For Download steps.
 5. Add Set Variable, Assert Element, Assert Text, If Condition, Repeat Times, Repeat For Each, Retry Block, and Stop Workflow steps.
 6. Add Use Profile, Save Session, Load Session, Set Cookie, Clear Cookies, and Set Secret steps.
-7. Reorder steps and reopen the workflow.
-8. Test a selected step.
-9. Run the full workflow.
-10. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
-11. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
-12. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
-13. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
-14. Confirm download actions save a new file in the configured directory and store its path in outputs.
-15. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
-16. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
-17. Confirm bad XPath fails immediately with a short message.
-18. Stop during a long Sleep.
-19. Confirm Chromium remains open after success, failure, and stop.
-20. Delete the workflow.
+7. Add Use Proxy, Set User Agent, Set Viewport, Set Geolocation, Set Extra Headers, and Grant Permission steps.
+8. Reorder steps and reopen the workflow.
+9. Test a selected step.
+10. Run the full workflow.
+11. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
+12. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
+13. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
+14. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
+15. Confirm download actions save a new file in the configured directory and store its path in outputs.
+16. Confirm `{{variable}}` templates interpolate into action text and control-flow blocks run nested actions.
+17. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
+18. Confirm user agent, viewport, geolocation, permission grants, and extra headers are visible to the target page.
+19. Confirm bad XPath fails immediately with a short message.
+20. Stop during a long Sleep.
+21. Confirm Chromium remains open after success, failure, and stop.
+22. Delete the workflow.

@@ -2,8 +2,9 @@ use crate::{
     app_state::{AppState, RunStateDto},
     commands::CommandError,
     domain::{
-        ActionConfig, ActionType, CheckboxState, ClearInputMethod, InputTypingMode, RunError,
-        RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, WaitCondition, WorkflowStep,
+        ActionConfig, ActionType, CheckboxState, ClearInputMethod, HeaderPair, InputTypingMode,
+        RunError, RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, WaitCondition,
+        WorkflowStep,
     },
     runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
 };
@@ -315,6 +316,36 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
         ActionType::SetSecret => ActionConfig::SetSecret {
             name: "secret".to_string(),
             value: String::new(),
+        },
+        ActionType::UseProxy => ActionConfig::UseProxy {
+            server: String::new(),
+            username: None,
+            password: None,
+        },
+        ActionType::SetUserAgent => ActionConfig::SetUserAgent {
+            user_agent: String::new(),
+        },
+        ActionType::SetViewport => ActionConfig::SetViewport {
+            width: 1280,
+            height: 720,
+            device_scale_factor: Some(1.0),
+            mobile: false,
+            touch: false,
+        },
+        ActionType::SetGeolocation => ActionConfig::SetGeolocation {
+            latitude: 0.0,
+            longitude: 0.0,
+            accuracy: Some(100.0),
+        },
+        ActionType::SetExtraHeaders => ActionConfig::SetExtraHeaders {
+            headers: vec![HeaderPair {
+                name: "X-WAM-Header".to_string(),
+                value: "value".to_string(),
+            }],
+        },
+        ActionType::GrantPermission => ActionConfig::GrantPermission {
+            origin: None,
+            permissions: vec!["geolocation".to_string()],
         },
     }
 }

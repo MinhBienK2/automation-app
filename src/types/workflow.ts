@@ -59,7 +59,13 @@ export type ActionType =
   | "load_session"
   | "set_cookie"
   | "clear_cookies"
-  | "set_secret";
+  | "set_secret"
+  | "use_proxy"
+  | "set_user_agent"
+  | "set_viewport"
+  | "set_geolocation"
+  | "set_extra_headers"
+  | "grant_permission";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -399,7 +405,36 @@ export type ActionConfig =
       config: { name: string; value: string; domain?: string | null; path?: string | null };
     }
   | { type: "clear_cookies"; config: { domain?: string | null } }
-  | { type: "set_secret"; config: { name: string; value: string } };
+  | { type: "set_secret"; config: { name: string; value: string } }
+  | {
+      type: "use_proxy";
+      config: { server: string; username?: string | null; password?: string | null };
+    }
+  | { type: "set_user_agent"; config: { user_agent: string } }
+  | {
+      type: "set_viewport";
+      config: {
+        width: number;
+        height: number;
+        device_scale_factor?: number | null;
+        mobile: boolean;
+        touch: boolean;
+      };
+    }
+  | {
+      type: "set_geolocation";
+      config: { latitude: number; longitude: number; accuracy?: number | null };
+    }
+  | { type: "set_extra_headers"; config: { headers: HeaderPair[] } }
+  | {
+      type: "grant_permission";
+      config: { origin?: string | null; permissions: string[] };
+    };
+
+export type HeaderPair = {
+  name: string;
+  value: string;
+};
 
 export type WorkflowCondition =
   | { kind: "output_equals"; name: string; value: string }

@@ -10,8 +10,8 @@ use std::{
 use uuid::Uuid;
 use workflow_automation_manager_lib::{
     domain::{
-        ActionConfig, AssertElementState, AssertTextMatchMode, ClickWaitUntil, ScrollDirection,
-        StopWorkflowStatus, WaitCondition, WorkflowCondition,
+        ActionConfig, AssertElementState, AssertTextMatchMode, ClickWaitUntil, HeaderPair,
+        ScrollDirection, StopWorkflowStatus, WaitCondition, WorkflowCondition,
     },
     runner::{BrowserRunner, RunnerCancellation, RunnerOptions, RunnerStatus},
 };
@@ -269,6 +269,65 @@ fn write_phase_six_session_page() -> (String, String) {
         format!("http://{address}/"),
         session_path.display().to_string(),
     )
+}
+
+fn phase_seven_server() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind phase seven server");
+    let address = listener.local_addr().expect("phase seven address");
+
+    thread::spawn(move || {
+        for stream in listener.incoming().take(4) {
+            let mut stream = stream.expect("accept phase seven request");
+            let mut request = [0; 8192];
+            let bytes = stream.read(&mut request).expect("read phase seven request");
+            let request = String::from_utf8_lossy(&request[..bytes]);
+            let header_value = if request
+                .lines()
+                .any(|line| line.eq_ignore_ascii_case("X-WAM-Phase: seven"))
+            {
+                "seven"
+            } else {
+                "missing"
+            };
+            let body = format!(
+                r#"<!doctype html>
+                <html>
+                  <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                  </head>
+                  <body>
+                    <div id="ua"></div>
+                    <div id="viewport"></div>
+                    <div id="headers">{header_value}</div>
+                    <div id="geo">pending</div>
+                    <script>
+                      document.getElementById('ua').textContent = navigator.userAgent;
+                      document.getElementById('viewport').textContent = window.innerWidth + 'x' + window.innerHeight + '|touch=' + navigator.maxTouchPoints;
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {{
+                          document.getElementById('geo').textContent =
+                            position.coords.latitude.toFixed(2) + ',' + position.coords.longitude.toFixed(2);
+                        }},
+                        (error) => {{
+                          document.getElementById('geo').textContent = 'error:' + error.code;
+                        }}
+                      );
+                    </script>
+                  </body>
+                </html>"#
+            );
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("write phase seven response");
+        }
+    });
+
+    format!("http://{}", address)
 }
 
 fn runner() -> BrowserRunner {
@@ -1290,4 +1349,78 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
         .expect("run third phase six session steps");
     assert_eq!(third.status, RunnerStatus::Success);
     third.session.close().await.expect("close third browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_seven_network_device_actions_against_visible_chromium() {
+    let url = phase_seven_server();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::SetUserAgent {
+                    user_agent: "WAMPhaseSeven/1.0".to_string(),
+                },
+                ActionConfig::SetViewport {
+                    width: 390,
+                    height: 844,
+                    device_scale_factor: Some(2.0),
+                    mobile: true,
+                    touch: true,
+                },
+                ActionConfig::GrantPermission {
+                    origin: Some(url.clone()),
+                    permissions: vec!["geolocation".to_string()],
+                },
+                ActionConfig::SetGeolocation {
+                    latitude: 10.77,
+                    longitude: 106.70,
+                    accuracy: Some(10.0),
+                },
+                ActionConfig::SetExtraHeaders {
+                    headers: vec![HeaderPair {
+                        name: "X-WAM-Phase".to_string(),
+                        value: "seven".to_string(),
+                    }],
+                },
+                ActionConfig::OpenUrl { url },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"ua\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "WAMPhaseSeven/1.0".to_string(),
+                    match_mode: AssertTextMatchMode::Contains,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"viewport\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "390x".to_string(),
+                    match_mode: AssertTextMatchMode::Contains,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"headers\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "seven".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"geo\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "10.77,106.70".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(5000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase seven network device steps");
+
+    assert_eq!(outcome.failed_step, None);
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    outcome.session.close().await.expect("close browser");
 }

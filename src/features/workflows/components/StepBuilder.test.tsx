@@ -145,6 +145,19 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "set_secret",
     );
+    expect(screen.getByRole("group", { name: "Network" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Use Proxy" })).toHaveAttribute(
+      "data-value",
+      "use_proxy",
+    );
+    expect(screen.getByRole("option", { name: "Set Viewport" })).toHaveAttribute(
+      "data-value",
+      "set_viewport",
+    );
+    expect(screen.getByRole("option", { name: "Grant Permission" })).toHaveAttribute(
+      "data-value",
+      "grant_permission",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -243,6 +256,60 @@ describe("Workflow step builder integration", () => {
             delay_ms: 25,
             wait_until: "visible",
             timeout_ms: 3000,
+          },
+        },
+      });
+    });
+  });
+
+  test("saves phase seven network device config from the form", async () => {
+    const viewportStep: WorkflowStep = {
+      id: "step-viewport",
+      name: "Mobile viewport",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "set_viewport",
+      config: {
+        type: "set_viewport",
+        config: {
+          width: 1280,
+          height: 720,
+          device_scale_factor: 1,
+          mobile: false,
+          touch: false,
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([viewportStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.clear(await screen.findByLabelText("Width"));
+    await userEvent.type(screen.getByLabelText("Width"), "390");
+    await userEvent.clear(screen.getByLabelText("Height"));
+    await userEvent.type(screen.getByLabelText("Height"), "844");
+    await userEvent.selectOptions(screen.getByLabelText("Mobile"), "true");
+    await userEvent.selectOptions(screen.getByLabelText("Touch"), "true");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-viewport",
+        name: "Mobile viewport",
+        config: {
+          type: "set_viewport",
+          config: {
+            width: 390,
+            height: 844,
+            device_scale_factor: 1,
+            mobile: true,
+            touch: true,
           },
         },
       });

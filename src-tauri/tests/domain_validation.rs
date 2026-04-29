@@ -1,8 +1,8 @@
 use workflow_automation_manager_lib::domain::{
     ActionConfig, ActionType, CheckboxState, ClearInputMethod, ClickButton, ClickMode,
-    ClickPosition, ClickWaitUntil, InputTypingMode, RunError, RunStatus, ScrollBehavior,
-    ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy, ValidationError,
-    WaitCondition, Workflow, WorkflowStep,
+    ClickPosition, ClickWaitUntil, HeaderPair, InputTypingMode, RunError, RunStatus,
+    ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy,
+    ValidationError, WaitCondition, Workflow, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -689,6 +689,120 @@ fn phase_six_session_profile_secret_configs_validate_required_fields() {
         .expect_err("blank secret value should fail"),
         "value",
         "Secret value is required",
+    );
+}
+
+#[test]
+fn phase_seven_network_device_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::UseProxy {
+            server: "http://127.0.0.1:8080".to_string(),
+            username: Some("agent".to_string()),
+            password: Some("secret".to_string()),
+        },
+        ActionConfig::SetUserAgent {
+            user_agent: "WAMPhaseSeven/1.0".to_string(),
+        },
+        ActionConfig::SetViewport {
+            width: 390,
+            height: 844,
+            device_scale_factor: Some(2.0),
+            mobile: true,
+            touch: true,
+        },
+        ActionConfig::SetGeolocation {
+            latitude: 10.77,
+            longitude: 106.70,
+            accuracy: Some(15.0),
+        },
+        ActionConfig::SetExtraHeaders {
+            headers: vec![HeaderPair {
+                name: "X-WAM-Phase".to_string(),
+                value: "seven".to_string(),
+            }],
+        },
+        ActionConfig::GrantPermission {
+            origin: Some("http://127.0.0.1:3000".to_string()),
+            permissions: vec!["geolocation".to_string()],
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_seven_network_device_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::UseProxy {
+            server: String::new(),
+            username: None,
+            password: None,
+        }
+        .validate()
+        .expect_err("blank proxy server should fail"),
+        "server",
+        "Proxy server is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetUserAgent {
+            user_agent: String::new(),
+        }
+        .validate()
+        .expect_err("blank user agent should fail"),
+        "user_agent",
+        "User agent is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetViewport {
+            width: 0,
+            height: 844,
+            device_scale_factor: Some(1.0),
+            mobile: false,
+            touch: false,
+        }
+        .validate()
+        .expect_err("zero viewport width should fail"),
+        "width",
+        "Viewport width must be greater than 0",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetGeolocation {
+            latitude: 91.0,
+            longitude: 106.70,
+            accuracy: Some(15.0),
+        }
+        .validate()
+        .expect_err("invalid latitude should fail"),
+        "latitude",
+        "Latitude must be between -90 and 90",
+    );
+
+    assert_validation_message(
+        ActionConfig::SetExtraHeaders { headers: vec![] }
+            .validate()
+            .expect_err("empty headers should fail"),
+        "headers",
+        "At least one header is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::GrantPermission {
+            origin: None,
+            permissions: vec![],
+        }
+        .validate()
+        .expect_err("empty permissions should fail"),
+        "permissions",
+        "At least one permission is required",
     );
 }
 

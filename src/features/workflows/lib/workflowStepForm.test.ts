@@ -437,4 +437,66 @@ describe("workflow step form config helpers", () => {
       config: { name: "password", value: "new-secret" },
     });
   });
+
+  test("updates phase seven network device configs with typed values", () => {
+    const proxyConfig: ActionConfig = {
+      type: "use_proxy",
+      config: { server: "http://old:8080", username: null, password: null },
+    };
+    const viewportConfig: ActionConfig = {
+      type: "set_viewport",
+      config: {
+        width: 1280,
+        height: 720,
+        device_scale_factor: 1,
+        mobile: false,
+        touch: false,
+      },
+    };
+    const headersConfig: ActionConfig = {
+      type: "set_extra_headers",
+      config: { headers: [{ name: "X-Old", value: "0" }] },
+    };
+    const permissionConfig: ActionConfig = {
+      type: "grant_permission",
+      config: { origin: null, permissions: ["geolocation"] },
+    };
+
+    expect(updateActionConfigField(proxyConfig, "server", "socks5://127.0.0.1:9050")).toEqual({
+      type: "use_proxy",
+      config: { server: "socks5://127.0.0.1:9050", username: null, password: null },
+    });
+    expect(updateActionConfigField(proxyConfig, "username", "agent")).toEqual({
+      type: "use_proxy",
+      config: { server: "http://old:8080", username: "agent", password: null },
+    });
+    expect(updateActionConfigField(viewportConfig, "width", "390")).toEqual({
+      type: "set_viewport",
+      config: {
+        width: 390,
+        height: 720,
+        device_scale_factor: 1,
+        mobile: false,
+        touch: false,
+      },
+    });
+    expect(updateActionConfigField(viewportConfig, "mobile", "true")).toEqual({
+      type: "set_viewport",
+      config: {
+        width: 1280,
+        height: 720,
+        device_scale_factor: 1,
+        mobile: true,
+        touch: false,
+      },
+    });
+    expect(updateActionConfigField(headersConfig, "headers", "X-WAM-Phase: seven")).toEqual({
+      type: "set_extra_headers",
+      config: { headers: [{ name: "X-WAM-Phase", value: "seven" }] },
+    });
+    expect(updateActionConfigField(permissionConfig, "permissions", "geolocation\nnotifications")).toEqual({
+      type: "grant_permission",
+      config: { origin: null, permissions: ["geolocation", "notifications"] },
+    });
+  });
 });

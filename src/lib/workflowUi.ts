@@ -67,6 +67,12 @@ export const actionLabels: Record<ActionType, string> = {
   set_cookie: "Set Cookie",
   clear_cookies: "Clear Cookies",
   set_secret: "Set Secret",
+  use_proxy: "Use Proxy",
+  set_user_agent: "Set User Agent",
+  set_viewport: "Set Viewport",
+  set_geolocation: "Set Geolocation",
+  set_extra_headers: "Set Extra Headers",
+  grant_permission: "Grant Permission",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -154,6 +160,17 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
       "set_cookie",
       "clear_cookies",
       "set_secret",
+    ],
+  },
+  {
+    label: "Network",
+    actions: [
+      "use_proxy",
+      "set_user_agent",
+      "set_viewport",
+      "set_geolocation",
+      "set_extra_headers",
+      "grant_permission",
     ],
   },
   {
@@ -316,6 +333,18 @@ export function stepSummary(step: WorkflowStep) {
       return step.config.config.domain || "All visible cookies";
     case "set_secret":
       return `${step.config.config.name || "No secret"} = [redacted]`;
+    case "use_proxy":
+      return step.config.config.server || "No proxy";
+    case "set_user_agent":
+      return step.config.config.user_agent || "No user agent";
+    case "set_viewport":
+      return `${step.config.config.width}x${step.config.config.height}`;
+    case "set_geolocation":
+      return `${step.config.config.latitude}, ${step.config.config.longitude}`;
+    case "set_extra_headers":
+      return `${step.config.config.headers.length} header(s)`;
+    case "grant_permission":
+      return step.config.config.permissions.join(", ") || "No permissions";
   }
 }
 

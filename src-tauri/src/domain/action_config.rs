@@ -66,6 +66,12 @@ pub enum ActionType {
     SetCookie,
     ClearCookies,
     SetSecret,
+    UseProxy,
+    SetUserAgent,
+    SetViewport,
+    SetGeolocation,
+    SetExtraHeaders,
+    GrantPermission,
 }
 
 impl ActionType {
@@ -132,6 +138,12 @@ impl ActionType {
             Self::SetCookie => "set_cookie",
             Self::ClearCookies => "clear_cookies",
             Self::SetSecret => "set_secret",
+            Self::UseProxy => "use_proxy",
+            Self::SetUserAgent => "set_user_agent",
+            Self::SetViewport => "set_viewport",
+            Self::SetGeolocation => "set_geolocation",
+            Self::SetExtraHeaders => "set_extra_headers",
+            Self::GrantPermission => "grant_permission",
         }
     }
 
@@ -198,6 +210,12 @@ impl ActionType {
             Self::SetCookie => "Set Cookie",
             Self::ClearCookies => "Clear Cookies",
             Self::SetSecret => "Set Secret",
+            Self::UseProxy => "Use Proxy",
+            Self::SetUserAgent => "Set User Agent",
+            Self::SetViewport => "Set Viewport",
+            Self::SetGeolocation => "Set Geolocation",
+            Self::SetExtraHeaders => "Set Extra Headers",
+            Self::GrantPermission => "Grant Permission",
         }
     }
 }
@@ -364,6 +382,12 @@ pub enum SelectOptionMatchBy {
 pub enum CheckboxState {
     Checked,
     Unchecked,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeaderPair {
+    pub name: String,
+    pub value: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -815,6 +839,38 @@ pub enum ActionConfig {
         name: String,
         value: String,
     },
+    UseProxy {
+        server: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        username: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        password: Option<String>,
+    },
+    SetUserAgent {
+        user_agent: String,
+    },
+    SetViewport {
+        width: u32,
+        height: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        device_scale_factor: Option<f64>,
+        mobile: bool,
+        touch: bool,
+    },
+    SetGeolocation {
+        latitude: f64,
+        longitude: f64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        accuracy: Option<f64>,
+    },
+    SetExtraHeaders {
+        headers: Vec<HeaderPair>,
+    },
+    GrantPermission {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        origin: Option<String>,
+        permissions: Vec<String>,
+    },
 }
 
 impl ActionConfig {
@@ -881,6 +937,12 @@ impl ActionConfig {
             Self::SetCookie { .. } => ActionType::SetCookie,
             Self::ClearCookies { .. } => ActionType::ClearCookies,
             Self::SetSecret { .. } => ActionType::SetSecret,
+            Self::UseProxy { .. } => ActionType::UseProxy,
+            Self::SetUserAgent { .. } => ActionType::SetUserAgent,
+            Self::SetViewport { .. } => ActionType::SetViewport,
+            Self::SetGeolocation { .. } => ActionType::SetGeolocation,
+            Self::SetExtraHeaders { .. } => ActionType::SetExtraHeaders,
+            Self::GrantPermission { .. } => ActionType::GrantPermission,
         }
     }
 
@@ -1245,6 +1307,81 @@ impl ActionConfig {
             }
             Self::SetSecret { value, .. } if value.is_empty() => {
                 Err(ValidationError::new("value", "Secret value is required"))
+            }
+            Self::UseProxy { server, .. } if server.trim().is_empty() => {
+                Err(ValidationError::new("server", "Proxy server is required"))
+            }
+            Self::UseProxy {
+                username: Some(username),
+                ..
+            } if username.trim().is_empty() => Err(ValidationError::new(
+                "username",
+                "Proxy username cannot be blank",
+            )),
+            Self::UseProxy {
+                password: Some(password),
+                ..
+            } if password.is_empty() => Err(ValidationError::new(
+                "password",
+                "Proxy password cannot be empty",
+            )),
+            Self::SetUserAgent { user_agent } if user_agent.trim().is_empty() => {
+                Err(ValidationError::new("user_agent", "User agent is required"))
+            }
+            Self::SetViewport { width: 0, .. } => Err(ValidationError::new(
+                "width",
+                "Viewport width must be greater than 0",
+            )),
+            Self::SetViewport { height: 0, .. } => Err(ValidationError::new(
+                "height",
+                "Viewport height must be greater than 0",
+            )),
+            Self::SetViewport {
+                device_scale_factor: Some(device_scale_factor),
+                ..
+            } if *device_scale_factor <= 0.0 => Err(ValidationError::new(
+                "device_scale_factor",
+                "Device scale factor must be greater than 0",
+            )),
+            Self::SetGeolocation { latitude, .. } if !(-90.0..=90.0).contains(latitude) => Err(
+                ValidationError::new("latitude", "Latitude must be between -90 and 90"),
+            ),
+            Self::SetGeolocation { longitude, .. } if !(-180.0..=180.0).contains(longitude) => Err(
+                ValidationError::new("longitude", "Longitude must be between -180 and 180"),
+            ),
+            Self::SetGeolocation {
+                accuracy: Some(accuracy),
+                ..
+            } if *accuracy < 0.0 => Err(ValidationError::new(
+                "accuracy",
+                "Accuracy must be greater than or equal to 0",
+            )),
+            Self::SetExtraHeaders { headers } if headers.is_empty() => Err(ValidationError::new(
+                "headers",
+                "At least one header is required",
+            )),
+            Self::SetExtraHeaders { headers }
+                if headers.iter().any(|header| {
+                    header.name.trim().is_empty() || header.value.trim().is_empty()
+                }) =>
+            {
+                Err(ValidationError::new(
+                    "headers",
+                    "Header names and values are required",
+                ))
+            }
+            Self::GrantPermission { permissions, .. } if permissions.is_empty() => Err(
+                ValidationError::new("permissions", "At least one permission is required"),
+            ),
+            Self::GrantPermission { permissions, .. }
+                if permissions
+                    .iter()
+                    .any(|permission| permission.trim().is_empty()) =>
+            {
+                Err(ValidationError::new(
+                    "permissions",
+                    "Permission names are required",
+                ))
             }
             Self::DoubleClick {
                 timeout_ms: Some(0),

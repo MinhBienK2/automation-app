@@ -63,7 +63,13 @@ type PhaseOneActionType =
   | "load_session"
   | "set_cookie"
   | "clear_cookies"
-  | "set_secret";
+  | "set_secret"
+  | "use_proxy"
+  | "set_user_agent"
+  | "set_viewport"
+  | "set_geolocation"
+  | "set_extra_headers"
+  | "grant_permission";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -556,6 +562,12 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   set_cookie: elementHelp("Set Cookie", "set a visible browser cookie", "đặt cookie", "cookie"),
   clear_cookies: elementHelp("Clear Cookies", "clear visible browser cookies", "xóa cookie", "cookie"),
   set_secret: elementHelp("Set Secret", "store a redacted secret variable", "lưu secret", "secret"),
+  use_proxy: elementHelp("Use Proxy", "route browser traffic through a proxy", "dùng proxy", "proxy"),
+  set_user_agent: elementHelp("Set User Agent", "override the browser user agent", "đổi user agent", "network"),
+  set_viewport: elementHelp("Set Viewport", "emulate viewport and device shape", "đổi viewport", "device"),
+  set_geolocation: elementHelp("Set Geolocation", "override browser geolocation", "đổi vị trí", "geo"),
+  set_extra_headers: elementHelp("Set Extra Headers", "send extra HTTP headers", "thêm header", "headers"),
+  grant_permission: elementHelp("Grant Permission", "grant browser permissions", "cấp quyền", "permission"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

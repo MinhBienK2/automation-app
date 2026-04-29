@@ -9,8 +9,14 @@ use std::{future::Future, path::Path, pin::Pin, time::Duration};
 
 use chromiumoxide::{
     cdp::browser_protocol::{
+        browser::{PermissionSetting, SetPermissionParams},
         dom::SetFileInputFilesParams,
+        emulation::{
+            SetDeviceMetricsOverrideParams, SetGeolocationOverrideParams,
+            SetTouchEmulationEnabledParams,
+        },
         input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
+        network::{EnableParams as NetworkEnableParams, Headers, SetExtraHttpHeadersParams},
         page::{
             CaptureScreenshotFormat, GetNavigationHistoryParams, HandleJavaScriptDialogParams,
             NavigateToHistoryEntryParams,
@@ -22,7 +28,7 @@ use chromiumoxide::{
 };
 
 use crate::domain::{
-    ActionConfig, AssertElementState, AssertTextMatchMode, ClickButton, ClickMode,
+    ActionConfig, AssertElementState, AssertTextMatchMode, ClickButton, ClickMode, HeaderPair,
     StopWorkflowStatus, WaitCondition, WorkflowCondition,
 };
 
@@ -863,7 +869,75 @@ pub(super) async fn execute_action(
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::UseProxy { .. } => Ok(ActionExecution::Complete),
+        ActionConfig::SetUserAgent { user_agent } => {
+            page.set_user_agent(user_agent.as_str()).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetViewport {
+            width,
+            height,
+            device_scale_factor,
+            mobile,
+            touch,
+        } => {
+            let metrics = SetDeviceMetricsOverrideParams::new(
+                i64::from(width),
+                i64::from(height),
+                device_scale_factor.unwrap_or(1.0),
+                mobile,
+            );
+            page.execute(metrics).await?;
+            let touch = SetTouchEmulationEnabledParams::builder()
+                .enabled(touch)
+                .max_touch_points(if touch { 1 } else { 0 })
+                .build()
+                .map_err(RunnerError::ActionFailed)?;
+            page.execute(touch).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetGeolocation {
+            latitude,
+            longitude,
+            accuracy,
+        } => {
+            let geolocation = SetGeolocationOverrideParams::builder()
+                .latitude(latitude)
+                .longitude(longitude)
+                .accuracy(accuracy.unwrap_or(100.0))
+                .build();
+            page.execute(geolocation).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetExtraHeaders { headers } => {
+            page.execute(NetworkEnableParams::default()).await?;
+            let headers = SetExtraHttpHeadersParams::new(headers_value(&headers));
+            page.execute(headers).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::GrantPermission {
+            origin,
+            permissions,
+        } => {
+            for permission in permissions {
+                let mut params = SetPermissionParams::new(permission, PermissionSetting::Granted);
+                params.origin = origin.clone();
+                page.execute(params).await?;
+            }
+            Ok(ActionExecution::Complete)
+        }
     }
+}
+
+fn headers_value(headers: &[HeaderPair]) -> Headers {
+    let mut value = serde_json::Map::new();
+    for header in headers {
+        value.insert(
+            header.name.trim().to_string(),
+            serde_json::Value::String(header.value.trim().to_string()),
+        );
+    }
+    Headers::new(serde_json::Value::Object(value))
 }
 
 fn execute_inline_steps<'a>(

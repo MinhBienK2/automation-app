@@ -29,6 +29,7 @@ export type ActionConfigField =
   | "offset_x"
   | "offset_y"
   | "option_text"
+  | "origin"
   | "output_name"
   | "path"
   | "pixels"
@@ -53,7 +54,21 @@ export type ActionConfigField =
   | "xpath"
   | "trigger_xpath"
   | "times"
-  | "full_page";
+  | "full_page"
+  | "accuracy"
+  | "device_scale_factor"
+  | "headers"
+  | "height"
+  | "latitude"
+  | "longitude"
+  | "mobile"
+  | "password"
+  | "permissions"
+  | "server"
+  | "touch"
+  | "user_agent"
+  | "username"
+  | "width";
 
 export function updateActionConfigField(
   config: ActionConfig,
@@ -202,7 +217,83 @@ export function updateActionConfigField(
       return { type: "clear_cookies", config: { domain: value || null } };
     case "set_secret":
       return { type: "set_secret", config: { ...config.config, [field]: value } };
+    case "use_proxy":
+      if (field === "username" || field === "password") {
+        return { type: "use_proxy", config: { ...config.config, [field]: value || null } };
+      }
+      return { type: "use_proxy", config: { ...config.config, server: value } };
+    case "set_user_agent":
+      return { type: "set_user_agent", config: { user_agent: value } };
+    case "set_viewport":
+      return updateSetViewportConfigField(config, field, value);
+    case "set_geolocation":
+      return updateSetGeolocationConfigField(config, field, value);
+    case "set_extra_headers":
+      return { type: "set_extra_headers", config: { headers: parseHeaderPairs(value) } };
+    case "grant_permission":
+      if (field === "origin") {
+        return { type: "grant_permission", config: { ...config.config, origin: value || null } };
+      }
+      return {
+        type: "grant_permission",
+        config: { ...config.config, permissions: parseLineList(value) },
+      };
   }
+}
+
+function updateSetViewportConfigField(
+  config: Extract<ActionConfig, { type: "set_viewport" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "width" || field === "height" || field === "device_scale_factor") {
+    return { type: "set_viewport", config: { ...config.config, [field]: Number(value) } };
+  }
+
+  if (field === "mobile" || field === "touch") {
+    return { type: "set_viewport", config: { ...config.config, [field]: value === "true" } };
+  }
+
+  return config;
+}
+
+function updateSetGeolocationConfigField(
+  config: Extract<ActionConfig, { type: "set_geolocation" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "latitude" || field === "longitude" || field === "accuracy") {
+    return { type: "set_geolocation", config: { ...config.config, [field]: Number(value) } };
+  }
+
+  return config;
+}
+
+function parseHeaderPairs(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => {
+      const separatorIndex = line.indexOf(":");
+      if (separatorIndex === -1) {
+        return null;
+      }
+
+      const name = line.slice(0, separatorIndex).trim();
+      const headerValue = line.slice(separatorIndex + 1).trim();
+      if (!name || !headerValue) {
+        return null;
+      }
+
+      return { name, value: headerValue };
+    })
+    .filter((header): header is { name: string; value: string } => Boolean(header));
+}
+
+function parseLineList(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function updateNavigateConfigField(

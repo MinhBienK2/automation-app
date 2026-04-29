@@ -78,13 +78,8 @@ impl BrowserRunner {
         cancellation: RunnerCancellation,
         mut progress: impl FnMut(RunnerProgress) + Send,
     ) -> Result<RunnerOutcome, RunnerError> {
-        let profile_name = steps.iter().find_map(|step| match step {
-            ActionConfig::UseProfile { name } if !name.trim().is_empty() => {
-                Some(name.trim().to_string())
-            }
-            _ => None,
-        });
-        let mut session = BrowserSession::launch(&self.options, profile_name.as_deref()).await?;
+        let launch_settings = LaunchSettings::from_steps(&steps);
+        let mut session = BrowserSession::launch(&self.options, &launch_settings).await?;
 
         for (index, step) in steps.into_iter().enumerate() {
             if cancellation.is_cancelled() {
@@ -157,10 +152,12 @@ pub struct BrowserSession {
 impl BrowserSession {
     async fn launch(
         options: &RunnerOptions,
-        profile_name: Option<&str>,
+        launch_settings: &LaunchSettings,
     ) -> Result<Self, RunnerError> {
-        let persistent_user_data_dir = profile_name.is_some();
-        let user_data_dir = profile_name
+        let persistent_user_data_dir = launch_settings.profile_name.is_some();
+        let user_data_dir = launch_settings
+            .profile_name
+            .as_deref()
             .map(profile_user_data_dir)
             .unwrap_or_else(|| std::env::temp_dir().join(format!("wam-chrome-{}", Uuid::new_v4())));
         std::fs::create_dir_all(&user_data_dir)?;
@@ -174,6 +171,10 @@ impl BrowserSession {
 
         if options.headed {
             builder = builder.with_head();
+        }
+
+        if let Some(proxy_server) = launch_settings.proxy_server.as_deref() {
+            builder = builder.arg(("proxy-server", proxy_server));
         }
 
         let chrome_executable = options
@@ -400,6 +401,62 @@ fn is_temporary_download(path: &Path) -> bool {
         .is_some_and(|extension| extension.eq_ignore_ascii_case("crdownload"))
 }
 
+#[derive(Debug, Clone, Default)]
+struct LaunchSettings {
+    profile_name: Option<String>,
+    proxy_server: Option<String>,
+}
+
+impl LaunchSettings {
+    fn from_steps(steps: &[ActionConfig]) -> Self {
+        let profile_name = steps.iter().find_map(|step| match step {
+            ActionConfig::UseProfile { name } if !name.trim().is_empty() => {
+                Some(name.trim().to_string())
+            }
+            _ => None,
+        });
+        let proxy_server = steps.iter().find_map(|step| match step {
+            ActionConfig::UseProxy {
+                server,
+                username,
+                password,
+            } if !server.trim().is_empty() => {
+                proxy_server_argument(server, username.as_deref(), password.as_deref())
+            }
+            _ => None,
+        });
+
+        Self {
+            profile_name,
+            proxy_server,
+        }
+    }
+}
+
+fn proxy_server_argument(
+    server: &str,
+    username: Option<&str>,
+    password: Option<&str>,
+) -> Option<String> {
+    let server = server.trim();
+    if server.is_empty() {
+        return None;
+    }
+
+    let username = username.map(str::trim).filter(|value| !value.is_empty());
+    let password = password.filter(|value| !value.is_empty());
+    match (username, password) {
+        (Some(username), Some(password)) if !server.contains('@') => {
+            if let Some((scheme, rest)) = server.split_once("://") {
+                Some(format!("{scheme}://{username}:{password}@{rest}"))
+            } else {
+                Some(format!("{username}:{password}@{server}"))
+            }
+        }
+        _ => Some(server.to_string()),
+    }
+}
+
 fn default_chrome_executable() -> Option<PathBuf> {
     [
         "/usr/bin/google-chrome",
@@ -409,4 +466,24 @@ fn default_chrome_executable() -> Option<PathBuf> {
     .iter()
     .map(PathBuf::from)
     .find(|path| path.exists())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LaunchSettings;
+    use crate::domain::ActionConfig;
+
+    #[test]
+    fn launch_settings_build_proxy_argument_with_credentials() {
+        let settings = LaunchSettings::from_steps(&[ActionConfig::UseProxy {
+            server: "http://proxy.local:8080".to_string(),
+            username: Some("agent".to_string()),
+            password: Some("secret".to_string()),
+        }]);
+
+        assert_eq!(
+            settings.proxy_server.as_deref(),
+            Some("http://agent:secret@proxy.local:8080")
+        );
+    }
 }
