@@ -86,19 +86,10 @@ export function updateActionConfigField(
   switch (config.type) {
     case "navigate":
       return updateNavigateConfigField(config, field, value);
-    case "open_url":
-      return { type: "open_url", config: { url: value } };
-    case "sleep":
-      return { type: "sleep", config: { seconds: Number(value) } };
     case "wait":
       return updateWaitConfigField(config, field, value);
     case "input_text":
       return updateInputTextConfigField(config, field, value);
-    case "type_text":
-      return {
-        type: "type_text",
-        config: { ...config.config, [field]: value },
-      };
     case "clear_input":
       return updateElementConfigField(config, field, value);
     case "click":

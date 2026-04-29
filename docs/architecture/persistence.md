@@ -17,6 +17,7 @@ Persistence stores workflows and ordered workflow steps in SQLite.
 - Summaries sort by `updated_at DESC`, then name ascending.
 - `get_workflow` returns workflow metadata plus steps ordered by `order_index ASC`.
 - Step configs are stored as serialized `ActionConfig` JSON.
+- Removed legacy step configs are migrated or normalized on read: `open_url` to `navigate`, `sleep` to duration `wait`, and `type_text` to `input_text`.
 - `add_step` appends with `MAX(order_index) + 1`.
 - `delete_step` compacts order indexes.
 - `reorder_steps` rewrites indexes through temporary negative values.
@@ -42,4 +43,3 @@ Persistence stores workflows and ordered workflow steps in SQLite.
 - Update repository tests.
 - Consider import/export compatibility.
 - Preserve existing workflow deserialization unless intentionally migrating data.
-

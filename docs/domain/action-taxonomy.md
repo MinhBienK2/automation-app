@@ -12,10 +12,10 @@
 
 Current action groups are defined in `src/lib/workflowUi.ts`:
 
-- Core: navigation, click, input, clear, scroll, wait.
+- Core: navigation, input, clear, wait.
 - Forms: select, checkbox/radio, upload, submit, custom option, contenteditable.
 - Keyboard: key, hotkey, sequence typing, focus, clipboard.
-- Mouse: hover, double click, right click, drag and drop.
+- Pointer & Scroll: click, scroll, hover, double click, right click, drag and drop.
 - Data: extraction and screenshots.
 - Browser: navigation history, tabs, frames, dialogs, downloads.
 - Logic: variables, assertions, conditions, loops, retries, stop.
@@ -24,7 +24,7 @@ Current action groups are defined in `src/lib/workflowUi.ts`:
 - Human Verification: challenge detection and manual pause/resume.
 - Reliability: fallback selector, retry step, checkpoint.
 - Advanced: JavaScript, network wait/block/mock, storage.
-- Legacy: `open_url`, `sleep`, `type_text`.
+- Removed legacy actions: `open_url`, `sleep`, and `type_text` are migrated or normalized to `navigate`, duration `wait`, and `input_text`.
 
 ## Change Rule
 
@@ -41,4 +41,3 @@ When adding or changing an action, keep these in sync:
 - Smoke checklist when user-visible behavior changes.
 
 Do not infer current actions from `docs/superpowers`; verify code.
-

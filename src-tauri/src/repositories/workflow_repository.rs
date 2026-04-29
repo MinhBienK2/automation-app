@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Error as JsonError;
+use serde_json::{Error as JsonError, Value};
 use sqlx::{Row, SqlitePool};
 use thiserror::Error;
 use uuid::Uuid;
@@ -137,6 +137,7 @@ impl WorkflowRepository {
         let mut steps = Vec::with_capacity(step_rows.len());
         for row in step_rows {
             let config_json: String = row.get("config_json");
+            let config_json = normalize_legacy_action_config_json(&config_json)?;
             let config: ActionConfig = serde_json::from_str(&config_json)?;
             let action_type = config.action_type();
 
@@ -314,6 +315,58 @@ impl WorkflowRepository {
 
         Ok(())
     }
+}
+
+fn normalize_legacy_action_config_json(config_json: &str) -> Result<String, JsonError> {
+    let mut value: Value = serde_json::from_str(config_json)?;
+    let action_type = value.get("type").and_then(Value::as_str);
+    let Some(action_type) = action_type else {
+        return Ok(config_json.to_string());
+    };
+
+    match action_type {
+        "open_url" => {
+            value["type"] = Value::String("navigate".to_string());
+        }
+        "sleep" => {
+            let seconds = value
+                .get("config")
+                .and_then(|config| config.get("seconds"))
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0);
+            let duration_ms = (seconds * 1000.0).round().max(0.0) as u64;
+            value = serde_json::json!({
+                "type": "wait",
+                "config": {
+                    "condition": "duration",
+                    "duration_ms": duration_ms
+                }
+            });
+        }
+        "type_text" => {
+            let config = value.get("config").cloned().unwrap_or(Value::Null);
+            let xpath = config
+                .get("xpath")
+                .cloned()
+                .unwrap_or_else(|| Value::String(String::new()));
+            let text = config
+                .get("text")
+                .cloned()
+                .unwrap_or_else(|| Value::String(String::new()));
+            value = serde_json::json!({
+                "type": "input_text",
+                "config": {
+                    "xpath": xpath,
+                    "text": text,
+                    "clear_before_input": true,
+                    "typing_mode": "set_value"
+                }
+            });
+        }
+        _ => return Ok(config_json.to_string()),
+    }
+
+    serde_json::to_string(&value)
 }
 
 async fn insert_step(pool: &SqlitePool, step: &WorkflowStep) -> Result<(), RepositoryError> {

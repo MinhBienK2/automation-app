@@ -184,35 +184,6 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           </Label>
         </>
       );
-    case "open_url":
-      return (
-        <Label>
-          URL
-          <Input
-            value={config.config.url}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "url", event.currentTarget.value))
-            }
-          />
-        </Label>
-      );
-    case "sleep":
-      return (
-        <Label>
-          Seconds
-          <Input
-            min="0"
-            step="0.1"
-            type="number"
-            value={config.config.seconds}
-            onChange={(event) =>
-              onChange(
-                updateActionConfigField(config, "seconds", event.currentTarget.value),
-              )
-            }
-          />
-        </Label>
-      );
     case "wait":
       return (
         <>
@@ -400,33 +371,6 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
               onChange={(event) =>
                 onChange(
                   updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
-        </>
-      );
-    case "type_text":
-      return (
-        <>
-          <Label>
-            XPath
-            <Input
-            value={config.config.xpath}
-            onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "xpath", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
-          <Label>
-            Text
-            <Textarea
-              value={config.config.text}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "text", event.currentTarget.value),
                 )
               }
             />

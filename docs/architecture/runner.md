@@ -32,6 +32,21 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Cancellation-aware execution.
 - Runner-level errors and outcomes.
 
+## Action Modules
+
+Browser action script builders live under `src-tauri/src/runner/actions/` and are grouped by user behavior:
+
+- `pointer.rs`: click, force DOM click, hover, and drag/drop pointer interactions.
+- `scroll.rs`: page, container, into-view, and until-visible scrolling.
+- `wait.rs`: wait condition polling scripts.
+- `input.rs`: text input, clearing input, and contenteditable updates.
+- `form.rs`: select, checkbox/radio, custom option, and submit form actions.
+- `keyboard.rs`: key press, hotkey, and typed key sequence actions.
+- `clipboard.rs`: in-run clipboard store and paste actions.
+- `element.rs`: focus and blur element actions.
+- `data_capture.rs`: output extraction and storage scripts.
+- `actionability.rs`, `js.rs`: shared helper code used by action modules.
+
 ## Does Not Belong Here
 
 - UI polling logic.
@@ -44,4 +59,3 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Update runner tests for action behavior.
 - Update command tests when run state semantics change.
 - Update `docs/contracts/run-state.md` for status/progress changes.
-

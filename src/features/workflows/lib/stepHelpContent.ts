@@ -131,47 +131,11 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
       commonMistakes: ["Missing https:// at the start of the URL.", "Network idle can wait too long on pages that keep background requests open."],
     },
   },
-  open_url: {
-    vi: {
-      title: "Trợ giúp Open URL",
-      summary: "Mở một URL. Đây là step legacy đơn giản hơn Navigate.",
-      useWhen: ["Dùng cho workflow cũ hoặc khi chỉ cần mở trang mà không cấu hình wait nâng cao."],
-      fields: [{ name: "URL", description: "Địa chỉ trang web đầy đủ, ví dụ https://example.com." }],
-      examples: ["URL: https://w3schools.com/html/html_iframe.asp"],
-      commonMistakes: ["Dùng URL thiếu giao thức như example.com thay vì https://example.com."],
-    },
-    en: {
-      title: "Open URL Help",
-      summary: "Open a URL. This is the simpler legacy version of Navigate.",
-      useWhen: ["Use for older workflows or when you only need to open a page without advanced waiting."],
-      fields: [{ name: "URL", description: "The full website address, for example https://example.com." }],
-      examples: ["URL: https://w3schools.com/html/html_iframe.asp"],
-      commonMistakes: ["Using a URL without a protocol, such as example.com instead of https://example.com."],
-    },
-  },
-  sleep: {
-    vi: {
-      title: "Trợ giúp Sleep",
-      summary: "Tạm dừng workflow trong một khoảng thời gian cố định.",
-      useWhen: ["Dùng khi trang cần thêm thời gian để animation, popup, hoặc dữ liệu xuất hiện.", "Dùng tạm thời khi chưa có điều kiện Wait phù hợp."],
-      fields: [{ name: "Seconds", description: "Số giây cần chờ. Có thể dùng số thập phân như 0.5." }],
-      examples: ["Seconds: 1", "Seconds: 0.5"],
-      commonMistakes: ["Lạm dụng Sleep quá dài làm workflow chạy chậm.", "Dùng 0 giây sẽ bị validation chặn."],
-    },
-    en: {
-      title: "Sleep Help",
-      summary: "Pause the workflow for a fixed amount of time.",
-      useWhen: ["Use when a page needs extra time for animation, popups, or data.", "Use as a temporary fallback when no Wait condition fits yet."],
-      fields: [{ name: "Seconds", description: "How many seconds to wait. Decimal values like 0.5 are allowed." }],
-      examples: ["Seconds: 1", "Seconds: 0.5"],
-      commonMistakes: ["Long sleeps make workflows slow.", "0 seconds is rejected by validation."],
-    },
-  },
   wait: {
     vi: {
       title: "Trợ giúp Wait",
       summary: "Chờ một điều kiện xảy ra trước khi chạy step tiếp theo.",
-      useWhen: ["Dùng thay Sleep khi bạn biết chính xác cần chờ gì.", "Dùng để chờ element hiện, biến mất, URL đổi, text xuất hiện, hoặc trang tải."],
+      useWhen: ["Dùng khi bạn biết chính xác cần chờ gì trước khi chạy step tiếp theo.", "Dùng để chờ element hiện, biến mất, URL đổi, text xuất hiện, hoặc trang tải."],
       fields: [
         { name: "Condition", description: "Điều kiện cần chờ: thời gian, element, text, URL, hoặc page load." },
         { name: "Duration ms", description: "Số mili-giây cần chờ khi Condition là Duration." },
@@ -181,12 +145,12 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
         { name: "Timeout ms", description: timeoutField.vi },
       ],
       examples: ["Condition: Element visible, XPath: //*[@id='result']", "Condition: URL contains, URL contains: /dashboard"],
-      commonMistakes: ["Dùng Sleep cố định trong khi Wait element visible sẽ ổn định hơn.", "XPath phải trỏ đúng element cần kiểm tra."],
+      commonMistakes: ["Dùng Duration cố định trong khi Wait element visible sẽ ổn định hơn.", "XPath phải trỏ đúng element cần kiểm tra."],
     },
     en: {
       title: "Wait Help",
       summary: "Wait for a condition before running the next step.",
-      useWhen: ["Use instead of Sleep when you know what must happen.", "Use to wait for elements, text, URL changes, or page load."],
+      useWhen: ["Use when you know what must happen before the next step runs.", "Use to wait for elements, text, URL changes, or page load."],
       fields: [
         { name: "Condition", description: "The condition to wait for: time, element state, text, URL, or page load." },
         { name: "Duration ms", description: "Milliseconds to wait when Condition is Duration." },
@@ -196,14 +160,14 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
         { name: "Timeout ms", description: timeoutField.en },
       ],
       examples: ["Condition: Element visible, XPath: //*[@id='result']", "Condition: URL contains, URL contains: /dashboard"],
-      commonMistakes: ["Using fixed Sleep when Wait element visible would be more stable.", "XPath must point to the element being checked."],
+      commonMistakes: ["Using fixed Duration when Wait element visible would be more stable.", "XPath must point to the element being checked."],
     },
   },
   input_text: {
     vi: {
       title: "Trợ giúp Input Text",
       summary: "Nhập text vào input, textarea, hoặc element có thể nhập liệu.",
-      useWhen: ["Dùng cho form đăng nhập, search box, textarea, hoặc field cần nhập dữ liệu.", "Nên dùng thay Type Text khi cần hỗ trợ iframe và wait nâng cao."],
+      useWhen: ["Dùng cho form đăng nhập, search box, textarea, hoặc field cần nhập dữ liệu.", "Dùng khi cần hỗ trợ iframe, wait nâng cao, hoặc nhập giống người dùng hơn."],
       fields: [
         { name: "XPath", description: xpathField.vi },
         { name: "Text", description: "Nội dung cần nhập vào field." },
@@ -220,7 +184,7 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
     en: {
       title: "Input Text Help",
       summary: "Enter text into an input, textarea, or editable element.",
-      useWhen: ["Use for login forms, search boxes, textareas, or fields that need text.", "Prefer this over Type Text when you need iframe or wait support."],
+      useWhen: ["Use for login forms, search boxes, textareas, or fields that need text.", "Use when you need iframe support, advanced waiting, or more user-like typing."],
       fields: [
         { name: "XPath", description: xpathField.en },
         { name: "Text", description: "The text to enter into the field." },
@@ -233,30 +197,6 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
       ],
       examples: ["XPath: //*[@name='email']", "Iframe XPath: //*[@id='login-frame'], XPath: //*[@name='email']"],
       commonMistakes: ["XPath points to a label or wrapper div instead of the real input.", "Elements inside iframes need Iframe XPath too."],
-    },
-  },
-  type_text: {
-    vi: {
-      title: "Trợ giúp Type Text",
-      summary: "Nhập text vào element theo XPath. Đây là step legacy đơn giản.",
-      useWhen: ["Dùng cho workflow cũ.", "Dùng khi chỉ cần nhập nhanh vào field trên trang chính."],
-      fields: [
-        { name: "XPath", description: "XPath của input, textarea, hoặc contenteditable trên trang chính." },
-        { name: "Text", description: "Nội dung cần nhập." },
-      ],
-      examples: ["XPath: //*[@name='q'], Text: automation"],
-      commonMistakes: ["Step này không có Iframe XPath; nếu cần iframe hãy dùng Input Text."],
-    },
-    en: {
-      title: "Type Text Help",
-      summary: "Enter text into an element by XPath. This is a simple legacy step.",
-      useWhen: ["Use for older workflows.", "Use when you only need simple typing on the main page."],
-      fields: [
-        { name: "XPath", description: "XPath of an input, textarea, or contenteditable element on the main page." },
-        { name: "Text", description: "The text to enter." },
-      ],
-      examples: ["XPath: //*[@name='q'], Text: automation"],
-      commonMistakes: ["This step has no Iframe XPath; use Input Text for iframe fields."],
     },
   },
   clear_input: {
@@ -799,7 +739,7 @@ const specificFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> =
       "Nên thử Real click trước. Chỉ dùng Force DOM khi bạn hiểu website vẫn xử lý click() trực tiếp.",
     ],
     "wait:Condition": [
-      "Duration chỉ chờ theo thời gian cố định, giống Sleep nhưng dùng mili-giây.",
+      "Duration chờ theo thời gian cố định bằng mili-giây.",
       "Element visible/hidden kiểm tra element có đang nhìn thấy hay không.",
       "Element attached/detached kiểm tra element có tồn tại trong DOM hay không, kể cả chưa visible.",
       "URL contains chờ địa chỉ trình duyệt chứa một đoạn text, hữu ích sau login hoặc chuyển trang.",
@@ -824,7 +764,7 @@ const specificFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> =
       "Try Real click first. Use Force DOM only when the website handles click() directly.",
     ],
     "wait:Condition": [
-      "Duration waits for fixed time, like Sleep, but in milliseconds.",
+      "Duration waits for a fixed time in milliseconds.",
       "Element visible/hidden checks whether an element can or cannot be seen.",
       "Element attached/detached checks whether the element exists in the DOM, even if it is not visible.",
       "URL contains waits until the browser URL contains text, useful after login or navigation.",
@@ -852,12 +792,8 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
       "Đơn vị là mili-giây: 1000 = 1 giây, 5000 = 5 giây.",
       "Timeout quá ngắn dễ fail trên mạng chậm; timeout quá dài làm workflow đợi lâu khi XPath sai.",
     ],
-    Seconds: [
-      "Dùng số nhỏ trước, ví dụ 0.5 hoặc 1, rồi tăng nếu trang tải chậm.",
-      "Sleep không kiểm tra điều kiện thật; nếu có thể, Wait thường ổn định hơn.",
-    ],
     Condition: [
-      "Chọn điều kiện đúng giúp workflow ổn định hơn Sleep cố định.",
+      "Chọn điều kiện đúng giúp workflow ổn định hơn Duration cố định.",
       "Nếu cần chờ element trong iframe, hiện Wait chưa có Iframe XPath; hãy dùng timing phù hợp hoặc step khác hỗ trợ iframe.",
     ],
     "Duration ms": [
@@ -1000,12 +936,8 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
       "Unit is milliseconds: 1000 = 1 second, 5000 = 5 seconds.",
       "Too short can fail on slow pages; too long makes wrong XPath failures slower.",
     ],
-    Seconds: [
-      "Start small, such as 0.5 or 1, then increase if the page is slow.",
-      "Sleep does not check a real condition; Wait is usually more stable when possible.",
-    ],
     Condition: [
-      "Choosing the right condition makes workflows more stable than fixed Sleep.",
+      "Choosing the right condition makes workflows more stable than fixed Duration.",
       "Wait currently has no Iframe XPath; use timing carefully or a step that supports iframe when needed.",
     ],
     "Duration ms": [

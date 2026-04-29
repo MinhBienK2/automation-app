@@ -54,7 +54,7 @@ cargo clippy --all-targets --all-features
 Use a simple page with an input, button, iframe, dialog trigger, download link, list, table, link, tall body, and an HTTP fixture that echoes request headers and geolocation.
 
 1. Create a workflow.
-2. Add Open URL, Sleep, Type Text, Click, and Scroll steps.
+2. Add Navigate, Wait, Input Text, Click, and Scroll steps.
 3. Add Extract Text, Extract Attribute, Extract Input Value, Extract List, Extract Table, and Take Screenshot steps.
 4. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Switch Frame, Accept Dialog, Dismiss Dialog, Set Download Directory, and Wait For Download steps.
 5. Add Set Variable, Assert Element, Assert Text, If Condition, Repeat Times, Repeat For Each, Retry Block, and Stop Workflow steps.
@@ -82,6 +82,6 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 27. Confirm Execute JS stores output, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.
 28. Confirm selector suggestions prefer stable attributes and recorder output maps to the action taxonomy.
 29. Confirm bad XPath fails immediately with a short message.
-30. Stop during a long Sleep.
+30. Stop during a long Wait duration.
 31. Confirm Chromium remains open after success, failure, and stop.
 32. Delete the workflow.

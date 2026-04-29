@@ -7,11 +7,8 @@ import type {
 
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
-  open_url: "Open URL",
-  sleep: "Sleep",
   wait: "Wait",
   input_text: "Input Text",
-  type_text: "Type Text",
   clear_input: "Clear Input",
   click: "Click",
   scroll: "Scroll",
@@ -91,7 +88,7 @@ export const actionLabels: Record<ActionType, string> = {
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Core",
-    actions: ["navigate", "click", "input_text", "clear_input", "scroll", "wait"],
+    actions: ["navigate", "input_text", "clear_input", "wait"],
   },
   {
     label: "Forms",
@@ -121,8 +118,8 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
     ],
   },
   {
-    label: "Mouse",
-    actions: ["hover", "double_click", "right_click", "drag_and_drop"],
+    label: "Pointer & Scroll",
+    actions: ["click", "scroll", "hover", "double_click", "right_click", "drag_and_drop"],
   },
   {
     label: "Data",
@@ -206,10 +203,6 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
       "set_session_storage",
     ],
   },
-  {
-    label: "Legacy",
-    actions: ["open_url", "sleep", "type_text"],
-  },
 ];
 
 export const actionOptions: ActionType[] = actionGroups.flatMap((group) => group.actions);
@@ -228,18 +221,12 @@ export function stepSummary(step: WorkflowStep) {
   switch (step.config.type) {
     case "navigate":
       return step.config.config.url || "No URL";
-    case "open_url":
-      return step.config.config.url || "No URL";
-    case "sleep":
-      return `${step.config.config.seconds}s`;
     case "wait":
       if (step.config.config.condition === "duration") {
         return `${step.config.config.duration_ms ?? 0}ms`;
       }
       return step.config.config.condition;
     case "input_text":
-      return step.config.config.xpath || "No XPath";
-    case "type_text":
       return step.config.config.xpath || "No XPath";
     case "clear_input":
       return step.config.config.xpath || "No XPath";
@@ -440,7 +427,7 @@ export function suggestionsFor(reason: string, actionType: string) {
   if (reason.includes("XPath not found")) {
     return [
       "Check the XPath in the Chromium window that remains open.",
-      "Add a Sleep step before this step if the element loads slowly.",
+      "Add a Wait step before this step if the element loads slowly.",
       "Prefer XPath based on id, name, placeholder, text, or stable attributes.",
       "Avoid absolute XPath such as /html/body/div[2]/...",
     ];
@@ -451,16 +438,10 @@ export function suggestionsFor(reason: string, actionType: string) {
       "Check whether the XPath points to a label, div, button, or wrapper instead of the field.",
     ];
   }
-  if (reason.includes("URL") || actionType === "open_url") {
+  if (reason.includes("URL") || actionType === "navigate") {
     return [
       "Use a full URL with http:// or https://.",
       "Check for extra whitespace or missing characters.",
-    ];
-  }
-  if (reason.includes("Seconds")) {
-    return [
-      "Use a Sleep value greater than 0.",
-      "Try 0.5, 1, or 2 seconds depending on page speed.",
     ];
   }
   if (reason.includes("Pixels")) {

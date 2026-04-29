@@ -7,7 +7,7 @@ use workflow_automation_manager_lib::{
     commands,
     domain::{
         ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, OrchestrationSchedule,
-        RecordedEvent, RunStatus, ScheduleKind, ScrollDirection,
+        RecordedEvent, RunStatus, ScheduleKind, ScrollDirection, WaitCondition,
     },
 };
 
@@ -30,7 +30,7 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
     let workflow = commands::create_workflow_impl(&state, "Login flow")
         .await
         .expect("create");
-    let step = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    let step = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
         .expect("add");
 
@@ -135,7 +135,7 @@ async fn reorder_and_delete_commands_work() {
     let workflow = commands::create_workflow_impl(&state, "Ordering")
         .await
         .expect("create");
-    let first = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+    let first = commands::add_step_impl(&state, &workflow.id, ActionType::Navigate)
         .await
         .expect("first");
     let second = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
@@ -180,33 +180,41 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
     let workflow = commands::create_workflow_impl(&state, "Run success")
         .await
         .expect("create");
-    let open = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+    let open = commands::add_step_impl(&state, &workflow.id, ActionType::Navigate)
         .await
-        .expect("open");
+        .expect("navigate");
     commands::update_step_impl(
         &state,
         &open.id,
-        "Open URL",
-        ActionConfig::OpenUrl {
+        "Navigate",
+        ActionConfig::Navigate {
             url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
         },
     )
     .await
-    .expect("update open");
-    let type_text = commands::add_step_impl(&state, &workflow.id, ActionType::TypeText)
+    .expect("update navigate");
+    let input_text = commands::add_step_impl(&state, &workflow.id, ActionType::InputText)
         .await
-        .expect("type");
+        .expect("input");
     commands::update_step_impl(
         &state,
-        &type_text.id,
-        "Type Text",
-        ActionConfig::TypeText {
+        &input_text.id,
+        "Input Text",
+        ActionConfig::InputText {
             xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
             text: "user@example.com".to_string(),
+            clear_before_input: true,
+            typing_mode: None,
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
         },
     )
     .await
-    .expect("update type");
+    .expect("update input");
     let click = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
         .await
         .expect("click");
@@ -250,17 +258,24 @@ async fn run_workflow_finishes_successfully_with_injected_runner() {
     let workflow = commands::create_workflow_impl(&state, "Run success")
         .await
         .expect("create");
-    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    let wait = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
-        .expect("sleep");
+        .expect("wait");
     commands::update_step_impl(
         &state,
-        &sleep.id,
-        "Sleep",
-        ActionConfig::Sleep { seconds: 1.0 },
+        &wait.id,
+        "Wait",
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((1.0 * 1000.0) as u64),
+            timeout_ms: None,
+        },
     )
     .await
-    .expect("update sleep");
+    .expect("update wait");
 
     let run_state = commands::run_workflow_impl(&state, &workflow.id)
         .await
@@ -269,7 +284,7 @@ async fn run_workflow_finishes_successfully_with_injected_runner() {
 
     poll_status(&state, RunStatus::Success).await;
     let finished = commands::get_run_state_impl(&state).await;
-    assert_eq!(finished.completed_step_ids, vec![sleep.id]);
+    assert_eq!(finished.completed_step_ids, vec![wait.id]);
 }
 
 #[tokio::test]
@@ -279,30 +294,39 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
     let workflow = commands::create_workflow_impl(&state, "Test step")
         .await
         .expect("create");
-    let open = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+    let open = commands::add_step_impl(&state, &workflow.id, ActionType::Navigate)
         .await
-        .expect("open");
+        .expect("navigate");
     commands::update_step_impl(
         &state,
         &open.id,
-        "Open URL",
-        ActionConfig::OpenUrl {
+        "Navigate",
+        ActionConfig::Navigate {
             url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
         },
     )
     .await
-    .expect("update open");
-    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    .expect("update navigate");
+    let wait = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
-        .expect("sleep");
+        .expect("wait");
     commands::update_step_impl(
         &state,
-        &sleep.id,
-        "Sleep",
-        ActionConfig::Sleep { seconds: 0.2 },
+        &wait.id,
+        "Wait",
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((0.2 * 1000.0) as u64),
+            timeout_ms: None,
+        },
     )
     .await
-    .expect("update sleep");
+    .expect("update wait");
     let bad_click = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
         .await
         .expect("bad click");
@@ -332,7 +356,7 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
     .expect("update bad click");
 
     assert_eq!(
-        commands::test_step_impl(&state, &workflow.id, &sleep.id)
+        commands::test_step_impl(&state, &workflow.id, &wait.id)
             .await
             .expect("start test")
             .status,
@@ -355,7 +379,7 @@ async fn run_workflow_maps_fake_runner_failure_to_step_error() {
     let workflow = commands::create_workflow_impl(&state, "Run failure")
         .await
         .expect("create");
-    let first = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    let first = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
         .expect("first");
     let second = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
@@ -406,73 +430,89 @@ async fn test_step_exposes_target_current_and_completed_progress() {
     let workflow = commands::create_workflow_impl(&state, "Progress")
         .await
         .expect("create");
-    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    let wait = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
-        .expect("sleep");
+        .expect("wait");
     commands::update_step_impl(
         &state,
-        &sleep.id,
+        &wait.id,
         "Wait long enough",
-        ActionConfig::Sleep { seconds: 10.0 },
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((10.0 * 1000.0) as u64),
+            timeout_ms: None,
+        },
     )
     .await
-    .expect("update sleep");
+    .expect("update wait");
 
-    let started = commands::test_step_impl(&state, &workflow.id, &sleep.id)
+    let started = commands::test_step_impl(&state, &workflow.id, &wait.id)
         .await
         .expect("start test");
     let started_json = serde_json::to_string(&started).expect("serialize started");
 
     assert_eq!(started.status, RunStatus::Running);
     assert!(started_json.contains("\"mode\":\"test_step\""));
-    assert!(started_json.contains(&format!("\"target_step_id\":\"{}\"", sleep.id)));
+    assert!(started_json.contains(&format!("\"target_step_id\":\"{}\"", wait.id)));
 
     let mut running_json = String::new();
     for _ in 0..50 {
         running_json =
             serde_json::to_string(&commands::get_run_state_impl(&state).await).expect("serialize");
-        if running_json.contains(&format!("\"current_step_id\":\"{}\"", sleep.id)) {
+        if running_json.contains(&format!("\"current_step_id\":\"{}\"", wait.id)) {
             break;
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    assert!(running_json.contains(&format!("\"current_step_id\":\"{}\"", sleep.id)));
+    assert!(running_json.contains(&format!("\"current_step_id\":\"{}\"", wait.id)));
     assert!(running_json.contains("\"current_step_number\":1"));
 
     commands::stop_run_impl(&state).await.expect("stop");
 }
 
 #[tokio::test]
-async fn stop_run_cancels_active_sleep_and_second_run_is_rejected() {
+async fn stop_run_cancels_active_wait_and_second_run_is_rejected() {
     let (state, _db_path) = test_state_with_runner(FakeRunExecutor::stopped_on_cancel()).await;
 
     let workflow = commands::create_workflow_impl(&state, "Stop run")
         .await
         .expect("create");
-    let open = commands::add_step_impl(&state, &workflow.id, ActionType::OpenUrl)
+    let open = commands::add_step_impl(&state, &workflow.id, ActionType::Navigate)
         .await
-        .expect("open");
+        .expect("navigate");
     commands::update_step_impl(
         &state,
         &open.id,
-        "Open URL",
-        ActionConfig::OpenUrl {
+        "Navigate",
+        ActionConfig::Navigate {
             url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
         },
     )
     .await
-    .expect("update open");
-    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    .expect("update navigate");
+    let wait = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
-        .expect("sleep");
+        .expect("wait");
     commands::update_step_impl(
         &state,
-        &sleep.id,
-        "Sleep",
-        ActionConfig::Sleep { seconds: 10.0 },
+        &wait.id,
+        "Wait",
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((10.0 * 1000.0) as u64),
+            timeout_ms: None,
+        },
     )
     .await
-    .expect("update sleep");
+    .expect("update wait");
 
     assert_eq!(
         commands::run_workflow_impl(&state, &workflow.id)
@@ -525,14 +565,21 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
     let workflow = commands::create_workflow_impl(&state, "Export me")
         .await
         .expect("create");
-    let sleep = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    let wait = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
         .expect("add");
     commands::update_step_impl(
         &state,
-        &sleep.id,
+        &wait.id,
         "Short wait",
-        ActionConfig::Sleep { seconds: 0.5 },
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((0.5 * 1000.0) as u64),
+            timeout_ms: None,
+        },
     )
     .await
     .expect("update");
@@ -554,8 +601,72 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
     assert_eq!(imported.steps[0].name, "Short wait");
     assert_eq!(
         imported.steps[0].config,
-        ActionConfig::Sleep { seconds: 0.5 }
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((0.5 * 1000.0) as u64),
+            timeout_ms: None
+        }
     );
+}
+
+#[test]
+fn import_workflow_normalizes_legacy_export_actions() {
+    let exported = serde_json::json!({
+        "version": 1,
+        "workflow": {
+            "id": "workflow-old",
+            "name": "Old export",
+            "created_at": "1",
+            "updated_at": "1"
+        },
+        "steps": [
+            {
+                "id": "step-open",
+                "name": "Open URL",
+                "workflow_id": "workflow-old",
+                "order_index": 0,
+                "action_type": "open_url",
+                "config": { "type": "open_url", "config": { "url": "https://example.com" } },
+                "created_at": "1",
+                "updated_at": "1"
+            },
+            {
+                "id": "step-sleep",
+                "name": "Sleep",
+                "workflow_id": "workflow-old",
+                "order_index": 1,
+                "action_type": "sleep",
+                "config": { "type": "sleep", "config": { "seconds": 1.5 } },
+                "created_at": "1",
+                "updated_at": "1"
+            },
+            {
+                "id": "step-type",
+                "name": "Type Text",
+                "workflow_id": "workflow-old",
+                "order_index": 2,
+                "action_type": "type_text",
+                "config": {
+                    "type": "type_text",
+                    "config": {
+                        "xpath": "//*[@name='email']",
+                        "text": "user@example.com"
+                    }
+                },
+                "created_at": "1",
+                "updated_at": "1"
+            }
+        ]
+    });
+
+    let normalized = commands::normalize_workflow_export_value(exported).expect("normalize");
+
+    assert_eq!(normalized.steps[0].action_type.as_str(), "navigate");
+    assert_eq!(normalized.steps[1].action_type.as_str(), "wait");
+    assert_eq!(normalized.steps[2].action_type.as_str(), "input_text");
 }
 
 #[tokio::test]
@@ -572,14 +683,21 @@ async fn phase_ten_batch_runs_account_for_each_input_row() {
     let workflow = commands::create_workflow_impl(&state, "Batch")
         .await
         .expect("create");
-    let step = commands::add_step_impl(&state, &workflow.id, ActionType::Sleep)
+    let step = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
         .await
         .expect("add");
     commands::update_step_impl(
         &state,
         &step.id,
         "Wait",
-        ActionConfig::Sleep { seconds: 0.1 },
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some((0.1 * 1000.0) as u64),
+            timeout_ms: None,
+        },
     )
     .await
     .expect("update");

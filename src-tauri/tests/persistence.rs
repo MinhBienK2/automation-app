@@ -1,7 +1,11 @@
 mod support;
 
-use support::test_repository;
-use workflow_automation_manager_lib::domain::{ActionConfig, ScrollDirection};
+use support::{temp_db_path, test_repository};
+use workflow_automation_manager_lib::{
+    db::{create_sqlite_pool, run_migrations},
+    domain::{ActionConfig, InputTypingMode, ScrollDirection, WaitCondition},
+    repositories::WorkflowRepository,
+};
 
 #[tokio::test]
 async fn workflow_crud_and_step_count_work() {
@@ -11,8 +15,10 @@ async fn workflow_crud_and_step_count_work() {
 
     repo.add_step(
         &workflow.id,
-        ActionConfig::OpenUrl {
+        ActionConfig::Navigate {
             url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
         },
     )
     .await
@@ -44,9 +50,15 @@ async fn step_config_round_trips_through_json() {
     let step = repo
         .add_step(
             &workflow.id,
-            ActionConfig::TypeText {
+            ActionConfig::InputText {
                 xpath: "//*[@name=\"email\"]".to_string(),
+                iframe_xpath: None,
                 text: "user@example.com".to_string(),
+                clear_before_input: true,
+                typing_mode: Some(InputTypingMode::SetValue),
+                delay_ms: None,
+                wait_until: None,
+                timeout_ms: None,
             },
         )
         .await
@@ -95,12 +107,78 @@ async fn step_config_round_trips_through_json() {
 }
 
 #[tokio::test]
+async fn repository_normalizes_legacy_step_configs_when_reading_old_databases() {
+    let db_path = temp_db_path("wam-legacy-normalize-test");
+    let pool = create_sqlite_pool(&db_path)
+        .await
+        .expect("create sqlite pool");
+    run_migrations(&pool).await.expect("run migrations");
+    let repo = WorkflowRepository::new(pool.clone());
+    let workflow = repo.create_workflow("Old flow").await.expect("create");
+
+    sqlx::query(
+        r#"
+        INSERT INTO workflow_steps
+          (id, workflow_id, order_index, type, name, config_json, created_at, updated_at)
+        VALUES
+          ('old-open', ?1, 0, 'open_url', 'Open URL', '{"type":"open_url","config":{"url":"https://example.com"}}', '2026-04-30T00:00:00Z', '2026-04-30T00:00:00Z'),
+          ('old-sleep', ?1, 1, 'sleep', 'Sleep', '{"type":"sleep","config":{"seconds":1.5}}', '2026-04-30T00:00:00Z', '2026-04-30T00:00:00Z'),
+          ('old-type', ?1, 2, 'type_text', 'Type Text', '{"type":"type_text","config":{"xpath":"//*[@name=\"email\"]","text":"user@example.com"}}', '2026-04-30T00:00:00Z', '2026-04-30T00:00:00Z')
+        "#,
+    )
+    .bind(&workflow.id)
+    .execute(&pool)
+    .await
+    .expect("insert legacy steps");
+
+    let detail = repo
+        .get_workflow(&workflow.id)
+        .await
+        .expect("get")
+        .expect("workflow exists");
+
+    assert_eq!(detail.steps[0].action_type.as_str(), "navigate");
+    assert_eq!(
+        detail.steps[0].config,
+        ActionConfig::Navigate {
+            url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
+        }
+    );
+    assert_eq!(
+        detail.steps[1].config,
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(1500),
+            timeout_ms: None,
+        }
+    );
+    assert_eq!(
+        detail.steps[2].config,
+        ActionConfig::InputText {
+            xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
+            text: "user@example.com".to_string(),
+            clear_before_input: true,
+            typing_mode: Some(InputTypingMode::SetValue),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
+        }
+    );
+}
+
+#[tokio::test]
 async fn reorder_persists_and_delete_compacts_order_indexes() {
     let (repo, _db_path) = test_repository().await;
     let workflow = repo.create_workflow("Ordering").await.expect("create");
 
     let first = repo
-        .add_step(&workflow.id, ActionConfig::Sleep { seconds: 1.0 })
+        .add_step(&workflow.id, wait_duration(1000))
         .await
         .expect("first");
     let second = repo
@@ -129,8 +207,10 @@ async fn reorder_persists_and_delete_compacts_order_indexes() {
     let third = repo
         .add_step(
             &workflow.id,
-            ActionConfig::OpenUrl {
+            ActionConfig::Navigate {
                 url: "https://example.com".to_string(),
+                wait_until: None,
+                timeout_ms: None,
             },
         )
         .await
@@ -171,7 +251,7 @@ async fn reorder_persists_and_delete_compacts_order_indexes() {
 async fn deleting_workflow_cascades_steps() {
     let (repo, _db_path) = test_repository().await;
     let workflow = repo.create_workflow("Cascade").await.expect("create");
-    repo.add_step(&workflow.id, ActionConfig::Sleep { seconds: 1.0 })
+    repo.add_step(&workflow.id, wait_duration(1000))
         .await
         .expect("add step");
 
@@ -184,4 +264,15 @@ async fn deleting_workflow_cascades_steps() {
 
     let detail = repo.get_workflow(&workflow.id).await.expect("missing");
     assert!(detail.is_none());
+}
+
+fn wait_duration(duration_ms: u64) -> ActionConfig {
+    ActionConfig::Wait {
+        condition: WaitCondition::Duration,
+        xpath: None,
+        text: None,
+        url: None,
+        duration_ms: Some(duration_ms),
+        timeout_ms: None,
+    }
 }

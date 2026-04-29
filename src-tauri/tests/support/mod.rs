@@ -207,6 +207,6 @@ impl RunExecutor for FakeRunExecutor {
     }
 }
 
-fn temp_db_path(prefix: &str) -> PathBuf {
+pub fn temp_db_path(prefix: &str) -> PathBuf {
     std::env::temp_dir().join(format!("{prefix}-{}.sqlite", Uuid::new_v4()))
 }

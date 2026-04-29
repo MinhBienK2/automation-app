@@ -96,7 +96,7 @@ describe("Workflow detail integration", () => {
               status: "failed",
               error: {
                 step_number: 1,
-                action_type: "sleep",
+                action_type: "wait",
                 reason: "XPath not found",
               },
             };

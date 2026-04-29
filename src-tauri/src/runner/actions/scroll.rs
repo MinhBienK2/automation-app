@@ -3,7 +3,7 @@ use crate::{
     runner::RunnerError,
 };
 
-use super::js::optional_json_string;
+use super::{js::optional_json_string, scroll_block_value, scroll_inline_value};
 
 pub(super) struct ScrollScriptOptions<'a> {
     pub mode: Option<ScrollMode>,
@@ -155,24 +155,6 @@ fn scroll_behavior_value(behavior: Option<ScrollBehavior>) -> &'static str {
     match behavior.unwrap_or(ScrollBehavior::Instant) {
         ScrollBehavior::Instant => "instant",
         ScrollBehavior::Smooth => "smooth",
-    }
-}
-
-fn scroll_block_value(block: Option<ScrollBlock>) -> &'static str {
-    match block.unwrap_or(ScrollBlock::Center) {
-        ScrollBlock::Start => "start",
-        ScrollBlock::Center => "center",
-        ScrollBlock::End => "end",
-        ScrollBlock::Nearest => "nearest",
-    }
-}
-
-fn scroll_inline_value(inline: Option<ScrollInline>) -> &'static str {
-    match inline.unwrap_or(ScrollInline::Nearest) {
-        ScrollInline::Start => "start",
-        ScrollInline::Center => "center",
-        ScrollInline::End => "end",
-        ScrollInline::Nearest => "nearest",
     }
 }
 

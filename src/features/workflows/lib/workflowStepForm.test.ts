@@ -3,24 +3,15 @@ import type { ActionConfig } from "../../../types/workflow";
 import { updateActionConfigField } from "./workflowStepForm";
 
 describe("workflow step form config helpers", () => {
-  test("updates sleep seconds as a number", () => {
-    const config: ActionConfig = { type: "sleep", config: { seconds: 1 } };
-
-    expect(updateActionConfigField(config, "seconds", "2.5")).toEqual({
-      type: "sleep",
-      config: { seconds: 2.5 },
-    });
-  });
-
-  test("updates type text xpath without dropping the text value", () => {
+  test("updates wait duration as a number", () => {
     const config: ActionConfig = {
-      type: "type_text",
-      config: { xpath: "//input", text: "hello" },
+      type: "wait",
+      config: { condition: "duration", duration_ms: 1000 },
     };
 
-    expect(updateActionConfigField(config, "xpath", "//textarea")).toEqual({
-      type: "type_text",
-      config: { xpath: "//textarea", text: "hello" },
+    expect(updateActionConfigField(config, "duration_ms", "2500")).toEqual({
+      type: "wait",
+      config: { condition: "duration", duration_ms: 2500 },
     });
   });
 

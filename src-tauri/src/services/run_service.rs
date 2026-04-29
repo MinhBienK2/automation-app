@@ -16,8 +16,6 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             wait_until: None,
             timeout_ms: None,
         },
-        ActionType::OpenUrl => ActionConfig::OpenUrl { url: String::new() },
-        ActionType::Sleep => ActionConfig::Sleep { seconds: 1.0 },
         ActionType::Wait => ActionConfig::Wait {
             condition: WaitCondition::Duration,
             xpath: None,
@@ -35,10 +33,6 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             delay_ms: None,
             wait_until: None,
             timeout_ms: None,
-        },
-        ActionType::TypeText => ActionConfig::TypeText {
-            xpath: String::new(),
-            text: String::new(),
         },
         ActionType::ClearInput => ActionConfig::ClearInput {
             xpath: String::new(),

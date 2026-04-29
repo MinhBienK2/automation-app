@@ -21,8 +21,8 @@ export const sleepStep: WorkflowStep = {
   name: "Wait for page",
   workflow_id: "workflow-1",
   order_index: 0,
-  action_type: "sleep",
-  config: { type: "sleep", config: { seconds: 1 } },
+  action_type: "wait",
+  config: { type: "wait", config: { condition: "duration", duration_ms: 1000 } },
   created_at: "1",
   updated_at: "1",
 };

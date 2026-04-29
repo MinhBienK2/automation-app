@@ -123,11 +123,8 @@ const commonActionTypes: ActionType[] = [
 
 const actionDescriptions: Record<ActionType, string> = {
   navigate: "Open a page",
-  open_url: "Open a URL with the legacy action",
-  sleep: "Pause for a fixed duration",
   wait: "Pause or wait for a condition",
   input_text: "Fill a field",
-  type_text: "Type text with the legacy action",
   clear_input: "Clear a field",
   click: "Click an element",
   scroll: "Move the page or an element",

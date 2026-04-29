@@ -441,11 +441,28 @@ async fn runner_executes_all_mvp_actions_against_visible_chromium() {
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
-                ActionConfig::Sleep { seconds: 0.2 },
-                ActionConfig::TypeText {
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
+                ActionConfig::Wait {
+                    condition: WaitCondition::Duration,
+                    xpath: None,
+                    text: None,
+                    url: None,
+                    duration_ms: Some((0.2 * 1000.0) as u64),
+                    timeout_ms: None,
+                },
+                ActionConfig::InputText {
                     xpath: "//*[@name=\"email\"]".to_string(),
+                    iframe_xpath: None,
                     text: "user@example.com".to_string(),
+                    clear_before_input: true,
+                    typing_mode: None,
+                    delay_ms: None,
+                    wait_until: None,
+                    timeout_ms: None,
                 },
                 ActionConfig::Click {
                     xpath: "//*[@id=\"submit\"]".to_string(),
@@ -521,7 +538,11 @@ async fn runner_fails_immediately_when_xpath_is_missing_and_keeps_browser_open()
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::Click {
                     xpath: "//*[@id=\"missing\"]".to_string(),
                     iframe_xpath: None,
@@ -574,8 +595,19 @@ async fn runner_can_stop_during_sleep_without_closing_browser() {
         runner()
             .run_steps(
                 vec![
-                    ActionConfig::OpenUrl { url },
-                    ActionConfig::Sleep { seconds: 10.0 },
+                    ActionConfig::Navigate {
+                        url,
+                        wait_until: None,
+                        timeout_ms: None,
+                    },
+                    ActionConfig::Wait {
+                        condition: WaitCondition::Duration,
+                        xpath: None,
+                        text: None,
+                        url: None,
+                        duration_ms: Some((10.0 * 1000.0) as u64),
+                        timeout_ms: None,
+                    },
                     ActionConfig::Scroll {
                         mode: None,
                         direction: ScrollDirection::Down,
@@ -613,7 +645,11 @@ async fn runner_executes_phase_one_human_interaction_actions_against_visible_chr
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::DoubleClick {
                     xpath: "//*[@id=\"double\"]".to_string(),
                     iframe_xpath: None,
@@ -783,7 +819,11 @@ async fn runner_executes_phase_two_form_and_file_actions_against_visible_chromiu
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::UploadFile {
                     xpath: "//*[@id=\"file\"]".to_string(),
                     iframe_xpath: None,
@@ -863,7 +903,11 @@ async fn runner_executes_phase_four_data_capture_actions_against_visible_chromiu
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::ExtractText {
                     xpath: "//*[@id=\"title\"]".to_string(),
                     iframe_xpath: None,
@@ -934,8 +978,10 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl {
+                ActionConfig::Navigate {
                     url: page_one.clone(),
+                    wait_until: None,
+                    timeout_ms: None,
                 },
                 ActionConfig::Navigate {
                     url: page_two.clone(),
@@ -1014,7 +1060,11 @@ async fn runner_executes_phase_three_frame_dialog_download_actions_against_visib
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::SwitchFrame {
                     xpath: Some("//*[@id=\"checkout-frame\"]".to_string()),
                 },
@@ -1145,7 +1195,11 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::SetVariable {
                     name: "customer".to_string(),
                     value: "Ada".to_string(),
@@ -1286,7 +1340,11 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                 ActionConfig::UseProfile {
                     name: profile.clone(),
                 },
-                ActionConfig::OpenUrl { url: url.clone() },
+                ActionConfig::Navigate {
+                    url: url.clone(),
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::Click {
                     xpath: "//*[@id=\"save-local\"]".to_string(),
                     iframe_xpath: None,
@@ -1321,7 +1379,11 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                 ActionConfig::UseProfile {
                     name: profile.clone(),
                 },
-                ActionConfig::OpenUrl { url: url.clone() },
+                ActionConfig::Navigate {
+                    url: url.clone(),
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::Click {
                     xpath: "//*[@id=\"read-local\"]".to_string(),
                     iframe_xpath: None,
@@ -1411,7 +1473,11 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
     let mut third = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::LoadSession { path: session_path },
                 ActionConfig::Click {
                     xpath: "//*[@id=\"read-local\"]".to_string(),
@@ -1480,7 +1546,11 @@ async fn runner_executes_phase_seven_network_device_actions_against_visible_chro
                         value: "seven".to_string(),
                     }],
                 },
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::AssertText {
                     xpath: Some("//*[@id=\"ua\"]".to_string()),
                     iframe_xpath: None,
@@ -1529,7 +1599,11 @@ async fn runner_executes_phase_eight_human_verification_actions_against_visible_
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::DetectChallenge {
                     output_name: "challenge_found".to_string(),
                     patterns: vec!["verify you are human".to_string(), "captcha".to_string()],
@@ -1600,7 +1674,11 @@ async fn runner_executes_phase_nine_reliability_actions_against_visible_chromium
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::FallbackSelector {
                     output_name: "save_xpath".to_string(),
                     xpaths: vec![
@@ -1677,7 +1755,11 @@ async fn runner_adds_failure_screenshot_path_to_failed_step_reason() {
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
                 ActionConfig::Click {
                     xpath: "//*[@id=\"missing\"]".to_string(),
                     iframe_xpath: None,
@@ -1723,7 +1805,7 @@ async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_c
     let mut outcome = runner()
         .run_steps(
             vec![
-                ActionConfig::OpenUrl { url },
+                ActionConfig::Navigate { url, wait_until: None, timeout_ms: None },
                 ActionConfig::SetLocalStorage {
                     key: "token".to_string(),
                     value: "local".to_string(),

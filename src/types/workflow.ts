@@ -1,10 +1,7 @@
 export type ActionType =
   | "navigate"
-  | "open_url"
-  | "sleep"
   | "wait"
   | "input_text"
-  | "type_text"
   | "clear_input"
   | "click"
   | "scroll"
@@ -107,8 +104,6 @@ export type ActionConfig =
         timeout_ms?: number | null;
       };
     }
-  | { type: "open_url"; config: { url: string } }
-  | { type: "sleep"; config: { seconds: number } }
   | {
       type: "wait";
       config: {
@@ -143,7 +138,6 @@ export type ActionConfig =
         timeout_ms?: number | null;
       };
     }
-  | { type: "type_text"; config: { xpath: string; text: string } }
   | {
       type: "clear_input";
       config: {

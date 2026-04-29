@@ -26,7 +26,7 @@ describe("Workflow step builder integration", () => {
     vi.restoreAllMocks();
   });
 
-  test("opens builder and adds a sleep step", async () => {
+  test("opens builder and adds a wait step", async () => {
     const commandDetailSteps: typeof sleepStep[] = [];
     mockTauriCommands({
       ...workflowDetailScenario(commandDetailSteps),
@@ -43,8 +43,8 @@ describe("Workflow step builder integration", () => {
     const palette = await screen.findByRole("dialog", {
       name: "Choose an action type",
     });
-    await userEvent.type(within(palette).getByLabelText("Search actions"), "sleep");
-    await userEvent.click(within(palette).getByRole("button", { name: /Sleep/ }));
+    await userEvent.type(within(palette).getByLabelText("Search actions"), "wait");
+    await userEvent.click(within(palette).getByText("Wait").closest("button")!);
 
     expect(screen.queryByRole("dialog", { name: "Choose an action type" }))
       .not.toBeInTheDocument();
@@ -52,7 +52,7 @@ describe("Workflow step builder integration", () => {
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("add_step", {
         workflowId: "workflow-1",
-        actionType: "sleep",
+        actionType: "wait",
       });
     });
   });
@@ -73,8 +73,8 @@ describe("Workflow step builder integration", () => {
       .toHaveAttribute("aria-pressed", "true");
     expect(within(palette).getByRole("button", { name: /Navigate/ }))
       .toHaveAttribute("data-value", "navigate");
-    expect(within(palette).getByRole("button", { name: /Sleep/ }))
-      .toHaveAttribute("data-value", "sleep");
+    expect(within(palette).getByText("Wait").closest("button"))
+      .toHaveAttribute("data-value", "wait");
     expect(within(palette).getByRole("button", { name: /Use Proxy/ }))
       .toHaveAttribute("data-value", "use_proxy");
     expect(within(palette).getByRole("button", { name: /Take Screenshot/ }))
@@ -334,19 +334,18 @@ describe("Workflow step builder integration", () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
       update_step: () => {
-        throw { field: "seconds", message: "Seconds must be greater than 0" };
+        throw { field: "duration_ms", message: "Duration must be greater than 0" };
       },
     });
 
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    await userEvent.clear(await screen.findByLabelText("Seconds"));
-    await userEvent.type(screen.getByLabelText("Seconds"), "0");
+    expect(await screen.findByLabelText("Duration ms")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
 
     expect(
-      await screen.findByText("Seconds must be greater than 0"),
+      await screen.findByText("Duration must be greater than 0"),
     ).toBeInTheDocument();
   });
 
@@ -356,7 +355,7 @@ describe("Workflow step builder integration", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    expect(await screen.findByLabelText("Seconds")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Duration ms")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Click/ }));
 
@@ -413,7 +412,7 @@ describe("Workflow step builder integration", () => {
     });
     expect(await screen.findByLabelText("XPath")).toHaveValue("saved-xpath");
     expect(screen.getByLabelText("Step name")).toHaveValue("Submit login form");
-    expect(screen.queryByLabelText("Seconds")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Duration ms")).not.toBeInTheDocument();
     expect(screen.getByText("Step saved successfully.")).toHaveAttribute(
       "role",
       "status",

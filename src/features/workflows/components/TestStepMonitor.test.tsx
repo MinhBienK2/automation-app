@@ -78,7 +78,7 @@ describe("Test step monitor integration", () => {
       .toBeInTheDocument();
     expect(screen.getByText("Check the XPath in the Chromium window that remains open."))
       .toBeInTheDocument();
-    expect(screen.getByText("Add a Sleep step before this step if the element loads slowly."))
+    expect(screen.getByText("Add a Wait step before this step if the element loads slowly."))
       .toBeInTheDocument();
   });
 

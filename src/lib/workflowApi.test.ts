@@ -49,7 +49,10 @@ describe("workflow API phase ten commands", () => {
       classes: [],
     });
     await normalizeRecordedEvents([{ type: "click", xpath: "//*[@id='save']" }]);
-    await dryRunValidateConfig({ type: "sleep", config: { seconds: 1 } });
+    await dryRunValidateConfig({
+      type: "wait",
+      config: { condition: "duration", duration_ms: 1000 },
+    });
     await generateFixture("/tmp/fixture.html", "<button>Save</button>");
 
     expect(invokeMock).toHaveBeenCalledWith("validate_schedule", {
@@ -85,7 +88,7 @@ describe("workflow API phase ten commands", () => {
       events: [{ type: "click", xpath: "//*[@id='save']" }],
     });
     expect(invokeMock).toHaveBeenCalledWith("dry_run_validate_config", {
-      config: { type: "sleep", config: { seconds: 1 } },
+      config: { type: "wait", config: { condition: "duration", duration_ms: 1000 } },
     });
     expect(invokeMock).toHaveBeenCalledWith("generate_fixture", {
       path: "/tmp/fixture.html",

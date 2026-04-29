@@ -39,7 +39,10 @@ Configs persist as JSON in `workflow_steps.config_json`.
 
 Preserve serde compatibility for existing configs unless a migration or import/export compatibility path is intentionally added.
 
-## Legacy Actions
+## Removed Legacy Actions
 
-`open_url`, `sleep`, and `type_text` remain in the current type set as legacy actions. Do not remove them without migration, UI, persistence, runner, and docs updates.
+`open_url`, `sleep`, and `type_text` are not part of the current action type set. Existing persisted configs are migrated or normalized as follows:
 
+- `open_url` -> `navigate`
+- `sleep` -> `wait` with `condition: "duration"` and `duration_ms`
+- `type_text` -> `input_text`

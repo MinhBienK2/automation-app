@@ -92,7 +92,7 @@ describe("Workflow list integration", () => {
           step_id: "step-1",
           step_number: 1,
           step_name: "Wait for page",
-          action_type: "sleep",
+          action_type: "wait",
           reason: "XPath not found",
         },
       },

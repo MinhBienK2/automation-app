@@ -1,9 +1,14 @@
-mod click;
+mod actionability;
+mod clipboard;
 mod data_capture;
+mod element;
+mod form;
+mod input;
 mod js;
+mod keyboard;
+mod pointer;
 mod scroll;
-mod type_text;
-mod user_interaction;
+mod wait;
 
 use std::{future::Future, path::Path, pin::Pin, time::Duration};
 
@@ -29,23 +34,28 @@ use chromiumoxide::{
 
 use crate::domain::{
     ActionConfig, AssertElementState, AssertTextMatchMode, ClickButton, ClickMode, HeaderPair,
-    StopWorkflowStatus, WaitCondition, WorkflowCondition,
+    ScrollBlock, ScrollInline, StopWorkflowStatus, WaitCondition, WorkflowCondition,
 };
 
 use self::{
-    click::{click_script, force_dom_click_script, ClickScriptOptions, ClickTargetResult},
+    clipboard::{paste_clipboard_script, set_clipboard_script},
     data_capture::{extract_data_script, store_output_script, ExtractKind},
-    js::{ensure_js_action, json_string, optional_json_string},
-    scroll::{scroll_script, ScrollScriptOptions},
-    type_text::type_text_script,
-    user_interaction::{
-        blur_element_script, clear_input_script, drag_and_drop_script, focus_element_script,
-        hotkey_script, hover_script, input_text_script, paste_clipboard_script, press_key_script,
+    element::{blur_element_script, focus_element_script},
+    form::{
         select_custom_option_script, select_option_script, select_radio_script,
-        set_checkbox_script, set_clipboard_script, set_contenteditable_script, submit_form_script,
-        toggle_checkbox_script, type_sequence_script, wait_script, InputTextScriptOptions,
-        WaitScriptOptions,
+        set_checkbox_script, submit_form_script, toggle_checkbox_script,
     },
+    input::{
+        clear_input_script, input_text_script, set_contenteditable_script, InputTextScriptOptions,
+    },
+    js::{ensure_js_action, json_string, optional_json_string},
+    keyboard::{hotkey_script, press_key_script, type_sequence_script},
+    pointer::{
+        click_script, drag_and_drop_script, force_dom_click_script, hover_script,
+        ClickScriptOptions, ClickTargetResult,
+    },
+    scroll::{scroll_script, ScrollScriptOptions},
+    wait::{wait_script, WaitScriptOptions},
 };
 use super::{browser::BrowserSession, cancellation::RunnerCancellation, error::RunnerError};
 
@@ -66,17 +76,6 @@ pub(super) async fn execute_action(
             let url = render_template(&page, &url).await?;
             page.goto(url).await?;
             Ok(ActionExecution::Complete)
-        }
-        ActionConfig::OpenUrl { url } => {
-            let url = render_template(&page, &url).await?;
-            page.goto(url).await?;
-            Ok(ActionExecution::Complete)
-        }
-        ActionConfig::Sleep { seconds } => {
-            tokio::select! {
-                _ = tokio::time::sleep(Duration::from_secs_f64(seconds)) => Ok(ActionExecution::Complete),
-                _ = cancellation.cancelled() => Ok(ActionExecution::Stopped),
-            }
         }
         ActionConfig::Wait {
             condition: WaitCondition::Duration,
@@ -132,12 +131,6 @@ pub(super) async fn execute_action(
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
-        ActionConfig::TypeText { xpath, text } => {
-            let text = render_template(&page, &text).await?;
-            let script = type_text_script(&xpath, &text)?;
-            ensure_js_action(&page, &script).await?;
-            Ok(ActionExecution::Complete)
-        }
         ActionConfig::ClearInput {
             xpath,
             iframe_xpath,
@@ -182,7 +175,6 @@ pub(super) async fn execute_action(
                 let script = click_script(ClickScriptOptions {
                     xpath: &xpath,
                     iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
-                    mode,
                     scroll_into_view,
                     block,
                     inline,
@@ -310,7 +302,6 @@ pub(super) async fn execute_action(
             let script = click_script(ClickScriptOptions {
                 xpath: &xpath,
                 iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
-                mode: None,
                 scroll_into_view: Some(true),
                 block: None,
                 inline: None,
@@ -337,7 +328,6 @@ pub(super) async fn execute_action(
             let script = click_script(ClickScriptOptions {
                 xpath: &xpath,
                 iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
-                mode: None,
                 scroll_into_view: Some(true),
                 block: None,
                 inline: None,
@@ -1342,6 +1332,24 @@ fn effective_frame<'a>(
     session: &'a BrowserSession,
 ) -> Option<&'a str> {
     explicit_iframe_xpath.or_else(|| session.frame_xpath())
+}
+
+fn scroll_block_value(block: Option<ScrollBlock>) -> &'static str {
+    match block.unwrap_or(ScrollBlock::Center) {
+        ScrollBlock::Start => "start",
+        ScrollBlock::Center => "center",
+        ScrollBlock::End => "end",
+        ScrollBlock::Nearest => "nearest",
+    }
+}
+
+fn scroll_inline_value(inline: Option<ScrollInline>) -> &'static str {
+    match inline.unwrap_or(ScrollInline::Nearest) {
+        ScrollInline::Start => "start",
+        ScrollInline::Center => "center",
+        ScrollInline::End => "end",
+        ScrollInline::Nearest => "nearest",
+    }
 }
 
 async fn render_template(page: &Page, template: &str) -> Result<String, RunnerError> {

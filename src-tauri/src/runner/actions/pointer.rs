@@ -1,16 +1,19 @@
 use serde::Deserialize;
 
 use crate::{
-    domain::{ClickMode, ClickPosition, ClickWaitUntil, ScrollBlock, ScrollInline},
+    domain::{ClickPosition, ClickWaitUntil, ScrollBlock, ScrollInline},
     runner::RunnerError,
 };
 
-use super::js::{json_string, optional_json_string};
+use super::{
+    actionability::click_wait_until_value,
+    js::{json_string, optional_json_string},
+    scroll_block_value, scroll_inline_value,
+};
 
 pub(super) struct ClickScriptOptions<'a> {
     pub xpath: &'a str,
     pub iframe_xpath: Option<&'a str>,
-    pub mode: Option<ClickMode>,
     pub scroll_into_view: Option<bool>,
     pub block: Option<ScrollBlock>,
     pub inline: Option<ScrollInline>,
@@ -62,7 +65,6 @@ pub(super) fn force_dom_click_script(
 pub(super) fn click_script(options: ClickScriptOptions<'_>) -> Result<String, RunnerError> {
     let xpath = json_string(options.xpath)?;
     let iframe_xpath = optional_json_string(options.iframe_xpath)?;
-    let _mode = click_mode_value(options.mode);
     let scroll_into_view = options.scroll_into_view.unwrap_or(true);
     let block = scroll_block_value(options.block);
     let inline = scroll_inline_value(options.inline);
@@ -153,31 +155,6 @@ pub(super) fn click_script(options: ClickScriptOptions<'_>) -> Result<String, Ru
     ))
 }
 
-fn scroll_block_value(block: Option<ScrollBlock>) -> &'static str {
-    match block.unwrap_or(ScrollBlock::Center) {
-        ScrollBlock::Start => "start",
-        ScrollBlock::Center => "center",
-        ScrollBlock::End => "end",
-        ScrollBlock::Nearest => "nearest",
-    }
-}
-
-fn scroll_inline_value(inline: Option<ScrollInline>) -> &'static str {
-    match inline.unwrap_or(ScrollInline::Nearest) {
-        ScrollInline::Start => "start",
-        ScrollInline::Center => "center",
-        ScrollInline::End => "end",
-        ScrollInline::Nearest => "nearest",
-    }
-}
-
-fn click_mode_value(mode: Option<ClickMode>) -> &'static str {
-    match mode.unwrap_or(ClickMode::Real) {
-        ClickMode::Real => "real",
-        ClickMode::ForceDom => "force_dom",
-    }
-}
-
 fn click_position_value(position: Option<ClickPosition>) -> &'static str {
     match position.unwrap_or(ClickPosition::Center) {
         ClickPosition::Center => "center",
@@ -189,13 +166,116 @@ fn click_position_value(position: Option<ClickPosition>) -> &'static str {
     }
 }
 
-fn click_wait_until_value(wait_until: Option<ClickWaitUntil>) -> &'static str {
-    match wait_until.unwrap_or(ClickWaitUntil::Clickable) {
-        ClickWaitUntil::Attached => "attached",
-        ClickWaitUntil::Visible => "visible",
-        ClickWaitUntil::Enabled => "enabled",
-        ClickWaitUntil::Clickable => "clickable",
-    }
+pub(super) fn hover_script(
+    xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let xpath = json_string(xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const xpath = {xpath};
+          const iframeXpath = {iframe_xpath};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const enabled = (node) => !node.disabled && node.getAttribute("aria-disabled") !== "true";
+          const ready = (node) => waitUntil === "attached" || (waitUntil === "visible" && visible(node)) || (waitUntil !== "visible" && enabled(node));
+          const tick = () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const node = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!node) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!ready(node)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element is not visible" }});
+              return setTimeout(tick, 50);
+            }}
+            node.dispatchEvent(new MouseEvent("mouseover", {{ bubbles: true }}));
+            node.dispatchEvent(new MouseEvent("mouseenter", {{ bubbles: true }}));
+            node.dispatchEvent(new MouseEvent("mousemove", {{ bubbles: true }}));
+            return resolve({{ ok: true, reason: "" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
+}
+
+pub(super) fn drag_and_drop_script(
+    source_xpath: &str,
+    target_xpath: &str,
+    iframe_xpath: Option<&str>,
+    wait_until: Option<ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let source_xpath = json_string(source_xpath)?;
+    let target_xpath = json_string(target_xpath)?;
+    let iframe_xpath = optional_json_string(iframe_xpath)?;
+    let wait_until = click_wait_until_value(wait_until);
+    let timeout_ms = timeout_ms.unwrap_or(5000);
+    Ok(format!(
+        r#"
+        (() => new Promise((resolve) => {{
+          const sourceXpath = {source_xpath};
+          const targetXpath = {target_xpath};
+          const iframeXpath = {iframe_xpath};
+          const waitUntil = "{wait_until}";
+          const timeoutMs = {timeout_ms};
+          const startedAt = Date.now();
+          const resolveDocument = () => iframeXpath
+            ? document.evaluate(iframeXpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue?.contentDocument || null
+            : document;
+          const visible = (node) => {{
+            const rect = node.getBoundingClientRect();
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          }};
+          const ready = (node) => waitUntil === "attached" || visible(node);
+          const tick = () => {{
+            const doc = resolveDocument();
+            if (!doc) return resolve({{ ok: false, reason: "Iframe not found" }});
+            const source = doc.evaluate(sourceXpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            const target = doc.evaluate(targetXpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (!source) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Source XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!target) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Target XPath not found" }});
+              return setTimeout(tick, 50);
+            }}
+            if (!ready(source) || !ready(target)) {{
+              if (Date.now() - startedAt >= timeoutMs) return resolve({{ ok: false, reason: "Element is not visible" }});
+              return setTimeout(tick, 50);
+            }}
+            const dataTransfer = new DataTransfer();
+            source.dispatchEvent(new DragEvent("dragstart", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            target.dispatchEvent(new DragEvent("dragenter", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            target.dispatchEvent(new DragEvent("dragover", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            target.dispatchEvent(new DragEvent("drop", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            source.dispatchEvent(new DragEvent("dragend", {{ bubbles: true, cancelable: true, dataTransfer }}));
+            return resolve({{ ok: true, reason: "" }});
+          }};
+          tick();
+        }}))()
+        "#
+    ))
 }
 
 #[cfg(test)]
@@ -207,7 +287,6 @@ mod tests {
         let script = click_script(ClickScriptOptions {
             xpath: "//*[@id='submit']",
             iframe_xpath: Some("//*[@id='frame']"),
-            mode: None,
             scroll_into_view: None,
             block: None,
             inline: None,
@@ -224,5 +303,29 @@ mod tests {
         assert!(script.contains("elementFromPoint"));
         assert!(script.contains("Element is covered"));
         assert!(script.contains("Iframe XPath not found"));
+    }
+
+    #[test]
+    fn pointer_scripts_cover_hover_and_drag_actions() {
+        let hover = hover_script(
+            "//*[@id='menu']",
+            None,
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+        let drag = drag_and_drop_script(
+            "//*[@id='source']",
+            "//*[@id='target']",
+            None,
+            Some(ClickWaitUntil::Visible),
+            Some(3000),
+        )
+        .unwrap();
+
+        assert!(hover.contains("mouseover"));
+        assert!(hover.contains("timeoutMs"));
+        assert!(drag.contains("dragstart"));
+        assert!(drag.contains("drop"));
     }
 }

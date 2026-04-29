@@ -6,11 +6,8 @@ use super::ValidationError;
 #[serde(rename_all = "snake_case")]
 pub enum ActionType {
     Navigate,
-    OpenUrl,
-    Sleep,
     Wait,
     InputText,
-    TypeText,
     ClearInput,
     Click,
     Scroll,
@@ -91,11 +88,8 @@ impl ActionType {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Navigate => "navigate",
-            Self::OpenUrl => "open_url",
-            Self::Sleep => "sleep",
             Self::Wait => "wait",
             Self::InputText => "input_text",
-            Self::TypeText => "type_text",
             Self::ClearInput => "clear_input",
             Self::Click => "click",
             Self::Scroll => "scroll",
@@ -176,11 +170,8 @@ impl ActionType {
     pub fn label(self) -> &'static str {
         match self {
             Self::Navigate => "Navigate",
-            Self::OpenUrl => "Open URL",
-            Self::Sleep => "Sleep",
             Self::Wait => "Wait",
             Self::InputText => "Input Text",
-            Self::TypeText => "Type Text",
             Self::ClearInput => "Clear Input",
             Self::Click => "Click",
             Self::Scroll => "Scroll",
@@ -439,12 +430,6 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
     },
-    OpenUrl {
-        url: String,
-    },
-    Sleep {
-        seconds: f64,
-    },
     Wait {
         condition: WaitCondition,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -473,10 +458,6 @@ pub enum ActionConfig {
         wait_until: Option<ClickWaitUntil>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
-    },
-    TypeText {
-        xpath: String,
-        text: String,
     },
     ClearInput {
         xpath: String,
@@ -986,11 +967,8 @@ impl ActionConfig {
     pub fn action_type(&self) -> ActionType {
         match self {
             Self::Navigate { .. } => ActionType::Navigate,
-            Self::OpenUrl { .. } => ActionType::OpenUrl,
-            Self::Sleep { .. } => ActionType::Sleep,
             Self::Wait { .. } => ActionType::Wait,
             Self::InputText { .. } => ActionType::InputText,
-            Self::TypeText { .. } => ActionType::TypeText,
             Self::ClearInput { .. } => ActionType::ClearInput,
             Self::Click { .. } => ActionType::Click,
             Self::Scroll { .. } => ActionType::Scroll,
@@ -1080,13 +1058,6 @@ impl ActionConfig {
                 "timeout_ms",
                 "Timeout must be greater than 0",
             )),
-            Self::OpenUrl { url } if url.trim().is_empty() => {
-                Err(ValidationError::new("url", "URL is required"))
-            }
-            Self::Sleep { seconds } if *seconds <= 0.0 => Err(ValidationError::new(
-                "seconds",
-                "Seconds must be greater than 0",
-            )),
             Self::Wait {
                 condition: WaitCondition::Duration,
                 duration_ms,
@@ -1141,12 +1112,6 @@ impl ActionConfig {
                 "delay_ms",
                 "Delay must be greater than 0",
             )),
-            Self::TypeText { xpath, .. } if xpath.trim().is_empty() => {
-                Err(ValidationError::new("xpath", "XPath is required"))
-            }
-            Self::TypeText { text, .. } if text.is_empty() => {
-                Err(ValidationError::new("text", "Text is required"))
-            }
             Self::ClearInput { xpath, .. } if xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }

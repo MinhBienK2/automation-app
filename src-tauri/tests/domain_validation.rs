@@ -30,46 +30,6 @@ fn valid_workflow_name_passes() {
 #[test]
 fn action_config_validation_covers_required_fields() {
     assert_validation_message(
-        ActionConfig::OpenUrl {
-            url: " ".to_string(),
-        }
-        .validate()
-        .expect_err("blank URL should fail"),
-        "url",
-        "URL is required",
-    );
-
-    assert_validation_message(
-        ActionConfig::Sleep { seconds: 0.0 }
-            .validate()
-            .expect_err("zero seconds should fail"),
-        "seconds",
-        "Seconds must be greater than 0",
-    );
-
-    assert_validation_message(
-        ActionConfig::TypeText {
-            xpath: String::new(),
-            text: "abc".to_string(),
-        }
-        .validate()
-        .expect_err("blank XPath should fail"),
-        "xpath",
-        "XPath is required",
-    );
-
-    assert_validation_message(
-        ActionConfig::TypeText {
-            xpath: "//*[@name=\"email\"]".to_string(),
-            text: String::new(),
-        }
-        .validate()
-        .expect_err("blank text should fail"),
-        "text",
-        "Text is required",
-    );
-
-    assert_validation_message(
         ActionConfig::Click {
             xpath: String::new(),
             iframe_xpath: None,
@@ -116,13 +76,28 @@ fn action_config_validation_covers_required_fields() {
 #[test]
 fn valid_action_configs_pass_validation() {
     let configs = [
-        ActionConfig::OpenUrl {
+        ActionConfig::Navigate {
             url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
         },
-        ActionConfig::Sleep { seconds: 1.5 },
-        ActionConfig::TypeText {
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(1500),
+            timeout_ms: None,
+        },
+        ActionConfig::InputText {
             xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
             text: "user@example.com".to_string(),
+            clear_before_input: true,
+            typing_mode: Some(InputTypingMode::SetValue),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
         },
         ActionConfig::Click {
             xpath: "//*[@type=\"submit\"]".to_string(),
@@ -163,13 +138,28 @@ fn valid_action_configs_pass_validation() {
 #[test]
 fn every_action_config_round_trips_through_json() {
     let configs = [
-        ActionConfig::OpenUrl {
+        ActionConfig::Navigate {
             url: "https://example.com".to_string(),
+            wait_until: None,
+            timeout_ms: None,
         },
-        ActionConfig::Sleep { seconds: 2.0 },
-        ActionConfig::TypeText {
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(2000),
+            timeout_ms: None,
+        },
+        ActionConfig::InputText {
             xpath: "//*[@name=\"email\"]".to_string(),
+            iframe_xpath: None,
             text: "user@example.com".to_string(),
+            clear_before_input: true,
+            typing_mode: Some(InputTypingMode::SetValue),
+            delay_ms: None,
+            wait_until: None,
+            timeout_ms: None,
         },
         ActionConfig::Click {
             xpath: "//*[@type=\"submit\"]".to_string(),
@@ -953,7 +943,14 @@ fn phase_nine_reliability_configs_validate_required_fields() {
         ActionConfig::RetryStep {
             max_attempts: 0,
             delay_ms: None,
-            step: Box::new(ActionConfig::Sleep { seconds: 0.1 }),
+            step: Box::new(ActionConfig::Wait {
+                condition: WaitCondition::Duration,
+                xpath: None,
+                text: None,
+                url: None,
+                duration_ms: Some(100),
+                timeout_ms: None,
+            }),
         }
         .validate()
         .expect_err("zero retry step attempts should fail"),
