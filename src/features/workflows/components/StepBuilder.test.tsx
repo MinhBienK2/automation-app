@@ -158,6 +158,19 @@ describe("Workflow step builder integration", () => {
       "data-value",
       "grant_permission",
     );
+    expect(screen.getByRole("group", { name: "Human Verification" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Detect Challenge" })).toHaveAttribute(
+      "data-value",
+      "detect_challenge",
+    );
+    expect(screen.getByRole("option", { name: "Pause For Human" })).toHaveAttribute(
+      "data-value",
+      "pause_for_human",
+    );
+    expect(screen.getByRole("option", { name: "Resume When Condition" })).toHaveAttribute(
+      "data-value",
+      "resume_when_condition",
+    );
   });
 
   test("flips the action picker upward when there is not enough room below", async () => {
@@ -310,6 +323,55 @@ describe("Workflow step builder integration", () => {
             device_scale_factor: 1,
             mobile: true,
             touch: true,
+          },
+        },
+      });
+    });
+  });
+
+  test("saves phase eight human verification config from the form", async () => {
+    const detectStep: WorkflowStep = {
+      id: "step-detect",
+      name: "Detect challenge",
+      workflow_id: "workflow-1",
+      order_index: 0,
+      action_type: "detect_challenge",
+      config: {
+        type: "detect_challenge",
+        config: {
+          output_name: "challenge_found",
+          patterns: ["captcha"],
+          timeout_ms: 1000,
+        },
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockTauriCommands({
+      ...workflowDetailScenario([detectStep]),
+      update_step: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    fireEvent.change(await screen.findByLabelText("Patterns"), {
+      target: { value: "captcha\nverify you are human" },
+    });
+    await userEvent.clear(screen.getByLabelText("Timeout ms"));
+    await userEvent.type(screen.getByLabelText("Timeout ms"), "1500");
+    await userEvent.click(screen.getByRole("button", { name: "Save Step" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("update_step", {
+        stepId: "step-detect",
+        name: "Detect challenge",
+        config: {
+          type: "detect_challenge",
+          config: {
+            output_name: "challenge_found",
+            patterns: ["captcha", "verify you are human"],
+            timeout_ms: 1500,
           },
         },
       });

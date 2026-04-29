@@ -73,6 +73,9 @@ export const actionLabels: Record<ActionType, string> = {
   set_geolocation: "Set Geolocation",
   set_extra_headers: "Set Extra Headers",
   grant_permission: "Grant Permission",
+  detect_challenge: "Detect Challenge",
+  pause_for_human: "Pause For Human",
+  resume_when_condition: "Resume When Condition",
 };
 
 export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
@@ -172,6 +175,10 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
       "set_extra_headers",
       "grant_permission",
     ],
+  },
+  {
+    label: "Human Verification",
+    actions: ["detect_challenge", "pause_for_human", "resume_when_condition"],
   },
   {
     label: "Legacy",
@@ -345,6 +352,12 @@ export function stepSummary(step: WorkflowStep) {
       return `${step.config.config.headers.length} header(s)`;
     case "grant_permission":
       return step.config.config.permissions.join(", ") || "No permissions";
+    case "detect_challenge":
+      return `${step.config.config.output_name} from ${step.config.config.patterns.length} pattern(s)`;
+    case "pause_for_human":
+      return step.config.config.reason || "No reason";
+    case "resume_when_condition":
+      return step.config.config.condition.kind;
   }
 }
 

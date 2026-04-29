@@ -926,6 +926,34 @@ pub(super) async fn execute_action(
             }
             Ok(ActionExecution::Complete)
         }
+        ActionConfig::DetectChallenge {
+            output_name,
+            patterns,
+            timeout_ms,
+        } => {
+            let script = detect_challenge_script(&output_name, &patterns, timeout_ms)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::PauseForHuman { reason, timeout_ms } => {
+            let script = store_output_script("human_verification_pause", &reason)?;
+            ensure_js_action(&page, &script).await?;
+            if let Some(timeout_ms) = timeout_ms {
+                tokio::select! {
+                    () = cancellation.cancelled() => Ok(ActionExecution::Stopped),
+                    () = tokio::time::sleep(Duration::from_millis(timeout_ms)) => Ok(ActionExecution::Complete),
+                }
+            } else {
+                Ok(ActionExecution::Complete)
+            }
+        }
+        ActionConfig::ResumeWhenCondition {
+            condition,
+            timeout_ms,
+        } => {
+            wait_for_workflow_condition(&page, &condition, timeout_ms, cancellation).await?;
+            Ok(ActionExecution::Complete)
+        }
     }
 }
 
@@ -938,6 +966,65 @@ fn headers_value(headers: &[HeaderPair]) -> Headers {
         );
     }
     Headers::new(serde_json::Value::Object(value))
+}
+
+fn detect_challenge_script(
+    output_name: &str,
+    patterns: &[String],
+    timeout_ms: Option<u64>,
+) -> Result<String, RunnerError> {
+    let output_name = json_string(output_name)?;
+    let patterns = serde_json::to_string(patterns)?;
+    let timeout_ms = timeout_ms.unwrap_or(1000);
+    Ok(format!(
+        r#"
+        (async () => {{
+          const outputName = {output_name};
+          const patterns = {patterns}.map((pattern) => String(pattern).toLowerCase());
+          const deadline = Date.now() + {timeout_ms};
+          const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const detect = () => {{
+            const text = (document.body ? document.body.innerText : document.documentElement.innerText || "").toLowerCase();
+            const marker = document.querySelector('[class*="captcha" i], [id*="captcha" i], iframe[src*="captcha" i], iframe[title*="challenge" i]');
+            return Boolean(marker) || patterns.some((pattern) => pattern && text.includes(pattern));
+          }};
+          let found = detect();
+          while (!found && Date.now() <= deadline) {{
+            await delay(100);
+            found = detect();
+          }}
+          window.__wamOutputs = window.__wamOutputs || {{}};
+          window.__wamOutputs[outputName] = found ? "true" : "false";
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
+async fn wait_for_workflow_condition(
+    page: &Page,
+    condition: &WorkflowCondition,
+    timeout_ms: Option<u64>,
+    cancellation: &RunnerCancellation,
+) -> Result<(), RunnerError> {
+    let deadline =
+        tokio::time::Instant::now() + Duration::from_millis(timeout_ms.unwrap_or(60_000));
+    loop {
+        if evaluate_condition(page, condition).await? {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return Err(RunnerError::ActionFailed(
+                "Resume condition was not met before timeout".to_string(),
+            ));
+        }
+        tokio::select! {
+            () = cancellation.cancelled() => {
+                return Err(RunnerError::ActionFailed("Workflow stopped".to_string()));
+            }
+            () = tokio::time::sleep(Duration::from_millis(100)) => {}
+        }
+    }
 }
 
 fn execute_inline_steps<'a>(

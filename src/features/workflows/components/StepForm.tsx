@@ -1788,6 +1788,79 @@ function ActionFields({ config, onChange }: ActionFieldsProps) {
           </Label>
         </>
       );
+    case "detect_challenge":
+      return (
+        <>
+          <Label>
+            Output name
+            <Input
+              value={config.config.output_name}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "output_name", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Patterns
+            <Textarea
+              value={config.config.patterns.join("\n")}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "patterns", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Timeout ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 1000}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
+    case "pause_for_human":
+      return (
+        <>
+          <Label>
+            Reason
+            <Textarea
+              value={config.config.reason}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "reason", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Timeout ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.timeout_ms ?? 0}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
+    case "resume_when_condition":
+      return (
+        <Label>
+          Timeout ms
+          <Input
+            min="1"
+            type="number"
+            value={config.config.timeout_ms ?? 60000}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "timeout_ms", event.currentTarget.value))
+            }
+          />
+        </Label>
+      );
   }
 }
 

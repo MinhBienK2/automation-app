@@ -330,6 +330,26 @@ fn phase_seven_server() -> String {
     format!("http://{}", address)
 }
 
+fn write_phase_eight_challenge_page() -> String {
+    let path = std::env::temp_dir().join(format!("wam-phase-eight-{}.html", Uuid::new_v4()));
+    fs::write(
+        &path,
+        r#"
+        <!doctype html>
+        <html>
+          <body>
+            <section id="challenge">Verify you are human before continuing</section>
+            <button id="solve" onclick="document.getElementById('challenge').remove(); document.getElementById('content').hidden = false">Solved</button>
+            <main id="content" hidden>Welcome after verification</main>
+          </body>
+        </html>
+        "#,
+    )
+    .expect("write phase eight challenge page");
+
+    format!("file://{}", path.display())
+}
+
 fn runner() -> BrowserRunner {
     BrowserRunner::new(RunnerOptions {
         headed: true,
@@ -1422,5 +1442,76 @@ async fn runner_executes_phase_seven_network_device_actions_against_visible_chro
 
     assert_eq!(outcome.failed_step, None);
     assert_eq!(outcome.status, RunnerStatus::Success);
+    outcome.session.close().await.expect("close browser");
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_executes_phase_eight_human_verification_actions_against_visible_chromium() {
+    let url = write_phase_eight_challenge_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::OpenUrl { url },
+                ActionConfig::DetectChallenge {
+                    output_name: "challenge_found".to_string(),
+                    patterns: vec!["verify you are human".to_string(), "captcha".to_string()],
+                    timeout_ms: Some(1000),
+                },
+                ActionConfig::PauseForHuman {
+                    reason: "Manual verification required".to_string(),
+                    timeout_ms: Some(100),
+                },
+                ActionConfig::Click {
+                    xpath: "//*[@id=\"solve\"]".to_string(),
+                    iframe_xpath: None,
+                    mode: None,
+                    button: None,
+                    click_count: None,
+                    scroll_into_view: None,
+                    block: None,
+                    inline: None,
+                    position: None,
+                    offset_x: None,
+                    offset_y: None,
+                    wait_until: None,
+                    timeout_ms: Some(3000),
+                    retry_interval_ms: None,
+                    post_click_wait_ms: None,
+                },
+                ActionConfig::ResumeWhenCondition {
+                    condition: WorkflowCondition::ElementVisible {
+                        xpath: "//*[@id=\"content\"]".to_string(),
+                    },
+                    timeout_ms: Some(3000),
+                },
+                ActionConfig::AssertText {
+                    xpath: Some("//*[@id=\"content\"]".to_string()),
+                    iframe_xpath: None,
+                    text: "Welcome after verification".to_string(),
+                    match_mode: AssertTextMatchMode::Equals,
+                    timeout_ms: Some(3000),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run phase eight human verification steps");
+
+    assert_eq!(outcome.failed_step, None);
+    assert_eq!(outcome.status, RunnerStatus::Success);
+    let outputs_json = outcome
+        .session
+        .evaluate_string("JSON.stringify(window.__wamOutputs)")
+        .await
+        .expect("outputs json");
+    let outputs: serde_json::Value = serde_json::from_str(&outputs_json).expect("outputs");
+    assert_eq!(outputs["challenge_found"], "true");
+    assert_eq!(
+        outputs["human_verification_pause"],
+        "Manual verification required"
+    );
     outcome.session.close().await.expect("close browser");
 }

@@ -69,7 +69,10 @@ type PhaseOneActionType =
   | "set_viewport"
   | "set_geolocation"
   | "set_extra_headers"
-  | "grant_permission";
+  | "grant_permission"
+  | "detect_challenge"
+  | "pause_for_human"
+  | "resume_when_condition";
 
 const xpathField = {
   vi: "XPath chọn element cần thao tác. Nếu element nằm trong iframe, XPath này là XPath bên trong iframe.",
@@ -568,6 +571,9 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   set_geolocation: elementHelp("Set Geolocation", "override browser geolocation", "đổi vị trí", "geo"),
   set_extra_headers: elementHelp("Set Extra Headers", "send extra HTTP headers", "thêm header", "headers"),
   grant_permission: elementHelp("Grant Permission", "grant browser permissions", "cấp quyền", "permission"),
+  detect_challenge: elementHelp("Detect Challenge", "detect human verification UI", "phát hiện xác minh", "challenge"),
+  pause_for_human: elementHelp("Pause For Human", "pause for manual verification", "tạm dừng cho người xử lý", "human"),
+  resume_when_condition: elementHelp("Resume When Condition", "resume after a clear condition", "tiếp tục khi đủ điều kiện", "resume"),
   take_screenshot: {
     vi: {
       title: "Trợ giúp Take Screenshot",

@@ -65,7 +65,10 @@ export type ActionType =
   | "set_viewport"
   | "set_geolocation"
   | "set_extra_headers"
-  | "grant_permission";
+  | "grant_permission"
+  | "detect_challenge"
+  | "pause_for_human"
+  | "resume_when_condition";
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
@@ -429,6 +432,18 @@ export type ActionConfig =
   | {
       type: "grant_permission";
       config: { origin?: string | null; permissions: string[] };
+    }
+  | {
+      type: "detect_challenge";
+      config: { output_name: string; patterns: string[]; timeout_ms?: number | null };
+    }
+  | {
+      type: "pause_for_human";
+      config: { reason: string; timeout_ms?: number | null };
+    }
+  | {
+      type: "resume_when_condition";
+      config: { condition: WorkflowCondition; timeout_ms?: number | null };
     };
 
 export type HeaderPair = {

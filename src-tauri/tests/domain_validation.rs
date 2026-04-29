@@ -2,7 +2,7 @@ use workflow_automation_manager_lib::domain::{
     ActionConfig, ActionType, CheckboxState, ClearInputMethod, ClickButton, ClickMode,
     ClickPosition, ClickWaitUntil, HeaderPair, InputTypingMode, RunError, RunStatus,
     ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy,
-    ValidationError, WaitCondition, Workflow, WorkflowStep,
+    ValidationError, WaitCondition, Workflow, WorkflowCondition, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -803,6 +803,86 @@ fn phase_seven_network_device_configs_validate_required_fields() {
         .expect_err("empty permissions should fail"),
         "permissions",
         "At least one permission is required",
+    );
+}
+
+#[test]
+fn phase_eight_human_verification_configs_validate_and_round_trip() {
+    let configs = [
+        ActionConfig::DetectChallenge {
+            output_name: "challenge_found".to_string(),
+            patterns: vec!["captcha".to_string(), "verify you are human".to_string()],
+            timeout_ms: Some(1000),
+        },
+        ActionConfig::PauseForHuman {
+            reason: "Solve the visible challenge".to_string(),
+            timeout_ms: Some(1000),
+        },
+        ActionConfig::ResumeWhenCondition {
+            condition: WorkflowCondition::ElementVisible {
+                xpath: "//*[@id='content']".to_string(),
+            },
+            timeout_ms: Some(5000),
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn phase_eight_human_verification_configs_validate_required_fields() {
+    assert_validation_message(
+        ActionConfig::DetectChallenge {
+            output_name: String::new(),
+            patterns: vec!["captcha".to_string()],
+            timeout_ms: Some(1000),
+        }
+        .validate()
+        .expect_err("blank challenge output should fail"),
+        "output_name",
+        "Output name is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::DetectChallenge {
+            output_name: "challenge_found".to_string(),
+            patterns: vec![],
+            timeout_ms: Some(1000),
+        }
+        .validate()
+        .expect_err("empty challenge patterns should fail"),
+        "patterns",
+        "At least one challenge pattern is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::PauseForHuman {
+            reason: String::new(),
+            timeout_ms: Some(1000),
+        }
+        .validate()
+        .expect_err("blank pause reason should fail"),
+        "reason",
+        "Pause reason is required",
+    );
+
+    assert_validation_message(
+        ActionConfig::ResumeWhenCondition {
+            condition: WorkflowCondition::TextVisible {
+                text: String::new(),
+            },
+            timeout_ms: Some(1000),
+        }
+        .validate()
+        .expect_err("invalid resume condition should fail"),
+        "text",
+        "Condition text is required",
     );
 }
 

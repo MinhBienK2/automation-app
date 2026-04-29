@@ -499,4 +499,52 @@ describe("workflow step form config helpers", () => {
       config: { origin: null, permissions: ["geolocation", "notifications"] },
     });
   });
+
+  test("updates phase eight human verification configs with typed values", () => {
+    const detectConfig: ActionConfig = {
+      type: "detect_challenge",
+      config: {
+        output_name: "challenge_found",
+        patterns: ["captcha"],
+      },
+    };
+    const pauseConfig: ActionConfig = {
+      type: "pause_for_human",
+      config: { reason: "Solve challenge", timeout_ms: 1000 },
+    };
+    const resumeConfig: ActionConfig = {
+      type: "resume_when_condition",
+      config: {
+        condition: { kind: "text_visible", text: "Welcome" },
+        timeout_ms: 3000,
+      },
+    };
+
+    expect(updateActionConfigField(detectConfig, "patterns", "captcha\nverify you are human")).toEqual({
+      type: "detect_challenge",
+      config: {
+        output_name: "challenge_found",
+        patterns: ["captcha", "verify you are human"],
+      },
+    });
+    expect(updateActionConfigField(detectConfig, "timeout_ms", "1500")).toEqual({
+      type: "detect_challenge",
+      config: {
+        output_name: "challenge_found",
+        patterns: ["captcha"],
+        timeout_ms: 1500,
+      },
+    });
+    expect(updateActionConfigField(pauseConfig, "reason", "Manual verification")).toEqual({
+      type: "pause_for_human",
+      config: { reason: "Manual verification", timeout_ms: 1000 },
+    });
+    expect(updateActionConfigField(resumeConfig, "timeout_ms", "5000")).toEqual({
+      type: "resume_when_condition",
+      config: {
+        condition: { kind: "text_visible", text: "Welcome" },
+        timeout_ms: 5000,
+      },
+    });
+  });
 });

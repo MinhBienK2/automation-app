@@ -347,6 +347,25 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             origin: None,
             permissions: vec!["geolocation".to_string()],
         },
+        ActionType::DetectChallenge => ActionConfig::DetectChallenge {
+            output_name: "challenge_found".to_string(),
+            patterns: vec![
+                "captcha".to_string(),
+                "verify you are human".to_string(),
+                "challenge".to_string(),
+            ],
+            timeout_ms: Some(1000),
+        },
+        ActionType::PauseForHuman => ActionConfig::PauseForHuman {
+            reason: "Human verification required".to_string(),
+            timeout_ms: None,
+        },
+        ActionType::ResumeWhenCondition => ActionConfig::ResumeWhenCondition {
+            condition: crate::domain::WorkflowCondition::TextVisible {
+                text: "Welcome".to_string(),
+            },
+            timeout_ms: Some(60_000),
+        },
     }
 }
 

@@ -72,6 +72,9 @@ pub enum ActionType {
     SetGeolocation,
     SetExtraHeaders,
     GrantPermission,
+    DetectChallenge,
+    PauseForHuman,
+    ResumeWhenCondition,
 }
 
 impl ActionType {
@@ -144,6 +147,9 @@ impl ActionType {
             Self::SetGeolocation => "set_geolocation",
             Self::SetExtraHeaders => "set_extra_headers",
             Self::GrantPermission => "grant_permission",
+            Self::DetectChallenge => "detect_challenge",
+            Self::PauseForHuman => "pause_for_human",
+            Self::ResumeWhenCondition => "resume_when_condition",
         }
     }
 
@@ -216,6 +222,9 @@ impl ActionType {
             Self::SetGeolocation => "Set Geolocation",
             Self::SetExtraHeaders => "Set Extra Headers",
             Self::GrantPermission => "Grant Permission",
+            Self::DetectChallenge => "Detect Challenge",
+            Self::PauseForHuman => "Pause For Human",
+            Self::ResumeWhenCondition => "Resume When Condition",
         }
     }
 }
@@ -871,6 +880,22 @@ pub enum ActionConfig {
         origin: Option<String>,
         permissions: Vec<String>,
     },
+    DetectChallenge {
+        output_name: String,
+        patterns: Vec<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    PauseForHuman {
+        reason: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
+    ResumeWhenCondition {
+        condition: WorkflowCondition,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
 }
 
 impl ActionConfig {
@@ -943,6 +968,9 @@ impl ActionConfig {
             Self::SetGeolocation { .. } => ActionType::SetGeolocation,
             Self::SetExtraHeaders { .. } => ActionType::SetExtraHeaders,
             Self::GrantPermission { .. } => ActionType::GrantPermission,
+            Self::DetectChallenge { .. } => ActionType::DetectChallenge,
+            Self::PauseForHuman { .. } => ActionType::PauseForHuman,
+            Self::ResumeWhenCondition { .. } => ActionType::ResumeWhenCondition,
         }
     }
 
@@ -1383,6 +1411,42 @@ impl ActionConfig {
                     "Permission names are required",
                 ))
             }
+            Self::DetectChallenge { output_name, .. } if output_name.trim().is_empty() => Err(
+                ValidationError::new("output_name", "Output name is required"),
+            ),
+            Self::DetectChallenge { patterns, .. } if patterns.is_empty() => Err(
+                ValidationError::new("patterns", "At least one challenge pattern is required"),
+            ),
+            Self::DetectChallenge { patterns, .. }
+                if patterns.iter().any(|pattern| pattern.trim().is_empty()) =>
+            {
+                Err(ValidationError::new(
+                    "patterns",
+                    "Challenge patterns are required",
+                ))
+            }
+            Self::DetectChallenge {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
+            Self::PauseForHuman { reason, .. } if reason.trim().is_empty() => {
+                Err(ValidationError::new("reason", "Pause reason is required"))
+            }
+            Self::PauseForHuman {
+                timeout_ms: Some(0),
+                ..
+            }
+            | Self::ResumeWhenCondition {
+                timeout_ms: Some(0),
+                ..
+            } => Err(ValidationError::new(
+                "timeout_ms",
+                "Timeout must be greater than 0",
+            )),
+            Self::ResumeWhenCondition { condition, .. } => validate_condition(condition),
             Self::DoubleClick {
                 timeout_ms: Some(0),
                 ..

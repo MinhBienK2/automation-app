@@ -32,6 +32,7 @@ export type ActionConfigField =
   | "origin"
   | "output_name"
   | "path"
+  | "patterns"
   | "pixels"
   | "position"
   | "post_click_wait_ms"
@@ -238,6 +239,36 @@ export function updateActionConfigField(
         type: "grant_permission",
         config: { ...config.config, permissions: parseLineList(value) },
       };
+    case "detect_challenge":
+      if (field === "patterns") {
+        return {
+          type: "detect_challenge",
+          config: { ...config.config, patterns: parseLineList(value) },
+        };
+      }
+      if (field === "timeout_ms") {
+        return {
+          type: "detect_challenge",
+          config: { ...config.config, timeout_ms: Number(value) },
+        };
+      }
+      return { type: "detect_challenge", config: { ...config.config, [field]: value } };
+    case "pause_for_human":
+      if (field === "timeout_ms") {
+        return {
+          type: "pause_for_human",
+          config: { ...config.config, timeout_ms: Number(value) },
+        };
+      }
+      return { type: "pause_for_human", config: { ...config.config, reason: value } };
+    case "resume_when_condition":
+      if (field === "timeout_ms") {
+        return {
+          type: "resume_when_condition",
+          config: { ...config.config, timeout_ms: Number(value) },
+        };
+      }
+      return config;
   }
 }
 
