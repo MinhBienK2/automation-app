@@ -24,6 +24,20 @@ Expected flow:
 
 Exceptions: docs-only changes, formatting-only changes, comment-only changes, generated code, trivial configuration updates, and throwaway prototypes. If skipping TDD for a code change, state why in the final response.
 
+## Docs Sync Requirement
+Before implementing any feature, bug fix, refactor, behavior change, command/API change, validation change, persistence change, runner change, or user-visible workflow change, agents MUST read the relevant files under `docs/`.
+
+Expected flow:
+1. Read `docs/README.md` and `docs/task-routes.md`.
+2. Read the route-specific domain, architecture, contract, and maintenance docs named by the route.
+3. Inspect the current source files listed by the route before assuming docs are complete.
+4. Update `docs/` in the same change if behavior, contracts, business rules, task routing, verification expectations, file ownership, or cross-feature impact changed.
+5. Before final response, verify docs and code agree for the touched area.
+
+Exceptions: formatting-only changes, comment-only changes, generated files, dependency lockfile churn with no behavior or command changes, and throwaway prototypes. If skipping docs updates for a code change, state why in the final response.
+
+Final responses for code changes MUST include tests/checks run, whether `docs/` was updated, and why docs did not need updates if unchanged.
+
 ## Design System Requirement
 Before changing `src/App.css`, layout structure, or user-facing component styling, agents MUST read `DESIGN.md` and follow its design system for colors, typography, spacing, borders, radius, responsive behavior, and component treatment.
 
@@ -34,7 +48,7 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 - Tauri commands live in `src-tauri/src/commands.rs`; keep command-facing errors serializable through `CommandError`.
 - Domain validation belongs in `src-tauri/src/domain/`; persistence belongs in `src-tauri/src/repositories/` and SQL migrations.
 - Browser execution code belongs in `src-tauri/src/runner/`; preserve stop/run state behavior when changing runner flow.
-- MVP plans and smoke checklist live under `docs/superpowers/` and `README.md`.
+- Agent source-of-truth docs live under `docs/`; historical plans/specs live under `docs/superpowers/`; smoke checklist lives in `README.md`.
 - Design direction lives in `DESIGN.md`; reference it for visual styling, layout, typography, and component UI work.
 
 ## Key Conventions
