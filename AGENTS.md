@@ -7,7 +7,7 @@
 ## File-Scoped Commands
 | Task | Command |
 |------|---------|
-| Frontend test file | `npm test -- path/to/file.test.tsx` |
+| Frontend test file | `npm test -- path/to/file.test.ts[x]` |
 | Typecheck frontend | `npx tsc --noEmit` |
 | Rust test file | `cd src-tauri && cargo test --test command_api` |
 | Rust single test | `cd src-tauri && cargo test test_name` |
@@ -16,23 +16,12 @@
 ## TDD Requirement
 Before implementing any feature, bug fix, refactor, or behavior change, agents MUST use `.agents/skills/test-driven-development`.
 
-Expected flow:
-1. Add or update a focused failing test first.
-2. Run the relevant test and confirm it fails for the expected reason.
-3. Implement the smallest change needed.
-4. Re-run the focused test and relevant checks.
-
 Exceptions: docs-only changes, formatting-only changes, comment-only changes, generated code, trivial configuration updates, and throwaway prototypes. If skipping TDD for a code change, state why in the final response.
 
 ## Docs Sync Requirement
 Before implementing any feature, bug fix, refactor, behavior change, command/API change, validation change, persistence change, runner change, or user-visible workflow change, agents MUST read the relevant files under `docs/`.
 
-Expected flow:
-1. Read `docs/README.md` and `docs/task-routes.md`.
-2. Read the route-specific domain, architecture, contract, and maintenance docs named by the route.
-3. Inspect the current source files listed by the route before assuming docs are complete.
-4. Update `docs/` in the same change if behavior, contracts, business rules, task routing, verification expectations, file ownership, or cross-feature impact changed.
-5. Before final response, verify docs and code agree for the touched area.
+Flow: read `docs/README.md`, route through `docs/task-routes.md`, inspect listed source files, and follow `docs/agent-workflow.md`.
 
 Exceptions: formatting-only changes, comment-only changes, generated files, dependency lockfile churn with no behavior or command changes, and throwaway prototypes. If skipping docs updates for a code change, state why in the final response.
 
