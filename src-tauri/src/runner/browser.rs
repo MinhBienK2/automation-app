@@ -167,30 +167,7 @@ impl BrowserSession {
             .unwrap_or_else(|| std::env::temp_dir().join(format!("wam-chrome-{}", Uuid::new_v4())));
         std::fs::create_dir_all(&user_data_dir)?;
 
-        let mut builder = BrowserConfig::builder()
-            .request_timeout(Duration::from_secs(10))
-            .launch_timeout(Duration::from_secs(20))
-            .window_size(1100, 800)
-            .user_data_dir(&user_data_dir)
-            .no_sandbox();
-
-        if options.headed {
-            builder = builder.with_head();
-        }
-
-        if let Some(proxy_server) = launch_settings.proxy_server.as_deref() {
-            builder = builder.arg(("proxy-server", proxy_server));
-        }
-
-        let chrome_executable = options
-            .chrome_executable
-            .clone()
-            .or_else(default_chrome_executable);
-        if let Some(executable) = &chrome_executable {
-            builder = builder.chrome_executable(executable);
-        }
-
-        let config = builder.build().map_err(RunnerError::Config)?;
+        let config = browser_config(options, launch_settings, &user_data_dir)?;
         let (browser, mut handler) = Browser::launch(config).await?;
         let handler_task = tokio::spawn(async move {
             while let Some(message) = handler.next().await {
@@ -228,6 +205,21 @@ impl BrowserSession {
     }
 
     pub(super) async fn open_new_tab(&mut self, url: Option<&str>) -> Result<(), RunnerError> {
+        let current_page = self.current_page()?;
+        let current_url = current_page.url().await?;
+        if should_reuse_startup_blank_page(
+            self.pages.len(),
+            self.current_page_index,
+            current_url.as_deref(),
+        ) {
+            if let Some(url) = url {
+                current_page.goto(url).await?;
+            }
+            current_page.bring_to_front().await?;
+            self.active_frame_xpath = None;
+            return Ok(());
+        }
+
         let browser = self
             .browser
             .as_ref()
@@ -385,6 +377,47 @@ impl BrowserSession {
     }
 }
 
+fn browser_config(
+    options: &RunnerOptions,
+    launch_settings: &LaunchSettings,
+    user_data_dir: &Path,
+) -> Result<BrowserConfig, RunnerError> {
+    let mut builder = BrowserConfig::builder()
+        .request_timeout(Duration::from_secs(10))
+        .launch_timeout(Duration::from_secs(20))
+        .window_size(1100, 800)
+        .viewport(None)
+        .user_data_dir(user_data_dir)
+        .arg("no-startup-window")
+        .no_sandbox();
+
+    if options.headed {
+        builder = builder.with_head();
+    }
+
+    if let Some(proxy_server) = launch_settings.proxy_server.as_deref() {
+        builder = builder.arg(("proxy-server", proxy_server));
+    }
+
+    let chrome_executable = options
+        .chrome_executable
+        .clone()
+        .or_else(default_chrome_executable);
+    if let Some(executable) = &chrome_executable {
+        builder = builder.chrome_executable(executable);
+    }
+
+    builder.build().map_err(RunnerError::Config)
+}
+
+fn should_reuse_startup_blank_page(
+    page_count: usize,
+    current_page_index: usize,
+    current_url: Option<&str>,
+) -> bool {
+    page_count == 1 && current_page_index == 0 && current_url == Some("about:blank")
+}
+
 fn profile_user_data_dir(name: &str) -> PathBuf {
     let safe_name = name
         .chars()
@@ -492,8 +525,11 @@ fn default_chrome_executable() -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::LaunchSettings;
+    use std::path::PathBuf;
+
+    use super::{browser_config, should_reuse_startup_blank_page, LaunchSettings};
     use crate::domain::ActionConfig;
+    use crate::runner::RunnerOptions;
 
     #[test]
     fn launch_settings_build_proxy_argument_with_credentials() {
@@ -507,5 +543,52 @@ mod tests {
             settings.proxy_server.as_deref(),
             Some("http://agent:secret@proxy.local:8080")
         );
+    }
+
+    #[test]
+    fn browser_config_suppresses_chrome_startup_tab() {
+        let config = browser_config(
+            &RunnerOptions {
+                headed: true,
+                chrome_executable: Some(PathBuf::from("/usr/bin/chromium")),
+            },
+            &LaunchSettings::default(),
+            &std::env::temp_dir().join("wam-test-profile"),
+        )
+        .expect("build browser config");
+
+        assert!(
+            format!("{config:?}").contains("no-startup-window"),
+            "Chrome should not create its own startup tab before the runner opens the first page"
+        );
+    }
+
+    #[test]
+    fn browser_config_uses_native_window_viewport() {
+        let config = browser_config(
+            &RunnerOptions {
+                headed: true,
+                chrome_executable: Some(PathBuf::from("/usr/bin/chromium")),
+            },
+            &LaunchSettings::default(),
+            &std::env::temp_dir().join("wam-test-profile"),
+        )
+        .expect("build browser config");
+
+        assert!(
+            format!("{config:?}").contains("viewport: None"),
+            "Visible browser runs should render to the full window instead of chromiumoxide's 800x600 default viewport"
+        );
+    }
+
+    #[test]
+    fn open_new_tab_reuses_single_startup_blank_page() {
+        assert!(should_reuse_startup_blank_page(1, 0, Some("about:blank")));
+        assert!(!should_reuse_startup_blank_page(
+            1,
+            0,
+            Some("https://example.com")
+        ));
+        assert!(!should_reuse_startup_blank_page(2, 1, Some("about:blank")));
     }
 }
