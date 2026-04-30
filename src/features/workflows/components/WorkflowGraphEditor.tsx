@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   Background,
   Controls,
@@ -28,6 +29,7 @@ import type {
   GraphNode,
   GraphNodeType,
   GraphPort,
+  GraphPosition,
   GraphValidationIssue,
   RunState,
   WorkflowCondition,
@@ -75,6 +77,7 @@ type ActivePortConnection = {
   nodeId: string;
   portId: string;
   direction: GraphPort["direction"];
+  sourcePoint: { x: number; y: number };
 } | null;
 
 const hiddenActionPickerTypes = new Set<ActionType>([
@@ -180,6 +183,8 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
+  const graphCanvasRef = useRef<HTMLDivElement | null>(null);
+  const previewPathRef = useRef<SVGPathElement | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const graphRef = useRef(graph);
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
@@ -242,12 +247,24 @@ export function WorkflowGraphEditor({
     [graph.edges],
   );
   const startPortConnection = useCallback(
-    (nodeId: string, port: GraphPort) => {
+    (event: ReactPointerEvent, nodeId: string, port: GraphPort) => {
+      const canvasBounds = graphCanvasRef.current?.getBoundingClientRect();
+      const handleBounds = event.currentTarget.getBoundingClientRect();
+      if (!canvasBounds) return;
+      const sourcePoint = {
+        x: handleBounds.left + handleBounds.width / 2 - canvasBounds.left,
+        y: handleBounds.top + handleBounds.height / 2 - canvasBounds.top,
+      };
       activePortConnectionRef.current = {
         nodeId,
         portId: port.id,
         direction: port.direction,
+        sourcePoint,
       };
+      previewPathRef.current?.setAttribute(
+        "d",
+        previewEdgePath(sourcePoint, sourcePoint),
+      );
     },
     [],
   );
@@ -287,6 +304,25 @@ export function WorkflowGraphEditor({
     },
     [onChange],
   );
+  const movePreviewConnection = useCallback((event: ReactPointerEvent) => {
+    const source = activePortConnectionRef.current;
+    const canvasBounds = graphCanvasRef.current?.getBoundingClientRect();
+    if (!source || !canvasBounds) return;
+    previewPathRef.current?.setAttribute(
+      "d",
+      previewEdgePath(
+        source.sourcePoint,
+        insetEdgeTarget(source.sourcePoint, {
+          x: event.clientX - canvasBounds.left,
+          y: event.clientY - canvasBounds.top,
+        }),
+      ),
+    );
+  }, []);
+  const clearPreviewConnection = useCallback(() => {
+    activePortConnectionRef.current = null;
+    previewPathRef.current?.setAttribute("d", "");
+  }, []);
   const workflowNodeTypes = useMemo(
     () => ({
       workflow: (props: NodeProps<WorkflowFlowNode>) => (
@@ -534,7 +570,14 @@ export function WorkflowGraphEditor({
 
       <div className="workflow-graph-layout">
         <div className="graph-canvas-wrap">
-          <div className="graph-canvas" role="application" aria-label="Workflow graph canvas">
+          <div
+            className="graph-canvas"
+            onPointerMove={movePreviewConnection}
+            onPointerUp={clearPreviewConnection}
+            ref={graphCanvasRef}
+            role="application"
+            aria-label="Workflow graph canvas"
+          >
             <ReactFlow
               colorMode="dark"
               defaultViewport={flowGraph.viewport}
@@ -558,7 +601,7 @@ export function WorkflowGraphEditor({
               }}
               onNodeClick={(_, node) => setSelectedNodeId(node.id)}
               onNodesChange={handleNodesChange}
-              panOnDrag={[1, 2]}
+              panOnDrag
             >
               <ViewportPortal>
                 <GraphEdgeOverlay graph={graph} issueEdgeIds={issueEdgeIds} />
@@ -573,6 +616,26 @@ export function WorkflowGraphEditor({
                 zoomable
               />
             </ReactFlow>
+            <svg
+              aria-hidden="true"
+              className="graph-connection-preview"
+              focusable="false"
+            >
+              <defs>
+                <marker
+                  id="graph-preview-arrow"
+                  markerHeight="6"
+                  markerWidth="6"
+                  orient="auto"
+                  refX="5.6"
+                  refY="3"
+                  viewBox="0 0 6 6"
+                >
+                  <path d="M0 0 L6 3 L0 6 Z" />
+                </marker>
+              </defs>
+              <path markerEnd="url(#graph-preview-arrow)" ref={previewPathRef} />
+            </svg>
             {contextMenu ? (
               <NodeContextMenu
                 node={graph.nodes.find((node) => node.id === contextMenu.nodeId) ?? null}
@@ -686,13 +749,40 @@ function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
       focusable="false"
       role="img"
     >
+      <defs>
+        <marker
+          id="graph-edge-arrow"
+          markerHeight="6"
+          markerWidth="6"
+          orient="auto"
+          refX="5.6"
+          refY="3"
+          viewBox="0 0 6 6"
+        >
+          <path d="M0 0 L6 3 L0 6 Z" />
+        </marker>
+        <marker
+          id="graph-edge-arrow-issue"
+          markerHeight="6"
+          markerWidth="6"
+          orient="auto"
+          refX="5.6"
+          refY="3"
+          viewBox="0 0 6 6"
+        >
+          <path d="M0 0 L6 3 L0 6 Z" />
+        </marker>
+      </defs>
       {graph.edges.map((edge) => {
         const sourceNode = nodeById.get(edge.source_node_id);
         const targetNode = nodeById.get(edge.target_node_id);
         if (!sourceNode || !targetNode) return null;
 
         const sourcePoint = edgePoint(sourceNode, edge.source_port, "output");
-        const targetPoint = edgePoint(targetNode, edge.target_port, "input");
+        const targetPoint = insetEdgeTarget(
+          sourcePoint,
+          edgePoint(targetNode, edge.target_port, "input"),
+        );
         const order = edgeOrders.get(edge.id);
         const hasIssue = issueEdgeIds.has(edge.id);
         const labelX = (sourcePoint.x + targetPoint.x) / 2;
@@ -705,7 +795,14 @@ function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
             key={edge.id}
             role="img"
           >
-            <path d={edgePath(sourcePoint, targetPoint)} />
+            <path
+              d={edgePath(sourcePoint, targetPoint)}
+              markerEnd={
+                hasIssue
+                  ? "url(#graph-edge-arrow-issue)"
+                  : "url(#graph-edge-arrow)"
+              }
+            />
             {order ? (
               <g
                 aria-label={`Edge direction order ${order}`}
@@ -727,7 +824,11 @@ function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
 }
 
 type WorkflowGraphNodeProps = NodeProps<WorkflowFlowNode> & {
-  onPortPointerDown: (nodeId: string, port: GraphPort) => void;
+  onPortPointerDown: (
+    event: ReactPointerEvent,
+    nodeId: string,
+    port: GraphPort,
+  ) => void;
   onPortPointerUp: (nodeId: string, port: GraphPort) => void;
 };
 
@@ -774,7 +875,7 @@ function WorkflowGraphNode({
       {inputPorts.map((port, index) => (
         <Handle
           aria-label={`${data.label} ${port.label} port`}
-          className="graph-handle graph-handle-input"
+          className="graph-handle graph-handle-input nopan"
           id={port.id}
           isConnectable={isConnectable}
           key={port.id}
@@ -787,11 +888,11 @@ function WorkflowGraphNode({
       {outputPorts.map((port, index) => (
         <Handle
           aria-label={`${data.label} ${port.label} port`}
-          className="graph-handle graph-handle-output"
+          className="graph-handle graph-handle-output nopan"
           id={port.id}
           isConnectable={isConnectable}
           key={port.id}
-          onPointerDown={() => onPortPointerDown(id, port)}
+          onPointerDown={(event) => onPortPointerDown(event, id, port)}
           position={Position.Right}
           style={{ top: portOffset(index, outputPorts.length) }}
           type="source"
@@ -1917,7 +2018,32 @@ function edgePoint(
   };
 }
 
+function insetEdgeTarget(
+  source: GraphPosition,
+  target: GraphPosition,
+): GraphEdgePoint {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 1) return target;
+  const inset = 22;
+  return {
+    x: target.x - (dx / length) * inset,
+    y: target.y - (dy / length) * inset,
+  };
+}
+
 function edgePath(source: GraphEdgePoint, target: GraphEdgePoint) {
+  const distance = Math.max(Math.abs(target.x - source.x) * 0.45, 48);
+  return [
+    `M ${source.x} ${source.y}`,
+    `C ${source.x + distance} ${source.y}`,
+    `${target.x - distance} ${target.y}`,
+    `${target.x} ${target.y}`,
+  ].join(" ");
+}
+
+function previewEdgePath(source: GraphPosition, target: GraphPosition) {
   const distance = Math.max(Math.abs(target.x - source.x) * 0.45, 48);
   return [
     `M ${source.x} ${source.y}`,

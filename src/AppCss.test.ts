@@ -130,6 +130,8 @@ describe("App CSS", () => {
   test("keeps React Flow connection previews visible while dragging ports", () => {
     const graphNode = cssRule(".graph-node");
     const graphHandle = cssRule(".graph-handle");
+    const preview = cssRule(".graph-connection-preview");
+    const previewPath = cssRule(".graph-connection-preview path");
     const connectionLine = cssRule(".graph-canvas .react-flow__connectionline");
     const connectionPath = cssRule(".graph-canvas .react-flow__connection-path");
     const activeSourceHandle = cssRule(".graph-canvas .react-flow__handle.connectingfrom");
@@ -139,6 +141,12 @@ describe("App CSS", () => {
     expect(graphNode).toContain("min-height: 64px");
     expect(graphHandle).toContain("pointer-events: all");
     expect(graphHandle).toContain("cursor: crosshair");
+    expect(preview).toContain("z-index: 45");
+    expect(preview).toContain("pointer-events: none");
+    expect(previewPath).toContain("stroke: #3ecf8e");
+    expect(previewPath).toContain("stroke-width: 2.4");
+    expect(css).toContain(".graph-connection-preview marker path");
+    expect(css).toContain(".graph-edge-overlay #graph-edge-arrow path");
     expect(connectionLine).toContain("z-index: 40");
     expect(connectionLine).toContain("overflow: visible");
     expect(connectionPath).toContain("stroke: #3ecf8e");

@@ -88,12 +88,17 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).toContain("connectionDragThreshold={0}");
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
     expect(workflowGraphEditorSource).toContain("nodesConnectable");
-    expect(workflowGraphEditorSource).toContain("panOnDrag={[1, 2]}");
+    expect(workflowGraphEditorSource).toContain("panOnDrag");
+    expect(workflowGraphEditorSource).toContain("graph-handle graph-handle-output nopan");
     expect(workflowGraphEditorSource).toContain("isConnectable={isConnectable}");
     expect(workflowGraphEditorSource).toContain("useUpdateNodeInternals");
     expect(workflowGraphEditorSource).toContain("updateNodeInternals(id)");
     expect(workflowGraphEditorSource).toContain("onPortPointerDown");
     expect(workflowGraphEditorSource).toContain("onPortPointerUp");
+    expect(workflowGraphEditorSource).toContain("graph-connection-preview");
+    expect(workflowGraphEditorSource).toContain("previewEdgePath");
+    expect(workflowGraphEditorSource).toContain("graph-preview-arrow");
+    expect(workflowGraphEditorSource).toContain("graph-edge-arrow");
   });
 
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
@@ -130,6 +135,48 @@ describe("Workflow graph editor integration", () => {
                 source_port: "out",
                 target_node_id: "node-action-42",
                 target_port: "in",
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+  });
+
+  test("cancels a pending port connection when released on empty canvas", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const canvas = within(editor).getByLabelText("Workflow graph canvas");
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="navigate"]') as HTMLElement,
+    );
+
+    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
+    fireEvent.pointerUp(canvas);
+    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
+    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            edges: expect.not.arrayContaining([
+              expect.objectContaining({
+                source_node_id: "start",
+                target_node_id: "node-action-42",
               }),
             ]),
           }),
