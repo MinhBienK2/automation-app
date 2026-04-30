@@ -3,7 +3,10 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{ActionConfig, ValidationError, WorkflowCondition, WorkflowStep};
+use super::{
+    ActionConfig, AssertOutputMatchMode, StopWorkflowStatus, SwitchCase, ValidationError,
+    VariableMapping, WaitCondition, WorkflowCondition, WorkflowStep,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -365,12 +368,19 @@ impl WorkflowGraph {
         match node.node_type {
             GraphNodeType::EndSuccess => return Ok(()),
             GraphNodeType::EndFailure => {
+                let reason = node
+                    .config
+                    .get("reason")
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.trim().is_empty())
+                    .unwrap_or("Graph reached failure end")
+                    .to_string();
                 steps.push(CompiledGraphStep {
                     node_id: node.id.clone(),
                     label: node.label.clone(),
                     config: ActionConfig::StopWorkflow {
-                        status: super::StopWorkflowStatus::Failure,
-                        reason: Some("Graph reached failure end".to_string()),
+                        status: StopWorkflowStatus::Failure,
+                        reason: Some(reason),
                     },
                 });
                 return Ok(());
@@ -462,6 +472,7 @@ impl WorkflowGraph {
                 )?;
                 let delay_ms = node.config.get("delay_ms").and_then(Value::as_u64);
                 let retry_steps = self.compile_nested_configs(&node.id, "try", visited)?;
+                let failed_steps = self.compile_nested_configs(&node.id, "failed", visited)?;
                 steps.push(CompiledGraphStep {
                     node_id: node.id.clone(),
                     label: node.label.clone(),
@@ -469,9 +480,218 @@ impl WorkflowGraph {
                         max_attempts,
                         delay_ms,
                         steps: retry_steps,
+                        failed_steps,
                     },
                 });
                 let next = self.next_target(&node.id, "success");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::Switch => {
+                let expression =
+                    required_string(&node.config, "expression", "Switch expression is required")?;
+                let case_values = string_array(&node.config, "cases", "Switch cases are required")?;
+                let cases = case_values
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, value)| {
+                        let port = format!("case_{}", index + 1);
+                        let steps = self.compile_nested_configs(&node.id, &port, visited)?;
+                        Ok(SwitchCase { value, steps })
+                    })
+                    .collect::<Result<Vec<_>, ValidationError>>()?;
+                let default_steps = self.compile_nested_configs(&node.id, "default", visited)?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::SwitchCondition {
+                        expression,
+                        cases,
+                        default_steps,
+                    },
+                });
+            }
+            GraphNodeType::While => {
+                let condition = node_condition(node)?;
+                let max_attempts = optional_positive_u32(&node.config, "max_attempts")?;
+                let timeout_ms = optional_positive_u64(&node.config, "timeout_ms")?;
+                let loop_steps = self.compile_nested_configs(&node.id, "loop", visited)?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::WhileLoop {
+                        condition,
+                        max_attempts,
+                        timeout_ms,
+                        steps: loop_steps,
+                    },
+                });
+                let next = self.next_target(&node.id, "done");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::RepeatUntil => {
+                let condition = node_condition(node)?;
+                let max_attempts = optional_positive_u32(&node.config, "max_attempts")?;
+                let timeout_ms = optional_positive_u64(&node.config, "timeout_ms")?;
+                let loop_steps = self.compile_nested_configs(&node.id, "loop", visited)?;
+                let timeout_steps = self.compile_nested_configs(&node.id, "timeout", visited)?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::RepeatUntil {
+                        condition,
+                        max_attempts,
+                        timeout_ms,
+                        steps: loop_steps,
+                        timeout_steps,
+                    },
+                });
+                let next = self.next_target(&node.id, "done");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::TryCatch => {
+                let try_steps = self.compile_nested_configs(&node.id, "try", visited)?;
+                let success_steps = self.compile_nested_configs(&node.id, "success", visited)?;
+                let error_steps = self.compile_nested_configs(&node.id, "error", visited)?;
+                let finally_steps = self.compile_nested_configs(&node.id, "finally", visited)?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::TryCatch {
+                        try_steps,
+                        success_steps,
+                        error_steps,
+                        finally_steps,
+                    },
+                });
+            }
+            GraphNodeType::Fallback => {
+                let primary_steps = self.compile_nested_configs(&node.id, "primary", visited)?;
+                let fallback_steps = self.compile_nested_configs(&node.id, "fallback", visited)?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::FallbackBlock {
+                        primary_steps,
+                        fallback_steps,
+                    },
+                });
+                let next = self.next_target(&node.id, "done");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::BreakLoop => {
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::BreakLoop {},
+                });
+                return Ok(());
+            }
+            GraphNodeType::ContinueLoop => {
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::ContinueLoop {},
+                });
+                return Ok(());
+            }
+            GraphNodeType::StopWorkflow => {
+                let status = match node.config.get("status").and_then(Value::as_str) {
+                    Some("failure") => StopWorkflowStatus::Failure,
+                    _ => StopWorkflowStatus::Success,
+                };
+                let reason = optional_string(&node.config, "reason");
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::StopWorkflow { status, reason },
+                });
+                return Ok(());
+            }
+            GraphNodeType::SetVariable => {
+                let name = required_string(&node.config, "name", "Variable name is required")?;
+                let value = node
+                    .config
+                    .get("value")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::SetVariable { name, value },
+                });
+                let next = self.next_target(&node.id, "out");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::TransformVariable => {
+                let source_name =
+                    required_string(&node.config, "source_name", "Source output is required")?;
+                let target_name =
+                    required_string(&node.config, "target_name", "Target output is required")?;
+                let expression = node
+                    .config
+                    .get("expression")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::TransformVariable {
+                        source_name,
+                        target_name,
+                        expression,
+                    },
+                });
+                let next = self.next_target(&node.id, "out");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::AssertOutput => {
+                let name = required_string(&node.config, "name", "Output name is required")?;
+                let value =
+                    required_string(&node.config, "value", "Expected output value is required")?;
+                let match_mode = match node.config.get("match").and_then(Value::as_str) {
+                    Some("contains") => AssertOutputMatchMode::Contains,
+                    _ => AssertOutputMatchMode::Equals,
+                };
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::AssertOutput {
+                        name,
+                        match_mode,
+                        value,
+                    },
+                });
+                let next = self.next_target(&node.id, "out");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::RunSubworkflow => {
+                let workflow_id =
+                    required_string(&node.config, "workflow_id", "Workflow id is required")?;
+                let input_mapping = variable_mappings(&node.config, "input_mapping")?;
+                let output_mapping = variable_mappings(&node.config, "output_mapping")?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::RunSubworkflow {
+                        workflow_id,
+                        input_mapping,
+                        output_mapping,
+                    },
+                });
+                let next = self.next_target(&node.id, "out");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::DomainAllowlist => {
+                let domains =
+                    string_array(&node.config, "domains", "Allowed domains are required")?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config: ActionConfig::DomainAllowlist { domains },
+                });
+                let next = self.next_target(&node.id, "out");
                 self.compile_path(next.as_deref(), visited, steps)?;
             }
             GraphNodeType::ManualApproval => {
@@ -501,7 +721,7 @@ impl WorkflowGraph {
                     node_id: node.id.clone(),
                     label: node.label.clone(),
                     config: ActionConfig::Wait {
-                        condition: super::WaitCondition::Duration,
+                        condition: WaitCondition::Duration,
                         xpath: None,
                         text: None,
                         url: None,
@@ -635,4 +855,79 @@ fn positive_u32(config: &Value, field: &str, message: &str) -> Result<u32, Valid
     }
 
     Ok(value as u32)
+}
+
+fn optional_positive_u32(config: &Value, field: &str) -> Result<Option<u32>, ValidationError> {
+    let Some(value) = config.get(field).and_then(Value::as_u64) else {
+        return Ok(None);
+    };
+    if value == 0 || value > u64::from(u32::MAX) {
+        return Err(ValidationError::new(field, "Value must be greater than 0"));
+    }
+    Ok(Some(value as u32))
+}
+
+fn optional_positive_u64(config: &Value, field: &str) -> Result<Option<u64>, ValidationError> {
+    let Some(value) = config.get(field).and_then(Value::as_u64) else {
+        return Ok(None);
+    };
+    if value == 0 {
+        return Err(ValidationError::new(field, "Value must be greater than 0"));
+    }
+    Ok(Some(value))
+}
+
+fn required_string(config: &Value, field: &str, message: &str) -> Result<String, ValidationError> {
+    config
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(ToString::to_string)
+        .ok_or_else(|| ValidationError::new(field, message))
+}
+
+fn optional_string(config: &Value, field: &str) -> Option<String> {
+    config
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(ToString::to_string)
+}
+
+fn string_array(
+    config: &Value,
+    field: &str,
+    message: &str,
+) -> Result<Vec<String>, ValidationError> {
+    let values = config
+        .get(field)
+        .and_then(Value::as_array)
+        .ok_or_else(|| ValidationError::new(field, message))?
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+
+    if values.is_empty() {
+        return Err(ValidationError::new(field, message));
+    }
+
+    Ok(values)
+}
+
+fn variable_mappings(config: &Value, field: &str) -> Result<Vec<VariableMapping>, ValidationError> {
+    let Some(values) = config.get(field).and_then(Value::as_array) else {
+        return Ok(Vec::new());
+    };
+
+    values
+        .iter()
+        .map(|value| {
+            let source = required_string(value, "source", "Mapping source is required")?;
+            let target = required_string(value, "target", "Mapping target is required")?;
+            Ok(VariableMapping { source, target })
+        })
+        .collect()
 }

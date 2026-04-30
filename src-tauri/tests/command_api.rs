@@ -2,7 +2,9 @@ mod support;
 
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
-use support::{poll_status, test_state, test_state_with_runner, FakeRunExecutor};
+use support::{
+    poll_status, test_state, test_state_with_runner, FakeRunExecutor, RecordingRunExecutor,
+};
 use workflow_automation_manager_lib::{
     commands,
     domain::{
@@ -129,8 +131,42 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
         .await
         .expect("run graph");
     assert_eq!(run_state.status, RunStatus::Running);
+    assert!(run_state.outputs.is_empty());
 
     poll_status(&state, RunStatus::Success).await;
+}
+
+#[tokio::test]
+async fn run_workflow_graph_expands_subworkflow_nodes_before_runner_start() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let child = commands::create_workflow_impl(&state, "Child graph")
+        .await
+        .expect("create child");
+    commands::save_workflow_graph_impl(&state, &child.id, sample_graph())
+        .await
+        .expect("save child graph");
+    let parent = commands::create_workflow_impl(&state, "Parent graph")
+        .await
+        .expect("create parent");
+    let parent_graph = graph_with_action_path(vec![run_subworkflow_node("run-child", &child.id)]);
+    commands::save_workflow_graph_impl(&state, &parent.id, parent_graph)
+        .await
+        .expect("save parent graph");
+
+    commands::run_workflow_impl(&state, &parent.id)
+        .await
+        .expect("run parent graph");
+    poll_status(&state, RunStatus::Success).await;
+
+    let runs = runner.recorded_runs();
+    assert_eq!(runs.len(), 1);
+    assert!(runs[0]
+        .iter()
+        .all(|config| !matches!(config, ActionConfig::RunSubworkflow { .. })));
+    assert!(runs[0]
+        .iter()
+        .any(|config| matches!(config, ActionConfig::Wait { .. })));
 }
 
 #[tokio::test]
@@ -939,6 +975,33 @@ fn action_node(id: &str) -> GraphNode {
                 "condition": "duration",
                 "duration_ms": 100
             }
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "out".to_string(),
+                label: "Out".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn run_subworkflow_node(id: &str, workflow_id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::RunSubworkflow,
+        label: "Run Subworkflow".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "workflow_id": workflow_id,
+            "input_mapping": [],
+            "output_mapping": []
         }),
         ports: vec![
             GraphPort {

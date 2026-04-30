@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { ActionConfig, WorkflowStep } from "../../../types/workflow";
-import { actionLabels, commandMessage } from "../../../lib/workflowUi";
+import type { ActionConfig, ActionType, WorkflowStep } from "../../../types/workflow";
+import { actionLabels, actionOptions, commandMessage } from "../../../lib/workflowUi";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -30,6 +30,7 @@ export function StepForm({
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [helpLanguage, setHelpLanguage] = useState<StepHelpLanguage>("vi");
   const successTimeoutRef = useRef<number | null>(null);
+  const helpActionType = isActionType(config.type) ? config.type : step.action_type;
 
   useEffect(() => {
     return () => {
@@ -125,7 +126,7 @@ export function StepForm({
       ) : null}
       {isHelpOpen ? (
         <StepHelpModal
-          actionType={config.type}
+          actionType={helpActionType}
           language={helpLanguage}
           onClose={() => setIsHelpOpen(false)}
           onLanguageChange={setHelpLanguage}
@@ -133,6 +134,10 @@ export function StepForm({
       ) : null}
     </>
   );
+}
+
+function isActionType(value: string): value is ActionType {
+  return actionOptions.includes(value as ActionType);
 }
 
 type ActionFieldsProps = {

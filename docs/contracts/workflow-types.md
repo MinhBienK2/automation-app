@@ -28,16 +28,21 @@ Workflow graph data is the product authoring surface and is versioned separately
 
 Graph validation issues serialize as `{ level, node_id, edge_id, message }`, where `level` is `error` or `warning`.
 
+Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
+
 Current frontend graph authoring supports explicit port connection, edge deletion, action config editing, and structured config editing for:
 
 - `if` conditions.
+- `switch` expressions and case ports.
 - `repeat_times` loop counts.
 - `repeat_for_each` item name and literal item list.
+- `while` and `repeat_until` conditions plus loop guard settings.
 - `retry` max attempts and delay.
 - `manual_approval` reason and optional timeout.
 - `rate_limit` delay.
+- `stop_workflow`, `set_variable`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, and `end_failure`.
 
-The backend compiler currently executes supported action, manual approval, rate limit, `if`, `repeat_times`, `repeat_for_each`, and `retry` graph nodes. Other advanced graph node types are represented in the DTO but fail compile/run with explicit unsupported-node errors until their runtime semantics are implemented.
+The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts.
 
 Executable frontend/Rust ports must agree:
 
@@ -45,9 +50,15 @@ Executable frontend/Rust ports must agree:
 - `end_success` / `end_failure`: input `in`
 - `action`: input `in`, output `out`
 - `if`: input `in`, outputs `true`, `false`
-- `repeat_times` / `repeat_for_each`: input `in`, outputs `loop`, `done`
+- `switch`: input `in`, outputs `case_N`, `default`
+- `repeat_times` / `repeat_for_each` / `while`: input `in`, outputs `loop`, `done`
+- `repeat_until`: input `in`, outputs `loop`, `done`, `timeout`
 - `retry`: input `in`, outputs `try`, `success`, `failed`
+- `try_catch`: input `in`, outputs `try`, `success`, `error`, `finally`
+- `fallback`: input `in`, outputs `primary`, `fallback`, `done`
+- `break_loop` / `continue_loop` / `stop_workflow`: input `in`
 - `manual_approval` / `rate_limit`: input `in`, output `out`
+- `set_variable` / `transform_variable` / `assert_output` / `run_subworkflow` / `domain_allowlist`: input `in`, output `out`
 
 ## Action Config Shape
 

@@ -5,12 +5,46 @@ import type {
   GraphNodeType,
   GraphPort,
   GraphPosition,
+  GraphViewport,
   GraphValidationIssue,
   WorkflowGraph,
   WorkflowStep,
 } from "../../../types/workflow";
+import type { Edge, Node, Viewport } from "@xyflow/react";
 
 export const graphIssueKey = "__graph__";
+
+export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed";
+
+export type WorkflowFlowNodeData = {
+  label: string;
+  nodeType: GraphNodeType;
+  ports: GraphPort[];
+  status: WorkflowFlowNodeStatus;
+  hasIssue: boolean;
+};
+
+export type WorkflowFlowEdgeData = {
+  hasIssue: boolean;
+};
+
+export type WorkflowFlowNode = Node<WorkflowFlowNodeData, "workflow">;
+export type WorkflowFlowEdge = Edge<WorkflowFlowEdgeData>;
+
+type ReactFlowGraphState = {
+  selectedNodeId?: string | null;
+  runningNodeId?: string | null;
+  completedNodeIds?: Set<string>;
+  failedNodeId?: string | null;
+  issueNodeIds?: Set<string>;
+  issueEdgeIds?: Set<string>;
+};
+
+type WorkflowReactFlowGraph = {
+  nodes: WorkflowFlowNode[];
+  edges: WorkflowFlowEdge[];
+  viewport: Viewport;
+};
 
 export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
   const nodes: GraphNode[] = [
@@ -62,6 +96,78 @@ export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
   };
 }
 
+export function toReactFlowGraph(
+  graph: WorkflowGraph,
+  state: ReactFlowGraphState = {},
+): WorkflowReactFlowGraph {
+  return {
+    nodes: graph.nodes.map((node) => ({
+      id: node.id,
+      type: "workflow",
+      position: node.position,
+      initialHeight: 64,
+      initialWidth: 160,
+      selected: state.selectedNodeId === node.id,
+      data: {
+        label: node.label,
+        nodeType: node.node_type,
+        ports: node.ports,
+        status: graphNodeStatus(node.id, state),
+        hasIssue: state.issueNodeIds?.has(node.id) ?? false,
+      },
+    })),
+    edges: graph.edges.map((edge) => ({
+      id: edge.id,
+      source: edge.source_node_id,
+      sourceHandle: edge.source_port,
+      target: edge.target_node_id,
+      targetHandle: edge.target_port,
+      label: edge.label ?? edge.source_port,
+      data: {
+        hasIssue: state.issueEdgeIds?.has(edge.id) ?? false,
+      },
+    })),
+    viewport: graph.viewport,
+  };
+}
+
+export function fromReactFlowGraph(
+  graph: WorkflowGraph,
+  nodes: Array<Node>,
+  edges: Array<Edge>,
+  viewport: Viewport | GraphViewport,
+): WorkflowGraph {
+  const nodePositions = new Map(nodes.map((node) => [node.id, node.position]));
+  const graphNodes = new Map(graph.nodes.map((node) => [node.id, node]));
+
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node) => ({
+      ...node,
+      position: nodePositions.get(node.id) ?? node.position,
+    })),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      source_node_id: edge.source,
+      source_port: edge.sourceHandle ?? "out",
+      target_node_id: edge.target,
+      target_port: edge.targetHandle ?? "in",
+      label: typeof edge.label === "string" ? edge.label : edge.sourceHandle ?? null,
+      condition:
+        graph.edges.find((graphEdge) => graphEdge.id === edge.id)?.condition ?? null,
+    })).filter(
+      (edge) =>
+        graphNodes.has(edge.source_node_id) &&
+        graphNodes.has(edge.target_node_id),
+    ),
+    viewport: {
+      x: viewport.x,
+      y: viewport.y,
+      zoom: viewport.zoom,
+    },
+  };
+}
+
 export function createDefaultGraphNode(
   nodeType: GraphNodeType,
   position: GraphPosition,
@@ -87,7 +193,11 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
     case "if":
       return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False")];
     case "switch":
-      return [inputPort("in", "In"), outputPort("default", "Default")];
+      return [
+        inputPort("in", "In"),
+        outputPort("case_1", "Case 1"),
+        outputPort("default", "Default"),
+      ];
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -102,6 +212,7 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
     case "try_catch":
       return [
         inputPort("in", "In"),
+        outputPort("try", "Try"),
         outputPort("success", "Success"),
         outputPort("error", "Error"),
         outputPort("finally", "Finally"),
@@ -114,9 +225,15 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
         outputPort("failed", "Failed"),
       ];
     case "fallback":
-      return [inputPort("in", "In"), outputPort("fallback", "Fallback"), outputPort("done", "Done")];
+      return [
+        inputPort("in", "In"),
+        outputPort("primary", "Primary"),
+        outputPort("fallback", "Fallback"),
+        outputPort("done", "Done"),
+      ];
     case "break_loop":
     case "continue_loop":
+    case "stop_workflow":
       return [inputPort("in", "In")];
     default:
       return [inputPort("in", "In"), outputPort("out", "Out")];
@@ -131,6 +248,16 @@ export function graphIssuesByNode(issues: GraphValidationIssue[]) {
   }, new Map<string, GraphValidationIssue[]>());
 }
 
+function graphNodeStatus(
+  nodeId: string,
+  state: ReactFlowGraphState,
+): WorkflowFlowNodeStatus {
+  if (state.failedNodeId === nodeId) return "failed";
+  if (state.runningNodeId === nodeId) return "running";
+  if (state.completedNodeIds?.has(nodeId)) return "completed";
+  return "idle";
+}
+
 export function graphNodeLabel(nodeType: GraphNodeType) {
   return nodeType
     .split("_")
@@ -143,9 +270,16 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
     case "action":
       return defaultActionConfig("wait");
     case "if":
+      return { condition: { kind: "output_equals", name: "name", value: "" } };
     case "repeat_until":
     case "while":
-      return { condition: { kind: "output_equals", name: "name", value: "" } };
+      return {
+        condition: { kind: "output_equals", name: "name", value: "" },
+        max_attempts: 10,
+        timeout_ms: null,
+      };
+    case "switch":
+      return { expression: "", cases: ["case"] };
     case "repeat_times":
       return { times: 1 };
     case "repeat_for_each":
@@ -156,6 +290,20 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { reason: "Manual approval required", timeout_ms: null };
     case "rate_limit":
       return { delay_ms: 1000 };
+    case "end_failure":
+      return { reason: "Graph reached failure end" };
+    case "stop_workflow":
+      return { status: "success", reason: "" };
+    case "set_variable":
+      return { name: "variable", value: "" };
+    case "transform_variable":
+      return { source_name: "input", target_name: "output", expression: "" };
+    case "assert_output":
+      return { name: "output", match: "equals", value: "" };
+    case "run_subworkflow":
+      return { workflow_id: "", input_mapping: [], output_mapping: [] };
+    case "domain_allowlist":
+      return { domains: [] };
     default:
       return {};
   }

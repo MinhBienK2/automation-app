@@ -1,10 +1,10 @@
 use workflow_automation_manager_lib::domain::{
-    ActionConfig, ActionType, AssertTextMatchMode, CheckboxState, ClearInputMethod, ClickButton,
-    ClickMode, ClickPosition, ClickWaitUntil, GraphEdge, GraphNode, GraphNodeType, GraphPort,
-    GraphPortDirection, GraphPosition, GraphValidationLevel, GraphViewport, HeaderPair,
-    InputTypingMode, RunError, RunStatus, ScrollBehavior, ScrollBlock, ScrollDirection,
-    ScrollInline, ScrollMode, SelectOptionMatchBy, ValidationError, WaitCondition, Workflow,
-    WorkflowCondition, WorkflowGraph, WorkflowStep,
+    ActionConfig, ActionType, AssertOutputMatchMode, AssertTextMatchMode, CheckboxState,
+    ClearInputMethod, ClickButton, ClickMode, ClickPosition, ClickWaitUntil, GraphEdge, GraphNode,
+    GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
+    GraphViewport, HeaderPair, InputTypingMode, RunError, RunStatus, ScrollBehavior, ScrollBlock,
+    ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy, SwitchCase, ValidationError,
+    VariableMapping, WaitCondition, Workflow, WorkflowCondition, WorkflowGraph, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -194,18 +194,210 @@ fn workflow_graph_compiles_repeat_for_each_loop_and_done_ports() {
 }
 
 #[test]
-fn workflow_graph_compiler_rejects_unsupported_advanced_nodes() {
+fn advanced_graph_action_configs_validate_and_round_trip() {
+    let nested_step = ActionConfig::SetVariable {
+        name: "status".to_string(),
+        value: "ready".to_string(),
+    };
+    let configs = [
+        ActionConfig::SwitchCondition {
+            expression: "status".to_string(),
+            cases: vec![SwitchCase {
+                value: "ready".to_string(),
+                steps: vec![nested_step.clone()],
+            }],
+            default_steps: vec![ActionConfig::StopWorkflow {
+                status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Failure,
+                reason: Some("unknown status".to_string()),
+            }],
+        },
+        ActionConfig::WhileLoop {
+            condition: WorkflowCondition::OutputEquals {
+                name: "keep_running".to_string(),
+                value: "true".to_string(),
+            },
+            max_attempts: Some(3),
+            timeout_ms: None,
+            steps: vec![nested_step.clone()],
+        },
+        ActionConfig::RepeatUntil {
+            condition: WorkflowCondition::OutputEquals {
+                name: "done".to_string(),
+                value: "true".to_string(),
+            },
+            max_attempts: Some(3),
+            timeout_ms: None,
+            steps: vec![nested_step.clone()],
+            timeout_steps: vec![ActionConfig::StopWorkflow {
+                status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Failure,
+                reason: Some("condition timed out".to_string()),
+            }],
+        },
+        ActionConfig::TryCatch {
+            try_steps: vec![nested_step.clone()],
+            success_steps: vec![nested_step.clone()],
+            error_steps: vec![nested_step.clone()],
+            finally_steps: vec![nested_step.clone()],
+        },
+        ActionConfig::FallbackBlock {
+            primary_steps: vec![nested_step.clone()],
+            fallback_steps: vec![nested_step.clone()],
+        },
+        ActionConfig::BreakLoop {},
+        ActionConfig::ContinueLoop {},
+        ActionConfig::TransformVariable {
+            source_name: "status".to_string(),
+            target_name: "status_label".to_string(),
+            expression: "String(value).toUpperCase()".to_string(),
+        },
+        ActionConfig::AssertOutput {
+            name: "status".to_string(),
+            match_mode: AssertOutputMatchMode::Equals,
+            value: "ready".to_string(),
+        },
+        ActionConfig::RunSubworkflow {
+            workflow_id: "child-workflow".to_string(),
+            input_mapping: vec![VariableMapping {
+                source: "parent_value".to_string(),
+                target: "child_value".to_string(),
+            }],
+            output_mapping: vec![VariableMapping {
+                source: "child_result".to_string(),
+                target: "parent_result".to_string(),
+            }],
+        },
+        ActionConfig::DomainAllowlist {
+            domains: vec!["example.com".to_string(), "*.example.org".to_string()],
+        },
+    ];
+
+    for config in configs {
+        config.validate().expect("advanced config should be valid");
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let decoded: ActionConfig = serde_json::from_str(&json).expect("deserialize config");
+
+        assert_eq!(decoded, config);
+    }
+}
+
+#[test]
+fn workflow_graph_compiles_switch_and_data_nodes_to_executable_configs() {
     let graph = graph_with_nodes(
-        vec![start_node(), switch_node("switch-status")],
-        vec![edge("start", "out", "switch-status", "in")],
+        vec![
+            start_node(),
+            switch_node("switch-status"),
+            set_variable_node("ready"),
+            domain_allowlist_node("allow-domain"),
+            transform_variable_node("transform-status"),
+            assert_output_node("assert-status"),
+            action_node("default-wait"),
+        ],
+        vec![
+            edge("start", "out", "switch-status", "in"),
+            edge("switch-status", "case_1", "ready", "in"),
+            edge("ready", "out", "allow-domain", "in"),
+            edge("allow-domain", "out", "transform-status", "in"),
+            edge("transform-status", "out", "assert-status", "in"),
+            edge("switch-status", "default", "default-wait", "in"),
+        ],
     );
 
-    let error = graph
-        .compile()
-        .expect_err("switch execution is not supported yet");
+    let compiled = graph.compile().expect("advanced graph should compile");
 
-    assert_eq!(error.field, "graph");
-    assert!(error.message.contains("not executable yet"));
+    assert_eq!(compiled.steps.len(), 1);
+    match &compiled.steps[0].config {
+        ActionConfig::SwitchCondition {
+            expression,
+            cases,
+            default_steps,
+        } => {
+            assert_eq!(expression, "status");
+            assert_eq!(cases.len(), 1);
+            assert_eq!(cases[0].value, "ready");
+            assert!(matches!(
+                cases[0].steps[0],
+                ActionConfig::SetVariable { .. }
+            ));
+            assert!(matches!(
+                cases[0].steps[1],
+                ActionConfig::DomainAllowlist { .. }
+            ));
+            assert!(matches!(
+                cases[0].steps[2],
+                ActionConfig::TransformVariable { .. }
+            ));
+            assert!(matches!(
+                cases[0].steps[3],
+                ActionConfig::AssertOutput { .. }
+            ));
+            assert_eq!(default_steps.len(), 1);
+        }
+        other => panic!("expected switch condition, got {other:?}"),
+    }
+}
+
+#[test]
+fn workflow_graph_compiles_loop_error_and_control_nodes_to_executable_configs() {
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            while_node("while-login"),
+            action_node("while-action"),
+            continue_loop_node("continue-loop"),
+            repeat_until_node("repeat-until"),
+            action_node("repeat-action"),
+            break_loop_node("break-loop"),
+            action_node("timeout-action"),
+            try_catch_node("try-catch"),
+            action_node("try-action"),
+            fallback_node("fallback"),
+            action_node("primary-action"),
+            action_node("fallback-action"),
+            stop_workflow_node("stop-success"),
+        ],
+        vec![
+            edge("start", "out", "while-login", "in"),
+            edge("while-login", "loop", "while-action", "in"),
+            edge("while-action", "out", "continue-loop", "in"),
+            edge("while-login", "done", "repeat-until", "in"),
+            edge("repeat-until", "loop", "repeat-action", "in"),
+            edge("repeat-action", "out", "break-loop", "in"),
+            edge("repeat-until", "timeout", "timeout-action", "in"),
+            edge("repeat-until", "done", "try-catch", "in"),
+            edge("try-catch", "try", "try-action", "in"),
+            edge("try-catch", "success", "fallback", "in"),
+            edge("fallback", "primary", "primary-action", "in"),
+            edge("fallback", "fallback", "fallback-action", "in"),
+            edge("fallback", "done", "stop-success", "in"),
+        ],
+    );
+
+    let compiled = graph
+        .compile()
+        .expect("advanced control graph should compile");
+
+    assert_eq!(compiled.steps.len(), 3);
+    assert!(matches!(
+        compiled.steps[0].config,
+        ActionConfig::WhileLoop { .. }
+    ));
+    assert!(matches!(
+        compiled.steps[1].config,
+        ActionConfig::RepeatUntil { .. }
+    ));
+    match &compiled.steps[2].config {
+        ActionConfig::TryCatch { success_steps, .. } => {
+            assert!(matches!(
+                success_steps[0],
+                ActionConfig::FallbackBlock { .. }
+            ));
+            assert!(matches!(
+                success_steps[1],
+                ActionConfig::StopWorkflow { .. }
+            ));
+        }
+        other => panic!("expected try catch, got {other:?}"),
+    }
 }
 
 #[test]
@@ -702,6 +894,7 @@ fn phase_five_logic_configs_validate_and_round_trip() {
             max_attempts: 3,
             delay_ms: Some(100),
             steps: vec![nested_step.clone()],
+            failed_steps: Vec::new(),
         },
         ActionConfig::StopWorkflow {
             status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Success,
@@ -774,6 +967,7 @@ fn phase_five_logic_configs_validate_required_fields() {
             max_attempts: 0,
             delay_ms: Some(100),
             steps: vec![],
+            failed_steps: Vec::new(),
         }
         .validate()
         .expect_err("zero retry attempts should fail"),
@@ -2117,6 +2311,86 @@ fn switch_node(id: &str) -> GraphNode {
         node_type: GraphNodeType::Switch,
         label: "Switch Status".to_string(),
         position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "expression": "status",
+            "cases": ["ready"]
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "case_1".to_string(),
+                label: "Case 1".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "default".to_string(),
+                label: "Default".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn while_node(id: &str) -> GraphNode {
+    guarded_loop_node(id, GraphNodeType::While, "While Login")
+}
+
+fn repeat_until_node(id: &str) -> GraphNode {
+    let mut node = guarded_loop_node(id, GraphNodeType::RepeatUntil, "Repeat Until Ready");
+    node.ports.push(GraphPort {
+        id: "timeout".to_string(),
+        label: "Timeout".to_string(),
+        direction: GraphPortDirection::Output,
+    });
+    node
+}
+
+fn guarded_loop_node(id: &str, node_type: GraphNodeType, label: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type,
+        label: label.to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "condition": {
+                "kind": "output_equals",
+                "name": "ready",
+                "value": "true"
+            },
+            "max_attempts": 3
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "loop".to_string(),
+                label: "Loop".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "done".to_string(),
+                label: "Done".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn try_catch_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::TryCatch,
+        label: "Try Catch".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
         config: serde_json::json!({}),
         ports: vec![
             GraphPort {
@@ -2125,8 +2399,172 @@ fn switch_node(id: &str) -> GraphNode {
                 direction: GraphPortDirection::Input,
             },
             GraphPort {
-                id: "default".to_string(),
-                label: "Default".to_string(),
+                id: "try".to_string(),
+                label: "Try".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "success".to_string(),
+                label: "Success".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "error".to_string(),
+                label: "Error".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "finally".to_string(),
+                label: "Finally".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn fallback_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::Fallback,
+        label: "Fallback".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({}),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "primary".to_string(),
+                label: "Primary".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "fallback".to_string(),
+                label: "Fallback".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "done".to_string(),
+                label: "Done".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn set_variable_node(id: &str) -> GraphNode {
+    single_in_out_node(
+        id,
+        GraphNodeType::SetVariable,
+        "Set Variable",
+        serde_json::json!({ "name": "status", "value": "ready" }),
+    )
+}
+
+fn transform_variable_node(id: &str) -> GraphNode {
+    single_in_out_node(
+        id,
+        GraphNodeType::TransformVariable,
+        "Transform Variable",
+        serde_json::json!({
+            "source_name": "status",
+            "target_name": "status_label",
+            "expression": "String(value).toUpperCase()"
+        }),
+    )
+}
+
+fn assert_output_node(id: &str) -> GraphNode {
+    single_in_out_node(
+        id,
+        GraphNodeType::AssertOutput,
+        "Assert Output",
+        serde_json::json!({ "name": "status_label", "match": "equals", "value": "READY" }),
+    )
+}
+
+fn domain_allowlist_node(id: &str) -> GraphNode {
+    single_in_out_node(
+        id,
+        GraphNodeType::DomainAllowlist,
+        "Domain Allowlist",
+        serde_json::json!({ "domains": ["example.com"] }),
+    )
+}
+
+fn break_loop_node(id: &str) -> GraphNode {
+    terminal_input_node(
+        id,
+        GraphNodeType::BreakLoop,
+        "Break Loop",
+        serde_json::json!({}),
+    )
+}
+
+fn continue_loop_node(id: &str) -> GraphNode {
+    terminal_input_node(
+        id,
+        GraphNodeType::ContinueLoop,
+        "Continue Loop",
+        serde_json::json!({}),
+    )
+}
+
+fn stop_workflow_node(id: &str) -> GraphNode {
+    terminal_input_node(
+        id,
+        GraphNodeType::StopWorkflow,
+        "Stop Workflow",
+        serde_json::json!({ "status": "success", "reason": "done" }),
+    )
+}
+
+fn terminal_input_node(
+    id: &str,
+    node_type: GraphNodeType,
+    label: &str,
+    config: serde_json::Value,
+) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type,
+        label: label.to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config,
+        ports: vec![GraphPort {
+            id: "in".to_string(),
+            label: "In".to_string(),
+            direction: GraphPortDirection::Input,
+        }],
+        group_id: None,
+    }
+}
+
+fn single_in_out_node(
+    id: &str,
+    node_type: GraphNodeType,
+    label: &str,
+    config: serde_json::Value,
+) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type,
+        label: label.to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config,
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "out".to_string(),
+                label: "Out".to_string(),
                 direction: GraphPortDirection::Output,
             },
         ],

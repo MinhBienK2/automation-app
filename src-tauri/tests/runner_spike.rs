@@ -1279,6 +1279,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                         match_mode: AssertTextMatchMode::Equals,
                         timeout_ms: Some(100),
                     }],
+                    failed_steps: Vec::new(),
                 },
                 ActionConfig::StopWorkflow {
                     status: StopWorkflowStatus::Success,

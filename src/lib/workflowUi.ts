@@ -214,6 +214,7 @@ export const initialRunState: RunState = {
   current_step_id: null,
   current_step_number: null,
   completed_step_ids: [],
+  outputs: {},
   error: null,
 };
 
@@ -412,6 +413,7 @@ export function normalizeRunState(state: RunState): RunState {
     current_step_id: state.current_step_id ?? null,
     current_step_number: state.current_step_number ?? null,
     completed_step_ids: state.completed_step_ids ?? [],
+    outputs: state.outputs ?? {},
     error: state.error ?? null,
   };
 }

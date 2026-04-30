@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
@@ -13,7 +13,7 @@ describe("Workflow graph editor integration", () => {
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
-  test("adds selects connects deletes and saves graph nodes", async () => {
+  test("adds selects deletes and saves graph nodes through the React Flow workspace", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
@@ -24,10 +24,14 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
 
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    expect(within(editor).getByLabelText("Workflow graph canvas")).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "Graph canvas node start" }))
       .toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "Graph canvas node step-1" }))
       .toBeInTheDocument();
+    expect(within(editor).getByLabelText("Start Out port")).toBeInTheDocument();
+    expect(within(editor).queryByRole("button", { name: "Connect Nodes" }))
+      .not.toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add If" }));
     expect(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }))
@@ -36,18 +40,8 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }));
     expect(within(editor).getByRole("heading", { name: "If" })).toBeInTheDocument();
     expect(within(editor).getByText("input: in")).toBeInTheDocument();
-
-    await userEvent.selectOptions(within(editor).getByLabelText("Source node"), "start");
-    await userEvent.selectOptions(within(editor).getByLabelText("Source port"), "out");
-    await userEvent.selectOptions(within(editor).getByLabelText("Target node"), "node-if-42");
-    await userEvent.selectOptions(within(editor).getByLabelText("Target port"), "in");
-    await userEvent.click(within(editor).getByRole("button", { name: "Connect Nodes" }));
-    expect(within(editor).getByText("start -> node-if-42")).toBeInTheDocument();
-
-    await userEvent.click(within(editor).getByRole("button", {
-      name: "Delete edge start -> node-if-42",
-    }));
-    expect(within(editor).queryByText("start -> node-if-42")).not.toBeInTheDocument();
+    expect(within(editor).getByLabelText("If True port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("If False port")).toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Delete Node" }));
     expect(within(editor).queryByRole("button", { name: "Graph canvas node node-if-42" }))
@@ -306,6 +300,9 @@ describe("Workflow graph editor integration", () => {
         current_step_id: "node-if-42",
         current_step_number: 2,
         completed_step_ids: ["start"],
+        outputs: {
+          title: "Dashboard",
+        },
         error: null,
       },
     });
@@ -365,6 +362,90 @@ describe("Workflow graph editor integration", () => {
       name: "Output inspector",
     });
     expect(within(outputInspector).getByText("loop.index")).toBeInTheDocument();
-    expect(within(outputInspector).getByText("No captured outputs yet")).toBeInTheDocument();
+    expect(within(outputInspector).getByText("title")).toBeInTheDocument();
+    expect(within(outputInspector).getByText("Dashboard")).toBeInTheDocument();
+  });
+
+  test("offers advanced node types with structured inspector fields", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    [
+      "Add Switch",
+      "Add While",
+      "Add Repeat Until",
+      "Add Try Catch",
+      "Add Fallback",
+      "Add Break Loop",
+      "Add Continue Loop",
+      "Add Stop Workflow",
+      "Add Set Variable",
+      "Add Assert Output",
+      "Add Run Subworkflow",
+      "Add Domain Allowlist",
+      "Add End Failure",
+    ].forEach((name) => {
+      expect(within(editor).getByRole("button", { name })).toBeInTheDocument();
+    });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add While" }));
+    expect(within(editor).getByLabelText("Loop max attempts")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Loop timeout ms")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Switch" }));
+    expect(within(editor).getByRole("heading", { name: "Switch" })).toBeInTheDocument();
+    await userEvent.type(within(editor).getByLabelText("Switch expression"), "login_state");
+    fireEvent.change(within(editor).getByLabelText("Switch cases"), {
+      target: { value: "logged_in\nlocked" },
+    });
+    expect(within(editor).getByLabelText("Switch Case 1 port")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add End Failure" }));
+    expect(within(editor).getByLabelText("Failure reason")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Domain Allowlist" }));
+    expect(within(editor).getByLabelText("Allowed domains")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                node_type: "switch",
+                config: {
+                  expression: "login_state",
+                  cases: ["logged_in", "locked"],
+                },
+              }),
+              expect.objectContaining({
+                node_type: "end_failure",
+                config: expect.objectContaining({
+                  reason: "Graph reached failure end",
+                }),
+              }),
+              expect.objectContaining({
+                node_type: "domain_allowlist",
+                config: {
+                  domains: [],
+                },
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
   });
 });

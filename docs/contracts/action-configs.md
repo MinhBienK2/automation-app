@@ -13,7 +13,7 @@
 
 ## Required Sync Points
 
-Every action type must have:
+Every user-addable action type must have:
 
 - TypeScript `ActionType`.
 - TypeScript `ActionConfig` variant.
@@ -26,6 +26,8 @@ Every action type must have:
 - Form support in workflow step form logic/components when user editable.
 - Domain validation when fields have constraints.
 - Runner execution or intentional no-op/unsupported behavior.
+
+Graph-internal executable configs such as `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are Rust/TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are not listed in the user action palette, but they still require serde compatibility, validation, and runner or command-layer execution semantics.
 
 ## Validation Ownership
 

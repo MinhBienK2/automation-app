@@ -270,33 +270,59 @@
   background-size: 32px 32px;
 }
 
-.graph-edge-layer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+.graph-canvas .react-flow {
+  min-height: 360px;
+  color: #fafafa;
 }
 
-.graph-edge-layer line {
-  stroke: rgba(62, 207, 142, 0.42);
+.graph-canvas .react-flow__pane {
+  cursor: grab;
+}
+
+.graph-canvas .react-flow__edge-path {
+  stroke: rgba(62, 207, 142, 0.48);
   stroke-width: 2;
 }
 
+.graph-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3ecf8e;
+}
+
+.graph-canvas .react-flow__controls,
+.graph-canvas .react-flow__minimap {
+  border: 1px solid #2e2e2e;
+  background: #0f0f0f;
+}
+
 .graph-node {
-  position: absolute;
-  display: inline-grid;
-  place-items: center;
-  min-width: 128px;
-  min-height: 46px;
-  padding: 8px 10px;
+  position: relative;
+  display: grid;
+  min-width: 150px;
+  min-height: 58px;
   border: 1px solid #363636;
   border-radius: 8px;
   background: #171717;
   color: #fafafa;
+}
+
+.graph-node-button {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  min-width: 128px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: #fafafa;
   font: inherit;
   font-size: 13px;
   text-align: center;
+}
+
+.graph-node-button small {
+  color: #898989;
+  font-size: 11px;
 }
 
 .graph-node-selected {
@@ -304,8 +330,12 @@
   color: #3ecf8e;
 }
 
+.graph-node-has-issue {
+  border-color: rgba(251, 191, 36, 0.6);
+}
+
 .graph-node-running {
-  box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.22);
+  outline: 2px solid rgba(62, 207, 142, 0.22);
 }
 
 .graph-node-completed {
@@ -315,6 +345,21 @@
 .graph-node-failed {
   border-color: rgba(248, 113, 113, 0.76);
   color: #fca5a5;
+}
+
+.graph-handle {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #0f0f0f;
+  background: #3ecf8e;
+}
+
+.graph-handle-input {
+  left: -5px;
+}
+
+.graph-handle-output {
+  right: -5px;
 }
 
 .graph-minimap {
@@ -373,6 +418,16 @@
 .graph-connect-form h3 {
   font-size: 14px;
   font-weight: 400;
+}
+
+.graph-node-issues {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.36);
+  border-radius: 8px;
+  color: #facc15;
+  font-size: 12px;
 }
 
 .graph-runtime-grid {
@@ -443,6 +498,32 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.graph-output-values {
+  display: grid;
+  gap: 8px;
+}
+
+.graph-output-values div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.35fr) minmax(0, 0.65fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.graph-output-values span {
+  color: #f5f5f5;
+  font-weight: 600;
+}
+
+.graph-output-values code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #b4b4b4;
 }
 
 .step-list-panel {

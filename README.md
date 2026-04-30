@@ -83,7 +83,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 28. Confirm selector suggestions prefer stable attributes and recorder output maps to the action taxonomy.
 29. Confirm bad XPath fails immediately with a short message.
 30. Stop during a long Wait duration.
-31. Open the workflow graph, add Action, If, Repeat Times, Repeat For Each, Retry, Manual Approval, and Rate Limit nodes, edit inspector fields, connect nodes through explicit ports, delete an edge, validate the graph, save it, reopen the workflow, and confirm the graph persists.
-32. Run the supported graph and confirm the validation panel, graph timeline, canvas run highlights, and output context update from run state.
+31. Open the workflow graph, add Action, If, Switch, Repeat Times, Repeat For Each, While, Repeat Until, Retry, Try Catch, Fallback, Break/Continue Loop, Stop Workflow, Manual Approval, Rate Limit, Set/Transform Variable, Assert Output, Run Subworkflow, Domain Allowlist, and Failure End nodes, edit inspector fields, connect nodes through explicit ports, delete an edge, validate the graph, save it, reopen the workflow, and confirm the graph persists.
+32. Run the graph and confirm the validation panel, graph timeline, canvas run highlights, subworkflow expansion, and captured output context update from run state.
 33. Confirm Chromium remains open after success, failure, and stop.
 34. Delete the workflow.

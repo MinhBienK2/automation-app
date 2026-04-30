@@ -17,11 +17,11 @@
 ## Edit Visual Graph
 
 - The workflow detail screen renders `WorkflowGraphEditor` as the only workflow builder.
-- Users can add supported graph nodes, choose an action type from the action palette when adding action nodes, connect edges through explicit source/target ports, delete edges, move/delete nodes, change action node type in the inspector, edit action config, and edit structured config for `if`, loop, retry, manual approval, and rate limit nodes.
+- Users can add supported graph nodes, choose an action type from the action palette when adding action nodes, connect edges through explicit source/target ports, delete edges, move/delete nodes, change action node type in the inspector, edit action config, and edit structured config for branch, loop, retry, manual approval, rate limit, variable, assertion, subworkflow, domain allowlist, stop, and failure-end nodes.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
 - `validate_workflow_graph` returns node/edge issues for the validation panel without persisting.
-- `run_workflow` loads the saved graph, compiles supported graph nodes into action configs, and starts the existing runner path.
-- The graph timeline maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
+- `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, expands subworkflow nodes through the command layer, and starts the existing runner path.
+- The graph timeline maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids. The output inspector shows captured runtime outputs from terminal run state.
 
 ## Legacy Step Rows
 
@@ -32,7 +32,7 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
 - UI polls `get_run_state` while status is `running`.
-- Unsupported advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
+- Invalid advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
 - Graph runs share the same run-state lifecycle as full workflow runs.
 
 ## Stop

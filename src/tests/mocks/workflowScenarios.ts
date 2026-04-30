@@ -9,6 +9,7 @@ export const idleRunState: RunState = {
   current_step_id: null,
   current_step_number: null,
   completed_step_ids: [],
+  outputs: {},
   error: null,
 };
 

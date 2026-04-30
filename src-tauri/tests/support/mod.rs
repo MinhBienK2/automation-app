@@ -85,6 +85,48 @@ pub enum FakeRunOutcome {
     Failed { step_number: usize, reason: String },
 }
 
+#[derive(Debug, Default)]
+pub struct RecordingRunExecutor {
+    runs: Arc<Mutex<Vec<Vec<ActionConfig>>>>,
+}
+
+impl RecordingRunExecutor {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    pub fn recorded_runs(&self) -> Vec<Vec<ActionConfig>> {
+        self.runs.lock().expect("recorded run lock").clone()
+    }
+}
+
+impl RunExecutor for RecordingRunExecutor {
+    fn run_steps(
+        &self,
+        steps: Vec<ActionConfig>,
+        _cancellation: RunnerCancellation,
+        mut progress: ProgressCallback,
+    ) -> RunExecutorFuture {
+        self.runs
+            .lock()
+            .expect("recorded run lock")
+            .push(steps.clone());
+
+        Box::pin(async move {
+            for step_number in 1..=steps.len() {
+                progress(RunnerProgress::StepStarted { step_number });
+                progress(RunnerProgress::StepCompleted { step_number });
+            }
+
+            Ok(RunExecution {
+                status: RunnerStatus::Success,
+                failed_step: None,
+                session: None,
+            })
+        })
+    }
+}
+
 impl FakeRunExecutor {
     pub fn success() -> Arc<Self> {
         Arc::new(Self {

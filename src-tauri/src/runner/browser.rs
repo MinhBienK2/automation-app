@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashSet},
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
@@ -113,6 +113,16 @@ impl BrowserRunner {
                         session,
                     });
                 }
+                Ok(ActionExecution::BreakLoop | ActionExecution::ContinueLoop) => {
+                    return Ok(RunnerOutcome {
+                        status: RunnerStatus::Failed,
+                        failed_step: Some(FailedStep {
+                            step_number,
+                            reason: "Loop control node was used outside a loop".to_string(),
+                        }),
+                        session,
+                    });
+                }
                 Err(RunnerError::ActionFailed(reason)) => {
                     let reason = session
                         .capture_failure_screenshot()
@@ -195,6 +205,14 @@ impl BrowserSession {
 
     pub fn is_open(&self) -> bool {
         self.open
+    }
+
+    pub async fn captured_outputs(
+        &self,
+    ) -> Result<BTreeMap<String, serde_json::Value>, RunnerError> {
+        let page = self.current_page()?;
+        let script = r#"(() => window.__wamOutputs || {})()"#;
+        Ok(page.evaluate(script).await?.into_value()?)
     }
 
     pub(super) fn current_page(&self) -> Result<Page, RunnerError> {

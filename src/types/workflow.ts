@@ -398,12 +398,79 @@ export type ActionConfig =
     }
   | {
       type: "retry_block";
-      config: { max_attempts: number; delay_ms?: number | null; steps: ActionConfig[] };
+      config: {
+        max_attempts: number;
+        delay_ms?: number | null;
+        steps: ActionConfig[];
+        failed_steps?: ActionConfig[];
+      };
     }
+  | {
+      type: "switch_condition";
+      config: {
+        expression: string;
+        cases: Array<{ value: string; steps: ActionConfig[] }>;
+        default_steps: ActionConfig[];
+      };
+    }
+  | {
+      type: "while_loop";
+      config: {
+        condition: WorkflowCondition;
+        max_attempts?: number | null;
+        timeout_ms?: number | null;
+        steps: ActionConfig[];
+      };
+    }
+  | {
+      type: "repeat_until";
+      config: {
+        condition: WorkflowCondition;
+        max_attempts?: number | null;
+        timeout_ms?: number | null;
+        steps: ActionConfig[];
+        timeout_steps: ActionConfig[];
+      };
+    }
+  | {
+      type: "try_catch";
+      config: {
+        try_steps: ActionConfig[];
+        success_steps: ActionConfig[];
+        error_steps: ActionConfig[];
+        finally_steps: ActionConfig[];
+      };
+    }
+  | {
+      type: "fallback_block";
+      config: {
+        primary_steps: ActionConfig[];
+        fallback_steps: ActionConfig[];
+      };
+    }
+  | { type: "break_loop"; config: Record<string, never> }
+  | { type: "continue_loop"; config: Record<string, never> }
   | {
       type: "stop_workflow";
       config: { status: "success" | "failure"; reason?: string | null };
     }
+  | {
+      type: "transform_variable";
+      config: { source_name: string; target_name: string; expression: string };
+    }
+  | {
+      type: "assert_output";
+      config: { name: string; match_mode: "contains" | "equals"; value: string };
+    }
+  | {
+      type: "run_subworkflow";
+      config: {
+        workflow_id: string;
+        input_mapping: Array<{ source: string; target: string }>;
+        output_mapping: Array<{ source: string; target: string }>;
+      };
+    }
+  | { type: "domain_allowlist"; config: { domains: string[] } }
   | { type: "use_profile"; config: { name: string } }
   | { type: "save_session"; config: { path: string } }
   | { type: "load_session"; config: { path: string } }
@@ -687,6 +754,7 @@ export type RunState = {
   current_step_id: string | null;
   current_step_number: number | null;
   completed_step_ids: string[];
+  outputs?: Record<string, unknown>;
   error: null | {
     step_id?: string | null;
     step_number: number;

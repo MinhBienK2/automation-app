@@ -1,10 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Background,
+  Controls,
+  Handle,
+  MiniMap,
+  Position,
+  ReactFlow,
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+} from "@xyflow/react";
+import type {
+  Connection,
+  Edge,
+  EdgeChange,
+  Node,
+  NodeChange,
+  NodeProps,
+  ReactFlowInstance,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import type {
   ActionConfig,
   ActionType,
-  GraphEdge,
   GraphNode,
   GraphNodeType,
+  GraphPort,
   GraphValidationIssue,
   RunState,
   WorkflowCondition,
@@ -25,8 +46,13 @@ import { Textarea } from "../../../components/ui/textarea";
 import {
   createDefaultGraphNode,
   defaultActionConfig,
+  fromReactFlowGraph,
   graphNodeLabel,
-  nodePorts,
+  graphIssuesByNode,
+  type WorkflowFlowEdge,
+  toReactFlowGraph,
+  type WorkflowFlowNode,
+  type WorkflowFlowNodeStatus,
 } from "../lib/workflowGraph";
 import { actionGroups, actionLabels, actionOptions } from "../../../lib/workflowUi";
 import { ActionConfigEditor } from "./StepForm";
@@ -45,12 +71,30 @@ type WorkflowGraphEditorProps = {
 const paletteNodes: GraphNodeType[] = [
   "action",
   "if",
+  "switch",
   "repeat_times",
   "repeat_for_each",
+  "while",
+  "repeat_until",
   "retry",
+  "try_catch",
+  "fallback",
+  "break_loop",
+  "continue_loop",
+  "stop_workflow",
   "manual_approval",
   "rate_limit",
+  "set_variable",
+  "transform_variable",
+  "assert_output",
+  "run_subworkflow",
+  "domain_allowlist",
+  "end_failure",
 ];
+
+const workflowNodeTypes = {
+  workflow: WorkflowGraphNode,
+};
 
 export function WorkflowGraphEditor({
   graph,
@@ -64,15 +108,55 @@ export function WorkflowGraphEditor({
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState(graph.nodes[0]?.id ?? "");
-  const [sourceNodeId, setSourceNodeId] = useState(graph.nodes[0]?.id ?? "");
-  const [targetNodeId, setTargetNodeId] = useState(graph.nodes[1]?.id ?? "");
-  const [sourcePortId, setSourcePortId] = useState("");
-  const [targetPortId, setTargetPortId] = useState("");
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
-  const sourceNode = graph.nodes.find((node) => node.id === sourceNodeId) ?? null;
-  const targetNode = graph.nodes.find((node) => node.id === targetNodeId) ?? null;
-  const sourcePorts = outputPorts(sourceNode);
-  const targetPorts = inputPorts(targetNode);
+  const completedNodeIds = useMemo(
+    () => new Set(runState.completed_step_ids),
+    [runState.completed_step_ids],
+  );
+  const issueGroups = useMemo(
+    () => graphIssuesByNode(validationIssues),
+    [validationIssues],
+  );
+  const issueNodeIds = useMemo(
+    () =>
+      new Set(
+        validationIssues
+          .map((issue) => issue.node_id)
+          .filter((nodeId): nodeId is string => Boolean(nodeId)),
+      ),
+    [validationIssues],
+  );
+  const issueEdgeIds = useMemo(
+    () =>
+      new Set(
+        validationIssues
+          .map((issue) => issue.edge_id)
+          .filter((edgeId): edgeId is string => Boolean(edgeId)),
+      ),
+    [validationIssues],
+  );
+  const flowGraph = useMemo(
+    () =>
+      toReactFlowGraph(graph, {
+        selectedNodeId,
+        runningNodeId: runState.current_step_id,
+        completedNodeIds,
+        failedNodeId: runState.error?.step_id ?? null,
+        issueNodeIds,
+        issueEdgeIds,
+      }),
+    [
+      graph,
+      selectedNodeId,
+      runState.current_step_id,
+      completedNodeIds,
+      runState.error?.step_id,
+      issueNodeIds,
+      issueEdgeIds,
+    ],
+  );
   const edgeLabels = useMemo(
     () =>
       graph.edges.map(
@@ -81,18 +165,6 @@ export function WorkflowGraphEditor({
     [graph.edges],
   );
 
-  useEffect(() => {
-    if (!sourcePorts.some((port) => port.id === sourcePortId)) {
-      setSourcePortId(sourcePorts[0]?.id ?? "");
-    }
-  }, [sourcePortId, sourcePorts]);
-
-  useEffect(() => {
-    if (!targetPorts.some((port) => port.id === targetPortId)) {
-      setTargetPortId(targetPorts[0]?.id ?? "");
-    }
-  }, [targetPortId, targetPorts]);
-
   function addNode(nodeType: GraphNodeType) {
     const node = createDefaultGraphNode(nodeType, {
       x: 120 + graph.nodes.length * 48,
@@ -100,7 +172,6 @@ export function WorkflowGraphEditor({
     });
     onChange({ ...graph, nodes: [...graph.nodes, node] });
     setSelectedNodeId(node.id);
-    setTargetNodeId(node.id);
   }
 
   function addActionNode(actionType: ActionType) {
@@ -114,7 +185,6 @@ export function WorkflowGraphEditor({
     };
     onChange({ ...graph, nodes: [...graph.nodes, node] });
     setSelectedNodeId(node.id);
-    setTargetNodeId(node.id);
     setIsActionPaletteOpen(false);
   }
 
@@ -151,29 +221,46 @@ export function WorkflowGraphEditor({
     });
   }
 
-  function connectNodes() {
-    if (!sourceNode || !targetNode || sourceNode.id === targetNode.id) return;
-    const sourcePort = sourcePorts.find((port) => port.id === sourcePortId);
-    const targetPort = targetPorts.find((port) => port.id === targetPortId);
-    if (!sourcePort || !targetPort) return;
+  function syncFlowGraph(nodes: Node[], edges: Edge[]) {
+    onChange(fromReactFlowGraph(graph, nodes, edges, graph.viewport));
+  }
 
-    const nextEdge: GraphEdge = {
-      id: `edge-${sourceNode.id}-${sourcePort.id}-${targetNode.id}-${targetPort.id}`,
-      source_node_id: sourceNode.id,
-      source_port: sourcePort.id,
-      target_node_id: targetNode.id,
-      target_port: targetPort.id,
-      label: sourcePort.label.toLowerCase(),
-      condition: null,
+  function handleNodesChange(changes: NodeChange[]) {
+    const selectedChange = changes.find(
+      (change) => change.type === "select" && change.selected,
+    );
+    if (selectedChange && "id" in selectedChange) {
+      setSelectedNodeId(selectedChange.id);
+    }
+    const nextNodes = applyNodeChanges(changes, flowGraph.nodes);
+    syncFlowGraph(nextNodes, flowGraph.edges);
+  }
+
+  function handleEdgesChange(changes: EdgeChange[]) {
+    const nextEdges = applyEdgeChanges(changes, flowGraph.edges);
+    syncFlowGraph(flowGraph.nodes, nextEdges);
+  }
+
+  function handleConnect(connection: Connection) {
+    if (!connection.source || !connection.target || !connection.sourceHandle) return;
+    if (!connection.targetHandle) return;
+    const nextEdge: WorkflowFlowEdge = {
+      ...connection,
+      id: `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
+      label: connection.sourceHandle,
+      data: { hasIssue: false },
     };
+    const nextEdges = addEdge(nextEdge, flowGraph.edges);
+    syncFlowGraph(flowGraph.nodes, nextEdges);
+  }
 
-    onChange({
-      ...graph,
-      edges: [
-        ...graph.edges.filter((edge) => edge.id !== nextEdge.id),
-        nextEdge,
-      ],
-    });
+  function focusSelectedNode() {
+    if (!selectedNode || !reactFlowInstance) return;
+    reactFlowInstance.setCenter(
+      selectedNode.position.x + 96,
+      selectedNode.position.y + 32,
+      { zoom: Math.max(graph.viewport.zoom, 0.9), duration: 240 },
+    );
   }
 
   function deleteEdge(edgeId: string) {
@@ -225,42 +312,34 @@ export function WorkflowGraphEditor({
 
         <div className="graph-canvas-wrap">
           <div className="graph-canvas" role="application" aria-label="Workflow graph canvas">
-            <svg className="graph-edge-layer" aria-hidden="true">
-              {graph.edges.map((edge) => {
-                const source = graph.nodes.find((node) => node.id === edge.source_node_id);
-                const target = graph.nodes.find((node) => node.id === edge.target_node_id);
-                if (!source || !target) return null;
-                return (
-                  <line
-                    key={edge.id}
-                    x1={source.position.x + 128}
-                    y1={source.position.y + 30}
-                    x2={target.position.x}
-                    y2={target.position.y + 30}
-                  />
-                );
-              })}
-            </svg>
-            {graph.nodes.map((node) => (
-              <button
-                key={node.id}
-                type="button"
-                aria-label={`Graph canvas node ${node.id}`}
-                className={
-                  selectedNodeId === node.id
-                    ? `graph-node graph-node-selected ${graphRunClass(node.id, runState)}`
-                    : `graph-node ${graphRunClass(node.id, runState)}`
-                }
-                style={{
-                  transform: `translate(${node.position.x}px, ${node.position.y}px)`,
-                }}
-                onClick={() => setSelectedNodeId(node.id)}
-              >
-                {node.label}
-              </button>
-            ))}
+            <ReactFlow
+              colorMode="dark"
+              defaultViewport={flowGraph.viewport}
+              edges={flowGraph.edges}
+              fitView
+              nodes={flowGraph.nodes}
+              nodeTypes={workflowNodeTypes}
+              onConnect={handleConnect}
+              onEdgesChange={handleEdgesChange}
+              onInit={setReactFlowInstance}
+              onMoveEnd={(_, viewport) =>
+                onChange({ ...graph, viewport })
+              }
+              onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+              onNodesChange={handleNodesChange}
+            >
+              <Background color="rgba(62, 207, 142, 0.14)" gap={32} />
+              <Controls position="bottom-left" />
+              <MiniMap
+                ariaLabel="Graph minimap"
+                nodeBorderRadius={8}
+                pannable
+                position="bottom-right"
+                zoomable
+              />
+            </ReactFlow>
           </div>
-          <div className="graph-minimap" aria-label="Graph minimap">
+          <div className="graph-minimap" aria-label="Graph summary">
             {graph.nodes.length} nodes / {graph.edges.length} edges
           </div>
         </div>
@@ -277,6 +356,15 @@ export function WorkflowGraphEditor({
                   </span>
                 ))}
               </div>
+              {issueGroups.get(selectedNode.id)?.length ? (
+                <div className="graph-node-issues" aria-label="Selected node issues">
+                  {issueGroups.get(selectedNode.id)?.map((issue) => (
+                    <p key={`${issue.level}-${issue.message}`}>
+                      {issue.level}: {issue.message}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
               <NodeConfigFields node={selectedNode} onChange={updateNode} />
               <div className="graph-move-actions">
                 <Button type="button" variant="secondary" onClick={() => moveSelectedNode(-24, 0)}>
@@ -284,6 +372,9 @@ export function WorkflowGraphEditor({
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => moveSelectedNode(24, 0)}>
                   Move Right
+                </Button>
+                <Button type="button" variant="secondary" onClick={focusSelectedNode}>
+                  Focus
                 </Button>
               </div>
               <Button
@@ -298,65 +389,6 @@ export function WorkflowGraphEditor({
           ) : (
             <p className="muted">Select a graph node.</p>
           )}
-
-          <div className="graph-connect-form">
-            <h3>Connect</h3>
-            <Label>
-              Source node
-              <Select
-                value={sourceNodeId}
-                onChange={(event) => setSourceNodeId(event.currentTarget.value)}
-              >
-                {graph.nodes.map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.id}
-                  </option>
-                ))}
-              </Select>
-            </Label>
-            <Label>
-              Source port
-              <Select
-                value={sourcePortId}
-                onChange={(event) => setSourcePortId(event.currentTarget.value)}
-              >
-                {sourcePorts.map((port) => (
-                  <option key={port.id} value={port.id}>
-                    {port.id}
-                  </option>
-                ))}
-              </Select>
-            </Label>
-            <Label>
-              Target node
-              <Select
-                value={targetNodeId}
-                onChange={(event) => setTargetNodeId(event.currentTarget.value)}
-              >
-                {graph.nodes.map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.id}
-                  </option>
-                ))}
-              </Select>
-            </Label>
-            <Label>
-              Target port
-              <Select
-                value={targetPortId}
-                onChange={(event) => setTargetPortId(event.currentTarget.value)}
-              >
-                {targetPorts.map((port) => (
-                  <option key={port.id} value={port.id}>
-                    {port.id}
-                  </option>
-                ))}
-              </Select>
-            </Label>
-            <Button type="button" onClick={connectNodes}>
-              Connect Nodes
-            </Button>
-          </div>
 
           <div className="graph-edge-summary" aria-label="Graph edge summary">
             {graph.edges.map((edge, index) => (
@@ -379,7 +411,7 @@ export function WorkflowGraphEditor({
       <div className="graph-runtime-grid">
         <GraphValidationPanel issues={validationIssues} />
         <GraphTimelinePanel runState={runState} />
-        <GraphOutputInspector graph={graph} />
+        <GraphOutputInspector graph={graph} runState={runState} />
       </div>
 
       <ActionNodePalette
@@ -388,6 +420,54 @@ export function WorkflowGraphEditor({
         onSelectAction={addActionNode}
       />
     </section>
+  );
+}
+
+function WorkflowGraphNode({ id, data, selected }: NodeProps<WorkflowFlowNode>) {
+  const inputPorts = portsByDirection(data.ports, "input");
+  const outputPorts = portsByDirection(data.ports, "output");
+
+  return (
+    <div
+      className={[
+        "graph-node",
+        selected ? "graph-node-selected" : "",
+        data.hasIssue ? "graph-node-has-issue" : "",
+        graphStatusClass(data.status),
+      ].filter(Boolean).join(" ")}
+    >
+      <button
+        type="button"
+        aria-label={`Graph canvas node ${id}`}
+        className="graph-node-button nodrag"
+      >
+        <span>{data.label}</span>
+        <small>{graphNodeLabel(data.nodeType)}</small>
+      </button>
+
+      {inputPorts.map((port, index) => (
+        <Handle
+          aria-label={`${data.label} ${port.label} port`}
+          className="graph-handle graph-handle-input"
+          id={port.id}
+          key={port.id}
+          position={Position.Left}
+          style={{ top: portOffset(index, inputPorts.length) }}
+          type="target"
+        />
+      ))}
+      {outputPorts.map((port, index) => (
+        <Handle
+          aria-label={`${data.label} ${port.label} port`}
+          className="graph-handle graph-handle-output"
+          id={port.id}
+          key={port.id}
+          position={Position.Right}
+          style={{ top: portOffset(index, outputPorts.length) }}
+          type="source"
+        />
+      ))}
+    </div>
   );
 }
 
@@ -644,10 +724,12 @@ function GraphTimelinePanel({ runState }: GraphTimelinePanelProps) {
 
 type GraphOutputInspectorProps = {
   graph: WorkflowGraph;
+  runState: RunState;
 };
 
-function GraphOutputInspector({ graph }: GraphOutputInspectorProps) {
+function GraphOutputInspector({ graph, runState }: GraphOutputInspectorProps) {
   const outputs = outputNamesFromGraph(graph);
+  const capturedOutputs = Object.entries(runState.outputs ?? {});
 
   return (
     <section className="graph-runtime-panel" aria-label="Output inspector">
@@ -660,7 +742,18 @@ function GraphOutputInspector({ graph }: GraphOutputInspectorProps) {
           <span key={output}>{output}</span>
         ))}
       </div>
-      {outputs.length ? null : <p className="muted">No captured outputs yet</p>}
+      {capturedOutputs.length ? (
+        <div className="graph-output-values" aria-label="Captured outputs">
+          {capturedOutputs.map(([name, value]) => (
+            <div key={name}>
+              <span>{name}</span>
+              <code>{formatOutputValue(value)}</code>
+            </div>
+          ))}
+        </div>
+      ) : outputs.length ? null : (
+        <p className="muted">No captured outputs yet</p>
+      )}
     </section>
   );
 }
@@ -685,8 +778,6 @@ function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
 
   switch (node.node_type) {
     case "if":
-    case "repeat_until":
-    case "while":
       return (
         <div className="graph-config-fields">
           <ConditionFields
@@ -695,6 +786,83 @@ function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
           />
         </div>
       );
+    case "repeat_until":
+    case "while":
+      return (
+        <div className="graph-config-fields">
+          <ConditionFields
+            condition={conditionFromConfig(node.config)}
+            onChange={(condition) => updateConfig({ ...objectConfig(node.config), condition })}
+          />
+          <Label>
+            Loop max attempts
+            <Input
+              min="1"
+              type="number"
+              value={numberConfig(node.config, "max_attempts", 10)}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  max_attempts: Number(event.currentTarget.value) || 1,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Loop timeout ms
+            <Input
+              min="0"
+              type="number"
+              value={numberConfig(node.config, "timeout_ms", 0)}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  timeout_ms: Number(event.currentTarget.value) || null,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "switch": {
+      const cases = arrayConfig(node.config, "cases");
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Switch expression
+            <Input
+              value={stringConfig(node.config, "expression", "")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  expression: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Switch cases
+            <Textarea
+              value={cases.join("\n")}
+              onChange={(event) => {
+                const nextCases = event.currentTarget.value
+                  .split("\n")
+                  .map((item) => item.trim())
+                  .filter(Boolean);
+                onChange({
+                  ...node,
+                  config: {
+                    ...objectConfig(node.config),
+                    cases: nextCases,
+                  },
+                  ports: switchPortsForCases(nextCases),
+                });
+              }}
+            />
+          </Label>
+        </div>
+      );
+    }
     case "repeat_times":
       return (
         <div className="graph-config-fields">
@@ -831,6 +999,217 @@ function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
           </Label>
         </div>
       );
+    case "end_failure":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Failure reason
+            <Input
+              value={stringConfig(node.config, "reason", "Graph reached failure end")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  reason: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "stop_workflow":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Status
+            <Select
+              value={stringConfig(node.config, "status", "success")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  status: event.currentTarget.value,
+                })
+              }
+            >
+              <option value="success">Success</option>
+              <option value="failure">Failure</option>
+            </Select>
+          </Label>
+          <Label>
+            Reason
+            <Input
+              value={stringConfig(node.config, "reason", "")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  reason: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "set_variable":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Variable name
+            <Input
+              value={stringConfig(node.config, "name", "variable")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  name: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Value
+            <Input
+              value={stringConfig(node.config, "value", "")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  value: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "transform_variable":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Source output
+            <Input
+              value={stringConfig(node.config, "source_name", "input")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  source_name: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Target output
+            <Input
+              value={stringConfig(node.config, "target_name", "output")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  target_name: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Expression
+            <Textarea
+              value={stringConfig(node.config, "expression", "")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  expression: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "assert_output":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Output name
+            <Input
+              value={stringConfig(node.config, "name", "output")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  name: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Match
+            <Select
+              value={stringConfig(node.config, "match", "equals")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  match: event.currentTarget.value,
+                })
+              }
+            >
+              <option value="equals">Equals</option>
+              <option value="contains">Contains</option>
+            </Select>
+          </Label>
+          <Label>
+            Expected value
+            <Input
+              value={stringConfig(node.config, "value", "")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  value: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "run_subworkflow":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Workflow id
+            <Input
+              value={stringConfig(node.config, "workflow_id", "")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  workflow_id: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "domain_allowlist":
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Allowed domains
+            <Textarea
+              value={arrayConfig(node.config, "domains").join("\n")}
+              onChange={(event) =>
+                updateConfig({
+                  ...objectConfig(node.config),
+                  domains: event.currentTarget.value
+                    .split("\n")
+                    .map((domain) => domain.trim())
+                    .filter(Boolean),
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    case "try_catch":
+    case "fallback":
+    case "break_loop":
+    case "continue_loop":
+      return (
+        <div className="graph-config-fields">
+          <p className="muted">
+            Configure this node by connecting its named ports on the canvas.
+          </p>
+        </div>
+      );
     case "action":
       if (!isActionConfig(node.config)) return null;
       return (
@@ -863,18 +1242,6 @@ function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
     default:
       return null;
   }
-}
-
-function outputPorts(node: GraphNode | null) {
-  if (!node) return [];
-  const ports = node.ports.length ? node.ports : nodePorts(node.node_type);
-  return ports.filter((port) => port.direction === "output");
-}
-
-function inputPorts(node: GraphNode | null) {
-  if (!node) return [];
-  const ports = node.ports.length ? node.ports : nodePorts(node.node_type);
-  return ports.filter((port) => port.direction === "input");
 }
 
 function isActionConfig(config: unknown): config is ActionConfig {
@@ -1019,11 +1386,41 @@ function arrayConfig(config: unknown, key: string) {
   return Array.isArray(value) ? value.map(String) : [];
 }
 
-function graphRunClass(nodeId: string, runState: RunState) {
-  if (runState.error?.step_id === nodeId) return "graph-node-failed";
-  if (runState.current_step_id === nodeId) return "graph-node-running";
-  if (runState.completed_step_ids.includes(nodeId)) return "graph-node-completed";
-  return "";
+function portsByDirection(
+  ports: GraphPort[],
+  direction: GraphPort["direction"],
+) {
+  return ports.filter((port) => port.direction === direction);
+}
+
+function switchPortsForCases(cases: string[]): GraphPort[] {
+  return [
+    { id: "in", label: "In", direction: "input" },
+    ...cases.map((_, index) => ({
+      id: `case_${index + 1}`,
+      label: `Case ${index + 1}`,
+      direction: "output" as const,
+    })),
+    { id: "default", label: "Default", direction: "output" },
+  ];
+}
+
+function portOffset(index: number, total: number) {
+  if (total <= 1) return "50%";
+  return `${((index + 1) / (total + 1)) * 100}%`;
+}
+
+function graphStatusClass(status: WorkflowFlowNodeStatus) {
+  switch (status) {
+    case "failed":
+      return "graph-node-failed";
+    case "running":
+      return "graph-node-running";
+    case "completed":
+      return "graph-node-completed";
+    default:
+      return "";
+  }
 }
 
 function outputNamesFromGraph(graph: WorkflowGraph) {
@@ -1043,6 +1440,15 @@ function outputNamesFromGraph(graph: WorkflowGraph) {
   });
 
   return Array.from(names).sort();
+}
+
+function formatOutputValue(value: unknown) {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
 }
 
 function looksSensitive(value: string) {

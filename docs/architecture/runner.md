@@ -21,9 +21,10 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - `BrowserRunExecutor` runs action configs through `BrowserRunner`.
 - `BrowserRunner` emits `StepStarted` and `StepCompleted`.
 - `run_service` maps progress step numbers back to workflow step ids.
+- Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, and domain allowlist semantics above the browser action dispatch layer.
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
-- Browser sessions are retained in `AppState` after terminal outcomes.
+- Browser sessions are retained in `AppState` after terminal outcomes, and captured `window.__wamOutputs` values are copied into run state before retention.
 
 ## Belongs Here
 

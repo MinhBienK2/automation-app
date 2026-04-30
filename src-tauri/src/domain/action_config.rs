@@ -56,7 +56,18 @@ pub enum ActionType {
     RepeatTimes,
     RepeatForEach,
     RetryBlock,
+    SwitchCondition,
+    WhileLoop,
+    RepeatUntil,
+    TryCatch,
+    FallbackBlock,
+    BreakLoop,
+    ContinueLoop,
     StopWorkflow,
+    TransformVariable,
+    AssertOutput,
+    RunSubworkflow,
+    DomainAllowlist,
     UseProfile,
     SaveSession,
     LoadSession,
@@ -138,7 +149,18 @@ impl ActionType {
             Self::RepeatTimes => "repeat_times",
             Self::RepeatForEach => "repeat_for_each",
             Self::RetryBlock => "retry_block",
+            Self::SwitchCondition => "switch_condition",
+            Self::WhileLoop => "while_loop",
+            Self::RepeatUntil => "repeat_until",
+            Self::TryCatch => "try_catch",
+            Self::FallbackBlock => "fallback_block",
+            Self::BreakLoop => "break_loop",
+            Self::ContinueLoop => "continue_loop",
             Self::StopWorkflow => "stop_workflow",
+            Self::TransformVariable => "transform_variable",
+            Self::AssertOutput => "assert_output",
+            Self::RunSubworkflow => "run_subworkflow",
+            Self::DomainAllowlist => "domain_allowlist",
             Self::UseProfile => "use_profile",
             Self::SaveSession => "save_session",
             Self::LoadSession => "load_session",
@@ -220,7 +242,18 @@ impl ActionType {
             Self::RepeatTimes => "Repeat Times",
             Self::RepeatForEach => "Repeat For Each",
             Self::RetryBlock => "Retry Block",
+            Self::SwitchCondition => "Switch Condition",
+            Self::WhileLoop => "While Loop",
+            Self::RepeatUntil => "Repeat Until",
+            Self::TryCatch => "Try Catch",
+            Self::FallbackBlock => "Fallback Block",
+            Self::BreakLoop => "Break Loop",
+            Self::ContinueLoop => "Continue Loop",
             Self::StopWorkflow => "Stop Workflow",
+            Self::TransformVariable => "Transform Variable",
+            Self::AssertOutput => "Assert Output",
+            Self::RunSubworkflow => "Run Subworkflow",
+            Self::DomainAllowlist => "Domain Allowlist",
             Self::UseProfile => "Use Profile",
             Self::SaveSession => "Save Session",
             Self::LoadSession => "Load Session",
@@ -269,6 +302,13 @@ pub enum AssertTextMatchMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum AssertOutputMatchMode {
+    Contains,
+    Equals,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum StopWorkflowStatus {
     Success,
     Failure,
@@ -282,6 +322,19 @@ pub enum WorkflowCondition {
     TextVisible { text: String },
     UrlContains { value: String },
     ElementVisible { xpath: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SwitchCase {
+    pub value: String,
+    #[serde(default)]
+    pub steps: Vec<ActionConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VariableMapping {
+    pub source: String,
+    pub target: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -828,11 +881,77 @@ pub enum ActionConfig {
         delay_ms: Option<u64>,
         #[serde(default)]
         steps: Vec<ActionConfig>,
+        #[serde(default)]
+        failed_steps: Vec<ActionConfig>,
     },
+    SwitchCondition {
+        expression: String,
+        cases: Vec<SwitchCase>,
+        #[serde(default)]
+        default_steps: Vec<ActionConfig>,
+    },
+    WhileLoop {
+        condition: WorkflowCondition,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_attempts: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+        #[serde(default)]
+        steps: Vec<ActionConfig>,
+    },
+    RepeatUntil {
+        condition: WorkflowCondition,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_attempts: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+        #[serde(default)]
+        steps: Vec<ActionConfig>,
+        #[serde(default)]
+        timeout_steps: Vec<ActionConfig>,
+    },
+    TryCatch {
+        #[serde(default)]
+        try_steps: Vec<ActionConfig>,
+        #[serde(default)]
+        success_steps: Vec<ActionConfig>,
+        #[serde(default)]
+        error_steps: Vec<ActionConfig>,
+        #[serde(default)]
+        finally_steps: Vec<ActionConfig>,
+    },
+    FallbackBlock {
+        #[serde(default)]
+        primary_steps: Vec<ActionConfig>,
+        #[serde(default)]
+        fallback_steps: Vec<ActionConfig>,
+    },
+    BreakLoop {},
+    ContinueLoop {},
     StopWorkflow {
         status: StopWorkflowStatus,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
+    },
+    TransformVariable {
+        source_name: String,
+        target_name: String,
+        expression: String,
+    },
+    AssertOutput {
+        name: String,
+        match_mode: AssertOutputMatchMode,
+        value: String,
+    },
+    RunSubworkflow {
+        workflow_id: String,
+        #[serde(default)]
+        input_mapping: Vec<VariableMapping>,
+        #[serde(default)]
+        output_mapping: Vec<VariableMapping>,
+    },
+    DomainAllowlist {
+        domains: Vec<String>,
     },
     UseProfile {
         name: String,
@@ -1017,7 +1136,18 @@ impl ActionConfig {
             Self::RepeatTimes { .. } => ActionType::RepeatTimes,
             Self::RepeatForEach { .. } => ActionType::RepeatForEach,
             Self::RetryBlock { .. } => ActionType::RetryBlock,
+            Self::SwitchCondition { .. } => ActionType::SwitchCondition,
+            Self::WhileLoop { .. } => ActionType::WhileLoop,
+            Self::RepeatUntil { .. } => ActionType::RepeatUntil,
+            Self::TryCatch { .. } => ActionType::TryCatch,
+            Self::FallbackBlock { .. } => ActionType::FallbackBlock,
+            Self::BreakLoop { .. } => ActionType::BreakLoop,
+            Self::ContinueLoop { .. } => ActionType::ContinueLoop,
             Self::StopWorkflow { .. } => ActionType::StopWorkflow,
+            Self::TransformVariable { .. } => ActionType::TransformVariable,
+            Self::AssertOutput { .. } => ActionType::AssertOutput,
+            Self::RunSubworkflow { .. } => ActionType::RunSubworkflow,
+            Self::DomainAllowlist { .. } => ActionType::DomainAllowlist,
             Self::UseProfile { .. } => ActionType::UseProfile,
             Self::SaveSession { .. } => ActionType::SaveSession,
             Self::LoadSession { .. } => ActionType::LoadSession,
@@ -1359,11 +1489,20 @@ impl ActionConfig {
             Self::AssertText { text, .. } if text.trim().is_empty() => {
                 Err(ValidationError::new("text", "Expected text is required"))
             }
-            Self::IfCondition { condition, .. } => validate_condition(condition),
+            Self::IfCondition {
+                condition,
+                then_steps,
+                else_steps,
+            } => {
+                validate_condition(condition)?;
+                validate_nested_steps(then_steps)?;
+                validate_nested_steps(else_steps)
+            }
             Self::RepeatTimes { times: 0, .. } => Err(ValidationError::new(
                 "times",
                 "Repeat count must be greater than 0",
             )),
+            Self::RepeatTimes { steps, .. } => validate_nested_steps(steps),
             Self::RepeatForEach { item_name, .. } if item_name.trim().is_empty() => {
                 Err(ValidationError::new("item_name", "Item name is required"))
             }
@@ -1371,12 +1510,112 @@ impl ActionConfig {
                 "items",
                 "At least one item is required",
             )),
+            Self::RepeatForEach { steps, .. } => validate_nested_steps(steps),
             Self::RetryBlock {
                 max_attempts: 0, ..
             } => Err(ValidationError::new(
                 "max_attempts",
                 "Max attempts must be greater than 0",
             )),
+            Self::RetryBlock {
+                steps,
+                failed_steps,
+                ..
+            } => {
+                validate_nested_steps(steps)?;
+                validate_nested_steps(failed_steps)
+            }
+            Self::SwitchCondition { expression, .. } if expression.trim().is_empty() => Err(
+                ValidationError::new("expression", "Switch expression is required"),
+            ),
+            Self::SwitchCondition { cases, .. } if cases.is_empty() => Err(ValidationError::new(
+                "cases",
+                "At least one switch case is required",
+            )),
+            Self::SwitchCondition {
+                cases,
+                default_steps,
+                ..
+            } => {
+                for case in cases {
+                    if case.value.trim().is_empty() {
+                        return Err(ValidationError::new("cases", "Switch case is required"));
+                    }
+                    validate_nested_steps(&case.steps)?;
+                }
+                validate_nested_steps(default_steps)
+            }
+            Self::WhileLoop {
+                condition,
+                max_attempts,
+                timeout_ms,
+                steps,
+            }
+            | Self::RepeatUntil {
+                condition,
+                max_attempts,
+                timeout_ms,
+                steps,
+                ..
+            } => {
+                validate_condition(condition)?;
+                validate_loop_guard(*max_attempts, *timeout_ms)?;
+                validate_nested_steps(steps)
+            }
+            Self::TryCatch {
+                try_steps,
+                success_steps,
+                error_steps,
+                finally_steps,
+            } => {
+                validate_nested_steps(try_steps)?;
+                validate_nested_steps(success_steps)?;
+                validate_nested_steps(error_steps)?;
+                validate_nested_steps(finally_steps)
+            }
+            Self::FallbackBlock {
+                primary_steps,
+                fallback_steps,
+            } => {
+                validate_nested_steps(primary_steps)?;
+                validate_nested_steps(fallback_steps)
+            }
+            Self::TransformVariable {
+                source_name,
+                target_name,
+                ..
+            } if source_name.trim().is_empty() || target_name.trim().is_empty() => Err(
+                ValidationError::new("name", "Source and target output names are required"),
+            ),
+            Self::AssertOutput { name, .. } if name.trim().is_empty() => {
+                Err(ValidationError::new("name", "Output name is required"))
+            }
+            Self::AssertOutput { value, .. } if value.trim().is_empty() => Err(
+                ValidationError::new("value", "Expected output value is required"),
+            ),
+            Self::RunSubworkflow { workflow_id, .. } if workflow_id.trim().is_empty() => Err(
+                ValidationError::new("workflow_id", "Workflow id is required"),
+            ),
+            Self::RunSubworkflow {
+                input_mapping,
+                output_mapping,
+                ..
+            } => {
+                validate_variable_mappings(input_mapping)?;
+                validate_variable_mappings(output_mapping)
+            }
+            Self::DomainAllowlist { domains } if domains.is_empty() => Err(ValidationError::new(
+                "domains",
+                "At least one allowed domain is required",
+            )),
+            Self::DomainAllowlist { domains }
+                if domains.iter().any(|domain| domain.trim().is_empty()) =>
+            {
+                Err(ValidationError::new(
+                    "domains",
+                    "Allowed domains are required",
+                ))
+            }
             Self::UseProfile { name } if name.trim().is_empty() => {
                 Err(ValidationError::new("name", "Profile name is required"))
             }
@@ -1714,4 +1953,45 @@ fn validate_condition(condition: &WorkflowCondition) -> Result<(), ValidationErr
         }
         _ => Ok(()),
     }
+}
+
+fn validate_nested_steps(steps: &[ActionConfig]) -> Result<(), ValidationError> {
+    for step in steps {
+        step.validate()?;
+    }
+    Ok(())
+}
+
+fn validate_loop_guard(
+    max_attempts: Option<u32>,
+    timeout_ms: Option<u64>,
+) -> Result<(), ValidationError> {
+    match (max_attempts, timeout_ms) {
+        (Some(0), _) => Err(ValidationError::new(
+            "max_attempts",
+            "Max attempts must be greater than 0",
+        )),
+        (_, Some(0)) => Err(ValidationError::new(
+            "timeout_ms",
+            "Timeout must be greater than 0",
+        )),
+        (None, None) => Err(ValidationError::new(
+            "loop_guard",
+            "Loop nodes require max attempts or timeout",
+        )),
+        _ => Ok(()),
+    }
+}
+
+fn validate_variable_mappings(mappings: &[VariableMapping]) -> Result<(), ValidationError> {
+    if mappings
+        .iter()
+        .any(|mapping| mapping.source.trim().is_empty() || mapping.target.trim().is_empty())
+    {
+        return Err(ValidationError::new(
+            "mapping",
+            "Variable mapping source and target are required",
+        ));
+    }
+    Ok(())
 }

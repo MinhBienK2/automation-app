@@ -21,6 +21,7 @@ Run state includes:
 - `current_step_id`
 - `current_step_number`
 - `completed_step_ids`
+- `outputs`: captured runtime outputs/variables available after the runner has a browser session to inspect
 - `error`
 
 Run errors include:
@@ -36,7 +37,7 @@ Run errors include:
 - `begin_run` sets status to `running`, mode, target step id, and clears progress/error.
 - Progress events set current step and completed step ids.
 - `stop_run` sets status to `stopped` and clears error.
-- `finish_run` clears active run, clears current step, sets terminal status, and retains session when present.
+- `finish_run` clears active run, clears current step, captures `window.__wamOutputs` from the retained browser session when present, sets terminal status, and retains session when present.
 - Infrastructure failure sets status to `failed` without retained session.
 
 ## UI Expectations
@@ -44,7 +45,7 @@ Run errors include:
 - `App.tsx` polls `get_run_state` while status is `running`.
 - Test monitor derives per-step status from target/current/completed/error.
 - Run status bar displays terminal and error states.
-- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids.
+- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, and renders captured `outputs` in the output inspector.
 
 ## Change Checklist
 

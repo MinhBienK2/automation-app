@@ -33,8 +33,9 @@ use chromiumoxide::{
 };
 
 use crate::domain::{
-    ActionConfig, AssertElementState, AssertTextMatchMode, ClickButton, ClickMode, HeaderPair,
-    ScrollBlock, ScrollInline, StopWorkflowStatus, WaitCondition, WorkflowCondition,
+    ActionConfig, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode, ClickButton,
+    ClickMode, HeaderPair, ScrollBlock, ScrollInline, StopWorkflowStatus, WaitCondition,
+    WorkflowCondition,
 };
 
 use self::{
@@ -63,6 +64,8 @@ pub(super) enum ActionExecution {
     Complete,
     Stopped,
     StopSuccess,
+    BreakLoop,
+    ContinueLoop,
 }
 
 pub(super) async fn execute_action(
@@ -799,6 +802,7 @@ pub(super) async fn execute_action(
             max_attempts,
             delay_ms,
             steps,
+            failed_steps,
         } => {
             let mut last_error = None;
             for attempt in 1..=max_attempts {
@@ -817,16 +821,170 @@ pub(super) async fn execute_action(
                     Err(error) => return Err(error),
                 }
             }
+            if !failed_steps.is_empty() {
+                return execute_inline_steps(session, failed_steps, cancellation).await;
+            }
             Err(RunnerError::ActionFailed(
                 last_error.unwrap_or_else(|| "Retry block failed".to_string()),
             ))
         }
+        ActionConfig::SwitchCondition {
+            expression,
+            cases,
+            default_steps,
+        } => {
+            let value = read_output_value(&page, &expression).await?;
+            let steps = cases
+                .into_iter()
+                .find(|case| case.value == value)
+                .map(|case| case.steps)
+                .unwrap_or(default_steps);
+            execute_inline_steps(session, steps, cancellation).await
+        }
+        ActionConfig::WhileLoop {
+            condition,
+            max_attempts,
+            timeout_ms,
+            steps,
+        } => {
+            let started_at = tokio::time::Instant::now();
+            let deadline = timeout_ms.map(|timeout| started_at + Duration::from_millis(timeout));
+            let mut iteration = 0_u32;
+            loop {
+                if cancellation.is_cancelled() {
+                    return Ok(ActionExecution::Stopped);
+                }
+                if let Some(limit) = max_attempts {
+                    if iteration >= limit {
+                        return Ok(ActionExecution::Complete);
+                    }
+                }
+                if deadline.is_some_and(|deadline| tokio::time::Instant::now() >= deadline) {
+                    return Ok(ActionExecution::Complete);
+                }
+                if !evaluate_condition(&page, &condition).await? {
+                    return Ok(ActionExecution::Complete);
+                }
+                store_loop_outputs(&page, iteration, max_attempts).await?;
+                match execute_inline_steps(session, steps.clone(), cancellation).await? {
+                    ActionExecution::Complete | ActionExecution::ContinueLoop => {}
+                    ActionExecution::BreakLoop => return Ok(ActionExecution::Complete),
+                    execution => return Ok(execution),
+                }
+                iteration += 1;
+            }
+        }
+        ActionConfig::RepeatUntil {
+            condition,
+            max_attempts,
+            timeout_ms,
+            steps,
+            timeout_steps,
+        } => {
+            let started_at = tokio::time::Instant::now();
+            let deadline = timeout_ms.map(|timeout| started_at + Duration::from_millis(timeout));
+            let mut iteration = 0_u32;
+            loop {
+                if cancellation.is_cancelled() {
+                    return Ok(ActionExecution::Stopped);
+                }
+                if evaluate_condition(&page, &condition).await? {
+                    return Ok(ActionExecution::Complete);
+                }
+                if let Some(limit) = max_attempts {
+                    if iteration >= limit {
+                        return execute_inline_steps(session, timeout_steps, cancellation).await;
+                    }
+                }
+                if deadline.is_some_and(|deadline| tokio::time::Instant::now() >= deadline) {
+                    return execute_inline_steps(session, timeout_steps, cancellation).await;
+                }
+                store_loop_outputs(&page, iteration, max_attempts).await?;
+                match execute_inline_steps(session, steps.clone(), cancellation).await? {
+                    ActionExecution::Complete | ActionExecution::ContinueLoop => {}
+                    ActionExecution::BreakLoop => return Ok(ActionExecution::Complete),
+                    execution => return Ok(execution),
+                }
+                iteration += 1;
+            }
+        }
+        ActionConfig::TryCatch {
+            try_steps,
+            success_steps,
+            error_steps,
+            finally_steps,
+        } => {
+            let try_result = execute_inline_steps(session, try_steps, cancellation).await;
+            let branch_result = match try_result {
+                Ok(ActionExecution::Complete) => {
+                    execute_inline_steps(session, success_steps, cancellation).await
+                }
+                Err(RunnerError::ActionFailed(reason)) => {
+                    let script = store_output_script("last_error", &reason)?;
+                    ensure_js_action(&page, &script).await?;
+                    execute_inline_steps(session, error_steps, cancellation).await
+                }
+                other => other,
+            };
+
+            let branch_execution = branch_result?;
+            let finally_execution = if finally_steps.is_empty() {
+                ActionExecution::Complete
+            } else {
+                execute_inline_steps(session, finally_steps, cancellation).await?
+            };
+            match finally_execution {
+                ActionExecution::Complete => Ok(branch_execution),
+                execution => Ok(execution),
+            }
+        }
+        ActionConfig::FallbackBlock {
+            primary_steps,
+            fallback_steps,
+        } => match execute_inline_steps(session, primary_steps, cancellation).await {
+            Ok(ActionExecution::Complete) => Ok(ActionExecution::Complete),
+            Ok(execution) => Ok(execution),
+            Err(RunnerError::ActionFailed(reason)) => {
+                let script = store_output_script("last_error", &reason)?;
+                ensure_js_action(&page, &script).await?;
+                execute_inline_steps(session, fallback_steps, cancellation).await
+            }
+            Err(error) => Err(error),
+        },
+        ActionConfig::BreakLoop {} => Ok(ActionExecution::BreakLoop),
+        ActionConfig::ContinueLoop {} => Ok(ActionExecution::ContinueLoop),
         ActionConfig::StopWorkflow { status, reason } => match status {
             StopWorkflowStatus::Success => Ok(ActionExecution::StopSuccess),
             StopWorkflowStatus::Failure => Err(RunnerError::ActionFailed(
                 reason.unwrap_or_else(|| "Workflow stopped".to_string()),
             )),
         },
+        ActionConfig::TransformVariable {
+            source_name,
+            target_name,
+            expression,
+        } => {
+            let script = transform_variable_script(&source_name, &target_name, &expression)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::AssertOutput {
+            name,
+            match_mode,
+            value,
+        } => {
+            let script = assert_output_script(&name, match_mode, &value)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::RunSubworkflow { workflow_id, .. } => Err(RunnerError::ActionFailed(
+            format!("Subworkflow {workflow_id} was not expanded before execution"),
+        )),
+        ActionConfig::DomainAllowlist { domains } => {
+            let script = domain_allowlist_script(&domains)?;
+            ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
         ActionConfig::UseProfile { .. } => Ok(ActionExecution::Complete),
         ActionConfig::SaveSession { path } => {
             save_session(&page, &path).await?;
@@ -1410,6 +1568,134 @@ async fn evaluate_condition(
         }
     };
     Ok(page.evaluate(script).await?.into_value()?)
+}
+
+async fn read_output_value(page: &Page, name: &str) -> Result<String, RunnerError> {
+    let name = json_string(name)?;
+    let script = format!(
+        r#"
+        (() => {{
+          const value = (window.__wamOutputs || {{}})[{name}];
+          if (value === undefined || value === null) return "";
+          if (typeof value === "object") return JSON.stringify(value);
+          return String(value);
+        }})()
+        "#
+    );
+    Ok(page.evaluate(script).await?.into_value()?)
+}
+
+async fn store_loop_outputs(
+    page: &Page,
+    iteration: u32,
+    total: Option<u32>,
+) -> Result<(), RunnerError> {
+    let total = total
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let script = format!(
+        r#"
+        (() => {{
+          window.__wamOutputs = window.__wamOutputs || {{}};
+          window.__wamOutputs["loop.index"] = "{index}";
+          window.__wamOutputs["loop.number"] = "{number}";
+          if ({total} === null) {{
+            delete window.__wamOutputs["loop.total"];
+          }} else {{
+            window.__wamOutputs["loop.total"] = String({total});
+          }}
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#,
+        index = iteration,
+        number = iteration + 1,
+        total = total,
+    );
+    ensure_js_action(page, &script).await
+}
+
+fn transform_variable_script(
+    source_name: &str,
+    target_name: &str,
+    expression: &str,
+) -> Result<String, RunnerError> {
+    let source_name = json_string(source_name)?;
+    let target_name = json_string(target_name)?;
+    let expression = json_string(expression)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          window.__wamOutputs = window.__wamOutputs || {{}};
+          const sourceName = {source_name};
+          const targetName = {target_name};
+          const expression = {expression};
+          const outputs = window.__wamOutputs;
+          const value = outputs[sourceName] ?? "";
+          let nextValue = value;
+          if (String(expression).trim()) {{
+            try {{
+              nextValue = Function("value", "outputs", "return (" + expression + ");")(value, outputs);
+            }} catch (error) {{
+              return {{ ok: false, reason: "Variable transform failed: " + (error && error.message ? error.message : String(error)) }};
+            }}
+          }}
+          outputs[targetName] = nextValue;
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
+fn assert_output_script(
+    name: &str,
+    match_mode: AssertOutputMatchMode,
+    expected: &str,
+) -> Result<String, RunnerError> {
+    let name = json_string(name)?;
+    let expected = json_string(expected)?;
+    let mode = match match_mode {
+        AssertOutputMatchMode::Contains => "contains",
+        AssertOutputMatchMode::Equals => "equals",
+    };
+    Ok(format!(
+        r#"
+        (() => {{
+          const outputs = window.__wamOutputs || {{}};
+          const name = {name};
+          const expected = {expected};
+          const actualValue = outputs[name];
+          const actual = actualValue === undefined || actualValue === null
+            ? ""
+            : (typeof actualValue === "object" ? JSON.stringify(actualValue) : String(actualValue));
+          const ok = {mode:?} === "contains" ? actual.includes(expected) : actual === expected;
+          return ok
+            ? {{ ok: true, reason: "" }}
+            : {{ ok: false, reason: "Output " + name + " expected " + expected + " but was " + actual }};
+        }})()
+        "#
+    ))
+}
+
+fn domain_allowlist_script(domains: &[String]) -> Result<String, RunnerError> {
+    let domains = serde_json::to_string(domains)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          const host = window.location.hostname;
+          const domains = {domains};
+          const matches = domains.some((domain) => {{
+            if (domain.startsWith("*.")) {{
+              const suffix = domain.slice(1);
+              return host.endsWith(suffix);
+            }}
+            return host === domain || host.endsWith("." + domain);
+          }});
+          return matches
+            ? {{ ok: true, reason: "" }}
+            : {{ ok: false, reason: "Current domain " + host + " is not in the workflow allowlist" }};
+        }})()
+        "#
+    ))
 }
 
 fn assert_element_script(

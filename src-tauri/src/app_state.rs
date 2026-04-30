@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 use tokio::sync::Mutex;
 
@@ -36,6 +36,8 @@ pub struct RunStateDto {
     pub current_step_id: Option<String>,
     pub current_step_number: Option<usize>,
     pub completed_step_ids: Vec<String>,
+    #[serde(default)]
+    pub outputs: BTreeMap<String, serde_json::Value>,
     pub error: Option<crate::domain::RunError>,
 }
 
@@ -48,6 +50,7 @@ impl RunStateDto {
             current_step_id: None,
             current_step_number: None,
             completed_step_ids: Vec::new(),
+            outputs: BTreeMap::new(),
             error: None,
         }
     }
@@ -109,6 +112,7 @@ impl AppState {
             current_step_id: None,
             current_step_number: None,
             completed_step_ids: Vec::new(),
+            outputs: BTreeMap::new(),
             error: None,
         };
 
@@ -128,6 +132,7 @@ impl AppState {
             current_step_id: current.current_step_id,
             current_step_number: current.current_step_number,
             completed_step_ids: current.completed_step_ids,
+            outputs: current.outputs,
             error: None,
         };
         *self.inner.run_state.lock().await = stopped.clone();
@@ -141,6 +146,11 @@ impl AppState {
         error: Option<RunError>,
         session: Option<BrowserSession>,
     ) {
+        let outputs = if let Some(session) = session.as_ref() {
+            session.captured_outputs().await.unwrap_or_default()
+        } else {
+            BTreeMap::new()
+        };
         if let Some(session) = session {
             self.inner.retained_sessions.lock().await.push(session);
         }
@@ -149,6 +159,7 @@ impl AppState {
         run_state.status = status;
         run_state.current_step_id = None;
         run_state.current_step_number = None;
+        run_state.outputs = outputs;
         run_state.error = error;
     }
 
@@ -158,6 +169,7 @@ impl AppState {
         run_state.status = RunStatus::Failed;
         run_state.current_step_id = None;
         run_state.current_step_number = None;
+        run_state.outputs = BTreeMap::new();
         run_state.error = Some(error);
     }
 

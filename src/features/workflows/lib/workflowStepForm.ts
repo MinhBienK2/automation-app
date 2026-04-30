@@ -332,6 +332,18 @@ export function updateActionConfigField(
       return { type: "set_local_storage", config: { ...config.config, [field]: value } };
     case "set_session_storage":
       return { type: "set_session_storage", config: { ...config.config, [field]: value } };
+    case "switch_condition":
+    case "while_loop":
+    case "repeat_until":
+    case "try_catch":
+    case "fallback_block":
+    case "break_loop":
+    case "continue_loop":
+    case "transform_variable":
+    case "assert_output":
+    case "run_subworkflow":
+    case "domain_allowlist":
+      return config;
   }
 }
 

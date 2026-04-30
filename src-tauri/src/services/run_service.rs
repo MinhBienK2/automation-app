@@ -286,6 +286,61 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             max_attempts: 3,
             delay_ms: None,
             steps: Vec::new(),
+            failed_steps: Vec::new(),
+        },
+        ActionType::SwitchCondition => ActionConfig::SwitchCondition {
+            expression: "name".to_string(),
+            cases: Vec::new(),
+            default_steps: Vec::new(),
+        },
+        ActionType::WhileLoop => ActionConfig::WhileLoop {
+            condition: crate::domain::WorkflowCondition::OutputEquals {
+                name: "name".to_string(),
+                value: "true".to_string(),
+            },
+            max_attempts: Some(1),
+            timeout_ms: None,
+            steps: Vec::new(),
+        },
+        ActionType::RepeatUntil => ActionConfig::RepeatUntil {
+            condition: crate::domain::WorkflowCondition::OutputEquals {
+                name: "name".to_string(),
+                value: "true".to_string(),
+            },
+            max_attempts: Some(1),
+            timeout_ms: None,
+            steps: Vec::new(),
+            timeout_steps: Vec::new(),
+        },
+        ActionType::TryCatch => ActionConfig::TryCatch {
+            try_steps: Vec::new(),
+            success_steps: Vec::new(),
+            error_steps: Vec::new(),
+            finally_steps: Vec::new(),
+        },
+        ActionType::FallbackBlock => ActionConfig::FallbackBlock {
+            primary_steps: Vec::new(),
+            fallback_steps: Vec::new(),
+        },
+        ActionType::BreakLoop => ActionConfig::BreakLoop {},
+        ActionType::ContinueLoop => ActionConfig::ContinueLoop {},
+        ActionType::TransformVariable => ActionConfig::TransformVariable {
+            source_name: "input".to_string(),
+            target_name: "output".to_string(),
+            expression: String::new(),
+        },
+        ActionType::AssertOutput => ActionConfig::AssertOutput {
+            name: "output".to_string(),
+            match_mode: crate::domain::AssertOutputMatchMode::Equals,
+            value: String::new(),
+        },
+        ActionType::RunSubworkflow => ActionConfig::RunSubworkflow {
+            workflow_id: String::new(),
+            input_mapping: Vec::new(),
+            output_mapping: Vec::new(),
+        },
+        ActionType::DomainAllowlist => ActionConfig::DomainAllowlist {
+            domains: Vec::new(),
         },
         ActionType::StopWorkflow => ActionConfig::StopWorkflow {
             status: crate::domain::StopWorkflowStatus::Success,
