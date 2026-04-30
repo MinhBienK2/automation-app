@@ -290,6 +290,18 @@
   cursor: grab;
 }
 
+.graph-canvas .react-flow__connectionline {
+  z-index: 40;
+  overflow: visible;
+}
+
+.graph-canvas .react-flow__connection-path {
+  stroke: #3ecf8e;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .graph-edge-overlay {
   position: absolute;
   inset: 0;
@@ -357,8 +369,8 @@
 .graph-node {
   position: relative;
   display: grid;
-  min-width: 150px;
-  min-height: 58px;
+  width: 160px;
+  min-height: 64px;
   border: 1px solid #363636;
   border-radius: 8px;
   background: #171717;
@@ -453,6 +465,18 @@
 
 .graph-handle-output {
   right: -8px;
+}
+
+.graph-canvas .react-flow__handle.connectingfrom {
+  border-color: #3ecf8e;
+  background: #fafafa;
+  box-shadow: 0 0 0 4px rgba(62, 207, 142, 0.16);
+}
+
+.graph-canvas .react-flow__handle.connectingto.valid {
+  border-color: #fafafa;
+  background: #00c573;
+  box-shadow: 0 0 0 4px rgba(0, 197, 115, 0.2);
 }
 
 .graph-minimap {

@@ -126,4 +126,22 @@ describe("App CSS", () => {
     expect(graphCanvas).toContain("height: clamp(460px, calc(100dvh - 260px), 640px)");
     expect(graphFlow).toContain("height: 100%");
   });
+
+  test("keeps React Flow connection previews visible while dragging ports", () => {
+    const graphNode = cssRule(".graph-node");
+    const connectionLine = cssRule(".graph-canvas .react-flow__connectionline");
+    const connectionPath = cssRule(".graph-canvas .react-flow__connection-path");
+    const activeSourceHandle = cssRule(".graph-canvas .react-flow__handle.connectingfrom");
+    const validTargetHandle = cssRule(".graph-canvas .react-flow__handle.connectingto.valid");
+
+    expect(graphNode).toContain("width: 160px");
+    expect(graphNode).toContain("min-height: 64px");
+    expect(connectionLine).toContain("z-index: 40");
+    expect(connectionLine).toContain("overflow: visible");
+    expect(connectionPath).toContain("stroke: #3ecf8e");
+    expect(connectionPath).toContain("stroke-width: 3");
+    expect(connectionPath).toContain("stroke-linecap: round");
+    expect(activeSourceHandle).toContain("background: #fafafa");
+    expect(validTargetHandle).toContain("background: #00c573");
+  });
 });
