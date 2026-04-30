@@ -310,6 +310,12 @@
   z-index: 1;
 }
 
+.graph-edge-overlay defs,
+.graph-edge-overlay marker,
+.graph-edge-overlay .graph-visible-edge path:not(.graph-visible-edge-hit-target) {
+  pointer-events: none;
+}
+
 .graph-connection-preview {
   position: absolute;
   inset: 0;
@@ -343,6 +349,18 @@
   stroke-width: 2.6;
 }
 
+.graph-visible-edge-hit-target {
+  cursor: pointer;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 24;
+}
+
+.graph-visible-edge-selected path:first-of-type {
+  stroke: #fafafa;
+  stroke-width: 3;
+}
+
 .graph-visible-edge-issue path {
   stroke: #ff7b72;
 }
@@ -353,7 +371,13 @@
   stroke-width: 1.5;
 }
 
+.graph-visible-edge-order {
+  cursor: pointer;
+  pointer-events: all;
+}
+
 .graph-visible-edge-order text {
+  pointer-events: none;
   fill: #3ecf8e;
   font-size: 11px;
   font-weight: 500;
@@ -516,6 +540,7 @@
 }
 
 .graph-connection-summary,
+.graph-selected-edge,
 .graph-edge-summary {
   display: grid;
   gap: 6px;
@@ -539,6 +564,15 @@
   border: 1px solid #242424;
   border-radius: 8px;
   background: #121212;
+}
+
+.graph-selected-edge {
+  padding: 8px;
+  border: 1px solid rgba(62, 207, 142, 0.48);
+  border-radius: 8px;
+  background: #121212;
+  color: #fafafa;
+  font-size: 12px;
 }
 
 .graph-connection-summary h3 {

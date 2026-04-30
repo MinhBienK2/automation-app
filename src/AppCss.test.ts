@@ -132,6 +132,10 @@ describe("App CSS", () => {
     const graphHandle = cssRule(".graph-handle");
     const preview = cssRule(".graph-connection-preview");
     const previewPath = cssRule(".graph-connection-preview path");
+    const edgeOverlay = cssRule(".graph-edge-overlay");
+    const edgeHitTarget = cssRule(".graph-visible-edge-hit-target");
+    const edgeOrder = cssRule(".graph-visible-edge-order");
+    const edgeOrderText = cssRule(".graph-visible-edge-order text");
     const connectionLine = cssRule(".graph-canvas .react-flow__connectionline");
     const connectionPath = cssRule(".graph-canvas .react-flow__connection-path");
     const activeSourceHandle = cssRule(".graph-canvas .react-flow__handle.connectingfrom");
@@ -147,6 +151,13 @@ describe("App CSS", () => {
     expect(previewPath).toContain("stroke-width: 2.4");
     expect(css).toContain(".graph-connection-preview marker path");
     expect(css).toContain(".graph-edge-overlay #graph-edge-arrow path");
+    expect(css).toContain(".graph-visible-edge-hit-target");
+    expect(css).toContain("pointer-events: stroke");
+    expect(css).toContain(".graph-visible-edge-selected path:first-of-type");
+    expect(edgeOverlay).toContain("pointer-events: none");
+    expect(edgeHitTarget).toContain("stroke-width: 24");
+    expect(edgeOrder).toContain("pointer-events: all");
+    expect(edgeOrderText).toContain("pointer-events: none");
     expect(connectionLine).toContain("z-index: 40");
     expect(connectionLine).toContain("overflow: visible");
     expect(connectionPath).toContain("stroke: #3ecf8e");

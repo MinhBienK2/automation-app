@@ -180,6 +180,7 @@ export function WorkflowGraphEditor({
     x: number;
     y: number;
   } | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
@@ -189,6 +190,11 @@ export function WorkflowGraphEditor({
   const graphRef = useRef(graph);
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
+  const selectedEdge = graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
+  const nodeLabels = useMemo(
+    () => new Map(graph.nodes.map((node) => [node.id, node.label])),
+    [graph.nodes],
+  );
   const completedNodeIds = useMemo(
     () => new Set(runState.completed_step_ids),
     [runState.completed_step_ids],
@@ -361,6 +367,7 @@ export function WorkflowGraphEditor({
   }
 
   function updateNode(nextNode: GraphNode) {
+    setSelectedEdgeId(null);
     onChange({
       ...graph,
       nodes: graph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
@@ -381,6 +388,7 @@ export function WorkflowGraphEditor({
       (change) => change.type === "select" && change.selected,
     );
     if (selectedChange && "id" in selectedChange) {
+      setSelectedEdgeId(null);
       setSelectedNodeId(selectedChange.id);
     }
     const nextNodes = applyNodeChanges(changes, flowGraph.nodes);
@@ -477,10 +485,16 @@ export function WorkflowGraphEditor({
   }
 
   function deleteEdge(edgeId: string) {
+    setSelectedEdgeId((current) => (current === edgeId ? null : current));
     onChange({
       ...graph,
       edges: graph.edges.filter((edge) => edge.id !== edgeId),
     });
+  }
+
+  function deleteSelectedEdge() {
+    if (!selectedEdge) return;
+    deleteEdge(selectedEdge.id);
   }
 
   return (
@@ -599,12 +613,22 @@ export function WorkflowGraphEditor({
                 setSelectedNodeId(node.id);
                 setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
               }}
-              onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+              onNodeClick={(_, node) => {
+                setSelectedEdgeId(null);
+                setSelectedNodeId(node.id);
+              }}
               onNodesChange={handleNodesChange}
               panOnDrag
             >
               <ViewportPortal>
-                <GraphEdgeOverlay graph={graph} issueEdgeIds={issueEdgeIds} />
+                <GraphEdgeOverlay
+                  graph={graph}
+                  issueEdgeIds={issueEdgeIds}
+                  selectedEdgeId={selectedEdgeId}
+                  onSelectEdge={(edgeId) => {
+                    setSelectedEdgeId(edgeId);
+                  }}
+                />
               </ViewportPortal>
               <Background color="rgba(62, 207, 142, 0.14)" gap={32} />
               <Controls position="bottom-left" />
@@ -667,6 +691,22 @@ export function WorkflowGraphEditor({
         </div>
 
         <aside className="graph-inspector" aria-label="Graph inspector">
+          {selectedEdge ? (
+            <section className="graph-selected-edge" aria-label="Selected link">
+              <p>
+                Selected link: {nodeLabels.get(selectedEdge.source_node_id) ?? selectedEdge.source_node_id}
+                {" -> "}
+                {nodeLabels.get(selectedEdge.target_node_id) ?? selectedEdge.target_node_id}
+              </p>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={deleteSelectedEdge}
+              >
+                Delete selected link
+              </Button>
+            </section>
+          ) : null}
           {selectedNode ? (
             <>
               <h2>{selectedNode.label}</h2>
@@ -736,9 +776,16 @@ export function WorkflowGraphEditor({
 type GraphEdgeOverlayProps = {
   graph: WorkflowGraph;
   issueEdgeIds: Set<string>;
+  selectedEdgeId: string | null;
+  onSelectEdge: (edgeId: string) => void;
 };
 
-function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
+function GraphEdgeOverlay({
+  graph,
+  issueEdgeIds,
+  selectedEdgeId,
+  onSelectEdge,
+}: GraphEdgeOverlayProps) {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const edgeOrders = graphEdgeOrders(graph);
 
@@ -788,10 +835,16 @@ function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
         const labelX = (sourcePoint.x + targetPoint.x) / 2;
         const labelY = (sourcePoint.y + targetPoint.y) / 2;
 
+        const isSelected = selectedEdgeId === edge.id;
+
         return (
           <g
             aria-label={`Visible edge ${sourceNode.label} to ${targetNode.label}`}
-            className={hasIssue ? "graph-visible-edge graph-visible-edge-issue" : "graph-visible-edge"}
+            className={[
+              "graph-visible-edge",
+              hasIssue ? "graph-visible-edge-issue" : "",
+              isSelected ? "graph-visible-edge-selected" : "",
+            ].filter(Boolean).join(" ")}
             key={edge.id}
             role="img"
           >
@@ -803,11 +856,39 @@ function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
                   : "url(#graph-edge-arrow)"
               }
             />
+            <path
+              aria-label={`Select edge ${sourceNode.label} to ${targetNode.label}`}
+              className="graph-visible-edge-hit-target"
+              d={edgePath(sourcePoint, targetPoint)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectEdge(edge.id);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectEdge(edge.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            />
             {order ? (
               <g
                 aria-label={`Edge direction order ${order}`}
                 className="graph-visible-edge-order"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectEdge(edge.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectEdge(edge.id);
+                  }
+                }}
                 role="img"
+                tabIndex={0}
                 transform={`translate(${labelX} ${labelY})`}
               >
                 <circle r="10" />
@@ -875,7 +956,7 @@ function WorkflowGraphNode({
       {inputPorts.map((port, index) => (
         <Handle
           aria-label={`${data.label} ${port.label} port`}
-          className="graph-handle graph-handle-input nopan"
+          className="graph-handle graph-handle-input"
           id={port.id}
           isConnectable={isConnectable}
           key={port.id}
@@ -888,7 +969,7 @@ function WorkflowGraphNode({
       {outputPorts.map((port, index) => (
         <Handle
           aria-label={`${data.label} ${port.label} port`}
-          className="graph-handle graph-handle-output nopan"
+          className="graph-handle graph-handle-output"
           id={port.id}
           isConnectable={isConnectable}
           key={port.id}

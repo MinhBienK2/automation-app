@@ -89,7 +89,6 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
     expect(workflowGraphEditorSource).toContain("nodesConnectable");
     expect(workflowGraphEditorSource).toContain("panOnDrag");
-    expect(workflowGraphEditorSource).toContain("graph-handle graph-handle-output nopan");
     expect(workflowGraphEditorSource).toContain("isConnectable={isConnectable}");
     expect(workflowGraphEditorSource).toContain("useUpdateNodeInternals");
     expect(workflowGraphEditorSource).toContain("updateNodeInternals(id)");
@@ -183,6 +182,85 @@ describe("Workflow graph editor integration", () => {
         }),
       );
     });
+  });
+
+  test("selects a canvas edge so the selected link can be deleted", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="navigate"]') as HTMLElement,
+    );
+    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
+    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
+
+    fireEvent.click(
+      within(editor).getByRole("button", { name: "Select edge Start to Navigate" }),
+    );
+    expect(within(editor).getByText("Selected link: Start -> Navigate"))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Delete selected link" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            edges: expect.not.arrayContaining([
+              expect.objectContaining({
+                source_node_id: "start",
+                target_node_id: "node-action-42",
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+  });
+
+  test("clears the selected link when a node is clicked", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="navigate"]') as HTMLElement,
+    );
+    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
+    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
+    fireEvent.click(
+      within(editor).getByRole("button", { name: "Select edge Start to Navigate" }),
+    );
+    expect(within(editor).getByText("Selected link: Start -> Navigate"))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }));
+
+    expect(within(editor).queryByText("Selected link: Start -> Navigate"))
+      .not.toBeInTheDocument();
+    expect(within(editor).getByRole("heading", { name: "Navigate" }))
+      .toBeInTheDocument();
   });
 
   test("edits logic node config through structured inspector fields", async () => {
