@@ -13,7 +13,7 @@ describe("Workflow graph editor integration", () => {
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
-  test("adds selects deletes and saves graph nodes through the React Flow workspace", async () => {
+  test("adds selects deletes and saves logic nodes through the grouped React Flow workspace", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
@@ -32,14 +32,24 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).getByLabelText("Start Out port")).toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Connect Nodes" }))
       .not.toBeInTheDocument();
+    expect(within(editor).getByRole("toolbar", { name: "Graph tools" })).toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "Add Logic" })).toBeInTheDocument();
+    expect(within(editor).queryByRole("button", { name: "Add If" })).not.toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add If" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    const logicPalette = await screen.findByRole("dialog", { name: "Choose a logic node" });
+    expect(within(logicPalette).getByRole("button", { name: "Branching" })).toBeInTheDocument();
+    await userEvent.type(within(logicPalette).getByLabelText("Search logic nodes"), "if");
+    await userEvent.click(logicPalette.querySelector('[data-value="if"]') as HTMLElement);
     expect(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }))
       .toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }));
     expect(within(editor).getByRole("heading", { name: "If" })).toBeInTheDocument();
-    expect(within(editor).getByText("input: in")).toBeInTheDocument();
+    expect(within(editor).getByRole("region", { name: "Node connections" })).toBeInTheDocument();
+    expect(within(editor).queryByText("input: in")).not.toBeInTheDocument();
+    expect(within(editor).queryByRole("button", { name: "Move Left" })).not.toBeInTheDocument();
+    expect(within(editor).queryByRole("button", { name: "Move Right" })).not.toBeInTheDocument();
     expect(within(editor).getByLabelText("If True port")).toBeInTheDocument();
     expect(within(editor).getByLabelText("If False port")).toBeInTheDocument();
 
@@ -73,17 +83,29 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add If" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
     await userEvent.clear(within(editor).getByLabelText("Output name"));
     await userEvent.type(within(editor).getByLabelText("Output name"), "logged_in");
     await userEvent.clear(within(editor).getByLabelText("Value"));
     await userEvent.type(within(editor).getByLabelText("Value"), "false");
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Repeat Times" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="repeat_times"]') as HTMLElement,
+    );
     await userEvent.clear(within(editor).getByLabelText("Times"));
     await userEvent.type(within(editor).getByLabelText("Times"), "3");
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Manual Approval" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="manual_approval"]') as HTMLElement,
+    );
     expect(within(editor).getByText("Human checkpoint only; this does not bypass challenges."))
       .toBeInTheDocument();
     await userEvent.clear(within(editor).getByLabelText("Approval reason"));
@@ -189,6 +211,11 @@ describe("Workflow graph editor integration", () => {
     const palette = await screen.findByRole("dialog", { name: "Choose an action type" });
     expect(palette.querySelector('[data-value="navigate"]')).toBeInTheDocument();
     expect(palette.querySelector('[data-value="click"]')).toBeInTheDocument();
+    expect(within(palette).queryByRole("button", { name: "Logic" })).not.toBeInTheDocument();
+    expect(palette.querySelector('[data-value="if_condition"]')).not.toBeInTheDocument();
+    expect(palette.querySelector('[data-value="repeat_times"]')).not.toBeInTheDocument();
+    expect(palette.querySelector('[data-value="retry_block"]')).not.toBeInTheDocument();
+    expect(palette.querySelector('[data-value="stop_workflow"]')).not.toBeInTheDocument();
 
     await userEvent.click(palette.querySelector('[data-value="click"]') as HTMLElement);
     expect(await within(editor).findByRole("heading", { name: "Click" })).toBeInTheDocument();
@@ -281,7 +308,7 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
-  test("validates and runs graph with timeline and output context panels", async () => {
+  test("validates and runs graph without the old runtime panels", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
       validate_workflow_graph: [
@@ -312,7 +339,11 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add If" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
     await userEvent.click(within(editor).getByRole("button", { name: "Validate Graph" }));
 
     await waitFor(() => {
@@ -328,12 +359,14 @@ describe("Workflow graph editor integration", () => {
       );
     });
 
-    const validationPanel = within(editor).getByRole("region", {
-      name: "Graph validation",
-    });
-    expect(within(validationPanel).getByText("If node needs a false branch"))
+    expect(within(editor).getByText("error: If node needs a false branch"))
       .toBeInTheDocument();
-    expect(within(validationPanel).getByText("node-if-42")).toBeInTheDocument();
+    expect(within(editor).queryByRole("region", { name: "Graph validation" }))
+      .not.toBeInTheDocument();
+    expect(within(editor).queryByRole("region", { name: "Graph run timeline" }))
+      .not.toBeInTheDocument();
+    expect(within(editor).queryByRole("region", { name: "Output inspector" }))
+      .not.toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Run" }));
 
@@ -354,16 +387,8 @@ describe("Workflow graph editor integration", () => {
       });
     });
 
-    const timeline = within(editor).getByRole("region", { name: "Graph run timeline" });
-    expect(within(timeline).getByText("Current: node-if-42")).toBeInTheDocument();
-    expect(within(timeline).getByText("Completed: start")).toBeInTheDocument();
-
-    const outputInspector = within(editor).getByRole("region", {
-      name: "Output inspector",
-    });
-    expect(within(outputInspector).getByText("loop.index")).toBeInTheDocument();
-    expect(within(outputInspector).getByText("title")).toBeInTheDocument();
-    expect(within(outputInspector).getByText("Dashboard")).toBeInTheDocument();
+    expect(within(editor).queryByText("Current: node-if-42")).not.toBeInTheDocument();
+    expect(within(editor).queryByText("Dashboard")).not.toBeInTheDocument();
   });
 
   test("offers advanced node types with structured inspector fields", async () => {
@@ -377,29 +402,32 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    const logicPalette = await screen.findByRole("dialog", { name: "Choose a logic node" });
     [
-      "Add Switch",
-      "Add While",
-      "Add Repeat Until",
-      "Add Try Catch",
-      "Add Fallback",
-      "Add Break Loop",
-      "Add Continue Loop",
-      "Add Stop Workflow",
-      "Add Set Variable",
-      "Add Assert Output",
-      "Add Run Subworkflow",
-      "Add Domain Allowlist",
-      "Add End Failure",
-    ].forEach((name) => {
-      expect(within(editor).getByRole("button", { name })).toBeInTheDocument();
+      "switch",
+      "while",
+      "repeat_until",
+      "try_catch",
+      "fallback",
+      "break_loop",
+      "continue_loop",
+      "stop_workflow",
+      "manual_approval",
+      "rate_limit",
+      "domain_allowlist",
+    ].forEach((value) => {
+      expect(logicPalette.querySelector(`[data-value="${value}"]`)).toBeInTheDocument();
     });
-
-    await userEvent.click(within(editor).getByRole("button", { name: "Add While" }));
+    await userEvent.click(logicPalette.querySelector('[data-value="while"]') as HTMLElement);
     expect(within(editor).getByLabelText("Loop max attempts")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Loop timeout ms")).toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Switch" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="switch"]') as HTMLElement,
+    );
     expect(within(editor).getByRole("heading", { name: "Switch" })).toBeInTheDocument();
     await userEvent.type(within(editor).getByLabelText("Switch expression"), "login_state");
     fireEvent.change(within(editor).getByLabelText("Switch cases"), {
@@ -407,10 +435,18 @@ describe("Workflow graph editor integration", () => {
     });
     expect(within(editor).getByLabelText("Switch Case 1 port")).toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add End Failure" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add End" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an end node" }))
+        .querySelector('[data-value="end_failure"]') as HTMLElement,
+    );
     expect(within(editor).getByLabelText("Failure reason")).toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Domain Allowlist" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="domain_allowlist"]') as HTMLElement,
+    );
     expect(within(editor).getByLabelText("Allowed domains")).toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
@@ -446,6 +482,34 @@ describe("Workflow graph editor integration", () => {
           }),
         }),
       );
+    });
+  });
+
+  test("shows edge direction order and node context actions on the canvas", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    expect(within(editor).queryByLabelText("Edge direction order")).not.toBeInTheDocument();
+    expect(within(editor).getByLabelText("Drag node step-1")).toBeInTheDocument();
+
+    fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
+    const menu = await within(editor).findByRole("menu", { name: "Node actions" });
+    [
+      "Edit",
+      "Rename",
+      "Duplicate",
+      "Focus",
+      "Help",
+      "Delete",
+    ].forEach((name) => {
+      expect(within(menu).getByRole("menuitem", { name })).toBeInTheDocument();
     });
   });
 });

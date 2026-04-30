@@ -9,7 +9,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/App.tsx`: top-level state orchestration.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
-- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace, action palette for new action nodes, action/logic inspector with action-type selection, explicit port connections, edge deletion, validation panel, run timeline, and captured output context.
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace, grouped canvas toolbar pickers for action/logic/variable/output/end nodes, action/logic inspector with action-type selection, explicit port connections, edge direction/order affordances, node drag handles, node context menu actions, edge deletion, and selected-node validation issues.
 - `src/features/workflows/components/StepForm.tsx`: legacy container for the reusable `ActionConfigEditor`; list-step UI is no longer rendered.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
 - `src/lib/workflowApi.ts`: Tauri invoke wrappers.
@@ -21,9 +21,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - User interaction state.
 - Form rendering and local validation display.
 - Visual graph editing state before persistence.
-- Graph validation/run controls and presentation of validation issues, timeline status, and output context.
+- Graph validation/run controls and presentation of validation issues for the selected node.
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, while keeping persisted `WorkflowGraph` as source of truth.
-- Action node creation from the action palette, plus type selection and config editing through the reusable action config editor.
+- Action node creation from the action palette, graph-control node creation from grouped node pickers, plus type selection and config editing through the reusable action config editor.
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 

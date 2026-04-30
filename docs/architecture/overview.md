@@ -6,7 +6,7 @@
 React UI
   -> src/App.tsx orchestration
   -> src/features/workflows/* screens and components
-  -> visual graph editor for graph authoring and runtime inspection
+  -> visual graph editor for graph authoring and canvas run state
   -> src/lib/workflowApi.ts invoke wrappers
   -> Tauri command boundary
 Rust commands

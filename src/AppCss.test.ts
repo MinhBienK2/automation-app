@@ -115,4 +115,15 @@ describe("App CSS", () => {
     expect(dialogSource).toContain('aria-label="Close dialog"');
     expect(dialogSource).not.toContain("bg-white");
   });
+
+  test("lets the workflow detail graph workspace fill the content column", () => {
+    const detailScreen = cssRule(".workflow-detail-screen");
+    const graphCanvas = cssRule(".graph-canvas");
+    const graphFlow = cssRule(".graph-canvas .react-flow");
+
+    expect(detailScreen).toContain("width: 100%");
+    expect(detailScreen).toContain("max-width: none");
+    expect(graphCanvas).toContain("height: clamp(460px, calc(100dvh - 260px), 640px)");
+    expect(graphFlow).toContain("height: 100%");
+  });
 });

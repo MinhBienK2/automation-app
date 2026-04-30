@@ -111,6 +111,7 @@ describe("workflow graph helpers", () => {
           id: "step-wait",
           type: "workflow",
           position: { x: 220, y: 0 },
+          dragHandle: ".graph-node-drag-handle",
           selected: true,
           data: expect.objectContaining({
             label: "Wait",
@@ -133,7 +134,11 @@ describe("workflow graph helpers", () => {
           sourceHandle: "out",
           target: "step-wait",
           targetHandle: "in",
-          label: "next",
+          label: "1",
+          ariaLabel: "Step 1: Start to Wait via next",
+          markerEnd: expect.objectContaining({
+            type: "arrowclosed",
+          }),
           data: expect.objectContaining({
             hasIssue: true,
           }),

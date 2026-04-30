@@ -11,6 +11,7 @@ import type {
   WorkflowStep,
 } from "../../../types/workflow";
 import type { Edge, Node, Viewport } from "@xyflow/react";
+import { MarkerType } from "@xyflow/react";
 
 export const graphIssueKey = "__graph__";
 
@@ -100,6 +101,9 @@ export function toReactFlowGraph(
   graph: WorkflowGraph,
   state: ReactFlowGraphState = {},
 ): WorkflowReactFlowGraph {
+  const edgeOrders = graphEdgeOrders(graph);
+  const nodeLabels = new Map(graph.nodes.map((node) => [node.id, node.label]));
+
   return {
     nodes: graph.nodes.map((node) => ({
       id: node.id,
@@ -107,6 +111,7 @@ export function toReactFlowGraph(
       position: node.position,
       initialHeight: 64,
       initialWidth: 160,
+      dragHandle: ".graph-node-drag-handle",
       selected: state.selectedNodeId === node.id,
       data: {
         label: node.label,
@@ -122,13 +127,63 @@ export function toReactFlowGraph(
       sourceHandle: edge.source_port,
       target: edge.target_node_id,
       targetHandle: edge.target_port,
-      label: edge.label ?? edge.source_port,
+      label: edgeOrders.get(edge.id)
+        ? String(edgeOrders.get(edge.id))
+        : edge.label ?? edge.source_port,
+      ariaLabel: edgeOrders.get(edge.id)
+        ? `Step ${edgeOrders.get(edge.id)}: ${
+            nodeLabels.get(edge.source_node_id) ?? edge.source_node_id
+          } to ${nodeLabels.get(edge.target_node_id) ?? edge.target_node_id} via ${
+            edge.label ?? edge.source_port
+          }`
+        : `${nodeLabels.get(edge.source_node_id) ?? edge.source_node_id} to ${
+            nodeLabels.get(edge.target_node_id) ?? edge.target_node_id
+          } via ${edge.label ?? edge.source_port}`,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: "rgba(62, 207, 142, 0.72)",
+      },
       data: {
         hasIssue: state.issueEdgeIds?.has(edge.id) ?? false,
       },
     })),
     viewport: graph.viewport,
   };
+}
+
+export function graphEdgeOrders(graph: WorkflowGraph) {
+  const orders = new Map<string, number>();
+  const edgesBySource = new Map<string, typeof graph.edges>();
+  graph.edges.forEach((edge) => {
+    edgesBySource.set(edge.source_node_id, [
+      ...(edgesBySource.get(edge.source_node_id) ?? []),
+      edge,
+    ]);
+  });
+
+  const visitedNodes = new Set<string>();
+  const visitedEdges = new Set<string>();
+  const queue = ["start"];
+  let order = 1;
+
+  while (queue.length) {
+    const sourceId = queue.shift();
+    if (!sourceId || visitedNodes.has(sourceId)) continue;
+    visitedNodes.add(sourceId);
+
+    for (const edge of edgesBySource.get(sourceId) ?? []) {
+      if (!visitedEdges.has(edge.id)) {
+        visitedEdges.add(edge.id);
+        orders.set(edge.id, order);
+        order += 1;
+      }
+      if (!visitedNodes.has(edge.target_node_id)) {
+        queue.push(edge.target_node_id);
+      }
+    }
+  }
+
+  return orders;
 }
 
 export function fromReactFlowGraph(
@@ -152,7 +207,10 @@ export function fromReactFlowGraph(
       source_port: edge.sourceHandle ?? "out",
       target_node_id: edge.target,
       target_port: edge.targetHandle ?? "in",
-      label: typeof edge.label === "string" ? edge.label : edge.sourceHandle ?? null,
+      label:
+        typeof edge.label === "string"
+          ? cleanEdgeLabel(edge.label)
+          : edge.sourceHandle ?? null,
       condition:
         graph.edges.find((graphEdge) => graphEdge.id === edge.id)?.condition ?? null,
     })).filter(
@@ -166,6 +224,10 @@ export function fromReactFlowGraph(
       zoom: viewport.zoom,
     },
   };
+}
+
+function cleanEdgeLabel(label: string) {
+  return label.replace(/^\d+\.\s+/, "");
 }
 
 export function createDefaultGraphNode(

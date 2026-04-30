@@ -54,7 +54,7 @@ import {
   type WorkflowFlowNode,
   type WorkflowFlowNodeStatus,
 } from "../lib/workflowGraph";
-import { actionGroups, actionLabels, actionOptions } from "../../../lib/workflowUi";
+import { actionGroups, actionLabels } from "../../../lib/workflowUi";
 import { ActionConfigEditor } from "./StepForm";
 
 type WorkflowGraphEditorProps = {
@@ -68,29 +68,79 @@ type WorkflowGraphEditorProps = {
   onValidate: () => void;
 };
 
-const paletteNodes: GraphNodeType[] = [
-  "action",
-  "if",
-  "switch",
+const hiddenActionPickerTypes = new Set<ActionType>([
+  "if_condition",
   "repeat_times",
   "repeat_for_each",
-  "while",
-  "repeat_until",
-  "retry",
-  "try_catch",
-  "fallback",
-  "break_loop",
-  "continue_loop",
+  "retry_block",
   "stop_workflow",
-  "manual_approval",
-  "rate_limit",
-  "set_variable",
-  "transform_variable",
-  "assert_output",
-  "run_subworkflow",
-  "domain_allowlist",
-  "end_failure",
+]);
+
+const actionPickerGroups = actionGroups
+  .filter((group) => group.label !== "Logic")
+  .map((group) => ({
+    ...group,
+    actions: group.actions.filter((actionType) => !hiddenActionPickerTypes.has(actionType)),
+  }))
+  .filter((group) => group.actions.length > 0);
+
+const actionPickerOptions = actionPickerGroups.flatMap((group) => group.actions);
+
+const logicNodeGroups: Array<{
+  label: string;
+  nodes: GraphNodeType[];
+}> = [
+  { label: "Branching", nodes: ["if", "switch"] },
+  {
+    label: "Loops",
+    nodes: ["repeat_times", "repeat_for_each", "while", "repeat_until"],
+  },
+  { label: "Recovery", nodes: ["retry", "try_catch", "fallback"] },
+  {
+    label: "Flow Control",
+    nodes: ["break_loop", "continue_loop", "stop_workflow"],
+  },
+  {
+    label: "Safety",
+    nodes: ["manual_approval", "rate_limit", "domain_allowlist"],
+  },
 ];
+
+const variableNodeGroups = [
+  { label: "Variables", nodes: ["set_variable", "transform_variable"] },
+] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
+
+const outputNodeGroups = [
+  { label: "Outputs", nodes: ["assert_output", "run_subworkflow"] },
+] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
+
+const endNodeGroups = [
+  { label: "End", nodes: ["end_failure", "stop_workflow"] },
+] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
+
+const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
+  action: "Run a browser, data, session, network, or advanced action.",
+  if: "Branch the workflow into True and False paths.",
+  switch: "Route execution to a matching case or a default path.",
+  repeat_times: "Run a loop path a fixed number of times.",
+  repeat_for_each: "Run a loop path once for each item.",
+  while: "Repeat while a condition stays true.",
+  repeat_until: "Repeat until a condition becomes true or times out.",
+  retry: "Retry a path and continue through success or failure.",
+  try_catch: "Separate normal work, errors, and final cleanup.",
+  fallback: "Try a primary path, then use a fallback path if needed.",
+  break_loop: "Exit the current loop.",
+  continue_loop: "Skip to the next loop iteration.",
+  stop_workflow: "Stop execution with a success or failure status.",
+  manual_approval: "Pause for a human checkpoint.",
+  rate_limit: "Add safe pacing before continuing.",
+  set_variable: "Store a workflow value.",
+  transform_variable: "Create an output from an existing value.",
+  assert_output: "Require an output value to match an expectation.",
+  run_subworkflow: "Run another workflow from this graph.",
+  domain_allowlist: "Restrict navigation to allowed domains.",
+  end_failure: "End the graph as a failure.",
+};
 
 const workflowNodeTypes = {
   workflow: WorkflowGraphNode,
@@ -107,7 +157,19 @@ export function WorkflowGraphEditor({
   onValidate,
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
+  const [nodePalette, setNodePalette] = useState<{
+    title: string;
+    eyebrow: string;
+    searchLabel: string;
+    groups: Array<{ label: string; nodes: GraphNodeType[] }>;
+  } | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState(graph.nodes[0]?.id ?? "");
+  const [contextMenu, setContextMenu] = useState<{
+    nodeId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
@@ -172,6 +234,7 @@ export function WorkflowGraphEditor({
     });
     onChange({ ...graph, nodes: [...graph.nodes, node] });
     setSelectedNodeId(node.id);
+    setNodePalette(null);
   }
 
   function addActionNode(actionType: ActionType) {
@@ -197,28 +260,7 @@ export function WorkflowGraphEditor({
 
   function deleteSelectedNode() {
     if (!selectedNode || selectedNode.node_type === "start") return;
-    onChange({
-      ...graph,
-      nodes: graph.nodes.filter((node) => node.id !== selectedNode.id),
-      edges: graph.edges.filter(
-        (edge) =>
-          edge.source_node_id !== selectedNode.id &&
-          edge.target_node_id !== selectedNode.id,
-      ),
-    });
-    const fallback = graph.nodes.find((node) => node.id !== selectedNode.id);
-    setSelectedNodeId(fallback?.id ?? "");
-  }
-
-  function moveSelectedNode(deltaX: number, deltaY: number) {
-    if (!selectedNode) return;
-    updateNode({
-      ...selectedNode,
-      position: {
-        x: selectedNode.position.x + deltaX,
-        y: selectedNode.position.y + deltaY,
-      },
-    });
+    deleteNode(selectedNode.id);
   }
 
   function syncFlowGraph(nodes: Node[], edges: Edge[]) {
@@ -256,11 +298,73 @@ export function WorkflowGraphEditor({
 
   function focusSelectedNode() {
     if (!selectedNode || !reactFlowInstance) return;
+    focusNode(selectedNode);
+  }
+
+  function focusNode(node: GraphNode) {
+    if (!reactFlowInstance) return;
     reactFlowInstance.setCenter(
-      selectedNode.position.x + 96,
-      selectedNode.position.y + 32,
+      node.position.x + 96,
+      node.position.y + 32,
       { zoom: Math.max(graph.viewport.zoom, 0.9), duration: 240 },
     );
+  }
+
+  function deleteNode(nodeId: string) {
+    const nodeToDelete = graph.nodes.find((node) => node.id === nodeId);
+    if (!nodeToDelete || nodeToDelete.node_type === "start") return;
+    onChange({
+      ...graph,
+      nodes: graph.nodes.filter((node) => node.id !== nodeId),
+      edges: graph.edges.filter(
+        (edge) =>
+          edge.source_node_id !== nodeId &&
+          edge.target_node_id !== nodeId,
+      ),
+    });
+    const fallback = graph.nodes.find((node) => node.id !== nodeId);
+    setSelectedNodeId(fallback?.id ?? "");
+  }
+
+  function duplicateNode(nodeId: string) {
+    const node = graph.nodes.find((item) => item.id === nodeId);
+    if (!node) return;
+    const copy = {
+      ...node,
+      id: `node-${node.node_type}-${Date.now()}`,
+      label: `${node.label} Copy`,
+      position: {
+        x: node.position.x + 36,
+        y: node.position.y + 36,
+      },
+    };
+    onChange({ ...graph, nodes: [...graph.nodes, copy] });
+    setSelectedNodeId(copy.id);
+    setContextMenu(null);
+  }
+
+  function renameNode(nodeId: string) {
+    const node = graph.nodes.find((item) => item.id === nodeId);
+    if (!node) return;
+    const nextLabel = window.prompt("Rename node", node.label)?.trim();
+    if (!nextLabel) return;
+    updateNode({ ...node, label: nextLabel });
+    setContextMenu(null);
+  }
+
+  function openNodeHelp(nodeId: string) {
+    const node = graph.nodes.find((item) => item.id === nodeId) ?? null;
+    setHelpNode(node);
+    setContextMenu(null);
+  }
+
+  function openNodePalette(
+    title: string,
+    eyebrow: string,
+    searchLabel: string,
+    groups: Array<{ label: string; nodes: GraphNodeType[] }>,
+  ) {
+    setNodePalette({ title, eyebrow, searchLabel, groups });
   }
 
   function deleteEdge(edgeId: string) {
@@ -290,26 +394,72 @@ export function WorkflowGraphEditor({
         </div>
       </div>
 
-      <div className="workflow-graph-layout">
-        <aside className="graph-palette" aria-label="Graph node palette">
-          {paletteNodes.map((nodeType) => (
-            <Button
-              key={nodeType}
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                if (nodeType === "action") {
-                  setIsActionPaletteOpen(true);
-                  return;
-                }
-                addNode(nodeType);
-              }}
-            >
-              Add {graphNodeLabel(nodeType)}
-            </Button>
-          ))}
-        </aside>
+      <div className="graph-toolbar" role="toolbar" aria-label="Graph tools">
+        <Button type="button" variant="secondary" onClick={() => setIsActionPaletteOpen(true)}>
+          Add Action
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            openNodePalette(
+              "Choose a logic node",
+              "Add Logic Node",
+              "Search logic nodes",
+              logicNodeGroups,
+            )
+          }
+        >
+          Add Logic
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            openNodePalette(
+              "Choose a variable node",
+              "Add Variable Node",
+              "Search variable nodes",
+              variableNodeGroups,
+            )
+          }
+        >
+          Add Variable
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            openNodePalette(
+              "Choose an output node",
+              "Add Output Node",
+              "Search output nodes",
+              outputNodeGroups,
+            )
+          }
+        >
+          Add Output
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            openNodePalette(
+              "Choose an end node",
+              "Add End Node",
+              "Search end nodes",
+              endNodeGroups,
+            )
+          }
+        >
+          Add End
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => reactFlowInstance?.fitView()}>
+          Fit
+        </Button>
+      </div>
 
+      <div className="workflow-graph-layout">
         <div className="graph-canvas-wrap">
           <div className="graph-canvas" role="application" aria-label="Workflow graph canvas">
             <ReactFlow
@@ -325,6 +475,11 @@ export function WorkflowGraphEditor({
               onMoveEnd={(_, viewport) =>
                 onChange({ ...graph, viewport })
               }
+              onNodeContextMenu={(event, node) => {
+                event.preventDefault();
+                setSelectedNodeId(node.id);
+                setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
+              }}
               onNodeClick={(_, node) => setSelectedNodeId(node.id)}
               onNodesChange={handleNodesChange}
             >
@@ -338,6 +493,30 @@ export function WorkflowGraphEditor({
                 zoomable
               />
             </ReactFlow>
+            {contextMenu ? (
+              <NodeContextMenu
+                node={graph.nodes.find((node) => node.id === contextMenu.nodeId) ?? null}
+                x={contextMenu.x}
+                y={contextMenu.y}
+                onClose={() => setContextMenu(null)}
+                onEdit={() => {
+                  setSelectedNodeId(contextMenu.nodeId);
+                  setContextMenu(null);
+                }}
+                onRename={() => renameNode(contextMenu.nodeId)}
+                onDuplicate={() => duplicateNode(contextMenu.nodeId)}
+                onFocus={() => {
+                  const node = graph.nodes.find((item) => item.id === contextMenu.nodeId);
+                  if (node) focusNode(node);
+                  setContextMenu(null);
+                }}
+                onHelp={() => openNodeHelp(contextMenu.nodeId)}
+                onDelete={() => {
+                  deleteNode(contextMenu.nodeId);
+                  setContextMenu(null);
+                }}
+              />
+            ) : null}
           </div>
           <div className="graph-minimap" aria-label="Graph summary">
             {graph.nodes.length} nodes / {graph.edges.length} edges
@@ -349,13 +528,7 @@ export function WorkflowGraphEditor({
             <>
               <h2>{selectedNode.label}</h2>
               <p className="muted">{graphNodeLabel(selectedNode.node_type)} node</p>
-              <div className="graph-port-list">
-                {selectedNode.ports.map((port) => (
-                  <span key={port.id}>
-                    {port.direction}: {port.id}
-                  </span>
-                ))}
-              </div>
+              <ConnectionSummary graph={graph} node={selectedNode} />
               {issueGroups.get(selectedNode.id)?.length ? (
                 <div className="graph-node-issues" aria-label="Selected node issues">
                   {issueGroups.get(selectedNode.id)?.map((issue) => (
@@ -366,17 +539,9 @@ export function WorkflowGraphEditor({
                 </div>
               ) : null}
               <NodeConfigFields node={selectedNode} onChange={updateNode} />
-              <div className="graph-move-actions">
-                <Button type="button" variant="secondary" onClick={() => moveSelectedNode(-24, 0)}>
-                  Move Left
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => moveSelectedNode(24, 0)}>
-                  Move Right
-                </Button>
-                <Button type="button" variant="secondary" onClick={focusSelectedNode}>
-                  Focus
-                </Button>
-              </div>
+              <Button type="button" variant="secondary" onClick={focusSelectedNode}>
+                Focus
+              </Button>
               <Button
                 type="button"
                 variant="destructive"
@@ -408,17 +573,19 @@ export function WorkflowGraphEditor({
         </aside>
       </div>
 
-      <div className="graph-runtime-grid">
-        <GraphValidationPanel issues={validationIssues} />
-        <GraphTimelinePanel runState={runState} />
-        <GraphOutputInspector graph={graph} runState={runState} />
-      </div>
-
       <ActionNodePalette
         open={isActionPaletteOpen}
         onOpenChange={setIsActionPaletteOpen}
         onSelectAction={addActionNode}
       />
+      <GraphNodePalette
+        palette={nodePalette}
+        onOpenChange={(open) => {
+          if (!open) setNodePalette(null);
+        }}
+        onSelectNode={addNode}
+      />
+      <NodeHelpDialog node={helpNode} onOpenChange={(open) => !open && setHelpNode(null)} />
     </section>
   );
 }
@@ -444,6 +611,12 @@ function WorkflowGraphNode({ id, data, selected }: NodeProps<WorkflowFlowNode>) 
         <span>{data.label}</span>
         <small>{graphNodeLabel(data.nodeType)}</small>
       </button>
+      <div
+        aria-label={`Drag node ${id}`}
+        className="graph-node-drag-handle"
+        role="button"
+        tabIndex={0}
+      />
 
       {inputPorts.map((port, index) => (
         <Handle
@@ -468,6 +641,245 @@ function WorkflowGraphNode({ id, data, selected }: NodeProps<WorkflowFlowNode>) 
         />
       ))}
     </div>
+  );
+}
+
+type GraphNodePaletteProps = {
+  palette: {
+    title: string;
+    eyebrow: string;
+    searchLabel: string;
+    groups: Array<{ label: string; nodes: GraphNodeType[] }>;
+  } | null;
+  onOpenChange: (open: boolean) => void;
+  onSelectNode: (nodeType: GraphNodeType) => void;
+};
+
+function GraphNodePalette({
+  palette,
+  onOpenChange,
+  onSelectNode,
+}: GraphNodePaletteProps) {
+  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const normalizedQuery = query.trim().toLowerCase();
+  const groups = palette?.groups ?? [];
+  const nodeOptions = groups.flatMap((group) => group.nodes);
+
+  const visibleNodes = useMemo(() => {
+    const sourceNodes =
+      activeCategory === "All"
+        ? nodeOptions
+        : groups.find((group) => group.label === activeCategory)?.nodes ?? [];
+
+    if (!normalizedQuery) return sourceNodes;
+
+    return nodeOptions.filter((nodeType) => {
+      const label = graphNodeLabel(nodeType).toLowerCase();
+      const description = (graphNodeDescriptions[nodeType] ?? "").toLowerCase();
+      return label.includes(normalizedQuery) || description.includes(normalizedQuery);
+    });
+  }, [activeCategory, groups, nodeOptions, normalizedQuery]);
+
+  function resetPalette() {
+    setQuery("");
+    setActiveCategory("All");
+  }
+
+  return (
+    <Dialog
+      open={Boolean(palette)}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) resetPalette();
+      }}
+    >
+      <DialogContent className="add-step-palette">
+        <DialogHeader>
+          <p className="eyebrow">{palette?.eyebrow}</p>
+          <DialogTitle>{palette?.title}</DialogTitle>
+          <DialogDescription>
+            Search or browse categories, then choose a node to add it to the graph.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Input
+          aria-label={palette?.searchLabel}
+          placeholder="Search nodes..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+
+        <div className="add-step-palette-body">
+          <div aria-label="Node categories" className="action-category-list">
+            {["All", ...groups.map((group) => group.label)].map((label) => (
+              <Button
+                aria-pressed={activeCategory === label && !normalizedQuery}
+                className={
+                  activeCategory === label && !normalizedQuery
+                    ? "action-category action-category-active"
+                    : "action-category"
+                }
+                key={label}
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setActiveCategory(label);
+                  setQuery("");
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          <div aria-label="Node results" className="action-result-list">
+            {visibleNodes.length === 0 ? (
+              <p className="muted">No matching nodes</p>
+            ) : (
+              visibleNodes.map((nodeType) => (
+                <Button
+                  className="action-result"
+                  data-value={nodeType}
+                  key={nodeType}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    onSelectNode(nodeType);
+                    resetPalette();
+                  }}
+                >
+                  <span>{graphNodeLabel(nodeType)}</span>
+                  <small>{graphNodeDescriptions[nodeType]}</small>
+                </Button>
+              ))
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type NodeContextMenuProps = {
+  node: GraphNode | null;
+  x: number;
+  y: number;
+  onClose: () => void;
+  onEdit: () => void;
+  onRename: () => void;
+  onDuplicate: () => void;
+  onFocus: () => void;
+  onHelp: () => void;
+  onDelete: () => void;
+};
+
+function NodeContextMenu({
+  node,
+  x,
+  y,
+  onClose,
+  onEdit,
+  onRename,
+  onDuplicate,
+  onFocus,
+  onHelp,
+  onDelete,
+}: NodeContextMenuProps) {
+  if (!node) return null;
+  const canDelete = node.node_type !== "start";
+
+  return (
+    <div
+      aria-label="Node actions"
+      className="graph-node-context-menu"
+      role="menu"
+      style={{ left: x, top: y }}
+      onMouseLeave={onClose}
+    >
+      <button type="button" role="menuitem" onClick={onEdit}>
+        Edit
+      </button>
+      <button type="button" role="menuitem" onClick={onRename}>
+        Rename
+      </button>
+      <button type="button" role="menuitem" onClick={onDuplicate}>
+        Duplicate
+      </button>
+      <button type="button" role="menuitem" onClick={onFocus}>
+        Focus
+      </button>
+      <button type="button" role="menuitem" onClick={onHelp}>
+        Help
+      </button>
+      <button type="button" role="menuitem" onClick={onDelete} disabled={!canDelete}>
+        Delete
+      </button>
+    </div>
+  );
+}
+
+type NodeHelpDialogProps = {
+  node: GraphNode | null;
+  onOpenChange: (open: boolean) => void;
+};
+
+function NodeHelpDialog({ node, onOpenChange }: NodeHelpDialogProps) {
+  return (
+    <Dialog open={Boolean(node)} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <p className="eyebrow">Node Help</p>
+          <DialogTitle>{node ? graphNodeLabel(node.node_type) : "Node"}</DialogTitle>
+          <DialogDescription>
+            {node ? graphNodeDescriptions[node.node_type] ?? "Graph node" : ""}
+          </DialogDescription>
+        </DialogHeader>
+        {node ? (
+          <div className="graph-help-ports">
+            {node.ports.map((port) => (
+              <span key={port.id}>{port.label}</span>
+            ))}
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type ConnectionSummaryProps = {
+  graph: WorkflowGraph;
+  node: GraphNode;
+};
+
+function ConnectionSummary({ graph, node }: ConnectionSummaryProps) {
+  const incoming = graph.edges.filter((edge) => edge.target_node_id === node.id);
+  const outgoing = graph.edges.filter((edge) => edge.source_node_id === node.id);
+  const nodeLabels = new Map(graph.nodes.map((item) => [item.id, item.label]));
+
+  return (
+    <section className="graph-connection-summary" aria-label="Node connections">
+      <h3>Connections</h3>
+      {incoming.length ? (
+        incoming.map((edge) => (
+          <span key={edge.id}>
+            Incoming from {nodeLabels.get(edge.source_node_id) ?? edge.source_node_id}
+          </span>
+        ))
+      ) : (
+        <span>No incoming link</span>
+      )}
+      {outgoing.length ? (
+        outgoing.map((edge) => (
+          <span key={edge.id}>
+            {portLabel(node, edge.source_port)} to{" "}
+            {nodeLabels.get(edge.target_node_id) ?? edge.target_node_id}
+          </span>
+        ))
+      ) : (
+        <span>No outgoing link</span>
+      )}
+    </section>
   );
 }
 
@@ -578,14 +990,14 @@ function ActionNodePalette({
   const visibleActions = useMemo(() => {
     const sourceActions =
       activeCategory === "All"
-        ? actionOptions
+        ? actionPickerOptions
         : activeCategory === "Common"
         ? commonActionTypes
-        : actionGroups.find((group) => group.label === activeCategory)?.actions ?? [];
+        : actionPickerGroups.find((group) => group.label === activeCategory)?.actions ?? [];
 
     if (!normalizedQuery) return sourceActions;
 
-    return actionOptions.filter((actionType) => {
+    return actionPickerOptions.filter((actionType) => {
       const label = actionLabels[actionType].toLowerCase();
       const description = actionDescriptions[actionType].toLowerCase();
       return label.includes(normalizedQuery) || description.includes(normalizedQuery);
@@ -623,7 +1035,7 @@ function ActionNodePalette({
 
         <div className="add-step-palette-body">
           <div aria-label="Action categories" className="action-category-list">
-            {["All", "Common", ...actionGroups.map((group) => group.label)].map((label) => (
+            {["All", "Common", ...actionPickerGroups.map((group) => group.label)].map((label) => (
               <Button
                 aria-pressed={activeCategory === label && !normalizedQuery}
                 className={
@@ -669,92 +1081,6 @@ function ActionNodePalette({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-type GraphValidationPanelProps = {
-  issues: GraphValidationIssue[];
-};
-
-function GraphValidationPanel({ issues }: GraphValidationPanelProps) {
-  return (
-    <section className="graph-runtime-panel" aria-label="Graph validation">
-      <h3>Graph validation</h3>
-      {issues.length ? (
-        <div className="graph-runtime-list">
-          {issues.map((issue) => (
-            <div key={`${issue.level}-${issue.node_id ?? issue.edge_id}-${issue.message}`}>
-              <span className={`graph-issue-level graph-issue-${issue.level}`}>
-                {issue.level}
-              </span>
-              {issue.node_id ? <span>{issue.node_id}</span> : null}
-              {issue.edge_id ? <span>{issue.edge_id}</span> : null}
-              <p>{issue.message}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="muted">Graph is valid.</p>
-      )}
-    </section>
-  );
-}
-
-type GraphTimelinePanelProps = {
-  runState: RunState;
-};
-
-function GraphTimelinePanel({ runState }: GraphTimelinePanelProps) {
-  const completed = runState.completed_step_ids.length
-    ? runState.completed_step_ids.join(", ")
-    : "none";
-
-  return (
-    <section className="graph-runtime-panel" aria-label="Graph run timeline">
-      <h3>Graph run timeline</h3>
-      <div className="graph-runtime-list">
-        <p>Status: {runState.status}</p>
-        <p>Current: {runState.current_step_id ?? "none"}</p>
-        <p>Completed: {completed}</p>
-        {runState.error ? <p>Error: {runState.error.reason}</p> : null}
-      </div>
-    </section>
-  );
-}
-
-type GraphOutputInspectorProps = {
-  graph: WorkflowGraph;
-  runState: RunState;
-};
-
-function GraphOutputInspector({ graph, runState }: GraphOutputInspectorProps) {
-  const outputs = outputNamesFromGraph(graph);
-  const capturedOutputs = Object.entries(runState.outputs ?? {});
-
-  return (
-    <section className="graph-runtime-panel" aria-label="Output inspector">
-      <h3>Output inspector</h3>
-      <div className="graph-output-chips">
-        <span>loop.index</span>
-        <span>loop.number</span>
-        <span>item</span>
-        {outputs.map((output) => (
-          <span key={output}>{output}</span>
-        ))}
-      </div>
-      {capturedOutputs.length ? (
-        <div className="graph-output-values" aria-label="Captured outputs">
-          {capturedOutputs.map(([name, value]) => (
-            <div key={name}>
-              <span>{name}</span>
-              <code>{formatOutputValue(value)}</code>
-            </div>
-          ))}
-        </div>
-      ) : outputs.length ? null : (
-        <p className="muted">No captured outputs yet</p>
-      )}
-    </section>
   );
 }
 
@@ -1222,7 +1548,7 @@ function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
                 updateActionType(event.currentTarget.value as ActionType)
               }
             >
-              {actionGroups.map((group) => (
+              {actionPickerGroups.map((group) => (
                 <optgroup key={group.label} label={group.label}>
                   {group.actions.map((actionType) => (
                     <option key={actionType} value={actionType}>
@@ -1393,6 +1719,12 @@ function portsByDirection(
   return ports.filter((port) => port.direction === direction);
 }
 
+function portLabel(node: GraphNode, portId: string) {
+  const label = node.ports.find((port) => port.id === portId)?.label ?? portId;
+  if (label.toLowerCase() === "out") return "Next";
+  return label;
+}
+
 function switchPortsForCases(cases: string[]): GraphPort[] {
   return [
     { id: "in", label: "In", direction: "input" },
@@ -1421,36 +1753,4 @@ function graphStatusClass(status: WorkflowFlowNodeStatus) {
     default:
       return "";
   }
-}
-
-function outputNamesFromGraph(graph: WorkflowGraph) {
-  const names = new Set<string>();
-
-  graph.nodes.forEach((node) => {
-    const config = objectConfig(node.config);
-    const outputName = config.output_name;
-    const name = config.name;
-
-    if (typeof outputName === "string" && !looksSensitive(outputName)) {
-      names.add(outputName);
-    }
-    if (node.node_type === "set_variable" && typeof name === "string" && !looksSensitive(name)) {
-      names.add(name);
-    }
-  });
-
-  return Array.from(names).sort();
-}
-
-function formatOutputValue(value: unknown) {
-  if (typeof value === "string") return value;
-  if (value === null || value === undefined) return "";
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return JSON.stringify(value);
-}
-
-function looksSensitive(value: string) {
-  return /secret|password|token|credential|api[_-]?key/i.test(value);
 }

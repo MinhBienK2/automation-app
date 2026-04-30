@@ -17,7 +17,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow list and detail remain separate screens.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
-- Running a graph shows graph validation, timeline, and output context inside the graph workspace.
+- Running a graph shows status in the page header and reflects graph progress through canvas node state.
 
 ## Command Boundary
 
@@ -31,7 +31,7 @@ Preserve these unless the task explicitly changes them.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Browser sessions remain open after success, failure, and stop.
 - Failures identify the failed step when possible.
-- Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the graph timeline and canvas reflect current/completed/failed nodes.
+- Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 
 ## Persistence
 

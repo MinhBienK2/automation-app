@@ -22,7 +22,7 @@
 - Runner launches a headed Chromium browser by default through `BrowserRunExecutor`.
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by `AppState::finish_run`.
-- `AppState::finish_run` captures runtime outputs before retaining the session, so the graph output inspector can show values produced by extract, screenshot, download, variable, and transform actions.
+- `AppState::finish_run` captures runtime outputs before retaining the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
 - Temporary user data directories are used unless a profile action config selects a persistent profile.
 
 ## Cancellation

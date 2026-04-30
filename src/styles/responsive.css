@@ -25,7 +25,9 @@
   }
 
   .builder-grid,
-  .monitor-grid {
+  .monitor-grid,
+  .workflow-graph-layout,
+  .graph-runtime-grid {
     grid-template-columns: 1fr;
   }
 

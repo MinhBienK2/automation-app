@@ -45,7 +45,7 @@ Run errors include:
 - `App.tsx` polls `get_run_state` while status is `running`.
 - Test monitor derives per-step status from target/current/completed/error.
 - Run status bar displays terminal and error states.
-- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, and renders captured `outputs` in the output inspector.
+- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids.
 
 ## Change Checklist
 
