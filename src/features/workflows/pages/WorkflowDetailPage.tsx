@@ -13,6 +13,7 @@ type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
   isRunning: boolean;
   appError: string;
+  graphSaveStatus: string;
   runState: RunState;
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
@@ -28,6 +29,7 @@ export function WorkflowDetailPage({
   detail,
   isRunning,
   appError,
+  graphSaveStatus,
   runState,
   workflowGraph,
   graphIssues,
@@ -44,7 +46,7 @@ export function WorkflowDetailPage({
         ariaLabel="Workflow detail header"
         backLabel="Back to Workflows"
         eyebrow="Workflow Detail"
-        meta={["Graph workspace", `Updated ${detail.workflow.updated_at}`]}
+        meta={["Graph workspace", graphSaveStatus, `Updated ${detail.workflow.updated_at}`]}
         status={<RunStatusBar state={runState} error={appError} />}
         title={detail.workflow.name}
         onBack={onBack}
@@ -84,13 +86,9 @@ export function WorkflowDetailPage({
       {workflowGraph ? (
         <WorkflowGraphEditor
           graph={workflowGraph}
-          isRunning={isRunning}
           runState={runState}
           validationIssues={graphIssues}
           onChange={onGraphChange}
-          onRunGraph={onRunGraph}
-          onSave={onSaveGraph}
-          onValidate={onValidateGraph}
         />
       ) : null}
     </section>

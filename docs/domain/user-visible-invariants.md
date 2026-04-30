@@ -6,17 +6,23 @@ Preserve these unless the task explicitly changes them.
 
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
-- New workflows have a default graph.
+- New workflows have a Start-only draft graph.
+- Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
+- When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
+- If saving the visible graph fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
 - Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
+- A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
 
 ## UI Behavior
 
 - Workflow list and detail remain separate screens.
+- Settings is a separate app screen reachable from the sidebar.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
+- Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 
 ## Command Boundary

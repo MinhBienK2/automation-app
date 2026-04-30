@@ -1,0 +1,477 @@
+.workflow-graph-editor {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.workflow-graph-heading h2,
+.graph-inspector h2 {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.workflow-graph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 14px;
+  align-items: start;
+}
+
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #242424;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.graph-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.graph-palette,
+.graph-inspector {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.graph-palette button {
+  justify-content: start;
+}
+
+.graph-canvas-wrap {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.graph-canvas {
+  position: relative;
+  height: clamp(460px, calc(100dvh - 260px), 640px);
+  overflow: hidden;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(62, 207, 142, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(62, 207, 142, 0.06) 1px, transparent 1px),
+    #0f0f0f;
+  background-size: 32px 32px;
+}
+
+.graph-canvas .react-flow {
+  height: 100%;
+  color: #fafafa;
+}
+
+.graph-canvas .react-flow__pane {
+  cursor: grab;
+}
+
+.graph-canvas .react-flow__connectionline {
+  z-index: 40;
+  overflow: visible;
+}
+
+.graph-canvas .react-flow__connection-path {
+  stroke: #3ecf8e;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.graph-edge-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.graph-edge-overlay defs,
+.graph-edge-overlay marker,
+.graph-edge-overlay .graph-visible-edge path:not(.graph-visible-edge-hit-target) {
+  pointer-events: none;
+}
+
+.graph-connection-preview {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 45;
+}
+
+.graph-connection-preview path {
+  fill: none;
+  stroke: #3ecf8e;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.graph-connection-preview marker path,
+.graph-edge-overlay #graph-edge-arrow path {
+  fill: #3ecf8e;
+}
+
+.graph-edge-overlay #graph-edge-arrow-issue path {
+  fill: #ff7b72;
+}
+
+.graph-visible-edge path {
+  fill: none;
+  stroke: rgba(62, 207, 142, 0.9);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
+.graph-visible-edge-hit-target {
+  cursor: pointer;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 24;
+}
+
+.graph-visible-edge-selected path:first-of-type {
+  stroke: #fafafa;
+  stroke-width: 3;
+}
+
+.graph-visible-edge-issue path {
+  stroke: #ff7b72;
+}
+
+.graph-visible-edge-order circle {
+  fill: #0f0f0f;
+  stroke: rgba(62, 207, 142, 0.9);
+  stroke-width: 1.5;
+}
+
+.graph-visible-edge-order {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.graph-visible-edge-order text {
+  pointer-events: none;
+  fill: #3ecf8e;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.graph-canvas .react-flow__edge-path {
+  stroke: rgba(62, 207, 142, 0.82);
+  stroke-width: 2.5;
+}
+
+.graph-canvas .react-flow__edge-text {
+  fill: #3ecf8e;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.graph-canvas .react-flow__edge-textbg {
+  fill: #0f0f0f;
+  stroke: rgba(62, 207, 142, 0.48);
+  stroke-width: 1;
+}
+
+.graph-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3ecf8e;
+  stroke-width: 3;
+}
+
+.graph-canvas .graph-edge-has-issue .react-flow__edge-path {
+  stroke: #ff7b72;
+}
+
+.graph-canvas .react-flow__controls,
+.graph-canvas .react-flow__minimap {
+  border: 1px solid #2e2e2e;
+  background: #0f0f0f;
+}
+
+.graph-node {
+  position: relative;
+  display: grid;
+  width: 160px;
+  min-height: 64px;
+  border: 1px solid #363636;
+  border-radius: 8px;
+  background: #171717;
+  color: #fafafa;
+}
+
+.graph-node-button {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  min-width: 128px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: #fafafa;
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+}
+
+.graph-node-button small {
+  color: #898989;
+  font-size: 11px;
+}
+
+.graph-node-drag-handle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  min-height: 20px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  background: #0f0f0f;
+  color: #898989;
+  cursor: grab;
+}
+
+.graph-node-drag-handle:active {
+  cursor: grabbing;
+}
+
+.graph-node-drag-handle::before {
+  width: 14px;
+  height: 8px;
+  background: repeating-linear-gradient(
+    90deg,
+    #898989 0,
+    #898989 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  content: "";
+}
+
+.graph-node-selected {
+  border-color: rgba(62, 207, 142, 0.72);
+  color: #3ecf8e;
+}
+
+.graph-node-has-issue {
+  border-color: rgba(251, 191, 36, 0.6);
+}
+
+.graph-node-running {
+  outline: 2px solid rgba(62, 207, 142, 0.22);
+}
+
+.graph-node-completed {
+  border-color: rgba(62, 207, 142, 0.44);
+}
+
+.graph-node-failed {
+  border-color: rgba(248, 113, 113, 0.76);
+  color: #fca5a5;
+}
+
+.graph-handle {
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  pointer-events: all;
+  border: 1px solid #0f0f0f;
+  background: #3ecf8e;
+  cursor: crosshair;
+}
+
+.graph-handle-input {
+  left: -8px;
+}
+
+.graph-handle-output {
+  right: -8px;
+}
+
+.graph-canvas .react-flow__handle.connectingfrom {
+  border-color: #3ecf8e;
+  background: #fafafa;
+  box-shadow: 0 0 0 4px rgba(62, 207, 142, 0.16);
+}
+
+.graph-canvas .react-flow__handle.connectingto.valid {
+  border-color: #fafafa;
+  background: #00c573;
+  box-shadow: 0 0 0 4px rgba(0, 197, 115, 0.2);
+}
+
+.graph-minimap {
+  justify-self: end;
+  padding: 4px 8px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  color: #898989;
+  font-size: 12px;
+}
+
+.graph-connection-summary,
+.graph-selected-edge,
+.graph-edge-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.graph-connection-summary span,
+.graph-edge-summary span {
+  min-width: 0;
+  overflow: hidden;
+  padding: 5px 7px;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  color: #b4b4b4;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-connection-summary {
+  padding: 8px;
+  border: 1px solid #242424;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.graph-selected-edge {
+  padding: 8px;
+  border: 1px solid rgba(62, 207, 142, 0.48);
+  border-radius: 8px;
+  background: #121212;
+  color: #fafafa;
+  font-size: 12px;
+}
+
+.graph-connection-summary h3 {
+  color: #fafafa;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.graph-config-fields {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #242424;
+}
+
+.graph-config-fields .muted {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.graph-move-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.graph-node-context-menu {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  min-width: 150px;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #363636;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.graph-node-context-menu button {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #b4b4b4;
+  text-align: left;
+}
+
+.graph-node-context-menu button:hover:not(:disabled) {
+  background: #171717;
+  color: #fafafa;
+}
+
+.graph-node-context-menu button:disabled {
+  opacity: 0.45;
+}
+
+.graph-help-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.graph-help-ports span {
+  padding: 5px 8px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  color: #b4b4b4;
+  font-size: 12px;
+}
+
+.graph-connect-form {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #242424;
+}
+
+.graph-connect-form h3 {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.graph-node-issues {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.36);
+  border-radius: 8px;
+  color: #facc15;
+  font-size: 12px;
+}
+
+.graph-issue-level {
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  color: #b4b4b4;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-issue-error {
+  border-color: rgba(248, 113, 113, 0.52);
+  color: #fca5a5;
+}
+
+.graph-issue-warning {
+  border-color: rgba(251, 191, 36, 0.52);
+  color: #facc15;
+}

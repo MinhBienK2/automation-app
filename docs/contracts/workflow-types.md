@@ -24,7 +24,7 @@ Frontend and backend must agree on:
 
 ## Graph Shape
 
-Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a default graph with start and success end nodes. Existing linear step rows can still be represented as a generated graph for compatibility paths.
+Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a Start-only draft graph. Existing linear step rows can still be represented as a generated graph with action nodes and a success end node for compatibility paths.
 
 Graph validation issues serialize as `{ level, node_id, edge_id, message }`, where `level` is `error` or `warning`.
 

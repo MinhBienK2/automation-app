@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { AppShell } from "./layouts/AppShell";
@@ -30,8 +31,46 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "list" | "detail";
+type AppScreen = "list" | "detail" | "settings";
 type WorkflowDialogMode = "create" | "edit" | null;
+type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
+
+const appSettingsStorageKey = "workflow-manager:settings:v1";
+
+function readGraphAutosaveEnabled() {
+  try {
+    const stored = window.localStorage.getItem(appSettingsStorageKey);
+    if (!stored) return true;
+    const parsed = JSON.parse(stored) as { graphAutosaveEnabled?: unknown };
+    return typeof parsed.graphAutosaveEnabled === "boolean"
+      ? parsed.graphAutosaveEnabled
+      : true;
+  } catch {
+    return true;
+  }
+}
+
+function writeGraphAutosaveEnabled(enabled: boolean) {
+  window.localStorage.setItem(
+    appSettingsStorageKey,
+    JSON.stringify({ graphAutosaveEnabled: enabled }),
+  );
+}
+
+function graphSaveStatusLabel(status: GraphSaveStatus) {
+  switch (status) {
+    case "saved":
+      return "Saved";
+    case "unsaved":
+      return "Unsaved changes";
+    case "saving":
+      return "Saving...";
+    case "failed":
+      return "Autosave failed";
+    case "off":
+      return "Autosave off";
+  }
+}
 
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
@@ -42,6 +81,14 @@ function App() {
   );
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
+  const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(
+    readGraphAutosaveEnabled,
+  );
+  const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(
+    graphAutosaveEnabled ? "saved" : "off",
+  );
+  const [graphRevision, setGraphRevision] = useState(0);
+  const [savedGraphRevision, setSavedGraphRevision] = useState(0);
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [workflowDialogMode, setWorkflowDialogMode] =
@@ -49,6 +96,16 @@ function App() {
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
   const [appError, setAppError] = useState("");
+  const graphRevisionRef = useRef(graphRevision);
+  const savedGraphRevisionRef = useRef(savedGraphRevision);
+
+  useEffect(() => {
+    graphRevisionRef.current = graphRevision;
+  }, [graphRevision]);
+
+  useEffect(() => {
+    savedGraphRevisionRef.current = savedGraphRevision;
+  }, [savedGraphRevision]);
 
   useEffect(() => {
     void loadWorkflows();
@@ -64,6 +121,48 @@ function App() {
 
     return () => window.clearInterval(intervalId);
   }, [runState.status]);
+
+  useEffect(() => {
+    if (
+      !graphAutosaveEnabled ||
+      !detail ||
+      !workflowGraph ||
+      graphRevision === savedGraphRevision
+    ) {
+      return;
+    }
+
+    const workflowId = detail.workflow.id;
+    const graphToSave = workflowGraph;
+    const revisionToSave = graphRevision;
+
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        setGraphSaveStatus("saving");
+        try {
+          await saveWorkflowGraph(workflowId, graphToSave);
+          setSavedGraphRevision((current) => Math.max(current, revisionToSave));
+          if (graphRevisionRef.current === revisionToSave) {
+            setGraphSaveStatus("saved");
+            setAppError("");
+          }
+        } catch (error) {
+          if (graphRevisionRef.current === revisionToSave) {
+            setGraphSaveStatus("failed");
+          }
+          setAppError(commandMessage(error));
+        }
+      })();
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    detail,
+    graphAutosaveEnabled,
+    graphRevision,
+    savedGraphRevision,
+    workflowGraph,
+  ]);
 
   async function loadWorkflows() {
     const items = await listWorkflows();
@@ -97,6 +196,11 @@ function App() {
       } catch {
         setWorkflowGraph(linearGraphFromSteps(loaded.steps));
       }
+      graphRevisionRef.current = 0;
+      savedGraphRevisionRef.current = 0;
+      setGraphRevision(0);
+      setSavedGraphRevision(0);
+      setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
       setGraphIssues([]);
       setRunState((current) =>
         current.status === "running" ? current : initialRunState,
@@ -171,12 +275,32 @@ function App() {
     await loadWorkflows();
   }
 
+  async function persistCurrentGraph() {
+    if (!detail || !workflowGraph) return;
+    setAppError("");
+    setGraphSaveStatus("saving");
+
+    try {
+      await saveWorkflowGraph(detail.workflow.id, workflowGraph);
+      setSavedGraphRevision(graphRevisionRef.current);
+      savedGraphRevisionRef.current = graphRevisionRef.current;
+      setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
+      await loadWorkflows();
+      return true;
+    } catch (error) {
+      setGraphSaveStatus("failed");
+      setAppError(commandMessage(error));
+      return false;
+    }
+  }
+
   async function runGraph() {
     if (!detail || !workflowGraph) return;
     setAppError("");
 
     try {
-      await saveWorkflowGraph(detail.workflow.id, workflowGraph);
+      const saved = await persistCurrentGraph();
+      if (!saved) return;
       const state = await runWorkflowCommand(detail.workflow.id);
       setRunState(normalizeRunState(state));
     } catch (error) {
@@ -196,15 +320,7 @@ function App() {
   }
 
   async function saveGraph() {
-    if (!detail || !workflowGraph) return;
-    setAppError("");
-
-    try {
-      await saveWorkflowGraph(detail.workflow.id, workflowGraph);
-      await loadWorkflows();
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
+    await persistCurrentGraph();
   }
 
   async function stopRun() {
@@ -223,26 +339,64 @@ function App() {
     setAppError("");
     void loadWorkflows();
   }
+
+  function openSettings() {
+    setScreen("settings");
+    setAppError("");
+  }
+
+  function updateGraphAutosaveEnabled(enabled: boolean) {
+    setGraphAutosaveEnabled(enabled);
+    writeGraphAutosaveEnabled(enabled);
+    if (!enabled) {
+      setGraphSaveStatus("off");
+      return;
+    }
+
+    setGraphSaveStatus(
+      graphRevisionRef.current === savedGraphRevisionRef.current ? "saved" : "unsaved",
+    );
+  }
+
+  function changeWorkflowGraph(nextGraph: WorkflowGraph) {
+    setWorkflowGraph(nextGraph);
+    setGraphIssues([]);
+    setGraphRevision((current) => {
+      const nextRevision = current + 1;
+      graphRevisionRef.current = nextRevision;
+      return nextRevision;
+    });
+    setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
+  }
+
   const isRunning = runState.status === "running";
 
   return (
     <AppShell
+      activeItem={screen === "settings" ? "settings" : "workflows"}
       sidebarCollapsed={sidebarCollapsed}
-      onBackToList={backToList}
+      onOpenSettings={openSettings}
+      onOpenWorkflows={backToList}
       onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
     >
-      {screen === "detail" && detail ? (
+      {screen === "settings" ? (
+        <SettingsPage
+          graphAutosaveEnabled={graphAutosaveEnabled}
+          onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
+        />
+      ) : screen === "detail" && detail ? (
         <>
           <WorkflowDetailPage
             detail={detail}
             isRunning={isRunning}
             appError={appError}
+            graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
             runState={runState}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
             onBack={backToList}
             onStopRun={stopRun}
-            onGraphChange={setWorkflowGraph}
+            onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
             onSaveGraph={saveGraph}
             onValidateGraph={validateGraph}

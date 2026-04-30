@@ -12,10 +12,18 @@ const workflowGraphEditorSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/WorkflowGraphEditor.tsx"),
   "utf8",
 );
+const workflowGraphCanvasPartsSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/WorkflowGraphCanvasParts.tsx"),
+  "utf8",
+);
 
 describe("Workflow graph editor integration", () => {
   beforeEach(() => {
     resetTauriInvoke();
+    window.localStorage.setItem(
+      "workflow-manager:settings:v1",
+      JSON.stringify({ graphAutosaveEnabled: false }),
+    );
     vi.restoreAllMocks();
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
@@ -69,7 +77,7 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).queryByRole("button", { name: "Graph canvas node node-if-42" }))
       .not.toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith(
@@ -89,15 +97,15 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
     expect(workflowGraphEditorSource).toContain("nodesConnectable");
     expect(workflowGraphEditorSource).toContain("panOnDrag");
-    expect(workflowGraphEditorSource).toContain("isConnectable={isConnectable}");
-    expect(workflowGraphEditorSource).toContain("useUpdateNodeInternals");
-    expect(workflowGraphEditorSource).toContain("updateNodeInternals(id)");
-    expect(workflowGraphEditorSource).toContain("onPortPointerDown");
-    expect(workflowGraphEditorSource).toContain("onPortPointerUp");
+    expect(workflowGraphCanvasPartsSource).toContain("isConnectable={isConnectable}");
+    expect(workflowGraphCanvasPartsSource).toContain("useUpdateNodeInternals");
+    expect(workflowGraphCanvasPartsSource).toContain("updateNodeInternals(id)");
+    expect(workflowGraphCanvasPartsSource).toContain("onPortPointerDown");
+    expect(workflowGraphCanvasPartsSource).toContain("onPortPointerUp");
     expect(workflowGraphEditorSource).toContain("graph-connection-preview");
-    expect(workflowGraphEditorSource).toContain("previewEdgePath");
+    expect(workflowGraphCanvasPartsSource).toContain("previewEdgePath");
     expect(workflowGraphEditorSource).toContain("graph-preview-arrow");
-    expect(workflowGraphEditorSource).toContain("graph-edge-arrow");
+    expect(workflowGraphCanvasPartsSource).toContain("graph-edge-arrow");
   });
 
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
@@ -119,7 +127,7 @@ describe("Workflow graph editor integration", () => {
 
     fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
     fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -163,7 +171,7 @@ describe("Workflow graph editor integration", () => {
     fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
     fireEvent.pointerUp(canvas);
     fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -210,7 +218,7 @@ describe("Workflow graph editor integration", () => {
       .toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Delete selected link" }));
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -302,7 +310,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.clear(within(editor).getByLabelText("Approval reason"));
     await userEvent.type(within(editor).getByLabelText("Approval reason"), "Review before posting");
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -359,7 +367,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }));
     await userEvent.clear(within(editor).getByLabelText("Duration ms"));
     await userEvent.type(within(editor).getByLabelText("Duration ms"), "2500");
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -411,7 +419,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(palette.querySelector('[data-value="click"]') as HTMLElement);
     expect(await within(editor).findByRole("heading", { name: "Click" })).toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -458,7 +466,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.selectOptions(within(editor).getByLabelText("Action type"), "click");
     expect(within(editor).getByRole("heading", { name: "Click" })).toBeInTheDocument();
     await userEvent.type(within(editor).getByLabelText("XPath"), "//button");
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(
@@ -535,7 +543,7 @@ describe("Workflow graph editor integration", () => {
       (await screen.findByRole("dialog", { name: "Choose a logic node" }))
         .querySelector('[data-value="if"]') as HTMLElement,
     );
-    await userEvent.click(within(editor).getByRole("button", { name: "Validate Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Validate" }));
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith(
@@ -559,7 +567,7 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).queryByRole("region", { name: "Output inspector" }))
       .not.toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Run" }));
+    await userEvent.click(screen.getByRole("button", { name: "Run" }));
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith(
@@ -640,7 +648,7 @@ describe("Workflow graph editor integration", () => {
     );
     expect(within(editor).getByLabelText("Allowed domains")).toBeInTheDocument();
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       const saveCall = invokeMock.mock.calls.find(

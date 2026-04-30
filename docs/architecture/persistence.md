@@ -16,7 +16,7 @@ Persistence stores workflows and versioned workflow graph authoring data in SQLi
 - `list_workflows` returns workflow summaries with the legacy `step_count` field.
 - Summaries sort by `updated_at DESC`, then name ascending.
 - `get_workflow` currently returns workflow metadata plus legacy ordered steps for compatibility; product graph authoring data is loaded from `get_workflow_graph`.
-- New workflows create a default workflow graph.
+- New workflows create a Start-only draft workflow graph.
 - Workflow graph authoring data is stored in `workflow_graphs.graph_json` keyed by `workflow_id`.
 - Workflows without a graph row still open through a compatibility linear graph fallback.
 - Removed legacy step configs are migrated or normalized on read: `open_url` to `navigate`, `sleep` to duration `wait`, and `type_text` to `input_text`.

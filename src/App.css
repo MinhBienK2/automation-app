@@ -2,6 +2,7 @@
 @import "./styles/base.css";
 @import "./styles/layout.css";
 @import "./styles/workflows.css";
+@import "./styles/workflow-graph.css";
 @import "./styles/modals.css";
 @import "./styles/monitor.css";
 @import "./styles/responsive.css";

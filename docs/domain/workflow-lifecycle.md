@@ -4,7 +4,7 @@
 
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Rust validates a non-blank workflow name in `src-tauri/src/domain/workflow.rs`.
-- Repository trims and stores the workflow with timestamps, then creates a default graph.
+- Repository trims and stores the workflow with timestamps, then creates a Start-only draft graph.
 - UI refreshes list and opens the created workflow.
 
 ## Open Detail
@@ -19,6 +19,8 @@
 - The workflow detail screen renders `WorkflowGraphEditor` as the only workflow builder.
 - Users can add supported graph nodes from grouped canvas toolbar pickers. The action picker is reserved for browser/data/session/network actions, while graph logic is added from the Logic picker. Users can connect edges through explicit source/target ports with left-button drag, click canvas edges to select/delete links, read edge direction through arrowed links with order badges on the edge, delete edges, drag nodes through the node drag handle, pan the canvas by dragging empty canvas space or using viewport controls, delete/duplicate/rename nodes, use node context actions from right-click, change action node type in the inspector, edit action config, and edit structured config for branch, loop, retry, manual approval, rate limit, variable, assertion, subworkflow, domain allowlist, stop, and failure-end nodes.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
+- Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
+- Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
 - `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, expands subworkflow nodes through the command layer, and starts the existing runner path.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
@@ -31,6 +33,8 @@
 ## Run Full Workflow
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
+- The UI saves the visible graph before invoking `run_workflow`; if that save fails, execution does not start.
+- A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - UI polls `get_run_state` while status is `running`.
 - Invalid advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
 - Graph runs share the same run-state lifecycle as full workflow runs.

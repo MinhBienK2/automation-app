@@ -98,14 +98,9 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
         .await
         .expect("get default graph");
     assert_eq!(default_graph.version, 1);
-    assert!(default_graph
-        .nodes
-        .iter()
-        .any(|node| node.node_type == GraphNodeType::Start));
-    assert!(default_graph
-        .nodes
-        .iter()
-        .any(|node| node.node_type == GraphNodeType::EndSuccess));
+    assert_eq!(default_graph.nodes.len(), 1);
+    assert_eq!(default_graph.nodes[0].node_type, GraphNodeType::Start);
+    assert!(default_graph.edges.is_empty());
 
     let graph = sample_graph();
     commands::save_workflow_graph_impl(&state, &workflow.id, graph.clone())
@@ -134,6 +129,24 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
     assert!(run_state.outputs.is_empty());
 
     poll_status(&state, RunStatus::Success).await;
+}
+
+#[tokio::test]
+async fn run_workflow_rejects_start_only_graph_without_starting_runner() {
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
+    let workflow = commands::create_workflow_impl(&state, "Empty graph")
+        .await
+        .expect("create");
+
+    let error = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect_err("start-only graph should not run");
+
+    assert_eq!(error.field.as_deref(), Some("graph"));
+    assert_eq!(
+        error.message,
+        "Add at least one executable node before running."
+    );
 }
 
 #[tokio::test]
@@ -357,6 +370,17 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
     )
     .await
     .expect("update click");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![
+            action_node(&open.id),
+            action_node(&input_text.id),
+            action_node(&click.id),
+        ]),
+    )
+    .await
+    .expect("save runnable graph");
 
     let run_state = commands::run_workflow_impl(&state, &workflow.id)
         .await
@@ -588,6 +612,13 @@ async fn stop_run_cancels_active_wait_and_second_run_is_rejected() {
     )
     .await
     .expect("update wait");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node(&open.id), action_node(&wait.id)]),
+    )
+    .await
+    .expect("save runnable graph");
 
     assert_eq!(
         commands::run_workflow_impl(&state, &workflow.id)

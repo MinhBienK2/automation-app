@@ -15,12 +15,15 @@ Workflow Automation Manager is a Tauri desktop app for building and running brow
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and expands subworkflow nodes before runner start.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state.
+- Graph autosave is an app-level editing preference controlled from Settings.
 
 ## User Workflows
 
 Users can:
 
 - Create, rename, open, and delete workflows.
+- Create workflows with a Start-only draft graph.
+- Turn graph autosave on or off from Settings.
 - Use legacy step data through compatibility paths.
 - Run a full workflow.
 - Test a selected step with visible progress.

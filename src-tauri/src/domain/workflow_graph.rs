@@ -142,6 +142,19 @@ impl WorkflowGraph {
             group_id: None,
         });
 
+        if steps.is_empty() {
+            return Self {
+                version: 1,
+                nodes,
+                edges,
+                viewport: GraphViewport {
+                    x: 0.0,
+                    y: 0.0,
+                    zoom: 1.0,
+                },
+            };
+        }
+
         let mut previous_node_id = "start".to_string();
         let mut previous_port = "out".to_string();
         for (index, step) in steps.iter().enumerate() {

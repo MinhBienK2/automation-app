@@ -8,6 +8,7 @@
 - Background execution is started by `src-tauri/src/services/run_service.rs`.
 - Browser execution lives under `src-tauri/src/runner/`.
 - Visual graphs compile to executable action configs, including graph-internal control configs for switch, guarded loops, try/catch, fallback, loop break/continue, output assertions, transforms, subworkflow expansion, and domain allowlists.
+- Graphs with no executable compiled steps are rejected before the runner starts.
 
 ## Run State
 

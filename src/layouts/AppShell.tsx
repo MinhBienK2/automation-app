@@ -3,22 +3,28 @@ import { AppSidebar } from "./AppSidebar";
 
 type AppShellProps = {
   children: ReactNode;
+  activeItem: "workflows" | "settings";
   sidebarCollapsed: boolean;
-  onBackToList: () => void;
+  onOpenSettings: () => void;
+  onOpenWorkflows: () => void;
   onToggleSidebar: () => void;
 };
 
 export function AppShell({
+  activeItem,
   children,
   sidebarCollapsed,
-  onBackToList,
+  onOpenSettings,
+  onOpenWorkflows,
   onToggleSidebar,
 }: AppShellProps) {
   return (
     <main className={sidebarCollapsed ? "app-shell app-shell-collapsed" : "app-shell"}>
       <AppSidebar
+        activeItem={activeItem}
         collapsed={sidebarCollapsed}
-        onBackToList={onBackToList}
+        onOpenSettings={onOpenSettings}
+        onOpenWorkflows={onOpenWorkflows}
         onToggle={onToggleSidebar}
       />
 

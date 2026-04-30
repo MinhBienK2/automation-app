@@ -24,6 +24,13 @@ const waitStep: WorkflowStep = {
 };
 
 describe("workflow graph helpers", () => {
+  test("builds a start-only draft graph when workflow has no steps", () => {
+    const graph = linearGraphFromSteps([]);
+
+    expect(graph.nodes.map((node) => node.id)).toEqual(["start"]);
+    expect(graph.edges).toEqual([]);
+  });
+
   test("builds a linear graph from existing workflow steps", () => {
     const graph = linearGraphFromSteps([waitStep]);
 

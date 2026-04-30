@@ -101,6 +101,8 @@
 .sidebar-item-icon,
 .sidebar-toggle-icon {
   flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
 }
 
 .app-shell-collapsed .sidebar-title,
@@ -315,4 +317,45 @@
   border-radius: 9999px;
   color: #b4b4b4;
   font-size: 13px;
+}
+
+.settings-screen {
+  align-content: start;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+  padding: 18px;
+}
+
+.settings-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.settings-toggle input {
+  width: 18px;
+  min-height: 18px;
+  margin: 3px 0 0;
+  accent-color: #3ecf8e;
+}
+
+.settings-toggle span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.settings-toggle strong {
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
 }

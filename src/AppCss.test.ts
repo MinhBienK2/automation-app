@@ -16,6 +16,7 @@ const cssFiles = [
   "src/styles/base.css",
   "src/styles/layout.css",
   "src/styles/workflows.css",
+  "src/styles/workflow-graph.css",
   "src/styles/modals.css",
   "src/styles/monitor.css",
   "src/styles/responsive.css",
@@ -35,6 +36,7 @@ describe("App CSS", () => {
     expect(appCss).toContain('@import "./styles/base.css";');
     expect(appCss).toContain('@import "./styles/layout.css";');
     expect(appCss).toContain('@import "./styles/workflows.css";');
+    expect(appCss).toContain('@import "./styles/workflow-graph.css";');
     expect(appCss).toContain('@import "./styles/modals.css";');
     expect(appCss).toContain('@import "./styles/monitor.css";');
     expect(appCss).toContain('@import "./styles/responsive.css";');

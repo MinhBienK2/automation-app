@@ -1,30 +1,15 @@
 import { Button } from "../components/ui/button";
+import { ListTree, Settings } from "lucide-react";
+
+type AppSidebarActiveItem = "workflows" | "settings";
 
 type AppSidebarProps = {
+  activeItem: AppSidebarActiveItem;
   collapsed: boolean;
-  onBackToList: () => void;
+  onOpenSettings: () => void;
+  onOpenWorkflows: () => void;
   onToggle: () => void;
 };
-
-function WorkflowNavIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="sidebar-item-icon"
-      fill="none"
-      height="18"
-      viewBox="0 0 18 18"
-      width="18"
-    >
-      <path
-        d="M4 4.5h10M4 9h10M4 13.5h10"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
 
 function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
   return (
@@ -58,7 +43,13 @@ function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-export function AppSidebar({ collapsed, onBackToList, onToggle }: AppSidebarProps) {
+export function AppSidebar({
+  activeItem,
+  collapsed,
+  onOpenSettings,
+  onOpenWorkflows,
+  onToggle,
+}: AppSidebarProps) {
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
@@ -67,13 +58,30 @@ export function AppSidebar({ collapsed, onBackToList, onToggle }: AppSidebarProp
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
         <Button
-          className="sidebar-nav-item sidebar-nav-item-active"
+          className={
+            activeItem === "workflows"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
           variant="secondary"
           type="button"
-          onClick={onBackToList}
+          onClick={onOpenWorkflows}
         >
-          <WorkflowNavIcon />
+          <ListTree aria-hidden="true" className="sidebar-item-icon" />
           <span>Workflows</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "settings"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenSettings}
+        >
+          <Settings aria-hidden="true" className="sidebar-item-icon" />
+          <span>Settings</span>
         </Button>
       </nav>
       <Button
