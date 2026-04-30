@@ -6,6 +6,7 @@
 React UI
   -> src/App.tsx orchestration
   -> src/features/workflows/* screens and components
+  -> visual graph editor for graph authoring and runtime inspection
   -> src/lib/workflowApi.ts invoke wrappers
   -> Tauri command boundary
 Rust commands
@@ -17,6 +18,7 @@ Rust commands
 SQLite
   -> workflows
   -> workflow_steps
+  -> workflow_graphs
 ```
 
 ## Boundaries
@@ -31,4 +33,3 @@ SQLite
 ## Read By Task
 
 Use `docs/task-routes.md`; do not scan every architecture doc for normal tasks.
-

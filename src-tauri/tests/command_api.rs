@@ -6,8 +6,10 @@ use support::{poll_status, test_state, test_state_with_runner, FakeRunExecutor};
 use workflow_automation_manager_lib::{
     commands,
     domain::{
-        ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, OrchestrationSchedule,
-        RecordedEvent, RunStatus, ScheduleKind, ScrollDirection, WaitCondition,
+        ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, GraphEdge, GraphNode,
+        GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphViewport,
+        OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind, ScrollDirection,
+        WaitCondition, WorkflowGraph,
     },
 };
 
@@ -81,6 +83,83 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
     assert!(json.contains("\"workflow\""));
     assert!(json.contains("\"steps\""));
     assert!(json.contains("\"name\":\"Scroll\""));
+}
+
+#[tokio::test]
+async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
+    let workflow = commands::create_workflow_impl(&state, "Graph flow")
+        .await
+        .expect("create");
+
+    let default_graph = commands::get_workflow_graph_impl(&state, &workflow.id)
+        .await
+        .expect("get default graph");
+    assert_eq!(default_graph.version, 1);
+    assert!(default_graph
+        .nodes
+        .iter()
+        .any(|node| node.node_type == GraphNodeType::Start));
+    assert!(default_graph
+        .nodes
+        .iter()
+        .any(|node| node.node_type == GraphNodeType::EndSuccess));
+
+    let graph = sample_graph();
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph.clone())
+        .await
+        .expect("save graph");
+    let saved = commands::get_workflow_graph_impl(&state, &workflow.id)
+        .await
+        .expect("get saved graph");
+    assert_eq!(saved, graph);
+
+    let issues = commands::validate_workflow_graph_impl(graph.clone())
+        .await
+        .expect("validate graph");
+    assert!(issues.is_empty(), "expected valid graph, got {issues:?}");
+
+    let compiled = commands::compile_workflow_graph_impl(graph.clone())
+        .await
+        .expect("compile graph");
+    assert_eq!(compiled.steps.len(), 1);
+    assert_eq!(compiled.steps[0].node_id, "wait");
+
+    let run_state = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run graph");
+    assert_eq!(run_state.status, RunStatus::Running);
+
+    poll_status(&state, RunStatus::Success).await;
+}
+
+#[tokio::test]
+async fn run_workflow_graph_rejects_graphs_with_blocking_issues() {
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
+    let workflow = commands::create_workflow_impl(&state, "Invalid graph")
+        .await
+        .expect("create");
+    let graph = WorkflowGraph {
+        version: 1,
+        nodes: vec![action_node("wait")],
+        edges: vec![],
+        viewport: GraphViewport {
+            x: 0.0,
+            y: 0.0,
+            zoom: 1.0,
+        },
+    };
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph)
+        .await
+        .expect("save invalid graph draft");
+
+    let error = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect_err("invalid graph should not run");
+
+    assert!(error
+        .message
+        .contains("Graph must contain exactly one start node"));
 }
 
 #[tokio::test]
@@ -258,24 +337,10 @@ async fn run_workflow_finishes_successfully_with_injected_runner() {
     let workflow = commands::create_workflow_impl(&state, "Run success")
         .await
         .expect("create");
-    let wait = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
+    let graph = graph_with_action_path(vec![action_node("wait")]);
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph)
         .await
-        .expect("wait");
-    commands::update_step_impl(
-        &state,
-        &wait.id,
-        "Wait",
-        ActionConfig::Wait {
-            condition: WaitCondition::Duration,
-            xpath: None,
-            text: None,
-            url: None,
-            duration_ms: Some((1.0 * 1000.0) as u64),
-            timeout_ms: None,
-        },
-    )
-    .await
-    .expect("update wait");
+        .expect("save graph");
 
     let run_state = commands::run_workflow_impl(&state, &workflow.id)
         .await
@@ -284,7 +349,7 @@ async fn run_workflow_finishes_successfully_with_injected_runner() {
 
     poll_status(&state, RunStatus::Success).await;
     let finished = commands::get_run_state_impl(&state).await;
-    assert_eq!(finished.completed_step_ids, vec![wait.id]);
+    assert_eq!(finished.completed_step_ids, vec!["wait"]);
 }
 
 #[tokio::test]
@@ -379,36 +444,10 @@ async fn run_workflow_maps_fake_runner_failure_to_step_error() {
     let workflow = commands::create_workflow_impl(&state, "Run failure")
         .await
         .expect("create");
-    let first = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
+    let graph = graph_with_action_path(vec![action_node("first"), action_node("second")]);
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph)
         .await
-        .expect("first");
-    let second = commands::add_step_impl(&state, &workflow.id, ActionType::Click)
-        .await
-        .expect("second");
-    commands::update_step_impl(
-        &state,
-        &second.id,
-        "Click login",
-        ActionConfig::Click {
-            xpath: "//*[@id=\"missing\"]".to_string(),
-            iframe_xpath: None,
-            mode: None,
-            button: None,
-            click_count: None,
-            scroll_into_view: None,
-            block: None,
-            inline: None,
-            position: None,
-            offset_x: None,
-            offset_y: None,
-            wait_until: None,
-            timeout_ms: None,
-            retry_interval_ms: None,
-            post_click_wait_ms: None,
-        },
-    )
-    .await
-    .expect("update second");
+        .expect("save graph");
 
     commands::run_workflow_impl(&state, &workflow.id)
         .await
@@ -417,10 +456,10 @@ async fn run_workflow_maps_fake_runner_failure_to_step_error() {
 
     let run_state = commands::get_run_state_impl(&state).await;
     let error = run_state.error.expect("failure payload");
-    assert_eq!(error.step_id.as_deref(), Some(second.id.as_str()));
+    assert_eq!(error.step_id.as_deref(), Some("second"));
     assert_eq!(error.step_number, 2);
     assert_eq!(error.reason, "XPath not found");
-    assert!(run_state.completed_step_ids.contains(&first.id));
+    assert!(run_state.completed_step_ids.contains(&"first".to_string()));
 }
 
 #[tokio::test]
@@ -816,4 +855,103 @@ async fn phase_twelve_dry_run_validation_and_fixture_generation_work() {
     assert!(std::fs::read_to_string(&fixture.path)
         .expect("fixture html")
         .contains("save-button"));
+}
+
+fn sample_graph() -> WorkflowGraph {
+    WorkflowGraph {
+        version: 1,
+        nodes: vec![start_node(), action_node("wait")],
+        edges: vec![GraphEdge {
+            id: "edge-start-wait".to_string(),
+            source_node_id: "start".to_string(),
+            source_port: "out".to_string(),
+            target_node_id: "wait".to_string(),
+            target_port: "in".to_string(),
+            label: Some("next".to_string()),
+            condition: None,
+        }],
+        viewport: GraphViewport {
+            x: 0.0,
+            y: 0.0,
+            zoom: 1.0,
+        },
+    }
+}
+
+fn graph_with_action_path(actions: Vec<GraphNode>) -> WorkflowGraph {
+    let mut nodes = vec![start_node()];
+    let mut edges = Vec::new();
+    let mut previous_node_id = "start".to_string();
+    let mut previous_port = "out".to_string();
+
+    for action in actions {
+        edges.push(GraphEdge {
+            id: format!("edge-{previous_node_id}-{}", action.id),
+            source_node_id: previous_node_id,
+            source_port: previous_port,
+            target_node_id: action.id.clone(),
+            target_port: "in".to_string(),
+            label: Some("next".to_string()),
+            condition: None,
+        });
+        previous_node_id = action.id.clone();
+        previous_port = "out".to_string();
+        nodes.push(action);
+    }
+
+    WorkflowGraph {
+        version: 1,
+        nodes,
+        edges,
+        viewport: GraphViewport {
+            x: 0.0,
+            y: 0.0,
+            zoom: 1.0,
+        },
+    }
+}
+
+fn start_node() -> GraphNode {
+    GraphNode {
+        id: "start".to_string(),
+        node_type: GraphNodeType::Start,
+        label: "Start".to_string(),
+        position: GraphPosition { x: 0.0, y: 0.0 },
+        config: serde_json::json!({}),
+        ports: vec![GraphPort {
+            id: "out".to_string(),
+            label: "Out".to_string(),
+            direction: GraphPortDirection::Output,
+        }],
+        group_id: None,
+    }
+}
+
+fn action_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::Action,
+        label: "Wait".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "type": "wait",
+            "config": {
+                "condition": "duration",
+                "duration_ms": 100
+            }
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "out".to_string(),
+                label: "Out".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
 }

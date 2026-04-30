@@ -1,8 +1,10 @@
 use workflow_automation_manager_lib::domain::{
     ActionConfig, ActionType, AssertTextMatchMode, CheckboxState, ClearInputMethod, ClickButton,
-    ClickMode, ClickPosition, ClickWaitUntil, HeaderPair, InputTypingMode, RunError, RunStatus,
-    ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy,
-    ValidationError, WaitCondition, Workflow, WorkflowCondition, WorkflowStep,
+    ClickMode, ClickPosition, ClickWaitUntil, GraphEdge, GraphNode, GraphNodeType, GraphPort,
+    GraphPortDirection, GraphPosition, GraphValidationLevel, GraphViewport, HeaderPair,
+    InputTypingMode, RunError, RunStatus, ScrollBehavior, ScrollBlock, ScrollDirection,
+    ScrollInline, ScrollMode, SelectOptionMatchBy, ValidationError, WaitCondition, Workflow,
+    WorkflowCondition, WorkflowGraph, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -25,6 +27,185 @@ fn valid_workflow_name_passes() {
     let workflow = Workflow::new("Login flow");
 
     workflow.validate().expect("name should be valid");
+}
+
+#[test]
+fn workflow_graph_validation_accepts_a_single_start_with_valid_edges() {
+    let graph = graph_with_nodes(
+        vec![start_node(), action_node("wait")],
+        vec![edge("start", "out", "wait", "in")],
+    );
+
+    let issues = graph.validation_issues();
+
+    assert!(
+        issues.is_empty(),
+        "expected no graph issues, got {issues:?}"
+    );
+}
+
+#[test]
+fn workflow_graph_validation_rejects_missing_start_and_invalid_edge_ports() {
+    let graph = graph_with_nodes(
+        vec![action_node("wait")],
+        vec![edge("missing", "out", "wait", "missing-in")],
+    );
+
+    let issues = graph.validation_issues();
+
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.message == "Graph must contain exactly one start node"
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.message.contains("source node does not exist")
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.message.contains("target port does not exist")
+    }));
+}
+
+#[test]
+fn workflow_graph_validation_blocks_unbounded_loop_nodes() {
+    let graph = graph_with_nodes(
+        vec![start_node(), loop_node("loop")],
+        vec![edge("start", "out", "loop", "in")],
+    );
+
+    let issues = graph.validation_issues();
+
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.node_id.as_deref() == Some("loop")
+            && issue.message.contains("max attempts or timeout")
+    }));
+}
+
+#[test]
+fn workflow_graph_compiles_if_condition_to_nested_action_config() {
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            if_node("if-login"),
+            action_node("then-wait"),
+            action_node("else-wait"),
+        ],
+        vec![
+            edge("start", "out", "if-login", "in"),
+            edge("if-login", "true", "then-wait", "in"),
+            edge("if-login", "false", "else-wait", "in"),
+        ],
+    );
+
+    let compiled = graph.compile().expect("compile graph");
+
+    assert_eq!(compiled.steps.len(), 1);
+    match &compiled.steps[0].config {
+        ActionConfig::IfCondition {
+            condition,
+            then_steps,
+            else_steps,
+        } => {
+            assert_eq!(
+                condition,
+                &WorkflowCondition::OutputEquals {
+                    name: "logged_in".to_string(),
+                    value: "false".to_string(),
+                }
+            );
+            assert_eq!(then_steps.len(), 1);
+            assert_eq!(else_steps.len(), 1);
+        }
+        other => panic!("expected if condition, got {other:?}"),
+    }
+}
+
+#[test]
+fn workflow_graph_compiles_loop_and_retry_nodes_to_nested_action_configs() {
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            repeat_times_node("repeat"),
+            action_node("loop-wait"),
+            retry_node("retry"),
+            action_node("retry-wait"),
+            action_node("after-retry"),
+        ],
+        vec![
+            edge("start", "out", "repeat", "in"),
+            edge("repeat", "loop", "loop-wait", "in"),
+            edge("repeat", "done", "retry", "in"),
+            edge("retry", "try", "retry-wait", "in"),
+            edge("retry", "success", "after-retry", "in"),
+        ],
+    );
+
+    let compiled = graph.compile().expect("compile graph");
+
+    assert_eq!(compiled.steps.len(), 3);
+    assert!(matches!(
+        compiled.steps[0].config,
+        ActionConfig::RepeatTimes { times: 2, .. }
+    ));
+    assert!(matches!(
+        compiled.steps[1].config,
+        ActionConfig::RetryBlock {
+            max_attempts: 3,
+            ..
+        }
+    ));
+    assert_eq!(compiled.steps[2].node_id, "after-retry");
+}
+
+#[test]
+fn workflow_graph_compiles_repeat_for_each_loop_and_done_ports() {
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            repeat_for_each_node("each-item"),
+            action_node("loop-wait"),
+            action_node("after-loop"),
+        ],
+        vec![
+            edge("start", "out", "each-item", "in"),
+            edge("each-item", "loop", "loop-wait", "in"),
+            edge("each-item", "done", "after-loop", "in"),
+        ],
+    );
+
+    let compiled = graph.compile().expect("compile graph");
+
+    assert_eq!(compiled.steps.len(), 2);
+    match &compiled.steps[0].config {
+        ActionConfig::RepeatForEach {
+            item_name,
+            items,
+            steps,
+        } => {
+            assert_eq!(item_name, "item");
+            assert_eq!(items, &vec!["a".to_string(), "b".to_string()]);
+            assert_eq!(steps.len(), 1);
+        }
+        other => panic!("expected repeat for each, got {other:?}"),
+    }
+    assert_eq!(compiled.steps[1].node_id, "after-loop");
+}
+
+#[test]
+fn workflow_graph_compiler_rejects_unsupported_advanced_nodes() {
+    let graph = graph_with_nodes(
+        vec![start_node(), switch_node("switch-status")],
+        vec![edge("start", "out", "switch-status", "in")],
+    );
+
+    let error = graph
+        .compile()
+        .expect_err("switch execution is not supported yet");
+
+    assert_eq!(error.field, "graph");
+    assert!(error.message.contains("not executable yet"));
 }
 
 #[test]
@@ -1711,4 +1892,261 @@ fn run_status_and_error_are_frontend_safe() {
     assert!(error_json.contains("\"step_number\":4"));
     assert!(error_json.contains("\"action_type\":\"click\""));
     assert!(error_json.contains("\"reason\":\"XPath not found\""));
+}
+
+fn graph_with_nodes(nodes: Vec<GraphNode>, edges: Vec<GraphEdge>) -> WorkflowGraph {
+    WorkflowGraph {
+        version: 1,
+        nodes,
+        edges,
+        viewport: GraphViewport {
+            x: 0.0,
+            y: 0.0,
+            zoom: 1.0,
+        },
+    }
+}
+
+fn start_node() -> GraphNode {
+    GraphNode {
+        id: "start".to_string(),
+        node_type: GraphNodeType::Start,
+        label: "Start".to_string(),
+        position: GraphPosition { x: 0.0, y: 0.0 },
+        config: serde_json::json!({}),
+        ports: vec![GraphPort {
+            id: "out".to_string(),
+            label: "Out".to_string(),
+            direction: GraphPortDirection::Output,
+        }],
+        group_id: None,
+    }
+}
+
+fn action_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::Action,
+        label: "Wait".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "type": "wait",
+            "config": {
+                "condition": "duration",
+                "duration_ms": 100
+            }
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "out".to_string(),
+                label: "Out".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn loop_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::RepeatUntil,
+        label: "Repeat Until".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "condition": {
+                "kind": "text_visible",
+                "text": "Done"
+            }
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "loop".to_string(),
+                label: "Loop".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "done".to_string(),
+                label: "Done".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn if_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::If,
+        label: "If Logged In".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "condition": {
+                "kind": "output_equals",
+                "name": "logged_in",
+                "value": "false"
+            }
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "true".to_string(),
+                label: "True".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "false".to_string(),
+                label: "False".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn repeat_times_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::RepeatTimes,
+        label: "Repeat Twice".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({ "times": 2 }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "loop".to_string(),
+                label: "Loop".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "done".to_string(),
+                label: "Done".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn repeat_for_each_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::RepeatForEach,
+        label: "Repeat For Each".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({
+            "item_name": "item",
+            "items": ["a", "b"]
+        }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "loop".to_string(),
+                label: "Loop".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "done".to_string(),
+                label: "Done".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn retry_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::Retry,
+        label: "Retry".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({ "max_attempts": 3, "delay_ms": 50 }),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "try".to_string(),
+                label: "Try".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "failed".to_string(),
+                label: "Failed".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+            GraphPort {
+                id: "success".to_string(),
+                label: "Success".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn switch_node(id: &str) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::Switch,
+        label: "Switch Status".to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config: serde_json::json!({}),
+        ports: vec![
+            GraphPort {
+                id: "in".to_string(),
+                label: "In".to_string(),
+                direction: GraphPortDirection::Input,
+            },
+            GraphPort {
+                id: "default".to_string(),
+                label: "Default".to_string(),
+                direction: GraphPortDirection::Output,
+            },
+        ],
+        group_id: None,
+    }
+}
+
+fn edge(
+    source_node_id: &str,
+    source_port: &str,
+    target_node_id: &str,
+    target_port: &str,
+) -> GraphEdge {
+    GraphEdge {
+        id: format!("{source_node_id}-{source_port}-{target_node_id}-{target_port}"),
+        source_node_id: source_node_id.to_string(),
+        source_port: source_port.to_string(),
+        target_node_id: target_node_id.to_string(),
+        target_port: target_port.to_string(),
+        label: Some("next".to_string()),
+        condition: None,
+    }
 }

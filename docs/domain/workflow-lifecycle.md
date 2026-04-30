@@ -4,53 +4,36 @@
 
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Rust validates a non-blank workflow name in `src-tauri/src/domain/workflow.rs`.
-- Repository trims and stores the workflow with timestamps.
+- Repository trims and stores the workflow with timestamps, then creates a default graph.
 - UI refreshes list and opens the created workflow.
 
 ## Open Detail
 
 - UI calls `get_workflow`.
-- Repository returns workflow metadata plus steps ordered by `order_index ASC`.
-- UI selects the preferred step when present, otherwise the first step.
+- UI calls `get_workflow_graph`.
+- Saved graph JSON is loaded when present; compatibility fallback can render a generated linear graph from legacy ordered steps.
+- UI does not select or store a current list step.
 
-## Add Step
+## Edit Visual Graph
 
-- UI opens an Add Step palette from the `Builder Steps` panel, then sends workflow id and selected action type to `add_step`.
-- The Add Step palette defaults to the `All` category so every action type is visible before filtering.
-- Backend creates the default config in `src-tauri/src/services/run_service.rs`.
-- Repository appends at `MAX(order_index) + 1`.
-- Step name defaults to the action label.
+- The workflow detail screen renders `WorkflowGraphEditor` as the only workflow builder.
+- Users can add supported graph nodes, choose an action type from the action palette when adding action nodes, connect edges through explicit source/target ports, delete edges, move/delete nodes, change action node type in the inspector, edit action config, and edit structured config for `if`, loop, retry, manual approval, and rate limit nodes.
+- `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
+- `validate_workflow_graph` returns node/edge issues for the validation panel without persisting.
+- `run_workflow` loads the saved graph, compiles supported graph nodes into action configs, and starts the existing runner path.
+- The graph timeline maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 
-## Edit Step
+## Legacy Step Rows
 
-- UI edits name and action-specific config.
-- `update_step` validates config before persistence.
-- Repository stores config JSON and trims blank step names back to the action label.
-- Successful step saves show a temporary success message so the user gets immediate confirmation without blocking the UI.
-
-## Duplicate Step
-
-- UI duplicates from the selected step detail form.
-- Duplicate creates a new step with the same action type through `add_step`.
-- UI then saves the current form name plus ` Copy` and current form config onto the new step through `update_step`.
-- The duplicated step becomes the selected step after the workflow reloads.
-
-## Reorder Or Delete Step
-
-- `reorder_steps` rewrites order indexes through a temporary negative-index pass.
-- `delete_step` compacts remaining order indexes to stay contiguous.
-- Workflow `updated_at` is touched when child steps change.
-
-## Test Selected Step
-
-- `test_step` loads the workflow, finds the selected step, and runs steps through that index.
-- Run mode is `test_step`.
-- Target step id is stored in run state.
+- List-step authoring is retired from the product UI and Tauri command registration.
+- Internal Rust helpers and repository methods for `workflow_steps` may remain temporarily for import/export compatibility and legacy tests.
 
 ## Run Full Workflow
 
-- `run_workflow` loads the workflow and sends every step to the background runner.
+- `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
 - UI polls `get_run_state` while status is `running`.
+- Unsupported advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
+- Graph runs share the same run-state lifecycle as full workflow runs.
 
 ## Stop
 
@@ -64,6 +47,7 @@
 
 ## Preserve
 
-- Step order must remain stable, ordered, and contiguous.
-- Run/test status must not mislead the user after success, failure, or stop.
+- Graph authoring state must not diverge from the graph the user runs; the UI saves the current graph before `run_workflow`.
+- Run status must not mislead the user after success, failure, or stop.
 - Command-facing errors must remain serializable through `CommandError`.
+- Invalid graph drafts may be saved, but `run_workflow` must validate/compile and fail before starting execution when blocking graph issues exist.

@@ -1,19 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   ActionConfig,
-  ActionType,
   BatchRunRequest,
   BatchRunSummary,
+  CompiledWorkflowGraph,
   ElementSnapshot,
   GeneratedFixture,
+  GraphValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
   RunState,
   SelectorCandidate,
+  WorkflowGraph,
   Workflow,
   WorkflowDetail,
   WorkflowExport,
-  WorkflowStep,
   WorkflowSummary,
 } from "../types/workflow";
 
@@ -37,28 +38,24 @@ export function deleteWorkflow(id: string) {
   return invoke("delete_workflow", { id });
 }
 
-export function addStep(workflowId: string, actionType: ActionType) {
-  return invoke<WorkflowStep>("add_step", { workflowId, actionType });
+export function getWorkflowGraph(workflowId: string) {
+  return invoke<WorkflowGraph>("get_workflow_graph", { workflowId });
 }
 
-export function updateStep(stepId: string, name: string, config: ActionConfig) {
-  return invoke("update_step", { stepId, name, config });
+export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph) {
+  return invoke("save_workflow_graph", { workflowId, graph });
 }
 
-export function deleteStep(stepId: string) {
-  return invoke("delete_step", { stepId });
+export function validateWorkflowGraph(graph: WorkflowGraph) {
+  return invoke<GraphValidationIssue[]>("validate_workflow_graph", { graph });
 }
 
-export function reorderSteps(workflowId: string, orderedStepIds: string[]) {
-  return invoke("reorder_steps", { workflowId, orderedStepIds });
+export function compileWorkflowGraph(graph: WorkflowGraph) {
+  return invoke<CompiledWorkflowGraph>("compile_workflow_graph", { graph });
 }
 
 export function runWorkflow(workflowId: string) {
   return invoke<RunState>("run_workflow", { workflowId });
-}
-
-export function testStep(workflowId: string, stepId: string) {
-  return invoke<RunState>("test_step", { workflowId, stepId });
 }
 
 export function stopRun() {

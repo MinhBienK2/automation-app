@@ -89,7 +89,7 @@ export function StepForm({
           />
         </Label>
 
-        <ActionFields config={config} onChange={setConfig} />
+        <ActionConfigEditor config={config} onChange={setConfig} />
 
         {fieldError ? <p className="field-error">{fieldError}</p> : null}
 
@@ -139,6 +139,10 @@ type ActionFieldsProps = {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
 };
+
+export function ActionConfigEditor({ config, onChange }: ActionFieldsProps) {
+  return <ActionFields config={config} onChange={onChange} />;
+}
 
 function ActionFields({ config, onChange }: ActionFieldsProps) {
   switch (config.type) {

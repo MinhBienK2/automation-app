@@ -19,6 +19,10 @@ The Tauri command layer is the contract between React and Rust.
 - Workflow lookup and command-level not-found errors.
 - Validation before persistence or execution.
 - Import/export, batch run, builder assist command logic.
+- Workflow graph load, save, validate, compile, and run command logic.
+- Graph commands must keep unsupported advanced node execution explicit: return a serializable command error before starting a run instead of compiling unsupported nodes to no-ops.
+- Product-facing workflow execution goes through `run_workflow`, which runs the saved workflow graph. The UI saves the current graph before invoking it.
+- List-step authoring commands are retired from Tauri registration; legacy Rust helpers may remain internal until import/export and persistence cleanup is complete.
 
 ## Does Not Belong Here
 
@@ -33,4 +37,3 @@ The Tauri command layer is the contract between React and Rust.
 - Keep `CommandError` serializable as `{ message, field }`.
 - Add/update `src-tauri/tests/command_api.rs`.
 - Register new Tauri commands in `src-tauri/src/lib.rs`.
-

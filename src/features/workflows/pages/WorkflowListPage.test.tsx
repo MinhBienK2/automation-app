@@ -81,6 +81,7 @@ describe("Workflow list integration", () => {
           ? { workflow: newWorkflow, steps: [] }
           : { workflow, steps: [sleepStep] };
       },
+      save_workflow_graph: undefined,
       run_workflow: {
         status: "failed",
         mode: "run_workflow",
@@ -102,7 +103,13 @@ describe("Workflow list integration", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    await userEvent.click(screen.getByRole("button", { name: "Run Workflow" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    await userEvent.click(within(controlsRow).getByRole("button", { name: "Run" }));
 
     expect(await screen.findByText("Failed at step 1: XPath not found"))
       .toBeInTheDocument();

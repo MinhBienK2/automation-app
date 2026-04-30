@@ -1,36 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
-import type { DragEndEvent } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
+import { useEffect, useState } from "react";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
-import { TestStepMonitor } from "./features/workflows/components/TestStepMonitor";
 import { AppShell } from "./layouts/AppShell";
 import {
-  addStep as addWorkflowStep,
   createWorkflow as createWorkflowCommand,
-  deleteStep as deleteWorkflowStep,
   deleteWorkflow as deleteWorkflowCommand,
+  getWorkflowGraph,
   getRunState,
   getWorkflow,
   listWorkflows,
   renameWorkflow as renameWorkflowCommand,
-  reorderSteps,
   runWorkflow as runWorkflowCommand,
+  saveWorkflowGraph,
   stopRun as stopRunCommand,
-  testStep as testStepCommand,
-  updateStep,
+  validateWorkflowGraph,
 } from "./lib/workflowApi";
+import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import {
   commandMessage,
   initialRunState,
   normalizeRunState,
 } from "./lib/workflowUi";
 import type {
-  ActionConfig,
-  ActionType,
+  GraphValidationIssue,
   RunState,
+  WorkflowGraph,
   WorkflowDetail,
-  WorkflowStep,
   WorkflowSummary,
 } from "./types/workflow";
 import "./App.css";
@@ -46,11 +41,9 @@ function App() {
     null,
   );
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
-  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
+  const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
   const [runState, setRunState] = useState<RunState>(initialRunState);
-  const [monitorOpen, setMonitorOpen] = useState(false);
-  const [monitorStepIds, setMonitorStepIds] = useState<string[]>([]);
-  const [monitorScope, setMonitorScope] = useState("");
   const [workflowDialogMode, setWorkflowDialogMode] =
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
@@ -82,7 +75,7 @@ function App() {
     setRunState(normalizeRunState(state));
   }
 
-  async function openWorkflow(id: string, preferredStepId?: string | null) {
+  async function openWorkflow(id: string) {
     setAppError("");
 
     try {
@@ -91,21 +84,20 @@ function App() {
         setScreen("list");
         setSelectedWorkflowId(null);
         setDetail(null);
-        setSelectedStepId(null);
+        setWorkflowGraph(null);
+        setGraphIssues([]);
         setAppError("Workflow not found");
         return;
       }
 
       setSelectedWorkflowId(id);
       setDetail(loaded);
-      const preferredStepExists = loaded.steps.some(
-        (step) => step.id === preferredStepId,
-      );
-      setSelectedStepId(
-        preferredStepExists
-          ? (preferredStepId ?? null)
-          : (loaded.steps[0]?.id ?? null),
-      );
+      try {
+        setWorkflowGraph(await getWorkflowGraph(id));
+      } catch {
+        setWorkflowGraph(linearGraphFromSteps(loaded.steps));
+      }
+      setGraphIssues([]);
       setRunState((current) =>
         current.status === "running" ? current : initialRunState,
       );
@@ -113,12 +105,6 @@ function App() {
     } catch (error) {
       setAppError(commandMessage(error));
     }
-  }
-
-  async function reloadSelectedWorkflow(preferredStepId = selectedStepId) {
-    if (!selectedWorkflowId) return;
-    await openWorkflow(selectedWorkflowId, preferredStepId);
-    await loadWorkflows();
   }
 
   function openCreateWorkflowDialog() {
@@ -178,55 +164,19 @@ function App() {
     if (selectedWorkflowId === id) {
       setSelectedWorkflowId(null);
       setDetail(null);
-      setSelectedStepId(null);
-      setMonitorOpen(false);
+      setWorkflowGraph(null);
+      setGraphIssues([]);
       setScreen("list");
     }
     await loadWorkflows();
   }
 
-  async function addStep(actionType: ActionType) {
-    if (!detail) return;
+  async function runGraph() {
+    if (!detail || !workflowGraph) return;
     setAppError("");
 
     try {
-      const step = await addWorkflowStep(detail.workflow.id, actionType);
-      await reloadSelectedWorkflow(step.id);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function deleteStep(stepId: string) {
-    if (!window.confirm("Delete this step?")) return;
-
-    await deleteWorkflowStep(stepId);
-    await reloadSelectedWorkflow();
-  }
-
-  async function duplicateStep(
-    sourceStep: WorkflowStep,
-    name: string,
-    config: ActionConfig,
-  ) {
-    if (!detail) return;
-    setAppError("");
-
-    try {
-      const step = await addWorkflowStep(detail.workflow.id, sourceStep.action_type);
-      await updateStep(step.id, `${name} Copy`, config);
-      await reloadSelectedWorkflow(step.id);
-    } catch (error) {
-      setAppError(commandMessage(error));
-      throw error;
-    }
-  }
-
-  async function runWorkflow() {
-    if (!detail) return;
-    setAppError("");
-
-    try {
+      await saveWorkflowGraph(detail.workflow.id, workflowGraph);
       const state = await runWorkflowCommand(detail.workflow.id);
       setRunState(normalizeRunState(state));
     } catch (error) {
@@ -234,20 +184,24 @@ function App() {
     }
   }
 
-  async function testStep(targetStepId = selectedStepId, scope = "selected") {
-    if (!detail || !targetStepId) return;
+  async function validateGraph() {
+    if (!workflowGraph) return;
     setAppError("");
 
-    const selectedIndex = detail.steps.findIndex((step) => step.id === targetStepId);
-    if (selectedIndex < 0) return;
+    try {
+      setGraphIssues(await validateWorkflowGraph(workflowGraph));
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
 
-    setMonitorStepIds(detail.steps.slice(0, selectedIndex + 1).map((step) => step.id));
-    setMonitorScope(scope);
-    setMonitorOpen(true);
+  async function saveGraph() {
+    if (!detail || !workflowGraph) return;
+    setAppError("");
 
     try {
-      const state = await testStepCommand(detail.workflow.id, targetStepId);
-      setRunState(normalizeRunState(state));
+      await saveWorkflowGraph(detail.workflow.id, workflowGraph);
+      await loadWorkflows();
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -264,39 +218,11 @@ function App() {
     }
   }
 
-  async function testAllSteps() {
-    if (!detail?.steps.length) return;
-    await testStep(detail.steps[detail.steps.length - 1].id, "all");
-  }
-
-  async function handleDragEnd(event: DragEndEvent) {
-    if (!detail || !event.over || event.active.id === event.over.id) return;
-
-    const oldIndex = detail.steps.findIndex((step) => step.id === event.active.id);
-    const newIndex = detail.steps.findIndex((step) => step.id === event.over?.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-
-    const reordered = arrayMove(detail.steps, oldIndex, newIndex);
-    setDetail({ ...detail, steps: reordered });
-
-    await reorderSteps(
-      detail.workflow.id,
-      reordered.map((step) => step.id),
-    );
-    await reloadSelectedWorkflow();
-  }
-
   function backToList() {
     setScreen("list");
-    setMonitorOpen(false);
     setAppError("");
     void loadWorkflows();
   }
-
-  const selectedStep = useMemo(
-    () => detail?.steps.find((step) => step.id === selectedStepId) ?? null,
-    [detail, selectedStepId],
-  );
   const isRunning = runState.status === "running";
 
   return (
@@ -309,37 +235,18 @@ function App() {
         <>
           <WorkflowDetailPage
             detail={detail}
-            selectedStep={selectedStep}
-            selectedStepId={selectedStepId}
             isRunning={isRunning}
             appError={appError}
             runState={runState}
+            workflowGraph={workflowGraph}
+            graphIssues={graphIssues}
             onBack={backToList}
-            onSelectStep={setSelectedStepId}
-            onAddStep={addStep}
-            onDeleteStep={deleteStep}
-            onDuplicateStep={duplicateStep}
-            onSaveStep={async (stepId, name, config: ActionConfig) => {
-              setAppError("");
-              await updateStep(stepId, name, config);
-              await reloadSelectedWorkflow(stepId);
-            }}
-            onRunWorkflow={runWorkflow}
-            onTestStep={testStep}
-            onTestAllSteps={testAllSteps}
             onStopRun={stopRun}
-            onDragEnd={handleDragEnd}
+            onGraphChange={setWorkflowGraph}
+            onRunGraph={runGraph}
+            onSaveGraph={saveGraph}
+            onValidateGraph={validateGraph}
           />
-          {monitorOpen ? (
-            <TestStepMonitor
-              runState={runState}
-              scope={monitorScope}
-              steps={detail.steps.filter((step) => monitorStepIds.includes(step.id))}
-              totalSteps={detail.steps.length}
-              onClose={() => setMonitorOpen(false)}
-              onStop={stopRun}
-            />
-          ) : null}
         </>
       ) : (
         <WorkflowListPage

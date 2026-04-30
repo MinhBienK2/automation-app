@@ -70,7 +70,7 @@ describe("Workflow detail integration", () => {
     expect(within(titleRow).queryByRole("heading", { name: "Login flow" }))
       .not.toBeInTheDocument();
     expect(within(titleRow).getByText("Workflow Detail")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("1 step")).toBeInTheDocument();
+    expect(within(controlsRow).getByText("Graph workspace")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Updated 1")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
     expect(within(controlsRow).getByText("idle")).toHaveAttribute(
@@ -78,15 +78,54 @@ describe("Workflow detail integration", () => {
       "badge",
     );
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
-    expect(within(controlsRow).getByRole("button", { name: "Run Workflow" }))
+    expect(within(controlsRow).getByRole("button", { name: "Run" }))
       .toHaveAttribute("data-slot", "button");
+    expect(screen.getByRole("region", { name: "Visual Graph" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Builder Steps" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
-  test("disables run actions while running and polls final failure", async () => {
+  test("disables graph run actions while running and polls final failure", async () => {
     let runStateCalls = 0;
     mockTauriCommands({
       list_workflows: [workflow],
       get_workflow: { workflow, steps: [sleepStep] },
+      get_workflow_graph: {
+        version: 1,
+        nodes: [
+          {
+            id: "start",
+            node_type: "start",
+            label: "Start",
+            position: { x: 0, y: 0 },
+            config: {},
+            ports: [{ id: "out", label: "Out", direction: "output" }],
+            group_id: null,
+          },
+          {
+            id: "end_success",
+            node_type: "end_success",
+            label: "End Success",
+            position: { x: 220, y: 0 },
+            config: {},
+            ports: [{ id: "in", label: "In", direction: "input" }],
+            group_id: null,
+          },
+        ],
+        edges: [
+          {
+            id: "edge-start-end_success",
+            source_node_id: "start",
+            source_port: "out",
+            target_node_id: "end_success",
+            target_port: "in",
+            label: "next",
+            condition: null,
+          },
+        ],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
       get_run_state: () => {
         runStateCalls += 1;
         return runStateCalls < 3
@@ -101,17 +140,26 @@ describe("Workflow detail integration", () => {
               },
             };
       },
+      save_workflow_graph: undefined,
       run_workflow: { ...idleRunState, status: "running" },
     });
 
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    await userEvent.click(screen.getByRole("button", { name: "Run Workflow" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    await userEvent.click(within(controlsRow).getByRole("button", { name: "Run" }));
 
-    expect(screen.getByRole("button", { name: "Run Workflow" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Test to Here" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Test All" })).toBeDisabled();
+    expect(within(controlsRow).getByRole("button", { name: "Run" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Test to Here" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Test All" }))
+      .not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stop" })).toHaveAttribute(
       "data-slot",
       "button",

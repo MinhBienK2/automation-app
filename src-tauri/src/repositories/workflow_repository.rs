@@ -6,7 +6,7 @@ use sqlx::{Row, SqlitePool};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::domain::{ActionConfig, Workflow, WorkflowStep};
+use crate::domain::{ActionConfig, Workflow, WorkflowGraph, WorkflowStep};
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {
@@ -88,6 +88,20 @@ impl WorkflowRepository {
         )
         .bind(&workflow.id)
         .bind(&workflow.name)
+        .bind(&workflow.created_at)
+        .bind(&workflow.updated_at)
+        .execute(&self.pool)
+        .await?;
+
+        let graph_json = serde_json::to_string(&WorkflowGraph::from_steps(&[]))?;
+        sqlx::query(
+            r#"
+            INSERT INTO workflow_graphs (workflow_id, graph_json, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4)
+            "#,
+        )
+        .bind(&workflow.id)
+        .bind(graph_json)
         .bind(&workflow.created_at)
         .bind(&workflow.updated_at)
         .execute(&self.pool)
@@ -182,6 +196,55 @@ impl WorkflowRepository {
             .bind(workflow_id)
             .execute(&self.pool)
             .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_workflow_graph(
+        &self,
+        workflow_id: &str,
+    ) -> Result<Option<WorkflowGraph>, RepositoryError> {
+        let graph_json: Option<String> = sqlx::query_scalar(
+            r#"
+            SELECT graph_json
+            FROM workflow_graphs
+            WHERE workflow_id = ?1
+            "#,
+        )
+        .bind(workflow_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        graph_json
+            .map(|graph_json| serde_json::from_str(&graph_json).map_err(RepositoryError::from))
+            .transpose()
+    }
+
+    pub async fn save_workflow_graph(
+        &self,
+        workflow_id: &str,
+        graph: WorkflowGraph,
+    ) -> Result<(), RepositoryError> {
+        let now = now_timestamp();
+        let graph_json = serde_json::to_string(&graph)?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO workflow_graphs (workflow_id, graph_json, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4)
+            ON CONFLICT(workflow_id) DO UPDATE SET
+              graph_json = excluded.graph_json,
+              updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(workflow_id)
+        .bind(graph_json)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        touch_workflow(&self.pool, workflow_id).await?;
 
         Ok(())
     }

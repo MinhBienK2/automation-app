@@ -532,6 +532,95 @@ export type WorkflowDetail = {
   steps: WorkflowStep[];
 };
 
+export type GraphNodeType =
+  | "start"
+  | "end_success"
+  | "end_failure"
+  | "action"
+  | "if"
+  | "switch"
+  | "repeat_times"
+  | "repeat_for_each"
+  | "repeat_until"
+  | "while"
+  | "retry"
+  | "try_catch"
+  | "fallback"
+  | "break_loop"
+  | "continue_loop"
+  | "stop_workflow"
+  | "set_variable"
+  | "transform_variable"
+  | "assert_output"
+  | "run_subworkflow"
+  | "manual_approval"
+  | "rate_limit"
+  | "domain_allowlist";
+
+export type GraphPortDirection = "input" | "output";
+export type GraphValidationLevel = "error" | "warning";
+
+export type GraphPosition = {
+  x: number;
+  y: number;
+};
+
+export type GraphViewport = {
+  x: number;
+  y: number;
+  zoom: number;
+};
+
+export type GraphPort = {
+  id: string;
+  label: string;
+  direction: GraphPortDirection;
+};
+
+export type GraphNode = {
+  id: string;
+  node_type: GraphNodeType;
+  label: string;
+  position: GraphPosition;
+  config: unknown;
+  ports: GraphPort[];
+  group_id?: string | null;
+};
+
+export type GraphEdge = {
+  id: string;
+  source_node_id: string;
+  source_port: string;
+  target_node_id: string;
+  target_port: string;
+  label?: string | null;
+  condition?: WorkflowCondition | null;
+};
+
+export type WorkflowGraph = {
+  version: number;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  viewport: GraphViewport;
+};
+
+export type GraphValidationIssue = {
+  level: GraphValidationLevel;
+  node_id?: string | null;
+  edge_id?: string | null;
+  message: string;
+};
+
+export type CompiledGraphStep = {
+  node_id: string;
+  label: string;
+  config: ActionConfig;
+};
+
+export type CompiledWorkflowGraph = {
+  steps: CompiledGraphStep[];
+};
+
 export type ScheduleKind =
   | { kind: "once_at"; timestamp: string }
   | { kind: "interval"; every_seconds: number };

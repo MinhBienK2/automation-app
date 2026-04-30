@@ -4,13 +4,18 @@ import {
   exportWorkflow,
   dryRunValidateConfig,
   generateFixture,
+  compileWorkflowGraph,
+  getWorkflowGraph,
   importWorkflow,
   normalizeRecordedEvents,
+  runWorkflow,
+  saveWorkflowGraph,
   runBatchWorkflow,
   suggestSelectors,
+  validateWorkflowGraph,
   validateSchedule,
 } from "./workflowApi";
-import type { WorkflowExport } from "../types/workflow";
+import type { WorkflowExport, WorkflowGraph } from "../types/workflow";
 
 describe("workflow API phase ten commands", () => {
   test("invokes orchestration commands with frontend-safe payloads", async () => {
@@ -93,6 +98,39 @@ describe("workflow API phase ten commands", () => {
     expect(invokeMock).toHaveBeenCalledWith("generate_fixture", {
       path: "/tmp/fixture.html",
       bodyHtml: "<button>Save</button>",
+    });
+  });
+});
+
+describe("workflow API graph commands", () => {
+  test("invokes graph commands with frontend-safe payloads", async () => {
+    resetTauriInvoke();
+    const graph: WorkflowGraph = {
+      version: 1,
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    invokeMock.mockResolvedValue(undefined);
+
+    await getWorkflowGraph("workflow-1");
+    await saveWorkflowGraph("workflow-1", graph);
+    await validateWorkflowGraph(graph);
+    await compileWorkflowGraph(graph);
+    await runWorkflow("workflow-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("get_workflow_graph", {
+      workflowId: "workflow-1",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("save_workflow_graph", {
+      workflowId: "workflow-1",
+      graph,
+    });
+    expect(invokeMock).toHaveBeenCalledWith("validate_workflow_graph", { graph });
+    expect(invokeMock).toHaveBeenCalledWith("compile_workflow_graph", { graph });
+    expect(invokeMock).toHaveBeenCalledWith("run_workflow", {
+      workflowId: "workflow-1",
     });
   });
 });

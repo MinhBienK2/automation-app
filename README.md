@@ -67,7 +67,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 12. Generate selector suggestions from an element snapshot, normalize recorded click/input events, dry-run validate a step config, and generate a local fixture HTML file.
 13. Reorder steps and reopen the workflow.
 14. Test a selected step.
-15. Run the full workflow.
+15. Save and run the graph workflow.
 16. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
 17. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
 18. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
@@ -83,5 +83,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 28. Confirm selector suggestions prefer stable attributes and recorder output maps to the action taxonomy.
 29. Confirm bad XPath fails immediately with a short message.
 30. Stop during a long Wait duration.
-31. Confirm Chromium remains open after success, failure, and stop.
-32. Delete the workflow.
+31. Open the workflow graph, add Action, If, Repeat Times, Repeat For Each, Retry, Manual Approval, and Rate Limit nodes, edit inspector fields, connect nodes through explicit ports, delete an edge, validate the graph, save it, reopen the workflow, and confirm the graph persists.
+32. Run the supported graph and confirm the validation panel, graph timeline, canvas run highlights, and output context update from run state.
+33. Confirm Chromium remains open after success, failure, and stop.
+34. Delete the workflow.

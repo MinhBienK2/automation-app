@@ -8,10 +8,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 
 - `src/App.tsx`: top-level state orchestration.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
-- `src/features/workflows/pages/WorkflowDetailPage.tsx`: workflow workspace.
-- `src/features/workflows/components/StepList.tsx`: ordered step list and Add Step palette.
-- `src/features/workflows/components/StepForm.tsx`: selected step editing, save confirmation, and duplicate action.
-- `src/features/workflows/components/TestStepMonitor.tsx`: test progress modal.
+- `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`: visual graph workspace, action palette for new action nodes, action/logic inspector with action-type selection, explicit port connections, edge deletion, validation panel, run timeline, and output context.
+- `src/features/workflows/components/StepForm.tsx`: legacy container for the reusable `ActionConfigEditor`; list-step UI is no longer rendered.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
 - `src/lib/workflowApi.ts`: Tauri invoke wrappers.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
@@ -21,7 +20,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 
 - User interaction state.
 - Form rendering and local validation display.
-- UI-only action browsing for the Add Step palette.
+- Visual graph editing state before persistence.
+- Graph validation/run controls and presentation of validation issues, timeline status, and output context.
+- Action node creation from the action palette, plus type selection and config editing through the reusable action config editor.
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 
@@ -31,6 +32,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Runner/browser implementation.
 - Backend validation as the only source of truth.
 - Ad hoc string manipulation of persisted config JSON.
+- List-step authoring UI.
 
 ## Change Checklist
 

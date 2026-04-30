@@ -17,12 +17,11 @@
 - `create_workflow`
 - `rename_workflow`
 - `delete_workflow`
-- `add_step`
-- `update_step`
-- `delete_step`
-- `reorder_steps`
+- `get_workflow_graph`
+- `save_workflow_graph`
+- `validate_workflow_graph`
+- `compile_workflow_graph`
 - `run_workflow`
-- `test_step`
 - `stop_run`
 - `get_run_state`
 - `validate_schedule`
@@ -49,6 +48,16 @@ Keep `CommandError` compatible with frontend error extraction in `src/lib/workfl
 - Frontend wrapper names may be camelCase.
 - Invoke command names are snake_case strings.
 - Payload keys must match Rust command parameter names after Tauri casing conversion expected by the current wrapper tests.
+- Graph command payloads:
+  - `get_workflow_graph`: `{ workflowId }`
+  - `save_workflow_graph`: `{ workflowId, graph }`
+  - `validate_workflow_graph`: `{ graph }`
+  - `compile_workflow_graph`: `{ graph }`
+- `run_workflow`: `{ workflowId }`; the frontend saves the current graph first, then this command validates, compiles, and runs the saved graph.
+
+## Retired Product Commands
+
+The list-step builder is no longer a product surface. `add_step`, `update_step`, `delete_step`, `reorder_steps`, `test_step`, and `run_workflow_graph` are not registered Tauri commands. Some Rust implementation helpers and repository methods may remain temporarily for import/export compatibility and legacy test coverage.
 
 ## Change Checklist
 

@@ -5,16 +5,19 @@ Preserve these unless the task explicitly changes them.
 ## Workflow Editing
 
 - Blank workflow names are rejected.
-- Blank step names fall back to the action label.
-- Step order is stable and contiguous after add, reorder, and delete.
-- Opening a workflow selects the preferred step if it still exists, otherwise the first step.
+- Opening a workflow shows the visual graph builder as the only workflow authoring surface.
+- New workflows have a default graph.
+- Running from the graph workspace saves the visible graph before execution.
+- Graph edges are connected through explicit ports so branch intent is visible.
+- Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
+- Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
 
 ## UI Behavior
 
 - Workflow list and detail remain separate screens.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
-- Testing a step opens the monitor for the included step range.
+- Running a graph shows graph validation, timeline, and output context inside the graph workspace.
 
 ## Command Boundary
 
@@ -24,14 +27,14 @@ Preserve these unless the task explicitly changes them.
 
 ## Runner Behavior
 
-- Full runs execute all steps in order.
-- Test-step runs execute from step 1 through the selected step.
+- Full runs execute the compiled saved graph.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Browser sessions remain open after success, failure, and stop.
 - Failures identify the failed step when possible.
+- Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the graph timeline and canvas reflect current/completed/failed nodes.
 
 ## Persistence
 
-- Workflow summaries include step counts.
-- Workflow detail returns ordered steps.
-- Child step changes touch the parent workflow `updated_at`.
+- Workflow summaries include the legacy `step_count` field until the summary contract is renamed.
+- Saved workflow graph JSON is keyed by workflow id.
+- Graph saves touch the parent workflow `updated_at`.

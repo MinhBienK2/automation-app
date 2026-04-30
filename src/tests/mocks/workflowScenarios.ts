@@ -1,4 +1,5 @@
 import type { RunState, WorkflowStep, WorkflowSummary } from "../../types/workflow";
+import { linearGraphFromSteps } from "../../features/workflows/lib/workflowGraph";
 import { workflow } from "./workflowFixtures";
 
 export const idleRunState: RunState = {
@@ -22,5 +23,6 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
   return {
     ...listWorkflowScenario([workflow]),
     get_workflow: { workflow, steps },
+    get_workflow_graph: linearGraphFromSteps(steps),
   };
 }

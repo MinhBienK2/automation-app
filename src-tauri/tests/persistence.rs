@@ -3,7 +3,11 @@ mod support;
 use support::{temp_db_path, test_repository};
 use workflow_automation_manager_lib::{
     db::{create_sqlite_pool, run_migrations},
-    domain::{ActionConfig, InputTypingMode, ScrollDirection, WaitCondition},
+    domain::{
+        ActionConfig, GraphEdge, GraphNode, GraphNodeType, GraphPort, GraphPortDirection,
+        GraphPosition, GraphViewport, InputTypingMode, ScrollDirection, WaitCondition,
+        WorkflowGraph,
+    },
     repositories::WorkflowRepository,
 };
 
@@ -266,6 +270,54 @@ async fn deleting_workflow_cascades_steps() {
     assert!(detail.is_none());
 }
 
+#[tokio::test]
+async fn workflow_graph_persists_and_round_trips() {
+    let (repo, _db_path) = test_repository().await;
+    let workflow = repo.create_workflow("Visual graph").await.expect("create");
+    let graph = sample_graph();
+
+    repo.save_workflow_graph(&workflow.id, graph.clone())
+        .await
+        .expect("save graph");
+
+    let loaded = repo
+        .get_workflow_graph(&workflow.id)
+        .await
+        .expect("get graph")
+        .expect("graph exists");
+
+    assert_eq!(loaded, graph);
+}
+
+#[tokio::test]
+async fn workflow_graph_is_created_by_default_and_cascades() {
+    let (repo, _db_path) = test_repository().await;
+    let workflow = repo
+        .create_workflow("Graph workflow")
+        .await
+        .expect("create");
+
+    let default_graph = repo
+        .get_workflow_graph(&workflow.id)
+        .await
+        .expect("get graph")
+        .expect("default graph exists");
+    assert_eq!(default_graph, WorkflowGraph::from_steps(&[]));
+
+    repo.save_workflow_graph(&workflow.id, sample_graph())
+        .await
+        .expect("save graph");
+    repo.delete_workflow(&workflow.id)
+        .await
+        .expect("delete workflow");
+
+    let deleted = repo
+        .get_workflow_graph(&workflow.id)
+        .await
+        .expect("get graph");
+    assert!(deleted.is_none());
+}
+
 fn wait_duration(duration_ms: u64) -> ActionConfig {
     ActionConfig::Wait {
         condition: WaitCondition::Duration,
@@ -274,5 +326,66 @@ fn wait_duration(duration_ms: u64) -> ActionConfig {
         url: None,
         duration_ms: Some(duration_ms),
         timeout_ms: None,
+    }
+}
+
+fn sample_graph() -> WorkflowGraph {
+    WorkflowGraph {
+        version: 1,
+        nodes: vec![
+            GraphNode {
+                id: "start".to_string(),
+                node_type: GraphNodeType::Start,
+                label: "Start".to_string(),
+                position: GraphPosition { x: 0.0, y: 0.0 },
+                config: serde_json::json!({}),
+                ports: vec![GraphPort {
+                    id: "out".to_string(),
+                    label: "Out".to_string(),
+                    direction: GraphPortDirection::Output,
+                }],
+                group_id: None,
+            },
+            GraphNode {
+                id: "wait".to_string(),
+                node_type: GraphNodeType::Action,
+                label: "Wait".to_string(),
+                position: GraphPosition { x: 220.0, y: 0.0 },
+                config: serde_json::json!({
+                    "type": "wait",
+                    "config": {
+                        "condition": "duration",
+                        "duration_ms": 100
+                    }
+                }),
+                ports: vec![
+                    GraphPort {
+                        id: "in".to_string(),
+                        label: "In".to_string(),
+                        direction: GraphPortDirection::Input,
+                    },
+                    GraphPort {
+                        id: "out".to_string(),
+                        label: "Out".to_string(),
+                        direction: GraphPortDirection::Output,
+                    },
+                ],
+                group_id: None,
+            },
+        ],
+        edges: vec![GraphEdge {
+            id: "edge-start-wait".to_string(),
+            source_node_id: "start".to_string(),
+            source_port: "out".to_string(),
+            target_node_id: "wait".to_string(),
+            target_port: "in".to_string(),
+            label: Some("next".to_string()),
+            condition: None,
+        }],
+        viewport: GraphViewport {
+            x: 0.0,
+            y: 0.0,
+            zoom: 1.0,
+        },
     }
 }

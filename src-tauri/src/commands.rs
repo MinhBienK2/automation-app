@@ -6,8 +6,9 @@ use crate::{
     app_state::{AppState, RunStateDto},
     domain::{
         ActionConfig, ActionType, BatchRunRequest, BatchRunRowResult, BatchRunSummary,
-        ClickWaitUntil, ElementSnapshot, GeneratedFixture, OrchestrationSchedule, RecordedEvent,
-        RunMode, RunStatus, SelectorCandidate, ValidationError, Workflow, WorkflowExport,
+        ClickWaitUntil, CompiledWorkflowGraph, ElementSnapshot, GeneratedFixture,
+        GraphValidationIssue, OrchestrationSchedule, RecordedEvent, RunMode, RunStatus,
+        SelectorCandidate, ValidationError, Workflow, WorkflowExport, WorkflowGraph,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
     runner::{RunnerCancellation, RunnerStatus},
@@ -142,6 +143,81 @@ pub async fn reorder_steps_impl(
         .map_err(CommandError::from)
 }
 
+pub async fn get_workflow_graph_impl(
+    state: &AppState,
+    workflow_id: &str,
+) -> Result<WorkflowGraph, CommandError> {
+    if let Some(graph) = state
+        .repository()
+        .get_workflow_graph(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+    {
+        return Ok(graph);
+    }
+
+    let detail = state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+
+    Ok(WorkflowGraph::from_steps(&detail.steps))
+}
+
+pub async fn save_workflow_graph_impl(
+    state: &AppState,
+    workflow_id: &str,
+    graph: WorkflowGraph,
+) -> Result<(), CommandError> {
+    state
+        .repository()
+        .save_workflow_graph(workflow_id, graph)
+        .await
+        .map_err(CommandError::from)
+}
+
+pub async fn validate_workflow_graph_impl(
+    graph: WorkflowGraph,
+) -> Result<Vec<GraphValidationIssue>, CommandError> {
+    Ok(graph.validation_issues())
+}
+
+pub async fn compile_workflow_graph_impl(
+    graph: WorkflowGraph,
+) -> Result<CompiledWorkflowGraph, CommandError> {
+    graph.compile().map_err(CommandError::validation)
+}
+
+pub async fn run_workflow_graph_impl(
+    state: &AppState,
+    workflow_id: &str,
+) -> Result<RunStateDto, CommandError> {
+    let graph = get_workflow_graph_impl(state, workflow_id).await?;
+    let compiled = graph.compile().map_err(CommandError::validation)?;
+    let steps = compiled
+        .steps
+        .into_iter()
+        .enumerate()
+        .map(|(index, compiled_step)| {
+            let action_type = compiled_step.config.action_type();
+            crate::domain::WorkflowStep {
+                id: compiled_step.node_id,
+                name: compiled_step.label,
+                workflow_id: workflow_id.to_string(),
+                order_index: index as i64,
+                action_type,
+                config: compiled_step.config,
+                created_at: String::new(),
+                updated_at: String::new(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    start_background_run(state, steps, RunMode::RunWorkflow, None).await
+}
+
 pub async fn get_run_state_impl(state: &AppState) -> RunStateDto {
     state.run_state().await
 }
@@ -150,14 +226,7 @@ pub async fn run_workflow_impl(
     state: &AppState,
     workflow_id: &str,
 ) -> Result<RunStateDto, CommandError> {
-    let detail = state
-        .repository()
-        .get_workflow(workflow_id)
-        .await
-        .map_err(CommandError::from)?
-        .ok_or_else(|| CommandError::message("Workflow not found"))?;
-
-    start_background_run(state, detail.steps, RunMode::RunWorkflow, None).await
+    run_workflow_graph_impl(state, workflow_id).await
 }
 
 pub async fn test_step_impl(
@@ -572,36 +641,34 @@ pub async fn delete_workflow(state: State<'_, AppState>, id: String) -> Result<(
 }
 
 #[tauri::command]
-pub async fn add_step(
+pub async fn get_workflow_graph(
     state: State<'_, AppState>,
     workflow_id: String,
-    action_type: ActionType,
-) -> Result<crate::domain::WorkflowStep, CommandError> {
-    add_step_impl(&state, &workflow_id, action_type).await
+) -> Result<WorkflowGraph, CommandError> {
+    get_workflow_graph_impl(&state, &workflow_id).await
 }
 
 #[tauri::command]
-pub async fn update_step(
-    state: State<'_, AppState>,
-    step_id: String,
-    name: String,
-    config: ActionConfig,
-) -> Result<(), CommandError> {
-    update_step_impl(&state, &step_id, &name, config).await
-}
-
-#[tauri::command]
-pub async fn delete_step(state: State<'_, AppState>, step_id: String) -> Result<(), CommandError> {
-    delete_step_impl(&state, &step_id).await
-}
-
-#[tauri::command]
-pub async fn reorder_steps(
+pub async fn save_workflow_graph(
     state: State<'_, AppState>,
     workflow_id: String,
-    ordered_step_ids: Vec<String>,
+    graph: WorkflowGraph,
 ) -> Result<(), CommandError> {
-    reorder_steps_impl(&state, &workflow_id, ordered_step_ids).await
+    save_workflow_graph_impl(&state, &workflow_id, graph).await
+}
+
+#[tauri::command]
+pub async fn validate_workflow_graph(
+    graph: WorkflowGraph,
+) -> Result<Vec<GraphValidationIssue>, CommandError> {
+    validate_workflow_graph_impl(graph).await
+}
+
+#[tauri::command]
+pub async fn compile_workflow_graph(
+    graph: WorkflowGraph,
+) -> Result<CompiledWorkflowGraph, CommandError> {
+    compile_workflow_graph_impl(graph).await
 }
 
 #[tauri::command]
@@ -615,15 +682,6 @@ pub async fn run_workflow(
     workflow_id: String,
 ) -> Result<RunStateDto, CommandError> {
     run_workflow_impl(&state, &workflow_id).await
-}
-
-#[tauri::command]
-pub async fn test_step(
-    state: State<'_, AppState>,
-    workflow_id: String,
-    step_id: String,
-) -> Result<RunStateDto, CommandError> {
-    test_step_impl(&state, &workflow_id, &step_id).await
 }
 
 #[tauri::command]
