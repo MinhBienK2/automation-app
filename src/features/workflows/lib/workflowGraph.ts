@@ -32,6 +32,9 @@ export type WorkflowFlowEdgeData = {
 export type WorkflowFlowNode = Node<WorkflowFlowNodeData, "workflow">;
 export type WorkflowFlowEdge = Edge<WorkflowFlowEdgeData>;
 
+const graphEdgeStroke = "rgba(62, 207, 142, 0.82)";
+const graphIssueEdgeStroke = "#ff7b72";
+
 type ReactFlowGraphState = {
   selectedNodeId?: string | null;
   runningNodeId?: string | null;
@@ -121,32 +124,43 @@ export function toReactFlowGraph(
         hasIssue: state.issueNodeIds?.has(node.id) ?? false,
       },
     })),
-    edges: graph.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source_node_id,
-      sourceHandle: edge.source_port,
-      target: edge.target_node_id,
-      targetHandle: edge.target_port,
-      label: edgeOrders.get(edge.id)
-        ? String(edgeOrders.get(edge.id))
-        : edge.label ?? edge.source_port,
-      ariaLabel: edgeOrders.get(edge.id)
-        ? `Step ${edgeOrders.get(edge.id)}: ${
-            nodeLabels.get(edge.source_node_id) ?? edge.source_node_id
-          } to ${nodeLabels.get(edge.target_node_id) ?? edge.target_node_id} via ${
-            edge.label ?? edge.source_port
-          }`
-        : `${nodeLabels.get(edge.source_node_id) ?? edge.source_node_id} to ${
-            nodeLabels.get(edge.target_node_id) ?? edge.target_node_id
-          } via ${edge.label ?? edge.source_port}`,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: "rgba(62, 207, 142, 0.72)",
-      },
-      data: {
-        hasIssue: state.issueEdgeIds?.has(edge.id) ?? false,
-      },
-    })),
+    edges: graph.edges.map((edge) => {
+      const hasIssue = state.issueEdgeIds?.has(edge.id) ?? false;
+      const stroke = hasIssue ? graphIssueEdgeStroke : graphEdgeStroke;
+
+      return {
+        id: edge.id,
+        source: edge.source_node_id,
+        sourceHandle: edge.source_port,
+        target: edge.target_node_id,
+        targetHandle: edge.target_port,
+        label: edgeOrders.get(edge.id)
+          ? String(edgeOrders.get(edge.id))
+          : edge.label ?? edge.source_port,
+        ariaLabel: edgeOrders.get(edge.id)
+          ? `Step ${edgeOrders.get(edge.id)}: ${
+              nodeLabels.get(edge.source_node_id) ?? edge.source_node_id
+            } to ${nodeLabels.get(edge.target_node_id) ?? edge.target_node_id} via ${
+              edge.label ?? edge.source_port
+            }`
+          : `${nodeLabels.get(edge.source_node_id) ?? edge.source_node_id} to ${
+              nodeLabels.get(edge.target_node_id) ?? edge.target_node_id
+            } via ${edge.label ?? edge.source_port}`,
+        className: hasIssue ? "graph-edge graph-edge-has-issue" : "graph-edge",
+        interactionWidth: 20,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: stroke,
+        },
+        style: {
+          stroke,
+          strokeWidth: hasIssue ? 2.75 : 2.5,
+        },
+        data: {
+          hasIssue,
+        },
+      };
+    }),
     viewport: graph.viewport,
   };
 }

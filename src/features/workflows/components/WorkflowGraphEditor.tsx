@@ -6,6 +6,7 @@ import {
   MiniMap,
   Position,
   ReactFlow,
+  ViewportPortal,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -47,6 +48,7 @@ import {
   createDefaultGraphNode,
   defaultActionConfig,
   fromReactFlowGraph,
+  graphEdgeOrders,
   graphNodeLabel,
   graphIssuesByNode,
   type WorkflowFlowEdge,
@@ -145,6 +147,9 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
 const workflowNodeTypes = {
   workflow: WorkflowGraphNode,
 };
+
+const graphNodeWidth = 160;
+const graphNodeHeight = 64;
 
 export function WorkflowGraphEditor({
   graph,
@@ -483,6 +488,9 @@ export function WorkflowGraphEditor({
               onNodeClick={(_, node) => setSelectedNodeId(node.id)}
               onNodesChange={handleNodesChange}
             >
+              <ViewportPortal>
+                <GraphEdgeOverlay graph={graph} issueEdgeIds={issueEdgeIds} />
+              </ViewportPortal>
               <Background color="rgba(62, 207, 142, 0.14)" gap={32} />
               <Controls position="bottom-left" />
               <MiniMap
@@ -587,6 +595,62 @@ export function WorkflowGraphEditor({
       />
       <NodeHelpDialog node={helpNode} onOpenChange={(open) => !open && setHelpNode(null)} />
     </section>
+  );
+}
+
+type GraphEdgeOverlayProps = {
+  graph: WorkflowGraph;
+  issueEdgeIds: Set<string>;
+};
+
+function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgeOrders = graphEdgeOrders(graph);
+
+  return (
+    <svg
+      aria-label="Visible workflow graph edges"
+      className="graph-edge-overlay"
+      focusable="false"
+      role="img"
+    >
+      {graph.edges.map((edge) => {
+        const sourceNode = nodeById.get(edge.source_node_id);
+        const targetNode = nodeById.get(edge.target_node_id);
+        if (!sourceNode || !targetNode) return null;
+
+        const sourcePoint = edgePoint(sourceNode, edge.source_port, "output");
+        const targetPoint = edgePoint(targetNode, edge.target_port, "input");
+        const order = edgeOrders.get(edge.id);
+        const hasIssue = issueEdgeIds.has(edge.id);
+        const labelX = (sourcePoint.x + targetPoint.x) / 2;
+        const labelY = (sourcePoint.y + targetPoint.y) / 2;
+
+        return (
+          <g
+            aria-label={`Visible edge ${sourceNode.label} to ${targetNode.label}`}
+            className={hasIssue ? "graph-visible-edge graph-visible-edge-issue" : "graph-visible-edge"}
+            key={edge.id}
+            role="img"
+          >
+            <path d={edgePath(sourcePoint, targetPoint)} />
+            {order ? (
+              <g
+                aria-label={`Edge direction order ${order}`}
+                className="graph-visible-edge-order"
+                role="img"
+                transform={`translate(${labelX} ${labelY})`}
+              >
+                <circle r="10" />
+                <text dominantBaseline="central" textAnchor="middle">
+                  {order}
+                </text>
+              </g>
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -1737,9 +1801,46 @@ function switchPortsForCases(cases: string[]): GraphPort[] {
   ];
 }
 
+type GraphEdgePoint = {
+  x: number;
+  y: number;
+};
+
+function edgePoint(
+  node: GraphNode,
+  portId: string,
+  direction: GraphPort["direction"],
+): GraphEdgePoint {
+  const ports = portsByDirection(node.ports, direction);
+  const portIndex = Math.max(
+    ports.findIndex((port) => port.id === portId),
+    0,
+  );
+  const y = node.position.y + graphNodeHeight * portOffsetRatio(portIndex, ports.length);
+
+  return {
+    x: node.position.x + (direction === "output" ? graphNodeWidth : 0),
+    y,
+  };
+}
+
+function edgePath(source: GraphEdgePoint, target: GraphEdgePoint) {
+  const distance = Math.max(Math.abs(target.x - source.x) * 0.45, 48);
+  return [
+    `M ${source.x} ${source.y}`,
+    `C ${source.x + distance} ${source.y}`,
+    `${target.x - distance} ${target.y}`,
+    `${target.x} ${target.y}`,
+  ].join(" ");
+}
+
 function portOffset(index: number, total: number) {
-  if (total <= 1) return "50%";
-  return `${((index + 1) / (total + 1)) * 100}%`;
+  return `${portOffsetRatio(index, total) * 100}%`;
+}
+
+function portOffsetRatio(index: number, total: number) {
+  if (total <= 1) return 0.5;
+  return (index + 1) / (total + 1);
 }
 
 function graphStatusClass(status: WorkflowFlowNodeStatus) {

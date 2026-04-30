@@ -136,8 +136,15 @@ describe("workflow graph helpers", () => {
           targetHandle: "in",
           label: "1",
           ariaLabel: "Step 1: Start to Wait via next",
+          className: "graph-edge graph-edge-has-issue",
+          interactionWidth: 20,
           markerEnd: expect.objectContaining({
             type: "arrowclosed",
+            color: "#ff7b72",
+          }),
+          style: expect.objectContaining({
+            stroke: "#ff7b72",
+            strokeWidth: 2.75,
           }),
           data: expect.objectContaining({
             hasIssue: true,

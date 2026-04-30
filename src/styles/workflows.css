@@ -290,9 +290,41 @@
   cursor: grab;
 }
 
+.graph-edge-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.graph-visible-edge path {
+  fill: none;
+  stroke: rgba(62, 207, 142, 0.9);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.graph-visible-edge-issue path {
+  stroke: #ff7b72;
+}
+
+.graph-visible-edge-order circle {
+  fill: #0f0f0f;
+  stroke: rgba(62, 207, 142, 0.9);
+  stroke-width: 1.5;
+}
+
+.graph-visible-edge-order text {
+  fill: #3ecf8e;
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .graph-canvas .react-flow__edge-path {
-  stroke: rgba(62, 207, 142, 0.48);
-  stroke-width: 2;
+  stroke: rgba(62, 207, 142, 0.82);
+  stroke-width: 2.5;
 }
 
 .graph-canvas .react-flow__edge-text {
@@ -309,6 +341,11 @@
 
 .graph-canvas .react-flow__edge.selected .react-flow__edge-path {
   stroke: #3ecf8e;
+  stroke-width: 3;
+}
+
+.graph-canvas .graph-edge-has-issue .react-flow__edge-path {
+  stroke: #ff7b72;
 }
 
 .graph-canvas .react-flow__controls,

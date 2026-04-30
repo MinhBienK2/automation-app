@@ -497,6 +497,10 @@ describe("Workflow graph editor integration", () => {
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     expect(within(editor).queryByLabelText("Edge direction order")).not.toBeInTheDocument();
+    expect(within(editor).getByLabelText("Visible edge Start to Wait for page"))
+      .toBeInTheDocument();
+    expect(within(editor).getByLabelText("Edge direction order 1"))
+      .toBeInTheDocument();
     expect(within(editor).getByLabelText("Drag node step-1")).toBeInTheDocument();
 
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
