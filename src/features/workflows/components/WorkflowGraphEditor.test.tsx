@@ -1,10 +1,17 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
 import { sleepStep } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+
+const workflowGraphEditorSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/WorkflowGraphEditor.tsx"),
+  "utf8",
+);
 
 describe("Workflow graph editor integration", () => {
   beforeEach(() => {
@@ -30,6 +37,11 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).getByRole("button", { name: "Graph canvas node step-1" }))
       .toBeInTheDocument();
     expect(within(editor).getByLabelText("Start Out port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Start Out port")).toHaveClass(
+      "connectable",
+      "connectablestart",
+      "connectionindicator",
+    );
     expect(within(editor).queryByRole("button", { name: "Connect Nodes" }))
       .not.toBeInTheDocument();
     expect(within(editor).getByRole("toolbar", { name: "Graph tools" })).toBeInTheDocument();
@@ -66,6 +78,60 @@ describe("Workflow graph editor integration", () => {
           workflowId: "workflow-1",
           graph: expect.objectContaining({
             version: 1,
+          }),
+        }),
+      );
+    });
+  });
+
+  test("reserves left mouse dragging for handle connections instead of pane panning", () => {
+    expect(workflowGraphEditorSource).toContain("connectionDragThreshold={0}");
+    expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
+    expect(workflowGraphEditorSource).toContain("nodesConnectable");
+    expect(workflowGraphEditorSource).toContain("panOnDrag={[1, 2]}");
+    expect(workflowGraphEditorSource).toContain("isConnectable={isConnectable}");
+    expect(workflowGraphEditorSource).toContain("useUpdateNodeInternals");
+    expect(workflowGraphEditorSource).toContain("updateNodeInternals(id)");
+    expect(workflowGraphEditorSource).toContain("onPortPointerDown");
+    expect(workflowGraphEditorSource).toContain("onPortPointerUp");
+  });
+
+  test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="navigate"]') as HTMLElement,
+    );
+
+    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
+    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
+    await userEvent.click(within(editor).getByRole("button", { name: "Save Graph" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            edges: expect.arrayContaining([
+              expect.objectContaining({
+                source_node_id: "start",
+                source_port: "out",
+                target_node_id: "node-action-42",
+                target_port: "in",
+              }),
+            ]),
           }),
         }),
       );

@@ -455,8 +455,10 @@
   z-index: 2;
   width: 16px;
   height: 16px;
+  pointer-events: all;
   border: 1px solid #0f0f0f;
   background: #3ecf8e;
+  cursor: crosshair;
 }
 
 .graph-handle-input {

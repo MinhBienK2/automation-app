@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   Controls,
@@ -10,6 +10,7 @@ import {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
+  useUpdateNodeInternals,
 } from "@xyflow/react";
 import type {
   Connection,
@@ -69,6 +70,12 @@ type WorkflowGraphEditorProps = {
   onSave: () => void;
   onValidate: () => void;
 };
+
+type ActivePortConnection = {
+  nodeId: string;
+  portId: string;
+  direction: GraphPort["direction"];
+} | null;
 
 const hiddenActionPickerTypes = new Set<ActionType>([
   "if_condition",
@@ -144,10 +151,6 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   end_failure: "End the graph as a failure.",
 };
 
-const workflowNodeTypes = {
-  workflow: WorkflowGraphNode,
-};
-
 const graphNodeWidth = 160;
 const graphNodeHeight = 64;
 
@@ -177,6 +180,9 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
+  const activePortConnectionRef = useRef<ActivePortConnection>(null);
+  const graphRef = useRef(graph);
+  const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const completedNodeIds = useMemo(
     () => new Set(runState.completed_step_ids),
@@ -224,12 +230,74 @@ export function WorkflowGraphEditor({
       issueEdgeIds,
     ],
   );
+  useEffect(() => {
+    graphRef.current = graph;
+    flowGraphRef.current = flowGraph;
+  }, [flowGraph, graph]);
   const edgeLabels = useMemo(
     () =>
       graph.edges.map(
         (edge) => `${edge.source_node_id} -> ${edge.target_node_id}`,
       ),
     [graph.edges],
+  );
+  const startPortConnection = useCallback(
+    (nodeId: string, port: GraphPort) => {
+      activePortConnectionRef.current = {
+        nodeId,
+        portId: port.id,
+        direction: port.direction,
+      };
+    },
+    [],
+  );
+  const completePortConnection = useCallback(
+    (nodeId: string, port: GraphPort) => {
+      const source = activePortConnectionRef.current;
+      activePortConnectionRef.current = null;
+      if (
+        !source ||
+        source.direction !== "output" ||
+        port.direction !== "input" ||
+        source.nodeId === nodeId
+      ) {
+        return;
+      }
+      const currentFlowGraph = flowGraphRef.current;
+      const currentGraph = graphRef.current;
+      if (!currentFlowGraph) return;
+
+      const nextEdge: WorkflowFlowEdge = {
+        id: `edge-${source.nodeId}-${source.portId}-${nodeId}-${port.id}`,
+        source: source.nodeId,
+        sourceHandle: source.portId,
+        target: nodeId,
+        targetHandle: port.id,
+        label: source.portId,
+        data: { hasIssue: false },
+      };
+      onChange(
+        fromReactFlowGraph(
+          currentGraph,
+          currentFlowGraph.nodes,
+          addEdge(nextEdge, currentFlowGraph.edges),
+          currentGraph.viewport,
+        ),
+      );
+    },
+    [onChange],
+  );
+  const workflowNodeTypes = useMemo(
+    () => ({
+      workflow: (props: NodeProps<WorkflowFlowNode>) => (
+        <WorkflowGraphNode
+          {...props}
+          onPortPointerDown={startPortConnection}
+          onPortPointerUp={completePortConnection}
+        />
+      ),
+    }),
+    [completePortConnection, startPortConnection],
   );
 
   function addNode(nodeType: GraphNodeType) {
@@ -472,7 +540,10 @@ export function WorkflowGraphEditor({
               defaultViewport={flowGraph.viewport}
               edges={flowGraph.edges}
               fitView
+              connectionDragThreshold={0}
+              connectionRadius={32}
               nodes={flowGraph.nodes}
+              nodesConnectable
               nodeTypes={workflowNodeTypes}
               onConnect={handleConnect}
               onEdgesChange={handleEdgesChange}
@@ -487,6 +558,7 @@ export function WorkflowGraphEditor({
               }}
               onNodeClick={(_, node) => setSelectedNodeId(node.id)}
               onNodesChange={handleNodesChange}
+              panOnDrag={[1, 2]}
             >
               <ViewportPortal>
                 <GraphEdgeOverlay graph={graph} issueEdgeIds={issueEdgeIds} />
@@ -654,9 +726,26 @@ function GraphEdgeOverlay({ graph, issueEdgeIds }: GraphEdgeOverlayProps) {
   );
 }
 
-function WorkflowGraphNode({ id, data, selected }: NodeProps<WorkflowFlowNode>) {
+type WorkflowGraphNodeProps = NodeProps<WorkflowFlowNode> & {
+  onPortPointerDown: (nodeId: string, port: GraphPort) => void;
+  onPortPointerUp: (nodeId: string, port: GraphPort) => void;
+};
+
+function WorkflowGraphNode({
+  id,
+  data,
+  selected,
+  isConnectable,
+  onPortPointerDown,
+  onPortPointerUp,
+}: WorkflowGraphNodeProps) {
+  const updateNodeInternals = useUpdateNodeInternals();
   const inputPorts = portsByDirection(data.ports, "input");
   const outputPorts = portsByDirection(data.ports, "output");
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [id, data.ports, updateNodeInternals]);
 
   return (
     <div
@@ -687,7 +776,9 @@ function WorkflowGraphNode({ id, data, selected }: NodeProps<WorkflowFlowNode>) 
           aria-label={`${data.label} ${port.label} port`}
           className="graph-handle graph-handle-input"
           id={port.id}
+          isConnectable={isConnectable}
           key={port.id}
+          onPointerUp={() => onPortPointerUp(id, port)}
           position={Position.Left}
           style={{ top: portOffset(index, inputPorts.length) }}
           type="target"
@@ -698,7 +789,9 @@ function WorkflowGraphNode({ id, data, selected }: NodeProps<WorkflowFlowNode>) 
           aria-label={`${data.label} ${port.label} port`}
           className="graph-handle graph-handle-output"
           id={port.id}
+          isConnectable={isConnectable}
           key={port.id}
+          onPointerDown={() => onPortPointerDown(id, port)}
           position={Position.Right}
           style={{ top: portOffset(index, outputPorts.length) }}
           type="source"
