@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
@@ -358,7 +358,7 @@ function App() {
     );
   }
 
-  function changeWorkflowGraph(nextGraph: WorkflowGraph) {
+  const changeWorkflowGraph = useCallback((nextGraph: WorkflowGraph) => {
     setWorkflowGraph(nextGraph);
     setGraphIssues([]);
     setGraphRevision((current) => {
@@ -367,7 +367,7 @@ function App() {
       return nextRevision;
     });
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
-  }
+  }, [graphAutosaveEnabled]);
 
   const isRunning = runState.status === "running";
 

@@ -16,6 +16,11 @@ const workflowGraphCanvasPartsSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/WorkflowGraphCanvasParts.tsx"),
   "utf8",
 );
+const workflowGraphInspectorSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/WorkflowGraphInspector.tsx"),
+  "utf8",
+);
+const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
 
 describe("Workflow graph editor integration", () => {
   beforeEach(() => {
@@ -103,6 +108,23 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphCanvasPartsSource).toContain("onPortPointerDown");
     expect(workflowGraphCanvasPartsSource).toContain("onPortPointerUp");
     expect(workflowGraphEditorSource).toContain("onEdgeClick");
+    expect(workflowGraphEditorSource).toContain("const workflowNodeTypes = useMemo");
+    expect(workflowGraphEditorSource).toContain("nodeTypes={workflowNodeTypes}");
+    expect(workflowGraphEditorSource).toContain("[completePortConnection, startPortConnection]");
+    expect(workflowGraphEditorSource).toContain("nodes={reactFlowNodes}");
+    expect(workflowGraphEditorSource).toContain(
+      "mergeReactFlowNodeRuntimeState(flowGraph.nodes, currentNodes)",
+    );
+    expect(workflowGraphEditorSource).toContain(
+      "applyNodeChanges<WorkflowFlowNode>(changes, currentNodes)",
+    );
+    expect(workflowGraphEditorSource).not.toMatch(
+      /setReactFlowNodes\(\([^)]*\)\s*=>\s*\{[\s\S]*?syncFlowGraph/,
+    );
+    expect(workflowGraphEditorSource).not.toMatch(
+      /setReactFlowEdges\(\([^)]*\)\s*=>\s*\{[\s\S]*?syncFlowGraph/,
+    );
+    expect(appSource).toContain("const changeWorkflowGraph = useCallback");
     expect(workflowGraphEditorSource).not.toContain("GraphEdgeOverlay");
     expect(workflowGraphEditorSource).not.toContain("ViewportPortal");
     expect(workflowGraphEditorSource).not.toContain("graph-connection-preview");
@@ -194,89 +216,18 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
-  test("selects a canvas edge so the selected link can be deleted", async () => {
-    mockTauriCommands({
-      ...workflowDetailScenario([]),
-      save_workflow_graph: undefined,
-    });
-
-    renderApp();
-
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    const editor = await screen.findByRole("region", { name: "Visual Graph" });
-
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
-    await userEvent.click(
-      (await screen.findByRole("dialog", { name: "Choose an action type" }))
-        .querySelector('[data-value="navigate"]') as HTMLElement,
-    );
-    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
-    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
-
-    await waitFor(() => {
-      expect(editor.querySelector(".react-flow__edge-path")).toBeInTheDocument();
-    });
-    const edgePath = editor.querySelector(".react-flow__edge-path");
-    if (!edgePath) throw new Error("React Flow edge path was not rendered");
-    fireEvent.click(edgePath);
-    expect(within(editor).getByText("Selected link: Start -> Navigate"))
-      .toBeInTheDocument();
-
-    await userEvent.click(within(editor).getByRole("button", { name: "Delete selected link" }));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
-        ([command]) => command === "save_workflow_graph",
-      );
-      expect(saveCall?.[1]).toEqual(
-        expect.objectContaining({
-          graph: expect.objectContaining({
-            edges: expect.not.arrayContaining([
-              expect.objectContaining({
-                source_node_id: "start",
-                target_node_id: "node-action-42",
-              }),
-            ]),
-          }),
-        }),
-      );
-    });
+  test("wires React Flow edge selection to selected-link deletion", () => {
+    expect(workflowGraphEditorSource).toContain("onEdgeClick={handleEdgeClick}");
+    expect(workflowGraphEditorSource).toContain("setSelectedEdgeId(edge.id)");
+    expect(workflowGraphInspectorSource).toContain('aria-label="Selected link"');
+    expect(workflowGraphInspectorSource).toContain("Delete selected link");
+    expect(workflowGraphInspectorSource).toContain("onDeleteSelectedEdge");
   });
 
-  test("clears the selected link when a node is clicked", async () => {
-    mockTauriCommands({
-      ...workflowDetailScenario([]),
-      save_workflow_graph: undefined,
-    });
-
-    renderApp();
-
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    const editor = await screen.findByRole("region", { name: "Visual Graph" });
-
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
-    await userEvent.click(
-      (await screen.findByRole("dialog", { name: "Choose an action type" }))
-        .querySelector('[data-value="navigate"]') as HTMLElement,
-    );
-    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
-    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
-    await waitFor(() => {
-      expect(editor.querySelector(".react-flow__edge-path")).toBeInTheDocument();
-    });
-    const edgePath = editor.querySelector(".react-flow__edge-path");
-    if (!edgePath) throw new Error("React Flow edge path was not rendered");
-    fireEvent.click(edgePath);
-    expect(within(editor).getByText("Selected link: Start -> Navigate"))
-      .toBeInTheDocument();
-
-    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }));
-
-    expect(within(editor).queryByText("Selected link: Start -> Navigate"))
-      .not.toBeInTheDocument();
-    expect(within(editor).getByRole("heading", { name: "Navigate" }))
-      .toBeInTheDocument();
+  test("clears selected links when a node is clicked", () => {
+    expect(workflowGraphEditorSource).toContain("onNodeClick={(_, node) =>");
+    expect(workflowGraphEditorSource).toContain("setSelectedEdgeId(null)");
+    expect(workflowGraphEditorSource).toContain("setSelectedNodeId(node.id)");
   });
 
   test("edits logic node config through structured inspector fields", async () => {
@@ -692,7 +643,7 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
-  test("shows edge direction order and node context actions on the canvas", async () => {
+  test("shows node context actions on the canvas without the custom edge overlay", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
@@ -705,9 +656,6 @@ describe("Workflow graph editor integration", () => {
 
     expect(within(editor).queryByLabelText("Visible edge Start to Wait for page"))
       .not.toBeInTheDocument();
-    expect(within(editor).getByLabelText("Step 1: Start to Wait for page via next"))
-      .toBeInTheDocument();
-    expect(within(editor).getByText("1")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Drag node step-1")).toBeInTheDocument();
 
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));

@@ -33,6 +33,7 @@ import {
   defaultActionConfig,
   fromReactFlowGraph,
   graphIssuesByNode,
+  mergeReactFlowNodeRuntimeState,
   type WorkflowFlowEdge,
   toReactFlowGraph,
   type WorkflowFlowNode,
@@ -83,10 +84,12 @@ export function WorkflowGraphEditor({
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
-    useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
+    useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const graphRef = useRef(graph);
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
+  const reactFlowNodesRef = useRef<WorkflowFlowNode[]>([]);
+  const reactFlowEdgesRef = useRef<WorkflowFlowEdge[]>([]);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedEdge = graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
   const nodeLabels = useMemo(
@@ -141,10 +144,30 @@ export function WorkflowGraphEditor({
       selectedEdgeId,
     ],
   );
+  const [reactFlowNodes, setReactFlowNodes] = useState<WorkflowFlowNode[]>(
+    () => flowGraph.nodes,
+  );
+  const [reactFlowEdges, setReactFlowEdges] = useState<WorkflowFlowEdge[]>(
+    () => flowGraph.edges,
+  );
   useEffect(() => {
     graphRef.current = graph;
-    flowGraphRef.current = flowGraph;
-  }, [flowGraph, graph]);
+  }, [graph]);
+  useEffect(() => {
+    setReactFlowNodes((currentNodes) =>
+      mergeReactFlowNodeRuntimeState(flowGraph.nodes, currentNodes),
+    );
+    setReactFlowEdges(flowGraph.edges);
+  }, [flowGraph.edges, flowGraph.nodes]);
+  useEffect(() => {
+    reactFlowNodesRef.current = reactFlowNodes;
+    reactFlowEdgesRef.current = reactFlowEdges;
+    flowGraphRef.current = {
+      ...flowGraph,
+      nodes: reactFlowNodes,
+      edges: reactFlowEdges,
+    };
+  }, [flowGraph, reactFlowEdges, reactFlowNodes]);
   const startPortConnection = useCallback(
     (_event: ReactPointerEvent, nodeId: string, port: GraphPort) => {
       activePortConnectionRef.current = {
@@ -168,7 +191,6 @@ export function WorkflowGraphEditor({
         return;
       }
       const currentFlowGraph = flowGraphRef.current;
-      const currentGraph = graphRef.current;
       if (!currentFlowGraph) return;
 
       const nextEdge: WorkflowFlowEdge = {
@@ -180,14 +202,9 @@ export function WorkflowGraphEditor({
         label: source.portId,
         data: { hasIssue: false },
       };
-      onChange(
-        fromReactFlowGraph(
-          currentGraph,
-          currentFlowGraph.nodes,
-          addEdge(nextEdge, currentFlowGraph.edges),
-          currentGraph.viewport,
-        ),
-      );
+      const nextEdges = addEdge(nextEdge, currentFlowGraph.edges);
+      setReactFlowEdges(nextEdges);
+      syncFlowGraph(currentFlowGraph.nodes, nextEdges);
     },
     [onChange],
   );
@@ -245,10 +262,11 @@ export function WorkflowGraphEditor({
   }
 
   function syncFlowGraph(nodes: Node[], edges: Edge[]) {
-    onChange(fromReactFlowGraph(graph, nodes, edges, graph.viewport));
+    const currentGraph = graphRef.current;
+    onChange(fromReactFlowGraph(currentGraph, nodes, edges, currentGraph.viewport));
   }
 
-  function handleNodesChange(changes: NodeChange[]) {
+  function handleNodesChange(changes: NodeChange<WorkflowFlowNode>[]) {
     const selectedChange = changes.find(
       (change) => change.type === "select" && change.selected,
     );
@@ -259,13 +277,16 @@ export function WorkflowGraphEditor({
     const shouldPersist = changes.some((change) =>
       ["add", "position", "remove", "replace"].includes(change.type),
     );
-    if (!shouldPersist) return;
-
-    const nextNodes = applyNodeChanges(changes, flowGraph.nodes);
-    syncFlowGraph(nextNodes, flowGraph.edges);
+    const currentNodes = reactFlowNodesRef.current;
+    const nextNodes = applyNodeChanges<WorkflowFlowNode>(changes, currentNodes);
+    reactFlowNodesRef.current = nextNodes;
+    setReactFlowNodes(nextNodes);
+    if (shouldPersist) {
+      syncFlowGraph(nextNodes, reactFlowEdgesRef.current);
+    }
   }
 
-  function handleEdgesChange(changes: EdgeChange[]) {
+  function handleEdgesChange(changes: EdgeChange<WorkflowFlowEdge>[]) {
     const selectedChange = changes.find((change) => change.type === "select");
     if (selectedChange && "id" in selectedChange) {
       setSelectedEdgeId(selectedChange.selected ? selectedChange.id : null);
@@ -273,13 +294,16 @@ export function WorkflowGraphEditor({
     const shouldPersist = changes.some((change) =>
       ["add", "remove", "replace"].includes(change.type),
     );
-    if (!shouldPersist) return;
-
-    const nextEdges = applyEdgeChanges(changes, flowGraph.edges);
-    syncFlowGraph(flowGraph.nodes, nextEdges);
+    const currentEdges = reactFlowEdgesRef.current;
+    const nextEdges = applyEdgeChanges<WorkflowFlowEdge>(changes, currentEdges);
+    reactFlowEdgesRef.current = nextEdges;
+    setReactFlowEdges(nextEdges);
+    if (shouldPersist) {
+      syncFlowGraph(reactFlowNodesRef.current, nextEdges);
+    }
   }
 
-  function handleEdgeClick(_: unknown, edge: Edge) {
+  function handleEdgeClick(_: unknown, edge: WorkflowFlowEdge) {
     setSelectedEdgeId(edge.id);
   }
 
@@ -292,8 +316,9 @@ export function WorkflowGraphEditor({
       label: connection.sourceHandle,
       data: { hasIssue: false },
     };
-    const nextEdges = addEdge(nextEdge, flowGraph.edges);
-    syncFlowGraph(flowGraph.nodes, nextEdges);
+    const nextEdges = addEdge(nextEdge, reactFlowEdgesRef.current);
+    setReactFlowEdges(nextEdges);
+    syncFlowGraph(reactFlowNodesRef.current, nextEdges);
   }
 
   function focusSelectedNode() {
@@ -403,14 +428,14 @@ export function WorkflowGraphEditor({
             role="application"
             aria-label="Workflow graph canvas"
           >
-            <ReactFlow
+            <ReactFlow<WorkflowFlowNode, WorkflowFlowEdge>
               colorMode="dark"
               defaultViewport={flowGraph.viewport}
-              edges={flowGraph.edges}
+              edges={reactFlowEdges}
               fitView
               connectionDragThreshold={0}
               connectionRadius={32}
-              nodes={flowGraph.nodes}
+              nodes={reactFlowNodes}
               nodesConnectable
               nodeTypes={workflowNodeTypes}
               onConnect={handleConnect}

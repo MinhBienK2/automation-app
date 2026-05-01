@@ -5,6 +5,7 @@ import {
   fromReactFlowGraph,
   graphIssuesByNode,
   linearGraphFromSteps,
+  mergeReactFlowNodeRuntimeState,
   nodePorts,
   toReactFlowGraph,
 } from "./workflowGraph";
@@ -202,6 +203,38 @@ describe("workflow graph helpers", () => {
           condition: null,
         }),
       ]),
+    );
+  });
+
+  test("preserves React Flow measured node dimensions when graph nodes are remapped", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const firstFlow = toReactFlowGraph(graph);
+    const measuredNodes = firstFlow.nodes.map((node) =>
+      node.id === "step-wait"
+        ? {
+            ...node,
+            measured: { width: 172, height: 74 },
+            width: 172,
+            height: 74,
+            dragging: true,
+          }
+        : node,
+    );
+
+    const nextFlow = toReactFlowGraph(graph, { selectedNodeId: "step-wait" });
+    const mergedNodes = mergeReactFlowNodeRuntimeState(
+      nextFlow.nodes,
+      measuredNodes,
+    );
+
+    expect(mergedNodes.find((node) => node.id === "step-wait")).toEqual(
+      expect.objectContaining({
+        selected: true,
+        measured: { width: 172, height: 74 },
+        width: 172,
+        height: 74,
+        dragging: true,
+      }),
     );
   });
 });

@@ -222,6 +222,27 @@ export function graphEdgeOrders(graph: WorkflowGraph) {
   return orders;
 }
 
+export function mergeReactFlowNodeRuntimeState(
+  nextNodes: WorkflowFlowNode[],
+  previousNodes: WorkflowFlowNode[],
+): WorkflowFlowNode[] {
+  const previousById = new Map(previousNodes.map((node) => [node.id, node]));
+
+  return nextNodes.map((node) => {
+    const previousNode = previousById.get(node.id);
+    if (!previousNode) return node;
+
+    return {
+      ...node,
+      dragging: previousNode.dragging ?? node.dragging,
+      height: node.height ?? previousNode.height,
+      measured: node.measured ?? previousNode.measured,
+      resizing: previousNode.resizing ?? node.resizing,
+      width: node.width ?? previousNode.width,
+    };
+  });
+}
+
 export function fromReactFlowGraph(
   graph: WorkflowGraph,
   nodes: Array<Node>,
