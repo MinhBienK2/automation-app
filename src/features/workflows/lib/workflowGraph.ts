@@ -42,6 +42,7 @@ type ReactFlowGraphState = {
   failedNodeId?: string | null;
   issueNodeIds?: Set<string>;
   issueEdgeIds?: Set<string>;
+  selectedEdgeId?: string | null;
 };
 
 type WorkflowReactFlowGraph = {
@@ -157,6 +158,7 @@ export function toReactFlowGraph(
         label: edgeOrders.get(edge.id)
           ? String(edgeOrders.get(edge.id))
           : edge.label ?? edge.source_port,
+        selected: state.selectedEdgeId === edge.id,
         ariaLabel: edgeOrders.get(edge.id)
           ? `Step ${edgeOrders.get(edge.id)}: ${
               nodeLabels.get(edge.source_node_id) ?? edge.source_node_id

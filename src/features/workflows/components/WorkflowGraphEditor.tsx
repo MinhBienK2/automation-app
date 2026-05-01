@@ -5,7 +5,6 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
-  ViewportPortal,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -39,12 +38,7 @@ import {
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
 import { actionLabels } from "../../../lib/workflowUi";
-import {
-  GraphEdgeOverlay,
-  WorkflowGraphNode,
-  insetEdgeTarget,
-  previewEdgePath,
-} from "./WorkflowGraphCanvasParts";
+import { WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
 import {
   ActionNodePalette,
@@ -65,7 +59,6 @@ type ActivePortConnection = {
   nodeId: string;
   portId: string;
   direction: GraphPort["direction"];
-  sourcePoint: { x: number; y: number };
 } | null;
 
 export function WorkflowGraphEditor({
@@ -91,8 +84,6 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, Edge> | null>(null);
-  const graphCanvasRef = useRef<HTMLDivElement | null>(null);
-  const previewPathRef = useRef<SVGPathElement | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const graphRef = useRef(graph);
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
@@ -137,6 +128,7 @@ export function WorkflowGraphEditor({
         failedNodeId: runState.error?.step_id ?? null,
         issueNodeIds,
         issueEdgeIds,
+        selectedEdgeId,
       }),
     [
       graph,
@@ -146,6 +138,7 @@ export function WorkflowGraphEditor({
       runState.error?.step_id,
       issueNodeIds,
       issueEdgeIds,
+      selectedEdgeId,
     ],
   );
   useEffect(() => {
@@ -153,24 +146,12 @@ export function WorkflowGraphEditor({
     flowGraphRef.current = flowGraph;
   }, [flowGraph, graph]);
   const startPortConnection = useCallback(
-    (event: ReactPointerEvent, nodeId: string, port: GraphPort) => {
-      const canvasBounds = graphCanvasRef.current?.getBoundingClientRect();
-      const handleBounds = event.currentTarget.getBoundingClientRect();
-      if (!canvasBounds) return;
-      const sourcePoint = {
-        x: handleBounds.left + handleBounds.width / 2 - canvasBounds.left,
-        y: handleBounds.top + handleBounds.height / 2 - canvasBounds.top,
-      };
+    (_event: ReactPointerEvent, nodeId: string, port: GraphPort) => {
       activePortConnectionRef.current = {
         nodeId,
         portId: port.id,
         direction: port.direction,
-        sourcePoint,
       };
-      previewPathRef.current?.setAttribute(
-        "d",
-        previewEdgePath(sourcePoint, sourcePoint),
-      );
     },
     [],
   );
@@ -210,24 +191,8 @@ export function WorkflowGraphEditor({
     },
     [onChange],
   );
-  const movePreviewConnection = useCallback((event: ReactPointerEvent) => {
-    const source = activePortConnectionRef.current;
-    const canvasBounds = graphCanvasRef.current?.getBoundingClientRect();
-    if (!source || !canvasBounds) return;
-    previewPathRef.current?.setAttribute(
-      "d",
-      previewEdgePath(
-        source.sourcePoint,
-        insetEdgeTarget(source.sourcePoint, {
-          x: event.clientX - canvasBounds.left,
-          y: event.clientY - canvasBounds.top,
-        }),
-      ),
-    );
-  }, []);
   const clearPreviewConnection = useCallback(() => {
     activePortConnectionRef.current = null;
-    previewPathRef.current?.setAttribute("d", "");
   }, []);
   const workflowNodeTypes = useMemo(
     () => ({
@@ -301,6 +266,10 @@ export function WorkflowGraphEditor({
   }
 
   function handleEdgesChange(changes: EdgeChange[]) {
+    const selectedChange = changes.find((change) => change.type === "select");
+    if (selectedChange && "id" in selectedChange) {
+      setSelectedEdgeId(selectedChange.selected ? selectedChange.id : null);
+    }
     const shouldPersist = changes.some((change) =>
       ["add", "remove", "replace"].includes(change.type),
     );
@@ -308,6 +277,10 @@ export function WorkflowGraphEditor({
 
     const nextEdges = applyEdgeChanges(changes, flowGraph.edges);
     syncFlowGraph(flowGraph.nodes, nextEdges);
+  }
+
+  function handleEdgeClick(_: unknown, edge: Edge) {
+    setSelectedEdgeId(edge.id);
   }
 
   function handleConnect(connection: Connection) {
@@ -426,9 +399,7 @@ export function WorkflowGraphEditor({
         <div className="graph-canvas-wrap">
           <div
             className="graph-canvas"
-            onPointerMove={movePreviewConnection}
             onPointerUp={clearPreviewConnection}
-            ref={graphCanvasRef}
             role="application"
             aria-label="Workflow graph canvas"
           >
@@ -443,6 +414,7 @@ export function WorkflowGraphEditor({
               nodesConnectable
               nodeTypes={workflowNodeTypes}
               onConnect={handleConnect}
+              onEdgeClick={handleEdgeClick}
               onEdgesChange={handleEdgesChange}
               onInit={setReactFlowInstance}
               onMoveEnd={(_, viewport) =>
@@ -460,16 +432,6 @@ export function WorkflowGraphEditor({
               onNodesChange={handleNodesChange}
               panOnDrag
             >
-              <ViewportPortal>
-                <GraphEdgeOverlay
-                  graph={graph}
-                  issueEdgeIds={issueEdgeIds}
-                  selectedEdgeId={selectedEdgeId}
-                  onSelectEdge={(edgeId) => {
-                    setSelectedEdgeId(edgeId);
-                  }}
-                />
-              </ViewportPortal>
               <Background color="rgba(62, 207, 142, 0.14)" gap={32} />
               <Controls position="bottom-left" />
               <MiniMap
@@ -480,26 +442,6 @@ export function WorkflowGraphEditor({
                 zoomable
               />
             </ReactFlow>
-            <svg
-              aria-hidden="true"
-              className="graph-connection-preview"
-              focusable="false"
-            >
-              <defs>
-                <marker
-                  id="graph-preview-arrow"
-                  markerHeight="6"
-                  markerWidth="6"
-                  orient="auto"
-                  refX="5.6"
-                  refY="3"
-                  viewBox="0 0 6 6"
-                >
-                  <path d="M0 0 L6 3 L0 6 Z" />
-                </marker>
-              </defs>
-              <path markerEnd="url(#graph-preview-arrow)" ref={previewPathRef} />
-            </svg>
             {contextMenu ? (
               <NodeContextMenu
                 node={graph.nodes.find((node) => node.id === contextMenu.nodeId) ?? null}

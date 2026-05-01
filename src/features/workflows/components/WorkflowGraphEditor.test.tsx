@@ -102,10 +102,12 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphCanvasPartsSource).toContain("updateNodeInternals(id)");
     expect(workflowGraphCanvasPartsSource).toContain("onPortPointerDown");
     expect(workflowGraphCanvasPartsSource).toContain("onPortPointerUp");
-    expect(workflowGraphEditorSource).toContain("graph-connection-preview");
-    expect(workflowGraphCanvasPartsSource).toContain("previewEdgePath");
-    expect(workflowGraphEditorSource).toContain("graph-preview-arrow");
-    expect(workflowGraphCanvasPartsSource).toContain("graph-edge-arrow");
+    expect(workflowGraphEditorSource).toContain("onEdgeClick");
+    expect(workflowGraphEditorSource).not.toContain("GraphEdgeOverlay");
+    expect(workflowGraphEditorSource).not.toContain("ViewportPortal");
+    expect(workflowGraphEditorSource).not.toContain("graph-connection-preview");
+    expect(workflowGraphCanvasPartsSource).not.toContain("previewEdgePath");
+    expect(workflowGraphCanvasPartsSource).not.toContain("graph-edge-arrow");
   });
 
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
@@ -211,9 +213,12 @@ describe("Workflow graph editor integration", () => {
     fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
     fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
 
-    fireEvent.click(
-      within(editor).getByRole("button", { name: "Select edge Start to Navigate" }),
-    );
+    await waitFor(() => {
+      expect(editor.querySelector(".react-flow__edge-path")).toBeInTheDocument();
+    });
+    const edgePath = editor.querySelector(".react-flow__edge-path");
+    if (!edgePath) throw new Error("React Flow edge path was not rendered");
+    fireEvent.click(edgePath);
     expect(within(editor).getByText("Selected link: Start -> Navigate"))
       .toBeInTheDocument();
 
@@ -257,9 +262,12 @@ describe("Workflow graph editor integration", () => {
     );
     fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
     fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
-    fireEvent.click(
-      within(editor).getByRole("button", { name: "Select edge Start to Navigate" }),
-    );
+    await waitFor(() => {
+      expect(editor.querySelector(".react-flow__edge-path")).toBeInTheDocument();
+    });
+    const edgePath = editor.querySelector(".react-flow__edge-path");
+    if (!edgePath) throw new Error("React Flow edge path was not rendered");
+    fireEvent.click(edgePath);
     expect(within(editor).getByText("Selected link: Start -> Navigate"))
       .toBeInTheDocument();
 
@@ -695,11 +703,11 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
-    expect(within(editor).queryByLabelText("Edge direction order")).not.toBeInTheDocument();
-    expect(within(editor).getByLabelText("Visible edge Start to Wait for page"))
+    expect(within(editor).queryByLabelText("Visible edge Start to Wait for page"))
+      .not.toBeInTheDocument();
+    expect(within(editor).getByLabelText("Step 1: Start to Wait for page via next"))
       .toBeInTheDocument();
-    expect(within(editor).getByLabelText("Edge direction order 1"))
-      .toBeInTheDocument();
+    expect(within(editor).getByText("1")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Drag node step-1")).toBeInTheDocument();
 
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));

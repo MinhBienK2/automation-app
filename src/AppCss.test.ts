@@ -129,17 +129,14 @@ describe("App CSS", () => {
     expect(graphFlow).toContain("height: 100%");
   });
 
-  test("keeps React Flow connection previews visible while dragging ports", () => {
+  test("keeps React Flow edges and connection previews visible while dragging ports", () => {
     const graphNode = cssRule(".graph-node");
     const graphHandle = cssRule(".graph-handle");
-    const preview = cssRule(".graph-connection-preview");
-    const previewPath = cssRule(".graph-connection-preview path");
-    const edgeOverlay = cssRule(".graph-edge-overlay");
-    const edgeHitTarget = cssRule(".graph-visible-edge-hit-target");
-    const edgeOrder = cssRule(".graph-visible-edge-order");
-    const edgeOrderText = cssRule(".graph-visible-edge-order text");
     const connectionLine = cssRule(".graph-canvas .react-flow__connectionline");
     const connectionPath = cssRule(".graph-canvas .react-flow__connection-path");
+    const edgePath = cssRule(".graph-canvas .react-flow__edge-path");
+    const edgeLabel = cssRule(".graph-canvas .react-flow__edge-text");
+    const edgeLabelBackground = cssRule(".graph-canvas .react-flow__edge-textbg");
     const activeSourceHandle = cssRule(".graph-canvas .react-flow__handle.connectingfrom");
     const validTargetHandle = cssRule(".graph-canvas .react-flow__handle.connectingto.valid");
 
@@ -147,24 +144,18 @@ describe("App CSS", () => {
     expect(graphNode).toContain("min-height: 64px");
     expect(graphHandle).toContain("pointer-events: all");
     expect(graphHandle).toContain("cursor: crosshair");
-    expect(preview).toContain("z-index: 45");
-    expect(preview).toContain("pointer-events: none");
-    expect(previewPath).toContain("stroke: #3ecf8e");
-    expect(previewPath).toContain("stroke-width: 2.4");
-    expect(css).toContain(".graph-connection-preview marker path");
-    expect(css).toContain(".graph-edge-overlay #graph-edge-arrow path");
-    expect(css).toContain(".graph-visible-edge-hit-target");
-    expect(css).toContain("pointer-events: stroke");
-    expect(css).toContain(".graph-visible-edge-selected path:first-of-type");
-    expect(edgeOverlay).toContain("pointer-events: none");
-    expect(edgeHitTarget).toContain("stroke-width: 24");
-    expect(edgeOrder).toContain("pointer-events: all");
-    expect(edgeOrderText).toContain("pointer-events: none");
+    expect(css).not.toContain(".graph-edge-overlay");
+    expect(css).not.toContain(".graph-visible-edge");
+    expect(css).not.toContain(".graph-connection-preview");
     expect(connectionLine).toContain("z-index: 40");
     expect(connectionLine).toContain("overflow: visible");
     expect(connectionPath).toContain("stroke: #3ecf8e");
     expect(connectionPath).toContain("stroke-width: 3");
     expect(connectionPath).toContain("stroke-linecap: round");
+    expect(edgePath).toContain("stroke: rgba(62, 207, 142, 0.82)");
+    expect(edgePath).toContain("stroke-width: 2.5");
+    expect(edgeLabel).toContain("fill: #3ecf8e");
+    expect(edgeLabelBackground).toContain("fill: #0f0f0f");
     expect(activeSourceHandle).toContain("background: #fafafa");
     expect(validTargetHandle).toContain("background: #00c573");
   });
