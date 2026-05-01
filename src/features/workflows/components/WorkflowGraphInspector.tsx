@@ -15,7 +15,6 @@ type WorkflowGraphInspectorProps = {
   nodeLabels: Map<string, string>;
   selectedEdge: GraphEdge | null;
   selectedNode: GraphNode | null;
-  onDeleteEdge: (edgeId: string) => void;
   onDeleteSelectedEdge: () => void;
   onDeleteSelectedNode: () => void;
   onFocusSelectedNode: () => void;
@@ -28,16 +27,11 @@ export function WorkflowGraphInspector({
   nodeLabels,
   selectedEdge,
   selectedNode,
-  onDeleteEdge,
   onDeleteSelectedEdge,
   onDeleteSelectedNode,
   onFocusSelectedNode,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
-  const edgeLabels = graph.edges.map(
-    (edge) => `${edge.source_node_id} -> ${edge.target_node_id}`,
-  );
-
   return (
     <aside className="graph-inspector" aria-label="Graph inspector">
       {selectedEdge ? (
@@ -61,6 +55,7 @@ export function WorkflowGraphInspector({
           <h2>{selectedNode.label}</h2>
           <p className="muted">{graphNodeLabel(selectedNode.node_type)} node</p>
           <ConnectionSummary graph={graph} node={selectedNode} />
+          <PortGuidance graph={graph} node={selectedNode} />
           {issueGroups.get(selectedNode.id)?.length ? (
             <div className="graph-node-issues" aria-label="Selected node issues">
               {issueGroups.get(selectedNode.id)?.map((issue) => (
@@ -87,21 +82,93 @@ export function WorkflowGraphInspector({
         <p className="muted">Select a graph node.</p>
       )}
 
-      <div className="graph-edge-summary" aria-label="Graph edge summary">
-        {graph.edges.map((edge, index) => (
-          <span key={edge.id}>
-            {edgeLabels[index]}
-            <Button
-              type="button"
-              variant="secondary"
-              aria-label={`Delete edge ${edgeLabels[index]}`}
-              onClick={() => onDeleteEdge(edge.id)}
-            >
-              Delete
-            </Button>
-          </span>
-        ))}
-      </div>
     </aside>
   );
+}
+
+function PortGuidance({
+  graph,
+  node,
+}: {
+  graph: WorkflowGraph;
+  node: GraphNode;
+}) {
+  const messages = portGuidanceMessages(graph, node);
+  if (messages.length === 0) return null;
+
+  return (
+    <section className="graph-port-guidance" aria-label="Port guidance">
+      {messages.map((message) => (
+        <p key={message}>{message}</p>
+      ))}
+    </section>
+  );
+}
+
+function portGuidanceMessages(graph: WorkflowGraph, node: GraphNode) {
+  const hasOutgoing = (portId: string) =>
+    graph.edges.some(
+      (edge) => edge.source_node_id === node.id && edge.source_port === portId,
+    );
+
+  switch (node.node_type) {
+    case "if":
+      return [
+        !hasOutgoing("true")
+          ? "True branch is optional; missing link will no-op."
+          : null,
+        !hasOutgoing("false")
+          ? "False branch is optional; missing link will no-op."
+          : null,
+        !hasOutgoing("done")
+          ? "Done continuation is optional; workflow ends successfully here."
+          : null,
+      ].filter((message): message is string => Boolean(message));
+    case "switch":
+      return [
+        ...node.ports
+          .filter(
+            (port) =>
+              port.direction === "output" &&
+              (port.id.startsWith("case_") || port.id === "default") &&
+              !hasOutgoing(port.id),
+          )
+          .map((port) => `${port.label} branch is optional; missing link will no-op.`),
+        !hasOutgoing("done")
+          ? "Done continuation is optional; workflow ends successfully here."
+          : null,
+      ].filter((message): message is string => Boolean(message));
+    case "retry":
+      return [
+        !hasOutgoing("try") ? "Try branch is required before run." : null,
+        !hasOutgoing("success")
+          ? "Success continuation is optional; workflow ends successfully here."
+          : null,
+        !hasOutgoing("failed")
+          ? "Failed branch is optional; retry failure will fail the workflow."
+          : null,
+      ].filter((message): message is string => Boolean(message));
+    case "try_catch":
+      return [
+        !hasOutgoing("try") ? "Try branch is required before run." : null,
+        !hasOutgoing("error")
+          ? "Error branch is optional; try failure will fail the workflow."
+          : null,
+        !hasOutgoing("done")
+          ? "Done continuation is optional; workflow ends successfully here."
+          : null,
+      ].filter((message): message is string => Boolean(message));
+    case "fallback":
+      return [
+        !hasOutgoing("primary") ? "Primary branch is required before run." : null,
+        !hasOutgoing("fallback")
+          ? "Fallback branch is optional; primary failure will fail the workflow."
+          : null,
+        !hasOutgoing("done")
+          ? "Done continuation is optional; workflow ends successfully here."
+          : null,
+      ].filter((message): message is string => Boolean(message));
+    default:
+      return [];
+  }
 }

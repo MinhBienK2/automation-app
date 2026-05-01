@@ -77,6 +77,11 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).queryByRole("button", { name: "Move Right" })).not.toBeInTheDocument();
     expect(within(editor).getByLabelText("If True port")).toBeInTheDocument();
     expect(within(editor).getByLabelText("If False port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("If Done port")).toBeInTheDocument();
+    expect(within(editor).getByText("True branch is optional; missing link will no-op."))
+      .toBeInTheDocument();
+    expect(within(editor).getByText("Done continuation is optional; workflow ends successfully here."))
+      .toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Delete Node" }));
     expect(within(editor).queryByRole("button", { name: "Graph canvas node node-if-42" }))
@@ -174,6 +179,62 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("replaces existing source and target port links instead of adding parallel edges", async () => {
+    let now = 41;
+    vi.mocked(Date.now).mockImplementation(() => {
+      now += 1;
+      return now;
+    });
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="navigate"]') as HTMLElement,
+    );
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="wait"]') as HTMLElement,
+    );
+
+    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
+    fireEvent.pointerUp(within(editor).getByLabelText("Navigate In port"));
+    fireEvent.pointerDown(within(editor).getByLabelText("Start Out port"));
+    fireEvent.pointerUp(within(editor).getByLabelText("Wait In port"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      const graph = (saveCall?.[1] as {
+        graph: {
+          nodes: Array<{ id: string; config: { type?: string } | null }>;
+          edges: unknown[];
+        };
+      } | undefined)?.graph;
+      const waitNode = graph?.nodes.find((node) => node.config?.type === "wait");
+      const edges = graph?.edges;
+      expect(edges).toEqual([
+        expect.objectContaining({
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: waitNode?.id,
+          target_port: "in",
+        }),
+      ]);
+    });
+  });
+
   test("cancels a pending port connection when released on empty canvas", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([]),
@@ -219,9 +280,13 @@ describe("Workflow graph editor integration", () => {
   test("wires React Flow edge selection to selected-link deletion", () => {
     expect(workflowGraphEditorSource).toContain("onEdgeClick={handleEdgeClick}");
     expect(workflowGraphEditorSource).toContain("setSelectedEdgeId(edge.id)");
+    expect(workflowGraphEditorSource).toContain("setSelectedNodeId(null)");
+    expect(workflowGraphEditorSource).toContain("onEdgeContextMenu");
+    expect(workflowGraphEditorSource).toContain("LinkContextMenu");
     expect(workflowGraphInspectorSource).toContain('aria-label="Selected link"');
     expect(workflowGraphInspectorSource).toContain("Delete selected link");
     expect(workflowGraphInspectorSource).toContain("onDeleteSelectedEdge");
+    expect(workflowGraphInspectorSource).not.toContain("graph-edge-summary");
   });
 
   test("clears selected links when a node is clicked", () => {
@@ -422,7 +487,9 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(
       within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }),
     );
-    await userEvent.selectOptions(within(editor).getByLabelText("Action type"), "click");
+    await userEvent.click(within(editor).getByRole("combobox", { name: "Action type" }));
+    await userEvent.type(within(editor).getByLabelText("Search action types"), "click");
+    await userEvent.click(within(editor).getByRole("option", { name: "Click" }));
     expect(within(editor).getByRole("heading", { name: "Click" })).toBeInTheDocument();
     await userEvent.type(within(editor).getByLabelText("XPath"), "//button");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -592,6 +659,7 @@ describe("Workflow graph editor integration", () => {
       target: { value: "logged_in\nlocked" },
     });
     expect(within(editor).getByLabelText("Switch Case 1 port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Switch Done port")).toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add End" }));
     await userEvent.click(
@@ -660,15 +728,73 @@ describe("Workflow graph editor integration", () => {
 
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
     const menu = await within(editor).findByRole("menu", { name: "Node actions" });
-    [
-      "Edit",
-      "Rename",
-      "Duplicate",
-      "Focus",
-      "Help",
-      "Delete",
-    ].forEach((name) => {
+    ["Duplicate", "Help", "Delete"].forEach((name) => {
       expect(within(menu).getByRole("menuitem", { name })).toBeInTheDocument();
+    });
+    ["Edit", "Rename", "Focus"].forEach((name) => {
+      expect(within(menu).queryByRole("menuitem", { name })).not.toBeInTheDocument();
+    });
+  });
+
+  test("opens new workflows with a selected draft New node", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    expect(within(editor).getByRole("button", { name: "Graph canvas node new-node" }))
+      .toBeInTheDocument();
+    expect(within(editor).getByRole("heading", { name: "New node" })).toBeInTheDocument();
+    expect(within(editor).getByRole("combobox", { name: "Action type" }))
+      .toHaveTextContent("Choose action type");
+    expect(within(editor).queryByText("start -> new-node")).not.toBeInTheDocument();
+  });
+
+  test("adds and configures a toolbar New node draft", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "New node" }));
+    expect(within(editor).getByRole("heading", { name: "New node" })).toBeInTheDocument();
+    await userEvent.click(within(editor).getByRole("combobox", { name: "Action type" }));
+    await userEvent.type(within(editor).getByLabelText("Search action types"), "open tab");
+    await userEvent.click(within(editor).getByRole("option", { name: "Open New Tab" }));
+    expect(within(editor).getByRole("heading", { name: "Open New Tab" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: "node-action-42",
+                label: "Open New Tab",
+                node_type: "action",
+                config: expect.objectContaining({
+                  type: "open_new_tab",
+                }),
+              }),
+            ]),
+          }),
+        }),
+      );
     });
   });
 });

@@ -26,9 +26,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Form rendering and local validation display.
 - Visual graph editing state before persistence.
 - App-level graph autosave preference and graph save status presentation.
-- Graph validation/run controls and presentation of validation issues for the selected node.
+- Graph validation/run controls and presentation of validation issues for the selected node or selected link.
+- Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, while keeping persisted `WorkflowGraph` as source of truth.
-- Action node creation from the action palette, graph-control node creation from grouped node pickers, plus type selection and config editing through the reusable action config editor.
+- Action node creation from the action palette, unconfigured `New node` draft creation from the toolbar, graph-control node creation from grouped node pickers, plus searchable type selection and config editing through the reusable action config editor.
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.

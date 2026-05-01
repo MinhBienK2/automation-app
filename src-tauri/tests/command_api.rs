@@ -9,9 +9,9 @@ use workflow_automation_manager_lib::{
     commands,
     domain::{
         ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, GraphEdge, GraphNode,
-        GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphViewport,
-        OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind, ScrollDirection,
-        WaitCondition, WorkflowGraph,
+        GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
+        GraphViewport, OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind,
+        ScrollDirection, WaitCondition, WorkflowGraph,
     },
 };
 
@@ -98,9 +98,14 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
         .await
         .expect("get default graph");
     assert_eq!(default_graph.version, 1);
-    assert_eq!(default_graph.nodes.len(), 1);
+    assert_eq!(default_graph.nodes.len(), 2);
     assert_eq!(default_graph.nodes[0].node_type, GraphNodeType::Start);
-    assert!(default_graph.edges.is_empty());
+    assert_eq!(default_graph.nodes[1].node_type, GraphNodeType::Action);
+    assert_eq!(default_graph.nodes[1].label, "New node");
+    assert!(default_graph.nodes[1].config.is_null());
+    assert_eq!(default_graph.edges.len(), 1);
+    assert_eq!(default_graph.edges[0].source_node_id, "start");
+    assert_eq!(default_graph.edges[0].target_node_id, "new-node");
 
     let graph = sample_graph();
     commands::save_workflow_graph_impl(&state, &workflow.id, graph.clone())
@@ -132,7 +137,7 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
 }
 
 #[tokio::test]
-async fn run_workflow_rejects_start_only_graph_without_starting_runner() {
+async fn run_workflow_rejects_default_new_node_graph_without_starting_runner() {
     let (state, _db_path) = test_state_with_runner(FakeRunExecutor::success()).await;
     let workflow = commands::create_workflow_impl(&state, "Empty graph")
         .await
@@ -140,13 +145,58 @@ async fn run_workflow_rejects_start_only_graph_without_starting_runner() {
 
     let error = commands::run_workflow_impl(&state, &workflow.id)
         .await
-        .expect_err("start-only graph should not run");
+        .expect_err("unconfigured new node graph should not run");
 
     assert_eq!(error.field.as_deref(), Some("graph"));
     assert_eq!(
         error.message,
-        "Add at least one executable node before running."
+        "Choose an action type before running this node"
     );
+}
+
+#[tokio::test]
+async fn graph_commands_reject_blocking_semantic_errors_before_runner_start() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Ambiguous graph")
+        .await
+        .expect("create");
+    let mut graph = sample_graph();
+    graph.nodes.push(action_node("other"));
+    graph.edges.push(GraphEdge {
+        id: "edge-start-other".to_string(),
+        source_node_id: "start".to_string(),
+        source_port: "out".to_string(),
+        target_node_id: "other".to_string(),
+        target_port: "in".to_string(),
+        label: Some("next".to_string()),
+        condition: None,
+    });
+
+    let issues = commands::validate_workflow_graph_impl(graph.clone())
+        .await
+        .expect("validate graph");
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.edge_id.as_deref() == Some("edge-start-other")
+            && issue
+                .message
+                .contains("Only one edge can leave an output port")
+    }));
+
+    let compile_error = commands::compile_workflow_graph_impl(graph.clone())
+        .await
+        .expect_err("ambiguous graph should not compile");
+    assert_eq!(compile_error.field.as_deref(), Some("graph"));
+
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph)
+        .await
+        .expect("save graph");
+    let run_error = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect_err("ambiguous graph should not run");
+    assert_eq!(run_error.field.as_deref(), Some("graph"));
+    assert!(runner.recorded_runs().is_empty());
 }
 
 #[tokio::test]

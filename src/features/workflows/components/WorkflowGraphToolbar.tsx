@@ -11,6 +11,7 @@ type NodePaletteGroups = Array<{ label: string; nodes: GraphNodeType[] }>;
 
 type WorkflowGraphToolbarProps = {
   onAddAction: () => void;
+  onAddNewNode: () => void;
   onFitView: () => void;
   onOpenNodePalette: (
     title: string,
@@ -22,6 +23,7 @@ type WorkflowGraphToolbarProps = {
 
 export function WorkflowGraphToolbar({
   onAddAction,
+  onAddNewNode,
   onFitView,
   onOpenNodePalette,
 }: WorkflowGraphToolbarProps) {
@@ -29,6 +31,9 @@ export function WorkflowGraphToolbar({
     <div className="graph-toolbar" role="toolbar" aria-label="Graph tools">
       <Button type="button" variant="secondary" onClick={onAddAction}>
         Add Action
+      </Button>
+      <Button type="button" variant="secondary" onClick={onAddNewNode}>
+        New node
       </Button>
       <Button
         type="button"

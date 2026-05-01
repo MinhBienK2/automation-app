@@ -1,36 +1,27 @@
+import { useState } from "react";
 import type {
   ActionConfig,
   ActionType,
   GraphNode,
   GraphPort,
 } from "../../../types/workflow";
+import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
-import { actionGroups, actionLabels } from "../../../lib/workflowUi";
+import { actionLabels } from "../../../lib/workflowUi";
 import { defaultActionConfig } from "../lib/workflowGraph";
 import { ActionConfigEditor } from "./ActionConfigEditor";
+import {
+  actionDescriptions,
+  actionPickerGroups,
+  actionPickerOptions,
+} from "./WorkflowGraphPalettes";
 import {
   ConditionFields,
   conditionFromConfig,
 } from "./WorkflowGraphConditionFields";
-
-const hiddenActionPickerTypes = new Set<ActionType>([
-  "if_condition",
-  "repeat_times",
-  "repeat_for_each",
-  "retry_block",
-  "stop_workflow",
-]);
-
-const actionPickerGroups = actionGroups
-  .filter((group) => group.label !== "Logic")
-  .map((group) => ({
-    ...group,
-    actions: group.actions.filter((actionType) => !hiddenActionPickerTypes.has(actionType)),
-  }))
-  .filter((group) => group.actions.length > 0);
 
 function switchPortsForCases(cases: string[]): GraphPort[] {
   return [
@@ -41,6 +32,7 @@ function switchPortsForCases(cases: string[]): GraphPort[] {
       direction: "output" as const,
     })),
     { id: "default", label: "Default", direction: "output" },
+    { id: "done", label: "Done", direction: "output" },
   ];
 }
 
@@ -496,38 +488,120 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
           </p>
         </div>
       );
-    case "action":
-      if (!isActionConfig(node.config)) return null;
+    case "action": {
+      const actionConfig = isActionConfig(node.config) ? node.config : null;
       return (
         <div className="graph-config-fields">
-          <Label>
-            Action type
-            <Select
-              value={node.config.type}
-              onChange={(event) =>
-                updateActionType(event.currentTarget.value as ActionType)
-              }
-            >
-              {actionPickerGroups.map((group) => (
-                <optgroup key={group.label} label={group.label}>
-                  {group.actions.map((actionType) => (
-                    <option key={actionType} value={actionType}>
-                      {actionLabels[actionType]}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </Select>
-          </Label>
-          <ActionConfigEditor
-            config={node.config}
-            onChange={(config) => updateConfig(config)}
+          <ActionTypeDropdown
+            value={actionTypeFromConfig(actionConfig)}
+            onChange={updateActionType}
           />
+          {actionConfig ? (
+            <ActionConfigEditor
+              config={actionConfig}
+              onChange={(config) => updateConfig(config)}
+            />
+          ) : null}
         </div>
       );
+    }
     default:
       return null;
   }
+}
+
+function actionTypeFromConfig(config: ActionConfig | null): ActionType | null {
+  if (!config) {
+    return null;
+  }
+  return actionPickerOptions.includes(config.type as ActionType)
+    ? (config.type as ActionType)
+    : null;
+}
+
+function ActionTypeDropdown({
+  value,
+  onChange,
+}: {
+  value: ActionType | null;
+  onChange: (actionType: ActionType) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleActions = normalizedQuery
+    ? actionPickerOptions.filter((actionType) =>
+        matchesActionSearch(actionType, normalizedQuery),
+      )
+    : actionPickerOptions;
+
+  function choose(actionType: ActionType) {
+    onChange(actionType);
+    setQuery("");
+    setOpen(false);
+  }
+
+  return (
+    <div className="action-type-dropdown">
+      <Label>Action type</Label>
+      <Button
+        aria-expanded={open}
+        aria-label="Action type"
+        className="action-type-trigger"
+        role="combobox"
+        type="button"
+        variant="secondary"
+        onClick={() => setOpen((current) => !current)}
+      >
+        {value ? actionLabels[value] : "Choose action type"}
+      </Button>
+      {open ? (
+        <div className="action-type-popover" role="listbox" aria-label="Action type options">
+          <Input
+            aria-label="Search action types"
+            placeholder="Search actions..."
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
+          />
+          {actionPickerGroups.map((group) => {
+            const groupActions = group.actions.filter((actionType) =>
+              visibleActions.includes(actionType),
+            );
+            if (groupActions.length === 0) return null;
+
+            return (
+              <div className="action-type-group" key={group.label}>
+                <p className="eyebrow">{group.label}</p>
+                {groupActions.map((actionType) => (
+                  <button
+                    aria-label={actionLabels[actionType]}
+                    aria-selected={value === actionType}
+                    className="action-type-option"
+                    key={actionType}
+                    role="option"
+                    type="button"
+                    onClick={() => choose(actionType)}
+                  >
+                    <span>{actionLabels[actionType]}</span>
+                    <small>{actionDescriptions[actionType]}</small>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+          {visibleActions.length === 0 ? <p className="muted">No matching actions</p> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function matchesActionSearch(actionType: ActionType, query: string) {
+  const haystack = `${actionLabels[actionType]} ${actionDescriptions[actionType]}`.toLowerCase();
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => haystack.includes(term));
 }
 
 function isActionConfig(config: unknown): config is ActionConfig {

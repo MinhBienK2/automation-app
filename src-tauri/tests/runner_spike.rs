@@ -1330,6 +1330,100 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
 
 #[tokio::test]
 #[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_fails_try_catch_when_error_branch_is_missing() {
+    let url = write_phase_five_logic_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
+                ActionConfig::TryCatch {
+                    try_steps: vec![ActionConfig::AssertText {
+                        xpath: Some("//*[@id=\"status\"]".to_string()),
+                        iframe_xpath: None,
+                        text: "Missing".to_string(),
+                        match_mode: AssertTextMatchMode::Equals,
+                        timeout_ms: Some(100),
+                    }],
+                    success_steps: Vec::new(),
+                    error_steps: Vec::new(),
+                    finally_steps: Vec::new(),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run try/catch missing error branch");
+    let status = outcome.status;
+    let reason = outcome
+        .failed_step
+        .as_ref()
+        .map(|step| step.reason.clone())
+        .unwrap_or_default();
+    outcome.session.close().await.expect("close browser");
+
+    assert_eq!(status, RunnerStatus::Failed);
+    assert!(
+        reason.contains("Missing")
+            || reason.contains("Expected text")
+            || reason.contains("Text assertion failed"),
+        "{reason}"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
+async fn runner_fails_fallback_when_fallback_branch_is_missing() {
+    let url = write_phase_five_logic_page();
+    let cancel = RunnerCancellation::new();
+
+    let mut outcome = runner()
+        .run_steps(
+            vec![
+                ActionConfig::Navigate {
+                    url,
+                    wait_until: None,
+                    timeout_ms: None,
+                },
+                ActionConfig::FallbackBlock {
+                    primary_steps: vec![ActionConfig::AssertText {
+                        xpath: Some("//*[@id=\"status\"]".to_string()),
+                        iframe_xpath: None,
+                        text: "Missing".to_string(),
+                        match_mode: AssertTextMatchMode::Equals,
+                        timeout_ms: Some(100),
+                    }],
+                    fallback_steps: Vec::new(),
+                },
+            ],
+            cancel,
+        )
+        .await
+        .expect("run fallback missing fallback branch");
+    let status = outcome.status;
+    let reason = outcome
+        .failed_step
+        .as_ref()
+        .map(|step| step.reason.clone())
+        .unwrap_or_default();
+    outcome.session.close().await.expect("close browser");
+
+    assert_eq!(status, RunnerStatus::Failed);
+    assert!(
+        reason.contains("Missing")
+            || reason.contains("Expected text")
+            || reason.contains("Text assertion failed"),
+        "{reason}"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires a local Chromium/Chrome process that can launch headed in this environment"]
 async fn runner_executes_phase_six_session_profile_secret_actions_against_visible_chromium() {
     let (url, session_path) = write_phase_six_session_page();
     let profile = format!("phase-six-{}", Uuid::new_v4());

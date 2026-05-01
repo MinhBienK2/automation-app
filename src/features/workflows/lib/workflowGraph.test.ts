@@ -25,11 +25,25 @@ const waitStep: WorkflowStep = {
 };
 
 describe("workflow graph helpers", () => {
-  test("builds a start-only draft graph when workflow has no steps", () => {
+  test("builds a start to New node draft graph when workflow has no steps", () => {
     const graph = linearGraphFromSteps([]);
 
-    expect(graph.nodes.map((node) => node.id)).toEqual(["start"]);
-    expect(graph.edges).toEqual([]);
+    expect(graph.nodes.map((node) => node.id)).toEqual(["start", "new-node"]);
+    expect(graph.nodes[1]).toEqual(
+      expect.objectContaining({
+        node_type: "action",
+        label: "New node",
+        config: null,
+      }),
+    );
+    expect(graph.edges).toEqual([
+      expect.objectContaining({
+        source_node_id: "start",
+        source_port: "out",
+        target_node_id: "new-node",
+        target_port: "in",
+      }),
+    ]);
   });
 
   test("builds a linear graph from existing workflow steps", () => {
@@ -55,6 +69,7 @@ describe("workflow graph helpers", () => {
       "input:in",
       "output:true",
       "output:false",
+      "output:done",
     ]);
   });
 
@@ -74,6 +89,26 @@ describe("workflow graph helpers", () => {
       "try",
       "success",
       "failed",
+    ]);
+    expect(nodePorts("if").map((port) => port.id)).toEqual([
+      "in",
+      "true",
+      "false",
+      "done",
+    ]);
+    expect(nodePorts("switch").map((port) => port.id)).toEqual([
+      "in",
+      "case_1",
+      "default",
+      "done",
+    ]);
+    expect(nodePorts("try_catch").map((port) => port.id)).toEqual([
+      "in",
+      "try",
+      "success",
+      "error",
+      "finally",
+      "done",
     ]);
     expect(nodePorts("manual_approval").map((port) => port.id)).toEqual([
       "in",
@@ -161,6 +196,31 @@ describe("workflow graph helpers", () => {
       ]),
     );
     expect(flow.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  test("marks selected graph edges with distinct stroke and marker styling", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+
+    const flow = toReactFlowGraph(graph, {
+      selectedEdgeId: "edge-start-step-wait",
+    });
+
+    expect(flow.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "edge-start-step-wait",
+          selected: true,
+          className: expect.stringContaining("graph-edge-selected"),
+          markerEnd: expect.objectContaining({
+            color: "#3ecf8e",
+          }),
+          style: expect.objectContaining({
+            stroke: "#3ecf8e",
+            strokeWidth: 3.5,
+          }),
+        }),
+      ]),
+    );
   });
 
   test("maps React Flow nodes and edges back to a persisted workflow graph", () => {

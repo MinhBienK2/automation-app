@@ -6,14 +6,20 @@ Preserve these unless the task explicitly changes them.
 
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
-- New workflows have a Start-only draft graph.
+- New workflows have a `Start -> New node` draft graph.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - If saving the visible graph fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
+- Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge. Reconnecting a port should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
+- Graph control blocks keep branch work separate from continuation work. `If`, `Switch`, and `Try/Catch` continue after branch work through a `done` port.
+- Missing optional graph branches are no-ops. Missing continuation ports end that path successfully. Missing recovery branches on retry, try/catch, and fallback preserve failure behavior where specified by the graph semantics.
 - Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
+- Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
+- Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
+- `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
 - Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
 
 ## UI Behavior

@@ -8,6 +8,8 @@
 - Background execution is started by `src-tauri/src/services/run_service.rs`.
 - Browser execution lives under `src-tauri/src/runner/`.
 - Visual graphs compile to executable action configs, including graph-internal control configs for switch, guarded loops, try/catch, fallback, loop break/continue, output assertions, transforms, subworkflow expansion, and domain allowlists.
+- Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
+- Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
 
 ## Run State
@@ -38,6 +40,8 @@
 - Failure screenshots are attempted and appended to the failure reason when available.
 - Runner infrastructure errors fail the run without a retained session.
 - `break_loop` and `continue_loop` only have meaning inside graph loop configs. If they reach top-level runner execution, the run fails with a loop-control error.
+- Graph validation blocks `break_loop` and `continue_loop` unless they are reachable through a loop body branch.
+- Retry exhaustion without a failed branch fails the workflow with the last action error. Try/catch failure without an error branch fails the workflow with the original action error after running `finally` when present. Fallback primary failure without a fallback branch fails the workflow with the primary error.
 
 ## Preserve
 

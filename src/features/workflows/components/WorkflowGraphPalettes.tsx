@@ -195,10 +195,7 @@ type NodeContextMenuProps = {
   x: number;
   y: number;
   onClose: () => void;
-  onEdit: () => void;
-  onRename: () => void;
   onDuplicate: () => void;
-  onFocus: () => void;
   onHelp: () => void;
   onDelete: () => void;
 };
@@ -208,10 +205,7 @@ export function NodeContextMenu({
   x,
   y,
   onClose,
-  onEdit,
-  onRename,
   onDuplicate,
-  onFocus,
   onHelp,
   onDelete,
 }: NodeContextMenuProps) {
@@ -226,22 +220,45 @@ export function NodeContextMenu({
       style={{ left: x, top: y }}
       onMouseLeave={onClose}
     >
-      <button type="button" role="menuitem" onClick={onEdit}>
-        Edit
-      </button>
-      <button type="button" role="menuitem" onClick={onRename}>
-        Rename
-      </button>
       <button type="button" role="menuitem" onClick={onDuplicate}>
         Duplicate
-      </button>
-      <button type="button" role="menuitem" onClick={onFocus}>
-        Focus
       </button>
       <button type="button" role="menuitem" onClick={onHelp}>
         Help
       </button>
       <button type="button" role="menuitem" onClick={onDelete} disabled={!canDelete}>
+        Delete
+      </button>
+    </div>
+  );
+}
+
+type LinkContextMenuProps = {
+  edge: { id: string } | null;
+  x: number;
+  y: number;
+  onClose: () => void;
+  onDelete: () => void;
+};
+
+export function LinkContextMenu({
+  edge,
+  x,
+  y,
+  onClose,
+  onDelete,
+}: LinkContextMenuProps) {
+  if (!edge) return null;
+
+  return (
+    <div
+      aria-label="Link actions"
+      className="graph-node-context-menu graph-link-context-menu"
+      role="menu"
+      style={{ left: x, top: y }}
+      onMouseLeave={onClose}
+    >
+      <button type="button" role="menuitem" onClick={onDelete}>
         Delete
       </button>
     </div>
@@ -318,7 +335,7 @@ type ActionNodePaletteProps = {
   onSelectAction: (actionType: ActionType) => void;
 };
 
-const hiddenActionPickerTypes = new Set<ActionType>([
+export const hiddenActionPickerTypes = new Set<ActionType>([
   "if_condition",
   "repeat_times",
   "repeat_for_each",
@@ -326,7 +343,7 @@ const hiddenActionPickerTypes = new Set<ActionType>([
   "stop_workflow",
 ]);
 
-const actionPickerGroups = actionGroups
+export const actionPickerGroups = actionGroups
   .filter((group) => group.label !== "Logic")
   .map((group) => ({
     ...group,
@@ -334,7 +351,7 @@ const actionPickerGroups = actionGroups
   }))
   .filter((group) => group.actions.length > 0);
 
-const actionPickerOptions = actionPickerGroups.flatMap((group) => group.actions);
+export const actionPickerOptions = actionPickerGroups.flatMap((group) => group.actions);
 
 const commonActionTypes: ActionType[] = [
   "navigate",
@@ -345,7 +362,7 @@ const commonActionTypes: ActionType[] = [
   "take_screenshot",
 ];
 
-const actionDescriptions: Record<ActionType, string> = {
+export const actionDescriptions: Record<ActionType, string> = {
   navigate: "Open a page",
   wait: "Pause or wait for a condition",
   input_text: "Fill a field",

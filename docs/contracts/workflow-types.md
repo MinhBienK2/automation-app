@@ -24,9 +24,11 @@ Frontend and backend must agree on:
 
 ## Graph Shape
 
-Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a Start-only draft graph. Existing linear step rows can still be represented as a generated graph with action nodes and a success end node for compatibility paths.
+Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a `Start -> New node` draft graph, where `New node` is an action node with `config: null`. Existing Start-only saved graphs remain valid drafts, and existing linear step rows can still be represented as a generated graph with action nodes and a success end node for compatibility paths.
 
 Graph validation issues serialize as `{ level, node_id, edge_id, message }`, where `level` is `error` or `warning`.
+
+Graph links are directed execution edges. The frontend replaces any existing edge that shares the same source output or target input when a port is reconnected. Backend validation is authoritative and rejects self-links, duplicate edges, more than one outgoing edge from the same output port, more than one incoming edge to the same input port, missing ports/nodes, unreachable non-start nodes, unsupported free cycles, and loop-control nodes reachable outside a loop body. Validation may return warnings for optional branches or continuations that are missing but still executable.
 
 Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
 
@@ -42,19 +44,19 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `rate_limit` delay.
 - `stop_workflow`, `set_variable`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, and `end_failure`.
 
-The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts.
+The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 
 Executable frontend/Rust ports must agree:
 
 - `start`: output `out`
 - `end_success` / `end_failure`: input `in`
-- `action`: input `in`, output `out`
-- `if`: input `in`, outputs `true`, `false`
-- `switch`: input `in`, outputs `case_N`, `default`
+- `action`: input `in`, output `out`; `config: null` is a saveable draft marker but blocks validation/compile/run.
+- `if`: input `in`, outputs `true`, `false`, `done`
+- `switch`: input `in`, outputs `case_N`, `default`, `done`
 - `repeat_times` / `repeat_for_each` / `while`: input `in`, outputs `loop`, `done`
 - `repeat_until`: input `in`, outputs `loop`, `done`, `timeout`
 - `retry`: input `in`, outputs `try`, `success`, `failed`
-- `try_catch`: input `in`, outputs `try`, `success`, `error`, `finally`
+- `try_catch`: input `in`, outputs `try`, `success`, `error`, `finally`, `done`
 - `fallback`: input `in`, outputs `primary`, `fallback`, `done`
 - `break_loop` / `continue_loop` / `stop_workflow`: input `in`
 - `manual_approval` / `rate_limit`: input `in`, output `out`

@@ -302,9 +302,14 @@ async fn workflow_graph_is_created_by_default_and_cascades() {
         .await
         .expect("get graph")
         .expect("default graph exists");
-    assert_eq!(default_graph.nodes.len(), 1);
+    assert_eq!(default_graph.nodes.len(), 2);
     assert_eq!(default_graph.nodes[0].node_type, GraphNodeType::Start);
-    assert!(default_graph.edges.is_empty());
+    assert_eq!(default_graph.nodes[1].node_type, GraphNodeType::Action);
+    assert_eq!(default_graph.nodes[1].label, "New node");
+    assert!(default_graph.nodes[1].config.is_null());
+    assert_eq!(default_graph.edges.len(), 1);
+    assert_eq!(default_graph.edges[0].source_node_id, "start");
+    assert_eq!(default_graph.edges[0].target_node_id, "new-node");
 
     repo.save_workflow_graph(&workflow.id, sample_graph())
         .await

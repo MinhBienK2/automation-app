@@ -922,6 +922,17 @@ pub(super) async fn execute_action(
                 Err(RunnerError::ActionFailed(reason)) => {
                     let script = store_output_script("last_error", &reason)?;
                     ensure_js_action(&page, &script).await?;
+                    if error_steps.is_empty() {
+                        let finally_execution = if finally_steps.is_empty() {
+                            ActionExecution::Complete
+                        } else {
+                            execute_inline_steps(session, finally_steps, cancellation).await?
+                        };
+                        return match finally_execution {
+                            ActionExecution::Complete => Err(RunnerError::ActionFailed(reason)),
+                            execution => Ok(execution),
+                        };
+                    }
                     execute_inline_steps(session, error_steps, cancellation).await
                 }
                 other => other,
@@ -947,6 +958,9 @@ pub(super) async fn execute_action(
             Err(RunnerError::ActionFailed(reason)) => {
                 let script = store_output_script("last_error", &reason)?;
                 ensure_js_action(&page, &script).await?;
+                if fallback_steps.is_empty() {
+                    return Err(RunnerError::ActionFailed(reason));
+                }
                 execute_inline_steps(session, fallback_steps, cancellation).await
             }
             Err(error) => Err(error),

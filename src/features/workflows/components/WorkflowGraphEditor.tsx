@@ -5,7 +5,6 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
-  addEdge,
   applyEdgeChanges,
   applyNodeChanges,
 } from "@xyflow/react";
@@ -44,6 +43,7 @@ import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
 import {
   ActionNodePalette,
   GraphNodePalette,
+  LinkContextMenu,
   NodeContextMenu,
   NodeHelpDialog,
 } from "./WorkflowGraphPalettes";
@@ -62,6 +62,35 @@ type ActivePortConnection = {
   direction: GraphPort["direction"];
 } | null;
 
+function initialSelectedNodeId(graph: WorkflowGraph) {
+  return (
+    graph.nodes.find((node) => node.node_type !== "start")?.id ??
+    graph.nodes[0]?.id ??
+    null
+  );
+}
+
+function replacePortEdge(
+  edges: WorkflowFlowEdge[],
+  nextEdge: WorkflowFlowEdge,
+): WorkflowFlowEdge[] {
+  const sourceHandle = nextEdge.sourceHandle ?? "out";
+  const targetHandle = nextEdge.targetHandle ?? "in";
+
+  return [
+    ...edges.filter((edge) => {
+      const sameOutput =
+        edge.source === nextEdge.source &&
+        (edge.sourceHandle ?? "out") === sourceHandle;
+      const sameInput =
+        edge.target === nextEdge.target &&
+        (edge.targetHandle ?? "in") === targetHandle;
+      return edge.id !== nextEdge.id && !sameOutput && !sameInput;
+    }),
+    nextEdge,
+  ];
+}
+
 export function WorkflowGraphEditor({
   graph,
   runState,
@@ -75,9 +104,16 @@ export function WorkflowGraphEditor({
     searchLabel: string;
     groups: Array<{ label: string; nodes: GraphNodeType[] }>;
   } | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState(graph.nodes[0]?.id ?? "");
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
+    () => initialSelectedNodeId(graph),
+  );
   const [contextMenu, setContextMenu] = useState<{
     nodeId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [linkContextMenu, setLinkContextMenu] = useState<{
+    edgeId: string;
     x: number;
     y: number;
   } | null>(null);
@@ -202,7 +238,7 @@ export function WorkflowGraphEditor({
         label: source.portId,
         data: { hasIssue: false },
       };
-      const nextEdges = addEdge(nextEdge, currentFlowGraph.edges);
+      const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge);
       setReactFlowEdges(nextEdges);
       syncFlowGraph(currentFlowGraph.nodes, nextEdges);
     },
@@ -234,6 +270,20 @@ export function WorkflowGraphEditor({
     setNodePalette(null);
   }
 
+  function addNewNode() {
+    const node = {
+      ...createDefaultGraphNode("action", {
+        x: 120 + graph.nodes.length * 48,
+        y: 120 + graph.nodes.length * 16,
+      }),
+      label: "New node",
+      config: null,
+    };
+    onChange({ ...graph, nodes: [...graph.nodes, node] });
+    setSelectedEdgeId(null);
+    setSelectedNodeId(node.id);
+  }
+
   function addActionNode(actionType: ActionType) {
     const node = {
       ...createDefaultGraphNode("action", {
@@ -244,6 +294,7 @@ export function WorkflowGraphEditor({
       config: defaultActionConfig(actionType),
     };
     onChange({ ...graph, nodes: [...graph.nodes, node] });
+    setSelectedEdgeId(null);
     setSelectedNodeId(node.id);
     setIsActionPaletteOpen(false);
   }
@@ -272,6 +323,7 @@ export function WorkflowGraphEditor({
     );
     if (selectedChange && "id" in selectedChange) {
       setSelectedEdgeId(null);
+      setLinkContextMenu(null);
       setSelectedNodeId(selectedChange.id);
     }
     const shouldPersist = changes.some((change) =>
@@ -290,6 +342,7 @@ export function WorkflowGraphEditor({
     const selectedChange = changes.find((change) => change.type === "select");
     if (selectedChange && "id" in selectedChange) {
       setSelectedEdgeId(selectedChange.selected ? selectedChange.id : null);
+      if (selectedChange.selected) setSelectedNodeId(null);
     }
     const shouldPersist = changes.some((change) =>
       ["add", "remove", "replace"].includes(change.type),
@@ -305,6 +358,8 @@ export function WorkflowGraphEditor({
 
   function handleEdgeClick(_: unknown, edge: WorkflowFlowEdge) {
     setSelectedEdgeId(edge.id);
+    setSelectedNodeId(null);
+    setLinkContextMenu(null);
   }
 
   function handleConnect(connection: Connection) {
@@ -316,7 +371,7 @@ export function WorkflowGraphEditor({
       label: connection.sourceHandle,
       data: { hasIssue: false },
     };
-    const nextEdges = addEdge(nextEdge, reactFlowEdgesRef.current);
+    const nextEdges = replacePortEdge(reactFlowEdgesRef.current, nextEdge);
     setReactFlowEdges(nextEdges);
     syncFlowGraph(reactFlowNodesRef.current, nextEdges);
   }
@@ -368,15 +423,6 @@ export function WorkflowGraphEditor({
     setContextMenu(null);
   }
 
-  function renameNode(nodeId: string) {
-    const node = graph.nodes.find((item) => item.id === nodeId);
-    if (!node) return;
-    const nextLabel = window.prompt("Rename node", node.label)?.trim();
-    if (!nextLabel) return;
-    updateNode({ ...node, label: nextLabel });
-    setContextMenu(null);
-  }
-
   function openNodeHelp(nodeId: string) {
     const node = graph.nodes.find((item) => item.id === nodeId) ?? null;
     setHelpNode(node);
@@ -394,6 +440,7 @@ export function WorkflowGraphEditor({
 
   function deleteEdge(edgeId: string) {
     setSelectedEdgeId((current) => (current === edgeId ? null : current));
+    setLinkContextMenu((current) => (current?.edgeId === edgeId ? null : current));
     onChange({
       ...graph,
       edges: graph.edges.filter((edge) => edge.id !== edgeId),
@@ -416,6 +463,7 @@ export function WorkflowGraphEditor({
 
       <WorkflowGraphToolbar
         onAddAction={() => setIsActionPaletteOpen(true)}
+        onAddNewNode={addNewNode}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenNodePalette={openNodePalette}
       />
@@ -440,6 +488,16 @@ export function WorkflowGraphEditor({
               nodeTypes={workflowNodeTypes}
               onConnect={handleConnect}
               onEdgeClick={handleEdgeClick}
+              onEdgeContextMenu={(event, edge) => {
+                event.preventDefault();
+                setSelectedEdgeId(edge.id);
+                setSelectedNodeId(null);
+                setLinkContextMenu({
+                  edgeId: edge.id,
+                  x: event.clientX,
+                  y: event.clientY,
+                });
+              }}
               onEdgesChange={handleEdgesChange}
               onInit={setReactFlowInstance}
               onMoveEnd={(_, viewport) =>
@@ -447,6 +505,8 @@ export function WorkflowGraphEditor({
               }
               onNodeContextMenu={(event, node) => {
                 event.preventDefault();
+                setSelectedEdgeId(null);
+                setLinkContextMenu(null);
                 setSelectedNodeId(node.id);
                 setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
               }}
@@ -473,22 +533,21 @@ export function WorkflowGraphEditor({
                 x={contextMenu.x}
                 y={contextMenu.y}
                 onClose={() => setContextMenu(null)}
-                onEdit={() => {
-                  setSelectedNodeId(contextMenu.nodeId);
-                  setContextMenu(null);
-                }}
-                onRename={() => renameNode(contextMenu.nodeId)}
                 onDuplicate={() => duplicateNode(contextMenu.nodeId)}
-                onFocus={() => {
-                  const node = graph.nodes.find((item) => item.id === contextMenu.nodeId);
-                  if (node) focusNode(node);
-                  setContextMenu(null);
-                }}
                 onHelp={() => openNodeHelp(contextMenu.nodeId)}
                 onDelete={() => {
                   deleteNode(contextMenu.nodeId);
                   setContextMenu(null);
                 }}
+              />
+            ) : null}
+            {linkContextMenu ? (
+              <LinkContextMenu
+                edge={graph.edges.find((edge) => edge.id === linkContextMenu.edgeId) ?? null}
+                x={linkContextMenu.x}
+                y={linkContextMenu.y}
+                onClose={() => setLinkContextMenu(null)}
+                onDelete={() => deleteEdge(linkContextMenu.edgeId)}
               />
             ) : null}
           </div>
@@ -503,7 +562,6 @@ export function WorkflowGraphEditor({
           nodeLabels={nodeLabels}
           selectedEdge={selectedEdge}
           selectedNode={selectedNode}
-          onDeleteEdge={deleteEdge}
           onDeleteSelectedEdge={deleteSelectedEdge}
           onDeleteSelectedNode={deleteSelectedNode}
           onFocusSelectedNode={focusSelectedNode}

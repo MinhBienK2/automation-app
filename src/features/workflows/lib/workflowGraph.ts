@@ -33,6 +33,7 @@ export type WorkflowFlowNode = Node<WorkflowFlowNodeData, "workflow">;
 export type WorkflowFlowEdge = Edge<WorkflowFlowEdgeData>;
 
 const graphEdgeStroke = "rgba(62, 207, 142, 0.82)";
+const graphSelectedEdgeStroke = "#3ecf8e";
 const graphIssueEdgeStroke = "#ff7b72";
 
 type ReactFlowGraphState = {
@@ -63,10 +64,30 @@ export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
   };
 
   if (steps.length === 0) {
+    const newNode: GraphNode = {
+      id: "new-node",
+      node_type: "action",
+      label: "New node",
+      position: { x: 220, y: 0 },
+      config: null,
+      ports: nodePorts("action"),
+      group_id: null,
+    };
+
     return {
       version: 1,
-      nodes: [startNode],
-      edges: [],
+      nodes: [startNode, newNode],
+      edges: [
+        {
+          id: "edge-start-new-node",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "new-node",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+      ],
       viewport: { x: 0, y: 0, zoom: 1 },
     };
   }
@@ -147,7 +168,8 @@ export function toReactFlowGraph(
     })),
     edges: graph.edges.map((edge) => {
       const hasIssue = state.issueEdgeIds?.has(edge.id) ?? false;
-      const stroke = hasIssue ? graphIssueEdgeStroke : graphEdgeStroke;
+      const isSelected = state.selectedEdgeId === edge.id;
+      const stroke = hasIssue ? graphIssueEdgeStroke : isSelected ? graphSelectedEdgeStroke : graphEdgeStroke;
 
       return {
         id: edge.id,
@@ -158,7 +180,7 @@ export function toReactFlowGraph(
         label: edgeOrders.get(edge.id)
           ? String(edgeOrders.get(edge.id))
           : edge.label ?? edge.source_port,
-        selected: state.selectedEdgeId === edge.id,
+        selected: isSelected,
         ariaLabel: edgeOrders.get(edge.id)
           ? `Step ${edgeOrders.get(edge.id)}: ${
               nodeLabels.get(edge.source_node_id) ?? edge.source_node_id
@@ -168,7 +190,11 @@ export function toReactFlowGraph(
           : `${nodeLabels.get(edge.source_node_id) ?? edge.source_node_id} to ${
               nodeLabels.get(edge.target_node_id) ?? edge.target_node_id
             } via ${edge.label ?? edge.source_port}`,
-        className: hasIssue ? "graph-edge graph-edge-has-issue" : "graph-edge",
+        className: [
+          "graph-edge",
+          hasIssue ? "graph-edge-has-issue" : "",
+          isSelected ? "graph-edge-selected" : "",
+        ].filter(Boolean).join(" "),
         interactionWidth: 20,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -176,7 +202,7 @@ export function toReactFlowGraph(
         },
         style: {
           stroke,
-          strokeWidth: hasIssue ? 2.75 : 2.5,
+          strokeWidth: isSelected ? 3.5 : hasIssue ? 2.75 : 2.5,
         },
         data: {
           hasIssue,
@@ -310,12 +336,18 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
     case "end_failure":
       return [inputPort("in", "In")];
     case "if":
-      return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False")];
+      return [
+        inputPort("in", "In"),
+        outputPort("true", "True"),
+        outputPort("false", "False"),
+        outputPort("done", "Done"),
+      ];
     case "switch":
       return [
         inputPort("in", "In"),
         outputPort("case_1", "Case 1"),
         outputPort("default", "Default"),
+        outputPort("done", "Done"),
       ];
     case "repeat_times":
     case "repeat_for_each":
@@ -335,6 +367,7 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
         outputPort("success", "Success"),
         outputPort("error", "Error"),
         outputPort("finally", "Finally"),
+        outputPort("done", "Done"),
       ];
     case "retry":
       return [

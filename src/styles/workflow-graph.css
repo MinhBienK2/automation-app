@@ -108,7 +108,15 @@
 
 .graph-canvas .react-flow__edge.selected .react-flow__edge-path {
   stroke: #3ecf8e;
-  stroke-width: 3;
+  stroke-width: 3.5;
+}
+
+.graph-canvas .graph-edge-selected .react-flow__edge-text {
+  fill: #fafafa;
+}
+
+.graph-canvas .graph-edge-selected .react-flow__edge-textbg {
+  stroke: rgba(62, 207, 142, 0.72);
 }
 
 .graph-canvas .graph-edge-has-issue .react-flow__edge-path {
@@ -247,13 +255,13 @@
 
 .graph-connection-summary,
 .graph-selected-edge,
-.graph-edge-summary {
+.graph-port-guidance {
   display: grid;
   gap: 6px;
 }
 
 .graph-connection-summary span,
-.graph-edge-summary span {
+.graph-port-guidance p {
   min-width: 0;
   overflow: hidden;
   padding: 5px 7px;
@@ -266,6 +274,13 @@
 }
 
 .graph-connection-summary {
+  padding: 8px;
+  border: 1px solid #242424;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.graph-port-guidance {
   padding: 8px;
   border: 1px solid #242424;
   border-radius: 8px;
@@ -297,6 +312,62 @@
 .graph-config-fields .muted {
   font-size: 12px;
   line-height: 1.45;
+}
+
+.action-type-dropdown {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+
+.action-type-trigger {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.action-type-popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  width: min(360px, 100%);
+  max-height: 360px;
+  gap: 8px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #363636;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.action-type-group {
+  display: grid;
+  gap: 4px;
+}
+
+.action-type-option {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #fafafa;
+  text-align: left;
+}
+
+.action-type-option small {
+  color: #898989;
+  font-size: 12px;
+}
+
+.action-type-option:hover,
+.action-type-option[aria-selected="true"] {
+  border-color: rgba(62, 207, 142, 0.3);
+  background: #171717;
 }
 
 .graph-move-actions {

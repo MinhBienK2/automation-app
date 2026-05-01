@@ -18,6 +18,7 @@ Domain code defines workflow/action/run types and business validation.
 
 - Serde-compatible domain types.
 - Action config enums and validation.
+- Workflow graph structural and semantic validation, including one-edge-per-port rules, block continuation semantics, required body ports, unreachable nodes, unsupported cycles, unconfigured action drafts, and loop-control context.
 - Run status/mode/error types.
 - Orchestration schedule and batch request validation.
 - Builder assist input/output types.
@@ -35,4 +36,3 @@ Domain code defines workflow/action/run types and business validation.
 - Add focused domain tests before validation changes.
 - Keep validation errors field-addressable where UI can act on a field.
 - Check default configs in `src-tauri/src/services/run_service.rs`.
-

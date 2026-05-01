@@ -143,6 +143,24 @@ impl WorkflowGraph {
         });
 
         if steps.is_empty() {
+            nodes.push(GraphNode {
+                id: "new-node".to_string(),
+                node_type: GraphNodeType::Action,
+                label: "New node".to_string(),
+                position: GraphPosition { x: 220.0, y: 0.0 },
+                config: Value::Null,
+                ports: vec![input_port("in", "In"), output_port("out", "Out")],
+                group_id: None,
+            });
+            edges.push(GraphEdge {
+                id: "edge-start-new-node".to_string(),
+                source_node_id: "start".to_string(),
+                source_port: "out".to_string(),
+                target_node_id: "new-node".to_string(),
+                target_port: "in".to_string(),
+                label: Some("next".to_string()),
+                condition: None,
+            });
             return Self {
                 version: 1,
                 nodes,
@@ -257,11 +275,17 @@ impl WorkflowGraph {
         }
 
         for edge in &self.edges {
+            if edge.source_node_id == edge.target_node_id {
+                issues.push(error(
+                    Some(edge.source_node_id.clone()),
+                    Some(edge.id.clone()),
+                    "Self-links are not allowed",
+                ));
+            }
+
             match node_by_id.get(edge.source_node_id.as_str()) {
                 Some(source)
-                    if !source.ports.iter().any(|port| {
-                        port.id == edge.source_port && port.direction == GraphPortDirection::Output
-                    }) =>
+                    if !has_port(source, &edge.source_port, GraphPortDirection::Output) =>
                 {
                     issues.push(error(
                         Some(source.id.clone()),
@@ -280,11 +304,7 @@ impl WorkflowGraph {
             }
 
             match node_by_id.get(edge.target_node_id.as_str()) {
-                Some(target)
-                    if !target.ports.iter().any(|port| {
-                        port.id == edge.target_port && port.direction == GraphPortDirection::Input
-                    }) =>
-                {
+                Some(target) if !has_port(target, &edge.target_port, GraphPortDirection::Input) => {
                     issues.push(error(
                         Some(target.id.clone()),
                         Some(edge.id.clone()),
@@ -302,19 +322,60 @@ impl WorkflowGraph {
             }
         }
 
-        for node in &self.nodes {
-            if matches!(
-                node.node_type,
-                GraphNodeType::RepeatUntil | GraphNodeType::While
-            ) && !has_positive_number(&node.config, "max_attempts")
-                && !has_positive_number(&node.config, "timeout_ms")
-            {
+        let mut seen_edge_ids = BTreeSet::new();
+        let mut seen_exact_edges = BTreeSet::new();
+        let mut used_output_ports = BTreeMap::new();
+        let mut used_input_ports = BTreeMap::new();
+        for edge in &self.edges {
+            if !seen_edge_ids.insert(edge.id.as_str()) {
                 issues.push(error(
-                    Some(node.id.clone()),
                     None,
-                    "Loop nodes require max attempts or timeout",
+                    Some(edge.id.clone()),
+                    format!("Edge id {} must be unique", edge.id),
                 ));
             }
+
+            let exact_key = (
+                edge.source_node_id.as_str(),
+                edge.source_port.as_str(),
+                edge.target_node_id.as_str(),
+                edge.target_port.as_str(),
+            );
+            if !seen_exact_edges.insert(exact_key) {
+                issues.push(error(
+                    Some(edge.source_node_id.clone()),
+                    Some(edge.id.clone()),
+                    "Duplicate edge between the same source and target ports",
+                ));
+            }
+
+            let output_key = (edge.source_node_id.as_str(), edge.source_port.as_str());
+            if used_output_ports
+                .insert(output_key, edge.id.as_str())
+                .is_some()
+            {
+                issues.push(error(
+                    Some(edge.source_node_id.clone()),
+                    Some(edge.id.clone()),
+                    "Only one edge can leave an output port",
+                ));
+            }
+
+            let input_key = (edge.target_node_id.as_str(), edge.target_port.as_str());
+            if used_input_ports
+                .insert(input_key, edge.id.as_str())
+                .is_some()
+            {
+                issues.push(error(
+                    Some(edge.target_node_id.clone()),
+                    Some(edge.id.clone()),
+                    "Only one edge can enter an input port",
+                ));
+            }
+        }
+
+        for node in &self.nodes {
+            self.push_node_semantic_issues(node, &mut issues);
         }
 
         if start_count == 1 {
@@ -329,6 +390,28 @@ impl WorkflowGraph {
                         format!("Node {} is unreachable", node.label),
                     ));
                 }
+            }
+            for node_id in self.unsupported_cycle_node_ids() {
+                issues.push(error(
+                    Some(node_id.clone()),
+                    None,
+                    format!("Graph contains an unsupported cycle at node {node_id}"),
+                ));
+            }
+            for node_id in self.loop_control_outside_loop_node_ids() {
+                let Some(node) = node_by_id.get(node_id.as_str()) else {
+                    continue;
+                };
+                let label = match node.node_type {
+                    GraphNodeType::BreakLoop => "Break Loop",
+                    GraphNodeType::ContinueLoop => "Continue Loop",
+                    _ => node.label.as_str(),
+                };
+                issues.push(error(
+                    Some(node.id.clone()),
+                    None,
+                    format!("{label} can only be used inside a loop body"),
+                ));
             }
         }
 
@@ -428,6 +511,8 @@ impl WorkflowGraph {
                         else_steps,
                     },
                 });
+                let next = self.next_target(&node.id, "done");
+                self.compile_path(next.as_deref(), visited, steps)?;
             }
             GraphNodeType::RepeatTimes => {
                 let times =
@@ -522,6 +607,8 @@ impl WorkflowGraph {
                         default_steps,
                     },
                 });
+                let next = self.next_target(&node.id, "done");
+                self.compile_path(next.as_deref(), visited, steps)?;
             }
             GraphNodeType::While => {
                 let condition = node_condition(node)?;
@@ -576,6 +663,8 @@ impl WorkflowGraph {
                         finally_steps,
                     },
                 });
+                let next = self.next_target(&node.id, "done");
+                self.compile_path(next.as_deref(), visited, steps)?;
             }
             GraphNodeType::Fallback => {
                 let primary_steps = self.compile_nested_configs(&node.id, "primary", visited)?;
@@ -808,6 +897,510 @@ impl WorkflowGraph {
             .min_by(|left, right| left.id.cmp(&right.id))
             .map(|edge| edge.target_node_id.clone())
     }
+
+    fn has_outgoing(&self, source_node_id: &str, source_port: &str) -> bool {
+        self.edges
+            .iter()
+            .any(|edge| edge.source_node_id == source_node_id && edge.source_port == source_port)
+    }
+
+    fn push_node_semantic_issues(&self, node: &GraphNode, issues: &mut Vec<GraphValidationIssue>) {
+        match node.node_type {
+            GraphNodeType::Start => {
+                if !self.has_outgoing(&node.id, "out") {
+                    issues.push(warning(
+                        Some(node.id.clone()),
+                        None,
+                        "Start is not connected; this draft has no executable work",
+                    ));
+                }
+            }
+            GraphNodeType::Action => {
+                if node.config.is_null() {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Choose an action type before running this node",
+                    ));
+                    return;
+                }
+                match serde_json::from_value::<ActionConfig>(node.config.clone()) {
+                    Ok(config) => {
+                        if let Err(validation) = config.validate() {
+                            issues.push(error(
+                                Some(node.id.clone()),
+                                None,
+                                format!(
+                                    "Node {} has invalid action config: {}",
+                                    node.label, validation.message
+                                ),
+                            ));
+                        }
+                    }
+                    Err(parse_error) => issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        format!(
+                            "Node {} has invalid action config: {parse_error}",
+                            node.label
+                        ),
+                    )),
+                }
+            }
+            GraphNodeType::If => {
+                push_condition_issue(node, issues);
+                self.warn_missing_branch(
+                    node,
+                    "true",
+                    "If true branch is unconnected and will no-op",
+                    issues,
+                );
+                self.warn_missing_branch(
+                    node,
+                    "false",
+                    "If false branch is unconnected and will no-op",
+                    issues,
+                );
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "If done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::Switch => {
+                if required_string(&node.config, "expression", "Switch expression is required")
+                    .is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Switch expression is required",
+                    ));
+                }
+                match node.config.get("cases").and_then(Value::as_array) {
+                    Some(cases) if !cases.is_empty() => {
+                        for (index, case) in cases.iter().enumerate() {
+                            if case.as_str().unwrap_or_default().trim().is_empty() {
+                                issues.push(error(
+                                    Some(node.id.clone()),
+                                    None,
+                                    "Switch case is required",
+                                ));
+                            }
+                            self.warn_missing_branch(
+                                node,
+                                &format!("case_{}", index + 1),
+                                &format!(
+                                    "Switch case {} branch is unconnected and will no-op",
+                                    index + 1
+                                ),
+                                issues,
+                            );
+                        }
+                    }
+                    _ => issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Switch cases are required",
+                    )),
+                }
+                self.warn_missing_branch(
+                    node,
+                    "default",
+                    "Switch default branch is unconnected and will no-op",
+                    issues,
+                );
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "Switch done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::RepeatTimes => {
+                if positive_u32(&node.config, "times", "Repeat times must be greater than 0")
+                    .is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Repeat times must be greater than 0",
+                    ));
+                }
+                self.require_body_port(node, "loop", "Repeat loop branch is required", issues);
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "Repeat done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::RepeatForEach => {
+                if required_string(&node.config, "item_name", "Item name is required").is_err() {
+                    issues.push(error(Some(node.id.clone()), None, "Item name is required"));
+                }
+                if string_array(&node.config, "items", "Items are required").is_err() {
+                    issues.push(error(Some(node.id.clone()), None, "Items are required"));
+                }
+                self.require_body_port(node, "loop", "Repeat loop branch is required", issues);
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "Repeat done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::While => {
+                push_condition_issue(node, issues);
+                if !has_positive_number(&node.config, "max_attempts")
+                    && !has_positive_number(&node.config, "timeout_ms")
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Loop nodes require max attempts or timeout",
+                    ));
+                }
+                self.require_body_port(node, "loop", "While loop branch is required", issues);
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "While done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::RepeatUntil => {
+                push_condition_issue(node, issues);
+                if !has_positive_number(&node.config, "max_attempts")
+                    && !has_positive_number(&node.config, "timeout_ms")
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Loop nodes require max attempts or timeout",
+                    ));
+                }
+                self.require_body_port(
+                    node,
+                    "loop",
+                    "Repeat Until loop branch is required",
+                    issues,
+                );
+                self.warn_missing_branch(
+                    node,
+                    "timeout",
+                    "Repeat Until timeout branch is unconnected; timeout path will end successfully",
+                    issues,
+                );
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "Repeat Until done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::Retry => {
+                if positive_u32(
+                    &node.config,
+                    "max_attempts",
+                    "Max attempts must be greater than 0",
+                )
+                .is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Max attempts must be greater than 0",
+                    ));
+                }
+                self.require_body_port(node, "try", "Retry try branch is required", issues);
+                self.warn_missing_continuation(
+                    node,
+                    "success",
+                    "Retry success continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+                self.warn_missing_branch(
+                    node,
+                    "failed",
+                    "Retry failed branch is unconnected; retry failure will fail the workflow",
+                    issues,
+                );
+            }
+            GraphNodeType::TryCatch => {
+                self.require_body_port(node, "try", "Try branch is required", issues);
+                self.warn_missing_branch(
+                    node,
+                    "success",
+                    "Try/Catch success branch is unconnected and will no-op",
+                    issues,
+                );
+                self.warn_missing_branch(
+                    node,
+                    "error",
+                    "Try/Catch error branch is unconnected; try failure will fail the workflow",
+                    issues,
+                );
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "Try/Catch done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::Fallback => {
+                self.require_body_port(
+                    node,
+                    "primary",
+                    "Fallback primary branch is required",
+                    issues,
+                );
+                self.warn_missing_branch(
+                    node,
+                    "fallback",
+                    "Fallback branch is unconnected; primary failure will fail the workflow",
+                    issues,
+                );
+                self.warn_missing_continuation(
+                    node,
+                    "done",
+                    "Fallback done continuation is unconnected; workflow ends successfully here",
+                    issues,
+                );
+            }
+            GraphNodeType::StopWorkflow => {
+                match node.config.get("status").and_then(Value::as_str) {
+                    Some("success" | "failure") => {}
+                    _ => issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Stop workflow status must be success or failure",
+                    )),
+                }
+            }
+            GraphNodeType::SetVariable => {
+                if required_string(&node.config, "name", "Variable name is required").is_err() {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Variable name is required",
+                    ));
+                }
+            }
+            GraphNodeType::TransformVariable => {
+                if required_string(&node.config, "source_name", "Source output is required")
+                    .is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Source output is required",
+                    ));
+                }
+                if required_string(&node.config, "target_name", "Target output is required")
+                    .is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Target output is required",
+                    ));
+                }
+            }
+            GraphNodeType::AssertOutput => {
+                if required_string(&node.config, "name", "Output name is required").is_err() {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Output name is required",
+                    ));
+                }
+                if required_string(&node.config, "value", "Expected output value is required")
+                    .is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Expected output value is required",
+                    ));
+                }
+            }
+            GraphNodeType::RunSubworkflow => {
+                if required_string(&node.config, "workflow_id", "Workflow id is required").is_err()
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Workflow id is required",
+                    ));
+                }
+                for field in ["input_mapping", "output_mapping"] {
+                    if let Err(validation) = variable_mappings(&node.config, field) {
+                        issues.push(error(Some(node.id.clone()), None, validation.message));
+                    }
+                }
+            }
+            GraphNodeType::DomainAllowlist => {
+                if string_array(&node.config, "domains", "Allowed domains are required").is_err() {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Allowed domains are required",
+                    ));
+                }
+            }
+            GraphNodeType::RateLimit => {
+                if node
+                    .config
+                    .get("delay_ms")
+                    .and_then(Value::as_u64)
+                    .is_some_and(|value| value == 0)
+                {
+                    issues.push(error(
+                        Some(node.id.clone()),
+                        None,
+                        "Rate limit delay must be greater than 0",
+                    ));
+                }
+            }
+            GraphNodeType::BreakLoop
+            | GraphNodeType::ContinueLoop
+            | GraphNodeType::EndSuccess
+            | GraphNodeType::EndFailure
+            | GraphNodeType::ManualApproval => {}
+        }
+    }
+
+    fn require_body_port(
+        &self,
+        node: &GraphNode,
+        source_port: &str,
+        message: &str,
+        issues: &mut Vec<GraphValidationIssue>,
+    ) {
+        if !self.has_outgoing(&node.id, source_port) {
+            issues.push(error(Some(node.id.clone()), None, message));
+        }
+    }
+
+    fn warn_missing_branch(
+        &self,
+        node: &GraphNode,
+        source_port: &str,
+        message: &str,
+        issues: &mut Vec<GraphValidationIssue>,
+    ) {
+        if !self.has_outgoing(&node.id, source_port) {
+            issues.push(warning(Some(node.id.clone()), None, message));
+        }
+    }
+
+    fn warn_missing_continuation(
+        &self,
+        node: &GraphNode,
+        source_port: &str,
+        message: &str,
+        issues: &mut Vec<GraphValidationIssue>,
+    ) {
+        if !self.has_outgoing(&node.id, source_port) {
+            issues.push(warning(Some(node.id.clone()), None, message));
+        }
+    }
+
+    fn unsupported_cycle_node_ids(&self) -> BTreeSet<String> {
+        let mut visiting = BTreeSet::new();
+        let mut visited = BTreeSet::new();
+        let mut cycle_nodes = BTreeSet::new();
+
+        for node in &self.nodes {
+            self.collect_cycle_nodes(
+                node.id.as_str(),
+                &mut visiting,
+                &mut visited,
+                &mut cycle_nodes,
+            );
+        }
+
+        cycle_nodes
+    }
+
+    fn collect_cycle_nodes(
+        &self,
+        node_id: &str,
+        visiting: &mut BTreeSet<String>,
+        visited: &mut BTreeSet<String>,
+        cycle_nodes: &mut BTreeSet<String>,
+    ) {
+        if visiting.contains(node_id) {
+            cycle_nodes.insert(node_id.to_string());
+            return;
+        }
+        if visited.contains(node_id) {
+            return;
+        }
+
+        visiting.insert(node_id.to_string());
+        for edge in self
+            .edges
+            .iter()
+            .filter(|edge| edge.source_node_id == node_id)
+        {
+            self.collect_cycle_nodes(edge.target_node_id.as_str(), visiting, visited, cycle_nodes);
+        }
+        visiting.remove(node_id);
+        visited.insert(node_id.to_string());
+    }
+
+    fn loop_control_outside_loop_node_ids(&self) -> BTreeSet<String> {
+        let mut invalid = BTreeSet::new();
+        let Some(start) = self
+            .nodes
+            .iter()
+            .find(|node| node.node_type == GraphNodeType::Start)
+        else {
+            return invalid;
+        };
+        let node_by_id = self
+            .nodes
+            .iter()
+            .map(|node| (node.id.as_str(), node))
+            .collect::<BTreeMap<_, _>>();
+        let mut seen_contexts = BTreeSet::new();
+        let mut queue = VecDeque::from([(start.id.clone(), false)]);
+
+        while let Some((node_id, inside_loop)) = queue.pop_front() {
+            if !seen_contexts.insert((node_id.clone(), inside_loop)) {
+                continue;
+            }
+            let Some(node) = node_by_id.get(node_id.as_str()) else {
+                continue;
+            };
+            if matches!(
+                node.node_type,
+                GraphNodeType::BreakLoop | GraphNodeType::ContinueLoop
+            ) && !inside_loop
+            {
+                invalid.insert(node.id.clone());
+            }
+
+            for edge in self
+                .edges
+                .iter()
+                .filter(|edge| edge.source_node_id == node.id)
+            {
+                let next_inside_loop = if is_loop_node(node.node_type) && edge.source_port == "loop"
+                {
+                    true
+                } else {
+                    inside_loop
+                };
+                queue.push_back((edge.target_node_id.clone(), next_inside_loop));
+            }
+        }
+
+        invalid
+    }
 }
 
 fn input_port(id: &str, label: &str) -> GraphPort {
@@ -839,6 +1432,107 @@ fn error(
     }
 }
 
+fn warning(
+    node_id: Option<String>,
+    edge_id: Option<String>,
+    message: impl Into<String>,
+) -> GraphValidationIssue {
+    GraphValidationIssue {
+        level: GraphValidationLevel::Warning,
+        node_id,
+        edge_id,
+        message: message.into(),
+    }
+}
+
+fn has_port(node: &GraphNode, port_id: &str, direction: GraphPortDirection) -> bool {
+    expected_ports(node)
+        .iter()
+        .any(|port| port.id == port_id && port.direction == direction)
+}
+
+fn expected_ports(node: &GraphNode) -> Vec<GraphPort> {
+    match node.node_type {
+        GraphNodeType::Start => vec![output_port("out", "Out")],
+        GraphNodeType::EndSuccess
+        | GraphNodeType::EndFailure
+        | GraphNodeType::BreakLoop
+        | GraphNodeType::ContinueLoop
+        | GraphNodeType::StopWorkflow => vec![input_port("in", "In")],
+        GraphNodeType::Action
+        | GraphNodeType::SetVariable
+        | GraphNodeType::TransformVariable
+        | GraphNodeType::AssertOutput
+        | GraphNodeType::RunSubworkflow
+        | GraphNodeType::ManualApproval
+        | GraphNodeType::RateLimit
+        | GraphNodeType::DomainAllowlist => vec![input_port("in", "In"), output_port("out", "Out")],
+        GraphNodeType::If => vec![
+            input_port("in", "In"),
+            output_port("true", "True"),
+            output_port("false", "False"),
+            output_port("done", "Done"),
+        ],
+        GraphNodeType::Switch => {
+            let case_count = node
+                .config
+                .get("cases")
+                .and_then(Value::as_array)
+                .map(|cases| cases.len())
+                .filter(|count| *count > 0)
+                .unwrap_or_else(|| {
+                    node.ports
+                        .iter()
+                        .filter(|port| {
+                            port.direction == GraphPortDirection::Output
+                                && port.id.starts_with("case_")
+                        })
+                        .count()
+                        .max(1)
+                });
+            let mut ports = vec![input_port("in", "In")];
+            ports.extend(
+                (1..=case_count)
+                    .map(|index| output_port(&format!("case_{index}"), &format!("Case {index}"))),
+            );
+            ports.push(output_port("default", "Default"));
+            ports.push(output_port("done", "Done"));
+            ports
+        }
+        GraphNodeType::RepeatTimes | GraphNodeType::RepeatForEach | GraphNodeType::While => vec![
+            input_port("in", "In"),
+            output_port("loop", "Loop"),
+            output_port("done", "Done"),
+        ],
+        GraphNodeType::RepeatUntil => vec![
+            input_port("in", "In"),
+            output_port("loop", "Loop"),
+            output_port("done", "Done"),
+            output_port("timeout", "Timeout"),
+        ],
+        GraphNodeType::Retry => vec![
+            input_port("in", "In"),
+            output_port("try", "Try"),
+            output_port("success", "Success"),
+            output_port("failed", "Failed"),
+        ],
+        GraphNodeType::TryCatch => vec![
+            input_port("in", "In"),
+            output_port("try", "Try"),
+            output_port("success", "Success"),
+            output_port("error", "Error"),
+            output_port("finally", "Finally"),
+            output_port("done", "Done"),
+        ],
+        GraphNodeType::Fallback => vec![
+            input_port("in", "In"),
+            output_port("primary", "Primary"),
+            output_port("fallback", "Fallback"),
+            output_port("done", "Done"),
+        ],
+    }
+}
+
 fn has_positive_number(config: &Value, field: &str) -> bool {
     config
         .get(field)
@@ -859,6 +1553,55 @@ fn node_condition(node: &GraphNode) -> Result<WorkflowCondition, ValidationError
             format!("Node {} has invalid condition: {error}", node.label),
         )
     })
+}
+
+fn push_condition_issue(node: &GraphNode, issues: &mut Vec<GraphValidationIssue>) {
+    match node_condition(node) {
+        Ok(condition) => {
+            if let Err(validation) = validate_workflow_condition(&condition) {
+                issues.push(error(Some(node.id.clone()), None, validation.message));
+            }
+        }
+        Err(validation) => issues.push(error(Some(node.id.clone()), None, validation.message)),
+    }
+}
+
+fn validate_workflow_condition(condition: &WorkflowCondition) -> Result<(), ValidationError> {
+    match condition {
+        WorkflowCondition::OutputEquals { name, .. }
+        | WorkflowCondition::OutputContains { name, .. }
+            if name.trim().is_empty() =>
+        {
+            Err(ValidationError::new(
+                "name",
+                "Condition output name is required",
+            ))
+        }
+        WorkflowCondition::OutputEquals { value, .. }
+        | WorkflowCondition::OutputContains { value, .. }
+        | WorkflowCondition::UrlContains { value }
+            if value.trim().is_empty() =>
+        {
+            Err(ValidationError::new("value", "Condition value is required"))
+        }
+        WorkflowCondition::TextVisible { text } if text.trim().is_empty() => {
+            Err(ValidationError::new("text", "Condition text is required"))
+        }
+        WorkflowCondition::ElementVisible { xpath } if xpath.trim().is_empty() => {
+            Err(ValidationError::new("xpath", "Condition XPath is required"))
+        }
+        _ => Ok(()),
+    }
+}
+
+fn is_loop_node(node_type: GraphNodeType) -> bool {
+    matches!(
+        node_type,
+        GraphNodeType::RepeatTimes
+            | GraphNodeType::RepeatForEach
+            | GraphNodeType::While
+            | GraphNodeType::RepeatUntil
+    )
 }
 
 fn positive_u32(config: &Value, field: &str, message: &str) -> Result<u32, ValidationError> {

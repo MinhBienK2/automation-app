@@ -84,6 +84,169 @@ fn workflow_graph_validation_blocks_unbounded_loop_nodes() {
 }
 
 #[test]
+fn workflow_graph_validation_rejects_ambiguous_links() {
+    let duplicate_a = GraphEdge {
+        id: "duplicate-a".to_string(),
+        ..edge("start", "out", "wait", "in")
+    };
+    let duplicate_b = GraphEdge {
+        id: "duplicate-b".to_string(),
+        ..edge("start", "out", "wait", "in")
+    };
+    let second_from_start = GraphEdge {
+        id: "parallel-source".to_string(),
+        ..edge("start", "out", "other", "in")
+    };
+    let second_into_wait = GraphEdge {
+        id: "parallel-target".to_string(),
+        ..edge("other", "out", "wait", "in")
+    };
+    let self_link = GraphEdge {
+        id: "self-link".to_string(),
+        ..edge("wait", "out", "wait", "in")
+    };
+    let graph = graph_with_nodes(
+        vec![start_node(), action_node("wait"), action_node("other")],
+        vec![
+            duplicate_a,
+            duplicate_b,
+            second_from_start,
+            second_into_wait,
+            self_link,
+        ],
+    );
+
+    let issues = graph.validation_issues();
+
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.edge_id.as_deref() == Some("duplicate-b")
+            && issue.message.contains("Duplicate edge")
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.edge_id.as_deref() == Some("parallel-source")
+            && issue
+                .message
+                .contains("Only one edge can leave an output port")
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.edge_id.as_deref() == Some("parallel-target")
+            && issue
+                .message
+                .contains("Only one edge can enter an input port")
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.edge_id.as_deref() == Some("self-link")
+            && issue.message.contains("Self-links are not allowed")
+    }));
+}
+
+#[test]
+fn workflow_graph_validation_blocks_unconfigured_actions_and_missing_required_body_ports() {
+    let mut draft_action = action_node("draft");
+    draft_action.label = "New node".to_string();
+    draft_action.config = serde_json::Value::Null;
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            draft_action,
+            repeat_times_node("repeat"),
+            retry_node("retry"),
+            try_catch_node("try-catch"),
+            fallback_node("fallback"),
+        ],
+        vec![
+            edge("start", "out", "draft", "in"),
+            edge("draft", "out", "repeat", "in"),
+            edge("repeat", "done", "retry", "in"),
+            edge("retry", "success", "try-catch", "in"),
+            edge("try-catch", "done", "fallback", "in"),
+        ],
+    );
+
+    let issues = graph.validation_issues();
+
+    for (node_id, message) in [
+        ("draft", "Choose an action type before running this node"),
+        ("repeat", "Repeat loop branch is required"),
+        ("retry", "Retry try branch is required"),
+        ("try-catch", "Try branch is required"),
+        ("fallback", "Fallback primary branch is required"),
+    ] {
+        assert!(
+            issues.iter().any(|issue| {
+                issue.level == GraphValidationLevel::Error
+                    && issue.node_id.as_deref() == Some(node_id)
+                    && issue.message.contains(message)
+            }),
+            "missing issue for {node_id}: {issues:?}",
+        );
+    }
+}
+
+#[test]
+fn workflow_graph_validation_blocks_loop_control_reachable_outside_loop_body() {
+    let graph = graph_with_nodes(
+        vec![start_node(), continue_loop_node("continue-loop")],
+        vec![edge("start", "out", "continue-loop", "in")],
+    );
+
+    let issues = graph.validation_issues();
+
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Error
+            && issue.node_id.as_deref() == Some("continue-loop")
+            && issue
+                .message
+                .contains("Continue Loop can only be used inside a loop body")
+    }));
+}
+
+#[test]
+fn workflow_graph_validation_warns_for_optional_missing_ports() {
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            if_node("if-login"),
+            retry_node("retry"),
+            action_node("retry-work"),
+        ],
+        vec![
+            edge("start", "out", "if-login", "in"),
+            edge("if-login", "done", "retry", "in"),
+            edge("retry", "try", "retry-work", "in"),
+        ],
+    );
+
+    let issues = graph.validation_issues();
+
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Warning
+            && issue.node_id.as_deref() == Some("if-login")
+            && issue
+                .message
+                .contains("true branch is unconnected and will no-op")
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Warning
+            && issue.node_id.as_deref() == Some("if-login")
+            && issue
+                .message
+                .contains("false branch is unconnected and will no-op")
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue.level == GraphValidationLevel::Warning
+            && issue.node_id.as_deref() == Some("retry")
+            && issue
+                .message
+                .contains("retry failure will fail the workflow")
+    }));
+}
+
+#[test]
 fn workflow_graph_compiles_if_condition_to_nested_action_config() {
     let graph = graph_with_nodes(
         vec![
@@ -119,6 +282,89 @@ fn workflow_graph_compiles_if_condition_to_nested_action_config() {
             assert_eq!(else_steps.len(), 1);
         }
         other => panic!("expected if condition, got {other:?}"),
+    }
+}
+
+#[test]
+fn workflow_graph_compiles_block_nodes_and_continues_through_done_ports() {
+    let graph = graph_with_nodes(
+        vec![
+            start_node(),
+            if_node("if-login"),
+            action_node("then-wait"),
+            action_node("after-if"),
+            switch_node("switch-status"),
+            action_node("case-wait"),
+            action_node("after-switch"),
+            try_catch_node("try-catch"),
+            action_node("try-action"),
+            action_node("after-try"),
+        ],
+        vec![
+            edge("start", "out", "if-login", "in"),
+            edge("if-login", "true", "then-wait", "in"),
+            edge("if-login", "done", "after-if", "in"),
+            edge("after-if", "out", "switch-status", "in"),
+            edge("switch-status", "case_1", "case-wait", "in"),
+            edge("switch-status", "done", "after-switch", "in"),
+            edge("after-switch", "out", "try-catch", "in"),
+            edge("try-catch", "try", "try-action", "in"),
+            edge("try-catch", "done", "after-try", "in"),
+        ],
+    );
+
+    let compiled = graph.compile().expect("compile graph");
+
+    assert_eq!(
+        compiled
+            .steps
+            .iter()
+            .map(|step| step.node_id.as_str())
+            .collect::<Vec<_>>(),
+        vec![
+            "if-login",
+            "after-if",
+            "switch-status",
+            "after-switch",
+            "try-catch",
+            "after-try"
+        ],
+    );
+    match &compiled.steps[0].config {
+        ActionConfig::IfCondition {
+            then_steps,
+            else_steps,
+            ..
+        } => {
+            assert_eq!(then_steps.len(), 1);
+            assert!(else_steps.is_empty());
+        }
+        other => panic!("expected if condition, got {other:?}"),
+    }
+    match &compiled.steps[2].config {
+        ActionConfig::SwitchCondition {
+            cases,
+            default_steps,
+            ..
+        } => {
+            assert_eq!(cases[0].steps.len(), 1);
+            assert!(default_steps.is_empty());
+        }
+        other => panic!("expected switch condition, got {other:?}"),
+    }
+    match &compiled.steps[4].config {
+        ActionConfig::TryCatch {
+            try_steps,
+            success_steps,
+            error_steps,
+            finally_steps,
+        } => {
+            assert_eq!(try_steps.len(), 1);
+            assert!(success_steps.is_empty());
+            assert!(error_steps.is_empty());
+            assert!(finally_steps.is_empty());
+        }
+        other => panic!("expected try catch, got {other:?}"),
     }
 }
 
