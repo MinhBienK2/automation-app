@@ -29,11 +29,11 @@ export function WorkflowGraphToolbar({
 }: WorkflowGraphToolbarProps) {
   return (
     <div className="graph-toolbar" role="toolbar" aria-label="Graph tools">
-      <Button type="button" variant="secondary" onClick={onAddAction}>
-        Add Action
-      </Button>
       <Button type="button" variant="secondary" onClick={onAddNewNode}>
         New node
+      </Button>
+      <Button type="button" variant="secondary" onClick={onAddAction}>
+        Add Action
       </Button>
       <Button
         type="button"
