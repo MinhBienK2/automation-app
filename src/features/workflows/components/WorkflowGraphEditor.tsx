@@ -37,6 +37,7 @@ import {
   toReactFlowGraph,
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
+import type { GraphNodeHelpLanguage } from "../lib/graphNodeHelpContent";
 import { actionLabels } from "../../../lib/workflowUi";
 import { WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
@@ -119,6 +120,7 @@ export function WorkflowGraphEditor({
   } | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
+  const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
@@ -565,6 +567,7 @@ export function WorkflowGraphEditor({
           onDeleteSelectedEdge={deleteSelectedEdge}
           onDeleteSelectedNode={deleteSelectedNode}
           onFocusSelectedNode={focusSelectedNode}
+          onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
           onUpdateNode={updateNode}
         />
       </div>
@@ -581,7 +584,12 @@ export function WorkflowGraphEditor({
         }}
         onSelectNode={addNode}
       />
-      <NodeHelpDialog node={helpNode} onOpenChange={(open) => !open && setHelpNode(null)} />
+      <NodeHelpDialog
+        node={helpNode}
+        language={helpLanguage}
+        onOpenChange={(open) => !open && setHelpNode(null)}
+        onLanguageChange={setHelpLanguage}
+      />
     </section>
   );
 }

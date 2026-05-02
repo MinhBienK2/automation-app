@@ -419,6 +419,65 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("opens detailed action help from the graph inspector", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="wait"]') as HTMLElement,
+    );
+    await userEvent.click(within(editor).getByRole("button", { name: "Open Wait help" }));
+
+    const help = await screen.findByRole("dialog", { name: "Wait Help" });
+    expect(within(help).getByText("Step này làm gì?")).toBeInTheDocument();
+    expect(within(help).getByText("Giải thích field")).toBeInTheDocument();
+    expect(within(help).getByText("Condition")).toBeInTheDocument();
+    expect(within(help).getByText("Timeout ms")).toBeInTheDocument();
+  });
+
+  test("opens detailed logic node help from the graph inspector and context menu", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
+    await userEvent.click(within(editor).getByRole("button", { name: "Open If help" }));
+
+    let help = await screen.findByRole("dialog", { name: "If Help" });
+    expect(within(help).getByText("Node này làm gì?")).toBeInTheDocument();
+    expect(within(help).getByText("Giải thích field và port")).toBeInTheDocument();
+    expect(within(help).getByText("Condition")).toBeInTheDocument();
+    expect(within(help).getByText("True port")).toBeInTheDocument();
+    expect(within(help).getByText("Done port")).toBeInTheDocument();
+
+    await userEvent.click(within(help).getByRole("button", { name: "Close dialog" }));
+    fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }));
+    await userEvent.click(await within(editor).findByRole("menuitem", { name: "Help" }));
+
+    help = await screen.findByRole("dialog", { name: "If Help" });
+    expect(within(help).getByText("False branch is optional; missing link will no-op."))
+      .toBeInTheDocument();
+  });
+
   test("adds an action node by choosing an action type from the palette", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([]),

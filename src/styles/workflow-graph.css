@@ -48,6 +48,13 @@
   justify-content: start;
 }
 
+.graph-inspector-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .graph-canvas-wrap {
   display: grid;
   grid-template-rows: auto auto;
@@ -405,20 +412,6 @@
 
 .graph-node-context-menu button:disabled {
   opacity: 0.45;
-}
-
-.graph-help-ports {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.graph-help-ports span {
-  padding: 5px 8px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  color: #b4b4b4;
-  font-size: 12px;
 }
 
 .graph-connect-form {

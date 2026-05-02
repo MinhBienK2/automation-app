@@ -13,6 +13,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
 - `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector.
+- `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/StepForm.tsx`: legacy step form container; list-step UI is no longer rendered.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
@@ -28,6 +29,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
+- Selected-node help from the graph inspector and node context menu. Configured action nodes reuse detailed action help; graph-native nodes use field and port help with the same modal structure.
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, while keeping persisted `WorkflowGraph` as source of truth.
 - Action node creation from the action palette, unconfigured `New node` draft creation from the toolbar, graph-control node creation from grouped node pickers, plus searchable type selection and config editing through the reusable action config editor.
 - Command invocation through `workflowApi.ts`.

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import type {
   ActionType,
   GraphNode,
@@ -14,8 +15,15 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { ScrollArea } from "../../../components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { graphNodeLabel } from "../lib/workflowGraph";
-import { actionGroups, actionLabels } from "../../../lib/workflowUi";
+import { actionGroups, actionLabels, actionOptions } from "../../../lib/workflowUi";
+import {
+  graphNodeHelpContent,
+  type GraphNodeHelpLanguage,
+} from "../lib/graphNodeHelpContent";
+import { StepHelpModal } from "./StepHelpModal";
 
 export const logicNodeGroups: Array<{
   label: string;
@@ -267,29 +275,144 @@ export function LinkContextMenu({
 
 type NodeHelpDialogProps = {
   node: GraphNode | null;
+  language: GraphNodeHelpLanguage;
   onOpenChange: (open: boolean) => void;
+  onLanguageChange: (language: GraphNodeHelpLanguage) => void;
 };
 
-export function NodeHelpDialog({ node, onOpenChange }: NodeHelpDialogProps) {
+export function NodeHelpDialog({
+  node,
+  language,
+  onOpenChange,
+  onLanguageChange,
+}: NodeHelpDialogProps) {
+  const actionType = actionTypeForNodeHelp(node);
+  if (actionType) {
+    return (
+      <StepHelpModal
+        actionType={actionType}
+        language={language}
+        onClose={() => onOpenChange(false)}
+        onLanguageChange={onLanguageChange}
+      />
+    );
+  }
+
+  const content = node ? graphNodeHelpContent[node.node_type][language] : null;
+
   return (
     <Dialog open={Boolean(node)} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <p className="eyebrow">Node Help</p>
-          <DialogTitle>{node ? graphNodeLabel(node.node_type) : "Node"}</DialogTitle>
-          <DialogDescription>
-            {node ? graphNodeDescriptions[node.node_type] ?? "Graph node" : ""}
-          </DialogDescription>
-        </DialogHeader>
-        {node ? (
-          <div className="graph-help-ports">
-            {node.ports.map((port) => (
-              <span key={port.id}>{port.label}</span>
-            ))}
+      <DialogContent className="step-help-dialog">
+        <DialogHeader className="modal-header">
+          <div>
+            <p className="eyebrow">{language === "vi" ? "Trợ giúp node" : "Node Help"}</p>
+            <DialogTitle>
+              {content ? content.title : `${node ? graphNodeLabel(node.node_type) : "Node"} Help`}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {content?.summary ?? ""}
+            </DialogDescription>
           </div>
+        </DialogHeader>
+
+        <Tabs
+          value={language}
+          onValueChange={(value) => onLanguageChange(value as GraphNodeHelpLanguage)}
+        >
+          <TabsList className="help-language-switch" aria-label="Help language">
+            <TabsTrigger
+              className={language === "vi" ? "help-language-active" : ""}
+              value="vi"
+            >
+              Tiếng Việt
+            </TabsTrigger>
+            <TabsTrigger
+              className={language === "en" ? "help-language-active" : ""}
+              value="en"
+            >
+              English
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {content ? (
+          <ScrollArea className="step-help-body">
+            <div
+              className="step-help-body"
+              style={{ overflow: "visible", paddingRight: 0 }}
+            >
+              <HelpSection title={language === "vi" ? "Node này làm gì?" : "What this node does"}>
+                <p>{content.summary}</p>
+              </HelpSection>
+
+              <HelpSection title={language === "vi" ? "Khi nào dùng?" : "When to use it"}>
+                <ul>
+                  {content.useWhen.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </HelpSection>
+
+              <HelpSection title={language === "vi" ? "Giải thích field và port" : "Field and port guide"}>
+                <div className="help-field-list">
+                  {content.fields.map((field) => (
+                    <div className="help-field-item" key={field.name}>
+                      <strong>{field.name}</strong>
+                      <p>{field.description}</p>
+                      <ul className="help-field-details">
+                        {field.details.map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </HelpSection>
+
+              <HelpSection title={language === "vi" ? "Ví dụ" : "Examples"}>
+                <ul>
+                  {content.examples.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </HelpSection>
+
+              <HelpSection title={language === "vi" ? "Dễ nhầm" : "Common mistakes"}>
+                <ul>
+                  {content.commonMistakes.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </HelpSection>
+            </div>
+          </ScrollArea>
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function actionTypeForNodeHelp(node: GraphNode | null) {
+  if (!node || node.node_type !== "action") return null;
+  const config = node.config as { type?: unknown } | null;
+  const actionType = typeof config?.type === "string" ? config.type : null;
+  return actionType && actionOptions.includes(actionType as ActionType)
+    ? (actionType as ActionType)
+    : null;
+}
+
+function HelpSection({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="help-section">
+      <h3>{title}</h3>
+      {children}
+    </section>
   );
 }
 

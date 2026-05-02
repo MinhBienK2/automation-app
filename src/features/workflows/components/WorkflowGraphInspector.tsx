@@ -18,6 +18,7 @@ type WorkflowGraphInspectorProps = {
   onDeleteSelectedEdge: () => void;
   onDeleteSelectedNode: () => void;
   onFocusSelectedNode: () => void;
+  onOpenSelectedNodeHelp: () => void;
   onUpdateNode: (node: GraphNode) => void;
 };
 
@@ -30,6 +31,7 @@ export function WorkflowGraphInspector({
   onDeleteSelectedEdge,
   onDeleteSelectedNode,
   onFocusSelectedNode,
+  onOpenSelectedNodeHelp,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
   return (
@@ -52,8 +54,20 @@ export function WorkflowGraphInspector({
       ) : null}
       {selectedNode ? (
         <>
-          <h2>{selectedNode.label}</h2>
-          <p className="muted">{graphNodeLabel(selectedNode.node_type)} node</p>
+          <div className="graph-inspector-header">
+            <div>
+              <h2>{selectedNode.label}</h2>
+              <p className="muted">{graphNodeLabel(selectedNode.node_type)} node</p>
+            </div>
+            <Button
+              aria-label={`Open ${selectedNode.label} help`}
+              className="step-help-button"
+              type="button"
+              onClick={onOpenSelectedNodeHelp}
+            >
+              ?
+            </Button>
+          </div>
           <ConnectionSummary graph={graph} node={selectedNode} />
           <PortGuidance graph={graph} node={selectedNode} />
           {issueGroups.get(selectedNode.id)?.length ? (

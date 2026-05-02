@@ -19,6 +19,7 @@ Preserve these unless the task explicitly changes them.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
+- Selected graph nodes expose detailed help from the inspector. Configured action nodes reuse action help content; graph-native nodes explain purpose, fields, ports, examples, and common mistakes in the same popup format.
 - `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
 - Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
 
