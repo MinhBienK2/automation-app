@@ -32,6 +32,7 @@ Preserve these unless the task explicitly changes them.
 ## UI Behavior
 
 - Workflow list and detail remain separate screens.
+- Workflow list does not expose legacy step counts or raw `updated_at` values; graph editing state belongs in the detail screen.
 - Settings is a separate app screen reachable from the sidebar.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.

@@ -18,6 +18,29 @@ describe("Workflow list integration", () => {
     resetTauriInvoke();
   });
 
+  test("hides legacy step counts and raw updated timestamps from workflow cards", async () => {
+    mockTauriCommands({
+      ...listWorkflowScenario([
+        {
+          ...workflow,
+          step_count: 1733,
+          updated_at: "1733-legacy-timestamp",
+        },
+      ]),
+    });
+
+    renderApp();
+
+    const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
+
+    expect(workflowCard).toBeInTheDocument();
+    expect(within(workflowCard as HTMLElement).queryByText("1733 steps"))
+      .not.toBeInTheDocument();
+    expect(within(workflowCard as HTMLElement).queryByText("Updated 1733-legacy-timestamp"))
+      .not.toBeInTheDocument();
+    expect(screen.queryByText("1733 steps")).not.toBeInTheDocument();
+  });
+
   test("lists workflows and creates a workflow from a dialog", async () => {
     mockTauriCommands({
       ...listWorkflowScenario([]),

@@ -39,16 +39,12 @@ export function WorkflowListPage({
   onOpenWorkflow,
   onDeleteWorkflow,
 }: WorkflowListPageProps) {
-  const totalSteps = workflows.reduce(
-    (total, workflow) => total + workflow.step_count,
-    0,
-  );
   const workflowDialogTitle =
     workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow";
   const workflowDialogDescription =
     workflowDialogMode === "create"
-      ? "Name the workflow before adding automation steps."
-      : "Rename the workflow without changing its existing steps.";
+      ? "Name the workflow before building its automation graph."
+      : "Rename the workflow without changing its graph.";
   const workflowNameLabel =
     workflowDialogMode === "create" ? "New workflow name" : "Workflow name";
 
@@ -62,7 +58,6 @@ export function WorkflowListPage({
         <div className="page-header-actions">
           <div className="header-stats" aria-label="Workflow summary">
             <span>{workflows.length} workflows</span>
-            <span>{totalSteps} steps</span>
           </div>
           <Button shape="pill" type="button" onClick={onOpenCreateWorkflow}>
             Create Workflow
@@ -74,7 +69,7 @@ export function WorkflowListPage({
         {workflows.length === 0 ? (
           <div className="empty-state panel">
             <h2>No workflows yet</h2>
-            <p className="muted">Create one to begin building automation steps.</p>
+            <p className="muted">Create one to begin building an automation graph.</p>
           </div>
         ) : (
           workflows.map((workflow) => (
@@ -82,9 +77,7 @@ export function WorkflowListPage({
               <div className="workflow-card-main">
                 <div>
                   <h2>{workflow.name}</h2>
-                  <p className="muted">{workflow.step_count} steps</p>
                 </div>
-                <small>Updated {workflow.updated_at}</small>
               </div>
               <div className="row-actions">
                 <Button shape="pill" type="button" onClick={() => onOpenWorkflow(workflow.id)}>
