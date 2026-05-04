@@ -456,8 +456,8 @@ describe("Workflow graph editor integration", () => {
     expect(within(help).getByText("Action này làm gì")).toBeInTheDocument();
     expect(within(help).getByText("Cấu hình tối thiểu")).toBeInTheDocument();
     expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
-    expect(within(help).getByText("Condition")).toBeInTheDocument();
-    expect(within(help).getByText("Timeout ms")).toBeInTheDocument();
+    expect(within(help).getAllByText("Condition").length).toBeGreaterThan(0);
+    expect(within(help).getAllByText("Timeout ms").length).toBeGreaterThan(0);
   });
 
   test("opens detailed logic node help from the graph inspector and context menu", async () => {

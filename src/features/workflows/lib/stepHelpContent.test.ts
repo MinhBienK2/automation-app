@@ -123,4 +123,103 @@ describe("step help content", () => {
       ]),
     );
   });
+
+  test("provides a detailed field reference for every action", () => {
+    for (const actionType of allActionOptions) {
+      for (const language of ["vi", "en"] as const) {
+        const content = stepHelpContent[actionType][language];
+
+        const fieldReference = content.fieldReference!;
+        expect(fieldReference.length, `${actionType} ${language}`).toBeGreaterThan(0);
+        for (const field of fieldReference) {
+          expect(field.description, `${actionType} ${language} ${field.name}`).not.toHaveLength(0);
+          expect(field.requiredWhen, `${actionType} ${language} ${field.name}`).not.toHaveLength(0);
+        }
+      }
+    }
+  });
+
+  test("documents select-like field options in the field reference", () => {
+    expect(stepHelpContent.navigate.en.fieldReference!.find((field) => field.name === "Wait until")?.options)
+      .toEqual([
+        expect.objectContaining({ label: "Load", value: "load" }),
+        expect.objectContaining({ label: "DOMContentLoaded", value: "dom_content_loaded" }),
+        expect.objectContaining({ label: "Network idle", value: "network_idle" }),
+      ]);
+    expect(
+      stepHelpContent.navigate.en.fieldReference!.find((field) => field.name === "Wait until")?.options
+        ?.map((option) => option.label),
+    ).not.toEqual(expect.arrayContaining(["Clickable", "Visible", "Enabled", "Attached"]));
+
+    expect(stepHelpContent.scroll.en.fieldReference!.find((field) => field.name === "Mode")?.options)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ label: "Page", useWhen: expect.stringContaining("main page") }),
+        expect.objectContaining({ label: "Container", avoidWhen: expect.stringContaining("target") }),
+        expect.objectContaining({ label: "Into View" }),
+        expect.objectContaining({ label: "Until Visible" }),
+      ]));
+
+    expect(stepHelpContent.click.en.fieldReference!.find((field) => field.name === "Position")?.options)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ label: "Center" }),
+        expect.objectContaining({ label: "Offset", useWhen: expect.stringContaining("exact") }),
+      ]));
+
+    expect(stepHelpContent.wait.en.fieldReference!.find((field) => field.name === "Condition")?.options)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ label: "Duration", useWhen: expect.stringContaining("fixed") }),
+        expect.objectContaining({ label: "Element visible", useWhen: expect.stringContaining("see") }),
+        expect.objectContaining({ label: "URL contains" }),
+      ]));
+  });
+
+  test("keeps action help option labels aligned with actual select fields", () => {
+    const expectedOptions: Array<{
+      actionType: keyof typeof stepHelpContent;
+      fieldName: string;
+      labels: string[];
+    }> = [
+      { actionType: "navigate", fieldName: "Wait until", labels: ["Load", "DOMContentLoaded", "Network idle"] },
+      { actionType: "wait", fieldName: "Condition", labels: ["Duration", "Element visible", "Element hidden", "Element attached", "Element detached", "Text visible", "URL contains", "Page load", "Element enabled", "Element disabled"] },
+      { actionType: "input_text", fieldName: "Clear before input", labels: ["Yes", "No"] },
+      { actionType: "input_text", fieldName: "Typing mode", labels: ["Set value", "Type keys"] },
+      { actionType: "input_text", fieldName: "Wait until", labels: ["Clickable", "Visible", "Enabled", "Attached"] },
+      { actionType: "clear_input", fieldName: "Method", labels: ["Select all", "Backspace", "DOM value"] },
+      { actionType: "clear_input", fieldName: "Wait until", labels: ["Clickable", "Visible", "Enabled", "Attached"] },
+      { actionType: "click", fieldName: "Mode", labels: ["Real click", "Force DOM click"] },
+      { actionType: "click", fieldName: "Click count", labels: ["Single", "Double"] },
+      { actionType: "click", fieldName: "Button", labels: ["Left", "Right", "Middle"] },
+      { actionType: "click", fieldName: "Scroll into view", labels: ["Yes", "No"] },
+      { actionType: "click", fieldName: "Block", labels: ["Start", "Center", "End", "Nearest"] },
+      { actionType: "click", fieldName: "Inline", labels: ["Start", "Center", "End", "Nearest"] },
+      { actionType: "click", fieldName: "Position", labels: ["Center", "Top left", "Top right", "Bottom left", "Bottom right", "Offset"] },
+      { actionType: "click", fieldName: "Wait until", labels: ["Clickable", "Visible", "Enabled", "Attached"] },
+      { actionType: "scroll", fieldName: "Mode", labels: ["Page", "Container", "Into View", "Until Visible"] },
+      { actionType: "scroll", fieldName: "Direction", labels: ["Down", "Up", "Left", "Right"] },
+      { actionType: "scroll", fieldName: "Behavior", labels: ["Instant", "Smooth"] },
+      { actionType: "scroll", fieldName: "Block", labels: ["Start", "Center", "End", "Nearest"] },
+      { actionType: "scroll", fieldName: "Inline", labels: ["Start", "Center", "End", "Nearest"] },
+      { actionType: "select_option", fieldName: "Match by", labels: ["Label", "Value"] },
+      { actionType: "select_option", fieldName: "Wait until", labels: ["Clickable", "Visible", "Enabled", "Attached"] },
+      { actionType: "set_checkbox", fieldName: "State", labels: ["Checked", "Unchecked"] },
+      { actionType: "set_checkbox", fieldName: "Wait until", labels: ["Clickable", "Visible", "Enabled", "Attached"] },
+      { actionType: "set_contenteditable", fieldName: "Clear before input", labels: ["Yes", "No"] },
+      { actionType: "set_contenteditable", fieldName: "Wait until", labels: ["Clickable", "Visible", "Enabled", "Attached"] },
+      { actionType: "take_screenshot", fieldName: "Full page", labels: ["Yes", "No"] },
+      { actionType: "set_viewport", fieldName: "Mobile", labels: ["False", "True"] },
+      { actionType: "set_viewport", fieldName: "Touch", labels: ["False", "True"] },
+      { actionType: "assert_element", fieldName: "State", labels: ["Visible", "Hidden", "Attached", "Enabled", "Disabled"] },
+      { actionType: "assert_text", fieldName: "Match mode", labels: ["Contains", "Equals"] },
+      { actionType: "stop_workflow", fieldName: "Status", labels: ["Success", "Failure"] },
+    ];
+
+    for (const { actionType, fieldName, labels } of expectedOptions) {
+      const field = stepHelpContent[actionType].en.fieldReference!
+        .find((item) => item.name === fieldName);
+      expect(
+        field?.options?.map((option) => option.label),
+        `${actionType} ${fieldName}`,
+      ).toEqual(labels);
+    }
+  });
 });

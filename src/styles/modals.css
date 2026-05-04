@@ -29,6 +29,16 @@
   background: #171717;
 }
 
+.action-help-dialog {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.action-help-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
 .help-language-switch {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -40,12 +50,29 @@
   background: #0f0f0f;
 }
 
+.help-language-tabs-compact {
+  justify-self: end;
+  gap: 0;
+}
+
+.help-language-switch-compact {
+  width: auto;
+  min-width: 96px;
+  padding: 3px;
+}
+
 .help-language-switch button {
   min-height: 32px;
   border-color: transparent;
   border-radius: 9999px;
   background: transparent;
   color: #b4b4b4;
+}
+
+.help-language-switch-compact button {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .help-language-switch .help-language-active {
@@ -112,4 +139,54 @@
 
 .help-field-details li {
   line-height: 1.45;
+}
+
+.help-field-reference {
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #242424;
+}
+
+.help-field-reference:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.help-option-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.help-option-item {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #242424;
+  border-radius: 6px;
+  background: #171717;
+}
+
+.help-option-item strong {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.help-option-item strong span {
+  color: #898989;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+@media (max-width: 600px) {
+  .action-help-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .help-language-tabs-compact {
+    justify-self: start;
+  }
 }

@@ -34,36 +34,40 @@ export function StepHelpModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="step-help-dialog">
-        <DialogHeader className="modal-header">
+      <DialogContent className="step-help-dialog action-help-dialog">
+        <DialogHeader className="modal-header action-help-header" data-testid="action-help-header">
           <div>
-            <p className="eyebrow">{language === "vi" ? "Trợ giúp step" : "Step Help"}</p>
+            <p className="eyebrow">{language === "vi" ? "Hướng dẫn action" : "Action guide"}</p>
             <DialogTitle>{actionLabels[actionType]} Help</DialogTitle>
             <DialogDescription className="sr-only">
               {content.summary}
             </DialogDescription>
           </div>
-        </DialogHeader>
 
-        <Tabs
-          value={language}
-          onValueChange={(value) => onLanguageChange(value as StepHelpLanguage)}
-        >
-          <TabsList className="help-language-switch" aria-label="Help language">
-            <TabsTrigger
-              className={language === "vi" ? "help-language-active" : ""}
-              value="vi"
+          <Tabs
+            className="help-language-tabs-compact"
+            value={language}
+            onValueChange={(value) => onLanguageChange(value as StepHelpLanguage)}
+          >
+            <TabsList
+              className="help-language-switch help-language-switch-compact"
+              aria-label="Help language"
             >
-              Tiếng Việt
-            </TabsTrigger>
-            <TabsTrigger
-              className={language === "en" ? "help-language-active" : ""}
-              value="en"
-            >
-              English
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <TabsTrigger
+                className={language === "vi" ? "help-language-active" : ""}
+                value="vi"
+              >
+                VI
+              </TabsTrigger>
+              <TabsTrigger
+                className={language === "en" ? "help-language-active" : ""}
+                value="en"
+              >
+                EN
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </DialogHeader>
 
         <ScrollArea className="step-help-body">
           <div
@@ -108,21 +112,9 @@ export function StepHelpModal({
               <FieldList fields={content.minimalConfig ?? content.fields} />
             </HelpSection>
 
-            {content.advancedConfig?.length ? (
-              <HelpSection title={language === "vi" ? "Field nâng cao" : "Advanced fields"}>
-                <div className="help-field-list">
-                  {content.advancedConfig.map((field) => (
-                    <div className="help-field-item" key={field.name}>
-                      <strong>{field.name}</strong>
-                      <p>{field.description}</p>
-                      {field.whenToUse ? (
-                        <ul className="help-field-details">
-                          <li>{field.whenToUse}</li>
-                        </ul>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
+            {content.fieldReference?.length ? (
+              <HelpSection title={language === "vi" ? "Tất cả field và option" : "All fields and options"}>
+                <FieldReferenceList fields={content.fieldReference} />
               </HelpSection>
             ) : null}
 
@@ -221,6 +213,66 @@ function FieldList({
                 <li key={detail}>{detail}</li>
               ))}
             </ul>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FieldReferenceList({
+  fields,
+}: {
+  fields: Array<{
+    name: string;
+    description: string;
+    requiredWhen: string;
+    example?: string;
+    mistakes?: string[];
+    details?: string[];
+    options?: Array<{
+      label: string;
+      value?: string;
+      description: string;
+      useWhen: string;
+      avoidWhen?: string;
+      example?: string;
+    }>;
+  }>;
+}) {
+  return (
+    <div className="help-field-list">
+      {fields.map((field) => (
+        <div className="help-field-item help-field-reference" key={field.name}>
+          <strong>{field.name}</strong>
+          <p>{field.description}</p>
+          <ul className="help-field-details">
+            <li>{field.requiredWhen}</li>
+            {field.example ? <li>{field.example}</li> : null}
+            {field.details?.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+            {field.mistakes?.map((mistake) => (
+              <li key={mistake}>{mistake}</li>
+            ))}
+          </ul>
+          {field.options?.length ? (
+            <div className="help-option-list">
+              {field.options.map((option) => (
+                <div className="help-option-item" key={`${field.name}-${option.label}`}>
+                  <strong>
+                    {option.label}
+                    {option.value ? <span>{option.value}</span> : null}
+                  </strong>
+                  <p>{option.description}</p>
+                  <ul className="help-field-details">
+                    <li>{option.useWhen}</li>
+                    {option.avoidWhen ? <li>{option.avoidWhen}</li> : null}
+                    {option.example ? <li>{option.example}</li> : null}
+                  </ul>
+                </div>
+              ))}
+            </div>
           ) : null}
         </div>
       ))}
