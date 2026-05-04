@@ -38,12 +38,14 @@ const graphIssueEdgeStroke = "#ff7b72";
 
 type ReactFlowGraphState = {
   selectedNodeId?: string | null;
+  selectedNodeIds?: Set<string>;
   runningNodeId?: string | null;
   completedNodeIds?: Set<string>;
   failedNodeId?: string | null;
   issueNodeIds?: Set<string>;
   issueEdgeIds?: Set<string>;
   selectedEdgeId?: string | null;
+  selectedEdgeIds?: Set<string>;
 };
 
 type WorkflowReactFlowGraph = {
@@ -157,7 +159,7 @@ export function toReactFlowGraph(
       initialHeight: 64,
       initialWidth: 160,
       dragHandle: ".graph-node-drag-handle",
-      selected: state.selectedNodeId === node.id,
+      selected: state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id,
       data: {
         label: node.label,
         nodeType: node.node_type,
@@ -168,7 +170,8 @@ export function toReactFlowGraph(
     })),
     edges: graph.edges.map((edge) => {
       const hasIssue = state.issueEdgeIds?.has(edge.id) ?? false;
-      const isSelected = state.selectedEdgeId === edge.id;
+      const isSelected =
+        state.selectedEdgeIds?.has(edge.id) ?? state.selectedEdgeId === edge.id;
       const stroke = hasIssue ? graphIssueEdgeStroke : isSelected ? graphSelectedEdgeStroke : graphEdgeStroke;
 
       return {

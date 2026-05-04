@@ -18,8 +18,14 @@ Preserve these unless the task explicitly changes them.
 - Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
+- The main graph toolbar exposes New node, Add Action, Add Logic, Add Variable, and Add End. It does not expose Add Output or a duplicate Fit button.
+- Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
+- Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
-- Selected graph nodes expose detailed help from the inspector. Configured action nodes reuse action help content; graph-native nodes explain purpose, fields, ports, examples, and common mistakes in the same popup format.
+- Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.
+- Graph undo/redo applies to graph edit snapshots only. Run state, validation results, save status, settings, and workflow metadata are not part of graph undo history.
+- Graph editor keyboard shortcuts do not fire while focus is inside inputs, textareas, contenteditable elements, action/node palettes, help dialogs, or dropdown popovers.
+- Selected graph nodes expose detailed help from the inspector. Configured action nodes reuse decision-guide action help content; graph-native nodes explain purpose, minimum setup, ports and flow, workflow examples, and common mistakes in the same popup format.
 - `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
 - Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
 

@@ -1,5 +1,8 @@
 import { useEffect } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import type { GraphPort } from "../../../types/workflow";
@@ -10,6 +13,10 @@ import {
 } from "../lib/workflowGraph";
 
 type WorkflowGraphNodeProps = NodeProps<WorkflowFlowNode> & {
+  onNodeSelect: (
+    event: ReactMouseEvent | ReactPointerEvent,
+    nodeId: string,
+  ) => void;
   onPortPointerDown: (
     event: ReactPointerEvent,
     nodeId: string,
@@ -23,6 +30,7 @@ export function WorkflowGraphNode({
   data,
   selected,
   isConnectable,
+  onNodeSelect,
   onPortPointerDown,
   onPortPointerUp,
 }: WorkflowGraphNodeProps) {
@@ -47,6 +55,10 @@ export function WorkflowGraphNode({
         type="button"
         aria-label={`Graph canvas node ${id}`}
         className="graph-node-button nodrag"
+        onClick={(event) => {
+          event.stopPropagation();
+          onNodeSelect(event, id);
+        }}
       >
         <span>{data.label}</span>
         <small>{graphNodeLabel(data.nodeType)}</small>

@@ -70,11 +70,11 @@ export function StepHelpModal({
             className="step-help-body"
             style={{ overflow: "visible", paddingRight: 0 }}
           >
-            <HelpSection title={language === "vi" ? "Step này làm gì?" : "What this step does"}>
+            <HelpSection title={language === "vi" ? "Action này làm gì" : "What this does"}>
               <p>{content.summary}</p>
             </HelpSection>
 
-            <HelpSection title={language === "vi" ? "Khi nào dùng?" : "When to use it"}>
+            <HelpSection title={language === "vi" ? "Dùng khi" : "Use it when"}>
               <ul>
                 {content.useWhen.map((item) => (
                   <li key={item}>{item}</li>
@@ -82,39 +82,102 @@ export function StepHelpModal({
               </ul>
             </HelpSection>
 
-            <HelpSection title={language === "vi" ? "Giải thích field" : "Field guide"}>
-              <div className="help-field-list">
-                {content.fields.map((field) => (
-                  <div className="help-field-item" key={field.name}>
-                    <strong>{field.name}</strong>
-                    <p>{field.description}</p>
-                    {field.details?.length ? (
+            {content.notFor?.length || content.chooseInstead?.length ? (
+              <HelpSection title={language === "vi" ? "Dùng cái khác khi" : "Use something else when"}>
+                {content.notFor?.length ? (
+                  <ul>
+                    {content.notFor.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {content.chooseInstead?.length ? (
+                  <div className="help-field-list">
+                    {content.chooseInstead.map((item) => (
+                      <div className="help-field-item" key={`${item.action}-${item.when}`}>
+                        <strong>{item.action}</strong>
+                        <p>{item.when}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </HelpSection>
+            ) : null}
+
+            <HelpSection title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}>
+              <FieldList fields={content.minimalConfig ?? content.fields} />
+            </HelpSection>
+
+            {content.advancedConfig?.length ? (
+              <HelpSection title={language === "vi" ? "Field nâng cao" : "Advanced fields"}>
+                <div className="help-field-list">
+                  {content.advancedConfig.map((field) => (
+                    <div className="help-field-item" key={field.name}>
+                      <strong>{field.name}</strong>
+                      <p>{field.description}</p>
+                      {field.whenToUse ? (
+                        <ul className="help-field-details">
+                          <li>{field.whenToUse}</li>
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </HelpSection>
+            ) : null}
+
+            {content.outputs?.length ? (
+              <HelpSection title={language === "vi" ? "Output được tạo" : "Outputs created"}>
+                <div className="help-field-list">
+                  {content.outputs.map((output) => (
+                    <div className="help-field-item" key={output.name}>
+                      <strong>{output.name}</strong>
+                      <p>{output.description}</p>
                       <ul className="help-field-details">
-                        {field.details.map((detail) => (
-                          <li key={detail}>{detail}</li>
+                        {output.usedBy.map((item) => (
+                          <li key={item}>{item}</li>
                         ))}
                       </ul>
-                    ) : null}
+                    </div>
+                  ))}
+                </div>
+              </HelpSection>
+            ) : null}
+
+            <HelpSection title={language === "vi" ? "Ví dụ workflow" : "Workflow examples"}>
+              <div className="help-field-list">
+                {(content.workflowExamples ?? [
+                  { title: language === "vi" ? "Ví dụ" : "Example", steps: content.examples },
+                ]).map((example) => (
+                  <div className="help-field-item" key={example.title}>
+                    <strong>{example.title}</strong>
+                    <ul className="help-field-details">
+                      {example.steps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ul>
                   </div>
                 ))}
               </div>
             </HelpSection>
 
-            <HelpSection title={language === "vi" ? "Ví dụ" : "Examples"}>
-              <ul>
-                {content.examples.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </HelpSection>
-
-            <HelpSection title={language === "vi" ? "Dễ nhầm" : "Common mistakes"}>
+            <HelpSection title={language === "vi" ? "Lỗi hay gặp và cách sửa" : "Common mistakes and fixes"}>
               <ul>
                 {content.commonMistakes.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </HelpSection>
+
+            {content.safetyNotes?.length ? (
+              <HelpSection title={language === "vi" ? "Lưu ý an toàn" : "Safety notes"}>
+                <ul>
+                  {content.safetyNotes.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </HelpSection>
+            ) : null}
           </div>
         </ScrollArea>
       </DialogContent>
@@ -134,5 +197,33 @@ function HelpSection({
       <h3>{title}</h3>
       {children}
     </section>
+  );
+}
+
+function FieldList({
+  fields,
+}: {
+  fields: Array<{
+    name: string;
+    description: string;
+    details?: string[];
+  }>;
+}) {
+  return (
+    <div className="help-field-list">
+      {fields.map((field) => (
+        <div className="help-field-item" key={field.name}>
+          <strong>{field.name}</strong>
+          <p>{field.description}</p>
+          {field.details?.length ? (
+            <ul className="help-field-details">
+              {field.details.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ))}
+    </div>
   );
 }

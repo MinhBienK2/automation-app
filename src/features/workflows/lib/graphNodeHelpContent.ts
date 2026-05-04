@@ -6,12 +6,32 @@ export type GraphNodeHelpContent = {
   title: string;
   summary: string;
   useWhen: string[];
+  notFor?: string[];
+  portSemantics?: Array<{
+    port: string;
+    kind: "input" | "branch" | "continuation" | "terminal";
+    required: boolean;
+    description: string;
+  }>;
   fields: Array<{
     name: string;
     description: string;
     details: string[];
   }>;
+  minimalConfig?: Array<{
+    name: string;
+    description: string;
+  }>;
+  workflowExamples?: Array<{
+    title: string;
+    steps: string[];
+    notes?: string[];
+  }>;
   examples: string[];
+  relatedNodes?: Array<{
+    node: string;
+    relationship: string;
+  }>;
   commonMistakes: string[];
 };
 
@@ -55,7 +75,7 @@ const conditionField = {
   ]),
 };
 
-export const graphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = {
+const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = {
   start: simpleNodeHelp("Start", "Bắt đầu workflow graph.", "Start the workflow graph."),
   end_success: simpleNodeHelp("Success End", "Kết thúc workflow thành công.", "End the workflow successfully."),
   end_failure: {
@@ -293,6 +313,229 @@ export const graphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp>
     ], "en"),
   },
 };
+
+export const graphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> =
+  addGraphNodeDecisionGuidance(baseGraphNodeHelpContent);
+
+function addGraphNodeDecisionGuidance(
+  content: Record<GraphNodeType, BilingualGraphNodeHelp>,
+): Record<GraphNodeType, BilingualGraphNodeHelp> {
+  const result = {} as Record<GraphNodeType, BilingualGraphNodeHelp>;
+  for (const nodeType of Object.keys(content) as GraphNodeType[]) {
+    result[nodeType] = {
+      vi: addGraphNodeLanguageDecisionGuidance(nodeType, "vi", content[nodeType].vi),
+      en: addGraphNodeLanguageDecisionGuidance(nodeType, "en", content[nodeType].en),
+    };
+  }
+  return result;
+}
+
+function addGraphNodeLanguageDecisionGuidance(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  content: GraphNodeHelpContent,
+): GraphNodeHelpContent {
+  return {
+    ...content,
+    notFor: graphNodeNotFor(nodeType, language),
+    portSemantics: graphNodePortSemantics(nodeType, language),
+    minimalConfig: content.fields.map((field) => ({
+      name: field.name,
+      description: field.description,
+    })),
+    workflowExamples: graphNodeWorkflowExamples(nodeType, language, content),
+    relatedNodes: relatedGraphNodes(nodeType, language),
+  };
+}
+
+function graphNodeNotFor(nodeType: GraphNodeType, language: GraphNodeHelpLanguage) {
+  const vi = language === "vi";
+  switch (nodeType) {
+    case "break_loop":
+    case "continue_loop":
+      return [
+        vi
+          ? "Không dùng ngoài loop body; validation sẽ chặn run nếu node không nằm trong loop."
+          : "Not for use outside a loop body; validation blocks runs when it is outside a loop.",
+      ];
+    case "retry":
+      return [
+        vi
+          ? "Không dùng để rẽ nhánh theo điều kiện nghiệp vụ; dùng If hoặc Switch."
+          : "Not for business-condition branching; use If or Switch.",
+      ];
+    default:
+      return undefined;
+  }
+}
+
+function graphNodePortSemantics(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+): GraphNodeHelpContent["portSemantics"] {
+  const vi = language === "vi";
+  const input = vi ? "Nhận luồng chạy từ node trước." : "Receives flow from the previous node.";
+  const optionalDone = vi
+    ? "Continuation optional; nếu không nối, path kết thúc thành công."
+    : "Optional continuation; when unconnected, the path ends successfully.";
+
+  switch (nodeType) {
+    case "if":
+      return [
+        port("in", "input", true, input),
+        port("true", "branch", false, vi ? "Chạy khi condition đúng; thiếu link sẽ no-op." : "Runs when the condition is true; missing link no-ops."),
+        port("false", "branch", false, vi ? "Chạy khi condition sai; thiếu link sẽ no-op." : "Runs when the condition is false; missing link no-ops."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    case "switch":
+      return [
+        port("in", "input", true, input),
+        port("case_N", "branch", false, vi ? "Chạy case khớp expression." : "Runs the case that matches the expression."),
+        port("default", "branch", false, vi ? "Chạy khi không case nào khớp." : "Runs when no case matches."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+      return [
+        port("in", "input", true, input),
+        port("loop", "branch", true, vi ? "Body chạy trong vòng lặp." : "Loop body that runs inside the loop."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    case "repeat_until":
+      return [
+        port("in", "input", true, input),
+        port("loop", "branch", true, vi ? "Body chạy cho tới khi condition đúng." : "Body runs until the condition becomes true."),
+        port("done", "continuation", false, optionalDone),
+        port("timeout", "branch", false, vi ? "Nhánh optional khi loop hết giới hạn." : "Optional branch when the loop reaches its limit."),
+      ];
+    case "retry":
+      return [
+        port("in", "input", true, input),
+        port("try", "branch", true, vi ? "Nhánh công việc cần retry." : "Work branch that should be retried."),
+        port("success", "continuation", false, vi ? "Chạy khi Try thành công." : "Runs when Try succeeds."),
+        port("failed", "branch", false, vi ? "Optional; nếu thiếu và hết retry, workflow fail." : "Optional; when missing and retries are exhausted, the workflow fails."),
+      ];
+    case "break_loop":
+    case "continue_loop":
+      return [port("in", "input", true, input)];
+    case "try_catch":
+      return [
+        port("in", "input", true, input),
+        port("try", "branch", true, vi ? "Nhánh chính cần bắt lỗi." : "Main branch whose errors are handled."),
+        port("error", "branch", false, vi ? "Nhánh xử lý lỗi optional." : "Optional error handling branch."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    case "fallback":
+      return [
+        port("in", "input", true, input),
+        port("primary", "branch", true, vi ? "Nhánh chính cần thử trước." : "Primary branch to try first."),
+        port("fallback", "branch", false, vi ? "Nhánh dự phòng optional." : "Optional fallback branch."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    default:
+      return contentPorts(nodeType, language);
+  }
+}
+
+function contentPorts(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+): GraphNodeHelpContent["portSemantics"] {
+  const vi = language === "vi";
+  if (nodeType === "start") {
+    return [port("out", "continuation", true, vi ? "Điểm bắt đầu workflow." : "Starts workflow flow.")];
+  }
+  if (nodeType === "end_success" || nodeType === "end_failure") {
+    return [port("in", "terminal", true, vi ? "Nhận path kết thúc." : "Receives the ending path.")];
+  }
+  return undefined;
+}
+
+function port(
+  portName: string,
+  kind: "input" | "branch" | "continuation" | "terminal",
+  required: boolean,
+  description: string,
+) {
+  return { port: portName, kind, required, description };
+}
+
+function graphNodeWorkflowExamples(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  content: GraphNodeHelpContent,
+) {
+  const vi = language === "vi";
+  switch (nodeType) {
+    case "continue_loop":
+      return [
+        {
+          title: vi ? "Bỏ qua item không hợp lệ" : "Skip invalid item",
+          steps: [
+            "Repeat For Each item",
+            "loop -> If item_invalid",
+            "true -> Continue Loop",
+            "false -> Process item",
+            "done -> Finish",
+          ],
+        },
+      ];
+    case "retry":
+      return [
+        {
+          title: vi ? "Retry thao tác dễ fail" : "Retry flaky work",
+          steps: [
+            "Retry",
+            "try -> Click Submit -> Wait Dashboard",
+            "success -> Extract Result",
+            "failed -> End Failure",
+          ],
+        },
+      ];
+    case "break_loop":
+      return [
+        {
+          title: vi ? "Thoát loop khi đã tìm thấy dữ liệu" : "Exit when data is found",
+          steps: ["Repeat For Each row", "loop -> If found", "true -> Break Loop", "done -> Finish"],
+        },
+      ];
+    default:
+      {
+        const firstStep = content.examples[0] ?? `${content.title} -> Done`;
+        const step = firstStep.includes("->") ? firstStep : `${content.title} -> Done`;
+        return [
+          {
+            title: vi ? "Luồng graph mẫu" : "Example graph flow",
+            steps: [step],
+          },
+        ];
+      }
+  }
+}
+
+function relatedGraphNodes(nodeType: GraphNodeType, language: GraphNodeHelpLanguage) {
+  const vi = language === "vi";
+  switch (nodeType) {
+    case "if":
+      return [
+        {
+          node: "Switch",
+          relationship: vi ? "Dùng khi có nhiều case." : "Use when there are many cases.",
+        },
+      ];
+    case "break_loop":
+    case "continue_loop":
+      return [
+        {
+          node: "Repeat For Each",
+          relationship: vi ? "Thường dùng bên trong loop." : "Commonly used inside a loop.",
+        },
+      ];
+    default:
+      return undefined;
+  }
+}
 
 function field(name: string, description: string, details: string[]) {
   return { name, description, details };

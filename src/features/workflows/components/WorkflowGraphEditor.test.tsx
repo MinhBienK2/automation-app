@@ -7,6 +7,7 @@ import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/
 import { sleepStep } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+import { nodePorts } from "../lib/workflowGraph";
 
 const workflowGraphEditorSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/WorkflowGraphEditor.tsx"),
@@ -115,7 +116,9 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).toContain("onEdgeClick");
     expect(workflowGraphEditorSource).toContain("const workflowNodeTypes = useMemo");
     expect(workflowGraphEditorSource).toContain("nodeTypes={workflowNodeTypes}");
-    expect(workflowGraphEditorSource).toContain("[completePortConnection, startPortConnection]");
+    expect(workflowGraphEditorSource).toContain(
+      "[completePortConnection, selectNodeFromEvent, startPortConnection]",
+    );
     expect(workflowGraphEditorSource).toContain("nodes={reactFlowNodes}");
     expect(workflowGraphEditorSource).toContain(
       "mergeReactFlowNodeRuntimeState(flowGraph.nodes, currentNodes)",
@@ -279,8 +282,9 @@ describe("Workflow graph editor integration", () => {
 
   test("wires React Flow edge selection to selected-link deletion", () => {
     expect(workflowGraphEditorSource).toContain("onEdgeClick={handleEdgeClick}");
-    expect(workflowGraphEditorSource).toContain("setSelectedEdgeId(edge.id)");
-    expect(workflowGraphEditorSource).toContain("setSelectedNodeId(null)");
+    expect(workflowGraphEditorSource).toContain(
+      "setSelection({ nodeIds: [], edgeIds: [edge.id] })",
+    );
     expect(workflowGraphEditorSource).toContain("onEdgeContextMenu");
     expect(workflowGraphEditorSource).toContain("LinkContextMenu");
     expect(workflowGraphInspectorSource).toContain('aria-label="Selected link"');
@@ -290,9 +294,12 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("clears selected links when a node is clicked", () => {
-    expect(workflowGraphEditorSource).toContain("onNodeClick={(_, node) =>");
-    expect(workflowGraphEditorSource).toContain("setSelectedEdgeId(null)");
-    expect(workflowGraphEditorSource).toContain("setSelectedNodeId(node.id)");
+    expect(workflowGraphEditorSource).toContain(
+      "onNodeClick={(event, node) => selectNodeFromEvent(event, node.id)}",
+    );
+    expect(workflowGraphEditorSource).toContain(
+      "setSelection({ nodeIds: [nodeId], edgeIds: [] })",
+    );
   });
 
   test("edits logic node config through structured inspector fields", async () => {
@@ -324,16 +331,6 @@ describe("Workflow graph editor integration", () => {
     await userEvent.clear(within(editor).getByLabelText("Times"));
     await userEvent.type(within(editor).getByLabelText("Times"), "3");
 
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
-    await userEvent.click(
-      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
-        .querySelector('[data-value="manual_approval"]') as HTMLElement,
-    );
-    expect(within(editor).getByText("Human checkpoint only; this does not bypass challenges."))
-      .toBeInTheDocument();
-    await userEvent.clear(within(editor).getByLabelText("Approval reason"));
-    await userEvent.type(within(editor).getByLabelText("Approval reason"), "Review before posting");
-
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -358,12 +355,6 @@ describe("Workflow graph editor integration", () => {
               expect.objectContaining({
                 node_type: "repeat_times",
                 config: { times: 3 },
-              }),
-              expect.objectContaining({
-                node_type: "manual_approval",
-                config: expect.objectContaining({
-                  reason: "Review before posting",
-                }),
               }),
             ]),
           }),
@@ -438,8 +429,9 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Open Wait help" }));
 
     const help = await screen.findByRole("dialog", { name: "Wait Help" });
-    expect(within(help).getByText("Step này làm gì?")).toBeInTheDocument();
-    expect(within(help).getByText("Giải thích field")).toBeInTheDocument();
+    expect(within(help).getByText("Action này làm gì")).toBeInTheDocument();
+    expect(within(help).getByText("Cấu hình tối thiểu")).toBeInTheDocument();
+    expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
     expect(within(help).getByText("Condition")).toBeInTheDocument();
     expect(within(help).getByText("Timeout ms")).toBeInTheDocument();
   });
@@ -463,8 +455,9 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Open If help" }));
 
     let help = await screen.findByRole("dialog", { name: "If Help" });
-    expect(within(help).getByText("Node này làm gì?")).toBeInTheDocument();
-    expect(within(help).getByText("Giải thích field và port")).toBeInTheDocument();
+    expect(within(help).getByText("Node này làm gì")).toBeInTheDocument();
+    expect(within(help).getByText("Port và luồng chạy")).toBeInTheDocument();
+    expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
     expect(within(help).getByText("Condition")).toBeInTheDocument();
     expect(within(help).getByText("True port")).toBeInTheDocument();
     expect(within(help).getByText("Done port")).toBeInTheDocument();
@@ -474,7 +467,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await within(editor).findByRole("menuitem", { name: "Help" }));
 
     help = await screen.findByRole("dialog", { name: "If Help" });
-    expect(within(help).getByText("False branch is optional; missing link will no-op."))
+    expect(within(help).getByText("Chạy khi condition sai; thiếu link sẽ no-op."))
       .toBeInTheDocument();
   });
 
@@ -518,6 +511,69 @@ describe("Workflow graph editor integration", () => {
                 node_type: "action",
                 config: expect.objectContaining({
                   type: "click",
+                }),
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+  });
+
+  test("simplifies graph toolbar palettes and shows Fill Field for input text", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
+
+    expect(within(toolbar).queryByRole("button", { name: "Add Output" }))
+      .not.toBeInTheDocument();
+    expect(within(toolbar).queryByRole("button", { name: "Fit" })).not.toBeInTheDocument();
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Add Variable" }));
+    const variablePalette = await screen.findByRole("dialog", { name: "Choose a variable node" });
+    expect(variablePalette.querySelector('[data-value="set_variable"]')).toBeInTheDocument();
+    expect(variablePalette.querySelector('[data-value="transform_variable"]'))
+      .not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Add End" }));
+    const endPalette = await screen.findByRole("dialog", { name: "Choose an end node" });
+    expect(endPalette.querySelector('[data-value="end_success"]')).toBeInTheDocument();
+    expect(endPalette.querySelector('[data-value="end_failure"]')).toBeInTheDocument();
+    expect(endPalette.querySelector('[data-value="stop_workflow"]')).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Add Action" }));
+    const actionPalette = await screen.findByRole("dialog", { name: "Choose an action type" });
+    expect(actionPalette.querySelector('[data-value="input_text"]')).toHaveTextContent(
+      "Fill Field",
+    );
+    expect(within(actionPalette).queryByText("Input Text")).not.toBeInTheDocument();
+    await userEvent.click(actionPalette.querySelector('[data-value="input_text"]') as HTMLElement);
+    expect(within(editor).getByRole("heading", { name: "Fill Field" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: "node-action-42",
+                label: "Fill Field",
+                config: expect.objectContaining({
+                  type: "input_text",
                 }),
               }),
             ]),
@@ -675,9 +731,34 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).queryByText("Dashboard")).not.toBeInTheDocument();
   });
 
-  test("offers advanced node types with structured inspector fields", async () => {
+  test("simplifies the logic palette while keeping hidden graph nodes compatible", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([]),
+      get_workflow_graph: {
+        version: 1,
+        nodes: [
+          {
+            id: "start",
+            node_type: "start",
+            label: "Start",
+            position: { x: 0, y: 0 },
+            config: {},
+            ports: nodePorts("start"),
+            group_id: null,
+          },
+          {
+            id: "hidden-domain",
+            node_type: "domain_allowlist",
+            label: "Domain Allowlist",
+            position: { x: 220, y: 0 },
+            config: { domains: ["example.com"] },
+            ports: nodePorts("domain_allowlist"),
+            group_id: null,
+          },
+        ],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
       save_workflow_graph: undefined,
     });
 
@@ -686,23 +767,26 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
+    expect(within(editor).getByRole("button", { name: "Graph canvas node hidden-domain" }))
+      .toBeInTheDocument();
+    expect(within(editor).getByLabelText("Allowed domains")).toHaveValue("example.com");
+
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
     const logicPalette = await screen.findByRole("dialog", { name: "Choose a logic node" });
-    [
-      "switch",
-      "while",
-      "repeat_until",
-      "try_catch",
-      "fallback",
-      "break_loop",
-      "continue_loop",
-      "stop_workflow",
-      "manual_approval",
-      "rate_limit",
-      "domain_allowlist",
-    ].forEach((value) => {
-      expect(logicPalette.querySelector(`[data-value="${value}"]`)).toBeInTheDocument();
-    });
+    expect(within(logicPalette).queryByRole("button", { name: "Flow Control" }))
+      .not.toBeInTheDocument();
+    expect(within(logicPalette).queryByRole("button", { name: "Safety" }))
+      .not.toBeInTheDocument();
+    ["switch", "while", "repeat_until", "break_loop", "continue_loop", "retry"].forEach(
+      (value) => {
+        expect(logicPalette.querySelector(`[data-value="${value}"]`)).toBeInTheDocument();
+      },
+    );
+    ["try_catch", "fallback", "stop_workflow", "manual_approval", "rate_limit", "domain_allowlist"].forEach(
+      (value) => {
+        expect(logicPalette.querySelector(`[data-value="${value}"]`)).not.toBeInTheDocument();
+      },
+    );
     await userEvent.click(logicPalette.querySelector('[data-value="while"]') as HTMLElement);
     expect(within(editor).getByLabelText("Loop max attempts")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Loop timeout ms")).toBeInTheDocument();
@@ -726,13 +810,6 @@ describe("Workflow graph editor integration", () => {
         .querySelector('[data-value="end_failure"]') as HTMLElement,
     );
     expect(within(editor).getByLabelText("Failure reason")).toBeInTheDocument();
-
-    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
-    await userEvent.click(
-      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
-        .querySelector('[data-value="domain_allowlist"]') as HTMLElement,
-    );
-    expect(within(editor).getByLabelText("Allowed domains")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -760,7 +837,7 @@ describe("Workflow graph editor integration", () => {
               expect.objectContaining({
                 node_type: "domain_allowlist",
                 config: {
-                  domains: [],
+                  domains: ["example.com"],
                 },
               }),
             ]),
@@ -855,5 +932,68 @@ describe("Workflow graph editor integration", () => {
         }),
       );
     });
+  });
+
+  test("shows a multi-selection summary with bulk graph actions", async () => {
+    vi.mocked(Date.now).mockReturnValue(42);
+    mockTauriCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "New node" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }), {
+      shiftKey: true,
+    });
+
+    expect(within(editor).getByRole("region", { name: "Graph selection summary" }))
+      .toHaveTextContent("2 nodes selected");
+    await userEvent.click(within(editor).getByRole("button", { name: "Duplicate selection" }));
+
+    expect(within(editor).getByRole("button", { name: "Graph canvas node step-1-copy" }))
+      .toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "Graph canvas node node-action-42-copy" }))
+      .toBeInTheDocument();
+    expect(within(editor).getByRole("region", { name: "Graph selection summary" }))
+      .toHaveTextContent("2 nodes selected");
+  });
+
+  test("handles graph keyboard shortcuts without firing inside config fields", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.keyboard("{Control>}d{/Control}");
+    expect(within(editor).getByRole("button", { name: "Graph canvas node new-node-copy" }))
+      .toBeInTheDocument();
+
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(within(editor).queryByRole("button", { name: "Graph canvas node new-node-copy" }))
+      .not.toBeInTheDocument();
+
+    await userEvent.keyboard("{Control>}y{/Control}");
+    expect(within(editor).getByRole("button", { name: "Graph canvas node new-node-copy" }))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
+    await userEvent.click(within(editor).getByRole("combobox", { name: "Action type" }));
+    await userEvent.click(within(editor).getByRole("option", { name: "Wait" }));
+    await userEvent.click(within(editor).getByLabelText("Duration ms"));
+    await userEvent.keyboard("{Control>}d{/Control}");
+
+    expect(within(editor).queryByRole("button", { name: "Graph canvas node new-node-copy-2" }))
+      .not.toBeInTheDocument();
   });
 });

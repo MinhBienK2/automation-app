@@ -32,7 +32,7 @@ Graph links are directed execution edges. The frontend replaces any existing edg
 
 Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
 
-Current frontend graph authoring supports explicit port connection, edge deletion, action config editing, and structured config editing for:
+Current frontend graph authoring supports explicit port connection, edge deletion, multi-selection bulk edit commands, action config editing, and structured config editing for:
 
 - `if` conditions.
 - `switch` expressions and case ports.
@@ -43,6 +43,8 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `manual_approval` reason and optional timeout.
 - `rate_limit` delay.
 - `stop_workflow`, `set_variable`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, and `end_failure`.
+
+The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
 The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 

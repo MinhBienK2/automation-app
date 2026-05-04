@@ -9,14 +9,23 @@ import { graphNodeLabel } from "../lib/workflowGraph";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import { ConnectionSummary } from "./WorkflowGraphPalettes";
 
+type SelectionSummary = {
+  nodeCount: number;
+  edgeCount: number;
+};
+
 type WorkflowGraphInspectorProps = {
   graph: WorkflowGraph;
   issueGroups: Map<string, GraphValidationIssue[]>;
   nodeLabels: Map<string, string>;
+  selectionSummary: SelectionSummary | null;
   selectedEdge: GraphEdge | null;
   selectedNode: GraphNode | null;
+  onCopySelection: () => void;
+  onDeleteSelection: () => void;
   onDeleteSelectedEdge: () => void;
   onDeleteSelectedNode: () => void;
+  onDuplicateSelection: () => void;
   onFocusSelectedNode: () => void;
   onOpenSelectedNodeHelp: () => void;
   onUpdateNode: (node: GraphNode) => void;
@@ -26,16 +35,38 @@ export function WorkflowGraphInspector({
   graph,
   issueGroups,
   nodeLabels,
+  selectionSummary,
   selectedEdge,
   selectedNode,
+  onCopySelection,
+  onDeleteSelection,
   onDeleteSelectedEdge,
   onDeleteSelectedNode,
+  onDuplicateSelection,
   onFocusSelectedNode,
   onOpenSelectedNodeHelp,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
   return (
     <aside className="graph-inspector" aria-label="Graph inspector">
+      {selectionSummary ? (
+        <section className="graph-selected-edge" aria-label="Graph selection summary">
+          <h2>Selection</h2>
+          <p>
+            {selectionSummary.nodeCount} nodes selected /{" "}
+            {selectionSummary.edgeCount} links selected
+          </p>
+          <Button type="button" variant="secondary" onClick={onDuplicateSelection}>
+            Duplicate selection
+          </Button>
+          <Button type="button" variant="secondary" onClick={onCopySelection}>
+            Copy selection
+          </Button>
+          <Button type="button" variant="destructive" onClick={onDeleteSelection}>
+            Delete selection
+          </Button>
+        </section>
+      ) : null}
       {selectedEdge ? (
         <section className="graph-selected-edge" aria-label="Selected link">
           <p>
@@ -52,7 +83,7 @@ export function WorkflowGraphInspector({
           </Button>
         </section>
       ) : null}
-      {selectedNode ? (
+      {!selectionSummary && selectedNode ? (
         <>
           <div className="graph-inspector-header">
             <div>
@@ -92,9 +123,9 @@ export function WorkflowGraphInspector({
             Delete Node
           </Button>
         </>
-      ) : (
+      ) : !selectionSummary && !selectedEdge ? (
         <p className="muted">Select a graph node.</p>
-      )}
+      ) : null}
 
     </aside>
   );

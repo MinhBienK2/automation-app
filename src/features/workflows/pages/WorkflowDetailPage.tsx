@@ -89,6 +89,9 @@ export function WorkflowDetailPage({
           runState={runState}
           validationIssues={graphIssues}
           onChange={onGraphChange}
+          onRunGraph={onRunGraph}
+          onSaveGraph={onSaveGraph}
+          onValidateGraph={onValidateGraph}
         />
       ) : null}
     </section>

@@ -10,21 +10,38 @@
 
 ## UI Groups
 
-Current action groups are defined in `src/lib/workflowUi.ts`:
+Current visible action groups are semantic and defined in `src/lib/workflowUi.ts`:
 
-- Core: navigation, input, clear, wait.
-- Forms: select, checkbox/radio, upload, submit, custom option, contenteditable.
-- Keyboard: key, hotkey, sequence typing, focus, clipboard.
-- Pointer & Scroll: click, scroll, hover, double click, right click, drag and drop.
-- Data: extraction and screenshots.
-- Browser: navigation history, tabs, frames, dialogs, downloads.
-- Logic: variables, assertions, conditions, loops, retries, stop.
-- Session: profiles, sessions, cookies, secrets.
-- Network: proxy, user agent, viewport, geolocation, headers, permissions.
-- Human Verification: challenge detection and manual pause/resume.
-- Reliability: fallback selector, retry step, checkpoint.
-- Advanced: JavaScript, network wait/block/mock, storage.
-- Removed legacy actions: `open_url`, `sleep`, and `type_text` are migrated or normalized to `navigate`, duration `wait`, and `input_text`.
+- Navigation: page navigation, browser history, and tab movement.
+- Element Interaction: click, hover, drag/drop, focus/blur, and scroll.
+- Form Fields: fill, clear, select, checkbox/radio, upload, submit, custom dropdown, and rich text.
+- Keyboard: key presses, hotkeys, character-by-character typing, clipboard, and paste.
+- Wait: wait conditions.
+- Capture Data: text/attribute/field/table/list extraction, screenshots, and downloads that create outputs.
+- Browser Context: frames, dialogs, download folder, viewport, geolocation, permissions, and user agent.
+- Variables & Checks: set variable, assert element, assert text.
+- Session & Storage: profiles, sessions, cookies, secrets, localStorage, and sessionStorage.
+- Network: proxy, request headers, request/response waits, request blocking, and response mocking.
+- Advanced: JavaScript escape hatch.
+
+Hidden compatibility action types remain supported in saved workflows but are not visible in the main action picker:
+
+- `set_checkbox`
+- `if_condition`
+- `repeat_times`
+- `repeat_for_each`
+- `retry_block`
+- `stop_workflow`
+- `fallback_selector`
+- `retry_step`
+- `checkpoint`
+- `detect_challenge`
+- `pause_for_human`
+- `resume_when_condition`
+
+Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript.
+
+Removed legacy actions: `open_url`, `sleep`, and `type_text` are migrated or normalized to `navigate`, duration `wait`, and `input_text`.
 
 ## Change Rule
 

@@ -37,6 +37,18 @@ import {
   toReactFlowGraph,
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
+import {
+  copyGraphSelection,
+  deleteGraphSelection,
+  duplicateGraphSelection,
+  pasteGraphClipboard,
+  pushGraphHistory,
+  redoGraphHistory,
+  undoGraphHistory,
+  type GraphClipboard,
+  type GraphHistoryState,
+  type GraphSelection,
+} from "../lib/graphEditorCommands";
 import type { GraphNodeHelpLanguage } from "../lib/graphNodeHelpContent";
 import { actionLabels } from "../../../lib/workflowUi";
 import { WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
@@ -55,6 +67,9 @@ type WorkflowGraphEditorProps = {
   runState: RunState;
   validationIssues: GraphValidationIssue[];
   onChange: (graph: WorkflowGraph) => void;
+  onRunGraph?: () => void;
+  onSaveGraph?: () => void;
+  onValidateGraph?: () => void;
 };
 
 type ActivePortConnection = {
@@ -92,11 +107,31 @@ function replacePortEdge(
   ];
 }
 
+function shouldIgnoreGraphShortcut(event: KeyboardEvent) {
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+
+  const tagName = target.tagName.toLowerCase();
+  if (
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select" ||
+    target.getAttribute("contenteditable") === "true"
+  ) {
+    return true;
+  }
+
+  return Boolean(target.closest('[role="dialog"], .action-type-popover'));
+}
+
 export function WorkflowGraphEditor({
   graph,
   runState,
   validationIssues,
   onChange,
+  onRunGraph,
+  onSaveGraph,
+  onValidateGraph,
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
   const [nodePalette, setNodePalette] = useState<{
@@ -105,9 +140,14 @@ export function WorkflowGraphEditor({
     searchLabel: string;
     groups: Array<{ label: string; nodes: GraphNodeType[] }>;
   } | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
-    () => initialSelectedNodeId(graph),
-  );
+  const [selection, setSelection] = useState<GraphSelection>(() => {
+    const initialNodeId = initialSelectedNodeId(graph);
+    return {
+      nodeIds: initialNodeId ? [initialNodeId] : [],
+      edgeIds: [],
+    };
+  });
+  const [clipboard, setClipboard] = useState<GraphClipboard | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     nodeId: string;
     x: number;
@@ -118,18 +158,45 @@ export function WorkflowGraphEditor({
     x: number;
     y: number;
   } | null>(null);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const graphRef = useRef(graph);
+  const selectionRef = useRef(selection);
+  const clipboardRef = useRef(clipboard);
+  const historyRef = useRef<GraphHistoryState>({
+    past: [],
+    present: graph,
+    future: [],
+    limit: 50,
+  });
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
   const reactFlowNodesRef = useRef<WorkflowFlowNode[]>([]);
   const reactFlowEdgesRef = useRef<WorkflowFlowEdge[]>([]);
-  const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
-  const selectedEdge = graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
+  const selectionCount = selection.nodeIds.length + selection.edgeIds.length;
+  const selectionSummary =
+    selectionCount > 1
+      ? {
+          nodeCount: selection.nodeIds.length,
+          edgeCount: selection.edgeIds.length,
+        }
+      : null;
+  const selectedNodeId =
+    !selectionSummary && selection.nodeIds.length === 1 && selection.edgeIds.length === 0
+      ? selection.nodeIds[0]
+      : null;
+  const selectedEdgeId =
+    !selectionSummary && selection.edgeIds.length === 1 && selection.nodeIds.length === 0
+      ? selection.edgeIds[0]
+      : null;
+  const selectedNode = selectedNodeId
+    ? graph.nodes.find((node) => node.id === selectedNodeId) ?? null
+    : null;
+  const selectedEdge = selectedEdgeId
+    ? graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null
+    : null;
   const nodeLabels = useMemo(
     () => new Map(graph.nodes.map((node) => [node.id, node.label])),
     [graph.nodes],
@@ -163,23 +230,23 @@ export function WorkflowGraphEditor({
   const flowGraph = useMemo(
     () =>
       toReactFlowGraph(graph, {
-        selectedNodeId,
+        selectedNodeIds: new Set(selection.nodeIds),
         runningNodeId: runState.current_step_id,
         completedNodeIds,
         failedNodeId: runState.error?.step_id ?? null,
         issueNodeIds,
         issueEdgeIds,
-        selectedEdgeId,
+        selectedEdgeIds: new Set(selection.edgeIds),
       }),
     [
       graph,
-      selectedNodeId,
+      selection.edgeIds,
+      selection.nodeIds,
       runState.current_step_id,
       completedNodeIds,
       runState.error?.step_id,
       issueNodeIds,
       issueEdgeIds,
-      selectedEdgeId,
     ],
   );
   const [reactFlowNodes, setReactFlowNodes] = useState<WorkflowFlowNode[]>(
@@ -190,7 +257,17 @@ export function WorkflowGraphEditor({
   );
   useEffect(() => {
     graphRef.current = graph;
+    historyRef.current = {
+      ...historyRef.current,
+      present: graph,
+    };
   }, [graph]);
+  useEffect(() => {
+    selectionRef.current = selection;
+  }, [selection]);
+  useEffect(() => {
+    clipboardRef.current = clipboard;
+  }, [clipboard]);
   useEffect(() => {
     setReactFlowNodes((currentNodes) =>
       mergeReactFlowNodeRuntimeState(flowGraph.nodes, currentNodes),
@@ -249,26 +326,142 @@ export function WorkflowGraphEditor({
   const clearPreviewConnection = useCallback(() => {
     activePortConnectionRef.current = null;
   }, []);
+  const selectNodeFromEvent = useCallback(
+    (
+      event: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean },
+      nodeId: string,
+    ) => {
+      setLinkContextMenu(null);
+      setContextMenu(null);
+      if (event.shiftKey || event.metaKey || event.ctrlKey) {
+        setSelection((current) => {
+          const nodeIds = current.nodeIds.includes(nodeId)
+            ? current.nodeIds.filter((selectedNodeId) => selectedNodeId !== nodeId)
+            : [...current.nodeIds, nodeId];
+          return {
+            nodeIds,
+            edgeIds: current.edgeIds,
+          };
+        });
+        return;
+      }
+      setSelection({ nodeIds: [nodeId], edgeIds: [] });
+    },
+    [],
+  );
   const workflowNodeTypes = useMemo(
     () => ({
       workflow: (props: NodeProps<WorkflowFlowNode>) => (
         <WorkflowGraphNode
           {...props}
+          onNodeSelect={selectNodeFromEvent}
           onPortPointerDown={startPortConnection}
           onPortPointerUp={completePortConnection}
         />
       ),
     }),
-    [completePortConnection, startPortConnection],
+    [completePortConnection, selectNodeFromEvent, startPortConnection],
   );
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (shouldIgnoreGraphShortcut(event)) return;
+
+      const usesModifier = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+      const isEditingDisabled = runState.status === "running";
+
+      if (!usesModifier && (event.key === "Delete" || event.key === "Backspace")) {
+        if (isEditingDisabled) return;
+        event.preventDefault();
+        deleteSelection();
+        return;
+      }
+
+      if (usesModifier && key === "z" && !event.shiftKey) {
+        if (isEditingDisabled) return;
+        event.preventDefault();
+        undoGraphEdit();
+        return;
+      }
+
+      if (
+        usesModifier &&
+        ((key === "z" && event.shiftKey) || key === "y")
+      ) {
+        if (isEditingDisabled) return;
+        event.preventDefault();
+        redoGraphEdit();
+        return;
+      }
+
+      if (usesModifier && key === "c") {
+        if (isEditingDisabled) return;
+        event.preventDefault();
+        copySelection();
+        return;
+      }
+
+      if (usesModifier && key === "v") {
+        if (isEditingDisabled) return;
+        event.preventDefault();
+        pasteClipboard();
+        return;
+      }
+
+      if (usesModifier && key === "d") {
+        if (isEditingDisabled) return;
+        event.preventDefault();
+        duplicateSelection();
+        return;
+      }
+
+      if (usesModifier && key === "s" && onSaveGraph) {
+        event.preventDefault();
+        onSaveGraph();
+        return;
+      }
+
+      if (usesModifier && event.key === "Enter" && event.shiftKey && onValidateGraph) {
+        event.preventDefault();
+        onValidateGraph();
+        return;
+      }
+
+      if (
+        usesModifier &&
+        event.key === "Enter" &&
+        !event.shiftKey &&
+        !isEditingDisabled &&
+        onRunGraph
+      ) {
+        event.preventDefault();
+        onRunGraph();
+        return;
+      }
+
+      if (
+        (!usesModifier && key === "f") ||
+        (usesModifier && event.key === "0")
+      ) {
+        event.preventDefault();
+        reactFlowInstance?.fitView();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
 
   function addNode(nodeType: GraphNodeType) {
     const node = createDefaultGraphNode(nodeType, {
       x: 120 + graph.nodes.length * 48,
       y: 120 + graph.nodes.length * 16,
     });
-    onChange({ ...graph, nodes: [...graph.nodes, node] });
-    setSelectedNodeId(node.id);
+    commitGraphChange(
+      { ...graph, nodes: [...graph.nodes, node] },
+      { nodeIds: [node.id], edgeIds: [] },
+    );
     setNodePalette(null);
   }
 
@@ -281,9 +474,10 @@ export function WorkflowGraphEditor({
       label: "New node",
       config: null,
     };
-    onChange({ ...graph, nodes: [...graph.nodes, node] });
-    setSelectedEdgeId(null);
-    setSelectedNodeId(node.id);
+    commitGraphChange(
+      { ...graph, nodes: [...graph.nodes, node] },
+      { nodeIds: [node.id], edgeIds: [] },
+    );
   }
 
   function addActionNode(actionType: ActionType) {
@@ -295,18 +489,21 @@ export function WorkflowGraphEditor({
       label: actionLabels[actionType],
       config: defaultActionConfig(actionType),
     };
-    onChange({ ...graph, nodes: [...graph.nodes, node] });
-    setSelectedEdgeId(null);
-    setSelectedNodeId(node.id);
+    commitGraphChange(
+      { ...graph, nodes: [...graph.nodes, node] },
+      { nodeIds: [node.id], edgeIds: [] },
+    );
     setIsActionPaletteOpen(false);
   }
 
   function updateNode(nextNode: GraphNode) {
-    setSelectedEdgeId(null);
-    onChange({
-      ...graph,
-      nodes: graph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
-    });
+    commitGraphChange(
+      {
+        ...graph,
+        nodes: graph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
+      },
+      { nodeIds: [nextNode.id], edgeIds: [] },
+    );
   }
 
   function deleteSelectedNode() {
@@ -316,36 +513,82 @@ export function WorkflowGraphEditor({
 
   function syncFlowGraph(nodes: Node[], edges: Edge[]) {
     const currentGraph = graphRef.current;
-    onChange(fromReactFlowGraph(currentGraph, nodes, edges, currentGraph.viewport));
+    commitGraphChange(
+      fromReactFlowGraph(currentGraph, nodes, edges, currentGraph.viewport),
+      selectionRef.current,
+    );
+  }
+
+  function commitGraphChange(
+    nextGraph: WorkflowGraph,
+    nextSelection: GraphSelection = selectionRef.current,
+    options: { pushHistory?: boolean } = {},
+  ) {
+    const shouldPushHistory = options.pushHistory ?? true;
+    graphRef.current = nextGraph;
+    if (shouldPushHistory) {
+      historyRef.current = pushGraphHistory(historyRef.current, nextGraph);
+    } else {
+      historyRef.current = {
+        ...historyRef.current,
+        present: nextGraph,
+      };
+    }
+    setContextMenu(null);
+    setLinkContextMenu(null);
+    setSelection(nextSelection);
+    onChange(nextGraph);
+  }
+
+  function undoGraphEdit() {
+    if (runState.status === "running") return;
+    const nextHistory = undoGraphHistory(historyRef.current);
+    if (nextHistory === historyRef.current) return;
+    historyRef.current = nextHistory;
+    graphRef.current = nextHistory.present;
+    setContextMenu(null);
+    setLinkContextMenu(null);
+    setSelection({ nodeIds: [], edgeIds: [] });
+    onChange(nextHistory.present);
+  }
+
+  function redoGraphEdit() {
+    if (runState.status === "running") return;
+    const nextHistory = redoGraphHistory(historyRef.current);
+    if (nextHistory === historyRef.current) return;
+    historyRef.current = nextHistory;
+    graphRef.current = nextHistory.present;
+    setContextMenu(null);
+    setLinkContextMenu(null);
+    setSelection({ nodeIds: [], edgeIds: [] });
+    onChange(nextHistory.present);
   }
 
   function handleNodesChange(changes: NodeChange<WorkflowFlowNode>[]) {
-    const selectedChange = changes.find(
-      (change) => change.type === "select" && change.selected,
-    );
-    if (selectedChange && "id" in selectedChange) {
-      setSelectedEdgeId(null);
-      setLinkContextMenu(null);
-      setSelectedNodeId(selectedChange.id);
-    }
+    const hasSelectionChange = changes.some((change) => change.type === "select");
     const shouldPersist = changes.some((change) =>
-      ["add", "position", "remove", "replace"].includes(change.type),
+      ["add", "remove", "replace"].includes(change.type),
     );
     const currentNodes = reactFlowNodesRef.current;
     const nextNodes = applyNodeChanges<WorkflowFlowNode>(changes, currentNodes);
     reactFlowNodesRef.current = nextNodes;
     setReactFlowNodes(nextNodes);
+    if (hasSelectionChange) {
+      setSelection({
+        nodeIds: nextNodes.filter((node) => node.selected).map((node) => node.id),
+        edgeIds: reactFlowEdgesRef.current
+          .filter((edge) => edge.selected)
+          .map((edge) => edge.id),
+      });
+      setLinkContextMenu(null);
+    }
     if (shouldPersist) {
       syncFlowGraph(nextNodes, reactFlowEdgesRef.current);
     }
   }
 
   function handleEdgesChange(changes: EdgeChange<WorkflowFlowEdge>[]) {
-    const selectedChange = changes.find((change) => change.type === "select");
-    if (selectedChange && "id" in selectedChange) {
-      setSelectedEdgeId(selectedChange.selected ? selectedChange.id : null);
-      if (selectedChange.selected) setSelectedNodeId(null);
-    }
+    const hasSelectionChange = changes.some((change) => change.type === "select");
     const shouldPersist = changes.some((change) =>
       ["add", "remove", "replace"].includes(change.type),
     );
@@ -353,14 +596,21 @@ export function WorkflowGraphEditor({
     const nextEdges = applyEdgeChanges<WorkflowFlowEdge>(changes, currentEdges);
     reactFlowEdgesRef.current = nextEdges;
     setReactFlowEdges(nextEdges);
+    if (hasSelectionChange) {
+      setSelection({
+        nodeIds: reactFlowNodesRef.current
+          .filter((node) => node.selected)
+          .map((node) => node.id),
+        edgeIds: nextEdges.filter((edge) => edge.selected).map((edge) => edge.id),
+      });
+    }
     if (shouldPersist) {
       syncFlowGraph(reactFlowNodesRef.current, nextEdges);
     }
   }
 
   function handleEdgeClick(_: unknown, edge: WorkflowFlowEdge) {
-    setSelectedEdgeId(edge.id);
-    setSelectedNodeId(null);
+    setSelection({ nodeIds: [], edgeIds: [edge.id] });
     setLinkContextMenu(null);
   }
 
@@ -393,36 +643,46 @@ export function WorkflowGraphEditor({
   }
 
   function deleteNode(nodeId: string) {
-    const nodeToDelete = graph.nodes.find((node) => node.id === nodeId);
+    const currentGraph = graphRef.current;
+    const nodeToDelete = currentGraph.nodes.find((node) => node.id === nodeId);
     if (!nodeToDelete || nodeToDelete.node_type === "start") return;
-    onChange({
-      ...graph,
-      nodes: graph.nodes.filter((node) => node.id !== nodeId),
-      edges: graph.edges.filter(
-        (edge) =>
-          edge.source_node_id !== nodeId &&
-          edge.target_node_id !== nodeId,
-      ),
+    const result = deleteGraphSelection(currentGraph, {
+      nodeIds: [nodeId],
+      edgeIds: [],
     });
-    const fallback = graph.nodes.find((node) => node.id !== nodeId);
-    setSelectedNodeId(fallback?.id ?? "");
+    commitGraphChange(result.graph, result.selection);
   }
 
   function duplicateNode(nodeId: string) {
-    const node = graph.nodes.find((item) => item.id === nodeId);
-    if (!node) return;
-    const copy = {
-      ...node,
-      id: `node-${node.node_type}-${Date.now()}`,
-      label: `${node.label} Copy`,
-      position: {
-        x: node.position.x + 36,
-        y: node.position.y + 36,
-      },
-    };
-    onChange({ ...graph, nodes: [...graph.nodes, copy] });
-    setSelectedNodeId(copy.id);
+    const result = duplicateGraphSelection(graphRef.current, {
+      nodeIds: [nodeId],
+      edgeIds: [],
+    });
+    commitGraphChange(result.graph, result.selection);
     setContextMenu(null);
+  }
+
+  function duplicateSelection() {
+    if (runState.status === "running") return;
+    const result = duplicateGraphSelection(graphRef.current, selectionRef.current);
+    commitGraphChange(result.graph, result.selection);
+  }
+
+  function copySelection() {
+    const nextClipboard = copyGraphSelection(graphRef.current, selectionRef.current);
+    if (nextClipboard) setClipboard(nextClipboard);
+  }
+
+  function pasteClipboard() {
+    if (runState.status === "running") return;
+    const result = pasteGraphClipboard(graphRef.current, clipboardRef.current);
+    commitGraphChange(result.graph, result.selection);
+  }
+
+  function deleteSelection() {
+    if (runState.status === "running") return;
+    const result = deleteGraphSelection(graphRef.current, selectionRef.current);
+    commitGraphChange(result.graph, result.selection);
   }
 
   function openNodeHelp(nodeId: string) {
@@ -441,12 +701,12 @@ export function WorkflowGraphEditor({
   }
 
   function deleteEdge(edgeId: string) {
-    setSelectedEdgeId((current) => (current === edgeId ? null : current));
     setLinkContextMenu((current) => (current?.edgeId === edgeId ? null : current));
-    onChange({
-      ...graph,
-      edges: graph.edges.filter((edge) => edge.id !== edgeId),
+    const result = deleteGraphSelection(graphRef.current, {
+      nodeIds: [],
+      edgeIds: [edgeId],
     });
+    commitGraphChange(result.graph, result.selection);
   }
 
   function deleteSelectedEdge() {
@@ -466,7 +726,6 @@ export function WorkflowGraphEditor({
       <WorkflowGraphToolbar
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
-        onFitView={() => reactFlowInstance?.fitView()}
         onOpenNodePalette={openNodePalette}
       />
 
@@ -492,8 +751,7 @@ export function WorkflowGraphEditor({
               onEdgeClick={handleEdgeClick}
               onEdgeContextMenu={(event, edge) => {
                 event.preventDefault();
-                setSelectedEdgeId(edge.id);
-                setSelectedNodeId(null);
+                setSelection({ nodeIds: [], edgeIds: [edge.id] });
                 setLinkContextMenu({
                   edgeId: edge.id,
                   x: event.clientX,
@@ -503,19 +761,20 @@ export function WorkflowGraphEditor({
               onEdgesChange={handleEdgesChange}
               onInit={setReactFlowInstance}
               onMoveEnd={(_, viewport) =>
-                onChange({ ...graph, viewport })
+                commitGraphChange({ ...graphRef.current, viewport }, selectionRef.current, {
+                  pushHistory: false,
+                })
               }
               onNodeContextMenu={(event, node) => {
                 event.preventDefault();
-                setSelectedEdgeId(null);
                 setLinkContextMenu(null);
-                setSelectedNodeId(node.id);
+                setSelection({ nodeIds: [node.id], edgeIds: [] });
                 setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY });
               }}
-              onNodeClick={(_, node) => {
-                setSelectedEdgeId(null);
-                setSelectedNodeId(node.id);
-              }}
+              onNodeClick={(event, node) => selectNodeFromEvent(event, node.id)}
+              onNodeDragStop={() =>
+                syncFlowGraph(reactFlowNodesRef.current, reactFlowEdgesRef.current)
+              }
               onNodesChange={handleNodesChange}
               panOnDrag
             >
@@ -535,6 +794,14 @@ export function WorkflowGraphEditor({
                 x={contextMenu.x}
                 y={contextMenu.y}
                 onClose={() => setContextMenu(null)}
+                onCopy={() => {
+                  const nextClipboard = copyGraphSelection(graphRef.current, {
+                    nodeIds: [contextMenu.nodeId],
+                    edgeIds: [],
+                  });
+                  if (nextClipboard) setClipboard(nextClipboard);
+                  setContextMenu(null);
+                }}
                 onDuplicate={() => duplicateNode(contextMenu.nodeId)}
                 onHelp={() => openNodeHelp(contextMenu.nodeId)}
                 onDelete={() => {
@@ -562,10 +829,14 @@ export function WorkflowGraphEditor({
           graph={graph}
           issueGroups={issueGroups}
           nodeLabels={nodeLabels}
+          selectionSummary={selectionSummary}
           selectedEdge={selectedEdge}
           selectedNode={selectedNode}
+          onCopySelection={copySelection}
+          onDeleteSelection={deleteSelection}
           onDeleteSelectedEdge={deleteSelectedEdge}
           onDeleteSelectedNode={deleteSelectedNode}
+          onDuplicateSelection={duplicateSelection}
           onFocusSelectedNode={focusSelectedNode}
           onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
           onUpdateNode={updateNode}

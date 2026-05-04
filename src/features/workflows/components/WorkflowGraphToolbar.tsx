@@ -3,7 +3,6 @@ import { Button } from "../../../components/ui/button";
 import {
   endNodeGroups,
   logicNodeGroups,
-  outputNodeGroups,
   variableNodeGroups,
 } from "./WorkflowGraphPalettes";
 
@@ -12,7 +11,6 @@ type NodePaletteGroups = Array<{ label: string; nodes: GraphNodeType[] }>;
 type WorkflowGraphToolbarProps = {
   onAddAction: () => void;
   onAddNewNode: () => void;
-  onFitView: () => void;
   onOpenNodePalette: (
     title: string,
     eyebrow: string,
@@ -24,7 +22,6 @@ type WorkflowGraphToolbarProps = {
 export function WorkflowGraphToolbar({
   onAddAction,
   onAddNewNode,
-  onFitView,
   onOpenNodePalette,
 }: WorkflowGraphToolbarProps) {
   return (
@@ -68,20 +65,6 @@ export function WorkflowGraphToolbar({
         variant="secondary"
         onClick={() =>
           onOpenNodePalette(
-            "Choose an output node",
-            "Add Output Node",
-            "Search output nodes",
-            outputNodeGroups,
-          )
-        }
-      >
-        Add Output
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
             "Choose an end node",
             "Add End Node",
             "Search end nodes",
@@ -90,9 +73,6 @@ export function WorkflowGraphToolbar({
         }
       >
         Add End
-      </Button>
-      <Button type="button" variant="secondary" onClick={onFitView}>
-        Fit
       </Button>
     </div>
   );

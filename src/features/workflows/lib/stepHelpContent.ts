@@ -1,4 +1,5 @@
 import type { ActionType } from "../../../types/workflow";
+import { actionLabels } from "../../../lib/workflowUi";
 
 export type StepHelpLanguage = "vi" | "en";
 
@@ -6,13 +7,38 @@ export type StepHelpContent = {
   title: string;
   summary: string;
   useWhen: string[];
+  notFor?: string[];
+  chooseInstead?: Array<{
+    action: string;
+    when: string;
+  }>;
   fields: Array<{
     name: string;
     description: string;
     details?: string[];
   }>;
+  minimalConfig?: Array<{
+    name: string;
+    description: string;
+  }>;
+  advancedConfig?: Array<{
+    name: string;
+    description: string;
+    whenToUse?: string;
+  }>;
+  workflowExamples?: Array<{
+    title: string;
+    steps: string[];
+    notes?: string[];
+  }>;
+  outputs?: Array<{
+    name: string;
+    description: string;
+    usedBy: string[];
+  }>;
   examples: string[];
   commonMistakes: string[];
+  safetyNotes?: string[];
 };
 
 type BilingualStepHelp = Record<StepHelpLanguage, StepHelpContent>;
@@ -165,7 +191,7 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
   },
   input_text: {
     vi: {
-      title: "Trợ giúp Input Text",
+      title: "Trợ giúp Fill Field",
       summary: "Nhập text vào input, textarea, hoặc element có thể nhập liệu.",
       useWhen: ["Dùng cho form đăng nhập, search box, textarea, hoặc field cần nhập dữ liệu.", "Dùng khi cần hỗ trợ iframe, wait nâng cao, hoặc nhập giống người dùng hơn."],
       fields: [
@@ -182,7 +208,7 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
       commonMistakes: ["XPath trỏ vào label hoặc div bọc ngoài thay vì input thật.", "Element trong iframe cần nhập cả Iframe XPath."],
     },
     en: {
-      title: "Input Text Help",
+      title: "Fill Field Help",
       summary: "Enter text into an input, textarea, or editable element.",
       useWhen: ["Use for login forms, search boxes, textareas, or fields that need text.", "Use when you need iframe support, advanced waiting, or more user-like typing."],
       fields: [
@@ -446,7 +472,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   right_click: elementHelp("Right Click", "right click", "click chuột phải", "context menu"),
   focus_element: elementHelp("Focus Element", "focus", "focus vào element", "keyboard input"),
   blur_element: elementHelp("Blur Element", "blur", "bỏ focus khỏi element", "validation"),
-  paste_clipboard: elementHelp("Paste Clipboard", "paste clipboard text", "dán clipboard", "paste"),
+  paste_clipboard: elementHelp("Paste Into Field", "paste clipboard text into a field", "dán clipboard vào field", "paste"),
   check: elementHelp("Check", "ensure a checkbox is checked", "bật checkbox", "checkbox"),
   uncheck: elementHelp("Uncheck", "ensure a checkbox is unchecked", "tắt checkbox", "checkbox"),
   toggle_checkbox: elementHelp("Toggle Checkbox", "toggle a checkbox", "đảo trạng thái checkbox", "checkbox"),
@@ -604,7 +630,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
         { name: "Timeout ms", description: timeoutField.vi },
       ],
       examples: ["XPath: //*[@role='combobox'], Text: apple, Delay ms: 25"],
-      commonMistakes: ["Dùng Input Text cho field thường sẽ nhanh và ổn định hơn.", "Delay 0 không hợp lệ; bỏ trống nếu không cần delay."],
+      commonMistakes: ["Dùng Fill Field cho field thường sẽ nhanh và ổn định hơn.", "Delay 0 không hợp lệ; bỏ trống nếu không cần delay."],
     },
     en: {
       title: "Type Sequence Help",
@@ -619,25 +645,25 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
         { name: "Timeout ms", description: timeoutField.en },
       ],
       examples: ["XPath: //*[@role='combobox'], Text: apple, Delay ms: 25"],
-      commonMistakes: ["Input Text is faster and more stable for normal fields.", "Delay 0 is invalid; leave it blank when no delay is needed."],
+      commonMistakes: ["Fill Field is faster and more stable for normal fields.", "Delay 0 is invalid; leave it blank when no delay is needed."],
     },
   },
   set_clipboard: {
     vi: {
       title: "Trợ giúp Set Clipboard",
-      summary: "Đặt nội dung clipboard nội bộ của workflow để dùng ở step Paste Clipboard.",
-      useWhen: ["Dùng khi website xử lý paste tốt hơn nhập từng ký tự.", "Dùng trước Paste Clipboard."],
+      summary: "Đặt nội dung clipboard nội bộ của workflow để dùng ở step Paste Into Field.",
+      useWhen: ["Dùng khi website xử lý paste tốt hơn nhập từng ký tự.", "Dùng trước Paste Into Field."],
       fields: [{ name: "Text", description: "Nội dung cần đưa vào clipboard workflow." }],
       examples: ["Text: Nội dung cần dán"],
-      commonMistakes: ["Step này chỉ chuẩn bị nội dung; dùng Paste Clipboard để dán vào field."],
+      commonMistakes: ["Step này chỉ chuẩn bị nội dung; dùng Paste Into Field để dán vào field."],
     },
     en: {
       title: "Set Clipboard Help",
-      summary: "Set the workflow clipboard text for a later Paste Clipboard step.",
-      useWhen: ["Use when the site handles paste better than typing.", "Use before Paste Clipboard."],
+      summary: "Set the workflow clipboard text for a later Paste Into Field step.",
+      useWhen: ["Use when the site handles paste better than typing.", "Use before Paste Into Field."],
       fields: [{ name: "Text", description: "The text to place into the workflow clipboard." }],
       examples: ["Text: Text to paste"],
-      commonMistakes: ["This only prepares the text; use Paste Clipboard to put it into a field."],
+      commonMistakes: ["This only prepares the text; use Paste Into Field to put it into a field."],
     },
   },
 };
@@ -705,6 +731,269 @@ function addLanguageFieldDetails(
       details: field.details ?? fieldDetails(actionType, language, field.name),
     })),
   };
+}
+
+function addDecisionGuidance(
+  content: Record<ActionType, BilingualStepHelp>,
+): Record<ActionType, BilingualStepHelp> {
+  const result = {} as Record<ActionType, BilingualStepHelp>;
+
+  for (const actionType of Object.keys(content) as ActionType[]) {
+    result[actionType] = {
+      vi: addLanguageDecisionGuidance(actionType, "vi", content[actionType].vi),
+      en: addLanguageDecisionGuidance(actionType, "en", content[actionType].en),
+    };
+  }
+
+  return result;
+}
+
+function addLanguageDecisionGuidance(
+  actionType: ActionType,
+  language: StepHelpLanguage,
+  content: StepHelpContent,
+): StepHelpContent {
+  const label = actionLabels[actionType];
+  const minimalConfig = content.fields.slice(0, 3).map((field) => ({
+    name: field.name,
+    description: field.description,
+  }));
+  const advancedConfig = content.fields.slice(3).map((field) => ({
+    name: field.name,
+    description: field.description,
+    whenToUse:
+      language === "vi"
+        ? "Dùng khi tình huống thực tế cần tinh chỉnh thêm."
+        : "Use when the real page needs extra tuning.",
+  }));
+
+  return {
+    ...content,
+    title:
+      language === "vi"
+        ? `Trợ giúp ${label}`
+        : `${label} Help`,
+    notFor: decisionNotFor(actionType, language),
+    chooseInstead: decisionAlternatives(actionType, language),
+    minimalConfig,
+    advancedConfig: advancedConfig.length ? advancedConfig : undefined,
+    workflowExamples: workflowExamples(actionType, language, content),
+    outputs: outputGuidance(actionType, language),
+    safetyNotes: safetyNotes(actionType, language),
+  };
+}
+
+function decisionNotFor(actionType: ActionType, language: StepHelpLanguage) {
+  const vi = language === "vi";
+  switch (actionType) {
+    case "input_text":
+      return [
+        vi
+          ? "Không dùng khi website cần từng sự kiện bàn phím thật, autocomplete, mask, hoặc listener theo từng phím."
+          : "Not for fields that require real keyboard events, autocomplete, masks, or per-key listeners.",
+        vi
+          ? "Không dùng cho contenteditable hoặc rich text editor."
+          : "Not for contenteditable or rich text editors.",
+      ];
+    case "type_sequence":
+      return [
+        vi
+          ? "Không dùng cho field thường khi Fill Field ổn định và nhanh hơn."
+          : "Not for ordinary fields when Fill Field is faster and stable.",
+      ];
+    case "paste_clipboard":
+      return [
+        vi
+          ? "Không dùng khi website chặn paste hoặc cần từng phím thật."
+          : "Not when the site blocks paste or needs real key-by-key typing.",
+      ];
+    case "set_contenteditable":
+      return [
+        vi
+          ? "Không dùng cho input hoặc textarea thường."
+          : "Not for normal input or textarea fields.",
+      ];
+    case "toggle_checkbox":
+      return [
+        vi
+          ? "Không dùng khi trạng thái cuối cùng phải chắc chắn checked hoặc unchecked."
+          : "Not when the final checked state must be guaranteed.",
+      ];
+    default:
+      return undefined;
+  }
+}
+
+function decisionAlternatives(actionType: ActionType, language: StepHelpLanguage) {
+  const vi = language === "vi";
+  switch (actionType) {
+    case "input_text":
+      return [
+        {
+          action: "Type Keys",
+          when: vi
+            ? "Website phụ thuộc key events, autocomplete, mask, hoặc listener từng phím."
+            : "The site depends on key events, autocomplete, masks, or per-key listeners.",
+        },
+        {
+          action: "Paste Into Field",
+          when: vi
+            ? "Text dài hoặc paste đáng tin cậy hơn gõ."
+            : "The text is long or paste is more reliable than typing.",
+        },
+        {
+          action: "Fill Rich Text",
+          when: vi
+            ? "Element là contenteditable hoặc rich text editor."
+            : "The element is contenteditable or a rich text editor.",
+        },
+      ];
+    case "type_sequence":
+      return [
+        {
+          action: "Fill Field",
+          when: vi
+            ? "Field thường không cần từng sự kiện bàn phím."
+            : "The field is ordinary and does not need per-key events.",
+        },
+      ];
+    case "paste_clipboard":
+      return [
+        {
+          action: "Fill Field",
+          when: vi ? "Nhập trực tiếp ổn định hơn paste." : "Direct fill is more stable than paste.",
+        },
+        {
+          action: "Type Keys",
+          when: vi ? "Website cần sự kiện phím thật." : "The site needs real keyboard events.",
+        },
+      ];
+    case "set_contenteditable":
+      return [
+        {
+          action: "Fill Field",
+          when: vi ? "Đích là input hoặc textarea thường." : "The target is a normal input or textarea.",
+        },
+      ];
+    case "toggle_checkbox":
+      return [
+        {
+          action: "Check",
+          when: vi ? "Cần đảm bảo checkbox bật." : "You need to ensure the checkbox is checked.",
+        },
+        {
+          action: "Uncheck",
+          when: vi ? "Cần đảm bảo checkbox tắt." : "You need to ensure the checkbox is unchecked.",
+        },
+      ];
+    default:
+      return undefined;
+  }
+}
+
+function workflowExamples(
+  actionType: ActionType,
+  language: StepHelpLanguage,
+  content: StepHelpContent,
+) {
+  const vi = language === "vi";
+  if (outputActionTypes.has(actionType)) {
+    return [
+      {
+        title: vi ? "Tạo output rồi dùng ở bước sau" : "Create an output and use it later",
+        steps: [
+          vi ? "Navigate trang nguồn" : "Navigate to source page",
+          `${actionLabels[actionType]} ${vi ? "tạo output" : "creates output"}`,
+          vi ? "If hoặc action sau đọc output đó" : "If or a later action reads that output",
+        ],
+      },
+    ];
+  }
+
+  return [
+    {
+      title: vi ? "Luồng cơ bản" : "Basic workflow",
+      steps: [
+        vi ? "Navigate tới trang cần thao tác" : "Navigate to the target page",
+        `${actionLabels[actionType]}: ${content.examples[0] ?? content.summary}`,
+        vi ? "Wait hoặc action tiếp theo xác nhận kết quả" : "Wait or the next action confirms the result",
+      ],
+    },
+  ];
+}
+
+const outputActionTypes = new Set<ActionType>([
+  "extract_text",
+  "extract_attribute",
+  "extract_input_value",
+  "extract_table",
+  "extract_list",
+  "take_screenshot",
+  "wait_for_download",
+  "execute_js",
+]);
+
+function outputGuidance(actionType: ActionType, language: StepHelpLanguage) {
+  if (!outputActionTypes.has(actionType)) return undefined;
+  const vi = language === "vi";
+  return [
+    {
+      name: outputNameForAction(actionType),
+      description: vi
+        ? "Tên output được lưu trong output store của workflow để node hoặc action sau đọc lại."
+        : "Output name stored in the workflow output store for later nodes or actions.",
+      usedBy: ["If", "Assertions", "Variables", "Later actions"],
+    },
+  ];
+}
+
+function outputNameForAction(actionType: ActionType) {
+  switch (actionType) {
+    case "take_screenshot":
+      return "screenshot_path";
+    case "wait_for_download":
+      return "download_path";
+    case "execute_js":
+      return "js_result";
+    default:
+      return "output_name";
+  }
+}
+
+function safetyNotes(actionType: ActionType, language: StepHelpLanguage) {
+  const vi = language === "vi";
+  const advancedActions = new Set<ActionType>([
+    "execute_js",
+    "use_proxy",
+    "set_extra_headers",
+    "wait_for_request",
+    "wait_for_response",
+    "block_request",
+    "mock_response",
+  ]);
+  const humanActions = new Set<ActionType>([
+    "detect_challenge",
+    "pause_for_human",
+    "resume_when_condition",
+  ]);
+
+  if (advancedActions.has(actionType)) {
+    return [
+      vi
+        ? "Action nâng cao: chỉ dùng cho workflow được phép và khi action thường không đủ."
+        : "Advanced action: use only for authorized workflows when normal actions are not enough.",
+    ];
+  }
+
+  if (humanActions.has(actionType)) {
+    return [
+      vi
+        ? "Action này tạm dừng cho người xử lý hợp lệ; không dùng để vượt qua CAPTCHA hoặc kiểm soát tài khoản bên thứ ba."
+        : "This action pauses for authorized human handling; it does not solve CAPTCHA or third-party account controls.",
+    ];
+  }
+
+  return undefined;
 }
 
 function fieldDetails(
@@ -1064,4 +1353,4 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
 };
 
 export const stepHelpContent: Record<ActionType, BilingualStepHelp> =
-  addFieldDetails({ ...baseStepHelpContent, ...phaseOneStepHelpContent });
+  addDecisionGuidance(addFieldDetails({ ...baseStepHelpContent, ...phaseOneStepHelpContent }));

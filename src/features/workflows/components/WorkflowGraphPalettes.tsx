@@ -18,7 +18,11 @@ import { Input } from "../../../components/ui/input";
 import { ScrollArea } from "../../../components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { graphNodeLabel } from "../lib/workflowGraph";
-import { actionGroups, actionLabels, actionOptions } from "../../../lib/workflowUi";
+import {
+  actionGroups,
+  actionLabels,
+  allActionOptions,
+} from "../../../lib/workflowUi";
 import {
   graphNodeHelpContent,
   type GraphNodeHelpLanguage,
@@ -32,29 +36,24 @@ export const logicNodeGroups: Array<{
   { label: "Branching", nodes: ["if", "switch"] },
   {
     label: "Loops",
-    nodes: ["repeat_times", "repeat_for_each", "while", "repeat_until"],
+    nodes: [
+      "repeat_times",
+      "repeat_for_each",
+      "while",
+      "repeat_until",
+      "break_loop",
+      "continue_loop",
+    ],
   },
-  { label: "Recovery", nodes: ["retry", "try_catch", "fallback"] },
-  {
-    label: "Flow Control",
-    nodes: ["break_loop", "continue_loop", "stop_workflow"],
-  },
-  {
-    label: "Safety",
-    nodes: ["manual_approval", "rate_limit", "domain_allowlist"],
-  },
+  { label: "Recovery", nodes: ["retry"] },
 ];
 
 export const variableNodeGroups = [
-  { label: "Variables", nodes: ["set_variable", "transform_variable"] },
-] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
-
-export const outputNodeGroups = [
-  { label: "Outputs", nodes: ["assert_output", "run_subworkflow"] },
+  { label: "Variables", nodes: ["set_variable"] },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
 
 export const endNodeGroups = [
-  { label: "End", nodes: ["end_failure", "stop_workflow"] },
+  { label: "End", nodes: ["end_success", "end_failure", "stop_workflow"] },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
 
 const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
@@ -68,8 +67,8 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   retry: "Retry a path and continue through success or failure.",
   try_catch: "Separate normal work, errors, and final cleanup.",
   fallback: "Try a primary path, then use a fallback path if needed.",
-  break_loop: "Exit the current loop.",
-  continue_loop: "Skip to the next loop iteration.",
+  break_loop: "Exit the current loop and continue after it.",
+  continue_loop: "Skip the rest of the loop body and move to the next iteration.",
   stop_workflow: "Stop execution with a success or failure status.",
   manual_approval: "Pause for a human checkpoint.",
   rate_limit: "Add safe pacing before continuing.",
@@ -78,6 +77,7 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   assert_output: "Require an output value to match an expectation.",
   run_subworkflow: "Run another workflow from this graph.",
   domain_allowlist: "Restrict navigation to allowed domains.",
+  end_success: "End the graph successfully.",
   end_failure: "End the graph as a failure.",
 };
 
@@ -203,6 +203,7 @@ type NodeContextMenuProps = {
   x: number;
   y: number;
   onClose: () => void;
+  onCopy: () => void;
   onDuplicate: () => void;
   onHelp: () => void;
   onDelete: () => void;
@@ -213,6 +214,7 @@ export function NodeContextMenu({
   x,
   y,
   onClose,
+  onCopy,
   onDuplicate,
   onHelp,
   onDelete,
@@ -230,6 +232,9 @@ export function NodeContextMenu({
     >
       <button type="button" role="menuitem" onClick={onDuplicate}>
         Duplicate
+      </button>
+      <button type="button" role="menuitem" onClick={onCopy}>
+        Copy
       </button>
       <button type="button" role="menuitem" onClick={onHelp}>
         Help
@@ -341,11 +346,11 @@ export function NodeHelpDialog({
               className="step-help-body"
               style={{ overflow: "visible", paddingRight: 0 }}
             >
-              <HelpSection title={language === "vi" ? "Node này làm gì?" : "What this node does"}>
+              <HelpSection title={language === "vi" ? "Node này làm gì" : "What this does"}>
                 <p>{content.summary}</p>
               </HelpSection>
 
-              <HelpSection title={language === "vi" ? "Khi nào dùng?" : "When to use it"}>
+              <HelpSection title={language === "vi" ? "Dùng khi" : "Use it when"}>
                 <ul>
                   {content.useWhen.map((item) => (
                     <li key={item}>{item}</li>
@@ -353,15 +358,47 @@ export function NodeHelpDialog({
                 </ul>
               </HelpSection>
 
-              <HelpSection title={language === "vi" ? "Giải thích field và port" : "Field and port guide"}>
+              {content.notFor?.length ? (
+                <HelpSection title={language === "vi" ? "Dùng cái khác khi" : "Use something else when"}>
+                  <ul>
+                    {content.notFor.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </HelpSection>
+              ) : null}
+
+              <HelpSection title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}>
+                <HelpFieldList fields={content.minimalConfig ?? content.fields} />
+              </HelpSection>
+
+              {content.portSemantics?.length ? (
+                <HelpSection title={language === "vi" ? "Port và luồng chạy" : "Ports and flow"}>
+                  <div className="help-field-list">
+                    {content.portSemantics.map((port) => (
+                      <div className="help-field-item" key={port.port}>
+                        <strong>{port.port}</strong>
+                        <p>{port.description}</p>
+                        <ul className="help-field-details">
+                          <li>{port.kind}</li>
+                          <li>{port.required ? "required" : "optional"}</li>
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </HelpSection>
+              ) : null}
+
+              <HelpSection title={language === "vi" ? "Ví dụ workflow" : "Workflow examples"}>
                 <div className="help-field-list">
-                  {content.fields.map((field) => (
-                    <div className="help-field-item" key={field.name}>
-                      <strong>{field.name}</strong>
-                      <p>{field.description}</p>
+                  {(content.workflowExamples ?? [
+                    { title: language === "vi" ? "Ví dụ" : "Example", steps: content.examples },
+                  ]).map((example) => (
+                    <div className="help-field-item" key={example.title}>
+                      <strong>{example.title}</strong>
                       <ul className="help-field-details">
-                        {field.details.map((detail) => (
-                          <li key={detail}>{detail}</li>
+                        {example.steps.map((step) => (
+                          <li key={step}>{step}</li>
                         ))}
                       </ul>
                     </div>
@@ -369,15 +406,7 @@ export function NodeHelpDialog({
                 </div>
               </HelpSection>
 
-              <HelpSection title={language === "vi" ? "Ví dụ" : "Examples"}>
-                <ul>
-                  {content.examples.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </HelpSection>
-
-              <HelpSection title={language === "vi" ? "Dễ nhầm" : "Common mistakes"}>
+              <HelpSection title={language === "vi" ? "Lỗi hay gặp và cách sửa" : "Common mistakes and fixes"}>
                 <ul>
                   {content.commonMistakes.map((item) => (
                     <li key={item}>{item}</li>
@@ -396,7 +425,7 @@ function actionTypeForNodeHelp(node: GraphNode | null) {
   if (!node || node.node_type !== "action") return null;
   const config = node.config as { type?: unknown } | null;
   const actionType = typeof config?.type === "string" ? config.type : null;
-  return actionType && actionOptions.includes(actionType as ActionType)
+  return actionType && allActionOptions.includes(actionType as ActionType)
     ? (actionType as ActionType)
     : null;
 }
@@ -413,6 +442,34 @@ function HelpSection({
       <h3>{title}</h3>
       {children}
     </section>
+  );
+}
+
+function HelpFieldList({
+  fields,
+}: {
+  fields: Array<{
+    name: string;
+    description: string;
+    details?: string[];
+  }>;
+}) {
+  return (
+    <div className="help-field-list">
+      {fields.map((field) => (
+        <div className="help-field-item" key={field.name}>
+          <strong>{field.name}</strong>
+          <p>{field.description}</p>
+          {field.details?.length ? (
+            <ul className="help-field-details">
+              {field.details.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ))}
+    </div>
   );
 }
 
