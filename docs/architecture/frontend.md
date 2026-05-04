@@ -7,10 +7,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 ## Key Files
 
 - `src/App.tsx`: top-level state orchestration.
-- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave.
+- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave and graph shortcut guidance.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
+- `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
 - `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector.
 - `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu.
@@ -34,6 +35,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, while keeping persisted `WorkflowGraph` as source of truth.
 - Action node creation from the semantic action palette, unconfigured `New node` draft creation from the toolbar, graph-control node creation from simplified grouped node pickers, plus searchable type selection and config editing through the reusable action config editor.
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and keyboard shortcuts without changing persisted `WorkflowGraph` shape.
+- Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning.
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.

@@ -41,6 +41,22 @@ describe("App settings and graph autosave", () => {
     ).not.toBeChecked();
   });
 
+  test("shows graph keyboard and mouse guidance in settings", async () => {
+    mockTauriCommands(listWorkflowScenario([workflow]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+
+    const shortcuts = await screen.findByRole("region", { name: "Graph shortcuts" });
+    expect(within(shortcuts).getByText("Drag empty canvas")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Box select nodes and links")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Hold Space + drag")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Pan the graph view")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Ctrl/Cmd + Enter")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Run workflow")).toBeInTheDocument();
+  });
+
   test("autosaves graph changes by default", async () => {
     const saveGraph = vi.fn().mockResolvedValue(undefined);
     mockTauriCommands({

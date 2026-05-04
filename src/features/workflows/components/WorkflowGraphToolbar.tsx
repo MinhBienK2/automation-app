@@ -11,6 +11,7 @@ type NodePaletteGroups = Array<{ label: string; nodes: GraphNodeType[] }>;
 type WorkflowGraphToolbarProps = {
   onAddAction: () => void;
   onAddNewNode: () => void;
+  onOpenShortcuts: () => void;
   onOpenNodePalette: (
     title: string,
     eyebrow: string,
@@ -22,6 +23,7 @@ type WorkflowGraphToolbarProps = {
 export function WorkflowGraphToolbar({
   onAddAction,
   onAddNewNode,
+  onOpenShortcuts,
   onOpenNodePalette,
 }: WorkflowGraphToolbarProps) {
   return (
@@ -73,6 +75,9 @@ export function WorkflowGraphToolbar({
         }
       >
         Add End
+      </Button>
+      <Button type="button" variant="ghost" onClick={onOpenShortcuts}>
+        Shortcuts
       </Button>
     </div>
   );

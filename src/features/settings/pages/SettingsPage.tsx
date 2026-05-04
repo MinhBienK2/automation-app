@@ -1,3 +1,5 @@
+import { GraphShortcutGuide } from "../../workflows/components/GraphShortcutGuide";
+
 type SettingsPageProps = {
   graphAutosaveEnabled: boolean;
   onGraphAutosaveEnabledChange: (enabled: boolean) => void;
@@ -40,6 +42,17 @@ export function SettingsPage({
             </small>
           </span>
         </label>
+      </section>
+
+      <section className="panel settings-panel" aria-label="Graph shortcuts">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Workflow Editing</p>
+            <h2>Graph shortcuts</h2>
+          </div>
+        </div>
+
+        <GraphShortcutGuide />
       </section>
     </section>
   );

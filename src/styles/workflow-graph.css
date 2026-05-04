@@ -81,7 +81,20 @@
 }
 
 .graph-canvas .react-flow__pane {
+  cursor: crosshair;
+}
+
+.graph-canvas-pan-mode .react-flow__pane {
   cursor: grab;
+}
+
+.graph-canvas-pan-mode .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.graph-canvas .react-flow__selection {
+  border: 1px solid rgba(62, 207, 142, 0.72);
+  background: rgba(62, 207, 142, 0.12);
 }
 
 .graph-canvas .react-flow__connectionline {
@@ -134,6 +147,75 @@
 .graph-canvas .react-flow__minimap {
   border: 1px solid #2e2e2e;
   background: #0f0f0f;
+}
+
+.graph-shortcuts-dialog {
+  display: grid;
+  gap: 18px;
+  width: min(720px, 100%);
+  max-height: min(720px, calc(100dvh - 48px));
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.graph-shortcut-guide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.graph-shortcut-group {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.graph-shortcut-group h3 {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.graph-shortcut-group dl,
+.graph-shortcut-row {
+  display: grid;
+  gap: 8px;
+}
+
+.graph-shortcut-row {
+  grid-template-columns: minmax(124px, 0.8fr) minmax(0, 1fr);
+  align-items: center;
+}
+
+.graph-shortcut-row dt,
+.graph-shortcut-row dd {
+  min-width: 0;
+}
+
+.graph-shortcut-row dd {
+  margin: 0;
+  color: #b4b4b4;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.graph-shortcut-row kbd {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 28px;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid #363636;
+  border-radius: 6px;
+  background: #171717;
+  color: #fafafa;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: normal;
 }
 
 .graph-node {

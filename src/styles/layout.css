@@ -330,6 +330,10 @@
   padding: 18px;
 }
 
+.settings-panel .graph-shortcut-guide {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .settings-toggle {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

@@ -5,6 +5,7 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  SelectionMode,
   applyEdgeChanges,
   applyNodeChanges,
 } from "@xyflow/react";
@@ -51,6 +52,14 @@ import {
 } from "../lib/graphEditorCommands";
 import type { GraphNodeHelpLanguage } from "../lib/graphNodeHelpContent";
 import { actionLabels } from "../../../lib/workflowUi";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
+import { GraphShortcutGuide } from "./GraphShortcutGuide";
 import { WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
 import {
@@ -160,6 +169,8 @@ export function WorkflowGraphEditor({
   } | null>(null);
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
+  const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
+  const [isPanMode, setIsPanMode] = useState(false);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
@@ -367,6 +378,12 @@ export function WorkflowGraphEditor({
     function handleKeyDown(event: KeyboardEvent) {
       if (shouldIgnoreGraphShortcut(event)) return;
 
+      if (event.code === "Space") {
+        event.preventDefault();
+        setIsPanMode(true);
+        return;
+      }
+
       const usesModifier = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
       const isEditingDisabled = runState.status === "running";
@@ -446,11 +463,37 @@ export function WorkflowGraphEditor({
       ) {
         event.preventDefault();
         reactFlowInstance?.fitView();
+        return;
+      }
+
+      if (!usesModifier && event.key === "Escape") {
+        event.preventDefault();
+        setContextMenu(null);
+        setLinkContextMenu(null);
+        setIsShortcutGuideOpen(false);
+        setSelection({ nodeIds: [], edgeIds: [] });
       }
     }
 
+    function handleKeyUp(event: KeyboardEvent) {
+      if (event.code === "Space") {
+        event.preventDefault();
+        setIsPanMode(false);
+      }
+    }
+
+    function stopPanMode() {
+      setIsPanMode(false);
+    }
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", stopPanMode);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", stopPanMode);
+    };
   });
 
   function addNode(nodeType: GraphNodeType) {
@@ -726,13 +769,16 @@ export function WorkflowGraphEditor({
       <WorkflowGraphToolbar
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
+        onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}
       />
 
       <div className="workflow-graph-layout">
         <div className="graph-canvas-wrap">
           <div
-            className="graph-canvas"
+            className={["graph-canvas", isPanMode ? "graph-canvas-pan-mode" : ""]
+              .filter(Boolean)
+              .join(" ")}
             onPointerUp={clearPreviewConnection}
             role="application"
             aria-label="Workflow graph canvas"
@@ -776,7 +822,9 @@ export function WorkflowGraphEditor({
                 syncFlowGraph(reactFlowNodesRef.current, reactFlowEdgesRef.current)
               }
               onNodesChange={handleNodesChange}
-              panOnDrag
+              panOnDrag={isPanMode}
+              selectionMode={SelectionMode.Partial}
+              selectionOnDrag={!isPanMode}
             >
               <Background color="rgba(62, 207, 142, 0.14)" gap={32} />
               <Controls position="bottom-left" />
@@ -861,6 +909,20 @@ export function WorkflowGraphEditor({
         onOpenChange={(open) => !open && setHelpNode(null)}
         onLanguageChange={setHelpLanguage}
       />
+      <Dialog open={isShortcutGuideOpen} onOpenChange={setIsShortcutGuideOpen}>
+        <DialogContent className="graph-shortcuts-dialog">
+          <DialogHeader className="modal-header">
+            <div>
+              <p className="eyebrow">Visual Graph</p>
+              <DialogTitle>Graph Shortcuts</DialogTitle>
+              <DialogDescription>
+                Mouse and keyboard controls for selecting, moving, editing, and running graph workflows.
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+          <GraphShortcutGuide />
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

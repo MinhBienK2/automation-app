@@ -27,7 +27,9 @@
   .builder-grid,
   .monitor-grid,
   .workflow-graph-layout,
-  .graph-runtime-grid {
+  .graph-runtime-grid,
+  .graph-shortcut-guide,
+  .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
   }
 

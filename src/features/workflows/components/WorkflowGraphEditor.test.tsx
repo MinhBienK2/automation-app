@@ -103,11 +103,15 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
-  test("reserves left mouse dragging for handle connections instead of pane panning", () => {
+  test("uses select-first canvas dragging with temporary spacebar panning", () => {
     expect(workflowGraphEditorSource).toContain("connectionDragThreshold={0}");
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
     expect(workflowGraphEditorSource).toContain("nodesConnectable");
-    expect(workflowGraphEditorSource).toContain("panOnDrag");
+    expect(workflowGraphEditorSource).toContain("SelectionMode.Partial");
+    expect(workflowGraphEditorSource).toContain("selectionOnDrag={!isPanMode}");
+    expect(workflowGraphEditorSource).toContain("panOnDrag={isPanMode}");
+    expect(workflowGraphEditorSource).toContain("graph-canvas-pan-mode");
+    expect(workflowGraphEditorSource).toContain("event.code === \"Space\"");
     expect(workflowGraphCanvasPartsSource).toContain("isConnectable={isConnectable}");
     expect(workflowGraphCanvasPartsSource).toContain("useUpdateNodeInternals");
     expect(workflowGraphCanvasPartsSource).toContain("updateNodeInternals(id)");
@@ -138,6 +142,26 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).not.toContain("graph-connection-preview");
     expect(workflowGraphCanvasPartsSource).not.toContain("previewEdgePath");
     expect(workflowGraphCanvasPartsSource).not.toContain("graph-edge-arrow");
+  });
+
+  test("opens graph shortcuts from the toolbar", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Shortcuts" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Graph Shortcuts" });
+    expect(within(dialog).getByText("Drag empty canvas")).toBeInTheDocument();
+    expect(within(dialog).getByText("Box select nodes and links")).toBeInTheDocument();
+    expect(within(dialog).getByText("Hold Space + drag")).toBeInTheDocument();
+    expect(within(dialog).getByText("Pan the graph view")).toBeInTheDocument();
   });
 
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {

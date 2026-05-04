@@ -19,12 +19,14 @@ Preserve these unless the task explicitly changes them.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
 - The main graph toolbar exposes New node, Add Action, Add Logic, Add Variable, and Add End. It does not expose Add Output or a duplicate Fit button.
+- The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.
 - Graph undo/redo applies to graph edit snapshots only. Run state, validation results, save status, settings, and workflow metadata are not part of graph undo history.
 - Graph editor keyboard shortcuts do not fire while focus is inside inputs, textareas, contenteditable elements, action/node palettes, help dialogs, or dropdown popovers.
+- Dragging empty graph canvas creates a selection box by default. Holding Space temporarily switches the canvas to pan mode.
 - Selected graph nodes expose detailed help from the inspector. Configured action nodes reuse decision-guide action help content; graph-native nodes explain purpose, minimum setup, ports and flow, workflow examples, and common mistakes in the same popup format.
 - `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
 - Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
@@ -34,6 +36,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow list and detail remain separate screens.
 - Workflow list does not expose legacy step counts or raw `updated_at` values; graph editing state belongs in the detail screen.
 - Settings is a separate app screen reachable from the sidebar.
+- Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off.
