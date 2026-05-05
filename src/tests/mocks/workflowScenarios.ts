@@ -24,6 +24,20 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
   return {
     ...listWorkflowScenario([workflow]),
     get_workflow: { workflow, steps },
+    get_workflow_browser_config: {
+      workflow_id: workflow.id,
+      profile_name: null,
+      proxy_enabled: false,
+      proxy_server: null,
+      proxy_username: null,
+      proxy_password: null,
+      user_agent: null,
+      viewport_width: null,
+      viewport_height: null,
+      mobile: false,
+      touch: false,
+      challenge_policy: "none",
+    },
     get_workflow_graph: linearGraphFromSteps(steps),
   };
 }

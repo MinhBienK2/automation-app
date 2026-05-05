@@ -6,7 +6,7 @@ use workflow_automation_manager_lib::{
     domain::{
         ActionConfig, GraphEdge, GraphNode, GraphNodeType, GraphPort, GraphPortDirection,
         GraphPosition, GraphViewport, InputTypingMode, ScrollDirection, WaitCondition,
-        WorkflowGraph,
+        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
     },
     repositories::WorkflowRepository,
 };
@@ -323,6 +323,56 @@ async fn workflow_graph_is_created_by_default_and_cascades() {
         .await
         .expect("get graph");
     assert!(deleted.is_none());
+}
+
+#[tokio::test]
+async fn workflow_browser_config_persists_round_trips_and_cascades() {
+    let (repo, _db_path) = test_repository().await;
+    let workflow = repo
+        .create_workflow("Runtime config")
+        .await
+        .expect("create");
+
+    assert!(repo
+        .get_workflow_browser_config(&workflow.id)
+        .await
+        .expect("get missing browser config")
+        .is_none());
+
+    let config = WorkflowBrowserConfig {
+        workflow_id: workflow.id.clone(),
+        profile_name: Some(" qa-profile ".to_string()),
+        proxy_enabled: true,
+        proxy_server: Some("http://proxy.local:8080".to_string()),
+        proxy_username: Some(" agent ".to_string()),
+        proxy_password: Some("secret".to_string()),
+        user_agent: Some("WorkflowBot/1.0".to_string()),
+        viewport_width: Some(1280),
+        viewport_height: Some(720),
+        mobile: false,
+        touch: true,
+        challenge_policy: WorkflowBrowserChallengePolicy::DetectOnly,
+    };
+
+    repo.save_workflow_browser_config(config.clone())
+        .await
+        .expect("save browser config");
+
+    let loaded = repo
+        .get_workflow_browser_config(&workflow.id)
+        .await
+        .expect("get browser config")
+        .expect("browser config exists");
+    assert_eq!(loaded, config.normalized());
+
+    repo.delete_workflow(&workflow.id)
+        .await
+        .expect("delete workflow");
+    assert!(repo
+        .get_workflow_browser_config(&workflow.id)
+        .await
+        .expect("get deleted browser config")
+        .is_none());
 }
 
 fn wait_duration(duration_ms: u64) -> ActionConfig {

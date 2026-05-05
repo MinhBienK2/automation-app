@@ -7,10 +7,13 @@ Preserve these unless the task explicitly changes them.
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
+- Workflow detail includes workflow-level browser runtime config for launch profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
+- Running from the graph workspace saves dirty browser runtime config before execution.
 - If saving the visible graph fails before a run, the run does not start.
+- If saving browser runtime config fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
 - Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge. Reconnecting a port should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
 - Graph control blocks keep branch work separate from continuation work. `If`, `Switch`, and `Try/Catch` continue after branch work through a `done` port.
@@ -46,6 +49,8 @@ Preserve these unless the task explicitly changes them.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
+- Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
+- Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure.
 
 ## Command Boundary
 
@@ -56,6 +61,7 @@ Preserve these unless the task explicitly changes them.
 ## Runner Behavior
 
 - Full runs execute the compiled saved graph.
+- Full runs use persisted workflow browser runtime config when present. Missing config rows keep legacy launch-action inference for compatibility.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Browser sessions remain open after success, failure, and stop unless the terminal End Success, End Failure, or Stop Workflow node has its close-browser option enabled.
 - Failures identify the failed step when possible.
@@ -66,3 +72,4 @@ Preserve these unless the task explicitly changes them.
 - Workflow summaries include the legacy `step_count` field until the summary contract is renamed.
 - Saved workflow graph JSON is keyed by workflow id.
 - Graph saves touch the parent workflow `updated_at`.
+- Saved workflow browser runtime config is keyed by workflow id and touches the parent workflow `updated_at`.

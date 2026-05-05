@@ -197,10 +197,10 @@ describe("workflow graph helpers", () => {
           interactionWidth: 20,
           markerEnd: expect.objectContaining({
             type: "arrowclosed",
-            color: "#ff7b72",
+            color: "#fbbf24",
           }),
           style: expect.objectContaining({
-            stroke: "#ff7b72",
+            stroke: "#fbbf24",
             strokeWidth: 2.75,
           }),
           data: expect.objectContaining({
@@ -226,15 +226,61 @@ describe("workflow graph helpers", () => {
           selected: true,
           className: expect.stringContaining("graph-edge-selected"),
           markerEnd: expect.objectContaining({
-            color: "#3ecf8e",
+            color: "#22d3ee",
           }),
           style: expect.objectContaining({
-            stroke: "#3ecf8e",
+            stroke: "#22d3ee",
             strokeWidth: 3.5,
           }),
         }),
       ]),
     );
+  });
+
+  test("uses semantic graph edge colors with neutral defaults and success green only for completed runs", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+
+    const defaultFlow = toReactFlowGraph(graph);
+    expect(defaultFlow.edges.find((edge) => edge.id === "edge-start-step-wait"))
+      .toEqual(
+        expect.objectContaining({
+          className: "graph-edge",
+          style: expect.objectContaining({ stroke: "#4d4d4d" }),
+        }),
+      );
+
+    const completedFlow = toReactFlowGraph(graph, {
+      completedNodeIds: new Set(["step-wait"]),
+    });
+    expect(completedFlow.edges.find((edge) => edge.id === "edge-start-step-wait"))
+      .toEqual(
+        expect.objectContaining({
+          className: expect.stringContaining("graph-edge-completed"),
+          style: expect.objectContaining({ stroke: "#3ecf8e" }),
+        }),
+      );
+
+    const failedFlow = toReactFlowGraph(graph, {
+      failedNodeId: "step-wait",
+    });
+    expect(failedFlow.edges.find((edge) => edge.id === "edge-start-step-wait"))
+      .toEqual(
+        expect.objectContaining({
+          className: expect.stringContaining("graph-edge-failed"),
+          style: expect.objectContaining({ stroke: "#ff7b72" }),
+        }),
+      );
+
+    const issueFlow = toReactFlowGraph(graph, {
+      issueEdgeIds: new Set(["edge-start-step-wait"]),
+    });
+    expect(issueFlow.edges.find((edge) => edge.id === "edge-start-step-wait"))
+      .toEqual(
+        expect.objectContaining({
+          className: expect.stringContaining("graph-edge-has-issue"),
+          style: expect.objectContaining({ stroke: "#fbbf24" }),
+        }),
+      );
   });
 
   test("maps React Flow nodes and edges back to a persisted workflow graph", () => {

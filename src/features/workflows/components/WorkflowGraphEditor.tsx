@@ -75,10 +75,17 @@ type WorkflowGraphEditorProps = {
   graph: WorkflowGraph;
   runState: RunState;
   validationIssues: GraphValidationIssue[];
+  selectionRequest?: GraphSelectionRequest | null;
   onChange: (graph: WorkflowGraph) => void;
   onRunGraph?: () => void;
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
+};
+
+export type GraphSelectionRequest = {
+  requestId: number;
+  nodeId?: string | null;
+  edgeId?: string | null;
 };
 
 type ActivePortConnection = {
@@ -137,6 +144,7 @@ export function WorkflowGraphEditor({
   graph,
   runState,
   validationIssues,
+  selectionRequest,
   onChange,
   onRunGraph,
   onSaveGraph,
@@ -286,6 +294,22 @@ export function WorkflowGraphEditor({
     setReactFlowEdges(flowGraph.edges);
   }, [flowGraph.edges, flowGraph.nodes]);
   useEffect(() => {
+    if (!selectionRequest) return;
+    if (selectionRequest.nodeId) {
+      setSelection({ nodeIds: [selectionRequest.nodeId], edgeIds: [] });
+      const node = graphRef.current.nodes.find(
+        (candidate) => candidate.id === selectionRequest.nodeId,
+      );
+      if (node && reactFlowInstance) {
+        focusNode(node);
+      }
+      return;
+    }
+    if (selectionRequest.edgeId) {
+      setSelection({ nodeIds: [], edgeIds: [selectionRequest.edgeId] });
+    }
+  }, [selectionRequest?.requestId]);
+  useEffect(() => {
     reactFlowNodesRef.current = reactFlowNodes;
     reactFlowEdgesRef.current = reactFlowEdges;
     flowGraphRef.current = {
@@ -326,7 +350,7 @@ export function WorkflowGraphEditor({
         target: nodeId,
         targetHandle: port.id,
         label: source.portId,
-        data: { hasIssue: false },
+        data: { hasIssue: false, status: "idle" },
       };
       const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge);
       setReactFlowEdges(nextEdges);
@@ -668,7 +692,7 @@ export function WorkflowGraphEditor({
       ...connection,
       id: `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
       label: connection.sourceHandle,
-      data: { hasIssue: false },
+      data: { hasIssue: false, status: "idle" },
     };
     const nextEdges = replacePortEdge(reactFlowEdgesRef.current, nextEdge);
     setReactFlowEdges(nextEdges);
@@ -763,13 +787,6 @@ export function WorkflowGraphEditor({
 
   return (
     <section className="workflow-graph-editor panel" aria-label="Visual Graph">
-      <div className="panel-heading workflow-graph-heading">
-        <div>
-          <p className="eyebrow">Visual Logic</p>
-          <h2>Visual Graph</h2>
-        </div>
-      </div>
-
       <WorkflowGraphToolbar
         isPanMode={isPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
@@ -887,6 +904,7 @@ export function WorkflowGraphEditor({
           graph={graph}
           issueGroups={issueGroups}
           nodeLabels={nodeLabels}
+          runState={runState}
           selectionSummary={selectionSummary}
           selectedEdge={selectedEdge}
           selectedNode={selectedNode}

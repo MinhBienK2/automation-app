@@ -94,7 +94,16 @@ pub async fn run_workflow_graph_impl(
         })
         .collect::<Vec<_>>();
 
-    start_background_run(state, steps, RunMode::RunWorkflow, None).await
+    let browser_config = state
+        .repository()
+        .get_workflow_browser_config(workflow_id)
+        .await
+        .map_err(CommandError::from)?;
+    if let Some(config) = &browser_config {
+        config.validate().map_err(CommandError::validation)?;
+    }
+
+    start_background_run(state, steps, RunMode::RunWorkflow, None, browser_config).await
 }
 
 fn expand_compiled_steps<'a>(

@@ -6,6 +6,7 @@
 - Rust workflow domain: `src-tauri/src/domain/workflow.rs`
 - Rust action configs: `src-tauri/src/domain/action_config.rs`
 - Rust graph domain: `src-tauri/src/domain/workflow_graph.rs`
+- Rust browser config domain: `src-tauri/src/domain/browser_config.rs`
 - Rust run types: `src-tauri/src/domain/run.rs`
 - Repository DTOs: `src-tauri/src/repositories/workflow_repository.rs`
 
@@ -17,10 +18,34 @@ Frontend and backend must agree on:
 - `Workflow`: `id`, `name`, `created_at`, `updated_at`.
 - `WorkflowStep`: legacy/internal step row shape used by import/export compatibility and compiled graph runner adapters.
 - `WorkflowDetail`: currently `workflow`, `steps` for compatibility, while the product UI loads graph authoring data through `get_workflow_graph`.
+- `WorkflowBrowserConfig`: optional workflow-level browser launch config loaded through `get_workflow_browser_config`.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`.
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`.
+
+## Browser Config Shape
+
+Workflow browser config is persisted separately from graph JSON and legacy ordered steps:
+
+```text
+{
+  workflow_id: string,
+  profile_name: string | null,
+  proxy_enabled: boolean,
+  proxy_server: string | null,
+  proxy_username: string | null,
+  proxy_password: string | null,
+  user_agent: string | null,
+  viewport_width: number | null,
+  viewport_height: number | null,
+  mobile: boolean,
+  touch: boolean,
+  challenge_policy: "none" | "detect_only" | "pause_for_human"
+}
+```
+
+Blank optional text fields normalize to `null`. A proxy server is required when `proxy_enabled` is true, and viewport dimensions must be greater than zero when present.
 
 ## Graph Shape
 

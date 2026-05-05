@@ -1,4 +1,5 @@
 mod action_config;
+mod browser_config;
 mod builder_assist;
 mod orchestration;
 mod run;
@@ -13,6 +14,7 @@ pub use action_config::{
     ScrollInline, ScrollMode, SelectOptionMatchBy, StopWorkflowStatus, SwitchCase,
     VariableAssignment, VariableMapping, VariableValueType, WaitCondition, WorkflowCondition,
 };
+pub use browser_config::{WorkflowBrowserChallengePolicy, WorkflowBrowserConfig};
 pub use builder_assist::{ElementSnapshot, GeneratedFixture, RecordedEvent, SelectorCandidate};
 pub use orchestration::{
     BatchRunRequest, BatchRunRowResult, BatchRunSummary, OrchestrationSchedule, ScheduleKind,

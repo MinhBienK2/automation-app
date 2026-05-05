@@ -11,6 +11,7 @@
 
 - UI calls `get_workflow`.
 - UI calls `get_workflow_graph`.
+- UI calls `get_workflow_browser_config` for workflow-level launch settings.
 - Saved graph JSON is loaded when present; compatibility fallback can render a generated linear graph from legacy ordered steps.
 - UI does not select or store a current list step.
 
@@ -30,6 +31,7 @@
 - Control blocks treat branch ports as work inside the block and continuation ports as work after the block. `If`, `Switch`, and `Try/Catch` expose `done` continuation ports; loop and fallback blocks continue through their existing `done` ports, and retry continues through `success`.
 - Missing optional branch ports are allowed and compile as no-op paths. Missing continuation ports end the current path successfully. Required body ports such as loop body, retry try, try/catch try, and fallback primary block validation/run.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
+- `save_workflow_browser_config` persists workflow-level browser launch settings without changing graph JSON.
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
@@ -44,7 +46,8 @@
 ## Run Full Workflow
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
-- The UI saves the visible graph before invoking `run_workflow`; if that save fails, execution does not start.
+- The UI saves the visible graph and any dirty browser runtime config before invoking `run_workflow`; if either save fails, execution does not start.
+- `run_workflow` loads and validates persisted browser runtime config when present. If no workflow-level config row exists, the browser runner falls back to legacy launch inference from action configs for compatibility.
 - A Start-only graph is still a valid saved legacy draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `get_run_state` while status is `running`.
@@ -65,6 +68,7 @@
 ## Preserve
 
 - Graph authoring state must not diverge from the graph the user runs; the UI saves the current graph before `run_workflow`.
+- Browser runtime config must not diverge from the config the user runs; dirty config is saved before `run_workflow`.
 - Run status must not mislead the user after success, failure, or stop.
 - Command-facing errors must remain serializable through `CommandError`.
 - Invalid graph drafts may be saved, but `run_workflow` must validate/compile and fail before starting execution when blocking graph issues exist.

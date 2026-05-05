@@ -6,12 +6,14 @@ import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
+  getWorkflowBrowserConfig,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
   listWorkflows,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
+  saveWorkflowBrowserConfig,
   saveWorkflowGraph,
   stopRun as stopRunCommand,
   validateWorkflowGraph,
@@ -19,12 +21,14 @@ import {
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import {
   commandMessage,
+  defaultWorkflowBrowserConfig,
   initialRunState,
   normalizeRunState,
 } from "./lib/workflowUi";
 import type {
   GraphValidationIssue,
   RunState,
+  WorkflowBrowserConfig,
   WorkflowGraph,
   WorkflowDetail,
   WorkflowSummary,
@@ -34,6 +38,7 @@ import "./App.css";
 type AppScreen = "list" | "detail" | "settings";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
+type BrowserConfigSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
 
@@ -72,6 +77,19 @@ function graphSaveStatusLabel(status: GraphSaveStatus) {
   }
 }
 
+function browserConfigSaveStatusLabel(status: BrowserConfigSaveStatus) {
+  switch (status) {
+    case "saved":
+      return "Saved";
+    case "unsaved":
+      return "Unsaved changes";
+    case "saving":
+      return "Saving...";
+    case "failed":
+      return "Save failed";
+  }
+}
+
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -81,6 +99,10 @@ function App() {
   );
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
+  const [browserConfig, setBrowserConfig] =
+    useState<WorkflowBrowserConfig | null>(null);
+  const [browserConfigSaveStatus, setBrowserConfigSaveStatus] =
+    useState<BrowserConfigSaveStatus>("saved");
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(
     readGraphAutosaveEnabled,
   );
@@ -184,6 +206,7 @@ function App() {
         setSelectedWorkflowId(null);
         setDetail(null);
         setWorkflowGraph(null);
+        setBrowserConfig(null);
         setGraphIssues([]);
         setAppError("Workflow not found");
         return;
@@ -196,6 +219,12 @@ function App() {
       } catch {
         setWorkflowGraph(linearGraphFromSteps(loaded.steps));
       }
+      try {
+        setBrowserConfig(await getWorkflowBrowserConfig(id));
+      } catch {
+        setBrowserConfig(defaultWorkflowBrowserConfig(id));
+      }
+      setBrowserConfigSaveStatus("saved");
       graphRevisionRef.current = 0;
       savedGraphRevisionRef.current = 0;
       setGraphRevision(0);
@@ -269,6 +298,7 @@ function App() {
       setSelectedWorkflowId(null);
       setDetail(null);
       setWorkflowGraph(null);
+      setBrowserConfig(null);
       setGraphIssues([]);
       setScreen("list");
     }
@@ -294,6 +324,24 @@ function App() {
     }
   }
 
+  async function persistBrowserConfig({ force = false } = {}) {
+    if (!detail || !browserConfig) return true;
+    if (!force && browserConfigSaveStatus === "saved") return true;
+    setAppError("");
+    setBrowserConfigSaveStatus("saving");
+
+    try {
+      await saveWorkflowBrowserConfig(detail.workflow.id, browserConfig);
+      setBrowserConfigSaveStatus("saved");
+      await loadWorkflows();
+      return true;
+    } catch (error) {
+      setBrowserConfigSaveStatus("failed");
+      setAppError(commandMessage(error));
+      return false;
+    }
+  }
+
   async function runGraph() {
     if (!detail || !workflowGraph) return;
     setAppError("");
@@ -301,10 +349,19 @@ function App() {
     try {
       const saved = await persistCurrentGraph();
       if (!saved) return;
+      const browserConfigSaved = await persistBrowserConfig();
+      if (!browserConfigSaved) return;
       const state = await runWorkflowCommand(detail.workflow.id);
       setRunState(normalizeRunState(state));
     } catch (error) {
       setAppError(commandMessage(error));
+      if (workflowGraph) {
+        try {
+          setGraphIssues(await validateWorkflowGraph(workflowGraph));
+        } catch {
+          // Keep the command error as the primary system issue when validation cannot run.
+        }
+      }
     }
   }
 
@@ -321,6 +378,10 @@ function App() {
 
   async function saveGraph() {
     await persistCurrentGraph();
+  }
+
+  async function saveBrowserConfig() {
+    await persistBrowserConfig({ force: true });
   }
 
   async function stopRun() {
@@ -369,6 +430,11 @@ function App() {
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
   }, [graphAutosaveEnabled]);
 
+  const changeBrowserConfig = useCallback((nextConfig: WorkflowBrowserConfig) => {
+    setBrowserConfig(nextConfig);
+    setBrowserConfigSaveStatus("unsaved");
+  }, []);
+
   const isRunning = runState.status === "running";
 
   return (
@@ -391,10 +457,14 @@ function App() {
             isRunning={isRunning}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
+            browserConfigSaveStatus={browserConfigSaveStatusLabel(browserConfigSaveStatus)}
             runState={runState}
+            browserConfig={browserConfig}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
             onBack={backToList}
+            onBrowserConfigChange={changeBrowserConfig}
+            onSaveBrowserConfig={saveBrowserConfig}
             onStopRun={stopRun}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}

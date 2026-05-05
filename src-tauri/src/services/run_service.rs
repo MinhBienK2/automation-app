@@ -4,7 +4,7 @@ use crate::{
     domain::{
         ActionConfig, ActionType, CheckboxState, ClearInputMethod, HeaderPair, InputTypingMode,
         RunError, RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, VariableAssignment,
-        VariableValueType, WaitCondition, WorkflowStep,
+        VariableValueType, WaitCondition, WorkflowBrowserConfig, WorkflowStep,
     },
     runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
 };
@@ -486,6 +486,7 @@ pub async fn start_background_run(
     steps: Vec<WorkflowStep>,
     mode: RunMode,
     target_step_id: Option<String>,
+    browser_config: Option<WorkflowBrowserConfig>,
 ) -> Result<RunStateDto, CommandError> {
     let cancellation = state
         .begin_run(mode, target_step_id)
@@ -525,6 +526,7 @@ pub async fn start_background_run(
         let result = run_executor
             .run_steps(
                 action_configs,
+                browser_config,
                 cancellation,
                 Box::new(move |progress| {
                     let _ = progress_tx.send(progress);

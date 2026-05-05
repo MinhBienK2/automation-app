@@ -15,7 +15,7 @@ use workflow_automation_manager_lib::{
     app_state::AppState,
     commands,
     db::{create_sqlite_pool, run_migrations},
-    domain::{ActionConfig, RunStatus},
+    domain::{ActionConfig, RunStatus, WorkflowBrowserConfig},
     repositories::WorkflowRepository,
     runner::{
         FailedStep, ProgressCallback, RunExecution, RunExecutor, RunExecutorFuture,
@@ -88,6 +88,7 @@ pub enum FakeRunOutcome {
 #[derive(Debug, Default)]
 pub struct RecordingRunExecutor {
     runs: Arc<Mutex<Vec<Vec<ActionConfig>>>>,
+    browser_configs: Arc<Mutex<Vec<Option<WorkflowBrowserConfig>>>>,
 }
 
 impl RecordingRunExecutor {
@@ -98,12 +99,20 @@ impl RecordingRunExecutor {
     pub fn recorded_runs(&self) -> Vec<Vec<ActionConfig>> {
         self.runs.lock().expect("recorded run lock").clone()
     }
+
+    pub fn recorded_browser_configs(&self) -> Vec<Option<WorkflowBrowserConfig>> {
+        self.browser_configs
+            .lock()
+            .expect("recorded browser config lock")
+            .clone()
+    }
 }
 
 impl RunExecutor for RecordingRunExecutor {
     fn run_steps(
         &self,
         steps: Vec<ActionConfig>,
+        browser_config: Option<WorkflowBrowserConfig>,
         _cancellation: RunnerCancellation,
         mut progress: ProgressCallback,
     ) -> RunExecutorFuture {
@@ -111,6 +120,10 @@ impl RunExecutor for RecordingRunExecutor {
             .lock()
             .expect("recorded run lock")
             .push(steps.clone());
+        self.browser_configs
+            .lock()
+            .expect("recorded browser config lock")
+            .push(browser_config);
 
         Box::pin(async move {
             for step_number in 1..=steps.len() {
@@ -177,6 +190,7 @@ impl RunExecutor for FakeRunExecutor {
     fn run_steps(
         &self,
         steps: Vec<ActionConfig>,
+        _browser_config: Option<WorkflowBrowserConfig>,
         cancellation: RunnerCancellation,
         mut progress: ProgressCallback,
     ) -> RunExecutorFuture {

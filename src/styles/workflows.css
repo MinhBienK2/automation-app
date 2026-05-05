@@ -204,6 +204,124 @@
   color: #fca5a5;
 }
 
+.browser-config-panel,
+.run-issue-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.browser-config-header,
+.run-issue-header {
+  display: flex;
+  gap: 16px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.browser-config-header h2,
+.run-issue-header h2 {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.browser-config-actions,
+.run-issue-header-actions,
+.run-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: end;
+}
+
+.browser-config-actions span {
+  color: #898989;
+  font-size: 13px;
+}
+
+.browser-config-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.browser-config-toggle {
+  display: flex;
+  min-height: 40px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.browser-config-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3ecf8e;
+}
+
+.run-issue-panel {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.run-issue-header p {
+  margin-top: 6px;
+  color: #b4b4b4;
+}
+
+.run-issue-list {
+  display: grid;
+  gap: 10px;
+}
+
+.run-issue-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.run-issue-item h3 {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.run-issue-item p,
+.run-issue-suggestions li,
+.run-issue-overflow {
+  color: #b4b4b4;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.run-issue-suggestions {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+}
+
+.run-issue-suggestions span {
+  color: #898989;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.run-issue-suggestions ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+
 .builder-grid {
   display: grid;
   grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);

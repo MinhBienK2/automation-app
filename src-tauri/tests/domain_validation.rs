@@ -4,7 +4,8 @@ use workflow_automation_manager_lib::domain::{
     GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
     GraphViewport, HeaderPair, InputTypingMode, RunError, RunStatus, ScrollBehavior, ScrollBlock,
     ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy, SwitchCase, ValidationError,
-    VariableMapping, WaitCondition, Workflow, WorkflowCondition, WorkflowGraph, WorkflowStep,
+    VariableMapping, WaitCondition, Workflow, WorkflowBrowserChallengePolicy,
+    WorkflowBrowserConfig, WorkflowCondition, WorkflowGraph, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -171,6 +172,97 @@ fn valid_workflow_name_passes() {
     let workflow = Workflow::new("Login flow");
 
     workflow.validate().expect("name should be valid");
+}
+
+#[test]
+fn workflow_browser_config_defaults_and_validation_match_launch_time_settings() {
+    let default_config = WorkflowBrowserConfig::default_for_workflow("workflow-1");
+
+    assert_eq!(default_config.workflow_id, "workflow-1");
+    assert_eq!(default_config.profile_name, None);
+    assert!(!default_config.proxy_enabled);
+    assert_eq!(
+        default_config.challenge_policy,
+        WorkflowBrowserChallengePolicy::None
+    );
+    default_config
+        .validate()
+        .expect("default browser config should validate");
+
+    let normalized = WorkflowBrowserConfig {
+        workflow_id: "workflow-1".to_string(),
+        profile_name: Some("  qa-profile  ".to_string()),
+        proxy_enabled: true,
+        proxy_server: Some(" http://proxy.local:8080 ".to_string()),
+        proxy_username: Some(" agent ".to_string()),
+        proxy_password: Some("secret".to_string()),
+        user_agent: Some(" WorkflowBot/1.0 ".to_string()),
+        viewport_width: Some(1280),
+        viewport_height: Some(720),
+        mobile: false,
+        touch: false,
+        challenge_policy: WorkflowBrowserChallengePolicy::PauseForHuman,
+    }
+    .normalized();
+
+    assert_eq!(normalized.profile_name.as_deref(), Some("qa-profile"));
+    assert_eq!(
+        normalized.proxy_server.as_deref(),
+        Some("http://proxy.local:8080")
+    );
+    assert_eq!(normalized.proxy_username.as_deref(), Some("agent"));
+    assert_eq!(normalized.user_agent.as_deref(), Some("WorkflowBot/1.0"));
+}
+
+#[test]
+fn workflow_browser_config_rejects_confusing_values_before_save_or_run() {
+    let missing_proxy = WorkflowBrowserConfig {
+        proxy_enabled: true,
+        ..WorkflowBrowserConfig::default_for_workflow("workflow-1")
+    };
+    assert_validation_message(
+        missing_proxy
+            .validate()
+            .expect_err("enabled proxy should require a server"),
+        "proxy_server",
+        "Proxy server is required",
+    );
+
+    let blank_username = WorkflowBrowserConfig {
+        proxy_username: Some("  ".to_string()),
+        ..WorkflowBrowserConfig::default_for_workflow("workflow-1")
+    };
+    assert_validation_message(
+        blank_username
+            .validate()
+            .expect_err("blank username should fail"),
+        "proxy_username",
+        "Proxy username cannot be blank",
+    );
+
+    let empty_password = WorkflowBrowserConfig {
+        proxy_password: Some(String::new()),
+        ..WorkflowBrowserConfig::default_for_workflow("workflow-1")
+    };
+    assert_validation_message(
+        empty_password
+            .validate()
+            .expect_err("empty password should fail"),
+        "proxy_password",
+        "Proxy password cannot be empty",
+    );
+
+    let invalid_viewport = WorkflowBrowserConfig {
+        viewport_width: Some(0),
+        ..WorkflowBrowserConfig::default_for_workflow("workflow-1")
+    };
+    assert_validation_message(
+        invalid_viewport
+            .validate()
+            .expect_err("zero viewport width should fail"),
+        "viewport_width",
+        "Viewport width must be greater than 0",
+    );
 }
 
 #[test]

@@ -11,7 +11,8 @@ use workflow_automation_manager_lib::{
         ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, GraphEdge, GraphNode,
         GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
         GraphViewport, OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind,
-        ScrollDirection, WaitCondition, WorkflowGraph,
+        ScrollDirection, WaitCondition, WorkflowBrowserChallengePolicy, WorkflowBrowserConfig,
+        WorkflowGraph,
     },
 };
 
@@ -134,6 +135,125 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
     assert!(run_state.outputs.is_empty());
 
     poll_status(&state, RunStatus::Success).await;
+}
+
+#[tokio::test]
+async fn workflow_browser_config_commands_round_trip_and_validate() {
+    let (state, _db_path) = test_state().await;
+    let workflow = commands::create_workflow_impl(&state, "Runtime config")
+        .await
+        .expect("create");
+
+    let default_config = commands::get_workflow_browser_config_impl(&state, &workflow.id)
+        .await
+        .expect("get default browser config");
+    assert_eq!(default_config.workflow_id, workflow.id);
+    assert_eq!(default_config.profile_name, None);
+    assert_eq!(
+        default_config.challenge_policy,
+        WorkflowBrowserChallengePolicy::None
+    );
+
+    let config = WorkflowBrowserConfig {
+        workflow_id: workflow.id.clone(),
+        profile_name: Some(" release ".to_string()),
+        proxy_enabled: true,
+        proxy_server: Some("http://proxy.local:8080".to_string()),
+        proxy_username: Some("agent".to_string()),
+        proxy_password: Some("secret".to_string()),
+        user_agent: Some("WorkflowBot/1.0".to_string()),
+        viewport_width: Some(1440),
+        viewport_height: Some(900),
+        mobile: false,
+        touch: false,
+        challenge_policy: WorkflowBrowserChallengePolicy::PauseForHuman,
+    };
+    commands::save_workflow_browser_config_impl(&state, &workflow.id, config.clone())
+        .await
+        .expect("save browser config");
+
+    let loaded = commands::get_workflow_browser_config_impl(&state, &workflow.id)
+        .await
+        .expect("get saved browser config");
+    assert_eq!(loaded, config.normalized());
+
+    let error = commands::save_workflow_browser_config_impl(
+        &state,
+        &workflow.id,
+        WorkflowBrowserConfig {
+            proxy_enabled: true,
+            ..WorkflowBrowserConfig::default_for_workflow(&workflow.id)
+        },
+    )
+    .await
+    .expect_err("invalid browser config should fail");
+    assert_eq!(error.field.as_deref(), Some("proxy_server"));
+    assert_eq!(error.message, "Proxy server is required");
+}
+
+#[tokio::test]
+async fn run_workflow_uses_saved_browser_config_before_legacy_launch_actions() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Runtime config precedence")
+        .await
+        .expect("create");
+
+    let legacy_profile = action_node_with_config(
+        "legacy-profile",
+        "Legacy profile",
+        serde_json::json!({
+            "type": "use_profile",
+            "config": { "name": "legacy-profile" }
+        }),
+    );
+    let wait = action_node("wait");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![legacy_profile, wait]),
+    )
+    .await
+    .expect("save graph");
+    commands::save_workflow_browser_config_impl(
+        &state,
+        &workflow.id,
+        WorkflowBrowserConfig {
+            workflow_id: workflow.id.clone(),
+            profile_name: Some("workflow-profile".to_string()),
+            proxy_enabled: true,
+            proxy_server: Some("http://proxy.local:8080".to_string()),
+            proxy_username: None,
+            proxy_password: None,
+            user_agent: Some("WorkflowBot/1.0".to_string()),
+            viewport_width: Some(1280),
+            viewport_height: Some(720),
+            mobile: false,
+            touch: true,
+            challenge_policy: WorkflowBrowserChallengePolicy::DetectOnly,
+        },
+    )
+    .await
+    .expect("save browser config");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let recorded_browser_configs = runner.recorded_browser_configs();
+    assert_eq!(recorded_browser_configs.len(), 1);
+    let recorded = recorded_browser_configs[0]
+        .as_ref()
+        .expect("workflow browser config should be passed to runner");
+    assert_eq!(recorded.profile_name.as_deref(), Some("workflow-profile"));
+    assert_eq!(
+        recorded.proxy_server.as_deref(),
+        Some("http://proxy.local:8080")
+    );
+    assert_eq!(recorded.user_agent.as_deref(), Some("WorkflowBot/1.0"));
+    assert_eq!(recorded.viewport_width, Some(1280));
+    assert!(recorded.touch);
 }
 
 #[tokio::test]
@@ -1045,18 +1165,26 @@ fn start_node() -> GraphNode {
 }
 
 fn action_node(id: &str) -> GraphNode {
-    GraphNode {
-        id: id.to_string(),
-        node_type: GraphNodeType::Action,
-        label: "Wait".to_string(),
-        position: GraphPosition { x: 200.0, y: 0.0 },
-        config: serde_json::json!({
+    action_node_with_config(
+        id,
+        "Wait",
+        serde_json::json!({
             "type": "wait",
             "config": {
                 "condition": "duration",
                 "duration_ms": 100
             }
         }),
+    )
+}
+
+fn action_node_with_config(id: &str, label: &str, config: serde_json::Value) -> GraphNode {
+    GraphNode {
+        id: id.to_string(),
+        node_type: GraphNodeType::Action,
+        label: label.to_string(),
+        position: GraphPosition { x: 200.0, y: 0.0 },
+        config,
         ports: vec![
             GraphPort {
                 id: "in".to_string(),

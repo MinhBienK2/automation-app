@@ -7,13 +7,14 @@ use std::{
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
     cdp::browser_protocol::browser::{SetDownloadBehaviorBehavior, SetDownloadBehaviorParams},
+    handler::viewport::Viewport,
     Page,
 };
 use futures::StreamExt;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::domain::ActionConfig;
+use crate::domain::{ActionConfig, WorkflowBrowserConfig};
 
 use super::{
     actions::{execute_action, ActionExecution},
@@ -79,7 +80,19 @@ impl BrowserRunner {
         cancellation: RunnerCancellation,
         mut progress: impl FnMut(RunnerProgress) + Send,
     ) -> Result<RunnerOutcome, RunnerError> {
-        let launch_settings = LaunchSettings::from_steps(&steps);
+        self.run_steps_with_browser_config_and_progress(steps, None, cancellation, &mut progress)
+            .await
+    }
+
+    pub async fn run_steps_with_browser_config_and_progress(
+        &self,
+        steps: Vec<ActionConfig>,
+        browser_config: Option<WorkflowBrowserConfig>,
+        cancellation: RunnerCancellation,
+        mut progress: impl FnMut(RunnerProgress) + Send,
+    ) -> Result<RunnerOutcome, RunnerError> {
+        let launch_settings =
+            LaunchSettings::from_browser_config_or_steps(browser_config.as_ref(), &steps);
         let mut session = BrowserSession::launch(&self.options, &launch_settings).await?;
 
         for (index, step) in steps.into_iter().enumerate() {
@@ -425,11 +438,22 @@ fn browser_config(
     let mut builder = BrowserConfig::builder()
         .request_timeout(Duration::from_secs(10))
         .launch_timeout(Duration::from_secs(20))
-        .window_size(1100, 800)
-        .viewport(None)
         .user_data_dir(user_data_dir)
         .arg("no-startup-window")
         .no_sandbox();
+
+    if let Some((width, height)) = launch_settings.viewport_size() {
+        builder = builder.window_size(width, height).viewport(Some(Viewport {
+            width,
+            height,
+            device_scale_factor: None,
+            emulating_mobile: launch_settings.mobile,
+            is_landscape: width >= height,
+            has_touch: launch_settings.touch,
+        }));
+    } else {
+        builder = builder.window_size(1100, 800).viewport(None);
+    }
 
     if options.headed {
         builder = builder.with_head();
@@ -437,6 +461,10 @@ fn browser_config(
 
     if let Some(proxy_server) = launch_settings.proxy_server.as_deref() {
         builder = builder.arg(("proxy-server", proxy_server));
+    }
+
+    if let Some(user_agent) = launch_settings.user_agent.as_deref() {
+        builder = builder.arg(("user-agent", user_agent));
     }
 
     let chrome_executable = options
@@ -500,9 +528,48 @@ fn is_temporary_download(path: &Path) -> bool {
 struct LaunchSettings {
     profile_name: Option<String>,
     proxy_server: Option<String>,
+    user_agent: Option<String>,
+    viewport_width: Option<u32>,
+    viewport_height: Option<u32>,
+    mobile: bool,
+    touch: bool,
 }
 
 impl LaunchSettings {
+    fn from_browser_config_or_steps(
+        browser_config: Option<&WorkflowBrowserConfig>,
+        steps: &[ActionConfig],
+    ) -> Self {
+        if let Some(config) = browser_config {
+            return Self::from_browser_config(config);
+        }
+
+        Self::from_steps(steps)
+    }
+
+    fn from_browser_config(config: &WorkflowBrowserConfig) -> Self {
+        let config = config.normalized();
+        let proxy_server = if config.proxy_enabled {
+            proxy_server_argument(
+                config.proxy_server.as_deref().unwrap_or_default(),
+                config.proxy_username.as_deref(),
+                config.proxy_password.as_deref(),
+            )
+        } else {
+            None
+        };
+
+        Self {
+            profile_name: config.profile_name,
+            proxy_server,
+            user_agent: config.user_agent,
+            viewport_width: config.viewport_width,
+            viewport_height: config.viewport_height,
+            mobile: config.mobile,
+            touch: config.touch,
+        }
+    }
+
     fn from_steps(steps: &[ActionConfig]) -> Self {
         let profile_name = steps.iter().find_map(|step| match step {
             ActionConfig::UseProfile { name } if !name.trim().is_empty() => {
@@ -524,7 +591,16 @@ impl LaunchSettings {
         Self {
             profile_name,
             proxy_server,
+            user_agent: None,
+            viewport_width: None,
+            viewport_height: None,
+            mobile: false,
+            touch: false,
         }
+    }
+
+    fn viewport_size(&self) -> Option<(u32, u32)> {
+        self.viewport_width.zip(self.viewport_height)
     }
 }
 

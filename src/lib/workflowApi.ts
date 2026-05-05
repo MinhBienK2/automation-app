@@ -11,6 +11,7 @@ import type {
   RecordedEvent,
   RunState,
   SelectorCandidate,
+  WorkflowBrowserConfig,
   WorkflowGraph,
   Workflow,
   WorkflowDetail,
@@ -24,6 +25,17 @@ export function listWorkflows() {
 
 export function getWorkflow(id: string) {
   return invoke<WorkflowDetail | null>("get_workflow", { id });
+}
+
+export function getWorkflowBrowserConfig(workflowId: string) {
+  return invoke<WorkflowBrowserConfig>("get_workflow_browser_config", { workflowId });
+}
+
+export function saveWorkflowBrowserConfig(
+  workflowId: string,
+  config: WorkflowBrowserConfig,
+) {
+  return invoke("save_workflow_browser_config", { workflowId, config });
 }
 
 export function createWorkflow(name: string) {

@@ -58,6 +58,8 @@ pub fn run() {
             commands::list_workflows,
             commands::create_workflow,
             commands::get_workflow,
+            commands::get_workflow_browser_config,
+            commands::save_workflow_browser_config,
             commands::rename_workflow,
             commands::delete_workflow,
             commands::get_workflow_graph,

@@ -16,6 +16,7 @@ Workflow Automation Manager is a Tauri desktop app for building and running brow
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and expands subworkflow nodes before runner start.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Graph autosave is an app-level editing preference controlled from Settings.
+- Workflow browser runtime config is a workflow-level launch profile for browser profile, proxy, user agent, viewport, mobile/touch flags, and challenge handling policy.
 
 ## User Workflows
 
@@ -30,6 +31,7 @@ Users can:
 - Stop an active run.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
+- Configure browser launch behavior for a workflow before running it.
 - Configure safe human checkpoints and pacing nodes; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 
 ## Current Source Files

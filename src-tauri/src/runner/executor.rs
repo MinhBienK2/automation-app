@@ -1,6 +1,6 @@
 use std::{future::Future, path::PathBuf, pin::Pin};
 
-use crate::domain::ActionConfig;
+use crate::domain::{ActionConfig, WorkflowBrowserConfig};
 
 use super::{
     browser::{BrowserRunner, FailedStep, RunnerStatus},
@@ -25,6 +25,7 @@ pub trait RunExecutor: std::fmt::Debug + Send + Sync {
     fn run_steps(
         &self,
         steps: Vec<ActionConfig>,
+        browser_config: Option<WorkflowBrowserConfig>,
         cancellation: RunnerCancellation,
         progress: ProgressCallback,
     ) -> RunExecutorFuture;
@@ -56,6 +57,7 @@ impl RunExecutor for BrowserRunExecutor {
     fn run_steps(
         &self,
         steps: Vec<ActionConfig>,
+        browser_config: Option<WorkflowBrowserConfig>,
         cancellation: RunnerCancellation,
         mut progress: ProgressCallback,
     ) -> RunExecutorFuture {
@@ -63,7 +65,12 @@ impl RunExecutor for BrowserRunExecutor {
 
         Box::pin(async move {
             let outcome = runner
-                .run_steps_with_progress(steps, cancellation, &mut progress)
+                .run_steps_with_browser_config_and_progress(
+                    steps,
+                    browser_config,
+                    cancellation,
+                    &mut progress,
+                )
                 .await?;
 
             Ok(RunExecution {

@@ -5,10 +5,12 @@ import {
   dryRunValidateConfig,
   generateFixture,
   compileWorkflowGraph,
+  getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
   normalizeRecordedEvents,
   runWorkflow,
+  saveWorkflowBrowserConfig,
   saveWorkflowGraph,
   runBatchWorkflow,
   suggestSelectors,
@@ -131,6 +133,39 @@ describe("workflow API graph commands", () => {
     expect(invokeMock).toHaveBeenCalledWith("compile_workflow_graph", { graph });
     expect(invokeMock).toHaveBeenCalledWith("run_workflow", {
       workflowId: "workflow-1",
+    });
+  });
+});
+
+describe("workflow API browser config commands", () => {
+  test("invokes workflow browser config commands with frontend-safe payloads", async () => {
+    resetTauriInvoke();
+    const config = {
+      workflow_id: "workflow-1",
+      profile_name: "qa-profile",
+      proxy_enabled: true,
+      proxy_server: "http://proxy.local:8080",
+      proxy_username: "agent",
+      proxy_password: "secret",
+      user_agent: "WorkflowBot/1.0",
+      viewport_width: 1280,
+      viewport_height: 720,
+      mobile: false,
+      touch: false,
+      challenge_policy: "pause_for_human" as const,
+    };
+
+    invokeMock.mockResolvedValue(undefined);
+
+    await getWorkflowBrowserConfig("workflow-1");
+    await saveWorkflowBrowserConfig("workflow-1", config);
+
+    expect(invokeMock).toHaveBeenCalledWith("get_workflow_browser_config", {
+      workflowId: "workflow-1",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("save_workflow_browser_config", {
+      workflowId: "workflow-1",
+      config,
     });
   });
 });

@@ -81,6 +81,10 @@ export type ActionType =
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
 export type VariableValueType = "text" | "json" | "number" | "boolean";
+export type WorkflowBrowserChallengePolicy =
+  | "none"
+  | "detect_only"
+  | "pause_for_human";
 
 export type VariableAssignment = {
   name: string;
@@ -101,6 +105,21 @@ export type Workflow = {
   name: string;
   created_at: string;
   updated_at: string;
+};
+
+export type WorkflowBrowserConfig = {
+  workflow_id: string;
+  profile_name?: string | null;
+  proxy_enabled: boolean;
+  proxy_server?: string | null;
+  proxy_username?: string | null;
+  proxy_password?: string | null;
+  user_agent?: string | null;
+  viewport_width?: number | null;
+  viewport_height?: number | null;
+  mobile: boolean;
+  touch: boolean;
+  challenge_policy: WorkflowBrowserChallengePolicy;
 };
 
 export type ActionConfig =

@@ -8,7 +8,8 @@ use crate::{
         ActionConfig, ActionType, BatchRunRequest, BatchRunRowResult, BatchRunSummary,
         ClickWaitUntil, CompiledWorkflowGraph, ElementSnapshot, GeneratedFixture,
         GraphValidationIssue, OrchestrationSchedule, RecordedEvent, RunMode, RunStatus,
-        SelectorCandidate, ValidationError, Workflow, WorkflowExport, WorkflowGraph,
+        SelectorCandidate, ValidationError, Workflow, WorkflowBrowserConfig, WorkflowExport,
+        WorkflowGraph,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
     runner::{RunnerCancellation, RunnerStatus},
@@ -79,6 +80,48 @@ pub async fn get_workflow_impl(
     state
         .repository()
         .get_workflow(id)
+        .await
+        .map_err(CommandError::from)
+}
+
+pub async fn get_workflow_browser_config_impl(
+    state: &AppState,
+    workflow_id: &str,
+) -> Result<WorkflowBrowserConfig, CommandError> {
+    state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+
+    Ok(state
+        .repository()
+        .get_workflow_browser_config(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .unwrap_or_else(|| WorkflowBrowserConfig::default_for_workflow(workflow_id)))
+}
+
+pub async fn save_workflow_browser_config_impl(
+    state: &AppState,
+    workflow_id: &str,
+    config: WorkflowBrowserConfig,
+) -> Result<(), CommandError> {
+    state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+
+    let mut config = config.normalized();
+    config.workflow_id = workflow_id.to_string();
+    config.validate().map_err(CommandError::validation)?;
+
+    state
+        .repository()
+        .save_workflow_browser_config(config)
         .await
         .map_err(CommandError::from)
 }
@@ -186,6 +229,7 @@ pub async fn test_step_impl(
         detail.steps[..=selected_index].to_vec(),
         RunMode::TestStep,
         Some(step_id.to_string()),
+        None,
     )
     .await
 }
@@ -238,7 +282,12 @@ pub async fn run_batch_workflow_impl(
         action_configs.extend(base_steps.clone());
 
         let outcome = run_executor
-            .run_steps(action_configs, RunnerCancellation::new(), Box::new(|_| {}))
+            .run_steps(
+                action_configs,
+                None,
+                RunnerCancellation::new(),
+                Box::new(|_| {}),
+            )
             .await
             .map_err(|error| CommandError::message(error.to_string()))?;
         let (status, error) = match outcome.status {
@@ -430,6 +479,23 @@ pub async fn get_workflow(
     id: String,
 ) -> Result<Option<WorkflowDetail>, CommandError> {
     get_workflow_impl(&state, &id).await
+}
+
+#[tauri::command]
+pub async fn get_workflow_browser_config(
+    state: State<'_, AppState>,
+    workflow_id: String,
+) -> Result<WorkflowBrowserConfig, CommandError> {
+    get_workflow_browser_config_impl(&state, &workflow_id).await
+}
+
+#[tauri::command]
+pub async fn save_workflow_browser_config(
+    state: State<'_, AppState>,
+    workflow_id: String,
+    config: WorkflowBrowserConfig,
+) -> Result<(), CommandError> {
+    save_workflow_browser_config_impl(&state, &workflow_id, config).await
 }
 
 #[tauri::command]

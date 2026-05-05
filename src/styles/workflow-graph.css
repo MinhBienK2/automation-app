@@ -118,24 +118,24 @@
 }
 
 .graph-canvas .react-flow__edge-path {
-  stroke: rgba(62, 207, 142, 0.82);
+  stroke: #4d4d4d;
   stroke-width: 2.5;
 }
 
 .graph-canvas .react-flow__edge-text {
-  fill: #3ecf8e;
+  fill: #b4b4b4;
   font-size: 12px;
   font-weight: 500;
 }
 
 .graph-canvas .react-flow__edge-textbg {
   fill: #0f0f0f;
-  stroke: rgba(62, 207, 142, 0.48);
+  stroke: #363636;
   stroke-width: 1;
 }
 
 .graph-canvas .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #3ecf8e;
+  stroke: #22d3ee;
   stroke-width: 3.5;
 }
 
@@ -144,10 +144,22 @@
 }
 
 .graph-canvas .graph-edge-selected .react-flow__edge-textbg {
-  stroke: rgba(62, 207, 142, 0.72);
+  stroke: rgba(34, 211, 238, 0.72);
 }
 
 .graph-canvas .graph-edge-has-issue .react-flow__edge-path {
+  stroke: #fbbf24;
+}
+
+.graph-canvas .graph-edge-running .react-flow__edge-path {
+  stroke: #38bdf8;
+}
+
+.graph-canvas .graph-edge-completed .react-flow__edge-path {
+  stroke: #3ecf8e;
+}
+
+.graph-canvas .graph-edge-failed .react-flow__edge-path {
   stroke: #ff7b72;
 }
 
@@ -290,8 +302,9 @@
 }
 
 .graph-node-selected {
-  border-color: rgba(62, 207, 142, 0.72);
-  color: #3ecf8e;
+  border-color: rgba(34, 211, 238, 0.72);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.44);
+  color: #67e8f9;
 }
 
 .graph-node-has-issue {
@@ -299,7 +312,7 @@
 }
 
 .graph-node-running {
-  outline: 2px solid rgba(62, 207, 142, 0.22);
+  outline: 2px solid rgba(56, 189, 248, 0.32);
 }
 
 .graph-node-completed {

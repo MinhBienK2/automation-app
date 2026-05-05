@@ -91,7 +91,7 @@ describe("App settings and graph autosave", () => {
         }),
       );
     });
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect((await screen.findAllByText("Saved")).length).toBeGreaterThan(0);
   });
 
   test("keeps the draft visible when autosave fails and does not run the stale saved graph", async () => {

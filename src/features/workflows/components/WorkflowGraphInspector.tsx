@@ -2,6 +2,7 @@ import type {
   GraphEdge,
   GraphNode,
   GraphValidationIssue,
+  RunState,
   WorkflowGraph,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
@@ -20,6 +21,7 @@ type WorkflowGraphInspectorProps = {
   graph: WorkflowGraph;
   issueGroups: Map<string, GraphValidationIssue[]>;
   nodeLabels: Map<string, string>;
+  runState: RunState;
   selectionSummary: SelectionSummary | null;
   selectedEdge: GraphEdge | null;
   selectedNode: GraphNode | null;
@@ -37,6 +39,7 @@ export function WorkflowGraphInspector({
   graph,
   issueGroups,
   nodeLabels,
+  runState,
   selectionSummary,
   selectedEdge,
   selectedNode,
@@ -113,6 +116,16 @@ export function WorkflowGraphInspector({
                 </p>
               ))}
             </div>
+          ) : null}
+          {runState.error?.step_id === selectedNode.id ? (
+            <section className="graph-last-run-error" aria-label="Last run error">
+              <h3>Last run error</h3>
+              <p>
+                Step {runState.error.step_number}:{" "}
+                {runState.error.step_name ?? selectedNode.label}
+              </p>
+              <p>{runState.error.reason}</p>
+            </section>
           ) : null}
           <NodeConfigFields
             node={selectedNode}

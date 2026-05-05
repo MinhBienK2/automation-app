@@ -152,9 +152,9 @@ describe("App CSS", () => {
     expect(connectionPath).toContain("stroke: #3ecf8e");
     expect(connectionPath).toContain("stroke-width: 3");
     expect(connectionPath).toContain("stroke-linecap: round");
-    expect(edgePath).toContain("stroke: rgba(62, 207, 142, 0.82)");
+    expect(edgePath).toContain("stroke: #4d4d4d");
     expect(edgePath).toContain("stroke-width: 2.5");
-    expect(edgeLabel).toContain("fill: #3ecf8e");
+    expect(edgeLabel).toContain("fill: #b4b4b4");
     expect(edgeLabelBackground).toContain("fill: #0f0f0f");
     expect(activeSourceHandle).toContain("background: #fafafa");
     expect(validTargetHandle).toContain("background: #00c573");

@@ -6,7 +6,10 @@ use sqlx::{Row, SqlitePool};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::domain::{ActionConfig, Workflow, WorkflowGraph, WorkflowStep};
+use crate::domain::{
+    ActionConfig, Workflow, WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
+    WorkflowStep,
+};
 
 #[derive(Debug, Error)]
 pub enum RepositoryError {
@@ -249,6 +252,121 @@ impl WorkflowRepository {
         Ok(())
     }
 
+    pub async fn get_workflow_browser_config(
+        &self,
+        workflow_id: &str,
+    ) -> Result<Option<WorkflowBrowserConfig>, RepositoryError> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+              workflow_id,
+              profile_name,
+              proxy_enabled,
+              proxy_server,
+              proxy_username,
+              proxy_password,
+              user_agent,
+              viewport_width,
+              viewport_height,
+              mobile,
+              touch,
+              challenge_policy
+            FROM workflow_browser_configs
+            WHERE workflow_id = ?1
+            "#,
+        )
+        .bind(workflow_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(|row| {
+            let challenge_policy: String = row.get("challenge_policy");
+            let challenge_policy = serde_json::from_value::<WorkflowBrowserChallengePolicy>(
+                Value::String(challenge_policy),
+            )?;
+
+            Ok(WorkflowBrowserConfig {
+                workflow_id: row.get("workflow_id"),
+                profile_name: row.get("profile_name"),
+                proxy_enabled: row.get::<i64, _>("proxy_enabled") != 0,
+                proxy_server: row.get("proxy_server"),
+                proxy_username: row.get("proxy_username"),
+                proxy_password: row.get("proxy_password"),
+                user_agent: row.get("user_agent"),
+                viewport_width: optional_u32(row.get("viewport_width")),
+                viewport_height: optional_u32(row.get("viewport_height")),
+                mobile: row.get::<i64, _>("mobile") != 0,
+                touch: row.get::<i64, _>("touch") != 0,
+                challenge_policy,
+            })
+        })
+        .transpose()
+    }
+
+    pub async fn save_workflow_browser_config(
+        &self,
+        config: WorkflowBrowserConfig,
+    ) -> Result<(), RepositoryError> {
+        let now = now_timestamp();
+        let config = config.normalized();
+        let challenge_policy = challenge_policy_str(config.challenge_policy);
+
+        sqlx::query(
+            r#"
+            INSERT INTO workflow_browser_configs (
+              workflow_id,
+              profile_name,
+              proxy_enabled,
+              proxy_server,
+              proxy_username,
+              proxy_password,
+              user_agent,
+              viewport_width,
+              viewport_height,
+              mobile,
+              touch,
+              challenge_policy,
+              created_at,
+              updated_at
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+            ON CONFLICT(workflow_id) DO UPDATE SET
+              profile_name = excluded.profile_name,
+              proxy_enabled = excluded.proxy_enabled,
+              proxy_server = excluded.proxy_server,
+              proxy_username = excluded.proxy_username,
+              proxy_password = excluded.proxy_password,
+              user_agent = excluded.user_agent,
+              viewport_width = excluded.viewport_width,
+              viewport_height = excluded.viewport_height,
+              mobile = excluded.mobile,
+              touch = excluded.touch,
+              challenge_policy = excluded.challenge_policy,
+              updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(&config.workflow_id)
+        .bind(&config.profile_name)
+        .bind(bool_to_i64(config.proxy_enabled))
+        .bind(&config.proxy_server)
+        .bind(&config.proxy_username)
+        .bind(&config.proxy_password)
+        .bind(&config.user_agent)
+        .bind(config.viewport_width.map(i64::from))
+        .bind(config.viewport_height.map(i64::from))
+        .bind(bool_to_i64(config.mobile))
+        .bind(bool_to_i64(config.touch))
+        .bind(challenge_policy)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        touch_workflow(&self.pool, &config.workflow_id).await?;
+
+        Ok(())
+    }
+
     pub async fn add_step(
         &self,
         workflow_id: &str,
@@ -460,6 +578,26 @@ fn step_name(name: String, action_type: crate::domain::ActionType) -> String {
         action_type.label().to_string()
     } else {
         trimmed.to_string()
+    }
+}
+
+fn optional_u32(value: Option<i64>) -> Option<u32> {
+    value.and_then(|value| u32::try_from(value).ok())
+}
+
+fn bool_to_i64(value: bool) -> i64 {
+    if value {
+        1
+    } else {
+        0
+    }
+}
+
+fn challenge_policy_str(policy: WorkflowBrowserChallengePolicy) -> &'static str {
+    match policy {
+        WorkflowBrowserChallengePolicy::None => "none",
+        WorkflowBrowserChallengePolicy::DetectOnly => "detect_only",
+        WorkflowBrowserChallengePolicy::PauseForHuman => "pause_for_human",
     }
 }
 

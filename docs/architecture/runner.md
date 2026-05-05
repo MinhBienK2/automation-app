@@ -19,6 +19,7 @@ The runner executes action configs in a headed Chromium browser and reports prog
 ## Current Behavior
 
 - `BrowserRunExecutor` runs action configs through `BrowserRunner`.
+- `BrowserRunExecutor` accepts optional workflow browser runtime config and passes it to `BrowserRunner` before launch.
 - `BrowserRunner` emits `StepStarted` and `StepCompleted`.
 - `run_service` maps progress step numbers back to workflow step ids.
 - Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
@@ -27,10 +28,12 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
 - Browser sessions are retained in `AppState` after terminal outcomes unless a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
+- Browser launch settings prefer persisted workflow browser runtime config when present. If the workflow has no browser config row, launch settings fall back to legacy action-config inference.
 
 ## Belongs Here
 
 - Chromium session launch and tab/frame/download behavior.
+- Workflow browser runtime config application at browser launch.
 - Action dispatch and browser interaction.
 - Cancellation-aware execution.
 - Runner-level errors and outcomes.

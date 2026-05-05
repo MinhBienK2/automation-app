@@ -29,8 +29,21 @@
   .workflow-graph-layout,
   .graph-runtime-grid,
   .graph-shortcut-guide,
+  .browser-config-grid,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
+  }
+
+  .browser-config-header,
+  .run-issue-header,
+  .run-issue-item {
+    display: grid;
+  }
+
+  .browser-config-actions,
+  .run-issue-header-actions,
+  .run-issue-actions {
+    justify-content: stretch;
   }
 
   .step-detail-panel {

@@ -30,6 +30,8 @@
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by `AppState::finish_run`.
 - `AppState::finish_run` captures runtime outputs before retaining the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
+- Workflow-level browser runtime config can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts.
+- When a workflow has no persisted browser runtime config row, launch setup falls back to legacy profile/proxy/user-agent/viewport action config inference for compatibility.
 - Temporary user data directories are used unless a profile action config selects a persistent profile.
 
 ## Cancellation

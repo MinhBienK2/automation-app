@@ -1,7 +1,9 @@
 import type {
   ActionType,
   CommandError,
+  GraphValidationIssue,
   RunState,
+  WorkflowBrowserConfig,
   WorkflowStep,
 } from "../types/workflow";
 
@@ -234,6 +236,25 @@ export const initialRunState: RunState = {
   error: null,
 };
 
+export function defaultWorkflowBrowserConfig(
+  workflowId: string,
+): WorkflowBrowserConfig {
+  return {
+    workflow_id: workflowId,
+    profile_name: null,
+    proxy_enabled: false,
+    proxy_server: null,
+    proxy_username: null,
+    proxy_password: null,
+    user_agent: null,
+    viewport_width: null,
+    viewport_height: null,
+    mobile: false,
+    touch: false,
+    challenge_policy: "none",
+  };
+}
+
 export function stepSummary(step: WorkflowStep) {
   switch (step.config.type) {
     case "navigate":
@@ -439,6 +460,104 @@ export function normalizeRunState(state: RunState): RunState {
     outputs: state.outputs ?? {},
     error: state.error ?? null,
   };
+}
+
+export function runStatusLabel(
+  state: RunState,
+  options: { appError?: string; hasBlockingIssues?: boolean } = {},
+) {
+  if (state.status === "running") {
+    return state.current_step_number
+      ? `Running step ${state.current_step_number}`
+      : "Running";
+  }
+  if (state.status === "success") return "Run succeeded";
+  if (state.status === "failed") return "Run failed";
+  if (state.status === "stopped") return "Stopped";
+  if (options.hasBlockingIssues) return "Run blocked";
+  if (options.appError) return "Could not start run";
+  return "Idle";
+}
+
+export type RunIssueSeverity = "blocking" | "runtime" | "system";
+
+export type RunIssue = {
+  id: string;
+  severity: RunIssueSeverity;
+  title: string;
+  message: string;
+  node_id?: string | null;
+  edge_id?: string | null;
+  step_number?: number | null;
+  action_type?: string | null;
+  suggestions: string[];
+};
+
+export function buildRunIssues({
+  appError,
+  graphIssues,
+  runState,
+}: {
+  appError: string;
+  graphIssues: GraphValidationIssue[];
+  runState: RunState;
+}): RunIssue[] {
+  const blockingIssues = graphIssues.filter((issue) => issue.level === "error");
+  if (blockingIssues.length) {
+    return blockingIssues.slice(0, 5).map((issue, index) => ({
+      id: `blocking-${issue.node_id ?? issue.edge_id ?? index}-${issue.message}`,
+      severity: "blocking",
+      title: issue.message,
+      message: issueMessageContext(issue),
+      node_id: issue.node_id,
+      edge_id: issue.edge_id,
+      suggestions: [],
+    }));
+  }
+
+  if (runState.status === "failed" && runState.error) {
+    const actionLabel = actionLabelForRunError(runState.error.action_type);
+    const stepLabel = runState.error.step_name?.trim() || actionLabel;
+    return [
+      {
+        id: `runtime-${runState.error.step_id ?? runState.error.step_number}`,
+        severity: "runtime",
+        title: `Run failed at step ${runState.error.step_number}: ${stepLabel}`,
+        message: runState.error.reason,
+        node_id: runState.error.step_id,
+        step_number: runState.error.step_number,
+        action_type: runState.error.action_type,
+        suggestions: suggestionsFor(
+          runState.error.reason,
+          runState.error.action_type,
+        ),
+      },
+    ];
+  }
+
+  if (appError.trim()) {
+    return [
+      {
+        id: "system-error",
+        severity: "system",
+        title: "Could not start run",
+        message: appError.trim(),
+        suggestions: [],
+      },
+    ];
+  }
+
+  return [];
+}
+
+function actionLabelForRunError(actionType: string) {
+  return actionLabels[actionType as ActionType] ?? actionType;
+}
+
+function issueMessageContext(issue: GraphValidationIssue) {
+  if (issue.node_id) return "Fix this node before running.";
+  if (issue.edge_id) return "Fix this link before running.";
+  return "Fix this graph issue before running.";
 }
 
 export function monitorStepStatus(step: WorkflowStep, state: RunState) {

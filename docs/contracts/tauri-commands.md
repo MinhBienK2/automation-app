@@ -21,6 +21,8 @@
 - `save_workflow_graph`
 - `validate_workflow_graph`
 - `compile_workflow_graph`
+- `get_workflow_browser_config`
+- `save_workflow_browser_config`
 - `run_workflow`
 - `stop_run`
 - `get_run_state`
@@ -53,6 +55,9 @@ Keep `CommandError` compatible with frontend error extraction in `src/lib/workfl
   - `save_workflow_graph`: `{ workflowId, graph }`
   - `validate_workflow_graph`: `{ graph }`
   - `compile_workflow_graph`: `{ graph }`
+- Browser runtime config command payloads:
+  - `get_workflow_browser_config`: `{ workflowId }`
+  - `save_workflow_browser_config`: `{ workflowId, config }`
 - `run_workflow`: `{ workflowId }`; the frontend saves the current graph first, then this command validates, compiles, and runs the saved graph.
 
 ## Retired Product Commands

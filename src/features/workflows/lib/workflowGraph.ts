@@ -27,14 +27,25 @@ export type WorkflowFlowNodeData = {
 
 export type WorkflowFlowEdgeData = {
   hasIssue: boolean;
+  status: WorkflowFlowEdgeStatus;
 };
 
 export type WorkflowFlowNode = Node<WorkflowFlowNodeData, "workflow">;
 export type WorkflowFlowEdge = Edge<WorkflowFlowEdgeData>;
+export type WorkflowFlowEdgeStatus =
+  | "idle"
+  | "selected"
+  | "running"
+  | "completed"
+  | "failed"
+  | "issue";
 
-const graphEdgeStroke = "rgba(62, 207, 142, 0.82)";
-const graphSelectedEdgeStroke = "#3ecf8e";
-const graphIssueEdgeStroke = "#ff7b72";
+const graphEdgeStroke = "#4d4d4d";
+const graphSelectedEdgeStroke = "#22d3ee";
+const graphRunningEdgeStroke = "#38bdf8";
+const graphCompletedEdgeStroke = "#3ecf8e";
+const graphIssueEdgeStroke = "#fbbf24";
+const graphFailedEdgeStroke = "#ff7b72";
 
 type ReactFlowGraphState = {
   selectedNodeId?: string | null;
@@ -172,7 +183,8 @@ export function toReactFlowGraph(
       const hasIssue = state.issueEdgeIds?.has(edge.id) ?? false;
       const isSelected =
         state.selectedEdgeIds?.has(edge.id) ?? state.selectedEdgeId === edge.id;
-      const stroke = hasIssue ? graphIssueEdgeStroke : isSelected ? graphSelectedEdgeStroke : graphEdgeStroke;
+      const status = graphEdgeStatus(edge, state, hasIssue, isSelected);
+      const stroke = graphEdgeStrokeForStatus(status);
 
       return {
         id: edge.id,
@@ -196,6 +208,9 @@ export function toReactFlowGraph(
         className: [
           "graph-edge",
           hasIssue ? "graph-edge-has-issue" : "",
+          status === "failed" ? "graph-edge-failed" : "",
+          status === "running" ? "graph-edge-running" : "",
+          status === "completed" ? "graph-edge-completed" : "",
           isSelected ? "graph-edge-selected" : "",
         ].filter(Boolean).join(" "),
         interactionWidth: 20,
@@ -209,6 +224,7 @@ export function toReactFlowGraph(
         },
         data: {
           hasIssue,
+          status,
         },
       };
     }),
@@ -411,6 +427,41 @@ function graphNodeStatus(
   if (state.runningNodeId === nodeId) return "running";
   if (state.completedNodeIds?.has(nodeId)) return "completed";
   return "idle";
+}
+
+function graphEdgeStatus(
+  edge: WorkflowGraph["edges"][number],
+  state: ReactFlowGraphState,
+  hasIssue: boolean,
+  isSelected: boolean,
+): WorkflowFlowEdgeStatus {
+  if (state.failedNodeId && edge.target_node_id === state.failedNodeId) {
+    return "failed";
+  }
+  if (hasIssue) return "issue";
+  if (state.runningNodeId && edge.target_node_id === state.runningNodeId) {
+    return "running";
+  }
+  if (isSelected) return "selected";
+  if (state.completedNodeIds?.has(edge.target_node_id)) return "completed";
+  return "idle";
+}
+
+function graphEdgeStrokeForStatus(status: WorkflowFlowEdgeStatus) {
+  switch (status) {
+    case "failed":
+      return graphFailedEdgeStroke;
+    case "issue":
+      return graphIssueEdgeStroke;
+    case "running":
+      return graphRunningEdgeStroke;
+    case "selected":
+      return graphSelectedEdgeStroke;
+    case "completed":
+      return graphCompletedEdgeStroke;
+    default:
+      return graphEdgeStroke;
+  }
 }
 
 export function graphNodeLabel(nodeType: GraphNodeType) {
