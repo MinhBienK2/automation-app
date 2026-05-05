@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use super::{
     ActionConfig, AssertOutputMatchMode, StopWorkflowStatus, SwitchCase, ValidationError,
-    VariableMapping, WaitCondition, WorkflowCondition, WorkflowStep,
+    VariableAssignment, VariableMapping, WaitCondition, WorkflowCondition, WorkflowStep,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,6 +28,7 @@ pub enum GraphNodeType {
     ContinueLoop,
     StopWorkflow,
     SetVariable,
+    SetJsonVariables,
     TransformVariable,
     AssertOutput,
     RunSubworkflow,
@@ -537,24 +538,31 @@ impl WorkflowGraph {
                     .filter(|value| !value.trim().is_empty())
                     .ok_or_else(|| ValidationError::new("item_name", "Item name is required"))?
                     .to_string();
-                let items = node
-                    .config
-                    .get("items")
-                    .and_then(Value::as_array)
-                    .ok_or_else(|| ValidationError::new("items", "Items are required"))?
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>();
-                if items.is_empty() {
-                    return Err(ValidationError::new("items", "Items are required"));
-                }
+                let array_variable = optional_string(&node.config, "array_variable");
+                let items = if array_variable.is_some() {
+                    Vec::new()
+                } else {
+                    let items = node
+                        .config
+                        .get("items")
+                        .and_then(Value::as_array)
+                        .ok_or_else(|| ValidationError::new("items", "Items are required"))?
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>();
+                    if items.is_empty() {
+                        return Err(ValidationError::new("items", "Items are required"));
+                    }
+                    items
+                };
                 let loop_steps = self.compile_nested_configs(&node.id, "loop", visited)?;
                 steps.push(CompiledGraphStep {
                     node_id: node.id.clone(),
                     label: node.label.clone(),
                     config: ActionConfig::RepeatForEach {
                         item_name,
+                        array_variable,
                         items,
                         steps: loop_steps,
                     },
@@ -710,17 +718,24 @@ impl WorkflowGraph {
                 return Ok(());
             }
             GraphNodeType::SetVariable => {
-                let name = required_string(&node.config, "name", "Variable name is required")?;
-                let value = node
-                    .config
-                    .get("value")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
+                let config = set_variable_action_config(node)?;
+                config.validate()?;
                 steps.push(CompiledGraphStep {
                     node_id: node.id.clone(),
                     label: node.label.clone(),
-                    config: ActionConfig::SetVariable { name, value },
+                    config,
+                });
+                let next = self.next_target(&node.id, "out");
+                self.compile_path(next.as_deref(), visited, steps)?;
+            }
+            GraphNodeType::SetJsonVariables => {
+                let json = required_string(&node.config, "json", "JSON variables are required")?;
+                let config = ActionConfig::SetJsonVariables { json };
+                config.validate()?;
+                steps.push(CompiledGraphStep {
+                    node_id: node.id.clone(),
+                    label: node.label.clone(),
+                    config,
                 });
                 let next = self.next_target(&node.id, "out");
                 self.compile_path(next.as_deref(), visited, steps)?;
@@ -1040,7 +1055,21 @@ impl WorkflowGraph {
                 if required_string(&node.config, "item_name", "Item name is required").is_err() {
                     issues.push(error(Some(node.id.clone()), None, "Item name is required"));
                 }
-                if string_array(&node.config, "items", "Items are required").is_err() {
+                if node.config.get("array_variable").is_some() {
+                    if required_string(
+                        &node.config,
+                        "array_variable",
+                        "Array variable name is required",
+                    )
+                    .is_err()
+                    {
+                        issues.push(error(
+                            Some(node.id.clone()),
+                            None,
+                            "Array variable name is required",
+                        ));
+                    }
+                } else if string_array(&node.config, "items", "Items are required").is_err() {
                     issues.push(error(Some(node.id.clone()), None, "Items are required"));
                 }
                 self.require_body_port(node, "loop", "Repeat loop branch is required", issues);
@@ -1179,13 +1208,22 @@ impl WorkflowGraph {
                     )),
                 }
             }
-            GraphNodeType::SetVariable => {
-                if required_string(&node.config, "name", "Variable name is required").is_err() {
-                    issues.push(error(
-                        Some(node.id.clone()),
-                        None,
-                        "Variable name is required",
-                    ));
+            GraphNodeType::SetVariable => match set_variable_action_config(node)
+                .and_then(|config| config.validate().map(|_| config))
+            {
+                Ok(_) => {}
+                Err(validation) => {
+                    issues.push(error(Some(node.id.clone()), None, validation.message))
+                }
+            },
+            GraphNodeType::SetJsonVariables => {
+                let config = required_string(&node.config, "json", "JSON variables are required")
+                    .map(|json| ActionConfig::SetJsonVariables { json });
+                match config.and_then(|config| config.validate().map(|_| config)) {
+                    Ok(_) => {}
+                    Err(validation) => {
+                        issues.push(error(Some(node.id.clone()), None, validation.message))
+                    }
                 }
             }
             GraphNodeType::TransformVariable => {
@@ -1451,6 +1489,38 @@ fn has_port(node: &GraphNode, port_id: &str, direction: GraphPortDirection) -> b
         .any(|port| port.id == port_id && port.direction == direction)
 }
 
+fn set_variable_action_config(node: &GraphNode) -> Result<ActionConfig, ValidationError> {
+    if let Some(variables_value) = node.config.get("variables") {
+        let variables = serde_json::from_value::<Vec<VariableAssignment>>(variables_value.clone())
+            .map_err(|error| {
+                ValidationError::new(
+                    "variables",
+                    format!("Node {} has invalid variable rows: {error}", node.label),
+                )
+            })?;
+        return Ok(ActionConfig::SetVariable {
+            name: None,
+            value: None,
+            value_type: None,
+            variables,
+        });
+    }
+
+    let name = required_string(&node.config, "name", "Variable name is required")?;
+    let value = node
+        .config
+        .get("value")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    Ok(ActionConfig::SetVariable {
+        name: Some(name),
+        value: Some(value),
+        value_type: None,
+        variables: Vec::new(),
+    })
+}
+
 fn expected_ports(node: &GraphNode) -> Vec<GraphPort> {
     match node.node_type {
         GraphNodeType::Start => vec![output_port("out", "Out")],
@@ -1461,6 +1531,7 @@ fn expected_ports(node: &GraphNode) -> Vec<GraphPort> {
         | GraphNodeType::StopWorkflow => vec![input_port("in", "In")],
         GraphNodeType::Action
         | GraphNodeType::SetVariable
+        | GraphNodeType::SetJsonVariables
         | GraphNodeType::TransformVariable
         | GraphNodeType::AssertOutput
         | GraphNodeType::RunSubworkflow

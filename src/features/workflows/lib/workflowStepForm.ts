@@ -2,6 +2,7 @@ import type { ActionConfig } from "../../../types/workflow";
 
 export type ActionConfigField =
   | "attribute"
+  | "array_variable"
   | "behavior"
   | "block"
   | "body"
@@ -20,6 +21,7 @@ export type ActionConfigField =
   | "inline"
   | "items"
   | "item_name"
+  | "json"
   | "key"
   | "keys"
   | "match_mode"
@@ -55,6 +57,7 @@ export type ActionConfigField =
   | "url_contains"
   | "url_patterns"
   | "value"
+  | "value_type"
   | "wait_ms"
   | "wait_until"
   | "xpath"
@@ -169,6 +172,8 @@ export function updateActionConfigField(
       return updateWaitForDownloadConfigField(config, field, value);
     case "set_variable":
       return { type: "set_variable", config: { ...config.config, [field]: value } };
+    case "set_json_variables":
+      return { type: "set_json_variables", config: { json: value } };
     case "assert_element":
       return updateAssertElementConfigField(config, field, value);
     case "assert_text":
@@ -178,6 +183,12 @@ export function updateActionConfigField(
     case "repeat_times":
       return { type: "repeat_times", config: { ...config.config, times: Number(value) } };
     case "repeat_for_each":
+      if (field === "array_variable") {
+        return {
+          type: "repeat_for_each",
+          config: { ...config.config, array_variable: value || null },
+        };
+      }
       if (field === "items") {
         return {
           type: "repeat_for_each",

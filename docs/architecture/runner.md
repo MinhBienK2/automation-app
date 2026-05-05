@@ -21,7 +21,9 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - `BrowserRunExecutor` runs action configs through `BrowserRunner`.
 - `BrowserRunner` emits `StepStarted` and `StepCompleted`.
 - `run_service` maps progress step numbers back to workflow step ids.
-- Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, and domain allowlist semantics above the browser action dispatch layer.
+- Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
+- Variable actions write to the browser session output store. `set_variable` accepts typed rows, renders templates before parsing values, flattens object fields into dotted output keys, and keeps array values whole. `set_json_variables` renders and parses a JSON object before storing flattened keys.
+- `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
 - Browser sessions are retained in `AppState` after terminal outcomes, and captured `window.__wamOutputs` values are copied into run state before retention.
@@ -46,6 +48,7 @@ Browser action script builders live under `src-tauri/src/runner/actions/` and ar
 - `clipboard.rs`: in-run clipboard store and paste actions.
 - `element.rs`: focus and blur element actions.
 - `data_capture.rs`: output extraction and storage scripts.
+- Variable and loop storage helpers live in `actions/mod.rs` because they coordinate runner control flow and browser output state.
 - `actionability.rs`, `js.rs`: shared helper code used by action modules.
 
 ## Does Not Belong Here

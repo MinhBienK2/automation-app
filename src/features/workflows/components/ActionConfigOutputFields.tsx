@@ -5,6 +5,8 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { TemplateTextareaField } from "./TemplateTextField";
+import { SetVariablesConfigFields } from "./VariableConfigFields";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -18,26 +20,22 @@ export function OutputActionFields({
   switch (config.type) {
     case "set_variable":
       return (
-        <>
-          <Label>
-            Name
-            <Input
-              value={config.config.name}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "name", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Value
-            <Textarea
-              value={config.config.value}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
-              }
-            />
-          </Label>
-        </>
+        <SetVariablesConfigFields
+          config={config.config}
+          onChange={(nextConfig) => onChange({ type: "set_variable", config: nextConfig })}
+        />
+      );
+    case "set_json_variables":
+      return (
+        <Label>
+          JSON variables
+          <Textarea
+            value={config.config.json}
+            onChange={(event) =>
+              onChange(updateActionConfigField(config, "json", event.currentTarget.value))
+            }
+          />
+        </Label>
       );
     case "assert_element":
       return (
@@ -106,15 +104,11 @@ export function OutputActionFields({
               placeholder="Blank checks whole page"
             />
           </Label>
-          <Label>
-            Text
-            <Textarea
-              value={config.config.text}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextareaField
+            label="Text"
+            value={config.config.text}
+            onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
+          />
           <Label>
             Match mode
             <Select

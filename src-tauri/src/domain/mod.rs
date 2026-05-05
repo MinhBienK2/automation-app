@@ -10,8 +10,8 @@ pub use action_config::{
     ActionConfig, ActionType, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode,
     CheckboxState, ClearInputMethod, ClickButton, ClickMode, ClickPosition, ClickWaitUntil,
     HeaderPair, InputTypingMode, NavigateWaitUntil, ScrollBehavior, ScrollBlock, ScrollDirection,
-    ScrollInline, ScrollMode, SelectOptionMatchBy, StopWorkflowStatus, SwitchCase, VariableMapping,
-    WaitCondition, WorkflowCondition,
+    ScrollInline, ScrollMode, SelectOptionMatchBy, StopWorkflowStatus, SwitchCase,
+    VariableAssignment, VariableMapping, VariableValueType, WaitCondition, WorkflowCondition,
 };
 pub use builder_assist::{ElementSnapshot, GeneratedFixture, RecordedEvent, SelectorCandidate};
 pub use orchestration::{

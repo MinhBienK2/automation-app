@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::ValidationError;
 
@@ -50,6 +51,7 @@ pub enum ActionType {
     SetDownloadDirectory,
     WaitForDownload,
     SetVariable,
+    SetJsonVariables,
     AssertElement,
     AssertText,
     IfCondition,
@@ -143,6 +145,7 @@ impl ActionType {
             Self::SetDownloadDirectory => "set_download_directory",
             Self::WaitForDownload => "wait_for_download",
             Self::SetVariable => "set_variable",
+            Self::SetJsonVariables => "set_json_variables",
             Self::AssertElement => "assert_element",
             Self::AssertText => "assert_text",
             Self::IfCondition => "if_condition",
@@ -235,7 +238,8 @@ impl ActionType {
             Self::DismissDialog => "Dismiss Dialog",
             Self::SetDownloadDirectory => "Set Download Directory",
             Self::WaitForDownload => "Wait For Download",
-            Self::SetVariable => "Set Variable",
+            Self::SetVariable => "Set Variables",
+            Self::SetJsonVariables => "Set JSON Variables",
             Self::AssertElement => "Assert Element",
             Self::AssertText => "Assert Text",
             Self::IfCondition => "If Condition",
@@ -471,6 +475,25 @@ pub enum CheckboxState {
 pub struct HeaderPair {
     pub name: String,
     pub value: String,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VariableValueType {
+    #[default]
+    Text,
+    Json,
+    Number,
+    Boolean,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VariableAssignment {
+    pub name: String,
+    #[serde(default)]
+    pub value: String,
+    #[serde(default)]
+    pub value_type: VariableValueType,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -836,8 +859,17 @@ pub enum ActionConfig {
         timeout_ms: Option<u64>,
     },
     SetVariable {
-        name: String,
-        value: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        value: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        value_type: Option<VariableValueType>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        variables: Vec<VariableAssignment>,
+    },
+    SetJsonVariables {
+        json: String,
     },
     AssertElement {
         xpath: String,
@@ -871,6 +903,9 @@ pub enum ActionConfig {
     },
     RepeatForEach {
         item_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        array_variable: Option<String>,
+        #[serde(default)]
         items: Vec<String>,
         #[serde(default)]
         steps: Vec<ActionConfig>,
@@ -1130,6 +1165,7 @@ impl ActionConfig {
             Self::SetDownloadDirectory { .. } => ActionType::SetDownloadDirectory,
             Self::WaitForDownload { .. } => ActionType::WaitForDownload,
             Self::SetVariable { .. } => ActionType::SetVariable,
+            Self::SetJsonVariables { .. } => ActionType::SetJsonVariables,
             Self::AssertElement { .. } => ActionType::AssertElement,
             Self::AssertText { .. } => ActionType::AssertText,
             Self::IfCondition { .. } => ActionType::IfCondition,
@@ -1480,9 +1516,18 @@ impl ActionConfig {
                 "timeout_ms",
                 "Timeout must be greater than 0",
             )),
-            Self::SetVariable { name, .. } if name.trim().is_empty() => {
-                Err(ValidationError::new("name", "Variable name is required"))
-            }
+            Self::SetVariable {
+                name,
+                value,
+                value_type,
+                variables,
+            } => validate_variable_assignments(
+                name.as_deref(),
+                value.as_deref(),
+                *value_type,
+                variables,
+            ),
+            Self::SetJsonVariables { json } => validate_json_variables(json),
             Self::AssertElement { xpath, .. } if xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
@@ -1506,7 +1551,18 @@ impl ActionConfig {
             Self::RepeatForEach { item_name, .. } if item_name.trim().is_empty() => {
                 Err(ValidationError::new("item_name", "Item name is required"))
             }
-            Self::RepeatForEach { items, .. } if items.is_empty() => Err(ValidationError::new(
+            Self::RepeatForEach {
+                array_variable: Some(array_variable),
+                ..
+            } if array_variable.trim().is_empty() => Err(ValidationError::new(
+                "array_variable",
+                "Array variable name is required",
+            )),
+            Self::RepeatForEach {
+                array_variable: None,
+                items,
+                ..
+            } if items.is_empty() => Err(ValidationError::new(
                 "items",
                 "At least one item is required",
             )),
@@ -1960,6 +2016,93 @@ fn validate_nested_steps(steps: &[ActionConfig]) -> Result<(), ValidationError> 
         step.validate()?;
     }
     Ok(())
+}
+
+fn validate_variable_assignments(
+    legacy_name: Option<&str>,
+    legacy_value: Option<&str>,
+    legacy_value_type: Option<VariableValueType>,
+    variables: &[VariableAssignment],
+) -> Result<(), ValidationError> {
+    if variables.is_empty() {
+        let name = legacy_name.unwrap_or_default();
+        if name.trim().is_empty() {
+            return Err(ValidationError::new("name", "Variable name is required"));
+        }
+        return validate_variable_value(
+            name,
+            legacy_value.unwrap_or_default(),
+            legacy_value_type.unwrap_or_default(),
+        );
+    }
+
+    for variable in variables {
+        if variable.name.trim().is_empty() {
+            return Err(ValidationError::new(
+                "variables",
+                "Variable name is required",
+            ));
+        }
+        validate_variable_value(&variable.name, &variable.value, variable.value_type)?;
+    }
+
+    Ok(())
+}
+
+fn validate_variable_value(
+    name: &str,
+    value: &str,
+    value_type: VariableValueType,
+) -> Result<(), ValidationError> {
+    if contains_template_token(value) {
+        return Ok(());
+    }
+
+    match value_type {
+        VariableValueType::Text => Ok(()),
+        VariableValueType::Json => serde_json::from_str::<Value>(value)
+            .map(|_| ())
+            .map_err(|_| {
+                ValidationError::new(
+                    "variables",
+                    format!("Variable {} must contain valid JSON", name.trim()),
+                )
+            }),
+        VariableValueType::Number => match value.trim().parse::<f64>() {
+            Ok(value) if value.is_finite() => Ok(()),
+            _ => Err(ValidationError::new(
+                "variables",
+                format!("Variable {} must contain a finite number", name.trim()),
+            )),
+        },
+        VariableValueType::Boolean => {
+            if matches!(value.trim(), "true" | "false") {
+                Ok(())
+            } else {
+                Err(ValidationError::new(
+                    "variables",
+                    format!("Variable {} must be true or false", name.trim()),
+                ))
+            }
+        }
+    }
+}
+
+fn validate_json_variables(json: &str) -> Result<(), ValidationError> {
+    let parsed = serde_json::from_str::<Value>(json)
+        .map_err(|_| ValidationError::new("json", "JSON variables must contain valid JSON"))?;
+    if parsed.is_object() {
+        Ok(())
+    } else {
+        Err(ValidationError::new(
+            "json",
+            "JSON variables root must be an object",
+        ))
+    }
+}
+
+fn contains_template_token(value: &str) -> bool {
+    value.contains("{{") && value.contains("}}")
 }
 
 fn validate_loop_guard(

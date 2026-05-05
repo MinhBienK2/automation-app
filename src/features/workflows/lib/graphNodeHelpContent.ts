@@ -1,4 +1,8 @@
 import type { GraphNodeType } from "../../../types/workflow";
+import type {
+  ActionFieldOptionReference,
+  HelpFieldCategory,
+} from "./stepHelpContent";
 
 export type GraphNodeHelpLanguage = "vi" | "en";
 
@@ -18,6 +22,7 @@ export type GraphNodeHelpContent = {
     description: string;
     details: string[];
   }>;
+  fieldReference?: GraphNodeFieldReference[];
   minimalConfig?: Array<{
     name: string;
     description: string;
@@ -36,6 +41,18 @@ export type GraphNodeHelpContent = {
 };
 
 type BilingualGraphNodeHelp = Record<GraphNodeHelpLanguage, GraphNodeHelpContent>;
+
+export type GraphNodeFieldReference = {
+  name: string;
+  category: HelpFieldCategory;
+  description: string;
+  requiredWhen: string;
+  valueGuidance?: string;
+  example?: string;
+  mistakes?: string[];
+  details: string[];
+  options?: ActionFieldOptionReference[];
+};
 
 const noConfigFields = {
   vi: [
@@ -245,13 +262,21 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
     ], "en"),
   },
   set_variable: {
-    vi: nodeWithFields("Set Variable", "Lưu một giá trị để các node sau dùng lại.", [
-      field("Variable name", "Tên biến/output cần lưu.", ["Dùng tên ổn định, không có khoảng trắng nếu muốn template dễ hơn."]),
-      field("Value", "Giá trị lưu vào biến.", ["Có thể là text cố định hoặc template theo output trước đó nếu runner hỗ trợ."]),
+    vi: nodeWithFields("Set Variables", "Lưu nhiều giá trị để các node sau dùng lại.", [
+      field("Rows", "Mỗi dòng có Name, Type và Value.", ["Type phân biệt text, JSON, number và boolean."]),
+      field("Name", "Tên biến hoặc dot-path cần lưu.", ["Dùng user.name để tạo biến có path rõ ràng."]),
     ]),
-    en: nodeWithFields("Set Variable", "Store a value for later nodes.", [
-      field("Variable name", "Variable/output name to store.", ["Use a stable name without spaces for easier templates."]),
-      field("Value", "Value to store.", ["Can be fixed text or a template from previous outputs when supported."]),
+    en: nodeWithFields("Set Variables", "Store multiple values for later nodes.", [
+      field("Rows", "Each row has Name, Type, and Value.", ["Type distinguishes text, JSON, number, and boolean."]),
+      field("Name", "Variable name or dot path to store.", ["Use user.name for a clear path variable."]),
+    ], "en"),
+  },
+  set_json_variables: {
+    vi: nodeWithFields("Set JSON Variables", "Lưu biến từ một JSON object.", [
+      field("JSON variables", "JSON root phải là object.", ["Object lồng nhau được flatten thành dot-path; array giữ nguyên."]),
+    ]),
+    en: nodeWithFields("Set JSON Variables", "Store variables from a JSON object.", [
+      field("JSON variables", "The JSON root must be an object.", ["Nested objects flatten into dot paths; arrays stay whole."]),
     ], "en"),
   },
   transform_variable: {
@@ -339,6 +364,7 @@ function addGraphNodeLanguageDecisionGuidance(
     ...content,
     notFor: graphNodeNotFor(nodeType, language),
     portSemantics: graphNodePortSemantics(nodeType, language),
+    fieldReference: graphNodeFieldReference(nodeType, language, content),
     minimalConfig: content.fields.map((field) => ({
       name: field.name,
       description: field.description,
@@ -346,6 +372,173 @@ function addGraphNodeLanguageDecisionGuidance(
     workflowExamples: graphNodeWorkflowExamples(nodeType, language, content),
     relatedNodes: relatedGraphNodes(nodeType, language),
   };
+}
+
+function graphNodeFieldReference(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  content: GraphNodeHelpContent,
+): GraphNodeFieldReference[] {
+  return content.fields.map((field) => ({
+    name: field.name,
+    category: graphNodeFieldCategory(nodeType, field.name),
+    description: field.description,
+    requiredWhen: graphNodeFieldRequiredWhen(nodeType, language, field.name),
+    valueGuidance: graphNodeFieldValueGuidance(nodeType, language, field),
+    example: graphNodeFieldExample(nodeType, language, field.name),
+    mistakes: graphNodeFieldMistakes(language, field.name),
+    details: field.details,
+    options: graphNodeFieldOptions(nodeType, language, field.name),
+  }));
+}
+
+function graphNodeFieldCategory(nodeType: GraphNodeType, fieldName: string): HelpFieldCategory {
+  if (fieldName === "Ports") return "optional";
+  if (
+    fieldName.includes("Timeout") ||
+    fieldName.includes("Delay") ||
+    fieldName === "Loop max attempts" ||
+    fieldName === "Loop timeout ms"
+  ) {
+    return "advanced";
+  }
+  if (
+    fieldName.includes("port") ||
+    fieldName === "Items" ||
+    fieldName === "Array variable" ||
+    fieldName === "Reason" ||
+    fieldName === "Allowed domains"
+  ) {
+    return "optional";
+  }
+  if (nodeType === "try_catch" || nodeType === "fallback" || nodeType === "break_loop" || nodeType === "continue_loop") {
+    return "optional";
+  }
+  return "required";
+}
+
+function graphNodeFieldRequiredWhen(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  fieldName: string,
+) {
+  const vi = language === "vi";
+  if (fieldName === "Ports") {
+    return vi
+      ? "Không có field nhập liệu; cấu hình node bằng cách nối port."
+      : "No input fields; configure this node by connecting ports.";
+  }
+  if (fieldName.includes("Timeout") || fieldName.includes("Delay")) {
+    return vi
+      ? "Tùy chọn; dùng để giới hạn thời gian hoặc nhịp chạy."
+      : "Optional; use to limit time or pace execution.";
+  }
+  if (fieldName.includes("port")) {
+    return vi
+      ? "Port này được cấu hình trên canvas, không phải bằng text field."
+      : "This port is configured on the canvas, not through a text field.";
+  }
+  return vi
+    ? `${fieldName} cần có khi ${nodeType} phụ thuộc trực tiếp vào giá trị này để validate hoặc chạy.`
+    : `${fieldName} is needed when ${nodeType} depends on this value directly for validation or execution.`;
+}
+
+function graphNodeFieldValueGuidance(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  field: GraphNodeHelpContent["fields"][number],
+) {
+  if (field.name === "Ports") return undefined;
+  const vi = language === "vi";
+  if (field.name === "Condition") {
+    return vi
+      ? "Chọn condition theo dữ liệu đã có trước node này hoặc trạng thái trang hiện tại."
+      : "Choose a condition based on data created before this node or the current page state.";
+  }
+  if (field.name === "Match") {
+    return vi
+      ? "Equals cần khớp chính xác; Contains phù hợp với text dài hoặc có phần động."
+      : "Equals requires an exact match; Contains fits longer text or values with dynamic parts.";
+  }
+  if (field.name.includes("Timeout") || field.name.includes("Delay") || field.name.includes("attempts")) {
+    return vi
+      ? "Nhập số đủ nhỏ để fail nhanh khi cấu hình sai, nhưng đủ lớn cho trang thật."
+      : "Use a value small enough to fail fast on wrong config, but large enough for the real page.";
+  }
+  return field.details[0] ?? (vi
+    ? `Nhập giá trị rõ ràng cho ${field.name} để node ${nodeType} dễ đọc trên canvas.`
+    : `Enter a clear ${field.name} value so ${nodeType} stays readable on the canvas.`);
+}
+
+function graphNodeFieldExample(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  fieldName: string,
+) {
+  const vi = language === "vi";
+  if (fieldName === "Condition") return vi ? "Output contains status = ready" : "Output contains status = ready";
+  if (fieldName === "Match") return "Contains";
+  if (fieldName.includes("Timeout")) return "5000";
+  if (fieldName.includes("Delay")) return "250";
+  if (fieldName.includes("Times") || fieldName.includes("attempts")) return "3";
+  if (fieldName.includes("Output")) return "login_state";
+  if (fieldName.includes("Item")) return "item";
+  if (fieldName === "Allowed domains") return "example.com";
+  if (fieldName === "Ports") return undefined;
+  return vi ? `${fieldName}: giá trị mẫu cho ${nodeType}` : `${fieldName}: example value for ${nodeType}`;
+}
+
+function graphNodeFieldMistakes(language: GraphNodeHelpLanguage, fieldName: string) {
+  const vi = language === "vi";
+  if (fieldName === "Condition") {
+    return [
+      vi
+        ? "Dùng output chưa được tạo trước node này."
+        : "Using an output that has not been created before this node.",
+    ];
+  }
+  if (fieldName.includes("port")) {
+    return [
+      vi
+        ? "Cấu hình field nhưng quên nối required port trước khi validate/run."
+        : "Configuring fields but forgetting required ports before validate/run.",
+    ];
+  }
+  return undefined;
+}
+
+function graphNodeFieldOptions(
+  nodeType: GraphNodeType,
+  language: GraphNodeHelpLanguage,
+  fieldName: string,
+) {
+  const vi = language === "vi";
+  if (fieldName === "Condition") {
+    return [
+      graphOption("Output equals", "output_equals", vi ? "Output phải bằng giá trị mong đợi." : "Output must equal the expected value.", vi ? "Dùng cho trạng thái chính xác như status = success." : "Use for exact states such as status = success.", vi ? "Tránh với text dài có phần thay đổi." : "Avoid for long text with changing parts."),
+      graphOption("Output contains", "output_contains", vi ? "Output chỉ cần chứa đoạn mong đợi." : "Output only needs to contain the expected fragment.", vi ? "Dùng cho text dài hoặc thông báo có prefix/suffix." : "Use for long text or messages with prefix/suffix.", vi ? "Tránh khi cần khớp tuyệt đối." : "Avoid when exact matching is required."),
+      graphOption("Text visible", "text_visible", vi ? "Trang hiện tại phải hiển thị text." : "The current page must show the text.", vi ? "Dùng khi trạng thái nằm trên UI." : "Use when the state is visible in the UI.", vi ? "Tránh với text theo ngôn ngữ động." : "Avoid locale-dependent text."),
+      graphOption("URL contains", "url_contains", vi ? "URL hiện tại chứa đoạn mong đợi." : "Current URL contains the expected fragment.", vi ? "Dùng sau login hoặc điều hướng." : "Use after login or navigation.", vi ? "Tránh với SPA không đổi URL." : "Avoid SPAs that do not change URL."),
+      graphOption("Element visible", "element_visible", vi ? "Element XPath phải visible." : "Element XPath must be visible.", vi ? "Dùng khi nhánh phụ thuộc một control đang hiện." : "Use when branching depends on a visible control.", vi ? "Tránh nếu chỉ cần DOM presence." : "Avoid when DOM presence is enough."),
+    ];
+  }
+  if (nodeType === "assert_output" && fieldName === "Match") {
+    return [
+      graphOption("Equals", "equals", vi ? "Output phải bằng đúng expected value." : "Output must equal the expected value exactly.", vi ? "Dùng cho trạng thái hoặc mã cố định." : "Use for fixed states or codes.", vi ? "Tránh với text dài có số động." : "Avoid long text with dynamic numbers."),
+      graphOption("Contains", "contains", vi ? "Output chỉ cần chứa expected value." : "Output only needs to contain the expected value.", vi ? "Dùng cho đoạn text trong nội dung dài." : "Use for a fragment inside longer content.", vi ? "Tránh nếu cần khẳng định chính xác." : "Avoid when exact assertion is required."),
+    ];
+  }
+  return undefined;
+}
+
+function graphOption(
+  label: string,
+  value: string,
+  description: string,
+  useWhen: string,
+  avoidWhen: string,
+): ActionFieldOptionReference {
+  return { label, value, description, useWhen, avoidWhen };
 }
 
 function graphNodeNotFor(nodeType: GraphNodeType, language: GraphNodeHelpLanguage) {

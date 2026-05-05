@@ -1201,8 +1201,10 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                     timeout_ms: None,
                 },
                 ActionConfig::SetVariable {
-                    name: "customer".to_string(),
-                    value: "Ada".to_string(),
+                    name: Some("customer".to_string()),
+                    value: Some("Ada".to_string()),
+                    value_type: None,
+                    variables: Vec::new(),
                 },
                 ActionConfig::InputText {
                     xpath: "//*[@id=\"name\"]".to_string(),
@@ -1233,8 +1235,10 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                         value: "Ada".to_string(),
                     },
                     then_steps: vec![ActionConfig::SetVariable {
-                        name: "branch".to_string(),
-                        value: "then".to_string(),
+                        name: Some("branch".to_string()),
+                        value: Some("then".to_string()),
+                        value_type: None,
+                        variables: Vec::new(),
                     }],
                     else_steps: vec![ActionConfig::StopWorkflow {
                         status: StopWorkflowStatus::Failure,
@@ -1263,10 +1267,13 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                 },
                 ActionConfig::RepeatForEach {
                     item_name: "item".to_string(),
+                    array_variable: None,
                     items: vec!["One".to_string(), "Two".to_string()],
                     steps: vec![ActionConfig::SetVariable {
-                        name: "last_item".to_string(),
-                        value: "{{item}}".to_string(),
+                        name: Some("last_item".to_string()),
+                        value: Some("{{item}}".to_string()),
+                        value_type: None,
+                        variables: Vec::new(),
                     }],
                 },
                 ActionConfig::RetryBlock {

@@ -25,8 +25,10 @@ import {
 } from "../../../lib/workflowUi";
 import {
   graphNodeHelpContent,
+  type GraphNodeFieldReference,
   type GraphNodeHelpLanguage,
 } from "../lib/graphNodeHelpContent";
+import type { HelpFieldCategory } from "../lib/stepHelpContent";
 import { StepHelpModal } from "./StepHelpModal";
 
 export const logicNodeGroups: Array<{
@@ -49,7 +51,7 @@ export const logicNodeGroups: Array<{
 ];
 
 export const variableNodeGroups = [
-  { label: "Variables", nodes: ["set_variable"] },
+  { label: "Variables", nodes: ["set_variable", "set_json_variables"] },
 ] satisfies Array<{ label: string; nodes: GraphNodeType[] }>;
 
 export const endNodeGroups = [
@@ -72,7 +74,8 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   stop_workflow: "Stop execution with a success or failure status.",
   manual_approval: "Pause for a human checkpoint.",
   rate_limit: "Add safe pacing before continuing.",
-  set_variable: "Store a workflow value.",
+  set_variable: "Store multiple workflow values.",
+  set_json_variables: "Store structured JSON values.",
   transform_variable: "Create an output from an existing value.",
   assert_output: "Require an output value to match an expectation.",
   run_subworkflow: "Run another workflow from this graph.",
@@ -368,10 +371,6 @@ export function NodeHelpDialog({
                 </HelpSection>
               ) : null}
 
-              <HelpSection title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}>
-                <HelpFieldList fields={content.minimalConfig ?? content.fields} />
-              </HelpSection>
-
               {content.portSemantics?.length ? (
                 <HelpSection title={language === "vi" ? "Port và luồng chạy" : "Ports and flow"}>
                   <div className="help-field-list">
@@ -386,6 +385,16 @@ export function NodeHelpDialog({
                       </div>
                     ))}
                   </div>
+                </HelpSection>
+              ) : null}
+
+              <HelpSection title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}>
+                <HelpFieldList fields={content.minimalConfig ?? content.fields} />
+              </HelpSection>
+
+              {content.fieldReference?.length ? (
+                <HelpSection title={language === "vi" ? "Tất cả field và option" : "All fields and options"}>
+                  <GraphFieldReferenceGroups fields={content.fieldReference} language={language} />
                 </HelpSection>
               ) : null}
 
@@ -406,13 +415,6 @@ export function NodeHelpDialog({
                 </div>
               </HelpSection>
 
-              <HelpSection title={language === "vi" ? "Lỗi hay gặp và cách sửa" : "Common mistakes and fixes"}>
-                <ul>
-                  {content.commonMistakes.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </HelpSection>
             </div>
           </ScrollArea>
         ) : null}
@@ -469,6 +471,84 @@ function HelpFieldList({
           ) : null}
         </div>
       ))}
+    </div>
+  );
+}
+
+function GraphFieldReferenceGroups({
+  fields,
+  language,
+}: {
+  fields: GraphNodeFieldReference[];
+  language: GraphNodeHelpLanguage;
+}) {
+  const groupOrder: HelpFieldCategory[] = ["required", "optional", "advanced"];
+  const labels: Record<HelpFieldCategory, string> = {
+    required: language === "vi" ? "Bắt buộc" : "Required",
+    optional: language === "vi" ? "Tùy chọn" : "Optional",
+    advanced: language === "vi" ? "Nâng cao" : "Advanced",
+  };
+
+  return (
+    <div className="help-field-groups">
+      {groupOrder.map((category) => {
+        const groupFields = fields.filter((field) => field.category === category);
+        if (!groupFields.length) return null;
+        return (
+          <section className="help-field-group" key={category}>
+            <h4>{labels[category]}</h4>
+            <div className="help-field-list">
+              {groupFields.map((field) => (
+                <div className="help-field-item help-field-reference" key={field.name}>
+                  <div className="help-field-title-row">
+                    <strong>{field.name}</strong>
+                    <span className={`help-field-badge help-field-badge-${field.category}`}>
+                      {field.category}
+                    </span>
+                  </div>
+                  <p>{field.description}</p>
+                  <ul className="help-field-details">
+                    <li>{field.requiredWhen}</li>
+                    {field.valueGuidance ? <li>{field.valueGuidance}</li> : null}
+                    {field.example ? <li>{field.example}</li> : null}
+                    {field.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                    {field.mistakes?.map((mistake) => (
+                      <li key={mistake}>{mistake}</li>
+                    ))}
+                  </ul>
+                  {field.options?.length ? (
+                    <div className="help-option-list">
+                      {field.options.map((option) => (
+                        <div className="help-option-item" key={`${field.name}-${option.label}`}>
+                          <strong>
+                            {option.label}
+                            {option.value ? <span>{option.value}</span> : null}
+                          </strong>
+                          <p>{option.description}</p>
+                          <ul className="help-field-details">
+                            <li>
+                              <span className="help-option-label">Use when</span>
+                              {option.useWhen}
+                            </li>
+                            {option.avoidWhen ? (
+                              <li>
+                                <span className="help-option-label">Avoid when</span>
+                                {option.avoidWhen}
+                              </li>
+                            ) : null}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -587,7 +667,8 @@ export const actionDescriptions: Record<ActionType, string> = {
   dismiss_dialog: "Dismiss a browser dialog",
   set_download_directory: "Choose download location",
   wait_for_download: "Wait for a download",
-  set_variable: "Store a workflow value",
+  set_variable: "Store workflow values",
+  set_json_variables: "Store JSON values",
   assert_element: "Require an element state",
   assert_text: "Require matching text",
   if_condition: "Run steps conditionally",

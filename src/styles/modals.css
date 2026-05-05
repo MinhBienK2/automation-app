@@ -118,15 +118,53 @@
   gap: 10px;
 }
 
+.help-field-groups {
+  display: grid;
+  gap: 14px;
+}
+
+.help-field-group {
+  display: grid;
+  gap: 8px;
+}
+
+.help-field-group h4 {
+  margin: 0;
+  color: #d8d8d8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .help-field-item {
   display: grid;
   gap: 6px;
+}
+
+.help-field-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .help-field-item strong {
   color: #fafafa;
   font-size: 13px;
   font-weight: 500;
+}
+
+.help-field-badge {
+  border: 1px solid #303030;
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: #b4b4b4;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.help-field-badge-required {
+  border-color: rgba(63, 185, 80, 0.45);
+  color: #7ee787;
 }
 
 .help-field-details {
@@ -179,6 +217,15 @@
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 11px;
   font-weight: 400;
+}
+
+.help-option-label {
+  display: inline-block;
+  min-width: 72px;
+  margin-right: 6px;
+  color: #d8d8d8;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 @media (max-width: 600px) {

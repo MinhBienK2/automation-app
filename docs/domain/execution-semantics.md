@@ -11,6 +11,9 @@
 - Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
+- `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
+- `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
+- `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
 
 ## Run State
 

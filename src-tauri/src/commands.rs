@@ -228,7 +228,12 @@ pub async fn run_batch_workflow_impl(
     for (row_index, row) in request.rows.into_iter().enumerate() {
         let mut action_configs = row
             .into_iter()
-            .map(|(name, value)| ActionConfig::SetVariable { name, value })
+            .map(|(name, value)| ActionConfig::SetVariable {
+                name: Some(name),
+                value: Some(value),
+                value_type: None,
+                variables: Vec::new(),
+            })
             .collect::<Vec<_>>();
         action_configs.extend(base_steps.clone());
 

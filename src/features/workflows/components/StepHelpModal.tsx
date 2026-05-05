@@ -10,7 +10,12 @@ import {
 } from "../../../components/ui/dialog";
 import { ScrollArea } from "../../../components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { stepHelpContent, type StepHelpLanguage } from "../lib/stepHelpContent";
+import {
+  stepHelpContent,
+  type ActionFieldReference,
+  type HelpFieldCategory,
+  type StepHelpLanguage,
+} from "../lib/stepHelpContent";
 
 type StepHelpModalProps = {
   actionType: ActionType;
@@ -114,7 +119,7 @@ export function StepHelpModal({
 
             {content.fieldReference?.length ? (
               <HelpSection title={language === "vi" ? "Tất cả field và option" : "All fields and options"}>
-                <FieldReferenceList fields={content.fieldReference} />
+                <FieldReferenceGroups fields={content.fieldReference} language={language} />
               </HelpSection>
             ) : null}
 
@@ -151,14 +156,6 @@ export function StepHelpModal({
                   </div>
                 ))}
               </div>
-            </HelpSection>
-
-            <HelpSection title={language === "vi" ? "Lỗi hay gặp và cách sửa" : "Common mistakes and fixes"}>
-              <ul>
-                {content.commonMistakes.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
             </HelpSection>
 
             {content.safetyNotes?.length ? (
@@ -223,31 +220,22 @@ function FieldList({
 function FieldReferenceList({
   fields,
 }: {
-  fields: Array<{
-    name: string;
-    description: string;
-    requiredWhen: string;
-    example?: string;
-    mistakes?: string[];
-    details?: string[];
-    options?: Array<{
-      label: string;
-      value?: string;
-      description: string;
-      useWhen: string;
-      avoidWhen?: string;
-      example?: string;
-    }>;
-  }>;
+  fields: ActionFieldReference[];
 }) {
   return (
     <div className="help-field-list">
       {fields.map((field) => (
         <div className="help-field-item help-field-reference" key={field.name}>
-          <strong>{field.name}</strong>
+          <div className="help-field-title-row">
+            <strong>{field.name}</strong>
+            <span className={`help-field-badge help-field-badge-${field.category}`}>
+              {field.category}
+            </span>
+          </div>
           <p>{field.description}</p>
           <ul className="help-field-details">
             <li>{field.requiredWhen}</li>
+            {field.valueGuidance ? <li>{field.valueGuidance}</li> : null}
             {field.example ? <li>{field.example}</li> : null}
             {field.details?.map((detail) => (
               <li key={detail}>{detail}</li>
@@ -266,9 +254,22 @@ function FieldReferenceList({
                   </strong>
                   <p>{option.description}</p>
                   <ul className="help-field-details">
-                    <li>{option.useWhen}</li>
-                    {option.avoidWhen ? <li>{option.avoidWhen}</li> : null}
-                    {option.example ? <li>{option.example}</li> : null}
+                    <li>
+                      <span className="help-option-label">Use when</span>
+                      {option.useWhen}
+                    </li>
+                    {option.avoidWhen ? (
+                      <li>
+                        <span className="help-option-label">Avoid when</span>
+                        {option.avoidWhen}
+                      </li>
+                    ) : null}
+                    {option.example ? (
+                      <li>
+                        <span className="help-option-label">Example</span>
+                        {option.example}
+                      </li>
+                    ) : null}
                   </ul>
                 </div>
               ))}
@@ -276,6 +277,36 @@ function FieldReferenceList({
           ) : null}
         </div>
       ))}
+    </div>
+  );
+}
+
+function FieldReferenceGroups({
+  fields,
+  language,
+}: {
+  fields: ActionFieldReference[];
+  language: StepHelpLanguage;
+}) {
+  const groupOrder: HelpFieldCategory[] = ["required", "optional", "advanced"];
+  const labels: Record<HelpFieldCategory, string> = {
+    required: language === "vi" ? "Bắt buộc" : "Required",
+    optional: language === "vi" ? "Tùy chọn" : "Optional",
+    advanced: language === "vi" ? "Nâng cao" : "Advanced",
+  };
+
+  return (
+    <div className="help-field-groups">
+      {groupOrder.map((category) => {
+        const groupFields = fields.filter((field) => field.category === category);
+        if (!groupFields.length) return null;
+        return (
+          <section className="help-field-group" key={category}>
+            <h4>{labels[category]}</h4>
+            <FieldReferenceList fields={groupFields} />
+          </section>
+        );
+      })}
     </div>
   );
 }

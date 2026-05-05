@@ -63,6 +63,8 @@ describe("workflow graph helpers", () => {
 
   test("creates default nodes with stable ports", () => {
     const ifNode = createDefaultGraphNode("if", { x: 10, y: 20 });
+    const variablesNode = createDefaultGraphNode("set_variable", { x: 20, y: 30 });
+    const jsonVariablesNode = createDefaultGraphNode("set_json_variables", { x: 30, y: 40 });
 
     expect(ifNode.node_type).toBe("if");
     expect(ifNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
@@ -71,6 +73,14 @@ describe("workflow graph helpers", () => {
       "output:false",
       "output:done",
     ]);
+    expect(variablesNode.label).toBe("Set Variables");
+    expect(variablesNode.config).toEqual({
+      variables: [{ name: "name", value_type: "text", value: "" }],
+    });
+    expect(jsonVariablesNode.label).toBe("Set JSON Variables");
+    expect(jsonVariablesNode.config).toEqual({
+      json: "{\n  \"name\": \"value\"\n}",
+    });
   });
 
   test("returns stable port definitions for graph node types", () => {
@@ -111,6 +121,10 @@ describe("workflow graph helpers", () => {
       "done",
     ]);
     expect(nodePorts("manual_approval").map((port) => port.id)).toEqual([
+      "in",
+      "out",
+    ]);
+    expect(nodePorts("set_json_variables").map((port) => port.id)).toEqual([
       "in",
       "out",
     ]);

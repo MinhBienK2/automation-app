@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { allActionOptions } from "../../../lib/workflowUi";
+import type { GraphNodeType } from "../../../types/workflow";
 import { graphNodeHelpContent } from "./graphNodeHelpContent";
 import { stepHelpContent } from "./stepHelpContent";
 
@@ -134,6 +135,39 @@ describe("step help content", () => {
         for (const field of fieldReference) {
           expect(field.description, `${actionType} ${language} ${field.name}`).not.toHaveLength(0);
           expect(field.requiredWhen, `${actionType} ${language} ${field.name}`).not.toHaveLength(0);
+          expect(
+            ["required", "optional", "advanced"],
+            `${actionType} ${language} ${field.name} category`,
+          ).toContain(field.category);
+          if (field.name !== "No fields") {
+            expect(
+              field.valueGuidance ?? field.example,
+              `${actionType} ${language} ${field.name} guidance`,
+            ).toBeTruthy();
+          }
+        }
+      }
+    }
+  });
+
+  test("does not use generic fallback text for real action fields", () => {
+    const genericFallbacks = [
+      "This field appears in this action's configuration form.",
+      "Field này xuất hiện trong form cấu hình của action này.",
+      "Required when this field appears in the action's minimum setup; otherwise it tunes behavior.",
+      "Bắt buộc nếu field này xuất hiện trong cấu hình tối thiểu của action; nếu không thì dùng để tinh chỉnh.",
+    ];
+
+    for (const actionType of allActionOptions) {
+      for (const language of ["vi", "en"] as const) {
+        for (const field of stepHelpContent[actionType][language].fieldReference ?? []) {
+          if (field.name === "No fields") continue;
+          expect(genericFallbacks, `${actionType} ${language} ${field.name}`).not.toContain(
+            field.description,
+          );
+          expect(genericFallbacks, `${actionType} ${language} ${field.name}`).not.toContain(
+            field.requiredWhen,
+          );
         }
       }
     }
@@ -221,5 +255,60 @@ describe("step help content", () => {
         `${actionType} ${fieldName}`,
       ).toEqual(labels);
     }
+  });
+
+  test("schema-backed graph node help covers fields, ports, and select options", () => {
+    const graphNodeTypes: GraphNodeType[] = [
+      "start",
+      "end_success",
+      "end_failure",
+      "action",
+      "if",
+      "switch",
+      "repeat_times",
+      "repeat_for_each",
+      "repeat_until",
+      "while",
+      "retry",
+      "try_catch",
+      "fallback",
+      "break_loop",
+      "continue_loop",
+      "stop_workflow",
+      "set_variable",
+      "set_json_variables",
+      "transform_variable",
+      "assert_output",
+      "run_subworkflow",
+      "manual_approval",
+      "rate_limit",
+      "domain_allowlist",
+    ];
+
+    for (const nodeType of graphNodeTypes) {
+      for (const language of ["vi", "en"] as const) {
+        const content = graphNodeHelpContent[nodeType][language];
+        expect(content.summary, `${nodeType} ${language}`).not.toHaveLength(0);
+        expect(content.fieldReference?.length, `${nodeType} ${language}`).toBeGreaterThan(0);
+        for (const field of content.fieldReference ?? []) {
+          expect(field.description, `${nodeType} ${language} ${field.name}`).not.toHaveLength(0);
+          expect(field.requiredWhen, `${nodeType} ${language} ${field.name}`).not.toHaveLength(0);
+          expect(["required", "optional", "advanced"]).toContain(field.category);
+          if (field.name !== "Ports") {
+            expect(field.valueGuidance ?? field.example, `${nodeType} ${language} ${field.name}`)
+              .toBeTruthy();
+          }
+        }
+      }
+    }
+
+    expect(
+      graphNodeHelpContent.if.en.fieldReference?.find((field) => field.name === "Condition")
+        ?.options?.map((option) => option.label),
+    ).toEqual(["Output equals", "Output contains", "Text visible", "URL contains", "Element visible"]);
+    expect(
+      graphNodeHelpContent.assert_output.en.fieldReference?.find((field) => field.name === "Match")
+        ?.options?.map((option) => option.label),
+    ).toEqual(["Equals", "Contains"]);
   });
 });

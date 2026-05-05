@@ -2,6 +2,7 @@ import type { ActionType } from "../../../types/workflow";
 import { actionLabels } from "../../../lib/workflowUi";
 
 export type StepHelpLanguage = "vi" | "en";
+export type HelpFieldCategory = "required" | "optional" | "advanced";
 
 export type StepHelpContent = {
   title: string;
@@ -44,8 +45,10 @@ export type StepHelpContent = {
 
 export type ActionFieldReference = {
   name: string;
+  category: HelpFieldCategory;
   description: string;
   requiredWhen: string;
+  valueGuidance?: string;
   example?: string;
   mistakes?: string[];
   details: string[];
@@ -97,6 +100,7 @@ type PhaseOneActionType =
   | "set_download_directory"
   | "wait_for_download"
   | "set_variable"
+  | "set_json_variables"
   | "assert_element"
   | "assert_text"
   | "if_condition"
@@ -547,7 +551,13 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
     "chờ file tải xong",
     "download",
   ),
-  set_variable: elementHelp("Set Variable", "save a reusable value", "lưu biến", "variable"),
+  set_variable: elementHelp("Set Variables", "save reusable values", "lưu biến", "variable"),
+  set_json_variables: elementHelp(
+    "Set JSON Variables",
+    "save structured JSON values",
+    "lưu biến JSON",
+    "variable",
+  ),
   assert_element: elementHelp("Assert Element", "require an element state", "kiểm tra element", "assert"),
   assert_text: elementHelp("Assert Text", "require expected text", "kiểm tra text", "assert"),
   if_condition: elementHelp("If Condition", "run steps when a condition matches", "rẽ nhánh", "logic"),
@@ -830,8 +840,10 @@ function addLanguageFieldReference(
     ...content,
     fieldReference: fieldNames.map((fieldName) => ({
       name: fieldName,
+      category: fieldCategory(actionType, fieldName),
       description: contentFields.get(fieldName)?.description ?? fieldDescription(actionType, language, fieldName),
       requiredWhen: fieldRequiredWhen(actionType, language, fieldName),
+      valueGuidance: fieldValueGuidance(actionType, language, fieldName),
       example: fieldExample(actionType, language, fieldName),
       mistakes: fieldMistakes(actionType, language, fieldName),
       details: contentFields.get(fieldName)?.details ?? fieldDetails(actionType, language, fieldName),
@@ -916,7 +928,9 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "wait_for_download":
       return ["Output name", "Timeout ms"];
     case "set_variable":
-      return ["Name", "Value"];
+      return ["Name", "Type", "Value"];
+    case "set_json_variables":
+      return ["JSON variables"];
     case "assert_element":
       return ["XPath", "State", "Iframe XPath", "Timeout ms"];
     case "assert_text":
@@ -926,7 +940,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "repeat_times":
       return ["Times"];
     case "repeat_for_each":
-      return ["Item name", "Items"];
+      return ["Items source", "Item name", "Items", "Array variable"];
     case "retry_block":
       return ["Max attempts", "Delay ms"];
     case "stop_workflow":
@@ -1079,8 +1093,8 @@ function fieldRequiredWhen(
       : "Optional; use to tune timing when the page is slow or unstable.";
   }
   return vi
-    ? "Bắt buộc nếu field này xuất hiện trong cấu hình tối thiểu của action; nếu không thì dùng để tinh chỉnh."
-    : "Required when this field appears in the action's minimum setup; otherwise it tunes behavior.";
+    ? `${fieldName} cần có khi ${actionLabels[actionType]} phụ thuộc trực tiếp vào giá trị này; nếu không nhập, action dùng mặc định hiện có.`
+    : `${fieldName} is needed when ${actionLabels[actionType]} depends on this value directly; otherwise the action uses its current default.`;
 }
 
 function fieldDescription(
@@ -1110,8 +1124,92 @@ function fieldDescription(
       : "Text entered into a prompt dialog before accepting it.";
   }
   return vi
-    ? "Field này xuất hiện trong form cấu hình của action này."
-    : "This field appears in this action's configuration form.";
+    ? `${fieldName} điều khiển cách ${actionLabels[actionType]} chạy trong browser. Đọc quy tắc bắt buộc và ví dụ để nhập đúng kiểu giá trị.`
+    : `${fieldName} controls how ${actionLabels[actionType]} runs in the browser. Use the requirement rule and example to enter the right value.`;
+}
+
+function fieldCategory(actionType: ActionType, fieldName: string): HelpFieldCategory {
+  if (fieldName === "No fields") return "optional";
+  if (
+    fieldName.includes("Timeout") ||
+    fieldName.includes("Delay") ||
+    fieldName.includes("Wait") ||
+    fieldName === "Iframe XPath" ||
+    fieldName === "Username" ||
+    fieldName === "Password" ||
+    fieldName === "Accuracy" ||
+    fieldName === "Device scale factor" ||
+    fieldName === "Block" ||
+    fieldName === "Inline" ||
+    fieldName === "Offset X / Offset Y" ||
+    fieldName === "Post-click wait ms" ||
+    fieldName === "Retry interval ms"
+  ) {
+    return "advanced";
+  }
+  if (
+    fieldName === "Reason" ||
+    fieldName === "Prompt text" ||
+    fieldName === "Screenshot path" ||
+    fieldName === "Path" ||
+    fieldName === "Output name" ||
+    fieldName === "Full page" ||
+    fieldName === "Mobile" ||
+    fieldName === "Touch" ||
+    fieldName === "Scroll into view" ||
+    fieldName === "Position" ||
+    fieldName === "Button" ||
+    fieldName === "Click count" ||
+    fieldName === "Method" ||
+    fieldName === "Clear before input" ||
+    fieldName === "Typing mode" ||
+    fieldName === "Items source" ||
+    fieldName === "Array variable"
+  ) {
+    return "optional";
+  }
+  if (actionType === "wait" && ["Duration ms", "XPath", "Text", "URL contains"].includes(fieldName)) {
+    return "optional";
+  }
+  return "required";
+}
+
+function fieldValueGuidance(
+  actionType: ActionType,
+  language: StepHelpLanguage,
+  fieldName: string,
+) {
+  const vi = language === "vi";
+  const details = fieldDetails(actionType, language, fieldName);
+  if (fieldName === "No fields") return undefined;
+  if (fieldName.includes("XPath")) {
+    return vi
+      ? "Copy XPath ổn định của element thật; nếu ở iframe, dùng thêm Iframe XPath."
+      : "Copy a stable XPath for the real element; add Iframe XPath when the target is inside a frame.";
+  }
+  if (fieldName.includes("Timeout") || fieldName.includes("Delay") || fieldName.includes("Wait")) {
+    return vi
+      ? "Nhập mili-giây, ví dụ 1000 = 1 giây. Tăng vừa đủ theo trang thật."
+      : "Enter milliseconds, for example 1000 = 1 second. Increase only as much as the page needs.";
+  }
+  if (fieldName === "URL" || fieldName === "Origin" || fieldName === "Server") {
+    return vi
+      ? "Dùng URL đầy đủ hoặc origin/server đúng định dạng, không thêm khoảng trắng."
+      : "Use a full URL or correctly formatted origin/server without extra spaces.";
+  }
+  if (fieldName === "Output name" || fieldName === "Name" || fieldName === "Key") {
+    return vi
+      ? "Dùng tên ổn định, ngắn, dễ đọc lại trong template hoặc node logic."
+      : "Use a stable, short name that is easy to read in templates or logic nodes.";
+  }
+  if (fieldName === "JSON variables") {
+    return vi
+      ? "Nhập JSON object hợp lệ; object lồng nhau được lưu thành dot path."
+      : "Enter a valid JSON object; nested objects are stored as dot paths.";
+  }
+  return details[0] ?? (vi
+    ? `${fieldName} nên khớp đúng ý nghĩa field trong form ${actionLabels[actionType]}.`
+    : `${fieldName} should match the field's meaning in the ${actionLabels[actionType]} form.`);
 }
 
 function fieldExample(

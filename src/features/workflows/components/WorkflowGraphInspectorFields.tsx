@@ -22,6 +22,7 @@ import {
   ConditionFields,
   conditionFromConfig,
 } from "./WorkflowGraphConditionFields";
+import { SetVariablesConfigFields } from "./VariableConfigFields";
 
 function switchPortsForCases(cases: string[]): GraphPort[] {
   return [
@@ -161,37 +162,81 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
         </div>
       );
     case "repeat_for_each":
-      return (
-        <div className="graph-config-fields">
-          <Label>
-            Item name
-            <Input
-              value={stringConfig(node.config, "item_name", "item")}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  item_name: event.currentTarget.value,
-                })
-              }
-            />
-          </Label>
-          <Label>
-            Items
-            <Textarea
-              value={arrayConfig(node.config, "items").join("\n")}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  items: event.currentTarget.value
-                    .split("\n")
-                    .map((item) => item.trim())
-                    .filter(Boolean),
-                })
-              }
-            />
-          </Label>
-        </div>
-      );
+      {
+        const source = stringConfig(node.config, "array_variable", "")
+          ? "variable_array"
+          : "manual";
+        return (
+          <div className="graph-config-fields">
+            <Label>
+              Items source
+              <Select
+                value={source}
+                onChange={(event) => {
+                  const nextSource = event.currentTarget.value;
+                  updateConfig({
+                    ...objectConfig(node.config),
+                    array_variable: nextSource === "variable_array" ? "items" : null,
+                    items:
+                      nextSource === "manual"
+                        ? arrayConfig(node.config, "items").length
+                          ? arrayConfig(node.config, "items")
+                          : ["item"]
+                        : [],
+                  });
+                }}
+              >
+                <option value="manual">Manual list</option>
+                <option value="variable_array">Variable array</option>
+              </Select>
+            </Label>
+            <Label>
+              Item name
+              <Input
+                value={stringConfig(node.config, "item_name", "item")}
+                onChange={(event) =>
+                  updateConfig({
+                    ...objectConfig(node.config),
+                    item_name: event.currentTarget.value,
+                  })
+                }
+              />
+            </Label>
+            {source === "variable_array" ? (
+              <Label>
+                Array variable
+                <Input
+                  value={stringConfig(node.config, "array_variable", "items")}
+                  onChange={(event) =>
+                    updateConfig({
+                      ...objectConfig(node.config),
+                      array_variable: event.currentTarget.value,
+                      items: [],
+                    })
+                  }
+                />
+              </Label>
+            ) : (
+              <Label>
+                Items
+                <Textarea
+                  value={arrayConfig(node.config, "items").join("\n")}
+                  onChange={(event) =>
+                    updateConfig({
+                      ...objectConfig(node.config),
+                      array_variable: null,
+                      items: event.currentTarget.value
+                        .split("\n")
+                        .map((item) => item.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                />
+              </Label>
+            )}
+          </div>
+        );
+      }
     case "retry":
       return (
         <div className="graph-config-fields">
@@ -329,26 +374,23 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
     case "set_variable":
       return (
         <div className="graph-config-fields">
+          <SetVariablesConfigFields
+            config={objectConfig(node.config)}
+            onChange={(config) => updateConfig(config)}
+          />
+        </div>
+      );
+    case "set_json_variables":
+      return (
+        <div className="graph-config-fields">
           <Label>
-            Variable name
-            <Input
-              value={stringConfig(node.config, "name", "variable")}
+            JSON variables
+            <Textarea
+              value={stringConfig(node.config, "json", "{\n  \"name\": \"value\"\n}")}
               onChange={(event) =>
                 updateConfig({
                   ...objectConfig(node.config),
-                  name: event.currentTarget.value,
-                })
-              }
-            />
-          </Label>
-          <Label>
-            Value
-            <Input
-              value={stringConfig(node.config, "value", "")}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  value: event.currentTarget.value,
+                  json: event.currentTarget.value,
                 })
               }
             />

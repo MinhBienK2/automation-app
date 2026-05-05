@@ -3,8 +3,8 @@ use crate::{
     commands::CommandError,
     domain::{
         ActionConfig, ActionType, CheckboxState, ClearInputMethod, HeaderPair, InputTypingMode,
-        RunError, RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, WaitCondition,
-        WorkflowStep,
+        RunError, RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, VariableAssignment,
+        VariableValueType, WaitCondition, WorkflowStep,
     },
     runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
 };
@@ -249,8 +249,17 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             timeout_ms: None,
         },
         ActionType::SetVariable => ActionConfig::SetVariable {
-            name: "name".to_string(),
-            value: String::new(),
+            name: None,
+            value: None,
+            value_type: None,
+            variables: vec![VariableAssignment {
+                name: "name".to_string(),
+                value: String::new(),
+                value_type: VariableValueType::Text,
+            }],
+        },
+        ActionType::SetJsonVariables => ActionConfig::SetJsonVariables {
+            json: "{\n  \"name\": \"value\"\n}".to_string(),
         },
         ActionType::AssertElement => ActionConfig::AssertElement {
             xpath: String::new(),
@@ -279,7 +288,8 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
         },
         ActionType::RepeatForEach => ActionConfig::RepeatForEach {
             item_name: "item".to_string(),
-            items: Vec::new(),
+            array_variable: None,
+            items: vec!["item".to_string()],
             steps: Vec::new(),
         },
         ActionType::RetryBlock => ActionConfig::RetryBlock {

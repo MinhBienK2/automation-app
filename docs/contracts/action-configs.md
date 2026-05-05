@@ -27,7 +27,17 @@ Every user-addable action type must have:
 - Domain validation when fields have constraints.
 - Runner execution or intentional no-op/unsupported behavior.
 
-Graph-internal executable configs such as `if_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are Rust/TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. Graph-native nodes are the user-facing control-flow authoring surface, so these control-flow configs are not listed in the main user action palette. Hidden compatibility actions such as `set_checkbox`, reliability actions, and human checkpoint actions remain serde-compatible and editable when loaded from existing workflows, but are not visible in the main Add Action picker. They still require serde compatibility, validation, and runner or command-layer execution semantics.
+Graph-internal executable configs such as `if_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are Rust/TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. Graph-native nodes are the user-facing control-flow authoring surface, so these control-flow configs are not listed in the main user action palette. Variable configs include backward-compatible `set_variable`, multi-row `set_variable`, and `set_json_variables`. Hidden compatibility actions such as `set_checkbox`, reliability actions, and human checkpoint actions remain serde-compatible and editable when loaded from existing workflows, but are not visible in the main Add Action picker. They still require serde compatibility, validation, and runner or command-layer execution semantics.
+
+Variable config rules:
+
+- Legacy `set_variable` `{ name, value }` must still deserialize and run.
+- New `set_variable` rows use `{ name, value_type, value }`, where `value_type` is `text`, `json`, `number`, or `boolean`.
+- `set_json_variables` requires a JSON object root.
+- Dot-path names are valid variable paths.
+- Object values flatten into dot-path outputs; arrays stay whole at their path.
+- Later writes to the same path overwrite earlier writes.
+- `repeat_for_each` can use literal `items` or an `array_variable` source.
 
 Recovery config semantics must preserve failure behavior when recovery branches are absent:
 

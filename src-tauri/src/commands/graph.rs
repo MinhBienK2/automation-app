@@ -194,10 +194,12 @@ fn expand_subworkflow_configs<'a>(
             },
             ActionConfig::RepeatForEach {
                 item_name,
+                array_variable,
                 items,
                 steps,
             } => ActionConfig::RepeatForEach {
                 item_name,
+                array_variable,
                 items,
                 steps: expand_action_config_list(state, steps, workflow_stack).await?,
             },

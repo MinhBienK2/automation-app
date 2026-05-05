@@ -44,6 +44,7 @@ export type ActionType =
   | "set_download_directory"
   | "wait_for_download"
   | "set_variable"
+  | "set_json_variables"
   | "assert_element"
   | "assert_text"
   | "if_condition"
@@ -79,6 +80,13 @@ export type ActionType =
 
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
+export type VariableValueType = "text" | "json" | "number" | "boolean";
+
+export type VariableAssignment = {
+  name: string;
+  value_type: VariableValueType;
+  value: string;
+};
 
 export type WorkflowSummary = {
   id: string;
@@ -363,7 +371,16 @@ export type ActionConfig =
       type: "wait_for_download";
       config: { output_name: string; timeout_ms?: number | null };
     }
-  | { type: "set_variable"; config: { name: string; value: string } }
+  | {
+      type: "set_variable";
+      config: {
+        name?: string | null;
+        value?: string | null;
+        value_type?: VariableValueType | null;
+        variables?: VariableAssignment[];
+      };
+    }
+  | { type: "set_json_variables"; config: { json: string } }
   | {
       type: "assert_element";
       config: {
@@ -394,7 +411,12 @@ export type ActionConfig =
   | { type: "repeat_times"; config: { times: number; steps: ActionConfig[] } }
   | {
       type: "repeat_for_each";
-      config: { item_name: string; items: string[]; steps: ActionConfig[] };
+      config: {
+        item_name: string;
+        array_variable?: string | null;
+        items: string[];
+        steps: ActionConfig[];
+      };
     }
   | {
       type: "retry_block";
@@ -617,6 +639,7 @@ export type GraphNodeType =
   | "continue_loop"
   | "stop_workflow"
   | "set_variable"
+  | "set_json_variables"
   | "transform_variable"
   | "assert_output"
   | "run_subworkflow"

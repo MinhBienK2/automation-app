@@ -14,6 +14,150 @@ fn assert_validation_message(error: ValidationError, field: &str, message: &str)
 }
 
 #[test]
+fn set_variable_config_accepts_legacy_and_multi_row_shapes() {
+    let legacy: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_variable",
+        "config": {
+            "name": "token",
+            "value": "abc"
+        }
+    }))
+    .expect("legacy single variable config should remain compatible");
+    legacy.validate().expect("legacy config should validate");
+
+    let multi: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_variable",
+        "config": {
+            "variables": [
+                { "name": "user.name", "value_type": "text", "value": "Ada" },
+                { "name": "roles", "value_type": "json", "value": "[\"admin\", \"editor\"]" },
+                { "name": "age", "value_type": "number", "value": "20" },
+                { "name": "enabled", "value_type": "boolean", "value": "true" }
+            ]
+        }
+    }))
+    .expect("multi-row variable config should deserialize");
+    multi.validate().expect("multi-row config should validate");
+}
+
+#[test]
+fn set_variable_config_validates_typed_rows() {
+    let invalid_json: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_variable",
+        "config": {
+            "variables": [
+                { "name": "roles", "value_type": "json", "value": "[admin]" }
+            ]
+        }
+    }))
+    .expect("config should deserialize before validation");
+    assert_validation_message(
+        invalid_json
+            .validate()
+            .expect_err("invalid JSON row should fail validation"),
+        "variables",
+        "Variable roles must contain valid JSON",
+    );
+
+    let invalid_number: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_variable",
+        "config": {
+            "variables": [
+                { "name": "age", "value_type": "number", "value": "twenty" }
+            ]
+        }
+    }))
+    .expect("config should deserialize before validation");
+    assert_validation_message(
+        invalid_number
+            .validate()
+            .expect_err("invalid number row should fail validation"),
+        "variables",
+        "Variable age must contain a finite number",
+    );
+
+    let invalid_boolean: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_variable",
+        "config": {
+            "variables": [
+                { "name": "enabled", "value_type": "boolean", "value": "yes" }
+            ]
+        }
+    }))
+    .expect("config should deserialize before validation");
+    assert_validation_message(
+        invalid_boolean
+            .validate()
+            .expect_err("invalid boolean row should fail validation"),
+        "variables",
+        "Variable enabled must be true or false",
+    );
+}
+
+#[test]
+fn set_json_variables_config_requires_root_object() {
+    let config: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_json_variables",
+        "config": {
+            "json": "{\"user\":{\"name\":\"Ada\"},\"roles\":[\"admin\"]}"
+        }
+    }))
+    .expect("set_json_variables should deserialize");
+    config.validate().expect("object JSON should validate");
+
+    let invalid_root: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "set_json_variables",
+        "config": {
+            "json": "[\"admin\"]"
+        }
+    }))
+    .expect("invalid root shape should still deserialize");
+    assert_validation_message(
+        invalid_root
+            .validate()
+            .expect_err("array root should fail validation"),
+        "json",
+        "JSON variables root must be an object",
+    );
+}
+
+#[test]
+fn repeat_for_each_allows_variable_array_source_without_manual_items() {
+    let config: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "repeat_for_each",
+        "config": {
+            "item_name": "role",
+            "items": [],
+            "array_variable": "roles",
+            "steps": []
+        }
+    }))
+    .expect("repeat_for_each variable source should deserialize");
+
+    config
+        .validate()
+        .expect("variable array source should not require manual items");
+
+    let invalid: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "repeat_for_each",
+        "config": {
+            "item_name": "role",
+            "items": [],
+            "array_variable": " ",
+            "steps": []
+        }
+    }))
+    .expect("invalid variable source should deserialize");
+    assert_validation_message(
+        invalid
+            .validate()
+            .expect_err("blank variable array source should fail"),
+        "array_variable",
+        "Array variable name is required",
+    );
+}
+
+#[test]
 fn workflow_name_is_required() {
     let workflow = Workflow::new("  ");
 
@@ -427,10 +571,12 @@ fn workflow_graph_compiles_repeat_for_each_loop_and_done_ports() {
     match &compiled.steps[0].config {
         ActionConfig::RepeatForEach {
             item_name,
+            array_variable,
             items,
             steps,
         } => {
             assert_eq!(item_name, "item");
+            assert_eq!(array_variable, &None);
             assert_eq!(items, &vec!["a".to_string(), "b".to_string()]);
             assert_eq!(steps.len(), 1);
         }
@@ -440,10 +586,126 @@ fn workflow_graph_compiles_repeat_for_each_loop_and_done_ports() {
 }
 
 #[test]
+fn workflow_graph_compiles_repeat_for_each_variable_array_source() {
+    let mut repeat = repeat_for_each_node("each-role");
+    repeat.config = serde_json::json!({
+        "item_name": "role",
+        "array_variable": "roles",
+        "items": []
+    });
+    let graph = graph_with_nodes(
+        vec![start_node(), repeat, action_node("loop-wait")],
+        vec![
+            edge("start", "out", "each-role", "in"),
+            edge("each-role", "loop", "loop-wait", "in"),
+        ],
+    );
+
+    let compiled = graph
+        .compile()
+        .expect("variable array repeat node should compile");
+
+    match &compiled.steps[0].config {
+        ActionConfig::RepeatForEach {
+            item_name,
+            array_variable,
+            items,
+            steps,
+        } => {
+            assert_eq!(item_name, "role");
+            assert_eq!(array_variable.as_deref(), Some("roles"));
+            assert!(items.is_empty());
+            assert_eq!(steps.len(), 1);
+        }
+        other => panic!("expected repeat for each, got {other:?}"),
+    }
+}
+
+#[test]
+fn workflow_graph_compiles_multi_row_set_variable_node() {
+    let mut variables = set_variable_node("set-vars");
+    variables.label = "Set Variables".to_string();
+    variables.config = serde_json::json!({
+        "variables": [
+            { "name": "user.name", "value_type": "text", "value": "Ada" },
+            { "name": "roles", "value_type": "json", "value": "[\"admin\"]" }
+        ]
+    });
+    let graph = graph_with_nodes(
+        vec![start_node(), variables],
+        vec![edge("start", "out", "set-vars", "in")],
+    );
+
+    let compiled = graph
+        .compile()
+        .expect("multi-row variable node should compile");
+
+    match &compiled.steps[0].config {
+        ActionConfig::SetVariable { variables, .. } => {
+            assert_eq!(variables.len(), 2);
+            assert_eq!(variables[0].name, "user.name");
+            assert_eq!(variables[1].name, "roles");
+        }
+        other => panic!("expected set variable config, got {other:?}"),
+    }
+}
+
+#[test]
+fn workflow_graph_deserializes_and_compiles_set_json_variables_node() {
+    let graph: WorkflowGraph = serde_json::from_value(serde_json::json!({
+        "version": 1,
+        "nodes": [
+            {
+                "id": "start",
+                "node_type": "start",
+                "label": "Start",
+                "position": { "x": 0.0, "y": 0.0 },
+                "config": {},
+                "ports": [{ "id": "out", "label": "Out", "direction": "output" }]
+            },
+            {
+                "id": "json-vars",
+                "node_type": "set_json_variables",
+                "label": "Set JSON Variables",
+                "position": { "x": 200.0, "y": 0.0 },
+                "config": { "json": "{\"user\":{\"name\":\"Ada\"},\"roles\":[\"admin\"]}" },
+                "ports": [
+                    { "id": "in", "label": "In", "direction": "input" },
+                    { "id": "out", "label": "Out", "direction": "output" }
+                ]
+            }
+        ],
+        "edges": [
+            {
+                "id": "edge-start-json-vars",
+                "source_node_id": "start",
+                "source_port": "out",
+                "target_node_id": "json-vars",
+                "target_port": "in",
+                "label": "next"
+            }
+        ],
+        "viewport": { "x": 0.0, "y": 0.0, "zoom": 1.0 }
+    }))
+    .expect("set_json_variables graph node should deserialize");
+
+    let compiled = graph
+        .compile()
+        .expect("set JSON variables node should compile");
+
+    assert_eq!(
+        compiled.steps[0].config.action_type().as_str(),
+        "set_json_variables"
+    );
+}
+
+#[test]
 fn advanced_graph_action_configs_validate_and_round_trip() {
     let nested_step = ActionConfig::SetVariable {
-        name: "status".to_string(),
-        value: "ready".to_string(),
+        name: Some("status".to_string()),
+        value: Some("ready".to_string()),
+        value_type: None,
+        variables: Vec::new(),
     };
     let configs = [
         ActionConfig::SwitchCondition {
@@ -1098,13 +1360,17 @@ fn phase_three_frame_dialog_download_configs_validate_required_fields() {
 #[test]
 fn phase_five_logic_configs_validate_and_round_trip() {
     let nested_step = ActionConfig::SetVariable {
-        name: "status".to_string(),
-        value: "ready".to_string(),
+        name: Some("status".to_string()),
+        value: Some("ready".to_string()),
+        value_type: None,
+        variables: Vec::new(),
     };
     let configs = [
         ActionConfig::SetVariable {
-            name: "customer".to_string(),
-            value: "Ada".to_string(),
+            name: Some("customer".to_string()),
+            value: Some("Ada".to_string()),
+            value_type: None,
+            variables: Vec::new(),
         },
         ActionConfig::AssertElement {
             xpath: "//*[@id=\"submit\"]".to_string(),
@@ -1133,6 +1399,7 @@ fn phase_five_logic_configs_validate_and_round_trip() {
         },
         ActionConfig::RepeatForEach {
             item_name: "item".to_string(),
+            array_variable: None,
             items: vec!["one".to_string(), "two".to_string()],
             steps: vec![nested_step.clone()],
         },
@@ -1161,8 +1428,10 @@ fn phase_five_logic_configs_validate_and_round_trip() {
 fn phase_five_logic_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::SetVariable {
-            name: String::new(),
-            value: "Ada".to_string(),
+            name: Some(String::new()),
+            value: Some("Ada".to_string()),
+            value_type: None,
+            variables: Vec::new(),
         }
         .validate()
         .expect_err("blank variable name should fail"),

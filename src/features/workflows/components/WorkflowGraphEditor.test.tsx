@@ -164,6 +164,24 @@ describe("Workflow graph editor integration", () => {
     expect(within(dialog).getByText("Pan the graph view")).toBeInTheDocument();
   });
 
+  test("offers separate variable authoring nodes from Add Variable", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Variable" }));
+
+    const palette = await screen.findByRole("dialog", { name: "Choose a variable node" });
+    expect(within(palette).getByRole("button", { name: /Set Variables/ })).toBeInTheDocument();
+    expect(within(palette).getByRole("button", { name: /Set JSON Variables/ })).toBeInTheDocument();
+  });
+
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([]),
@@ -482,9 +500,9 @@ describe("Workflow graph editor integration", () => {
     expect(within(help).getByText("Node này làm gì")).toBeInTheDocument();
     expect(within(help).getByText("Port và luồng chạy")).toBeInTheDocument();
     expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
-    expect(within(help).getByText("Condition")).toBeInTheDocument();
-    expect(within(help).getByText("True port")).toBeInTheDocument();
-    expect(within(help).getByText("Done port")).toBeInTheDocument();
+    expect(within(help).getAllByText("Condition").length).toBeGreaterThan(0);
+    expect(within(help).getAllByText("True port").length).toBeGreaterThan(0);
+    expect(within(help).getAllByText("Done port").length).toBeGreaterThan(0);
 
     await userEvent.click(within(help).getByRole("button", { name: "Close dialog" }));
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }));

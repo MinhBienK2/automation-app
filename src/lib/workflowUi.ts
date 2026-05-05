@@ -50,7 +50,8 @@ export const actionLabels: Record<ActionType, string> = {
   dismiss_dialog: "Dismiss Dialog",
   set_download_directory: "Choose Download Folder",
   wait_for_download: "Wait For Download",
-  set_variable: "Set Variable",
+  set_variable: "Set Variables",
+  set_json_variables: "Set JSON Variables",
   assert_element: "Assert Element",
   assert_text: "Assert Text",
   if_condition: "If Condition",
@@ -168,7 +169,7 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   },
   {
     label: "Variables & Checks",
-    actions: ["set_variable", "assert_element", "assert_text"],
+    actions: ["set_variable", "set_json_variables", "assert_element", "assert_text"],
   },
   {
     label: "Session & Storage",
@@ -342,8 +343,13 @@ export function stepSummary(step: WorkflowStep) {
       return step.config.config.path || "No directory";
     case "wait_for_download":
       return step.config.config.output_name || "No output";
-    case "set_variable":
-      return `${step.config.config.name} = ${step.config.config.value || "empty"}`;
+    case "set_variable": {
+      const variables = step.config.config.variables;
+      if (variables?.length) return `${variables.length} variable(s)`;
+      return `${step.config.config.name ?? "name"} = ${step.config.config.value || "empty"}`;
+    }
+    case "set_json_variables":
+      return "JSON variables";
     case "assert_element":
       return `${step.config.config.state} ${step.config.config.xpath || "No XPath"}`;
     case "assert_text":
@@ -353,7 +359,9 @@ export function stepSummary(step: WorkflowStep) {
     case "repeat_times":
       return `${step.config.config.times} time(s)`;
     case "repeat_for_each":
-      return `${step.config.config.item_name} over ${step.config.config.items.length} item(s)`;
+      return step.config.config.array_variable
+        ? `${step.config.config.item_name} over ${step.config.config.array_variable}`
+        : `${step.config.config.item_name} over ${step.config.config.items.length} item(s)`;
     case "retry_block":
       return `${step.config.config.max_attempts} attempt(s)`;
     case "stop_workflow":

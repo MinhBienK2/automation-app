@@ -414,6 +414,9 @@ function graphNodeStatus(
 }
 
 export function graphNodeLabel(nodeType: GraphNodeType) {
+  if (nodeType === "set_variable") return "Set Variables";
+  if (nodeType === "set_json_variables") return "Set JSON Variables";
+
   return nodeType
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -438,7 +441,7 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
     case "repeat_times":
       return { times: 1 };
     case "repeat_for_each":
-      return { item_name: "item", items: [] };
+      return { item_name: "item", array_variable: null, items: ["item"] };
     case "retry":
       return { max_attempts: 3, delay_ms: 100 };
     case "manual_approval":
@@ -450,7 +453,9 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
     case "stop_workflow":
       return { status: "success", reason: "" };
     case "set_variable":
-      return { name: "variable", value: "" };
+      return { variables: [{ name: "name", value_type: "text", value: "" }] };
+    case "set_json_variables":
+      return { json: "{\n  \"name\": \"value\"\n}" };
     case "transform_variable":
       return { source_name: "input", target_name: "output", expression: "" };
     case "assert_output":

@@ -3,8 +3,8 @@ import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { TemplateTextareaField } from "./TemplateTextField";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -156,15 +156,11 @@ export function CoreActionFields({
               }
             />
           </Label>
-          <Label>
-            Text
-            <Textarea
-              value={config.config.text}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <TemplateTextareaField
+            label="Text"
+            value={config.config.text}
+            onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
+          />
           <Label>
             Clear before input
             <Select

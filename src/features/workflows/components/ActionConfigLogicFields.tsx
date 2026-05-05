@@ -36,6 +36,36 @@ export function LogicActionFields({
       return (
         <>
           <Label>
+            Items source
+            <Select
+              value={config.config.array_variable ? "variable_array" : "manual"}
+              onChange={(event) =>
+                onChange(
+                  event.currentTarget.value === "variable_array"
+                    ? {
+                        type: "repeat_for_each",
+                        config: {
+                          ...config.config,
+                          array_variable: "items",
+                          items: [],
+                        },
+                      }
+                    : {
+                        type: "repeat_for_each",
+                        config: {
+                          ...config.config,
+                          array_variable: null,
+                          items: config.config.items.length ? config.config.items : ["item"],
+                        },
+                      },
+                )
+              }
+            >
+              <option value="manual">Manual list</option>
+              <option value="variable_array">Variable array</option>
+            </Select>
+          </Label>
+          <Label>
             Item name
             <Input
               value={config.config.item_name}
@@ -44,15 +74,33 @@ export function LogicActionFields({
               }
             />
           </Label>
-          <Label>
-            Items
-            <Textarea
-              value={config.config.items.join("\n")}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "items", event.currentTarget.value))
-              }
-            />
-          </Label>
+          {config.config.array_variable ? (
+            <Label>
+              Array variable
+              <Input
+                value={config.config.array_variable}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(
+                      config,
+                      "array_variable",
+                      event.currentTarget.value,
+                    ),
+                  )
+                }
+              />
+            </Label>
+          ) : (
+            <Label>
+              Items
+              <Textarea
+                value={config.config.items.join("\n")}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "items", event.currentTarget.value))
+                }
+              />
+            </Label>
+          )}
         </>
       );
     case "retry_block":

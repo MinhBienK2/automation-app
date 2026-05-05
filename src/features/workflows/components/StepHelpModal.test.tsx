@@ -21,4 +21,28 @@ describe("StepHelpModal", () => {
       .toHaveClass("help-language-switch-compact");
     expect(within(help).getByText("Tất cả field và option")).toBeInTheDocument();
   });
+
+  test("groups field references by category and keeps mistakes inside field cards", async () => {
+    render(
+      <StepHelpModal
+        actionType="click"
+        language="en"
+        onClose={vi.fn()}
+        onLanguageChange={vi.fn()}
+      />,
+    );
+
+    const help = await screen.findByRole("dialog", { name: "Click Help" });
+    const fieldsSection = within(help)
+      .getByRole("heading", { name: "All fields and options" })
+      .closest("section")!;
+
+    expect(within(fieldsSection).getByText("Required")).toBeInTheDocument();
+    expect(within(fieldsSection).getByText("Optional")).toBeInTheDocument();
+    expect(within(fieldsSection).getByText("Advanced")).toBeInTheDocument();
+    expect(within(fieldsSection).getAllByText("required").length).toBeGreaterThan(0);
+    expect(within(fieldsSection).getAllByText("Use when").length).toBeGreaterThan(0);
+    expect(within(fieldsSection).getAllByText("Avoid when").length).toBeGreaterThan(0);
+    expect(within(help).queryByText("Common mistakes and fixes")).not.toBeInTheDocument();
+  });
 });

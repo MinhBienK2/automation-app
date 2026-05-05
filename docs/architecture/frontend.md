@@ -13,8 +13,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
+- `src/features/workflows/components/TemplateTextField.tsx`: template-aware textarea with token preview/highlighting and variable insertion.
+- `src/features/workflows/components/VariableConfigFields.tsx`: shared Set Variables row editor used by action config and graph-node config surfaces.
 - `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector.
-- `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. Action help also owns detailed field references and select-option explanations for the action guide popup.
+- `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. These catalogs own detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/StepForm.tsx`: legacy step form container; list-step UI is no longer rendered.
@@ -31,9 +33,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
-- Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with minimum setup, detailed field and option references, output guidance, workflow examples, and common mistakes; graph-native nodes use minimum setup, port semantics, workflow examples, and common mistakes with the same modal structure.
+- Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, and workflow examples with the same modal structure. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, while keeping persisted `WorkflowGraph` as source of truth.
 - Action node creation from the semantic action palette, unconfigured `New node` draft creation from the toolbar, graph-control node creation from simplified grouped node pickers, plus searchable type selection and config editing through the reusable action config editor.
+- Variable authoring UI for Set Variables, Set JSON Variables, Repeat For Each manual/array modes, and template token insertion/highlighting in supported text fields.
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and keyboard shortcuts without changing persisted `WorkflowGraph` shape.
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning.
 - Command invocation through `workflowApi.ts`.

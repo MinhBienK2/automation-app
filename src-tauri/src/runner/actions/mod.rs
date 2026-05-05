@@ -34,8 +34,8 @@ use chromiumoxide::{
 
 use crate::domain::{
     ActionConfig, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode, ClickButton,
-    ClickMode, HeaderPair, ScrollBlock, ScrollInline, StopWorkflowStatus, WaitCondition,
-    WorkflowCondition,
+    ClickMode, HeaderPair, ScrollBlock, ScrollInline, StopWorkflowStatus, VariableAssignment,
+    VariableValueType, WaitCondition, WorkflowCondition,
 };
 
 use self::{
@@ -719,10 +719,45 @@ pub(super) async fn execute_action(
             ensure_js_action(&page, &script).await?;
             Ok(ActionExecution::Complete)
         }
-        ActionConfig::SetVariable { name, value } => {
-            let value = render_template(&page, &value).await?;
-            let script = store_output_script(&name, &value)?;
+        ActionConfig::SetVariable {
+            name,
+            value,
+            value_type,
+            variables,
+        } => {
+            let variables = if variables.is_empty() {
+                vec![VariableAssignment {
+                    name: name.unwrap_or_default(),
+                    value: value.unwrap_or_default(),
+                    value_type: value_type.unwrap_or_default(),
+                }]
+            } else {
+                variables
+            };
+            let mut assignments = Vec::new();
+            for variable in variables {
+                let value = render_template(&page, &variable.value).await?;
+                let value = parse_variable_value(&value, variable.value_type)?;
+                flatten_variable_value(&variable.name, &value, &mut assignments);
+            }
+            let script = store_variable_assignments_script(&assignments)?;
             ensure_js_action(&page, &script).await?;
+            Ok(ActionExecution::Complete)
+        }
+        ActionConfig::SetJsonVariables { json } => {
+            let json = render_template(&page, &json).await?;
+            let parsed: serde_json::Value = serde_json::from_str(&json).map_err(|_| {
+                RunnerError::ActionFailed("JSON variables must contain valid JSON".to_string())
+            })?;
+            let object = parsed.as_object().ok_or_else(|| {
+                RunnerError::ActionFailed("JSON variables root must be an object".to_string())
+            })?;
+            for (name, value) in object {
+                let mut assignments = Vec::new();
+                flatten_variable_value(name, value, &mut assignments);
+                let script = store_variable_assignments_script(&assignments)?;
+                ensure_js_action(&page, &script).await?;
+            }
             Ok(ActionExecution::Complete)
         }
         ActionConfig::AssertElement {
@@ -785,11 +820,26 @@ pub(super) async fn execute_action(
         }
         ActionConfig::RepeatForEach {
             item_name,
+            array_variable,
             items,
             steps,
         } => {
-            for item in items {
-                let script = store_output_script(&item_name, &item)?;
+            let loop_values = if let Some(array_variable) = array_variable {
+                let value = read_output_json(&page, &array_variable).await?;
+                value.as_array().cloned().ok_or_else(|| {
+                    RunnerError::ActionFailed(format!(
+                        "Variable {array_variable} is missing or is not an array"
+                    ))
+                })?
+            } else {
+                items.into_iter().map(serde_json::Value::String).collect()
+            };
+            let total = u32::try_from(loop_values.len()).unwrap_or(u32::MAX);
+            for (index, item) in loop_values.into_iter().enumerate() {
+                store_loop_outputs(&page, index as u32, Some(total)).await?;
+                let mut assignments = Vec::new();
+                flatten_variable_value(&item_name, &item, &mut assignments);
+                let script = store_variable_assignments_script(&assignments)?;
                 ensure_js_action(&page, &script).await?;
                 match execute_inline_steps(session, steps.clone(), cancellation).await? {
                     ActionExecution::Complete => {}
@@ -1543,6 +1593,65 @@ async fn render_template(page: &Page, template: &str) -> Result<String, RunnerEr
     Ok(page.evaluate(script).await?.into_value()?)
 }
 
+fn parse_variable_value(
+    value: &str,
+    value_type: VariableValueType,
+) -> Result<serde_json::Value, RunnerError> {
+    match value_type {
+        VariableValueType::Text => Ok(serde_json::Value::String(value.to_string())),
+        VariableValueType::Json => serde_json::from_str(value).map_err(|_| {
+            RunnerError::ActionFailed("Variable value must contain valid JSON".to_string())
+        }),
+        VariableValueType::Number => {
+            let parsed = value.trim().parse::<f64>().map_err(|_| {
+                RunnerError::ActionFailed("Variable value must contain a finite number".to_string())
+            })?;
+            let number = serde_json::Number::from_f64(parsed).ok_or_else(|| {
+                RunnerError::ActionFailed("Variable value must contain a finite number".to_string())
+            })?;
+            Ok(serde_json::Value::Number(number))
+        }
+        VariableValueType::Boolean => match value.trim() {
+            "true" => Ok(serde_json::Value::Bool(true)),
+            "false" => Ok(serde_json::Value::Bool(false)),
+            _ => Err(RunnerError::ActionFailed(
+                "Variable value must be true or false".to_string(),
+            )),
+        },
+    }
+}
+
+fn flatten_variable_value(
+    name: &str,
+    value: &serde_json::Value,
+    assignments: &mut Vec<(String, serde_json::Value)>,
+) {
+    assignments.push((name.to_string(), value.clone()));
+    if let serde_json::Value::Object(object) = value {
+        for (key, nested_value) in object {
+            flatten_variable_value(&format!("{name}.{key}"), nested_value, assignments);
+        }
+    }
+}
+
+fn store_variable_assignments_script(
+    assignments: &[(String, serde_json::Value)],
+) -> Result<String, RunnerError> {
+    let assignments = serde_json::to_string(assignments)?;
+    Ok(format!(
+        r#"
+        (() => {{
+          window.__wamOutputs = window.__wamOutputs || {{}};
+          const assignments = {assignments};
+          for (const [name, value] of assignments) {{
+            window.__wamOutputs[name] = value;
+          }}
+          return {{ ok: true, reason: "" }};
+        }})()
+        "#
+    ))
+}
+
 async fn evaluate_condition(
     page: &Page,
     condition: &WorkflowCondition,
@@ -1593,6 +1702,19 @@ async fn read_output_value(page: &Page, name: &str) -> Result<String, RunnerErro
           if (value === undefined || value === null) return "";
           if (typeof value === "object") return JSON.stringify(value);
           return String(value);
+        }})()
+        "#
+    );
+    Ok(page.evaluate(script).await?.into_value()?)
+}
+
+async fn read_output_json(page: &Page, name: &str) -> Result<serde_json::Value, RunnerError> {
+    let name = json_string(name)?;
+    let script = format!(
+        r#"
+        (() => {{
+          const outputs = window.__wamOutputs || {{}};
+          return Object.prototype.hasOwnProperty.call(outputs, {name}) ? outputs[{name}] : null;
         }})()
         "#
     );
@@ -2019,9 +2141,10 @@ fn mouse_button_for(button: Option<ClickButton>) -> MouseButton {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::ClickButton;
+    use crate::domain::{ClickButton, VariableValueType};
+    use serde_json::json;
 
-    use super::mouse_button_for;
+    use super::{flatten_variable_value, mouse_button_for, parse_variable_value};
 
     #[test]
     fn click_buttons_map_to_cdp_mouse_buttons() {
@@ -2031,6 +2154,52 @@ mod tests {
         assert_eq!(
             mouse_button_for(Some(ClickButton::Middle)).as_ref(),
             "middle"
+        );
+    }
+
+    #[test]
+    fn variable_value_parser_preserves_text_and_parses_typed_values() {
+        assert_eq!(
+            parse_variable_value("[\"admin\"]", VariableValueType::Text).expect("text parses"),
+            json!("[\"admin\"]"),
+        );
+        assert_eq!(
+            parse_variable_value("[\"admin\"]", VariableValueType::Json).expect("JSON parses"),
+            json!(["admin"]),
+        );
+        assert_eq!(
+            parse_variable_value("20", VariableValueType::Number).expect("number parses"),
+            json!(20.0),
+        );
+        assert_eq!(
+            parse_variable_value("true", VariableValueType::Boolean).expect("boolean parses"),
+            json!(true),
+        );
+    }
+
+    #[test]
+    fn variable_values_flatten_objects_but_keep_arrays_whole() {
+        let mut assignments = Vec::new();
+
+        flatten_variable_value(
+            "user",
+            &json!({ "name": "Ada", "profile": { "email": "a@b.com" } }),
+            &mut assignments,
+        );
+        flatten_variable_value("roles", &json!(["admin", "editor"]), &mut assignments);
+
+        assert_eq!(
+            assignments,
+            vec![
+                (
+                    "user".to_string(),
+                    json!({ "name": "Ada", "profile": { "email": "a@b.com" } })
+                ),
+                ("user.name".to_string(), json!("Ada")),
+                ("user.profile".to_string(), json!({ "email": "a@b.com" })),
+                ("user.profile.email".to_string(), json!("a@b.com")),
+                ("roles".to_string(), json!(["admin", "editor"])),
+            ],
         );
     }
 }

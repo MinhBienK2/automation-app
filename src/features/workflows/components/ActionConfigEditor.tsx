@@ -5,6 +5,7 @@ import { BrowserActionFields } from "./ActionConfigBrowserFields";
 import { CaptureActionFields } from "./ActionConfigCaptureFields";
 import { CoreActionFields } from "./ActionConfigCoreFields";
 import { ElementActionFields } from "./ActionConfigElementFields";
+import { LogicActionFields } from "./ActionConfigLogicFields";
 import { OutputActionFields } from "./ActionConfigOutputFields";
 
 type ActionFieldsProps = {
@@ -20,6 +21,7 @@ const actionFieldRenderers: ActionFieldRenderer[] = [
   CaptureActionFields,
   BrowserActionFields,
   OutputActionFields,
+  LogicActionFields,
   AdvancedActionFields,
 ];
 

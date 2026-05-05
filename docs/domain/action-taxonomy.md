@@ -19,7 +19,7 @@ Current visible action groups are semantic and defined in `src/lib/workflowUi.ts
 - Wait: wait conditions.
 - Capture Data: text/attribute/field/table/list extraction, screenshots, and downloads that create outputs.
 - Browser Context: frames, dialogs, download folder, viewport, geolocation, permissions, and user agent.
-- Variables & Checks: set variable, assert element, assert text.
+- Variables & Checks: set variables, set JSON variables, assert element, assert text.
 - Session & Storage: profiles, sessions, cookies, secrets, localStorage, and sessionStorage.
 - Network: proxy, request headers, request/response waits, request blocking, and response mocking.
 - Advanced: JavaScript escape hatch.

@@ -215,7 +215,12 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "wait_for_download":
       return { type: actionType, config: { output_name: "download_path", timeout_ms: null } };
     case "set_variable":
-      return { type: actionType, config: { name: "name", value: "" } };
+      return {
+        type: actionType,
+        config: { variables: [{ name: "name", value_type: "text", value: "" }] },
+      };
+    case "set_json_variables":
+      return { type: actionType, config: { json: "{\n  \"name\": \"value\"\n}" } };
     case "assert_element":
       return {
         type: actionType,
@@ -238,7 +243,10 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "repeat_times":
       return { type: actionType, config: { times: 1, steps: [] } };
     case "repeat_for_each":
-      return { type: actionType, config: { item_name: "item", items: [], steps: [] } };
+      return {
+        type: actionType,
+        config: { item_name: "item", array_variable: null, items: ["item"], steps: [] },
+      };
     case "retry_block":
       return { type: actionType, config: { max_attempts: 3, delay_ms: null, steps: [] } };
     case "stop_workflow":

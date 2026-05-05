@@ -37,16 +37,16 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `if` conditions.
 - `switch` expressions and case ports.
 - `repeat_times` loop counts.
-- `repeat_for_each` item name and literal item list.
+- `repeat_for_each` item name with either a literal item list or a variable-array source.
 - `while` and `repeat_until` conditions plus loop guard settings.
 - `retry` max attempts and delay.
 - `manual_approval` reason and optional timeout.
 - `rate_limit` delay.
-- `stop_workflow`, `set_variable`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, and `end_failure`.
+- `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, and `end_failure`.
 
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
-The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 
 Executable frontend/Rust ports must agree:
 
@@ -62,7 +62,7 @@ Executable frontend/Rust ports must agree:
 - `fallback`: input `in`, outputs `primary`, `fallback`, `done`
 - `break_loop` / `continue_loop` / `stop_workflow`: input `in`
 - `manual_approval` / `rate_limit`: input `in`, output `out`
-- `set_variable` / `transform_variable` / `assert_output` / `run_subworkflow` / `domain_allowlist`: input `in`, output `out`
+- `set_variable` / `set_json_variables` / `transform_variable` / `assert_output` / `run_subworkflow` / `domain_allowlist`: input `in`, output `out`
 
 ## Action Config Shape
 
@@ -73,6 +73,34 @@ Action configs use a tagged shape compatible with Rust serde:
 ```
 
 The `type` string must match Rust `ActionType` snake_case serialization.
+
+`set_variable` remains backward compatible with saved single-value configs:
+
+```text
+{ type: "set_variable", config: { name: "token", value: "abc" } }
+```
+
+New variable authoring stores multiple rows:
+
+```text
+{
+  type: "set_variable",
+  config: {
+    variables: [
+      { name: "user.name", value_type: "text", value: "Ada" },
+      { name: "roles", value_type: "json", value: "[\"admin\"]" }
+    ]
+  }
+}
+```
+
+`set_json_variables` stores a JSON object string:
+
+```text
+{ type: "set_json_variables", config: { json: "{\"roles\":[\"admin\"]}" } }
+```
+
+`repeat_for_each` supports manual `items` or `array_variable`. Variable-array mode requires a non-empty `array_variable` and uses the current runtime array value in order.
 
 ## Change Checklist
 

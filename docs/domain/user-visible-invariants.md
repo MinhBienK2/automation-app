@@ -27,9 +27,13 @@ Preserve these unless the task explicitly changes them.
 - Graph undo/redo applies to graph edit snapshots only. Run state, validation results, save status, settings, and workflow metadata are not part of graph undo history.
 - Graph editor keyboard shortcuts do not fire while focus is inside inputs, textareas, contenteditable elements, action/node palettes, help dialogs, or dropdown popovers.
 - Dragging empty graph canvas creates a selection box by default. Holding Space temporarily switches the canvas to pan mode.
-- Selected graph nodes expose detailed help from the inspector. Configured action nodes show an action guide popup with a compact header language toggle, minimum setup, detailed field and option explanations, output guidance, workflow examples, and common mistakes; graph-native nodes explain purpose, minimum setup, ports and flow, workflow examples, and common mistakes in the same popup format.
+- Selected graph nodes expose detailed schema-backed help from the inspector. Configured action nodes show an action guide popup with a compact header language toggle, minimum setup, detailed field and option explanations grouped by required, optional, and advanced, output guidance, workflow examples, and safety notes when relevant. Graph-native nodes explain purpose, ports and flow before minimum setup, grouped field and option explanations, and workflow examples in the same popup format. Common mistake guidance appears inside relevant field or option details, not as a separate top-level section.
 - `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
 - Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
+- Set Variables can write multiple typed values in one node. Duplicate paths are allowed and later rows/nodes overwrite earlier values at the same path.
+- Set JSON Variables requires an object root, flattens nested object fields into dot-path variables, and preserves arrays as arrays at their key.
+- Template tokens such as `{{user.name}}` remain manually editable, can be inserted through a variable picker in supported template fields, and are visually highlighted without changing the stored text.
+- Repeat For Each manual list mode keeps literal item order. Variable-array mode loops over the current array variable in index order and fails clearly when the variable is missing or not an array.
 
 ## UI Behavior
 
