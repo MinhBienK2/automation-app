@@ -497,53 +497,57 @@ export function WorkflowGraphEditor({
   });
 
   function addNode(nodeType: GraphNodeType) {
+    const currentGraph = graphRef.current;
     const node = createDefaultGraphNode(nodeType, {
-      x: 120 + graph.nodes.length * 48,
-      y: 120 + graph.nodes.length * 16,
+      x: 120 + currentGraph.nodes.length * 48,
+      y: 120 + currentGraph.nodes.length * 16,
     });
     commitGraphChange(
-      { ...graph, nodes: [...graph.nodes, node] },
+      { ...currentGraph, nodes: [...currentGraph.nodes, node] },
       { nodeIds: [node.id], edgeIds: [] },
     );
     setNodePalette(null);
   }
 
   function addNewNode() {
+    const currentGraph = graphRef.current;
     const node = {
       ...createDefaultGraphNode("action", {
-        x: 120 + graph.nodes.length * 48,
-        y: 120 + graph.nodes.length * 16,
+        x: 120 + currentGraph.nodes.length * 48,
+        y: 120 + currentGraph.nodes.length * 16,
       }),
       label: "New node",
       config: null,
     };
     commitGraphChange(
-      { ...graph, nodes: [...graph.nodes, node] },
+      { ...currentGraph, nodes: [...currentGraph.nodes, node] },
       { nodeIds: [node.id], edgeIds: [] },
     );
   }
 
   function addActionNode(actionType: ActionType) {
+    const currentGraph = graphRef.current;
     const node = {
       ...createDefaultGraphNode("action", {
-        x: 120 + graph.nodes.length * 48,
-        y: 120 + graph.nodes.length * 16,
+        x: 120 + currentGraph.nodes.length * 48,
+        y: 120 + currentGraph.nodes.length * 16,
       }),
       label: actionLabels[actionType],
       config: defaultActionConfig(actionType),
     };
     commitGraphChange(
-      { ...graph, nodes: [...graph.nodes, node] },
+      { ...currentGraph, nodes: [...currentGraph.nodes, node] },
       { nodeIds: [node.id], edgeIds: [] },
     );
     setIsActionPaletteOpen(false);
   }
 
   function updateNode(nextNode: GraphNode) {
+    const currentGraph = graphRef.current;
     commitGraphChange(
       {
-        ...graph,
-        nodes: graph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
+        ...currentGraph,
+        nodes: currentGraph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
       },
       { nodeIds: [nextNode.id], edgeIds: [] },
     );
@@ -767,10 +771,16 @@ export function WorkflowGraphEditor({
       </div>
 
       <WorkflowGraphToolbar
+        isPanMode={isPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
+        onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}
+        onRedo={redoGraphEdit}
+        onSelectMode={() => setIsPanMode(false)}
+        onTogglePanMode={() => setIsPanMode((current) => !current)}
+        onUndo={undoGraphEdit}
       />
 
       <div className="workflow-graph-layout">

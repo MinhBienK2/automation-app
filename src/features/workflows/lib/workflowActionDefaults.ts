@@ -250,7 +250,10 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "retry_block":
       return { type: actionType, config: { max_attempts: 3, delay_ms: null, steps: [] } };
     case "stop_workflow":
-      return { type: actionType, config: { status: "success", reason: null } };
+      return {
+        type: actionType,
+        config: { status: "success", reason: null, close_browser: false },
+      };
     case "use_profile":
       return { type: actionType, config: { name: "default" } };
     case "save_session":

@@ -45,6 +45,7 @@ pub struct RunnerOutcome {
     pub status: RunnerStatus,
     pub failed_step: Option<FailedStep>,
     pub session: BrowserSession,
+    pub close_browser: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,6 +88,7 @@ impl BrowserRunner {
                     status: RunnerStatus::Stopped,
                     failed_step: None,
                     session,
+                    close_browser: false,
                 });
             }
 
@@ -103,14 +105,31 @@ impl BrowserRunner {
                         status: RunnerStatus::Stopped,
                         failed_step: None,
                         session,
+                        close_browser: false,
                     });
                 }
-                Ok(ActionExecution::StopSuccess) => {
+                Ok(ActionExecution::StopSuccess { close_browser }) => {
                     progress(RunnerProgress::StepCompleted { step_number });
                     return Ok(RunnerOutcome {
                         status: RunnerStatus::Success,
                         failed_step: None,
                         session,
+                        close_browser,
+                    });
+                }
+                Ok(ActionExecution::StopFailure {
+                    reason,
+                    close_browser,
+                }) => {
+                    progress(RunnerProgress::StepCompleted { step_number });
+                    return Ok(RunnerOutcome {
+                        status: RunnerStatus::Failed,
+                        failed_step: Some(FailedStep {
+                            step_number,
+                            reason,
+                        }),
+                        session,
+                        close_browser,
                     });
                 }
                 Ok(ActionExecution::BreakLoop | ActionExecution::ContinueLoop) => {
@@ -121,6 +140,7 @@ impl BrowserRunner {
                             reason: "Loop control node was used outside a loop".to_string(),
                         }),
                         session,
+                        close_browser: false,
                     });
                 }
                 Err(RunnerError::ActionFailed(reason)) => {
@@ -136,6 +156,7 @@ impl BrowserRunner {
                             reason,
                         }),
                         session,
+                        close_browser: false,
                     });
                 }
                 Err(error) => return Err(error),
@@ -146,6 +167,7 @@ impl BrowserRunner {
             status: RunnerStatus::Success,
             failed_step: None,
             session,
+            close_browser: false,
         })
     }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ActionConfig,
   ActionType,
@@ -23,6 +23,7 @@ import {
   conditionFromConfig,
 } from "./WorkflowGraphConditionFields";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
+import type { VariableOption } from "./TemplateTextField";
 
 function switchPortsForCases(cases: string[]): GraphPort[] {
   return [
@@ -40,9 +41,14 @@ function switchPortsForCases(cases: string[]): GraphPort[] {
 type NodeConfigFieldsProps = {
   node: GraphNode;
   onChange: (node: GraphNode) => void;
+  variableOptions?: VariableOption[];
 };
 
-export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
+export function NodeConfigFields({
+  node,
+  onChange,
+  variableOptions,
+}: NodeConfigFieldsProps) {
   function updateConfig(config: unknown) {
     onChange({ ...node, config });
   }
@@ -322,6 +328,20 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
           </Label>
         </div>
       );
+    case "end_success":
+      return (
+        <div className="graph-config-fields">
+          <CloseBrowserField
+            checked={booleanConfig(node.config, "close_browser", false)}
+            onChange={(closeBrowser) =>
+              updateConfig({
+                ...objectConfig(node.config),
+                close_browser: closeBrowser,
+              })
+            }
+          />
+        </div>
+      );
     case "end_failure":
       return (
         <div className="graph-config-fields">
@@ -335,8 +355,17 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
                   reason: event.currentTarget.value,
                 })
               }
-            />
+              />
           </Label>
+          <CloseBrowserField
+            checked={booleanConfig(node.config, "close_browser", false)}
+            onChange={(closeBrowser) =>
+              updateConfig({
+                ...objectConfig(node.config),
+                close_browser: closeBrowser,
+              })
+            }
+          />
         </div>
       );
     case "stop_workflow":
@@ -367,8 +396,17 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
                   reason: event.currentTarget.value,
                 })
               }
-            />
+              />
           </Label>
+          <CloseBrowserField
+            checked={booleanConfig(node.config, "close_browser", false)}
+            onChange={(closeBrowser) =>
+              updateConfig({
+                ...objectConfig(node.config),
+                close_browser: closeBrowser,
+              })
+            }
+          />
         </div>
       );
     case "set_variable":
@@ -542,6 +580,7 @@ export function NodeConfigFields({ node, onChange }: NodeConfigFieldsProps) {
             <ActionConfigEditor
               config={actionConfig}
               onChange={(config) => updateConfig(config)}
+              variableOptions={variableOptions}
             />
           ) : null}
         </div>
@@ -570,6 +609,8 @@ function ActionTypeDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
   const visibleActions = normalizedQuery
     ? actionPickerOptions.filter((actionType) =>
@@ -583,8 +624,27 @@ function ActionTypeDropdown({
     setOpen(false);
   }
 
+  useEffect(() => {
+    if (!open) return;
+    searchRef.current?.focus();
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        containerRef.current &&
+        !containerRef.current.contains(target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
   return (
-    <div className="action-type-dropdown">
+    <div className="action-type-dropdown" ref={containerRef}>
       <Label>Action type</Label>
       <Button
         aria-expanded={open}
@@ -600,6 +660,7 @@ function ActionTypeDropdown({
       {open ? (
         <div className="action-type-popover" role="listbox" aria-label="Action type options">
           <Input
+            ref={searchRef}
             aria-label="Search action types"
             placeholder="Search actions..."
             value={query}
@@ -671,7 +732,31 @@ function numberConfig(config: unknown, key: string, fallback: number) {
   return typeof value === "number" ? value : fallback;
 }
 
+function booleanConfig(config: unknown, key: string, fallback: boolean) {
+  const value = objectConfig(config)[key];
+  return typeof value === "boolean" ? value : fallback;
+}
+
 function arrayConfig(config: unknown, key: string) {
   const value = objectConfig(config)[key];
   return Array.isArray(value) ? value.map(String) : [];
+}
+
+function CloseBrowserField({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Label className="graph-checkbox-field">
+      <Input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+      />
+      Close browser after workflow ends
+    </Label>
+  );
 }

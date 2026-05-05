@@ -42,7 +42,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `retry` max attempts and delay.
 - `manual_approval` reason and optional timeout.
 - `rate_limit` delay.
-- `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, and `end_failure`.
+- `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, `end_success`, and `end_failure`.
 
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
@@ -101,6 +101,8 @@ New variable authoring stores multiple rows:
 ```
 
 `repeat_for_each` supports manual `items` or `array_variable`. Variable-array mode requires a non-empty `array_variable` and uses the current runtime array value in order.
+
+Terminal End Success, End Failure, and Stop Workflow graph nodes can carry `close_browser: true` in their node config. The compiler maps that to executable `stop_workflow` configs so the runner closes the browser after outputs are captured. Missing or false keeps the browser session retained.
 
 ## Change Checklist
 

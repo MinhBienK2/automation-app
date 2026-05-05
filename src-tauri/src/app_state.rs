@@ -145,14 +145,19 @@ impl AppState {
         status: RunStatus,
         error: Option<RunError>,
         session: Option<BrowserSession>,
+        close_browser: bool,
     ) {
         let outputs = if let Some(session) = session.as_ref() {
             session.captured_outputs().await.unwrap_or_default()
         } else {
             BTreeMap::new()
         };
-        if let Some(session) = session {
-            self.inner.retained_sessions.lock().await.push(session);
+        if let Some(mut session) = session {
+            if close_browser {
+                let _ = session.close().await;
+            } else {
+                self.inner.retained_sessions.lock().await.push(session);
+            }
         }
         *self.inner.active_run.lock().await = None;
         let mut run_state = self.inner.run_state.lock().await;

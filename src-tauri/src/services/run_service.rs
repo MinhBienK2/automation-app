@@ -355,6 +355,7 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
         ActionType::StopWorkflow => ActionConfig::StopWorkflow {
             status: crate::domain::StopWorkflowStatus::Success,
             reason: None,
+            close_browser: false,
         },
         ActionType::UseProfile => ActionConfig::UseProfile {
             name: "default".to_string(),
@@ -569,7 +570,9 @@ async fn complete_background_run(
                 }
             };
 
-            state.finish_run(status, error, outcome.session).await;
+            state
+                .finish_run(status, error, outcome.session, outcome.close_browser)
+                .await;
         }
         Err(error) => {
             state

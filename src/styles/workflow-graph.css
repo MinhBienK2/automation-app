@@ -29,6 +29,14 @@
   background: #0f0f0f;
 }
 
+.graph-icon-tools {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding-right: 4px;
+  border-right: 1px solid #242424;
+}
+
 .graph-header-actions {
   display: flex;
   flex-wrap: wrap;
@@ -479,11 +487,14 @@
 .variable-row-table {
   display: grid;
   gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .variable-row-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 116px minmax(0, 1.4fr) auto;
+  grid-template-columns: minmax(96px, 1fr) 116px minmax(120px, 1.4fr) auto;
+  min-width: 520px;
   gap: 8px;
   align-items: end;
 }
@@ -497,6 +508,19 @@
 .variable-warning {
   color: #ffcc66;
   font-size: 12px;
+}
+
+.graph-checkbox-field {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.graph-checkbox-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
 }
 
 .action-type-dropdown {

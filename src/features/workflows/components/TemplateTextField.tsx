@@ -17,11 +17,14 @@ const defaultVariableOptions: VariableOption[] = [
   { name: "last_error", source: "System outputs" },
 ];
 
+let rememberedVariableOptions: VariableOption[] = [];
+
 type TemplateTextareaFieldProps = {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  variableOptions?: VariableOption[];
 };
 
 export function TemplateTextareaField({
@@ -29,21 +32,23 @@ export function TemplateTextareaField({
   value,
   onChange,
   placeholder,
+  variableOptions = defaultVariableOptions,
 }: TemplateTextareaFieldProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
+  const allOptions = useMemo(() => mergeVariableOptions(variableOptions), [variableOptions]);
   const options = useMemo(
     () =>
       normalizedQuery
-        ? defaultVariableOptions.filter(
+        ? allOptions.filter(
             (option) =>
               option.name.toLowerCase().includes(normalizedQuery) ||
               option.source.toLowerCase().includes(normalizedQuery),
           )
-        : defaultVariableOptions,
-    [normalizedQuery],
+        : allOptions,
+    [allOptions, normalizedQuery],
   );
 
   function insertVariable(name: string) {
@@ -111,6 +116,24 @@ export function TemplateTextareaField({
     </div>
   );
 }
+
+function mergeVariableOptions(options: VariableOption[]) {
+  const seen = new Set<string>();
+  return [...options, ...rememberedVariableOptions, ...defaultVariableOptions].filter((option) => {
+    const key = `${option.source}:${option.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function rememberVariableOptions(options: VariableOption[]) {
+  rememberedVariableOptions = mergeVariableOptions(options).filter(
+    (option) => option.source !== "Loop current item" && option.source !== "System outputs",
+  );
+}
+
+export type { VariableOption };
 
 function highlightTemplateTokens(value: string) {
   const parts = value.split(/(\{\{\s*[a-zA-Z0-9_.:-]+\s*\}\})/g);

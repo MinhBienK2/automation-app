@@ -26,7 +26,7 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
-- Browser sessions are retained in `AppState` after terminal outcomes, and captured `window.__wamOutputs` values are copied into run state before retention.
+- Browser sessions are retained in `AppState` after terminal outcomes unless a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
 
 ## Belongs Here
 

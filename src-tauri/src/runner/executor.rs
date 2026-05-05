@@ -18,6 +18,7 @@ pub struct RunExecution {
     pub status: RunnerStatus,
     pub failed_step: Option<FailedStep>,
     pub session: Option<BrowserSession>,
+    pub close_browser: bool,
 }
 
 pub trait RunExecutor: std::fmt::Debug + Send + Sync {
@@ -69,6 +70,7 @@ impl RunExecutor for BrowserRunExecutor {
                 status: outcome.status,
                 failed_step: outcome.failed_step,
                 session: Some(outcome.session),
+                close_browser: outcome.close_browser,
             })
         })
     }

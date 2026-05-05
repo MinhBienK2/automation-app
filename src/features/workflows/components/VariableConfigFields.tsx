@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import type { VariableAssignment, VariableValueType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
+import { rememberVariableOptions } from "./TemplateTextField";
 
 type SetVariableConfig = {
   name?: string | null;
@@ -22,6 +24,15 @@ export function SetVariablesConfigFields({
 }: SetVariablesConfigFieldsProps) {
   const rows = variableRowsFromConfig(config);
   const duplicateNames = duplicateVariableNames(rows);
+
+  useEffect(() => {
+    rememberVariableOptions(
+      rows
+        .map((row) => row.name.trim())
+        .filter(Boolean)
+        .map((name) => ({ name, source: "Set Variables" })),
+    );
+  }, [rows]);
 
   function updateRow(index: number, patch: Partial<VariableAssignment>) {
     onChange({

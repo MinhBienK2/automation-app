@@ -5,17 +5,19 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { TemplateTextareaField } from "./TemplateTextField";
+import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 
 type ActionFieldsProps = {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
+  variableOptions?: VariableOption[];
 };
 
 export function OutputActionFields({
   config,
   onChange,
+  variableOptions,
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
     case "set_variable":
@@ -108,6 +110,7 @@ export function OutputActionFields({
             label="Text"
             value={config.config.text}
             onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
+            variableOptions={variableOptions}
           />
           <Label>
             Match mode

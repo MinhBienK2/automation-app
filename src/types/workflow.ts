@@ -474,7 +474,11 @@ export type ActionConfig =
   | { type: "continue_loop"; config: Record<string, never> }
   | {
       type: "stop_workflow";
-      config: { status: "success" | "failure"; reason?: string | null };
+      config: {
+        status: "success" | "failure";
+        reason?: string | null;
+        close_browser?: boolean | null;
+      };
     }
   | {
       type: "transform_variable";

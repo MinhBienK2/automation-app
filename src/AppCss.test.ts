@@ -159,4 +159,13 @@ describe("App CSS", () => {
     expect(activeSourceHandle).toContain("background: #fafafa");
     expect(validTargetHandle).toContain("background: #00c573");
   });
+
+  test("keeps variable rows tabular while protecting narrow inspectors from overflow", () => {
+    const variableTable = cssRule(".variable-row-table");
+    const variableGrid = cssRule(".variable-row-grid");
+
+    expect(variableTable).toContain("overflow-x: auto");
+    expect(variableGrid).toContain("grid-template-columns: minmax(96px, 1fr) 116px minmax(120px, 1.4fr) auto");
+    expect(variableGrid).toContain("min-width: 520px");
+  });
 });

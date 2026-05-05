@@ -122,6 +122,7 @@ impl RunExecutor for RecordingRunExecutor {
                 status: RunnerStatus::Success,
                 failed_step: None,
                 session: None,
+                close_browser: false,
             })
         })
     }
@@ -196,6 +197,7 @@ impl RunExecutor for FakeRunExecutor {
                         status,
                         failed_step,
                         session: None,
+                        close_browser: false,
                     })
                 }
                 FakeRunBehavior::WaitForCancellation => {
@@ -208,6 +210,7 @@ impl RunExecutor for FakeRunExecutor {
                         status: RunnerStatus::Stopped,
                         failed_step: None,
                         session: None,
+                        close_browser: false,
                     })
                 }
                 FakeRunBehavior::Sequence {
@@ -230,6 +233,7 @@ impl RunExecutor for FakeRunExecutor {
                             status: RunnerStatus::Success,
                             failed_step: None,
                             session: None,
+                            close_browser: false,
                         }),
                         FakeRunOutcome::Failed {
                             step_number,
@@ -241,6 +245,7 @@ impl RunExecutor for FakeRunExecutor {
                                 reason,
                             }),
                             session: None,
+                            close_browser: false,
                         }),
                     }
                 }

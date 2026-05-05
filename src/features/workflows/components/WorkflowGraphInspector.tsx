@@ -8,6 +8,8 @@ import { Button } from "../../../components/ui/button";
 import { graphNodeLabel } from "../lib/workflowGraph";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import { ConnectionSummary } from "./WorkflowGraphPalettes";
+import type { ActionConfig } from "../../../types/workflow";
+import type { VariableOption } from "./TemplateTextField";
 
 type SelectionSummary = {
   nodeCount: number;
@@ -47,6 +49,8 @@ export function WorkflowGraphInspector({
   onOpenSelectedNodeHelp,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
+  const variableOptions = collectVariableOptions(graph);
+
   return (
     <aside className="graph-inspector" aria-label="Graph inspector">
       {selectionSummary ? (
@@ -110,7 +114,11 @@ export function WorkflowGraphInspector({
               ))}
             </div>
           ) : null}
-          <NodeConfigFields node={selectedNode} onChange={onUpdateNode} />
+          <NodeConfigFields
+            node={selectedNode}
+            onChange={onUpdateNode}
+            variableOptions={variableOptions}
+          />
           <Button type="button" variant="secondary" onClick={onFocusSelectedNode}>
             Focus
           </Button>
@@ -129,6 +137,100 @@ export function WorkflowGraphInspector({
 
     </aside>
   );
+}
+
+function collectVariableOptions(graph: WorkflowGraph): VariableOption[] {
+  const options: VariableOption[] = [];
+
+  for (const node of graph.nodes) {
+    if (node.node_type === "set_variable") {
+      const config = objectConfig(node.config);
+      const rows = Array.isArray(config.variables) ? config.variables : [];
+      for (const row of rows) {
+        if (row && typeof row === "object" && "name" in row) {
+          const name = String(row.name ?? "").trim();
+          if (name) options.push({ name, source: "Set Variables" });
+        }
+      }
+      const legacyName = typeof config.name === "string" ? config.name.trim() : "";
+      if (legacyName) options.push({ name: legacyName, source: "Set Variables" });
+      for (const name of variableNamesFromSerializedConfig(node.config)) {
+        options.push({ name, source: "Set Variables" });
+      }
+    }
+
+    if (node.node_type === "set_json_variables") {
+      const json = objectConfig(node.config).json;
+      if (typeof json === "string") {
+        options.push(...jsonVariableOptions(json));
+      }
+    }
+
+    if (node.node_type === "action" && isActionConfig(node.config)) {
+      const outputName = outputNameForAction(node.config);
+      if (outputName) options.push({ name: outputName, source: node.label });
+    }
+  }
+
+  const seen = new Set<string>();
+  return options.filter((option) => {
+    const key = `${option.source}:${option.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function variableNamesFromSerializedConfig(config: unknown) {
+  const matches = JSON.stringify(config).matchAll(/"name"\s*:\s*"([^"]+)"/g);
+  return [...matches]
+    .map((match) => match[1].trim())
+    .filter(Boolean);
+}
+
+function jsonVariableOptions(json: string): VariableOption[] {
+  try {
+    const value = JSON.parse(json);
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    return flattenObjectKeys(value).map((name) => ({
+      name,
+      source: "Set JSON Variables",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function flattenObjectKeys(value: Record<string, unknown>, prefix = ""): string[] {
+  return Object.entries(value).flatMap(([key, item]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      return flattenObjectKeys(item as Record<string, unknown>, path);
+    }
+    return [path];
+  });
+}
+
+function outputNameForAction(config: ActionConfig) {
+  const maybeOutput = config.config as { output_name?: unknown };
+  return typeof maybeOutput.output_name === "string" && maybeOutput.output_name.trim()
+    ? maybeOutput.output_name.trim()
+    : null;
+}
+
+function isActionConfig(config: unknown): config is ActionConfig {
+  return Boolean(
+    config &&
+      typeof config === "object" &&
+      "type" in config &&
+      "config" in config,
+  );
+}
+
+function objectConfig(config: unknown): Record<string, unknown> {
+  return config && typeof config === "object" && !Array.isArray(config)
+    ? (config as Record<string, unknown>)
+    : {};
 }
 
 function PortGuidance({

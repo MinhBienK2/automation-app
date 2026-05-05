@@ -463,7 +463,20 @@ impl WorkflowGraph {
         };
 
         match node.node_type {
-            GraphNodeType::EndSuccess => return Ok(()),
+            GraphNodeType::EndSuccess => {
+                if close_browser_config(&node.config) {
+                    steps.push(CompiledGraphStep {
+                        node_id: node.id.clone(),
+                        label: node.label.clone(),
+                        config: ActionConfig::StopWorkflow {
+                            status: StopWorkflowStatus::Success,
+                            reason: None,
+                            close_browser: true,
+                        },
+                    });
+                }
+                return Ok(());
+            }
             GraphNodeType::EndFailure => {
                 let reason = node
                     .config
@@ -478,6 +491,7 @@ impl WorkflowGraph {
                     config: ActionConfig::StopWorkflow {
                         status: StopWorkflowStatus::Failure,
                         reason: Some(reason),
+                        close_browser: close_browser_config(&node.config),
                     },
                 });
                 return Ok(());
@@ -713,7 +727,11 @@ impl WorkflowGraph {
                 steps.push(CompiledGraphStep {
                     node_id: node.id.clone(),
                     label: node.label.clone(),
-                    config: ActionConfig::StopWorkflow { status, reason },
+                    config: ActionConfig::StopWorkflow {
+                        status,
+                        reason,
+                        close_browser: close_browser_config(&node.config),
+                    },
                 });
                 return Ok(());
             }
@@ -1719,6 +1737,13 @@ fn optional_string(config: &Value, field: &str) -> Option<String> {
         .and_then(Value::as_str)
         .filter(|value| !value.trim().is_empty())
         .map(ToString::to_string)
+}
+
+fn close_browser_config(config: &Value) -> bool {
+    config
+        .get("close_browser")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
 }
 
 fn string_array(

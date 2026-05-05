@@ -1243,6 +1243,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                     else_steps: vec![ActionConfig::StopWorkflow {
                         status: StopWorkflowStatus::Failure,
                         reason: Some("wrong branch".to_string()),
+                        close_browser: false,
                     }],
                 },
                 ActionConfig::RepeatTimes {
@@ -1291,6 +1292,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                 ActionConfig::StopWorkflow {
                     status: StopWorkflowStatus::Success,
                     reason: Some("done".to_string()),
+                    close_browser: false,
                 },
                 ActionConfig::AssertText {
                     xpath: Some("//*[@id=\"status\"]".to_string()),

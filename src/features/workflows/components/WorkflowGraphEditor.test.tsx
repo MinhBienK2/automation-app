@@ -690,6 +690,125 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("focuses action type search when opened and closes the dropdown on outside click", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("combobox", { name: "Action type" }));
+    const search = within(editor).getByLabelText("Search action types");
+    expect(search).toHaveFocus();
+
+    await userEvent.click(within(editor).getByLabelText("Workflow graph canvas"));
+    expect(within(editor).queryByLabelText("Search action types")).not.toBeInTheDocument();
+  });
+
+  test("persists close browser options from end nodes", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add End" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an end node" }))
+        .querySelector('[data-value="end_failure"]') as HTMLElement,
+    );
+    await userEvent.click(within(editor).getByLabelText("Close browser after workflow ends"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = invokeMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                node_type: "end_failure",
+                config: expect.objectContaining({
+                  close_browser: true,
+                }),
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+  });
+
+  test("inserts variables discovered from graph variable nodes into template fields", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Variable" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a variable node" }))
+        .querySelector('[data-value="set_variable"]') as HTMLElement,
+    );
+    await userEvent.clear(within(editor).getByLabelText("Variable 1 name"));
+    await userEvent.type(within(editor).getByLabelText("Variable 1 name"), "session.token");
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="input_text"]') as HTMLElement,
+    );
+    await userEvent.click(within(editor).getByRole("button", { name: "Insert variable for Text" }));
+    await userEvent.click(
+      within(editor).getByRole("option", { name: "session.token Set Variables" }),
+    );
+
+    expect(within(editor).getByLabelText("Text")).toHaveValue("{{session.token}}");
+    expect(
+      within(within(editor).getByLabelText("Text token preview")).getByText("{{session.token}}"),
+    ).toHaveClass("template-token-highlight");
+  });
+
+  test("shows icon graph tools for history and viewport modes", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
+
+    ["Undo", "Redo", "Select canvas mode", "Pan canvas mode", "Fit graph view"].forEach(
+      (name) => {
+        expect(within(toolbar).getByRole("button", { name })).toBeInTheDocument();
+      },
+    );
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Pan canvas mode" }));
+    expect(within(toolbar).getByRole("button", { name: "Pan canvas mode" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(within(editor).getByLabelText("Workflow graph canvas"))
+      .toHaveClass("graph-canvas-pan-mode");
+  });
+
   test("validates and runs graph without the old runtime panels", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),

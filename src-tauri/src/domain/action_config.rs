@@ -967,6 +967,8 @@ pub enum ActionConfig {
         status: StopWorkflowStatus,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
+        #[serde(default)]
+        close_browser: bool,
     },
     TransformVariable {
         source_name: String,

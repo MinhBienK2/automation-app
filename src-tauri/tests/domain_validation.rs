@@ -717,6 +717,7 @@ fn advanced_graph_action_configs_validate_and_round_trip() {
             default_steps: vec![ActionConfig::StopWorkflow {
                 status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Failure,
                 reason: Some("unknown status".to_string()),
+                close_browser: false,
             }],
         },
         ActionConfig::WhileLoop {
@@ -739,6 +740,7 @@ fn advanced_graph_action_configs_validate_and_round_trip() {
             timeout_steps: vec![ActionConfig::StopWorkflow {
                 status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Failure,
                 reason: Some("condition timed out".to_string()),
+                close_browser: false,
             }],
         },
         ActionConfig::TryCatch {
@@ -1412,6 +1414,7 @@ fn phase_five_logic_configs_validate_and_round_trip() {
         ActionConfig::StopWorkflow {
             status: workflow_automation_manager_lib::domain::StopWorkflowStatus::Success,
             reason: Some("done".to_string()),
+            close_browser: false,
         },
     ];
 
@@ -3036,6 +3039,50 @@ fn stop_workflow_node(id: &str) -> GraphNode {
         "Stop Workflow",
         serde_json::json!({ "status": "success", "reason": "done" }),
     )
+}
+
+#[test]
+fn workflow_graph_compiles_close_browser_from_terminal_nodes() {
+    let graph = WorkflowGraph {
+        version: 1,
+        nodes: vec![
+            start_node(),
+            terminal_input_node(
+                "end",
+                GraphNodeType::EndFailure,
+                "End Failure",
+                serde_json::json!({
+                    "reason": "finished with failure",
+                    "close_browser": true
+                }),
+            ),
+        ],
+        edges: vec![edge("start", "out", "end", "in")],
+        viewport: GraphViewport {
+            x: 0.0,
+            y: 0.0,
+            zoom: 1.0,
+        },
+    };
+
+    let compiled = graph.compile().expect("terminal node should compile");
+
+    assert_eq!(compiled.steps.len(), 1);
+    match &compiled.steps[0].config {
+        ActionConfig::StopWorkflow {
+            status,
+            reason,
+            close_browser,
+        } => {
+            assert_eq!(
+                *status,
+                workflow_automation_manager_lib::domain::StopWorkflowStatus::Failure
+            );
+            assert_eq!(reason.as_deref(), Some("finished with failure"));
+            assert!(*close_browser);
+        }
+        config => panic!("expected stop workflow config, got {config:?}"),
+    }
 }
 
 fn terminal_input_node(

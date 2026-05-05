@@ -7,10 +7,12 @@ import { CoreActionFields } from "./ActionConfigCoreFields";
 import { ElementActionFields } from "./ActionConfigElementFields";
 import { LogicActionFields } from "./ActionConfigLogicFields";
 import { OutputActionFields } from "./ActionConfigOutputFields";
+import type { VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
+  variableOptions?: VariableOption[];
 };
 
 type ActionFieldRenderer = (props: ActionFieldsProps) => ReactNode | null;

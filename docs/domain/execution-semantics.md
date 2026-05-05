@@ -22,6 +22,7 @@
 - Step progress reports current step id/number and completed step ids.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
 - Failures carry step id, step number, step name, action type, and reason when available.
+- Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 
 ## Browser Sessions
 

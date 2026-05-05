@@ -63,7 +63,8 @@ use super::{browser::BrowserSession, cancellation::RunnerCancellation, error::Ru
 pub(super) enum ActionExecution {
     Complete,
     Stopped,
-    StopSuccess,
+    StopSuccess { close_browser: bool },
+    StopFailure { reason: String, close_browser: bool },
     BreakLoop,
     ContinueLoop,
 }
@@ -1017,11 +1018,16 @@ pub(super) async fn execute_action(
         },
         ActionConfig::BreakLoop {} => Ok(ActionExecution::BreakLoop),
         ActionConfig::ContinueLoop {} => Ok(ActionExecution::ContinueLoop),
-        ActionConfig::StopWorkflow { status, reason } => match status {
-            StopWorkflowStatus::Success => Ok(ActionExecution::StopSuccess),
-            StopWorkflowStatus::Failure => Err(RunnerError::ActionFailed(
-                reason.unwrap_or_else(|| "Workflow stopped".to_string()),
-            )),
+        ActionConfig::StopWorkflow {
+            status,
+            reason,
+            close_browser,
+        } => match status {
+            StopWorkflowStatus::Success => Ok(ActionExecution::StopSuccess { close_browser }),
+            StopWorkflowStatus::Failure => Ok(ActionExecution::StopFailure {
+                reason: reason.unwrap_or_else(|| "Workflow stopped".to_string()),
+                close_browser,
+            }),
         },
         ActionConfig::TransformVariable {
             source_name,

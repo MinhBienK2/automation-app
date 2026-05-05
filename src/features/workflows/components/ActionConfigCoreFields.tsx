@@ -4,16 +4,18 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { TemplateTextareaField } from "./TemplateTextField";
+import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
+  variableOptions?: VariableOption[];
 };
 
 export function CoreActionFields({
   config,
   onChange,
+  variableOptions,
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
     case "navigate":
@@ -160,6 +162,7 @@ export function CoreActionFields({
             label="Text"
             value={config.config.text}
             onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
+            variableOptions={variableOptions}
           />
           <Label>
             Clear before input

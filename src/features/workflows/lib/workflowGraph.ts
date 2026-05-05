@@ -448,10 +448,12 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { reason: "Manual approval required", timeout_ms: null };
     case "rate_limit":
       return { delay_ms: 1000 };
+    case "end_success":
+      return { close_browser: false };
     case "end_failure":
-      return { reason: "Graph reached failure end" };
+      return { reason: "Graph reached failure end", close_browser: false };
     case "stop_workflow":
-      return { status: "success", reason: "" };
+      return { status: "success", reason: "", close_browser: false };
     case "set_variable":
       return { variables: [{ name: "name", value_type: "text", value: "" }] };
     case "set_json_variables":
