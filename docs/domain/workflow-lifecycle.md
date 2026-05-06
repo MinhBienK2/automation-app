@@ -75,7 +75,8 @@
 
 - The workflow list Export action opens an Export Workflow dialog.
 - Users choose whether to include Flow and which Workflow Settings sections to include.
-- Export calls `export_workflow_package` and downloads a `workflow_package` version 2 JSON file.
+- Export calls `export_workflow_package`, opens the native system Save dialog with a suggested `.workflow.json` file name, and writes the `workflow_package` version 2 JSON to the selected path.
+- Canceling the native Save dialog leaves the export dialog open and does not create a file.
 - Flow export uses the saved `WorkflowGraph`.
 - Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including proxy passwords, download directory, cookies, storage rows, and session restore refs.
 

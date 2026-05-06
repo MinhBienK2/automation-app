@@ -15,13 +15,24 @@ import { renderApp } from "../../../tests/utils/renderApp";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
 import type { WorkflowPackage } from "../../../types/workflow";
 
+const { saveDialogMock, writeTextFileMock } = vi.hoisted(() => ({
+  saveDialogMock: vi.fn(),
+  writeTextFileMock: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  save: saveDialogMock,
+}));
+
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  writeTextFile: writeTextFileMock,
+}));
+
 describe("Workflow list integration", () => {
   beforeEach(() => {
     resetTauriInvoke();
-    vi.stubGlobal("URL", {
-      createObjectURL: vi.fn(() => "blob:workflow-package"),
-      revokeObjectURL: vi.fn(),
-    });
+    saveDialogMock.mockReset();
+    writeTextFileMock.mockReset();
   });
 
   test("hides legacy step counts and raw updated timestamps from workflow cards", async () => {
@@ -189,6 +200,8 @@ describe("Workflow list integration", () => {
       ...listWorkflowScenario([workflow]),
       export_workflow_package: workflowPackage,
     });
+    saveDialogMock.mockResolvedValue("/tmp/login-flow.workflow.json");
+    writeTextFileMock.mockResolvedValue(undefined);
 
     renderApp();
 
@@ -214,6 +227,15 @@ describe("Workflow list integration", () => {
           ],
         },
       });
+      expect(saveDialogMock).toHaveBeenCalledWith({
+        defaultPath: "login-flow.workflow.json",
+        filters: [{ name: "Workflow package", extensions: ["json"] }],
+        title: "Export Workflow",
+      });
+      expect(writeTextFileMock).toHaveBeenCalledWith(
+        "/tmp/login-flow.workflow.json",
+        JSON.stringify(workflowPackage, null, 2),
+      );
     });
   });
 

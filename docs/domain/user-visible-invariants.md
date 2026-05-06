@@ -10,7 +10,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow list `Edit` opens Workflow Settings at General.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and copied settings where available.
 - Workflow list exposes Import Workflow. Import reads a workflow package, shows a preview, and always creates a new workflow; it never overwrites an existing workflow.
-- Workflow package export can include Flow and selected Workflow Settings sections. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
+- Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
 - Workflow Settings contains General, Execution, Browser, Environment, Inputs & Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it.

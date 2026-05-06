@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
@@ -415,7 +417,14 @@ function App() {
         include_flow: exportPackageIncludeFlow,
         settings_sections: exportPackageSections,
       });
-      downloadWorkflowPackage(packageValue);
+      const filePath = await save({
+        defaultPath: `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
+        filters: [{ name: "Workflow package", extensions: ["json"] }],
+        title: "Export Workflow",
+      });
+      if (!filePath) return;
+
+      await writeTextFile(filePath, JSON.stringify(packageValue, null, 2));
       closeExportPackageDialog();
     } catch (error) {
       setAppError(commandMessage(error));
@@ -970,18 +979,6 @@ function sectionLabel(section: WorkflowSettingsSectionId) {
     case "advanced":
       return "Advanced";
   }
-}
-
-function downloadWorkflowPackage(packageValue: WorkflowPackage) {
-  const blob = new Blob([JSON.stringify(packageValue, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 function filenameFromWorkflowName(name: string) {
