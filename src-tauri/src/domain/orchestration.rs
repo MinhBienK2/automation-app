@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{RunStatus, ValidationError, Workflow, WorkflowStep};
+use super::{RunStatus, ValidationError, Workflow, WorkflowSettings, WorkflowStep};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -86,4 +86,6 @@ pub struct WorkflowExport {
     pub version: u32,
     pub workflow: Workflow,
     pub steps: Vec<WorkflowStep>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settings: Option<WorkflowSettings>,
 }

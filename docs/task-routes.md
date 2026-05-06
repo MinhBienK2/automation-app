@@ -35,7 +35,7 @@ Update docs: action taxonomy, action config contract, workflow types, runner doc
 
 Read: `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/frontend.md`, `contracts/run-state.md` when run/test UI changes
 
-Verify: `src/App.tsx`, `src/features/settings/`, `src/features/workflows/pages/`, `src/features/workflows/components/`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`
+Verify: `src/App.tsx`, `src/features/settings/`, `src/features/workflows/pages/`, `src/features/workflows/components/`, `src/features/workflows/lib/workflowSettings.ts`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`
 
 Checks: focused page/component test; `npx tsc --noEmit` when types or props change.
 
@@ -55,7 +55,7 @@ Update docs: frontend architecture or invariants when layout ownership/behavior 
 
 Read: `architecture/command-boundary.md`, `contracts/tauri-commands.md`, `contracts/workflow-types.md`
 
-Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src-tauri/src/commands.rs`, focused modules under `src-tauri/src/commands/`, `src-tauri/src/lib.rs`, `src-tauri/tests/command_api.rs`
+Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src-tauri/src/commands.rs`, focused modules under `src-tauri/src/commands/`, `src-tauri/src/domain/workflow_settings.rs`, `src-tauri/src/lib.rs`, `src-tauri/tests/command_api.rs`
 
 Checks: `npm test -- src/lib/workflowApi.test.ts`, `cd src-tauri && cargo test --test command_api`
 
@@ -75,7 +75,7 @@ Update docs: domain architecture, action config contract, user-visible invariant
 
 Read: `architecture/persistence.md`, `contracts/workflow-types.md`, `domain/workflow-lifecycle.md`
 
-Verify: `src-tauri/src/repositories/workflow_repository.rs`, `src-tauri/migrations/`, `src-tauri/tests/persistence.rs`, import/export code in `src-tauri/src/commands/import_export.rs` if persisted shape changes
+Verify: `src-tauri/src/repositories/workflow_repository.rs`, `src-tauri/src/domain/workflow_settings.rs`, `src-tauri/migrations/`, `src-tauri/tests/persistence.rs`, import/export code in `src-tauri/src/commands/import_export.rs` if persisted shape changes
 
 Checks: `cd src-tauri && cargo test --test persistence`; add command tests when command results change.
 

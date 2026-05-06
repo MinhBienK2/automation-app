@@ -6,31 +6,35 @@ import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
-  getWorkflowBrowserConfig,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
+  getWorkflowSettings,
   listWorkflows,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
-  saveWorkflowBrowserConfig,
   saveWorkflowGraph,
+  saveWorkflowSettingsSection,
   stopRun as stopRunCommand,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import {
   commandMessage,
-  defaultWorkflowBrowserConfig,
   initialRunState,
   normalizeRunState,
 } from "./lib/workflowUi";
+import {
+  defaultWorkflowSettings,
+} from "./features/workflows/lib/workflowSettings";
+import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
 import type {
   GraphValidationIssue,
   RunState,
-  WorkflowBrowserConfig,
   WorkflowGraph,
   WorkflowDetail,
+  WorkflowSettings,
+  WorkflowSettingsSectionId,
   WorkflowSummary,
 } from "./types/workflow";
 import "./App.css";
@@ -38,7 +42,7 @@ import "./App.css";
 type AppScreen = "list" | "detail" | "settings";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
-type BrowserConfigSaveStatus = "saved" | "unsaved" | "saving" | "failed";
+type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
 
@@ -77,7 +81,7 @@ function graphSaveStatusLabel(status: GraphSaveStatus) {
   }
 }
 
-function browserConfigSaveStatusLabel(status: BrowserConfigSaveStatus) {
+function workflowSettingsSaveStatusLabel(status: WorkflowSettingsSaveStatus) {
   switch (status) {
     case "saved":
       return "Saved";
@@ -99,10 +103,16 @@ function App() {
   );
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
-  const [browserConfig, setBrowserConfig] =
-    useState<WorkflowBrowserConfig | null>(null);
-  const [browserConfigSaveStatus, setBrowserConfigSaveStatus] =
-    useState<BrowserConfigSaveStatus>("saved");
+  const [workflowSettings, setWorkflowSettings] =
+    useState<WorkflowSettings | null>(null);
+  const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] =
+    useState(false);
+  const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] =
+    useState<WorkflowSettingsSectionId>("general");
+  const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] =
+    useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(
+      settingsSaveStatuses("saved"),
+    );
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(
     readGraphAutosaveEnabled,
   );
@@ -207,7 +217,7 @@ function App() {
         setSelectedWorkflowId(null);
         setDetail(null);
         setWorkflowGraph(null);
-        setBrowserConfig(null);
+        setWorkflowSettings(null);
         setGraphIssues([]);
         setGraphIssuesNeedRecheck(false);
         setAppError("Workflow not found");
@@ -222,11 +232,18 @@ function App() {
         setWorkflowGraph(linearGraphFromSteps(loaded.steps));
       }
       try {
-        setBrowserConfig(await getWorkflowBrowserConfig(id));
+        setWorkflowSettings(await getWorkflowSettings(id));
       } catch {
-        setBrowserConfig(defaultWorkflowBrowserConfig(id));
+        setWorkflowSettings(
+          defaultWorkflowSettings({
+            workflowId: id,
+            workflowName: loaded.workflow.name,
+            createdAt: loaded.workflow.created_at,
+            updatedAt: loaded.workflow.updated_at,
+          }),
+        );
       }
-      setBrowserConfigSaveStatus("saved");
+      setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
       graphRevisionRef.current = 0;
       savedGraphRevisionRef.current = 0;
       setGraphRevision(0);
@@ -251,10 +268,7 @@ function App() {
   }
 
   function openEditWorkflowDialog(workflow: WorkflowSummary) {
-    setWorkflowDialogMode("edit");
-    setEditingWorkflowId(workflow.id);
-    setWorkflowNameDraft(workflow.name);
-    setAppError("");
+    void openWorkflowSettings(workflow, "general");
   }
 
   function closeWorkflowDialog() {
@@ -301,7 +315,7 @@ function App() {
       setSelectedWorkflowId(null);
       setDetail(null);
       setWorkflowGraph(null);
-      setBrowserConfig(null);
+      setWorkflowSettings(null);
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
       setScreen("list");
@@ -328,22 +342,54 @@ function App() {
     }
   }
 
-  async function persistBrowserConfig({ force = false } = {}) {
-    if (!detail || !browserConfig) return true;
-    if (!force && browserConfigSaveStatus === "saved") return true;
+  async function persistWorkflowSettingsSection(
+    section: WorkflowSettingsSectionId,
+    { force = false } = {},
+  ) {
+    if (!workflowSettings) return true;
+    if (!force && workflowSettingsSaveStatuses[section] === "saved") return true;
     setAppError("");
-    setBrowserConfigSaveStatus("saving");
+    setWorkflowSettingsSaveStatuses((current) => ({
+      ...current,
+      [section]: "saving",
+    }));
 
     try {
-      await saveWorkflowBrowserConfig(detail.workflow.id, browserConfig);
-      setBrowserConfigSaveStatus("saved");
+      const saved = await saveWorkflowSettingsSection(
+        workflowSettings.workflow_id,
+        section,
+        workflowSettings[section],
+      );
+      const nextSettings = isWorkflowSettings(saved) ? saved : workflowSettings;
+      setWorkflowSettings(nextSettings);
+      if (section === "general") {
+        updateLoadedWorkflowName(nextSettings.general.name);
+      }
+      setWorkflowSettingsSaveStatuses((current) => ({
+        ...current,
+        [section]: "saved",
+      }));
       await loadWorkflows();
       return true;
     } catch (error) {
-      setBrowserConfigSaveStatus("failed");
+      setWorkflowSettingsSaveStatuses((current) => ({
+        ...current,
+        [section]: "failed",
+      }));
       setAppError(commandMessage(error));
       return false;
     }
+  }
+
+  async function persistDirtyWorkflowSettings() {
+    for (const section of Object.keys(workflowSettingsSaveStatuses) as WorkflowSettingsSectionId[]) {
+      if (workflowSettingsSaveStatuses[section] === "unsaved") {
+        const saved = await persistWorkflowSettingsSection(section, { force: true });
+        if (!saved) return false;
+      }
+    }
+
+    return true;
   }
 
   async function runGraph() {
@@ -353,8 +399,8 @@ function App() {
     try {
       const saved = await persistCurrentGraph();
       if (!saved) return;
-      const browserConfigSaved = await persistBrowserConfig();
-      if (!browserConfigSaved) return;
+      const settingsSaved = await persistDirtyWorkflowSettings();
+      if (!settingsSaved) return;
       const state = await runWorkflowCommand(detail.workflow.id);
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
@@ -386,10 +432,6 @@ function App() {
 
   async function saveGraph() {
     await persistCurrentGraph();
-  }
-
-  async function saveBrowserConfig() {
-    return persistBrowserConfig({ force: true });
   }
 
   async function stopRun() {
@@ -438,10 +480,76 @@ function App() {
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
   }, [graphAutosaveEnabled, graphIssues.length]);
 
-  const changeBrowserConfig = useCallback((nextConfig: WorkflowBrowserConfig) => {
-    setBrowserConfig(nextConfig);
-    setBrowserConfigSaveStatus("unsaved");
-  }, []);
+  const changeWorkflowSettings = useCallback(
+    (nextSettings: WorkflowSettings) => {
+      setWorkflowSettings(nextSettings);
+      setWorkflowSettingsSaveStatuses((current) => ({
+        ...current,
+        [workflowSettingsActiveSection]: "unsaved",
+      }));
+    },
+    [workflowSettingsActiveSection],
+  );
+
+  async function openWorkflowSettings(
+    workflow: WorkflowSummary,
+    section: WorkflowSettingsSectionId,
+  ) {
+    setAppError("");
+    setWorkflowSettingsActiveSection(section);
+
+    try {
+      setWorkflowSettings(await getWorkflowSettings(workflow.id));
+    } catch {
+      setWorkflowSettings(
+        defaultWorkflowSettings({
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          createdAt: workflow.created_at,
+          updatedAt: workflow.updated_at,
+        }),
+      );
+    }
+    setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
+    setWorkflowSettingsDialogOpen(true);
+  }
+
+  function openDetailWorkflowSettings(section: WorkflowSettingsSectionId) {
+    if (!detail) return;
+    if (!workflowSettings) {
+      setWorkflowSettings(
+        defaultWorkflowSettings({
+          workflowId: detail.workflow.id,
+          workflowName: detail.workflow.name,
+          createdAt: detail.workflow.created_at,
+          updatedAt: detail.workflow.updated_at,
+        }),
+      );
+    }
+    setWorkflowSettingsActiveSection(section);
+    setWorkflowSettingsDialogOpen(true);
+  }
+
+  function updateLoadedWorkflowName(name: string) {
+    setDetail((current) =>
+      current
+        ? {
+            ...current,
+            workflow: {
+              ...current.workflow,
+              name,
+            },
+          }
+        : current,
+    );
+    setWorkflows((current) =>
+      current.map((workflow) =>
+        workflow.id === workflowSettings?.workflow_id
+          ? { ...workflow, name }
+          : workflow,
+      ),
+    );
+  }
 
   const isRunning = runState.status === "running";
 
@@ -465,15 +573,12 @@ function App() {
             isRunning={isRunning}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
-            browserConfigSaveStatus={browserConfigSaveStatusLabel(browserConfigSaveStatus)}
             runState={runState}
-            browserConfig={browserConfig}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
             onBack={backToList}
-            onBrowserConfigChange={changeBrowserConfig}
-            onSaveBrowserConfig={saveBrowserConfig}
+            onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser")}
             onStopRun={stopRun}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
@@ -496,7 +601,47 @@ function App() {
           onDeleteWorkflow={deleteWorkflow}
         />
       )}
+      <WorkflowSettingsDialog
+        open={workflowSettingsDialogOpen}
+        settings={workflowSettings}
+        activeSection={workflowSettingsActiveSection}
+        saveStatuses={Object.fromEntries(
+          Object.entries(workflowSettingsSaveStatuses).map(([section, status]) => [
+            section,
+            workflowSettingsSaveStatusLabel(status),
+          ]),
+        )}
+        error={appError}
+        onOpenChange={setWorkflowSettingsDialogOpen}
+        onActiveSectionChange={setWorkflowSettingsActiveSection}
+        onSettingsChange={changeWorkflowSettings}
+        onSaveSection={async (section) => {
+          await persistWorkflowSettingsSection(section, { force: true });
+        }}
+      />
     </AppShell>
+  );
+}
+
+function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
+  return {
+    general: status,
+    execution: status,
+    browser: status,
+    environment: status,
+    inputs: status,
+    triggers: status,
+    advanced: status,
+  };
+}
+
+function isWorkflowSettings(value: unknown): value is WorkflowSettings {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "workflow_id" in value &&
+      "general" in value &&
+      "browser" in value,
   );
 }
 

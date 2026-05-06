@@ -8,8 +8,9 @@ use crate::{
         ActionConfig, ActionType, BatchRunRequest, BatchRunRowResult, BatchRunSummary,
         ClickWaitUntil, CompiledWorkflowGraph, ElementSnapshot, GeneratedFixture,
         GraphValidationIssue, OrchestrationSchedule, RecordedEvent, RunMode, RunStatus,
-        SelectorCandidate, ValidationError, Workflow, WorkflowBrowserConfig, WorkflowExport,
-        WorkflowGraph,
+        RunValidationIssue, SelectorCandidate, SettingsValidationIssue, ValidationError, Workflow,
+        WorkflowBrowserConfig, WorkflowExport, WorkflowGraph, WorkflowSettings,
+        WorkflowSettingsSection,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
     runner::{RunnerCancellation, RunnerStatus},
@@ -20,7 +21,7 @@ mod graph;
 mod import_export;
 pub use graph::{
     compile_workflow_graph_impl, get_workflow_graph_impl, run_workflow_graph_impl,
-    save_workflow_graph_impl, validate_workflow_graph_impl,
+    save_workflow_graph_impl, validate_workflow_graph_impl, validate_workflow_run_impl,
 };
 pub use import_export::{
     export_workflow_impl, import_workflow_impl, normalize_workflow_export_value,
@@ -84,23 +85,95 @@ pub async fn get_workflow_impl(
         .map_err(CommandError::from)
 }
 
+pub async fn get_workflow_settings_impl(
+    state: &AppState,
+    workflow_id: &str,
+) -> Result<WorkflowSettings, CommandError> {
+    state
+        .repository()
+        .get_workflow_settings(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))
+}
+
+pub async fn save_workflow_settings_impl(
+    state: &AppState,
+    workflow_id: &str,
+    settings: WorkflowSettings,
+) -> Result<WorkflowSettings, CommandError> {
+    let mut settings = settings.normalized();
+    settings.workflow_id = workflow_id.to_string();
+    settings.validate().map_err(CommandError::validation)?;
+
+    state
+        .repository()
+        .save_workflow_settings(settings)
+        .await
+        .map_err(CommandError::from)
+}
+
+pub async fn save_workflow_settings_section_impl(
+    state: &AppState,
+    workflow_id: &str,
+    section: WorkflowSettingsSection,
+    section_value: Value,
+) -> Result<WorkflowSettings, CommandError> {
+    let mut settings = get_workflow_settings_impl(state, workflow_id).await?;
+
+    match section {
+        WorkflowSettingsSection::General => {
+            settings.general = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid General settings: {error}"))
+            })?;
+        }
+        WorkflowSettingsSection::Execution => {
+            settings.execution = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Execution settings: {error}"))
+            })?;
+        }
+        WorkflowSettingsSection::Browser => {
+            settings.browser = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Browser settings: {error}"))
+            })?;
+        }
+        WorkflowSettingsSection::Environment => {
+            settings.environment = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Environment settings: {error}"))
+            })?;
+        }
+        WorkflowSettingsSection::Inputs => {
+            settings.inputs = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Inputs settings: {error}"))
+            })?;
+        }
+        WorkflowSettingsSection::Triggers => {
+            settings.triggers = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Triggers settings: {error}"))
+            })?;
+        }
+        WorkflowSettingsSection::Advanced => {
+            settings.advanced = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Advanced settings: {error}"))
+            })?;
+        }
+    }
+
+    save_workflow_settings_impl(state, workflow_id, settings).await
+}
+
+pub async fn validate_workflow_settings_impl(
+    settings: WorkflowSettings,
+) -> Result<Vec<SettingsValidationIssue>, CommandError> {
+    Ok(settings.validation_issues())
+}
+
 pub async fn get_workflow_browser_config_impl(
     state: &AppState,
     workflow_id: &str,
 ) -> Result<WorkflowBrowserConfig, CommandError> {
-    state
-        .repository()
-        .get_workflow(workflow_id)
-        .await
-        .map_err(CommandError::from)?
-        .ok_or_else(|| CommandError::message("Workflow not found"))?;
-
-    Ok(state
-        .repository()
-        .get_workflow_browser_config(workflow_id)
-        .await
-        .map_err(CommandError::from)?
-        .unwrap_or_else(|| WorkflowBrowserConfig::default_for_workflow(workflow_id)))
+    let settings = get_workflow_settings_impl(state, workflow_id).await?;
+    Ok(settings.browser.to_browser_config(workflow_id))
 }
 
 pub async fn save_workflow_browser_config_impl(
@@ -108,22 +181,14 @@ pub async fn save_workflow_browser_config_impl(
     workflow_id: &str,
     config: WorkflowBrowserConfig,
 ) -> Result<(), CommandError> {
-    state
-        .repository()
-        .get_workflow(workflow_id)
-        .await
-        .map_err(CommandError::from)?
-        .ok_or_else(|| CommandError::message("Workflow not found"))?;
-
     let mut config = config.normalized();
     config.workflow_id = workflow_id.to_string();
     config.validate().map_err(CommandError::validation)?;
+    let mut settings = get_workflow_settings_impl(state, workflow_id).await?;
+    settings.browser = crate::domain::WorkflowSettingsBrowser::from_browser_config(config);
+    save_workflow_settings_impl(state, workflow_id, settings).await?;
 
-    state
-        .repository()
-        .save_workflow_browser_config(config)
-        .await
-        .map_err(CommandError::from)
+    Ok(())
 }
 
 pub async fn rename_workflow_impl(
@@ -479,6 +544,48 @@ pub async fn get_workflow(
     id: String,
 ) -> Result<Option<WorkflowDetail>, CommandError> {
     get_workflow_impl(&state, &id).await
+}
+
+#[tauri::command]
+pub async fn get_workflow_settings(
+    state: State<'_, AppState>,
+    workflow_id: String,
+) -> Result<WorkflowSettings, CommandError> {
+    get_workflow_settings_impl(&state, &workflow_id).await
+}
+
+#[tauri::command]
+pub async fn save_workflow_settings(
+    state: State<'_, AppState>,
+    workflow_id: String,
+    settings: WorkflowSettings,
+) -> Result<WorkflowSettings, CommandError> {
+    save_workflow_settings_impl(&state, &workflow_id, settings).await
+}
+
+#[tauri::command]
+pub async fn save_workflow_settings_section(
+    state: State<'_, AppState>,
+    workflow_id: String,
+    section: WorkflowSettingsSection,
+    section_value: Value,
+) -> Result<WorkflowSettings, CommandError> {
+    save_workflow_settings_section_impl(&state, &workflow_id, section, section_value).await
+}
+
+#[tauri::command]
+pub async fn validate_workflow_settings(
+    settings: WorkflowSettings,
+) -> Result<Vec<SettingsValidationIssue>, CommandError> {
+    validate_workflow_settings_impl(settings).await
+}
+
+#[tauri::command]
+pub async fn validate_workflow_run(
+    state: State<'_, AppState>,
+    workflow_id: String,
+) -> Result<Vec<RunValidationIssue>, CommandError> {
+    validate_workflow_run_impl(&state, &workflow_id).await
 }
 
 #[tauri::command]

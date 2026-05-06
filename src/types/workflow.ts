@@ -122,6 +122,158 @@ export type WorkflowBrowserConfig = {
   challenge_policy: WorkflowBrowserChallengePolicy;
 };
 
+export type WorkflowSettingsSectionId =
+  | "general"
+  | "execution"
+  | "browser"
+  | "environment"
+  | "inputs"
+  | "triggers"
+  | "advanced";
+
+export type WorkflowBrowserRetention = "retain" | "close";
+export type WorkflowFailurePolicy = "stop_on_first_failure";
+export type WorkflowTriggerMode = "manual" | "once" | "interval" | "cron" | "event";
+export type WorkflowMissedRunPolicy = "skip" | "run_next_eligible";
+export type WorkflowTriggerConcurrencyPolicy =
+  | "skip_if_running"
+  | "queue_one"
+  | "reject";
+export type WorkflowInputValueType =
+  | "text"
+  | "json"
+  | "number"
+  | "boolean"
+  | "array"
+  | "object"
+  | "secret_ref";
+export type WorkflowDebugLoggingLevel = "off" | "error" | "info" | "debug";
+
+export type WorkflowSettingsGeneral = {
+  name: string;
+  description: string;
+  tags: string[];
+  notes: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type WorkflowSettingsExecution = {
+  default_action_timeout_ms?: number | null;
+  default_retry_attempts?: number | null;
+  default_retry_interval_ms?: number | null;
+  max_workflow_duration_ms?: number | null;
+  browser_retention: WorkflowBrowserRetention;
+  failure_policy: WorkflowFailurePolicy;
+  batch_concurrency_limit?: number | null;
+  batch_headless: boolean;
+  batch_stop_on_first_failed_row: boolean;
+  output_retention_days?: number | null;
+};
+
+export type WorkflowSettingsBrowser = Omit<WorkflowBrowserConfig, "workflow_id"> & {
+  headless: boolean;
+};
+
+export type WorkflowSettingsGeolocation = {
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+};
+
+export type WorkflowSettingsCookie = {
+  name: string;
+  value: string;
+  domain?: string | null;
+  path?: string | null;
+};
+
+export type WorkflowSettingsStorageEntry = {
+  key: string;
+  value: string;
+};
+
+export type WorkflowSettingsEnvironment = {
+  geolocation?: WorkflowSettingsGeolocation | null;
+  permissions: string[];
+  extra_http_headers: HeaderPair[];
+  locale?: string | null;
+  timezone?: string | null;
+  download_directory?: string | null;
+  cookies: WorkflowSettingsCookie[];
+  local_storage: WorkflowSettingsStorageEntry[];
+  session_storage: WorkflowSettingsStorageEntry[];
+  session_restore_ref?: string | null;
+};
+
+export type WorkflowSettingsInputRow = {
+  name: string;
+  value_type: WorkflowInputValueType;
+  required: boolean;
+  default_value?: string | null;
+  description?: string | null;
+};
+
+export type WorkflowSettingsBatchMapping = {
+  column: string;
+  input: string;
+};
+
+export type WorkflowSettingsInputs = {
+  input_schema: WorkflowSettingsInputRow[];
+  initial_variables: VariableAssignment[];
+  batch_mapping: WorkflowSettingsBatchMapping[];
+};
+
+export type WorkflowSettingsTriggers = {
+  enabled: boolean;
+  mode: WorkflowTriggerMode;
+  interval_seconds?: number | null;
+  once_at?: string | null;
+  input_source?: string | null;
+  batch_source_ref?: string | null;
+  missed_run_policy: WorkflowMissedRunPolicy;
+  concurrency_policy: WorkflowTriggerConcurrencyPolicy;
+  last_run_at?: string | null;
+  next_run_at?: string | null;
+};
+
+export type WorkflowSettingsAdvanced = {
+  compatibility_warnings: string[];
+  debug_logging_level: WorkflowDebugLoggingLevel;
+  experimental_flags: string[];
+};
+
+export type WorkflowSettings = {
+  workflow_id: string;
+  version: number;
+  general: WorkflowSettingsGeneral;
+  execution: WorkflowSettingsExecution;
+  browser: WorkflowSettingsBrowser;
+  environment: WorkflowSettingsEnvironment;
+  inputs: WorkflowSettingsInputs;
+  triggers: WorkflowSettingsTriggers;
+  advanced: WorkflowSettingsAdvanced;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type SettingsValidationIssue = {
+  section: WorkflowSettingsSectionId;
+  field?: string | null;
+  message: string;
+  level: "error" | "warning";
+};
+
+export type RunValidationIssue = {
+  source: "graph" | "settings";
+  field?: string | null;
+  node_id?: string | null;
+  edge_id?: string | null;
+  message: string;
+  level: "error" | "warning";
+};
+
 export type ActionConfig =
   | {
       type: "navigate";
@@ -767,6 +919,7 @@ export type WorkflowExport = {
   version: number;
   workflow: Workflow;
   steps: WorkflowStep[];
+  settings?: WorkflowSettings | null;
 };
 
 export type ElementSnapshot = {

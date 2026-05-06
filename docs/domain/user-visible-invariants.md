@@ -7,13 +7,15 @@ Preserve these unless the task explicitly changes them.
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
-- Workflow detail exposes workflow-level browser runtime config from a header Runtime dialog for launch profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy.
+- Workflow list `Edit` opens Workflow Settings at General.
+- Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
+- Workflow Settings contains General, Execution, Browser, Environment, Inputs & Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
-- Running from the graph workspace saves dirty browser runtime config before execution.
+- Running from the graph workspace saves dirty Workflow Settings sections before execution.
 - If saving the visible graph fails before a run, the run does not start.
-- If saving browser runtime config fails before a run, the run does not start.
+- If saving dirty Workflow Settings fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
 - Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge. Reconnecting a port should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
 - Graph control blocks keep branch work separate from continuation work. `If`, `Switch`, and `Try/Catch` continue after branch work through a `done` port.
@@ -63,7 +65,8 @@ Preserve these unless the task explicitly changes them.
 ## Runner Behavior
 
 - Full runs execute the compiled saved graph.
-- Full runs use persisted workflow browser runtime config when present. Missing config rows keep legacy launch-action inference for compatibility.
+- Full runs use persisted Workflow Settings as the run baseline. Browser settings are resolved before browser launch; Environment defaults and Inputs & Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset.
+- Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Browser sessions remain open after success, failure, and stop unless the terminal End Success, End Failure, or Stop Workflow node has its close-browser option enabled.
 - Failures identify the failed step when possible.
@@ -74,4 +77,4 @@ Preserve these unless the task explicitly changes them.
 - Workflow summaries include the legacy `step_count` field until the summary contract is renamed.
 - Saved workflow graph JSON is keyed by workflow id.
 - Graph saves touch the parent workflow `updated_at`.
-- Saved workflow browser runtime config is keyed by workflow id and touches the parent workflow `updated_at`.
+- Saved Workflow Settings are keyed by workflow id and touch the parent workflow `updated_at`. Saving General also updates the workflow summary name.

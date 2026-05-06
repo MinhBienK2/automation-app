@@ -19,6 +19,8 @@ SQLite
   -> workflows
   -> workflow_steps
   -> workflow_graphs
+  -> workflow_settings
+  -> workflow_browser_configs (legacy compatibility)
 ```
 
 ## Boundaries

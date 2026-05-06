@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     ActionConfig, Workflow, WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
-    WorkflowStep,
+    WorkflowSettings, WorkflowStep,
 };
 
 #[derive(Debug, Error)]
@@ -365,6 +365,139 @@ impl WorkflowRepository {
         touch_workflow(&self.pool, &config.workflow_id).await?;
 
         Ok(())
+    }
+
+    pub async fn get_workflow_settings(
+        &self,
+        workflow_id: &str,
+    ) -> Result<Option<WorkflowSettings>, RepositoryError> {
+        let detail = self.get_workflow(workflow_id).await?;
+        let Some(detail) = detail else {
+            return Ok(None);
+        };
+
+        let row = sqlx::query(
+            r#"
+            SELECT
+              workflow_id,
+              version,
+              general_json,
+              execution_json,
+              browser_json,
+              environment_json,
+              inputs_json,
+              triggers_json,
+              advanced_json,
+              created_at,
+              updated_at
+            FROM workflow_settings
+            WHERE workflow_id = ?1
+            "#,
+        )
+        .bind(workflow_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let Some(row) = row else {
+            let mut settings = WorkflowSettings::default_for_workflow(&detail.workflow);
+            if let Some(browser_config) = self.get_workflow_browser_config(workflow_id).await? {
+                settings.browser =
+                    crate::domain::WorkflowSettingsBrowser::from_browser_config(browser_config);
+            }
+            return Ok(Some(settings));
+        };
+
+        Ok(Some(
+            WorkflowSettings {
+                workflow_id: row.get("workflow_id"),
+                version: row.get::<i64, _>("version") as u32,
+                general: serde_json::from_str(&row.get::<String, _>("general_json"))?,
+                execution: serde_json::from_str(&row.get::<String, _>("execution_json"))?,
+                browser: serde_json::from_str(&row.get::<String, _>("browser_json"))?,
+                environment: serde_json::from_str(&row.get::<String, _>("environment_json"))?,
+                inputs: serde_json::from_str(&row.get::<String, _>("inputs_json"))?,
+                triggers: serde_json::from_str(&row.get::<String, _>("triggers_json"))?,
+                advanced: serde_json::from_str(&row.get::<String, _>("advanced_json"))?,
+                created_at: Some(row.get("created_at")),
+                updated_at: Some(row.get("updated_at")),
+            }
+            .normalized(),
+        ))
+    }
+
+    pub async fn save_workflow_settings(
+        &self,
+        settings: WorkflowSettings,
+    ) -> Result<WorkflowSettings, RepositoryError> {
+        let now = now_timestamp();
+        let mut settings = settings.normalized();
+        settings.version = 1;
+        let created_at = settings.created_at.clone().unwrap_or_else(|| now.clone());
+        settings.created_at = Some(created_at.clone());
+        settings.updated_at = Some(now.clone());
+        settings.general.updated_at = Some(now.clone());
+        settings.general.created_at = settings
+            .general
+            .created_at
+            .clone()
+            .or(Some(created_at.clone()));
+
+        sqlx::query(
+            r#"
+            INSERT INTO workflow_settings (
+              workflow_id,
+              version,
+              general_json,
+              execution_json,
+              browser_json,
+              environment_json,
+              inputs_json,
+              triggers_json,
+              advanced_json,
+              created_at,
+              updated_at
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            ON CONFLICT(workflow_id) DO UPDATE SET
+              version = excluded.version,
+              general_json = excluded.general_json,
+              execution_json = excluded.execution_json,
+              browser_json = excluded.browser_json,
+              environment_json = excluded.environment_json,
+              inputs_json = excluded.inputs_json,
+              triggers_json = excluded.triggers_json,
+              advanced_json = excluded.advanced_json,
+              updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(&settings.workflow_id)
+        .bind(i64::from(settings.version))
+        .bind(serde_json::to_string(&settings.general)?)
+        .bind(serde_json::to_string(&settings.execution)?)
+        .bind(serde_json::to_string(&settings.browser)?)
+        .bind(serde_json::to_string(&settings.environment)?)
+        .bind(serde_json::to_string(&settings.inputs)?)
+        .bind(serde_json::to_string(&settings.triggers)?)
+        .bind(serde_json::to_string(&settings.advanced)?)
+        .bind(&created_at)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            UPDATE workflows
+            SET name = ?1, updated_at = ?2
+            WHERE id = ?3
+            "#,
+        )
+        .bind(&settings.general.name)
+        .bind(&now)
+        .bind(&settings.workflow_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(settings)
     }
 
     pub async fn add_step(

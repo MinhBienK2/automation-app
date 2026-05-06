@@ -5,7 +5,7 @@ use workflow_automation_manager_lib::domain::{
     GraphViewport, HeaderPair, InputTypingMode, RunError, RunStatus, ScrollBehavior, ScrollBlock,
     ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy, SwitchCase, ValidationError,
     VariableMapping, WaitCondition, Workflow, WorkflowBrowserChallengePolicy,
-    WorkflowBrowserConfig, WorkflowCondition, WorkflowGraph, WorkflowStep,
+    WorkflowBrowserConfig, WorkflowCondition, WorkflowGraph, WorkflowSettings, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -262,6 +262,86 @@ fn workflow_browser_config_rejects_confusing_values_before_save_or_run() {
             .expect_err("zero viewport width should fail"),
         "viewport_width",
         "Viewport width must be greater than 0",
+    );
+}
+
+#[test]
+fn workflow_settings_defaults_and_validation_cover_all_sections() {
+    let workflow = Workflow {
+        id: "workflow-1".to_string(),
+        name: "Login flow".to_string(),
+        created_at: "1".to_string(),
+        updated_at: "2".to_string(),
+    };
+    let settings = WorkflowSettings::default_for_workflow(&workflow);
+
+    assert_eq!(settings.workflow_id, "workflow-1");
+    assert_eq!(settings.version, 1);
+    assert_eq!(settings.general.name, "Login flow");
+    assert_eq!(settings.execution.browser_retention.as_str(), "retain");
+    assert_eq!(
+        settings.browser.challenge_policy,
+        WorkflowBrowserChallengePolicy::None
+    );
+    assert!(settings.environment.permissions.is_empty());
+    assert!(settings.inputs.input_schema.is_empty());
+    assert!(!settings.triggers.enabled);
+    assert!(settings.advanced.compatibility_warnings.is_empty());
+    settings
+        .validate()
+        .expect("default settings should validate");
+}
+
+#[test]
+fn workflow_settings_rejects_invalid_cross_section_values() {
+    let workflow = Workflow {
+        id: "workflow-1".to_string(),
+        name: "Login flow".to_string(),
+        created_at: "1".to_string(),
+        updated_at: "2".to_string(),
+    };
+
+    let mut missing_name = WorkflowSettings::default_for_workflow(&workflow);
+    missing_name.general.name = "  ".to_string();
+    assert_validation_message(
+        missing_name
+            .validate()
+            .expect_err("blank settings name should fail"),
+        "general.name",
+        "Workflow name is required",
+    );
+
+    let mut bad_browser = WorkflowSettings::default_for_workflow(&workflow);
+    bad_browser.browser.proxy_enabled = true;
+    assert_validation_message(
+        bad_browser
+            .validate()
+            .expect_err("enabled proxy should require server"),
+        "browser.proxy_server",
+        "Proxy server is required",
+    );
+
+    let mut bad_duration = WorkflowSettings::default_for_workflow(&workflow);
+    bad_duration.execution.default_action_timeout_ms = Some(0);
+    assert_validation_message(
+        bad_duration
+            .validate()
+            .expect_err("zero timeout should fail"),
+        "execution.default_action_timeout_ms",
+        "Default action timeout must be greater than 0",
+    );
+
+    let mut bad_trigger = WorkflowSettings::default_for_workflow(&workflow);
+    bad_trigger.triggers.enabled = true;
+    bad_trigger.triggers.mode =
+        workflow_automation_manager_lib::domain::WorkflowTriggerMode::Interval;
+    bad_trigger.triggers.interval_seconds = Some(0);
+    assert_validation_message(
+        bad_trigger
+            .validate()
+            .expect_err("zero interval should fail"),
+        "triggers.interval_seconds",
+        "Trigger interval must be greater than 0",
     );
 }
 

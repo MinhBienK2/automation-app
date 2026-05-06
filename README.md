@@ -61,14 +61,14 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Switch Frame, Accept Dialog, Dismiss Dialog, Choose Download Folder, and Wait For Download action nodes.
 7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
 8. Add Use Profile, Save Session, Load Session, Set Cookie, Clear Cookies, and Set Secret action nodes.
-9. Open Runtime from the workflow detail header and configure the workflow browser runtime profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy. Also confirm Set Geolocation, Set Request Headers, and Grant Permission action nodes remain available.
+9. Open Settings from the workflow detail header, confirm it opens to Browser, and configure the workflow browser profile, proxy, user agent, viewport, mobile/touch flags, headed/headless default, and challenge policy. Also confirm Workflow Settings has General, Execution, Environment, Inputs & Variables, Triggers, Advanced, and section help.
 10. Confirm hidden compatibility action nodes such as Detect Challenge, Pause For Human, and Resume When Condition still load and show inspector/help when present in an imported or existing workflow.
 11. Confirm hidden compatibility reliability actions such as Fallback Selector, Retry Step, and Checkpoint still load and show inspector/help when present in an imported or existing workflow.
 12. Export a workflow, import it back, validate an interval schedule, and run a batch with at least two input rows.
 13. Add Run JavaScript, Wait For Request, Wait For Response, Block Request, Mock Response, Set Local Storage, and Set Session Storage action nodes.
 14. Generate selector suggestions from an element snapshot, normalize recorded click/input events, dry-run validate a config, and generate a local fixture HTML file.
 15. Move graph nodes, reopen the workflow, and confirm node positions persist.
-16. Save the browser runtime config, save the graph, and run the graph workflow.
+16. Save Workflow Settings, save the graph, and run the graph workflow.
 17. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
 18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
 19. Confirm Switch Frame lets later element/output steps target iframe content without repeating iframe XPath.
@@ -76,7 +76,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 21. Confirm download actions save a new file in the configured directory and store its path in outputs.
 22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use a variable array, and control-flow blocks run nested actions.
 23. Confirm persistent profile state survives a browser restart, session JSON can restore storage, cookies can be set/cleared, and `{{secret:name}}` templates are redacted in summaries.
-24. Confirm workflow-level user agent and viewport apply before browser launch, and geolocation, permission grants, and extra headers are visible to the target page when those action nodes run.
+24. Confirm Workflow Settings Browser user agent and viewport apply before browser launch, and Environment geolocation, permission grants, extra headers, storage, cookies, and Inputs & Variables seed values apply before graph actions run.
 25. Confirm challenge detection writes an output, human verification pause is logged, and resume waits for the expected condition.
 26. Confirm fallback selector stores the selected XPath, retry step retries the nested action, checkpoint screenshot exists, and failed steps include a failure screenshot path.
 27. Confirm batch run results account for each row and separate success from failure.

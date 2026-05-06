@@ -10,9 +10,12 @@ use workflow_automation_manager_lib::{
     domain::{
         ActionConfig, ActionType, BatchRunRequest, ElementSnapshot, GraphEdge, GraphNode,
         GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
-        GraphViewport, OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind,
-        ScrollDirection, WaitCondition, WorkflowBrowserChallengePolicy, WorkflowBrowserConfig,
-        WorkflowGraph,
+        GraphViewport, HeaderPair, OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind,
+        ScrollDirection, VariableAssignment, VariableValueType, WaitCondition,
+        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
+        WorkflowInputValueType, WorkflowSettings, WorkflowSettingsCookie,
+        WorkflowSettingsGeolocation, WorkflowSettingsInputRow, WorkflowSettingsSection,
+        WorkflowSettingsStorageEntry, WorkflowTriggerMode,
     },
 };
 
@@ -192,6 +195,137 @@ async fn workflow_browser_config_commands_round_trip_and_validate() {
 }
 
 #[tokio::test]
+async fn workflow_settings_commands_round_trip_validate_and_map_browser_config() {
+    let (state, _db_path) = test_state().await;
+    let workflow = commands::create_workflow_impl(&state, "Settings config")
+        .await
+        .expect("create");
+
+    let defaults = commands::get_workflow_settings_impl(&state, &workflow.id)
+        .await
+        .expect("get default settings");
+    assert_eq!(defaults.workflow_id, workflow.id);
+    assert_eq!(defaults.general.name, "Settings config");
+    assert_eq!(
+        defaults.browser.challenge_policy,
+        WorkflowBrowserChallengePolicy::None
+    );
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.general.name = "Settings config updated".to_string();
+    settings.execution.default_action_timeout_ms = Some(5000);
+    settings.browser.profile_name = Some("release".to_string());
+    settings.browser.challenge_policy = WorkflowBrowserChallengePolicy::PauseForHuman;
+
+    let saved = commands::save_workflow_settings_impl(&state, &workflow.id, settings.clone())
+        .await
+        .expect("save settings");
+    assert_eq!(saved.general.name, "Settings config updated");
+    assert_eq!(saved.browser.profile_name.as_deref(), Some("release"));
+
+    let mut browser = saved.browser.clone();
+    browser.proxy_enabled = true;
+    browser.proxy_server = Some("http://proxy.local:8080".to_string());
+    let saved = commands::save_workflow_settings_section_impl(
+        &state,
+        &workflow.id,
+        WorkflowSettingsSection::Browser,
+        serde_json::to_value(browser).expect("browser section JSON"),
+    )
+    .await
+    .expect("save browser section");
+    assert!(saved.browser.proxy_enabled);
+
+    let legacy_browser = commands::get_workflow_browser_config_impl(&state, &workflow.id)
+        .await
+        .expect("get mapped browser config");
+    assert_eq!(
+        legacy_browser.proxy_server.as_deref(),
+        Some("http://proxy.local:8080")
+    );
+
+    commands::save_workflow_browser_config_impl(
+        &state,
+        &workflow.id,
+        WorkflowBrowserConfig {
+            workflow_id: workflow.id.clone(),
+            profile_name: Some("legacy-command-profile".to_string()),
+            proxy_enabled: false,
+            proxy_server: None,
+            proxy_username: None,
+            proxy_password: None,
+            user_agent: None,
+            viewport_width: None,
+            viewport_height: None,
+            mobile: false,
+            touch: false,
+            challenge_policy: WorkflowBrowserChallengePolicy::DetectOnly,
+        },
+    )
+    .await
+    .expect("legacy browser config command maps to settings");
+    let mapped_settings = commands::get_workflow_settings_impl(&state, &workflow.id)
+        .await
+        .expect("get mapped settings");
+    assert_eq!(
+        mapped_settings.browser.profile_name.as_deref(),
+        Some("legacy-command-profile")
+    );
+    assert_eq!(
+        mapped_settings.browser.challenge_policy,
+        WorkflowBrowserChallengePolicy::DetectOnly
+    );
+
+    let mut invalid = mapped_settings;
+    invalid.triggers.enabled = true;
+    invalid.triggers.mode = WorkflowTriggerMode::Interval;
+    invalid.triggers.interval_seconds = Some(0);
+    let issues = commands::validate_workflow_settings_impl(invalid)
+        .await
+        .expect("validate settings");
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].section, WorkflowSettingsSection::Triggers);
+    assert_eq!(issues[0].field.as_deref(), Some("interval_seconds"));
+}
+
+#[tokio::test]
+async fn validate_workflow_run_reports_settings_issues_before_launch() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Validate run")
+        .await
+        .expect("create");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.inputs.input_schema = vec![WorkflowSettingsInputRow {
+        name: "email".to_string(),
+        value_type: WorkflowInputValueType::Text,
+        required: true,
+        default_value: None,
+        description: None,
+    }];
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    let issues = commands::validate_workflow_run_impl(&state, &workflow.id)
+        .await
+        .expect("validate run");
+
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].source.as_str(), "settings");
+    assert_eq!(issues[0].field.as_deref(), Some("inputs.input_schema"));
+    assert!(runner.recorded_runs().is_empty());
+}
+
+#[tokio::test]
 async fn run_workflow_uses_saved_browser_config_before_legacy_launch_actions() {
     let runner = RecordingRunExecutor::new();
     let (state, _db_path) = test_state_with_runner(runner.clone()).await;
@@ -254,6 +388,167 @@ async fn run_workflow_uses_saved_browser_config_before_legacy_launch_actions() {
     assert_eq!(recorded.user_agent.as_deref(), Some("WorkflowBot/1.0"));
     assert_eq!(recorded.viewport_width, Some(1280));
     assert!(recorded.touch);
+}
+
+#[tokio::test]
+async fn run_workflow_applies_environment_and_input_settings_before_graph_steps() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Settings run context")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.environment.geolocation = Some(WorkflowSettingsGeolocation {
+        latitude: 10.0,
+        longitude: 20.0,
+        accuracy: Some(5.0),
+    });
+    settings.environment.permissions = vec!["geolocation".to_string()];
+    settings.environment.extra_http_headers = vec![HeaderPair {
+        name: "X-Test-Run".to_string(),
+        value: "settings".to_string(),
+    }];
+    settings.environment.download_directory = Some("/tmp/wam-downloads".to_string());
+    settings.environment.cookies = vec![WorkflowSettingsCookie {
+        name: "session".to_string(),
+        value: "abc".to_string(),
+        domain: Some("example.com".to_string()),
+        path: Some("/".to_string()),
+    }];
+    settings.environment.local_storage = vec![WorkflowSettingsStorageEntry {
+        key: "feature".to_string(),
+        value: "on".to_string(),
+    }];
+    settings.environment.session_storage = vec![WorkflowSettingsStorageEntry {
+        key: "tab".to_string(),
+        value: "checkout".to_string(),
+    }];
+    settings.inputs.input_schema = vec![WorkflowSettingsInputRow {
+        name: "email".to_string(),
+        value_type: WorkflowInputValueType::Text,
+        required: true,
+        default_value: Some("user@example.com".to_string()),
+        description: None,
+    }];
+    settings.inputs.initial_variables = vec![VariableAssignment {
+        name: "tenant".to_string(),
+        value_type: VariableValueType::Text,
+        value: "qa".to_string(),
+    }];
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let runs = runner.recorded_runs();
+    assert_eq!(runs.len(), 1);
+    assert!(matches!(runs[0][0], ActionConfig::SetGeolocation { .. }));
+    assert!(matches!(runs[0][1], ActionConfig::GrantPermission { .. }));
+    assert!(matches!(runs[0][2], ActionConfig::SetExtraHeaders { .. }));
+    assert!(matches!(
+        runs[0][3],
+        ActionConfig::SetDownloadDirectory { .. }
+    ));
+    assert!(matches!(runs[0][4], ActionConfig::SetCookie { .. }));
+    assert!(matches!(runs[0][5], ActionConfig::SetLocalStorage { .. }));
+    assert!(matches!(runs[0][6], ActionConfig::SetSessionStorage { .. }));
+    match &runs[0][7] {
+        ActionConfig::SetVariable { variables, .. } => {
+            assert!(variables.iter().any(|variable| {
+                variable.name == "email" && variable.value == "user@example.com"
+            }));
+            assert!(variables
+                .iter()
+                .any(|variable| variable.name == "tenant" && variable.value == "qa"));
+        }
+        other => panic!("expected input seed variables, got {other:?}"),
+    }
+    assert!(matches!(runs[0][8], ActionConfig::Wait { .. }));
+}
+
+#[tokio::test]
+async fn run_workflow_applies_execution_default_timeout_to_actions_without_timeout() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Timeout defaults")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.default_action_timeout_ms = Some(7000);
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let runs = runner.recorded_runs();
+    match &runs[0][0] {
+        ActionConfig::Wait { timeout_ms, .. } => assert_eq!(*timeout_ms, Some(7000)),
+        other => panic!("expected wait action, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn run_workflow_rejects_required_settings_input_without_value_before_runner_start() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Required input")
+        .await
+        .expect("create");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.inputs.input_schema = vec![WorkflowSettingsInputRow {
+        name: "email".to_string(),
+        value_type: WorkflowInputValueType::Text,
+        required: true,
+        default_value: None,
+        description: None,
+    }];
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    let error = commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect_err("required input should block run");
+
+    assert_eq!(error.field.as_deref(), Some("inputs.input_schema"));
+    assert_eq!(
+        error.message,
+        "Input \"email\" is required but no default, batch mapping, or run value was provided."
+    );
+    assert!(runner.recorded_runs().is_empty());
 }
 
 #[tokio::test]
@@ -859,6 +1154,12 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
     )
     .await
     .expect("update");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.general.description = "Exported settings".to_string();
+    settings.browser.profile_name = Some("export-profile".to_string());
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
 
     let exported = commands::export_workflow_impl(&state, &workflow.id)
         .await
@@ -866,6 +1167,13 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
     assert_eq!(exported.version, 1);
     assert_eq!(exported.workflow.name, "Export me");
     assert_eq!(exported.steps.len(), 1);
+    assert_eq!(
+        exported
+            .settings
+            .as_ref()
+            .and_then(|settings| settings.browser.profile_name.as_deref()),
+        Some("export-profile")
+    );
 
     let imported = commands::import_workflow_impl(&state, exported)
         .await
@@ -885,6 +1193,15 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
             duration_ms: Some((0.5 * 1000.0) as u64),
             timeout_ms: None
         }
+    );
+    let imported_settings = commands::get_workflow_settings_impl(&state, &imported.workflow.id)
+        .await
+        .expect("get imported settings");
+    assert_eq!(imported_settings.general.name, "Export me (imported)");
+    assert_eq!(imported_settings.general.description, "Exported settings");
+    assert_eq!(
+        imported_settings.browser.profile_name.as_deref(),
+        Some("export-profile")
     );
 }
 

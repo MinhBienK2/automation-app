@@ -9,13 +9,17 @@ import type {
   GraphValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
+  RunValidationIssue,
   RunState,
   SelectorCandidate,
+  SettingsValidationIssue,
   WorkflowBrowserConfig,
   WorkflowGraph,
   Workflow,
   WorkflowDetail,
   WorkflowExport,
+  WorkflowSettings,
+  WorkflowSettingsSectionId,
   WorkflowSummary,
 } from "../types/workflow";
 
@@ -36,6 +40,41 @@ export function saveWorkflowBrowserConfig(
   config: WorkflowBrowserConfig,
 ) {
   return invoke("save_workflow_browser_config", { workflowId, config });
+}
+
+export function getWorkflowSettings(workflowId: string) {
+  return invoke<WorkflowSettings>("get_workflow_settings", { workflowId });
+}
+
+export function saveWorkflowSettings(
+  workflowId: string,
+  settings: WorkflowSettings,
+) {
+  return invoke<WorkflowSettings>("save_workflow_settings", { workflowId, settings });
+}
+
+export function saveWorkflowSettingsSection<
+  Section extends WorkflowSettingsSectionId,
+>(
+  workflowId: string,
+  section: Section,
+  sectionValue: WorkflowSettings[Section],
+) {
+  return invoke<WorkflowSettings>("save_workflow_settings_section", {
+    workflowId,
+    section,
+    sectionValue,
+  });
+}
+
+export function validateWorkflowSettings(settings: WorkflowSettings) {
+  return invoke<SettingsValidationIssue[]>("validate_workflow_settings", {
+    settings,
+  });
+}
+
+export function validateWorkflowRun(workflowId: string) {
+  return invoke<RunValidationIssue[]>("validate_workflow_run", { workflowId });
 }
 
 export function createWorkflow(name: string) {

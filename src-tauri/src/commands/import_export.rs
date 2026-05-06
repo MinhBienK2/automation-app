@@ -19,6 +19,11 @@ pub async fn export_workflow_impl(
         version: 1,
         workflow: detail.workflow,
         steps: detail.steps,
+        settings: state
+            .repository()
+            .get_workflow_settings(workflow_id)
+            .await
+            .map_err(CommandError::from)?,
     })
 }
 
@@ -43,6 +48,17 @@ pub async fn import_workflow_impl(
         state
             .repository()
             .update_step(&created.id, &step.name, step.config)
+            .await
+            .map_err(CommandError::from)?;
+    }
+
+    if let Some(mut settings) = exported.settings {
+        settings.workflow_id = workflow.id.clone();
+        settings.general.name = imported_name;
+        settings.validate().map_err(CommandError::validation)?;
+        state
+            .repository()
+            .save_workflow_settings(settings)
             .await
             .map_err(CommandError::from)?;
     }

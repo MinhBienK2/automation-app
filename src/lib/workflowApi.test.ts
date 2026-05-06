@@ -5,19 +5,24 @@ import {
   dryRunValidateConfig,
   generateFixture,
   compileWorkflowGraph,
+  getWorkflowSettings,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
   normalizeRecordedEvents,
   runWorkflow,
+  saveWorkflowSettings,
+  saveWorkflowSettingsSection,
   saveWorkflowBrowserConfig,
   saveWorkflowGraph,
   runBatchWorkflow,
   suggestSelectors,
+  validateWorkflowSettings,
   validateWorkflowGraph,
+  validateWorkflowRun,
   validateSchedule,
 } from "./workflowApi";
-import type { WorkflowExport, WorkflowGraph } from "../types/workflow";
+import type { WorkflowExport, WorkflowGraph, WorkflowSettings } from "../types/workflow";
 
 describe("workflow API phase ten commands", () => {
   test("invokes orchestration commands with frontend-safe payloads", async () => {
@@ -166,6 +171,113 @@ describe("workflow API browser config commands", () => {
     expect(invokeMock).toHaveBeenCalledWith("save_workflow_browser_config", {
       workflowId: "workflow-1",
       config,
+    });
+  });
+});
+
+describe("workflow API settings commands", () => {
+  test("invokes workflow settings commands with frontend-safe payloads", async () => {
+    resetTauriInvoke();
+    const settings: WorkflowSettings = {
+      workflow_id: "workflow-1",
+      version: 1,
+      general: {
+        name: "Login flow",
+        description: "",
+        tags: [],
+        notes: "",
+        created_at: "1",
+        updated_at: "1",
+      },
+      execution: {
+        default_action_timeout_ms: null,
+        default_retry_attempts: null,
+        default_retry_interval_ms: null,
+        max_workflow_duration_ms: null,
+        browser_retention: "retain",
+        failure_policy: "stop_on_first_failure",
+        batch_concurrency_limit: null,
+        batch_headless: false,
+        batch_stop_on_first_failed_row: false,
+        output_retention_days: null,
+      },
+      browser: {
+        profile_name: null,
+        proxy_enabled: false,
+        proxy_server: null,
+        proxy_username: null,
+        proxy_password: null,
+        user_agent: null,
+        viewport_width: null,
+        viewport_height: null,
+        mobile: false,
+        touch: false,
+        challenge_policy: "none",
+        headless: false,
+      },
+      environment: {
+        geolocation: null,
+        permissions: [],
+        extra_http_headers: [],
+        locale: null,
+        timezone: null,
+        download_directory: null,
+        cookies: [],
+        local_storage: [],
+        session_storage: [],
+        session_restore_ref: null,
+      },
+      inputs: {
+        input_schema: [],
+        initial_variables: [],
+        batch_mapping: [],
+      },
+      triggers: {
+        enabled: false,
+        mode: "manual",
+        interval_seconds: null,
+        once_at: null,
+        input_source: null,
+        batch_source_ref: null,
+        missed_run_policy: "skip",
+        concurrency_policy: "skip_if_running",
+        last_run_at: null,
+        next_run_at: null,
+      },
+      advanced: {
+        compatibility_warnings: [],
+        debug_logging_level: "off",
+        experimental_flags: [],
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+
+    invokeMock.mockResolvedValue(settings);
+
+    await getWorkflowSettings("workflow-1");
+    await saveWorkflowSettings("workflow-1", settings);
+    await saveWorkflowSettingsSection("workflow-1", "browser", settings.browser);
+    await validateWorkflowSettings(settings);
+    await validateWorkflowRun("workflow-1");
+
+    expect(invokeMock).toHaveBeenCalledWith("get_workflow_settings", {
+      workflowId: "workflow-1",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings", {
+      workflowId: "workflow-1",
+      settings,
+    });
+    expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
+      workflowId: "workflow-1",
+      section: "browser",
+      sectionValue: settings.browser,
+    });
+    expect(invokeMock).toHaveBeenCalledWith("validate_workflow_settings", {
+      settings,
+    });
+    expect(invokeMock).toHaveBeenCalledWith("validate_workflow_run", {
+      workflowId: "workflow-1",
     });
   });
 });

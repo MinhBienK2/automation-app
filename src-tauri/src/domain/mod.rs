@@ -6,6 +6,7 @@ mod run;
 mod validation;
 mod workflow;
 mod workflow_graph;
+mod workflow_settings;
 
 pub use action_config::{
     ActionConfig, ActionType, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode,
@@ -27,4 +28,14 @@ pub use workflow_graph::{
     CompiledGraphStep, CompiledWorkflowGraph, GraphEdge, GraphNode, GraphNodeType, GraphPort,
     GraphPortDirection, GraphPosition, GraphValidationIssue, GraphValidationLevel, GraphViewport,
     WorkflowGraph,
+};
+pub use workflow_settings::{
+    RunValidationIssue, RunValidationIssueSource, SettingsValidationIssue,
+    WorkflowBrowserRetention, WorkflowDebugLoggingLevel, WorkflowFailurePolicy,
+    WorkflowInputValueType, WorkflowMissedRunPolicy, WorkflowSettings, WorkflowSettingsAdvanced,
+    WorkflowSettingsBatchMapping, WorkflowSettingsBrowser, WorkflowSettingsCookie,
+    WorkflowSettingsEnvironment, WorkflowSettingsExecution, WorkflowSettingsGeneral,
+    WorkflowSettingsGeolocation, WorkflowSettingsInputRow, WorkflowSettingsInputs,
+    WorkflowSettingsIssueLevel, WorkflowSettingsSection, WorkflowSettingsStorageEntry,
+    WorkflowSettingsTriggers, WorkflowTriggerConcurrencyPolicy, WorkflowTriggerMode,
 };

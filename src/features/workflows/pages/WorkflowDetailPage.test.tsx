@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import {
@@ -93,73 +93,130 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
-  test("opens, edits, and saves workflow browser runtime config from the header dialog", async () => {
+  test("opens workflow settings on the Browser section from the detail header", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
-      get_workflow_browser_config: {
+      get_workflow_settings: {
         workflow_id: "workflow-1",
-        profile_name: "qa-profile",
-        proxy_enabled: true,
-        proxy_server: "http://proxy.local:8080",
-        proxy_username: "agent",
-        proxy_password: "secret",
-        user_agent: "WorkflowBot/1.0",
-        viewport_width: 1280,
-        viewport_height: 720,
-        mobile: false,
-        touch: false,
-        challenge_policy: "pause_for_human",
+        version: 1,
+        general: {
+          name: "Login flow",
+          description: "",
+          tags: [],
+          notes: "",
+          created_at: "1",
+          updated_at: "1",
+        },
+        execution: {
+          default_action_timeout_ms: null,
+          default_retry_attempts: null,
+          default_retry_interval_ms: null,
+          max_workflow_duration_ms: null,
+          browser_retention: "retain",
+          failure_policy: "stop_on_first_failure",
+          batch_concurrency_limit: null,
+          batch_headless: false,
+          batch_stop_on_first_failed_row: false,
+          output_retention_days: null,
+        },
+        browser: {
+          profile_name: "qa-profile",
+          proxy_enabled: true,
+          proxy_server: "http://proxy.local:8080",
+          proxy_username: "agent",
+          proxy_password: "secret",
+          user_agent: "WorkflowBot/1.0",
+          viewport_width: 1280,
+          viewport_height: 720,
+          mobile: false,
+          touch: false,
+          challenge_policy: "pause_for_human",
+          headless: false,
+        },
+        environment: {
+          geolocation: null,
+          permissions: [],
+          extra_http_headers: [],
+          locale: null,
+          timezone: null,
+          download_directory: null,
+          cookies: [],
+          local_storage: [],
+          session_storage: [],
+          session_restore_ref: null,
+        },
+        inputs: {
+          input_schema: [],
+          initial_variables: [],
+          batch_mapping: [],
+        },
+        triggers: {
+          enabled: false,
+          mode: "manual",
+          interval_seconds: null,
+          once_at: null,
+          input_source: null,
+          batch_source_ref: null,
+          missed_run_policy: "skip",
+          concurrency_policy: "skip_if_running",
+          last_run_at: null,
+          next_run_at: null,
+        },
+        advanced: {
+          compatibility_warnings: [],
+          debug_logging_level: "off",
+          experimental_flags: [],
+        },
+        created_at: "1",
+        updated_at: "1",
       },
-      save_workflow_browser_config: undefined,
+      save_workflow_settings_section: undefined,
     });
 
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    expect(screen.queryByRole("dialog", { name: "Browser Runtime" }))
+    expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
       .not.toBeInTheDocument();
 
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
-    await userEvent.click(within(header).getByRole("button", { name: "Runtime" }));
-    const configPanel = await screen.findByRole("dialog", {
-      name: "Browser Runtime",
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
     });
 
-    expect(within(configPanel).getByLabelText("Profile name")).toHaveValue(
+    expect(within(settingsDialog).getByRole("tab", { name: "Browser" }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(
       "qa-profile",
     );
-    expect(within(configPanel).getByLabelText("Proxy enabled")).toBeChecked();
-    expect(within(configPanel).getByPlaceholderText("qa-profile")).toBeInTheDocument();
-    expect(within(configPanel).getByPlaceholderText("WorkflowBot/1.0")).toBeInTheDocument();
-    expect(within(configPanel).getByPlaceholderText("http://proxy.local:8080")).toBeInTheDocument();
-    expect(within(configPanel).getByPlaceholderText("agent")).toBeInTheDocument();
-    expect(within(configPanel).getByPlaceholderText("secret")).toBeInTheDocument();
-    expect(within(configPanel).getByPlaceholderText("1280")).toBeInTheDocument();
-    expect(within(configPanel).getByPlaceholderText("720")).toBeInTheDocument();
-    expect(
-      within(configPanel).getByText(
-        "You can also paste a full proxy URL with credentials, e.g. http://agent:secret@proxy.local:8080",
-      ),
-    ).toBeInTheDocument();
-    await userEvent.clear(within(configPanel).getByLabelText("Profile name"));
-    await userEvent.type(within(configPanel).getByLabelText("Profile name"), "release");
-    await userEvent.clear(within(configPanel).getByLabelText("Viewport width"));
-    await userEvent.type(within(configPanel).getByLabelText("Viewport width"), "1440");
-    await userEvent.click(within(configPanel).getByLabelText("Touch input"));
+    expect(within(settingsDialog).getByLabelText("Proxy enabled")).toBeChecked();
+    expect(within(settingsDialog).getByPlaceholderText("WorkflowBot/1.0")).toBeInTheDocument();
+    await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
+    await userEvent.clear(within(settingsDialog).getByLabelText("Viewport width"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Viewport width"), "1440");
+    await userEvent.click(within(settingsDialog).getByLabelText("Touch input"));
     await userEvent.selectOptions(
-      within(configPanel).getByLabelText("Challenge policy"),
+      within(settingsDialog).getByLabelText("Challenge policy"),
       "detect_only",
     );
-    await userEvent.click(within(configPanel).getByRole("button", {
-      name: "Save browser config",
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Browser help",
+    }));
+    expect(await screen.findByText("Browser Settings Help")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Save Browser",
     }));
 
-    expect(invokeMock).toHaveBeenCalledWith("save_workflow_browser_config", {
+    expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
       workflowId: "workflow-1",
-      config: expect.objectContaining({
-        workflow_id: "workflow-1",
+      section: "browser",
+      sectionValue: expect.objectContaining({
         profile_name: "release",
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
@@ -168,10 +225,6 @@ describe("Workflow detail integration", () => {
         touch: true,
         challenge_policy: "detect_only",
       }),
-    });
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Browser Runtime" }))
-        .not.toBeInTheDocument();
     });
   });
 

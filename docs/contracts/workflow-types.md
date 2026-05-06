@@ -6,6 +6,7 @@
 - Rust workflow domain: `src-tauri/src/domain/workflow.rs`
 - Rust action configs: `src-tauri/src/domain/action_config.rs`
 - Rust graph domain: `src-tauri/src/domain/workflow_graph.rs`
+- Rust settings domain: `src-tauri/src/domain/workflow_settings.rs`
 - Rust browser config domain: `src-tauri/src/domain/browser_config.rs`
 - Rust run types: `src-tauri/src/domain/run.rs`
 - Repository DTOs: `src-tauri/src/repositories/workflow_repository.rs`
@@ -18,7 +19,8 @@ Frontend and backend must agree on:
 - `Workflow`: `id`, `name`, `created_at`, `updated_at`.
 - `WorkflowStep`: legacy/internal step row shape used by import/export compatibility and compiled graph runner adapters.
 - `WorkflowDetail`: currently `workflow`, `steps` for compatibility, while the product UI loads graph authoring data through `get_workflow_graph`.
-- `WorkflowBrowserConfig`: optional workflow-level browser launch config loaded through `get_workflow_browser_config`.
+- `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `execution`, `browser`, `environment`, `inputs`, `triggers`, and `advanced` sections.
+- `WorkflowBrowserConfig`: legacy compatibility shape loaded through `get_workflow_browser_config`; command handlers map it to `WorkflowSettings.browser`.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`.
@@ -26,7 +28,7 @@ Frontend and backend must agree on:
 
 ## Browser Config Shape
 
-Workflow browser config is persisted separately from graph JSON and legacy ordered steps:
+Workflow browser config remains as a legacy compatibility command shape:
 
 ```text
 {
@@ -46,6 +48,61 @@ Workflow browser config is persisted separately from graph JSON and legacy order
 ```
 
 Blank optional text fields normalize to `null`. A proxy server is required when `proxy_enabled` is true, and viewport dimensions must be greater than zero when present.
+
+## Workflow Settings Shape
+
+Workflow Settings are persisted separately from graph JSON and legacy ordered steps:
+
+```text
+{
+  workflow_id: string,
+  version: number,
+  general: { name, description, tags, notes, created_at, updated_at },
+  execution: {
+    default_action_timeout_ms,
+    default_retry_attempts,
+    default_retry_interval_ms,
+    max_workflow_duration_ms,
+    browser_retention,
+    failure_policy,
+    batch_concurrency_limit,
+    batch_headless,
+    batch_stop_on_first_failed_row,
+    output_retention_days
+  },
+  browser: WorkflowBrowserConfig without workflow_id plus headless,
+  environment: {
+    geolocation,
+    permissions,
+    extra_http_headers,
+    locale,
+    timezone,
+    download_directory,
+    cookies,
+    local_storage,
+    session_storage,
+    session_restore_ref
+  },
+  inputs: { input_schema, initial_variables, batch_mapping },
+  triggers: {
+    enabled,
+    mode,
+    interval_seconds,
+    once_at,
+    input_source,
+    batch_source_ref,
+    missed_run_policy,
+    concurrency_policy,
+    last_run_at,
+    next_run_at
+  },
+  advanced: { compatibility_warnings, debug_logging_level, experimental_flags }
+}
+```
+
+Settings validation issues serialize as `{ section, field, message, level }`.
+Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
+Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
 
 ## Graph Shape
 

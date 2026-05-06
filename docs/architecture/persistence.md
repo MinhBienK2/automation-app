@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Persistence stores workflows and versioned workflow graph authoring data in SQLite. Legacy ordered workflow step rows still exist for compatibility paths, but they are no longer the product authoring source of truth.
-Workflow-level browser runtime config is also persisted in SQLite and keyed by workflow id.
+Persistence stores workflows, versioned workflow graph authoring data, and per-workflow settings in SQLite. Legacy ordered workflow step rows still exist for compatibility paths, but they are no longer the product authoring source of truth.
+Legacy workflow-level browser runtime config rows still exist for compatibility, but product-facing browser launch settings now live in `workflow_settings.browser_json`.
 
 ## Key Files
 
@@ -20,14 +20,17 @@ Workflow-level browser runtime config is also persisted in SQLite and keyed by w
 - New workflows create a `Start -> New node` draft workflow graph with an unconfigured action node saved as `config: null`.
 - Workflow graph authoring data is stored in `workflow_graphs.graph_json` keyed by `workflow_id`.
 - Workflow browser runtime config is stored in `workflow_browser_configs` keyed by `workflow_id`.
+- Workflow Settings are stored in `workflow_settings` keyed by `workflow_id`, with version plus JSON columns for General, Execution, Browser, Environment, Inputs, Triggers, and Advanced.
+- Workflows without a settings row return lazy defaults based on workflow metadata and any legacy browser config row.
+- Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Workflows without a graph row still open through a compatibility linear graph fallback.
-- Workflows without a browser config row return default UI values and keep legacy launch inference during runs.
+- Legacy browser config rows are read into lazy Workflow Settings defaults when no settings row exists.
 - Removed legacy step configs are migrated or normalized on read: `open_url` to `navigate`, `sleep` to duration `wait`, and `type_text` to `input_text`.
 - `add_step` appends with `MAX(order_index) + 1`.
 - `delete_step` compacts order indexes.
 - `reorder_steps` rewrites indexes through temporary negative values.
 - Child step changes touch the parent workflow `updated_at`.
-- Graph and browser config saves touch the parent workflow `updated_at`.
+- Graph, Workflow Settings, and legacy browser config saves touch the parent workflow `updated_at`.
 
 ## Belongs Here
 
@@ -37,7 +40,7 @@ Workflow-level browser runtime config is also persisted in SQLite and keyed by w
 - Order index integrity.
 - Serialization/deserialization of stored action config JSON.
 - Serialization/deserialization of stored workflow graph JSON.
-- Persistence of workflow browser runtime config rows.
+- Persistence of Workflow Settings rows and legacy workflow browser runtime config rows.
 - Compatibility behavior for legacy step rows until that schema is removed.
 
 ## Does Not Belong Here

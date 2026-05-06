@@ -68,10 +68,84 @@ describe("Workflow list integration", () => {
       .toBeInTheDocument();
   });
 
-  test("renames a workflow from the list edit dialog", async () => {
+  test("opens workflow settings General from the list edit action", async () => {
     mockTauriCommands({
       ...listWorkflowScenario([workflow]),
-      rename_workflow: undefined,
+      get_workflow_settings: {
+        workflow_id: "workflow-1",
+        version: 1,
+        general: {
+          name: "Login flow",
+          description: "Signs into the QA account",
+          tags: ["qa"],
+          notes: "",
+          created_at: "1",
+          updated_at: "1",
+        },
+        execution: {
+          default_action_timeout_ms: null,
+          default_retry_attempts: null,
+          default_retry_interval_ms: null,
+          max_workflow_duration_ms: null,
+          browser_retention: "retain",
+          failure_policy: "stop_on_first_failure",
+          batch_concurrency_limit: null,
+          batch_headless: false,
+          batch_stop_on_first_failed_row: false,
+          output_retention_days: null,
+        },
+        browser: {
+          profile_name: null,
+          proxy_enabled: false,
+          proxy_server: null,
+          proxy_username: null,
+          proxy_password: null,
+          user_agent: null,
+          viewport_width: null,
+          viewport_height: null,
+          mobile: false,
+          touch: false,
+          challenge_policy: "none",
+          headless: false,
+        },
+        environment: {
+          geolocation: null,
+          permissions: [],
+          extra_http_headers: [],
+          locale: null,
+          timezone: null,
+          download_directory: null,
+          cookies: [],
+          local_storage: [],
+          session_storage: [],
+          session_restore_ref: null,
+        },
+        inputs: {
+          input_schema: [],
+          initial_variables: [],
+          batch_mapping: [],
+        },
+        triggers: {
+          enabled: false,
+          mode: "manual",
+          interval_seconds: null,
+          once_at: null,
+          input_source: null,
+          batch_source_ref: null,
+          missed_run_policy: "skip",
+          concurrency_policy: "skip_if_running",
+          last_run_at: null,
+          next_run_at: null,
+        },
+        advanced: {
+          compatibility_warnings: [],
+          debug_logging_level: "off",
+          experimental_flags: [],
+        },
+        created_at: "1",
+        updated_at: "1",
+      },
+      save_workflow_settings_section: undefined,
     });
 
     renderApp();
@@ -80,16 +154,29 @@ describe("Workflow list integration", () => {
       .toBeInTheDocument();
 
     await userEvent.click(await screen.findByRole("button", { name: "Edit Login flow" }));
-    const dialog = await screen.findByRole("dialog", { name: "Edit Workflow" });
+    const dialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
+
+    expect(within(dialog).getByRole("tab", { name: "General" }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(within(dialog).getByLabelText("Workflow name")).toHaveValue("Login flow");
+    expect(within(dialog).getByLabelText("Description")).toHaveValue(
+      "Signs into the QA account",
+    );
+    expect(within(dialog).getByLabelText("Tags")).toHaveValue("qa");
 
     await userEvent.clear(within(dialog).getByLabelText("Workflow name"));
     await userEvent.type(within(dialog).getByLabelText("Workflow name"), "Updated login flow");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save General" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("rename_workflow", {
-        id: "workflow-1",
-        name: "Updated login flow",
+      expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
+        workflowId: "workflow-1",
+        section: "general",
+        sectionValue: expect.objectContaining({
+          name: "Updated login flow",
+          description: "Signs into the QA account",
+          tags: ["qa"],
+        }),
       });
     });
   });

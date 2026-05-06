@@ -29,18 +29,22 @@
   .workflow-graph-layout,
   .graph-runtime-grid,
   .graph-shortcut-guide,
+  .workflow-settings-body,
   .browser-config-grid,
+  .workflow-settings-grid,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
   }
 
   .browser-config-header,
+  .workflow-settings-section-header,
   .run-issue-header,
   .run-issue-item {
     display: grid;
   }
 
   .browser-config-actions,
+  .workflow-settings-actions,
   .run-issue-header-actions,
   .run-issue-actions {
     justify-content: stretch;
@@ -104,6 +108,23 @@
   }
 
   .action-category {
+    flex: 0 0 auto;
+  }
+
+  .workflow-settings-dialog {
+    width: min(100vw - 24px, 680px);
+  }
+
+  .workflow-settings-sidebar {
+    display: flex;
+    overflow-x: auto;
+    padding-right: 0;
+    padding-bottom: 8px;
+    border-right: 0;
+    border-bottom: 1px solid #242424;
+  }
+
+  .workflow-settings-tab {
     flex: 0 0 auto;
   }
 }

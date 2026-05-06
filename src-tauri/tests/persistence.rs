@@ -6,7 +6,7 @@ use workflow_automation_manager_lib::{
     domain::{
         ActionConfig, GraphEdge, GraphNode, GraphNodeType, GraphPort, GraphPortDirection,
         GraphPosition, GraphViewport, InputTypingMode, ScrollDirection, WaitCondition,
-        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
+        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph, WorkflowSettings,
     },
     repositories::WorkflowRepository,
 };
@@ -372,6 +372,63 @@ async fn workflow_browser_config_persists_round_trips_and_cascades() {
         .get_workflow_browser_config(&workflow.id)
         .await
         .expect("get deleted browser config")
+        .is_none());
+}
+
+#[tokio::test]
+async fn workflow_settings_persist_round_trip_lazy_defaults_and_cascade() {
+    let (repo, _db_path) = test_repository().await;
+    let workflow = repo.create_workflow("Settings flow").await.expect("create");
+
+    let defaults = repo
+        .get_workflow_settings(&workflow.id)
+        .await
+        .expect("get settings")
+        .expect("workflow exists");
+    assert_eq!(defaults.workflow_id, workflow.id);
+    assert_eq!(defaults.general.name, "Settings flow");
+    assert_eq!(
+        defaults.browser.challenge_policy,
+        WorkflowBrowserChallengePolicy::None
+    );
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.general.name = "Settings flow updated".to_string();
+    settings.general.description = "Runs with a dedicated launch profile".to_string();
+    settings.general.tags = vec!["qa".to_string(), "login".to_string()];
+    settings.browser.profile_name = Some("release".to_string());
+    settings.browser.proxy_enabled = true;
+    settings.browser.proxy_server = Some("http://proxy.local:8080".to_string());
+    settings.execution.default_action_timeout_ms = Some(5000);
+
+    repo.save_workflow_settings(settings.clone())
+        .await
+        .expect("save settings");
+
+    let loaded = repo
+        .get_workflow_settings(&workflow.id)
+        .await
+        .expect("get saved settings")
+        .expect("settings exist");
+    assert_eq!(loaded.general.name, "Settings flow updated");
+    assert_eq!(loaded.general.tags, vec!["qa", "login"]);
+    assert_eq!(loaded.browser.profile_name.as_deref(), Some("release"));
+    assert_eq!(loaded.execution.default_action_timeout_ms, Some(5000));
+
+    let renamed = repo
+        .get_workflow(&workflow.id)
+        .await
+        .expect("get workflow")
+        .expect("workflow exists");
+    assert_eq!(renamed.workflow.name, "Settings flow updated");
+
+    repo.delete_workflow(&workflow.id)
+        .await
+        .expect("delete workflow");
+    assert!(repo
+        .get_workflow_settings(&workflow.id)
+        .await
+        .expect("get deleted settings")
         .is_none());
 }
 

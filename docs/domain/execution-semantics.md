@@ -11,6 +11,10 @@
 - Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
+- `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
+- Environment defaults from Workflow Settings compile into setup actions before graph actions: geolocation, permission grants, extra headers, download directory, cookies, localStorage, and sessionStorage.
+- Inputs & Variables settings seed the runtime variable store before graph actions. Required inputs without a saved default block manual runs until a per-run value source exists.
+- Execution settings fill missing action `timeout_ms` fields from `default_action_timeout_ms`; action-level timeouts remain more specific.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
@@ -30,8 +34,8 @@
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by `AppState::finish_run`.
 - `AppState::finish_run` captures runtime outputs before retaining the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
-- Workflow-level browser runtime config can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts.
-- When a workflow has no persisted browser runtime config row, launch setup falls back to legacy profile/proxy/user-agent/viewport action config inference for compatibility.
+- Workflow Settings Browser can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts.
+- Legacy browser config commands are compatibility wrappers over Workflow Settings Browser.
 - Temporary user data directories are used unless a profile action config selects a persistent profile.
 
 ## Cancellation
