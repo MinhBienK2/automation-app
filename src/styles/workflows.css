@@ -343,6 +343,13 @@
   line-height: 1.35;
 }
 
+.run-issue-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 .run-issue-header-actions,
 .run-issue-actions {
   display: flex;
@@ -359,6 +366,10 @@
 .run-issue-header p {
   margin-top: 6px;
   color: #b4b4b4;
+}
+
+.run-issue-header .run-issue-stale-note {
+  color: #facc15;
 }
 
 .run-issue-list {

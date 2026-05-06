@@ -35,6 +35,7 @@ type WorkflowDetailPageProps = {
   browserConfig: WorkflowBrowserConfig | null;
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
+  graphIssuesNeedRecheck: boolean;
   onBack: () => void;
   onBrowserConfigChange: (config: WorkflowBrowserConfig) => void;
   onSaveBrowserConfig: () => boolean | Promise<boolean>;
@@ -55,6 +56,7 @@ export function WorkflowDetailPage({
   browserConfig,
   workflowGraph,
   graphIssues,
+  graphIssuesNeedRecheck,
   onBack,
   onBrowserConfigChange,
   onSaveBrowserConfig,
@@ -68,8 +70,14 @@ export function WorkflowDetailPage({
     useState<GraphSelectionRequest | null>(null);
   const [isBrowserConfigOpen, setIsBrowserConfigOpen] = useState(false);
   const runIssues = useMemo(
-    () => buildRunIssues({ appError, graphIssues, runState }),
-    [appError, graphIssues, runState],
+    () =>
+      buildRunIssues({
+        appError,
+        graphIssues,
+        graphIssuesNeedRecheck,
+        runState,
+      }),
+    [appError, graphIssues, graphIssuesNeedRecheck, runState],
   );
   const totalBlockingIssues = graphIssues.filter((issue) => issue.level === "error").length;
   const hasBlockingIssues = totalBlockingIssues > 0;
@@ -177,6 +185,7 @@ export function WorkflowDetailPage({
 
       <RunIssuePanel
         issues={runIssues}
+        issuesNeedRecheck={graphIssuesNeedRecheck}
         totalBlockingIssues={totalBlockingIssues}
         onRunAgain={onRunGraph}
         onSaveAgain={onSaveGraph}

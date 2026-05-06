@@ -495,24 +495,28 @@ export type RunIssue = {
 
 export function buildRunIssues({
   appError,
+  graphIssuesNeedRecheck = false,
   graphIssues,
   runState,
 }: {
   appError: string;
+  graphIssuesNeedRecheck?: boolean;
   graphIssues: GraphValidationIssue[];
   runState: RunState;
 }): RunIssue[] {
   const blockingIssues = graphIssues.filter((issue) => issue.level === "error");
-  if (blockingIssues.length) {
-    return blockingIssues.slice(0, 5).map((issue, index) => ({
-      id: `blocking-${issue.node_id ?? issue.edge_id ?? index}-${issue.message}`,
-      severity: "blocking",
-      title: issue.message,
-      message: issueMessageContext(issue),
-      node_id: issue.node_id,
-      edge_id: issue.edge_id,
-      suggestions: [],
-    }));
+  const blockingRunIssues: RunIssue[] = blockingIssues.slice(0, 5).map((issue, index) => ({
+    id: `blocking-${issue.node_id ?? issue.edge_id ?? index}-${issue.message}`,
+    severity: "blocking",
+    title: issue.message,
+    message: issueMessageContext(issue),
+    node_id: issue.node_id,
+    edge_id: issue.edge_id,
+    suggestions: [],
+  }));
+
+  if (blockingRunIssues.length && !graphIssuesNeedRecheck) {
+    return blockingRunIssues;
   }
 
   if (runState.status === "failed" && runState.error) {
@@ -532,6 +536,7 @@ export function buildRunIssues({
           runState.error.action_type,
         ),
       },
+      ...blockingRunIssues,
     ];
   }
 
@@ -544,7 +549,12 @@ export function buildRunIssues({
         message: appError.trim(),
         suggestions: [],
       },
+      ...blockingRunIssues,
     ];
+  }
+
+  if (blockingRunIssues.length) {
+    return blockingRunIssues;
   }
 
   return [];

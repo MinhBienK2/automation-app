@@ -203,6 +203,37 @@ describe("Workflow detail integration", () => {
       .toBeInTheDocument();
   });
 
+  test("keeps graph issues visible after an edit and marks them for recheck", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([sleepStep]),
+      validate_workflow_graph: [
+        {
+          level: "error",
+          node_id: "step-1",
+          edge_id: null,
+          message: "Choose an action type before running this node",
+        },
+      ],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(screen.getByRole("button", { name: "Validate" }));
+    const panel = await screen.findByRole("region", { name: "Run issues" });
+
+    await userEvent.click(screen.getByRole("button", { name: "New node" }));
+
+    expect(within(panel).getByText("Needs recheck")).toBeInTheDocument();
+    expect(within(panel).getByText("Run issues may be out of date after graph edits."))
+      .toBeInTheDocument();
+    expect(within(panel).getByText("Choose an action type before running this node"))
+      .toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Validate again" }))
+      .toBeInTheDocument();
+  });
+
   test("disables graph run actions while running and polls final failure", async () => {
     let runStateCalls = 0;
     mockTauriCommands({

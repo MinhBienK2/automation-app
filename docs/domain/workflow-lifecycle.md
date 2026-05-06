@@ -36,6 +36,7 @@
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
+- Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
 - `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, expands subworkflow nodes through the command layer, and starts the existing runner path.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 

@@ -50,7 +50,9 @@ Preserve these unless the task explicitly changes them.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
+- Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
 - Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure.
+- Selecting a graph node or link must not replace amber validation or red failure color with cyan selection color. Selection can add a secondary ring or emphasis while preserving the issue/failure color.
 
 ## Command Boundary
 

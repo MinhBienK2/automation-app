@@ -112,6 +112,7 @@ function App() {
   const [graphRevision, setGraphRevision] = useState(0);
   const [savedGraphRevision, setSavedGraphRevision] = useState(0);
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
+  const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [workflowDialogMode, setWorkflowDialogMode] =
     useState<WorkflowDialogMode>(null);
@@ -208,6 +209,7 @@ function App() {
         setWorkflowGraph(null);
         setBrowserConfig(null);
         setGraphIssues([]);
+        setGraphIssuesNeedRecheck(false);
         setAppError("Workflow not found");
         return;
       }
@@ -231,6 +233,7 @@ function App() {
       setSavedGraphRevision(0);
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
       setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
       setRunState((current) =>
         current.status === "running" ? current : initialRunState,
       );
@@ -300,6 +303,7 @@ function App() {
       setWorkflowGraph(null);
       setBrowserConfig(null);
       setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
       setScreen("list");
     }
     await loadWorkflows();
@@ -352,12 +356,15 @@ function App() {
       const browserConfigSaved = await persistBrowserConfig();
       if (!browserConfigSaved) return;
       const state = await runWorkflowCommand(detail.workflow.id);
+      setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
       setRunState(normalizeRunState(state));
     } catch (error) {
       setAppError(commandMessage(error));
       if (workflowGraph) {
         try {
           setGraphIssues(await validateWorkflowGraph(workflowGraph));
+          setGraphIssuesNeedRecheck(false);
         } catch {
           // Keep the command error as the primary system issue when validation cannot run.
         }
@@ -371,6 +378,7 @@ function App() {
 
     try {
       setGraphIssues(await validateWorkflowGraph(workflowGraph));
+      setGraphIssuesNeedRecheck(false);
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -421,14 +429,14 @@ function App() {
 
   const changeWorkflowGraph = useCallback((nextGraph: WorkflowGraph) => {
     setWorkflowGraph(nextGraph);
-    setGraphIssues([]);
+    setGraphIssuesNeedRecheck((current) => current || graphIssues.length > 0);
     setGraphRevision((current) => {
       const nextRevision = current + 1;
       graphRevisionRef.current = nextRevision;
       return nextRevision;
     });
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
-  }, [graphAutosaveEnabled]);
+  }, [graphAutosaveEnabled, graphIssues.length]);
 
   const changeBrowserConfig = useCallback((nextConfig: WorkflowBrowserConfig) => {
     setBrowserConfig(nextConfig);
@@ -462,6 +470,7 @@ function App() {
             browserConfig={browserConfig}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
+            graphIssuesNeedRecheck={graphIssuesNeedRecheck}
             onBack={backToList}
             onBrowserConfigChange={changeBrowserConfig}
             onSaveBrowserConfig={saveBrowserConfig}

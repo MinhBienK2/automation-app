@@ -160,6 +160,25 @@ describe("App CSS", () => {
     expect(validTargetHandle).toContain("background: #00c573");
   });
 
+  test("keeps graph error colors dominant when issue or failed items are selected", () => {
+    const selectedNode = cssRule(".graph-node-selected");
+    const selectedIssueNode = cssRule(".graph-node-has-issue.graph-node-selected");
+    const selectedFailedNode = cssRule(".graph-node-failed.graph-node-selected");
+    const selectedIssueEdge = cssRule(
+      ".graph-canvas .graph-edge-has-issue.graph-edge-selected .react-flow__edge-path",
+    );
+    const selectedFailedEdge = cssRule(
+      ".graph-canvas .graph-edge-failed.graph-edge-selected .react-flow__edge-path",
+    );
+
+    expect(selectedNode).not.toContain("border-color: rgba(34, 211, 238");
+    expect(selectedNode).toContain("outline: 2px solid rgba(34, 211, 238");
+    expect(selectedIssueNode).toContain("border-color: rgba(251, 191, 36");
+    expect(selectedFailedNode).toContain("border-color: rgba(248, 113, 113");
+    expect(selectedIssueEdge).toContain("stroke: #fbbf24");
+    expect(selectedFailedEdge).toContain("stroke: #ff7b72");
+  });
+
   test("keeps variable rows tabular while protecting narrow inspectors from overflow", () => {
     const variableTable = cssRule(".variable-row-table");
     const variableGrid = cssRule(".variable-row-grid");

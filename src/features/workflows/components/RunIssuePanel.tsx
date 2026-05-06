@@ -5,6 +5,7 @@ import { Badge } from "../../../components/ui/badge";
 
 type RunIssuePanelProps = {
   issues: RunIssue[];
+  issuesNeedRecheck?: boolean;
   totalBlockingIssues: number;
   onRunAgain: () => void;
   onSaveAgain: () => void;
@@ -15,6 +16,7 @@ type RunIssuePanelProps = {
 
 export function RunIssuePanel({
   issues,
+  issuesNeedRecheck = false,
   totalBlockingIssues,
   onRunAgain,
   onSaveAgain,
@@ -32,14 +34,22 @@ export function RunIssuePanel({
     <section className="run-issue-panel panel" aria-label="Run issues">
       <div className="run-issue-header">
         <div>
-          <Badge variant={firstIssue.severity === "runtime" ? "destructive" : "default"}>
-            {issueSeverityLabel(firstIssue.severity)}
-          </Badge>
+          <div className="run-issue-badges">
+            <Badge variant={firstIssue.severity === "runtime" ? "destructive" : "default"}>
+              {issueSeverityLabel(firstIssue.severity)}
+            </Badge>
+            {issuesNeedRecheck ? <Badge variant="secondary">Needs recheck</Badge> : null}
+          </div>
           <h2>{header}</h2>
           {summary ? <p>{summary}</p> : null}
+          {issuesNeedRecheck ? (
+            <p className="run-issue-stale-note">
+              Run issues may be out of date after graph edits.
+            </p>
+          ) : null}
         </div>
         <div className="run-issue-header-actions">
-          {firstIssue.severity === "blocking" ? (
+          {firstIssue.severity === "blocking" || issuesNeedRecheck ? (
             <Button type="button" variant="secondary" onClick={onValidateAgain}>
               <RotateCw aria-hidden="true" />
               Validate again
