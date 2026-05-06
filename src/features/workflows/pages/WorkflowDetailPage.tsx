@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import type {
   GraphValidationIssue,
   RunState,
@@ -8,6 +9,13 @@ import type {
 } from "../../../types/workflow";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button } from "../../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
 import { buildRunIssues } from "../../../lib/workflowUi";
 import { RunIssuePanel } from "../components/RunIssuePanel";
 import { RunStatusBar } from "../components/RunStatusBar";
@@ -58,6 +66,7 @@ export function WorkflowDetailPage({
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
+  const [isBrowserConfigOpen, setIsBrowserConfigOpen] = useState(false);
   const runIssues = useMemo(
     () => buildRunIssues({ appError, graphIssues, runState }),
     [appError, graphIssues, runState],
@@ -97,6 +106,16 @@ export function WorkflowDetailPage({
         onBack={onBack}
         actions={
           <div className={isRunning ? "run-actions run-actions-with-stop" : "run-actions"}>
+            {browserConfig ? (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setIsBrowserConfigOpen(true)}
+              >
+                <SlidersHorizontal aria-hidden="true" />
+                Runtime
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               type="button"
@@ -128,14 +147,29 @@ export function WorkflowDetailPage({
         }
       />
 
-      {browserConfig ? (
-        <WorkflowBrowserConfigPanel
-          config={browserConfig}
-          saveStatus={browserConfigSaveStatus}
-          onChange={onBrowserConfigChange}
-          onSave={onSaveBrowserConfig}
-        />
-      ) : null}
+      <Dialog open={isBrowserConfigOpen} onOpenChange={setIsBrowserConfigOpen}>
+        {browserConfig ? (
+          <DialogContent className="browser-config-dialog">
+            <DialogHeader className="browser-config-dialog-header">
+              <div>
+                <p className="eyebrow">Workflow launch</p>
+                <DialogTitle>Browser Runtime</DialogTitle>
+              </div>
+              <DialogDescription>
+                Configure the browser profile, network, device, and challenge policy
+                applied before this workflow runs.
+              </DialogDescription>
+            </DialogHeader>
+            <WorkflowBrowserConfigPanel
+              config={browserConfig}
+              saveStatus={browserConfigSaveStatus}
+              onCancel={() => setIsBrowserConfigOpen(false)}
+              onChange={onBrowserConfigChange}
+              onSave={onSaveBrowserConfig}
+            />
+          </DialogContent>
+        ) : null}
+      </Dialog>
 
       <RunIssuePanel
         issues={runIssues}

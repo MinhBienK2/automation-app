@@ -61,7 +61,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Switch Frame, Accept Dialog, Dismiss Dialog, Choose Download Folder, and Wait For Download action nodes.
 7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
 8. Add Use Profile, Save Session, Load Session, Set Cookie, Clear Cookies, and Set Secret action nodes.
-9. Configure the workflow browser runtime profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy from the detail screen. Also confirm Set Geolocation, Set Request Headers, and Grant Permission action nodes remain available.
+9. Open Runtime from the workflow detail header and configure the workflow browser runtime profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy. Also confirm Set Geolocation, Set Request Headers, and Grant Permission action nodes remain available.
 10. Confirm hidden compatibility action nodes such as Detect Challenge, Pause For Human, and Resume When Condition still load and show inspector/help when present in an imported or existing workflow.
 11. Confirm hidden compatibility reliability actions such as Fallback Selector, Retry Step, and Checkpoint still load and show inspector/help when present in an imported or existing workflow.
 12. Export a workflow, import it back, validate an interval schedule, and run a batch with at least two input rows.

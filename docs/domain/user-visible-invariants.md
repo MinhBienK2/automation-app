@@ -7,7 +7,7 @@ Preserve these unless the task explicitly changes them.
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
-- Workflow detail includes workflow-level browser runtime config for launch profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy.
+- Workflow detail exposes workflow-level browser runtime config from a header Runtime dialog for launch profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.

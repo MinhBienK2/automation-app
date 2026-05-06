@@ -93,7 +93,7 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
-  test("edits and saves workflow browser runtime config from workflow detail", async () => {
+  test("opens, edits, and saves workflow browser runtime config from the header dialog", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),
       get_workflow_browser_config: {
@@ -116,14 +116,33 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    const configPanel = await screen.findByRole("region", {
-      name: "Browser runtime config",
+    expect(screen.queryByRole("dialog", { name: "Browser Runtime" }))
+      .not.toBeInTheDocument();
+
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Runtime" }));
+    const configPanel = await screen.findByRole("dialog", {
+      name: "Browser Runtime",
     });
 
     expect(within(configPanel).getByLabelText("Profile name")).toHaveValue(
       "qa-profile",
     );
     expect(within(configPanel).getByLabelText("Proxy enabled")).toBeChecked();
+    expect(within(configPanel).getByPlaceholderText("qa-profile")).toBeInTheDocument();
+    expect(within(configPanel).getByPlaceholderText("WorkflowBot/1.0")).toBeInTheDocument();
+    expect(within(configPanel).getByPlaceholderText("http://proxy.local:8080")).toBeInTheDocument();
+    expect(within(configPanel).getByPlaceholderText("agent")).toBeInTheDocument();
+    expect(within(configPanel).getByPlaceholderText("secret")).toBeInTheDocument();
+    expect(within(configPanel).getByPlaceholderText("1280")).toBeInTheDocument();
+    expect(within(configPanel).getByPlaceholderText("720")).toBeInTheDocument();
+    expect(
+      within(configPanel).getByText(
+        "You can also paste a full proxy URL with credentials, e.g. http://agent:secret@proxy.local:8080",
+      ),
+    ).toBeInTheDocument();
     await userEvent.clear(within(configPanel).getByLabelText("Profile name"));
     await userEvent.type(within(configPanel).getByLabelText("Profile name"), "release");
     await userEvent.clear(within(configPanel).getByLabelText("Viewport width"));

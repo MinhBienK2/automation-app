@@ -148,13 +148,13 @@
 }
 
 .page-detail-header .run-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: min(420px, 100%);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(560px, 100%);
 }
 
 .page-detail-header .run-actions-with-stop {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  width: min(520px, 100%);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: min(680px, 100%);
 }
 
 .field-error {
@@ -204,47 +204,88 @@
   color: #fca5a5;
 }
 
-.browser-config-panel,
-.run-issue-panel {
+.browser-config-dialog {
+  width: min(860px, calc(100vw - 48px));
+  max-height: min(820px, calc(100dvh - 48px));
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border-color: #363636;
+}
+
+.browser-config-dialog-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #242424;
+}
+
+.browser-config-dialog-header .eyebrow {
+  margin-bottom: 6px;
+}
+
+.browser-config-panel {
   display: grid;
   gap: 14px;
-  padding: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
-.browser-config-header,
-.run-issue-header {
+.browser-config-status-row {
   display: flex;
-  gap: 16px;
-  align-items: start;
-  justify-content: space-between;
-}
-
-.browser-config-header h2,
-.run-issue-header h2 {
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1.35;
-}
-
-.browser-config-actions,
-.run-issue-header-actions,
-.run-issue-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-  justify-content: end;
-}
-
-.browser-config-actions span {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 9px 11px;
+  border: 1px solid rgba(62, 207, 142, 0.28);
+  border-radius: 8px;
+  background: rgba(62, 207, 142, 0.04);
   color: #898989;
   font-size: 13px;
 }
 
+.browser-config-status-row strong {
+  color: #3ecf8e;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.browser-config-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.browser-config-section legend {
+  padding: 0 6px;
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .browser-config-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.browser-config-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.browser-config-grid-proxy {
+  grid-template-columns: minmax(150px, 0.7fr) repeat(2, minmax(0, 1fr));
+}
+
+.browser-config-proxy-server {
+  grid-column: span 2;
+}
+
+.browser-config-grid-device {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .browser-config-toggle {
@@ -256,13 +297,59 @@
   padding: 10px 12px;
   border: 1px solid #2e2e2e;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #171717;
 }
 
 .browser-config-toggle input {
   width: 16px;
   height: 16px;
   accent-color: #3ecf8e;
+}
+
+.browser-config-hint {
+  color: #898989;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.browser-config-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #242424;
+  background: #171717;
+}
+
+.run-issue-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.run-issue-header {
+  display: flex;
+  gap: 16px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.run-issue-header h2 {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.run-issue-header-actions,
+.run-issue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: end;
 }
 
 .run-issue-panel {

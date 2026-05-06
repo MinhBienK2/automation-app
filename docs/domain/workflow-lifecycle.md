@@ -13,6 +13,7 @@
 - UI calls `get_workflow_graph`.
 - UI calls `get_workflow_browser_config` for workflow-level launch settings.
 - Saved graph JSON is loaded when present; compatibility fallback can render a generated linear graph from legacy ordered steps.
+- The workflow detail header exposes a Runtime action that opens workflow-level browser launch settings in a dialog.
 - UI does not select or store a current list step.
 
 ## Edit Visual Graph
