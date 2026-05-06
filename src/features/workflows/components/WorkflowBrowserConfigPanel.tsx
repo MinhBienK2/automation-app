@@ -13,7 +13,7 @@ type WorkflowBrowserConfigPanelProps = {
   saveStatus: string;
   onCancel?: () => void;
   onChange: (config: WorkflowBrowserConfig) => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 };
 
 export function WorkflowBrowserConfigPanel({

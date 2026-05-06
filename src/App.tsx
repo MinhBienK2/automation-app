@@ -381,7 +381,7 @@ function App() {
   }
 
   async function saveBrowserConfig() {
-    await persistBrowserConfig({ force: true });
+    return persistBrowserConfig({ force: true });
   }
 
   async function stopRun() {

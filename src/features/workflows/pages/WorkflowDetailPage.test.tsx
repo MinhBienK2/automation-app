@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import {
@@ -168,6 +168,10 @@ describe("Workflow detail integration", () => {
         touch: true,
         challenge_policy: "detect_only",
       }),
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Browser Runtime" }))
+        .not.toBeInTheDocument();
     });
   });
 

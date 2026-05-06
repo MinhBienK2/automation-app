@@ -37,7 +37,7 @@ type WorkflowDetailPageProps = {
   graphIssues: GraphValidationIssue[];
   onBack: () => void;
   onBrowserConfigChange: (config: WorkflowBrowserConfig) => void;
-  onSaveBrowserConfig: () => void;
+  onSaveBrowserConfig: () => boolean | Promise<boolean>;
   onStopRun: () => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
@@ -86,6 +86,10 @@ export function WorkflowDetailPage({
       nodeId: null,
       edgeId,
     });
+  };
+  const saveBrowserConfigFromDialog = async () => {
+    const saved = await onSaveBrowserConfig();
+    if (saved) setIsBrowserConfigOpen(false);
   };
 
   return (
@@ -165,7 +169,7 @@ export function WorkflowDetailPage({
               saveStatus={browserConfigSaveStatus}
               onCancel={() => setIsBrowserConfigOpen(false)}
               onChange={onBrowserConfigChange}
-              onSave={onSaveBrowserConfig}
+              onSave={saveBrowserConfigFromDialog}
             />
           </DialogContent>
         ) : null}
