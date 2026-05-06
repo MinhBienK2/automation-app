@@ -132,4 +132,10 @@
   .workflow-settings-help-header {
     padding-right: 32px;
   }
+
+  .workflow-card .row-actions {
+    grid-template-columns: repeat(4, 40px);
+    justify-content: end;
+    width: auto;
+  }
 }

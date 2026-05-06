@@ -6,10 +6,12 @@ import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
+  exportWorkflow,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
+  importWorkflow,
   listWorkflows,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
@@ -323,6 +325,32 @@ function App() {
     await loadWorkflows();
   }
 
+  async function duplicateWorkflow(workflow: WorkflowSummary) {
+    setAppError("");
+    const copyName = `Copy of ${workflow.name}`;
+
+    try {
+      const exported = await exportWorkflow(workflow.id);
+      const graph = await getWorkflowGraph(workflow.id);
+      const imported = await importWorkflow(exported);
+      const copiedWorkflowId = imported.workflow.id;
+
+      await saveWorkflowGraph(copiedWorkflowId, graph);
+      await renameWorkflowCommand(copiedWorkflowId, copyName);
+
+      if (exported.settings) {
+        await saveWorkflowSettingsSection(copiedWorkflowId, "general", {
+          ...exported.settings.general,
+          name: copyName,
+        });
+      }
+
+      await loadWorkflows();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
   async function persistCurrentGraph() {
     if (!detail || !workflowGraph) return;
     setAppError("");
@@ -596,6 +624,7 @@ function App() {
           onSubmitWorkflowDialog={submitWorkflowDialog}
           onOpenCreateWorkflow={openCreateWorkflowDialog}
           onOpenEditWorkflow={openEditWorkflowDialog}
+          onDuplicateWorkflow={duplicateWorkflow}
           onCloseWorkflowDialog={closeWorkflowDialog}
           onOpenWorkflow={openWorkflow}
           onDeleteWorkflow={deleteWorkflow}

@@ -1,3 +1,4 @@
+import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
 import type { WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
@@ -21,6 +22,7 @@ type WorkflowListPageProps = {
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
+  onDuplicateWorkflow: (workflow: WorkflowSummary) => void;
   onCloseWorkflowDialog: () => void;
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
@@ -35,6 +37,7 @@ export function WorkflowListPage({
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
+  onDuplicateWorkflow,
   onCloseWorkflowDialog,
   onOpenWorkflow,
   onDeleteWorkflow,
@@ -80,19 +83,40 @@ export function WorkflowListPage({
                 </div>
               </div>
               <div className="row-actions">
-                <Button shape="pill" type="button" onClick={() => onOpenWorkflow(workflow.id)}>
-                  View Details
+                <Button
+                  aria-label="View Details"
+                  size="icon"
+                  type="button"
+                  onClick={() => onOpenWorkflow(workflow.id)}
+                >
+                  <Eye aria-hidden="true" />
                 </Button>
                 <Button
                   variant="secondary"
+                  size="icon"
                   type="button"
                   aria-label={`Edit ${workflow.name}`}
                   onClick={() => onOpenEditWorkflow(workflow)}
                 >
-                  Edit
+                  <Pencil aria-hidden="true" />
                 </Button>
-                <Button variant="destructive" type="button" onClick={() => onDeleteWorkflow(workflow.id)}>
-                  Delete
+                <Button
+                  aria-label={`Duplicate ${workflow.name}`}
+                  size="icon"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onDuplicateWorkflow(workflow)}
+                >
+                  <Copy aria-hidden="true" />
+                </Button>
+                <Button
+                  aria-label={`Delete ${workflow.name}`}
+                  size="icon"
+                  type="button"
+                  variant="destructive"
+                  onClick={() => onDeleteWorkflow(workflow.id)}
+                >
+                  <Trash2 aria-hidden="true" />
                 </Button>
               </div>
             </Card>

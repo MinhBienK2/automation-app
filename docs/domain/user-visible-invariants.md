@@ -8,6 +8,7 @@ Preserve these unless the task explicitly changes them.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
 - Workflow list `Edit` opens Workflow Settings at General.
+- Workflow list row actions are icon-only controls with accessible labels for View Details, Edit, Duplicate, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and copied settings where available.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
 - Workflow Settings contains General, Execution, Browser, Environment, Inputs & Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it.

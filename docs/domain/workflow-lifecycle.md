@@ -6,6 +6,7 @@
 - Rust validates a non-blank workflow name in `src-tauri/src/domain/workflow.rs`.
 - Repository trims and stores the workflow with timestamps, then creates a `Start -> New node` draft graph. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
+- The workflow list exposes icon-only row actions for view, edit settings, duplicate, and delete. Duplicate exports the source workflow, imports it as a new workflow, copies the saved graph JSON, renames the copy to `Copy of <name>`, saves copied General settings when present, and refreshes the list.
 
 ## Open Detail
 

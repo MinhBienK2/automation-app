@@ -143,8 +143,8 @@
 }
 
 .workflow-card .row-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: 340px;
+  grid-template-columns: repeat(4, 40px);
+  width: auto;
 }
 
 .page-detail-header .run-actions {
