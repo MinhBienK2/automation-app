@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
 import {
   newWorkflow,
@@ -13,10 +13,15 @@ import {
 } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
+import type { WorkflowPackage } from "../../../types/workflow";
 
 describe("Workflow list integration", () => {
   beforeEach(() => {
     resetTauriInvoke();
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:workflow-package"),
+      revokeObjectURL: vi.fn(),
+    });
   });
 
   test("hides legacy step counts and raw updated timestamps from workflow cards", async () => {
@@ -160,6 +165,186 @@ describe("Workflow list integration", () => {
       });
     });
     expect(await screen.findByText("Copy of Login flow")).toBeInTheDocument();
+  });
+
+  test("exports a workflow package from the list", async () => {
+    const workflowPackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Login flow" },
+      included_sections: ["flow", "settings.general", "settings.execution"],
+      omitted_fields: [],
+      flow: linearGraphFromSteps([sleepStep]),
+      settings: {
+        general: {
+          name: "Login flow",
+          description: "",
+          tags: [],
+          notes: "",
+        },
+      },
+    };
+
+    mockTauriCommands({
+      ...listWorkflowScenario([workflow]),
+      export_workflow_package: workflowPackage,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Export Login flow",
+    }));
+    const dialog = await screen.findByRole("dialog", { name: "Export Workflow" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Export" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("export_workflow_package", {
+        workflowId: "workflow-1",
+        options: {
+          include_flow: true,
+          settings_sections: [
+            "general",
+            "execution",
+            "browser",
+            "environment",
+            "inputs",
+            "triggers",
+            "advanced",
+          ],
+        },
+      });
+    });
+  });
+
+  test("imports a workflow package as a new workflow", async () => {
+    const workflowPackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Imported package" },
+      included_sections: ["flow", "settings.general"],
+      omitted_fields: ["settings.browser.proxy_password"],
+      flow: linearGraphFromSteps([sleepStep]),
+      settings: {
+        general: {
+          name: "Imported package",
+          description: "Shared workflow",
+          tags: [],
+          notes: "",
+        },
+      },
+    };
+    const importedWorkflow = {
+      id: "workflow-imported",
+      name: "Imported package (imported)",
+      created_at: "3",
+      updated_at: "3",
+    };
+    let listCalls = 0;
+
+    mockTauriCommands({
+      ...listWorkflowScenario([workflow]),
+      list_workflows: () => {
+        listCalls += 1;
+        return listCalls === 1
+          ? [workflow]
+          : [{ ...importedWorkflow, step_count: 0 }, workflow];
+      },
+      preview_workflow_package: {
+        workflow_name: "Imported package",
+        includes_flow: true,
+        settings_sections: ["general"],
+        omitted_fields: ["settings.browser.proxy_password"],
+      },
+      import_workflow_package: {
+        workflow: importedWorkflow,
+        steps: [],
+      },
+      get_workflow: {
+        workflow: importedWorkflow,
+        steps: [],
+      },
+      get_workflow_graph: workflowPackage.flow,
+      get_workflow_settings: {
+        workflow_id: "workflow-imported",
+        version: 1,
+        general: {
+          name: "Imported package (imported)",
+          description: "Shared workflow",
+          tags: [],
+          notes: "",
+          created_at: "3",
+          updated_at: "3",
+        },
+        execution: {
+          browser_retention: "retain",
+          failure_policy: "stop_on_first_failure",
+          batch_headless: false,
+          batch_stop_on_first_failed_row: false,
+        },
+        browser: {
+          proxy_enabled: false,
+          mobile: false,
+          touch: false,
+          challenge_policy: "none",
+          headless: false,
+        },
+        environment: {
+          permissions: [],
+          extra_http_headers: [],
+          cookies: [],
+          local_storage: [],
+          session_storage: [],
+        },
+        inputs: {
+          input_schema: [],
+          initial_variables: [],
+          batch_mapping: [],
+        },
+        triggers: {
+          enabled: false,
+          mode: "manual",
+          missed_run_policy: "skip",
+          concurrency_policy: "skip_if_running",
+        },
+        advanced: {
+          compatibility_warnings: [],
+          debug_logging_level: "off",
+          experimental_flags: [],
+        },
+      },
+    });
+
+    renderApp();
+
+    const file = new File([JSON.stringify(workflowPackage)], "workflow.json", {
+      type: "application/json",
+    });
+    await userEvent.upload(
+      await screen.findByLabelText("Workflow package file"),
+      file,
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Import Workflow" });
+    expect(within(dialog).getByText("Imported package")).toBeInTheDocument();
+    expect(within(dialog).getByText("Flow")).toBeInTheDocument();
+    expect(within(dialog).getByText("General")).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("preview_workflow_package", {
+        package: workflowPackage,
+      });
+      expect(invokeMock).toHaveBeenCalledWith("import_workflow_package", {
+        package: workflowPackage,
+        options: {
+          include_flow: true,
+          settings_sections: ["general"],
+        },
+      });
+    });
+    expect(await screen.findByRole("button", { name: "Back to Workflows" }))
+      .toBeInTheDocument();
   });
 
   test("opens workflow settings General from the list edit action", async () => {

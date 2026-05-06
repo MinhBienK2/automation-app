@@ -36,6 +36,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Workflow Settings editing through list Edit and detail Settings, section save state, bilingual section help with field-level guidance, and run-before-save orchestration.
+- Workflow Package import/export interaction from the workflow list. Export chooses Flow and selected Workflow Settings sections, downloads package JSON, and relies on backend sanitization. Import reads package JSON, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, and workflow examples with the same modal structure. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.

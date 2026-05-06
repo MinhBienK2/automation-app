@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { invokeMock, resetTauriInvoke } from "../tests/mocks/tauri";
 import {
   exportWorkflow,
+  exportWorkflowPackage,
   dryRunValidateConfig,
   generateFixture,
   compileWorkflowGraph,
@@ -9,6 +10,7 @@ import {
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
+  importWorkflowPackage,
   normalizeRecordedEvents,
   runWorkflow,
   saveWorkflowSettings,
@@ -21,8 +23,14 @@ import {
   validateWorkflowGraph,
   validateWorkflowRun,
   validateSchedule,
+  previewWorkflowPackage,
 } from "./workflowApi";
-import type { WorkflowExport, WorkflowGraph, WorkflowSettings } from "../types/workflow";
+import type {
+  WorkflowExport,
+  WorkflowGraph,
+  WorkflowPackage,
+  WorkflowSettings,
+} from "../types/workflow";
 
 describe("workflow API phase ten commands", () => {
   test("invokes orchestration commands with frontend-safe payloads", async () => {
@@ -105,6 +113,68 @@ describe("workflow API phase ten commands", () => {
     expect(invokeMock).toHaveBeenCalledWith("generate_fixture", {
       path: "/tmp/fixture.html",
       bodyHtml: "<button>Save</button>",
+    });
+  });
+
+  test("invokes workflow package commands with selected sections", async () => {
+    resetTauriInvoke();
+    const workflowPackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Login flow" },
+      included_sections: ["flow", "settings.general", "settings.browser"],
+      omitted_fields: [],
+      flow: {
+        version: 1,
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
+      settings: {
+        general: {
+          name: "Login flow",
+          description: "",
+          tags: [],
+          notes: "",
+        },
+        browser: {
+          proxy_enabled: false,
+          mobile: false,
+          touch: false,
+          challenge_policy: "none",
+          headless: false,
+        },
+      },
+    };
+
+    invokeMock.mockResolvedValue(undefined);
+
+    await exportWorkflowPackage("workflow-1", {
+      include_flow: true,
+      settings_sections: ["general", "browser"],
+    });
+    await previewWorkflowPackage(workflowPackage);
+    await importWorkflowPackage(workflowPackage, {
+      include_flow: true,
+      settings_sections: ["general", "browser"],
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("export_workflow_package", {
+      workflowId: "workflow-1",
+      options: {
+        include_flow: true,
+        settings_sections: ["general", "browser"],
+      },
+    });
+    expect(invokeMock).toHaveBeenCalledWith("preview_workflow_package", {
+      package: workflowPackage,
+    });
+    expect(invokeMock).toHaveBeenCalledWith("import_workflow_package", {
+      package: workflowPackage,
+      options: {
+        include_flow: true,
+        settings_sections: ["general", "browser"],
+      },
     });
   });
 });

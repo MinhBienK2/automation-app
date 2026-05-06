@@ -25,6 +25,7 @@ Frontend and backend must agree on:
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`.
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`.
+- `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 
 ## Browser Config Shape
 
@@ -103,6 +104,36 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
 Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
+
+## Workflow Package Shape
+
+Workflow Package v2 is the current user-facing import/export format. It is graph-first and does not use legacy ordered step rows:
+
+```text
+{
+  kind: "workflow_package",
+  version: 2,
+  workflow: { name },
+  included_sections: ["flow", "settings.general"],
+  omitted_fields: ["settings.browser.proxy_password"],
+  flow: WorkflowGraph | null,
+  settings: {
+    general,
+    execution,
+    browser,
+    environment,
+    inputs,
+    triggers,
+    advanced
+  } // every section optional
+}
+```
+
+Package export options serialize as `{ include_flow, settings_sections }`, where `settings_sections` contains Workflow Settings section ids. Package import uses the same option shape, always creates a new workflow, and remaps selected settings to the new workflow id.
+
+Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import.
+
+Export sanitizes machine-local or sensitive fields by default: `settings.browser.proxy_password`, `settings.environment.download_directory`, `settings.environment.cookies`, `settings.environment.local_storage`, `settings.environment.session_storage`, and `settings.environment.session_restore_ref`.
 
 ## Graph Shape
 

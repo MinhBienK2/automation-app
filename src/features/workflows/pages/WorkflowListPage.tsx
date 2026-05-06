@@ -1,4 +1,4 @@
-import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
+import { Copy, Download, Eye, Pencil, Trash2, Upload } from "lucide-react";
 import type { WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
@@ -23,6 +23,8 @@ type WorkflowListPageProps = {
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
   onDuplicateWorkflow: (workflow: WorkflowSummary) => void;
+  onOpenExportWorkflow: (workflow: WorkflowSummary) => void;
+  onImportWorkflowPackageFile: (file: File | null) => void;
   onCloseWorkflowDialog: () => void;
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
@@ -38,6 +40,8 @@ export function WorkflowListPage({
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
   onDuplicateWorkflow,
+  onOpenExportWorkflow,
+  onImportWorkflowPackageFile,
   onCloseWorkflowDialog,
   onOpenWorkflow,
   onDeleteWorkflow,
@@ -62,6 +66,20 @@ export function WorkflowListPage({
           <div className="header-stats" aria-label="Workflow summary">
             <span>{workflows.length} workflows</span>
           </div>
+          <label className="workflow-import-button">
+            <Upload aria-hidden="true" />
+            Import Workflow
+            <input
+              aria-label="Workflow package file"
+              className="workflow-package-file-input"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                onImportWorkflowPackageFile(event.currentTarget.files?.[0] ?? null);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
           <Button shape="pill" type="button" onClick={onOpenCreateWorkflow}>
             Create Workflow
           </Button>
@@ -108,6 +126,15 @@ export function WorkflowListPage({
                   onClick={() => onDuplicateWorkflow(workflow)}
                 >
                   <Copy aria-hidden="true" />
+                </Button>
+                <Button
+                  aria-label={`Export ${workflow.name}`}
+                  size="icon"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenExportWorkflow(workflow)}
+                >
+                  <Download aria-hidden="true" />
                 </Button>
                 <Button
                   aria-label={`Delete ${workflow.name}`}

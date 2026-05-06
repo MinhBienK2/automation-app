@@ -34,6 +34,9 @@
 - `validate_schedule`
 - `export_workflow`
 - `import_workflow`
+- `export_workflow_package`
+- `preview_workflow_package`
+- `import_workflow_package`
 - `run_batch_workflow`
 - `suggest_selectors`
 - `normalize_recorded_events`
@@ -70,6 +73,18 @@ Keep `CommandError` compatible with frontend error extraction in `src/lib/workfl
   - `validate_workflow_settings`: `{ settings }`
   - `validate_workflow_run`: `{ workflowId }`
 - `run_workflow`: `{ workflowId }`; the frontend saves the current graph first, then this command validates, compiles, and runs the saved graph.
+- Workflow package command payloads:
+  - `export_workflow_package`: `{ workflowId, options }`, where `options` selects `include_flow` and `settings_sections`.
+  - `preview_workflow_package`: `{ package }`; validates package kind/version/name and reports available sections before import.
+  - `import_workflow_package`: `{ package, options }`; always creates a new workflow and never overwrites an existing workflow.
+
+## Workflow Package Commands
+
+`export_workflow_package` is the product-facing import/export path. It emits `workflow_package` version 2 JSON with optional `flow` and partial `settings` sections. Flow uses saved `WorkflowGraph`; Settings sections use the current Workflow Settings contract.
+
+Package export sanitizes machine-local or sensitive settings fields by default. The current sanitizer omits browser proxy passwords, environment download directories, cookies, local storage, session storage, and session restore refs, and lists omitted field paths in `omitted_fields`.
+
+`import_workflow_package` validates the package header and selected Settings sections before creating the new workflow. The imported workflow name is derived as `<package workflow name> (imported)`, selected Flow is saved to the new workflow id, and selected Settings are remapped to the new workflow id with General name updated to the imported name.
 
 ## Retired Product Commands
 

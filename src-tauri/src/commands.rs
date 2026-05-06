@@ -9,8 +9,9 @@ use crate::{
         ClickWaitUntil, CompiledWorkflowGraph, ElementSnapshot, GeneratedFixture,
         GraphValidationIssue, OrchestrationSchedule, RecordedEvent, RunMode, RunStatus,
         RunValidationIssue, SelectorCandidate, SettingsValidationIssue, ValidationError, Workflow,
-        WorkflowBrowserConfig, WorkflowExport, WorkflowGraph, WorkflowSettings,
-        WorkflowSettingsSection,
+        WorkflowBrowserConfig, WorkflowExport, WorkflowGraph, WorkflowPackage,
+        WorkflowPackageExportOptions, WorkflowPackageImportOptions, WorkflowPackagePreview,
+        WorkflowSettings, WorkflowSettingsSection,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
     runner::{RunnerCancellation, RunnerStatus},
@@ -24,7 +25,8 @@ pub use graph::{
     save_workflow_graph_impl, validate_workflow_graph_impl, validate_workflow_run_impl,
 };
 pub use import_export::{
-    export_workflow_impl, import_workflow_impl, normalize_workflow_export_value,
+    export_workflow_impl, export_workflow_package_impl, import_workflow_impl,
+    import_workflow_package_impl, normalize_workflow_export_value, preview_workflow_package_impl,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -690,6 +692,31 @@ pub async fn import_workflow(
 ) -> Result<WorkflowDetail, CommandError> {
     let exported = normalize_workflow_export_value(exported)?;
     import_workflow_impl(&state, exported).await
+}
+
+#[tauri::command]
+pub async fn export_workflow_package(
+    state: State<'_, AppState>,
+    workflow_id: String,
+    options: WorkflowPackageExportOptions,
+) -> Result<WorkflowPackage, CommandError> {
+    export_workflow_package_impl(&state, &workflow_id, options).await
+}
+
+#[tauri::command]
+pub async fn preview_workflow_package(
+    package: WorkflowPackage,
+) -> Result<WorkflowPackagePreview, CommandError> {
+    preview_workflow_package_impl(package)
+}
+
+#[tauri::command]
+pub async fn import_workflow_package(
+    state: State<'_, AppState>,
+    package: WorkflowPackage,
+    options: WorkflowPackageImportOptions,
+) -> Result<WorkflowDetail, CommandError> {
+    import_workflow_package_impl(&state, package, options).await
 }
 
 #[tauri::command]

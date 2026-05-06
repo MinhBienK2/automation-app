@@ -7,12 +7,15 @@ import {
   createWorkflow as createWorkflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
   exportWorkflow,
+  exportWorkflowPackage,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
   importWorkflow,
+  importWorkflowPackage,
   listWorkflows,
+  previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
   saveWorkflowGraph,
@@ -30,11 +33,23 @@ import {
   defaultWorkflowSettings,
 } from "./features/workflows/lib/workflowSettings";
 import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { Button } from "./components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./components/ui/dialog";
+import { Label } from "./components/ui/label";
 import type {
   GraphValidationIssue,
   RunState,
   WorkflowGraph,
   WorkflowDetail,
+  WorkflowPackage,
+  WorkflowPackagePreview,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
@@ -47,6 +62,15 @@ type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
+const workflowPackageSections: WorkflowSettingsSectionId[] = [
+  "general",
+  "execution",
+  "browser",
+  "environment",
+  "inputs",
+  "triggers",
+  "advanced",
+];
 
 function readGraphAutosaveEnabled() {
   try {
@@ -130,6 +154,17 @@ function App() {
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
+  const [exportPackageWorkflow, setExportPackageWorkflow] =
+    useState<WorkflowSummary | null>(null);
+  const [exportPackageIncludeFlow, setExportPackageIncludeFlow] = useState(true);
+  const [exportPackageSections, setExportPackageSections] =
+    useState<WorkflowSettingsSectionId[]>(workflowPackageSections);
+  const [importPackage, setImportPackage] = useState<WorkflowPackage | null>(null);
+  const [importPackagePreview, setImportPackagePreview] =
+    useState<WorkflowPackagePreview | null>(null);
+  const [importPackageIncludeFlow, setImportPackageIncludeFlow] = useState(true);
+  const [importPackageSections, setImportPackageSections] =
+    useState<WorkflowSettingsSectionId[]>([]);
   const [appError, setAppError] = useState("");
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
@@ -346,6 +381,89 @@ function App() {
       }
 
       await loadWorkflows();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  function openExportPackageDialog(workflow: WorkflowSummary) {
+    setAppError("");
+    setExportPackageWorkflow(workflow);
+    setExportPackageIncludeFlow(true);
+    setExportPackageSections(workflowPackageSections);
+  }
+
+  function closeExportPackageDialog() {
+    setExportPackageWorkflow(null);
+    setExportPackageIncludeFlow(true);
+    setExportPackageSections(workflowPackageSections);
+    setAppError("");
+  }
+
+  async function submitExportPackage(event: React.FormEvent) {
+    event.preventDefault();
+    if (!exportPackageWorkflow) return;
+    if (!exportPackageIncludeFlow && exportPackageSections.length === 0) {
+      setAppError("Select at least Flow or one Settings section");
+      return;
+    }
+
+    setAppError("");
+
+    try {
+      const packageValue = await exportWorkflowPackage(exportPackageWorkflow.id, {
+        include_flow: exportPackageIncludeFlow,
+        settings_sections: exportPackageSections,
+      });
+      downloadWorkflowPackage(packageValue);
+      closeExportPackageDialog();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function importWorkflowPackageFile(file: File | null) {
+    if (!file) return;
+    setAppError("");
+
+    try {
+      const packageValue = JSON.parse(await file.text()) as WorkflowPackage;
+      const preview = await previewWorkflowPackage(packageValue);
+      setImportPackage(packageValue);
+      setImportPackagePreview(preview);
+      setImportPackageIncludeFlow(preview.includes_flow);
+      setImportPackageSections(preview.settings_sections);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  function closeImportPackageDialog() {
+    setImportPackage(null);
+    setImportPackagePreview(null);
+    setImportPackageIncludeFlow(true);
+    setImportPackageSections([]);
+    setAppError("");
+  }
+
+  async function submitImportPackage(event: React.FormEvent) {
+    event.preventDefault();
+    if (!importPackage) return;
+    if (!importPackageIncludeFlow && importPackageSections.length === 0) {
+      setAppError("Select at least Flow or one Settings section");
+      return;
+    }
+
+    setAppError("");
+
+    try {
+      const imported = await importWorkflowPackage(importPackage, {
+        include_flow: importPackageIncludeFlow,
+        settings_sections: importPackageSections,
+      });
+      closeImportPackageDialog();
+      await loadWorkflows();
+      await openWorkflow(imported.workflow.id);
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -625,6 +743,8 @@ function App() {
           onOpenCreateWorkflow={openCreateWorkflowDialog}
           onOpenEditWorkflow={openEditWorkflowDialog}
           onDuplicateWorkflow={duplicateWorkflow}
+          onOpenExportWorkflow={openExportPackageDialog}
+          onImportWorkflowPackageFile={importWorkflowPackageFile}
           onCloseWorkflowDialog={closeWorkflowDialog}
           onOpenWorkflow={openWorkflow}
           onDeleteWorkflow={deleteWorkflow}
@@ -648,6 +768,115 @@ function App() {
           await persistWorkflowSettingsSection(section, { force: true });
         }}
       />
+      <Dialog
+        open={Boolean(exportPackageWorkflow)}
+        onOpenChange={(open) => {
+          if (!open) closeExportPackageDialog();
+        }}
+      >
+        {exportPackageWorkflow ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Package</p>
+              <DialogTitle>Export Workflow</DialogTitle>
+              <DialogDescription>
+                Choose the workflow parts to include in the JSON package.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="workflow-dialog-form" onSubmit={submitExportPackage}>
+              <PackageFlowCheckbox
+                checked={exportPackageIncludeFlow}
+                label="Flow"
+                onChange={setExportPackageIncludeFlow}
+              />
+              <PackageSectionPicker
+                availableSections={workflowPackageSections}
+                selectedSections={exportPackageSections}
+                onSelectedSectionsChange={setExportPackageSections}
+              />
+              {appError ? <p className="field-error">{appError}</p> : null}
+              <DialogFooter className="form-actions">
+                <Button shape="pill" type="submit">
+                  Export
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeExportPackageDialog}
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <Dialog
+        open={Boolean(importPackage && importPackagePreview)}
+        onOpenChange={(open) => {
+          if (!open) closeImportPackageDialog();
+        }}
+      >
+        {importPackagePreview ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Package</p>
+              <DialogTitle>Import Workflow</DialogTitle>
+              <DialogDescription>
+                Import creates a new workflow and never overwrites an existing one.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="workflow-dialog-form" onSubmit={submitImportPackage}>
+              <dl className="package-preview-list">
+                <div>
+                  <dt>Name</dt>
+                  <dd>{importPackagePreview.workflow_name}</dd>
+                </div>
+                <div>
+                  <dt>Included</dt>
+                  <dd>
+                    {[
+                      importPackagePreview.includes_flow ? "Flow" : null,
+                      ...importPackagePreview.settings_sections.map(sectionLabel),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </dd>
+                </div>
+              </dl>
+              <PackageFlowCheckbox
+                checked={importPackageIncludeFlow}
+                disabled={!importPackagePreview.includes_flow}
+                label="Flow"
+                onChange={setImportPackageIncludeFlow}
+              />
+              <PackageSectionPicker
+                availableSections={importPackagePreview.settings_sections}
+                selectedSections={importPackageSections}
+                onSelectedSectionsChange={setImportPackageSections}
+              />
+              {importPackagePreview.omitted_fields.length > 0 ? (
+                <p className="muted">
+                  Sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
+                </p>
+              ) : null}
+              {appError ? <p className="field-error">{appError}</p> : null}
+              <DialogFooter className="form-actions">
+                <Button shape="pill" type="submit">
+                  Import
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeImportPackageDialog}
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </AppShell>
   );
 }
@@ -662,6 +891,106 @@ function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     triggers: status,
     advanced: status,
   };
+}
+
+function PackageFlowCheckbox({
+  checked,
+  disabled = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Label className="package-checkbox-field">
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+      />
+      <span>{label}</span>
+    </Label>
+  );
+}
+
+function PackageSectionPicker({
+  availableSections,
+  selectedSections,
+  onSelectedSectionsChange,
+}: {
+  availableSections: WorkflowSettingsSectionId[];
+  selectedSections: WorkflowSettingsSectionId[];
+  onSelectedSectionsChange: (sections: WorkflowSettingsSectionId[]) => void;
+}) {
+  return (
+    <fieldset className="package-section-list">
+      <legend>Settings</legend>
+      {availableSections.length === 0 ? (
+        <p className="muted">No Settings sections in this package.</p>
+      ) : (
+        availableSections.map((section) => (
+          <Label className="package-checkbox-field" key={section}>
+            <input
+              type="checkbox"
+              checked={selectedSections.includes(section)}
+              onChange={(event) => {
+                onSelectedSectionsChange(
+                  event.currentTarget.checked
+                    ? [...selectedSections, section]
+                    : selectedSections.filter((current) => current !== section),
+                );
+              }}
+            />
+            <span>{sectionLabel(section)}</span>
+          </Label>
+        ))
+      )}
+    </fieldset>
+  );
+}
+
+function sectionLabel(section: WorkflowSettingsSectionId) {
+  switch (section) {
+    case "general":
+      return "General";
+    case "execution":
+      return "Execution";
+    case "browser":
+      return "Browser";
+    case "environment":
+      return "Environment";
+    case "inputs":
+      return "Inputs & Variables";
+    case "triggers":
+      return "Triggers";
+    case "advanced":
+      return "Advanced";
+  }
+}
+
+function downloadWorkflowPackage(packageValue: WorkflowPackage) {
+  const blob = new Blob([JSON.stringify(packageValue, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function filenameFromWorkflowName(name: string) {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "workflow";
 }
 
 function isWorkflowSettings(value: unknown): value is WorkflowSettings {

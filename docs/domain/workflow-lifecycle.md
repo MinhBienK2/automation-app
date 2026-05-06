@@ -6,7 +6,8 @@
 - Rust validates a non-blank workflow name in `src-tauri/src/domain/workflow.rs`.
 - Repository trims and stores the workflow with timestamps, then creates a `Start -> New node` draft graph. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
-- The workflow list exposes icon-only row actions for view, edit settings, duplicate, and delete. Duplicate exports the source workflow, imports it as a new workflow, copies the saved graph JSON, renames the copy to `Copy of <name>`, saves copied General settings when present, and refreshes the list.
+- The workflow list exposes icon-only row actions for view, edit settings, duplicate, export, and delete. Duplicate exports the source workflow, imports it as a new workflow, copies the saved graph JSON, renames the copy to `Copy of <name>`, saves copied General settings when present, and refreshes the list.
+- The workflow list header exposes Import Workflow for JSON workflow packages. Import previews the package and always creates a new workflow; it never overwrites an existing workflow.
 
 ## Open Detail
 
@@ -69,6 +70,22 @@
 
 - UI confirms with the user before calling `delete_workflow`.
 - Deleting the selected workflow returns the UI to the list screen.
+
+## Export Workflow Package
+
+- The workflow list Export action opens an Export Workflow dialog.
+- Users choose whether to include Flow and which Workflow Settings sections to include.
+- Export calls `export_workflow_package` and downloads a `workflow_package` version 2 JSON file.
+- Flow export uses the saved `WorkflowGraph`.
+- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including proxy passwords, download directory, cookies, storage rows, and session restore refs.
+
+## Import Workflow Package
+
+- Import Workflow accepts a JSON workflow package file from the workflow list.
+- The UI calls `preview_workflow_package` before import and shows package workflow name, Flow availability, Settings sections, and sanitized omitted fields.
+- Import calls `import_workflow_package` with the selected Flow and Settings sections.
+- Import always creates a new workflow named `<package workflow name> (imported)`, saves selected Flow to the new workflow id, saves selected Settings after remapping `workflow_id`, refreshes the list, and opens the imported workflow.
+- Import does not overwrite or merge into an existing workflow.
 
 ## Preserve
 

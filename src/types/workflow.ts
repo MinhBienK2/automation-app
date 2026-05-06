@@ -922,6 +922,45 @@ export type WorkflowExport = {
   settings?: WorkflowSettings | null;
 };
 
+export type WorkflowPackageExportOptions = {
+  include_flow: boolean;
+  settings_sections: WorkflowSettingsSectionId[];
+};
+
+export type WorkflowPackageImportOptions = {
+  include_flow: boolean;
+  settings_sections: WorkflowSettingsSectionId[];
+};
+
+export type WorkflowPackageSettings = Partial<{
+  general: WorkflowSettingsGeneral;
+  execution: WorkflowSettingsExecution;
+  browser: WorkflowSettingsBrowser;
+  environment: WorkflowSettingsEnvironment;
+  inputs: WorkflowSettingsInputs;
+  triggers: WorkflowSettingsTriggers;
+  advanced: WorkflowSettingsAdvanced;
+}>;
+
+export type WorkflowPackage = {
+  kind: "workflow_package";
+  version: 2;
+  workflow: {
+    name: string;
+  };
+  included_sections: string[];
+  omitted_fields: string[];
+  flow?: WorkflowGraph | null;
+  settings?: WorkflowPackageSettings | null;
+};
+
+export type WorkflowPackagePreview = {
+  workflow_name: string;
+  includes_flow: boolean;
+  settings_sections: WorkflowSettingsSectionId[];
+  omitted_fields: string[];
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;

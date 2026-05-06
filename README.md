@@ -64,7 +64,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 9. Open Settings from the workflow detail header, confirm it opens to Browser, and configure the workflow browser profile, proxy, user agent, viewport, mobile/touch flags, headed/headless default, and challenge policy. Also confirm Workflow Settings has General, Execution, Environment, Inputs & Variables, Triggers, Advanced, and section help.
 10. Confirm hidden compatibility action nodes such as Detect Challenge, Pause For Human, and Resume When Condition still load and show inspector/help when present in an imported or existing workflow.
 11. Confirm hidden compatibility reliability actions such as Fallback Selector, Retry Step, and Checkpoint still load and show inspector/help when present in an imported or existing workflow.
-12. Export a workflow, import it back, validate an interval schedule, and run a batch with at least two input rows.
+12. Export a workflow package with Flow and selected Settings, import it back as a new workflow without overwriting the original, validate an interval schedule, and run a batch with at least two input rows.
 13. Add Run JavaScript, Wait For Request, Wait For Response, Block Request, Mock Response, Set Local Storage, and Set Session Storage action nodes.
 14. Generate selector suggestions from an element snapshot, normalize recorded click/input events, dry-run validate a config, and generate a local fixture HTML file.
 15. Move graph nodes, reopen the workflow, and confirm node positions persist.

@@ -18,6 +18,10 @@ import type {
   Workflow,
   WorkflowDetail,
   WorkflowExport,
+  WorkflowPackage,
+  WorkflowPackageExportOptions,
+  WorkflowPackageImportOptions,
+  WorkflowPackagePreview,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
@@ -127,6 +131,29 @@ export function exportWorkflow(workflowId: string) {
 
 export function importWorkflow(exported: WorkflowExport) {
   return invoke<WorkflowDetail>("import_workflow", { exported });
+}
+
+export function exportWorkflowPackage(
+  workflowId: string,
+  options: WorkflowPackageExportOptions,
+) {
+  return invoke<WorkflowPackage>("export_workflow_package", { workflowId, options });
+}
+
+export function previewWorkflowPackage(packageValue: WorkflowPackage) {
+  return invoke<WorkflowPackagePreview>("preview_workflow_package", {
+    package: packageValue,
+  });
+}
+
+export function importWorkflowPackage(
+  packageValue: WorkflowPackage,
+  options: WorkflowPackageImportOptions,
+) {
+  return invoke<WorkflowDetail>("import_workflow_package", {
+    package: packageValue,
+    options,
+  });
 }
 
 export function runBatchWorkflow(workflowId: string, request: BatchRunRequest) {

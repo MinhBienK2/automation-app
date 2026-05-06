@@ -19,7 +19,8 @@ pub use browser_config::{WorkflowBrowserChallengePolicy, WorkflowBrowserConfig};
 pub use builder_assist::{ElementSnapshot, GeneratedFixture, RecordedEvent, SelectorCandidate};
 pub use orchestration::{
     BatchRunRequest, BatchRunRowResult, BatchRunSummary, OrchestrationSchedule, ScheduleKind,
-    WorkflowExport,
+    WorkflowExport, WorkflowPackage, WorkflowPackageExportOptions, WorkflowPackageImportOptions,
+    WorkflowPackagePreview, WorkflowPackageSettings, WorkflowPackageWorkflow,
 };
 pub use run::{RunError, RunMode, RunStatus};
 pub use validation::ValidationError;

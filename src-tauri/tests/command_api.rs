@@ -13,9 +13,10 @@ use workflow_automation_manager_lib::{
         GraphViewport, HeaderPair, OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind,
         ScrollDirection, VariableAssignment, VariableValueType, WaitCondition,
         WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
-        WorkflowInputValueType, WorkflowSettings, WorkflowSettingsCookie,
-        WorkflowSettingsGeolocation, WorkflowSettingsInputRow, WorkflowSettingsSection,
-        WorkflowSettingsStorageEntry, WorkflowTriggerMode,
+        WorkflowInputValueType, WorkflowPackageExportOptions, WorkflowPackageImportOptions,
+        WorkflowSettings, WorkflowSettingsCookie, WorkflowSettingsGeolocation,
+        WorkflowSettingsInputRow, WorkflowSettingsSection, WorkflowSettingsStorageEntry,
+        WorkflowTriggerMode,
     },
 };
 
@@ -1203,6 +1204,147 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
         imported_settings.browser.profile_name.as_deref(),
         Some("export-profile")
     );
+}
+
+#[tokio::test]
+async fn workflow_package_export_import_round_trips_flow_and_safe_settings() {
+    let (state, _db_path) = test_state().await;
+
+    let workflow = commands::create_workflow_impl(&state, "Package source")
+        .await
+        .expect("create");
+    let graph = sample_graph();
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph.clone())
+        .await
+        .expect("save graph");
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.general.description = "Ready to share".to_string();
+    settings.browser.proxy_enabled = true;
+    settings.browser.proxy_server = Some("http://proxy.local:8080".to_string());
+    settings.browser.proxy_username = Some("operator".to_string());
+    settings.browser.proxy_password = Some("secret".to_string());
+    settings.environment.download_directory = Some("/home/minhbien/downloads".to_string());
+    settings.environment.cookies = vec![WorkflowSettingsCookie {
+        name: "session".to_string(),
+        value: "private".to_string(),
+        domain: Some("example.com".to_string()),
+        path: Some("/".to_string()),
+    }];
+    settings.environment.local_storage = vec![WorkflowSettingsStorageEntry {
+        key: "token".to_string(),
+        value: "private".to_string(),
+    }];
+    settings.environment.session_restore_ref = Some("local-session".to_string());
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    let options = WorkflowPackageExportOptions {
+        include_flow: true,
+        settings_sections: vec![
+            WorkflowSettingsSection::General,
+            WorkflowSettingsSection::Browser,
+            WorkflowSettingsSection::Environment,
+        ],
+    };
+    let package = commands::export_workflow_package_impl(&state, &workflow.id, options)
+        .await
+        .expect("export package");
+
+    assert_eq!(package.kind, "workflow_package");
+    assert_eq!(package.version, 2);
+    assert_eq!(package.workflow.name, "Package source");
+    assert_eq!(package.flow.as_ref(), Some(&graph));
+    assert_eq!(
+        package
+            .settings
+            .as_ref()
+            .and_then(|settings| settings.general.as_ref())
+            .map(|general| general.description.as_str()),
+        Some("Ready to share")
+    );
+    assert_eq!(
+        package
+            .settings
+            .as_ref()
+            .and_then(|settings| settings.browser.as_ref())
+            .and_then(|browser| browser.proxy_password.as_deref()),
+        None
+    );
+    assert!(package
+        .settings
+        .as_ref()
+        .and_then(|settings| settings.environment.as_ref())
+        .is_some_and(|environment| {
+            environment.download_directory.is_none()
+                && environment.cookies.is_empty()
+                && environment.local_storage.is_empty()
+                && environment.session_restore_ref.is_none()
+        }));
+    assert!(package
+        .omitted_fields
+        .iter()
+        .any(|field| field == "settings.browser.proxy_password"));
+
+    let preview = commands::preview_workflow_package_impl(package.clone()).expect("preview");
+    assert_eq!(preview.workflow_name, "Package source");
+    assert!(preview.includes_flow);
+    assert_eq!(
+        preview.settings_sections,
+        vec![
+            WorkflowSettingsSection::General,
+            WorkflowSettingsSection::Browser,
+            WorkflowSettingsSection::Environment
+        ]
+    );
+
+    let imported = commands::import_workflow_package_impl(
+        &state,
+        package,
+        WorkflowPackageImportOptions {
+            include_flow: true,
+            settings_sections: vec![
+                WorkflowSettingsSection::General,
+                WorkflowSettingsSection::Browser,
+                WorkflowSettingsSection::Environment,
+            ],
+        },
+    )
+    .await
+    .expect("import package");
+
+    assert_ne!(imported.workflow.id, workflow.id);
+    assert_eq!(imported.workflow.name, "Package source (imported)");
+    assert_eq!(
+        commands::get_workflow_graph_impl(&state, &imported.workflow.id)
+            .await
+            .expect("imported graph"),
+        graph
+    );
+    let imported_settings = commands::get_workflow_settings_impl(&state, &imported.workflow.id)
+        .await
+        .expect("imported settings");
+    assert_eq!(imported_settings.general.name, "Package source (imported)");
+    assert_eq!(imported_settings.general.description, "Ready to share");
+    assert_eq!(imported_settings.browser.proxy_password, None);
+    assert!(imported_settings.environment.cookies.is_empty());
+    assert_eq!(imported_settings.environment.download_directory, None);
+}
+
+#[test]
+fn workflow_package_preview_rejects_unsupported_versions() {
+    let package = serde_json::json!({
+        "kind": "workflow_package",
+        "version": 999,
+        "workflow": { "name": "Future package" }
+    });
+
+    let package = serde_json::from_value(package).expect("deserialize package");
+    let error = commands::preview_workflow_package_impl(package)
+        .expect_err("unsupported version should fail");
+
+    assert_eq!(error.message, "Unsupported workflow package version");
 }
 
 #[test]

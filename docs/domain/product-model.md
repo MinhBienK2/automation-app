@@ -34,6 +34,8 @@ Users can:
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
 - Configure browser launch behavior for a workflow before running it.
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
+- Export workflow packages containing Flow and selected Workflow Settings sections.
+- Import workflow packages as new workflows without overwriting existing workflows.
 - Configure safe human checkpoints and pacing nodes; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 
 ## Current Source Files
