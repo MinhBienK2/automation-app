@@ -20,7 +20,7 @@ Legacy workflow-level browser runtime config rows still exist for compatibility,
 - New workflows create a `Start -> New node` draft workflow graph with an unconfigured action node saved as `config: null`.
 - Workflow graph authoring data is stored in `workflow_graphs.graph_json` keyed by `workflow_id`.
 - Workflow browser runtime config is stored in `workflow_browser_configs` keyed by `workflow_id`.
-- Workflow Settings are stored in `workflow_settings` keyed by `workflow_id`, with version plus JSON columns for General, Execution, Browser, Environment, Inputs, Triggers, and Advanced.
+- Workflow Settings are stored in `workflow_settings` keyed by `workflow_id`, with version plus JSON columns for General, Execution, Browser, Environment, Inputs, Triggers, and Advanced. The persisted Inputs column remains the compatibility storage for the UI's Variables section.
 - Workflows without a settings row return lazy defaults based on workflow metadata and any legacy browser config row.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Workflows without a graph row still open through a compatibility linear graph fallback.

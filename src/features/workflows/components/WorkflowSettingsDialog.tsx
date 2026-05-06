@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
+  VariableAssignment,
   WorkflowBrowserChallengePolicy,
   WorkflowDebugLoggingLevel,
   WorkflowFailurePolicy,
-  WorkflowInputValueType,
   WorkflowMissedRunPolicy,
   WorkflowSettings,
   WorkflowSettingsAdvanced,
@@ -38,11 +38,17 @@ import {
   detectBrowserDeviceProfile,
   tagsFromInput,
   tagsToInput,
+  variableRowsFromJsonText,
+  variablesJsonFromRows,
   type BrowserDeviceProfileId,
   type WorkflowSettingsHelpLanguage,
   workflowSettingsHelp,
   workflowSettingsSections,
 } from "../lib/workflowSettings";
+import {
+  SetVariablesConfigFields,
+  variableRowsFromConfig,
+} from "./VariableConfigFields";
 
 type WorkflowSettingsDialogProps = {
   open: boolean;
@@ -754,78 +760,92 @@ function InputsSettingsSection({
   value: WorkflowSettingsInputs;
   onChange: (value: WorkflowSettingsInputs) => void;
 }) {
-  const schemaText = value.input_schema
-    .map((row) =>
-      [
-        row.name,
-        row.value_type,
-        row.required ? "required" : "optional",
-        row.default_value ?? "",
-        row.description ?? "",
-      ].join("|"),
-    )
-    .join("\n");
+  const [mode, setMode] = useState<"rows" | "json">("rows");
+  const [draftRows, setDraftRows] = useState<VariableAssignment[]>(() =>
+    value.initial_variables.length ? value.initial_variables : [emptyVariableRow()],
+  );
+  const [jsonText, setJsonText] = useState(() =>
+    variablesJsonFromRows(value.initial_variables),
+  );
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const rows = draftRows.length ? draftRows : [emptyVariableRow()];
 
-  const variablesText = value.initial_variables
-    .map((row) => `${row.name}|${row.value_type}|${row.value}`)
-    .join("\n");
+  function updateVariables(rows: VariableAssignment[]) {
+    const nextRows = rows.length ? rows : [emptyVariableRow()];
+    setDraftRows(nextRows);
+    onChange({
+      ...value,
+      input_schema: [],
+      batch_mapping: [],
+      initial_variables: nextRows.filter((row) => row.name.trim()),
+    });
+  }
+
+  function switchMode(nextMode: "rows" | "json") {
+    if (nextMode === mode) return;
+    if (nextMode === "json") {
+      setJsonText(variablesJsonFromRows(rows.filter((row) => row.name.trim())));
+      setJsonError(null);
+      setMode("json");
+      return;
+    }
+
+    const parsed = variableRowsFromJsonText(jsonText);
+    setJsonError(parsed.error);
+    if (!parsed.error) {
+      updateVariables(parsed.rows);
+      setMode("rows");
+    }
+  }
 
   return (
     <div className="workflow-settings-form">
-      <Label htmlFor="workflow-settings-input-schema">
-        Input schema
-        <Textarea
-          id="workflow-settings-input-schema"
-          placeholder="email|text|required|user@example.com|Login email"
-          value={schemaText}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              input_schema: event.currentTarget.value
-                .split("\n")
-                .map((line) => line.trim())
-                .filter(Boolean)
-                .map((line) => {
-                  const [name, valueType, required, defaultValue, description] = line.split("|");
-                  return {
-                    name: name?.trim() ?? "",
-                    value_type: (valueType?.trim() || "text") as WorkflowInputValueType,
-                    required: required?.trim() === "required",
-                    default_value: nullableText(defaultValue ?? ""),
-                    description: nullableText(description ?? ""),
-                  };
-                }),
-            })
-          }
+      <div className="workflow-settings-mode-toggle" role="group" aria-label="Variable edit mode">
+        <Button
+          type="button"
+          variant={mode === "rows" ? "default" : "secondary"}
+          onClick={() => switchMode("rows")}
+        >
+          Rows
+        </Button>
+        <Button
+          type="button"
+          variant={mode === "json" ? "default" : "secondary"}
+          onClick={() => switchMode("json")}
+        >
+          JSON
+        </Button>
+      </div>
+
+      {mode === "rows" ? (
+        <SetVariablesConfigFields
+          config={{ variables: rows }}
+          onChange={(config) => updateVariables(variableRowsFromConfig(config))}
         />
-      </Label>
-      <Label htmlFor="workflow-settings-initial-variables">
-        Initial variables
-        <Textarea
-          id="workflow-settings-initial-variables"
-          placeholder="user.email|text|user@example.com"
-          value={variablesText}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              initial_variables: event.currentTarget.value
-                .split("\n")
-                .map((line) => line.trim())
-                .filter(Boolean)
-                .map((line) => {
-                  const [name, valueType, variableValue] = line.split("|");
-                  return {
-                    name: name?.trim() ?? "",
-                    value_type: (valueType?.trim() || "text") as "text",
-                    value: variableValue ?? "",
-                  };
-                }),
-            })
-          }
-        />
-      </Label>
+      ) : (
+        <Label htmlFor="workflow-settings-variables-json">
+          Variables JSON
+          <Textarea
+            id="workflow-settings-variables-json"
+            placeholder={`{\n  "user": { "email": "user@example.com" }\n}`}
+            value={jsonText}
+            onChange={(event) => {
+              const nextText = event.currentTarget.value;
+              setJsonText(nextText);
+              const parsed = variableRowsFromJsonText(nextText);
+              setJsonError(parsed.error);
+              if (!parsed.error) updateVariables(parsed.rows);
+            }}
+          />
+          {jsonError ? <span className="workflow-settings-error">{jsonError}</span> : null}
+        </Label>
+      )}
     </div>
   );
+}
+
+function emptyVariableRow(): VariableAssignment {
+  return { name: "", value_type: "text", value: "" };
 }
 
 function TriggersSettingsSection({

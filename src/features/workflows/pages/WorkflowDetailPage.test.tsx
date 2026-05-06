@@ -187,6 +187,16 @@ describe("Workflow detail integration", () => {
       name: "Workflow Settings",
     });
 
+    expect(within(settingsDialog).getByRole("tab", { name: "Variables" }))
+      .toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("tab", { name: "Inputs & Variables" }))
+      .not.toBeInTheDocument();
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Variables" }));
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Add variable row",
+    }));
+    expect(within(settingsDialog).getByLabelText("Variable 2 name")).toBeInTheDocument();
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser" }));
     expect(within(settingsDialog).getByRole("tab", { name: "Browser" }))
       .toHaveAttribute("aria-selected", "true");
     expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(

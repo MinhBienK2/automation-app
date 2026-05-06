@@ -3,6 +3,8 @@ import {
   applyBrowserDeviceProfile,
   createDefaultBrowserProfileName,
   defaultWorkflowSettings,
+  variableRowsFromJsonText,
+  variablesJsonFromRows,
   workflowSettingsHelp,
   workflowSettingsSections,
 } from "./workflowSettings";
@@ -83,5 +85,42 @@ describe("workflow settings model", () => {
   test("creates readable generated browser profile names", () => {
     expect(createDefaultBrowserProfileName("abc123")).toBe("profile-abc123");
     expect(createDefaultBrowserProfileName("A B/C")).toBe("profile-A_B_C");
+  });
+
+  test("converts initial variables between rows and JSON text", () => {
+    const rows = variableRowsFromJsonText(
+      `{
+        "user": { "email": "ada@example.com" },
+        "active": true,
+        "count": 3,
+        "flags": ["qa", "login"]
+      }`,
+    );
+
+    expect(rows).toEqual({
+      rows: [
+        { name: "user.email", value_type: "text", value: "ada@example.com" },
+        { name: "active", value_type: "boolean", value: "true" },
+        { name: "count", value_type: "number", value: "3" },
+        { name: "flags", value_type: "json", value: "[\"qa\",\"login\"]" },
+      ],
+      error: null,
+    });
+
+    expect(variablesJsonFromRows(rows.rows)).toBe(
+      [
+        "{",
+        "  \"user\": {",
+        "    \"email\": \"ada@example.com\"",
+        "  },",
+        "  \"active\": true,",
+        "  \"count\": 3,",
+        "  \"flags\": [",
+        "    \"qa\",",
+        "    \"login\"",
+        "  ]",
+        "}",
+      ].join("\n"),
+    );
   });
 });

@@ -105,6 +105,8 @@ Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
 
+The UI labels the persisted `inputs` section as Variables and currently edits only `initial_variables`. `input_schema` and `batch_mapping` remain in the contract for saved-data compatibility.
+
 ## Workflow Package Shape
 
 Workflow Package v2 is the current user-facing import/export format. It is graph-first and does not use legacy ordered step rows:

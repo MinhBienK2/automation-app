@@ -12,7 +12,9 @@ Preserve these unless the task explicitly changes them.
 - Workflow list exposes Import Workflow. Import reads a workflow package, shows a preview, and always creates a new workflow; it never overwrites an existing workflow.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
-- Workflow Settings contains General, Execution, Browser, Environment, Inputs & Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
+- Workflow Settings contains General, Execution, Browser, Environment, Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
+- Workflow Settings Variables only exposes initial variable values. It hides the legacy input schema and batch mapping fields from the UI, while preserving those persisted fields for compatibility.
+- Variables can be edited as typed rows or as a JSON object. Switching modes keeps both views synchronized: nested JSON becomes dot-path rows, and dot-path rows become nested JSON.
 - Workflow Settings Browser exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
 - Workflow Settings Browser exposes a Device profile selector for Default browser, Desktop Chrome, Android Chrome, iPhone Safari, and Custom user agent. Presets update user agent, viewport width/height, mobile, and touch settings together; raw user-agent editing is reserved for Custom.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it.
@@ -71,7 +73,7 @@ Preserve these unless the task explicitly changes them.
 ## Runner Behavior
 
 - Full runs execute the compiled saved graph.
-- Full runs use persisted Workflow Settings as the run baseline. Browser settings are resolved before browser launch; Environment defaults and Inputs & Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset.
+- Full runs use persisted Workflow Settings as the run baseline. Browser settings are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset.
 - Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
 - Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.

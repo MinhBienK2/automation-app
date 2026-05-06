@@ -1,4 +1,6 @@
 import type {
+  VariableAssignment,
+  VariableValueType,
   WorkflowBrowserConfig,
   WorkflowSettings,
   WorkflowSettingsSectionId,
@@ -58,7 +60,7 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "execution", label: "Execution" },
   { id: "browser", label: "Browser" },
   { id: "environment", label: "Environment" },
-  { id: "inputs", label: "Inputs & Variables" },
+  { id: "inputs", label: "Variables" },
   { id: "triggers", label: "Triggers" },
   { id: "advanced", label: "Advanced" },
 ];
@@ -176,6 +178,111 @@ function browserDeviceConfigMatches(config: BrowserDeviceConfig, preset: Browser
     config.mobile === preset.mobile &&
     config.touch === preset.touch
   );
+}
+
+export function variableRowsFromJsonText(
+  text: string,
+): { rows: VariableAssignment[]; error: string | null } {
+  const trimmed = text.trim();
+  if (!trimmed) return { rows: [], error: null };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch (error) {
+    return {
+      rows: [],
+      error: error instanceof Error ? error.message : "Invalid JSON",
+    };
+  }
+
+  if (!isPlainObject(parsed)) {
+    return { rows: [], error: "Variables JSON must be an object." };
+  }
+
+  return { rows: flattenVariablesObject(parsed), error: null };
+}
+
+export function variablesJsonFromRows(rows: VariableAssignment[]) {
+  const root: Record<string, unknown> = {};
+  for (const row of rows) {
+    const path = row.name
+      .split(".")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!path.length) continue;
+    setNestedValue(root, path, variableRowValue(row));
+  }
+  return JSON.stringify(root, null, 2);
+}
+
+function flattenVariablesObject(
+  object: Record<string, unknown>,
+  prefix = "",
+): VariableAssignment[] {
+  const rows: VariableAssignment[] = [];
+  for (const [key, value] of Object.entries(object)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (isPlainObject(value) && Object.keys(value).length > 0) {
+      rows.push(...flattenVariablesObject(value, path));
+      continue;
+    }
+    rows.push({
+      name: path,
+      value_type: variableValueType(value),
+      value: variableValueText(value),
+    });
+  }
+  return rows;
+}
+
+function variableValueType(value: unknown): VariableValueType {
+  if (typeof value === "number") return "number";
+  if (typeof value === "boolean") return "boolean";
+  if (typeof value === "string") return "text";
+  return "json";
+}
+
+function variableValueText(value: unknown) {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
+function variableRowValue(row: VariableAssignment): unknown {
+  switch (row.value_type) {
+    case "number": {
+      const parsed = Number(row.value);
+      return Number.isFinite(parsed) ? parsed : row.value;
+    }
+    case "boolean":
+      return row.value.trim().toLowerCase() === "true";
+    case "json":
+      try {
+        return JSON.parse(row.value);
+      } catch {
+        return row.value;
+      }
+    case "text":
+    default:
+      return row.value;
+  }
+}
+
+function setNestedValue(root: Record<string, unknown>, path: string[], value: unknown) {
+  let target = root;
+  for (const key of path.slice(0, -1)) {
+    const current = target[key];
+    if (!isPlainObject(current)) {
+      target[key] = {};
+    }
+    target = target[key] as Record<string, unknown>;
+  }
+  target[path[path.length - 1]] = value;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function defaultWorkflowSettings({
@@ -334,7 +441,7 @@ export const workflowSettingsHelp: Record<
         "Changing browser launch behavior, proxy routing, retries, schedules, or graph execution order.",
       ],
       precedence: [
-        "General metadata travels with the workflow, but runner decisions come from Execution, Browser, Environment, Inputs, Triggers, and graph nodes.",
+        "General metadata travels with the workflow, but runner decisions come from Execution, Browser, Environment, Variables, Triggers, and graph nodes.",
       ],
       fieldGuide: [
         {
@@ -363,7 +470,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Free-form operator context for maintenance reminders, assumptions, external ticket links, or review notes that should stay with the workflow draft.",
           whenToUse:
-            "Use notes for human handoff details; move any required runtime value into Inputs & Variables instead.",
+            "Use notes for human handoff details; move stable runtime values into Variables instead.",
         },
       ],
       workflowExamples: [
@@ -375,7 +482,7 @@ export const workflowSettingsHelp: Record<
       commonMistakes: [
         {
           mistake: "Putting required email, password, or environment values only in notes.",
-          fix: "Define those values under Inputs & Variables so manual, batch, and triggered runs can validate them.",
+          fix: "Define stable values under Variables so graph templates can reference them consistently.",
         },
       ],
     },
@@ -392,7 +499,7 @@ export const workflowSettingsHelp: Record<
         "Không dùng mục này để đổi cách mở browser, proxy, retry, lịch chạy, hoặc thứ tự chạy của graph.",
       ],
       precedence: [
-        "Metadata ở General đi cùng workflow, còn quyết định runtime nằm ở Execution, Browser, Environment, Inputs, Triggers, và các node trong graph.",
+        "Metadata ở General đi cùng workflow, còn quyết định runtime nằm ở Execution, Browser, Environment, Variables, Triggers, và các node trong graph.",
       ],
       fieldGuide: [
         {
@@ -421,7 +528,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Vùng ghi tự do cho nhắc nhở bảo trì, giả định, link ticket bên ngoài, hoặc ghi chú review cần đi kèm bản nháp workflow.",
           whenToUse:
-            "Dùng cho thông tin bàn giao giữa người với người; giá trị bắt buộc khi chạy phải đưa vào Inputs & Variables.",
+            "Dùng cho thông tin bàn giao giữa người với người; giá trị runtime ổn định nên đưa vào Variables.",
         },
       ],
       workflowExamples: [
@@ -433,7 +540,7 @@ export const workflowSettingsHelp: Record<
       commonMistakes: [
         {
           mistake: "Chỉ ghi email, password, hoặc environment bắt buộc trong ghi chú.",
-          fix: "Đưa các giá trị đó vào Inputs & Variables để run manual, batch, và trigger đều được validate.",
+          fix: "Đưa giá trị ổn định vào Variables để graph template tham chiếu nhất quán.",
         },
       ],
     },
@@ -1038,126 +1145,112 @@ export const workflowSettingsHelp: Record<
   },
   inputs: {
     en: {
-      title: "Inputs & Variables Settings Help",
+      title: "Variables Settings Help",
       summary:
-        "Inputs & Variables define the data contract loaded before execution, so manual runs, batch rows, triggered runs, and graph variable nodes can agree on names, types, defaults, and required values.",
+        "Variables define initial typed values loaded before execution, so graph actions can reference stable workflow context without adding setup nodes at the start of every graph.",
       uiLabels: enLabels,
-      bestFor: ["Declaring required runtime inputs, safe defaults, initial variables, and batch column mapping."],
+      bestFor: ["Seeding stable text, JSON, number, and boolean values before the first graph step."],
       notFor: ["Changing values after graph execution has already begun; use Set Variables nodes for that."],
       precedence: [
-        "Saved defaults load first.",
-        "Manual, batch, or trigger values override defaults for that run.",
+        "Saved Variables load before graph execution.",
         "Graph Set Variables writes override prior values by execution order.",
+        "Rows and JSON mode edit the same saved initial variables.",
       ],
       fieldGuide: [
         {
-          name: "Input schema",
+          name: "Rows mode",
           description:
-            "Rows that declare input name, value type, required flag, default value, and human description for values supplied at run time.",
+            "Table editor for adding one variable per row with an explicit name, type, and value, matching the Set Variables node editing model.",
           whenToUse:
-            "Use it for data the workflow cannot safely assume, such as account, environment, search term, or target record id.",
+            "Use it for normal editing when operators should add, remove, or scan individual variable values without writing JSON by hand.",
         },
         {
-          name: "Required flag",
+          name: "JSON mode",
           description:
-            "Marks an input as mandatory when no default or run override exists, allowing validation to block incomplete runs early.",
+            "Structured JSON textarea for editing the same variables as an object. Nested object keys become dot-path variables and arrays or objects are stored as JSON values.",
           whenToUse:
-            "Use it for values that would make the workflow ambiguous, unsafe, or guaranteed to fail if missing.",
+            "Use it when pasting a prepared variable object or when nested values are easier to review as JSON than as rows.",
         },
         {
-          name: "Default value",
+          name: "Variable type",
           description:
-            "Fallback value loaded when the run does not provide a value for that input, useful for safe examples or common environments.",
+            "Type controls how the runner parses the stored value before graph execution: text stays a string, JSON parses arrays or objects, number parses numeric values, and boolean parses true or false.",
           whenToUse:
-            "Use defaults for non-secret, low-risk values; avoid hiding production-like secrets in defaults.",
+            "Use JSON for arrays or objects, number for numeric comparisons, boolean for flags, and text for template strings or ordinary scalar values.",
         },
         {
-          name: "Initial variables",
+          name: "Dot paths",
           description:
-            "Variables seeded before the first executable graph step, using typed name and value rows that graph actions can reference.",
+            "Nested JSON fields convert to dot-path variable names such as user.email, and dot-path rows convert back into nested JSON when switching modes.",
           whenToUse:
-            "Use them for stable computed-like values or constants that should be available without adding an early Set Variables node.",
-        },
-        {
-          name: "Batch mapping",
-          description:
-            "Mapping between batch source columns and workflow input names, so each row can resolve the correct runtime values.",
-          whenToUse:
-            "Use it when a CSV or external row source should drive repeated runs with different accounts, records, or parameters.",
+            "Use dot paths to keep related variables grouped while still letting action templates reference a precise value.",
         },
       ],
       workflowExamples: [
         {
-          title: "Batch login rows",
-          steps: ["Define email and password inputs", "Map CSV columns to those inputs"],
+          title: "Seed login constants",
+          steps: ["Add base_url as text", "Add retry_count as number", "Add feature flags as JSON"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Writing required inputs only in notes.",
-          fix: "Add input schema rows so validation can block incomplete manual, batch, or triggered runs.",
+          mistake: "Using Variables for values that should change halfway through a graph.",
+          fix: "Use Variables for initial context and Set Variables nodes for runtime changes that depend on earlier steps.",
         },
       ],
     },
     vi: {
-      title: "Trợ giúp Inputs & Variables",
+      title: "Trợ giúp Variables",
       summary:
-        "Inputs & Variables định nghĩa data contract được load trước khi chạy, để manual run, batch row, triggered run, và variable node trong graph thống nhất về tên, type, default, và giá trị bắt buộc.",
+        "Variables định nghĩa các giá trị typed được load trước khi chạy, để graph action tham chiếu context ổn định mà không cần thêm setup node ở đầu mỗi graph.",
       uiLabels: viLabels,
-      bestFor: ["Khai báo runtime input bắt buộc, default an toàn, initial variables, và mapping cột batch."],
+      bestFor: ["Seed giá trị text, JSON, number, và boolean ổn định trước graph step đầu tiên."],
       notFor: ["Không dùng để đổi giá trị sau khi graph đã bắt đầu; hãy dùng Set Variables node cho việc đó."],
       precedence: [
-        "Saved defaults được load đầu tiên.",
-        "Giá trị từ manual, batch, hoặc trigger ghi đè default cho run đó.",
+        "Variables đã lưu được load trước khi graph chạy.",
         "Graph Set Variables ghi đè giá trị trước đó theo đúng thứ tự execution.",
+        "Rows mode và JSON mode cùng sửa một danh sách initial variables.",
       ],
       fieldGuide: [
         {
-          name: "Input schema",
+          name: "Rows mode",
           description:
-            "Các dòng khai báo tên input, type giá trị, cờ required, default value, và mô tả cho giá trị được cung cấp lúc chạy.",
+            "Bảng nhập mỗi biến một dòng với name, type, và value rõ ràng, cùng model với editor của node Set Variables.",
           whenToUse:
-            "Dùng cho dữ liệu workflow không nên tự giả định, như account, environment, từ khóa tìm kiếm, hoặc id bản ghi đích.",
+            "Dùng cho chỉnh sửa thông thường khi operator cần thêm, xóa, hoặc scan từng biến mà không phải tự viết JSON.",
         },
         {
-          name: "Cờ required",
+          name: "JSON mode",
           description:
-            "Đánh dấu input là bắt buộc khi không có default hoặc override của run, giúp validation chặn run thiếu dữ liệu từ sớm.",
+            "Textarea JSON có cấu trúc để sửa cùng danh sách biến dưới dạng object. Object lồng nhau thành dot-path variables, còn array/object được lưu như JSON values.",
           whenToUse:
-            "Dùng cho giá trị mà nếu thiếu sẽ làm workflow mơ hồ, không an toàn, hoặc chắc chắn thất bại.",
+            "Dùng khi paste một object variables đã chuẩn bị sẵn hoặc khi nested values dễ review bằng JSON hơn bằng bảng.",
         },
         {
-          name: "Default value",
+          name: "Loại biến",
           description:
-            "Giá trị fallback được load khi run không cung cấp input đó, hữu ích cho ví dụ an toàn hoặc môi trường thường dùng.",
+            "Type quyết định runner parse value thế nào trước khi graph chạy: text giữ nguyên string, JSON parse array/object, number parse số, boolean parse true hoặc false.",
           whenToUse:
-            "Dùng default cho giá trị không phải secret và ít rủi ro; tránh giấu secret giống production trong default.",
+            "Dùng JSON cho array/object, number cho so sánh số, boolean cho flag, và text cho template string hoặc scalar thông thường.",
         },
         {
-          name: "Initial variables",
+          name: "Dot paths",
           description:
-            "Biến được seed trước executable graph step đầu tiên, gồm name, type, và value để graph action có thể tham chiếu.",
+            "Field JSON lồng nhau convert thành tên biến dot-path như user.email, và row dot-path convert ngược lại thành JSON lồng nhau khi đổi mode.",
           whenToUse:
-            "Dùng cho constant hoặc giá trị ổn định cần có sẵn mà không muốn thêm Set Variables node ở đầu graph.",
-        },
-        {
-          name: "Batch mapping",
-          description:
-            "Mapping giữa cột của batch source và tên input workflow, để mỗi row resolve đúng runtime value.",
-          whenToUse:
-            "Dùng khi CSV hoặc nguồn row bên ngoài cần chạy lặp với account, record, hoặc tham số khác nhau.",
+            "Dùng dot path để nhóm biến liên quan nhưng vẫn cho action template tham chiếu đúng một giá trị cụ thể.",
         },
       ],
       workflowExamples: [
         {
-          title: "Batch nhiều dòng đăng nhập",
-          steps: ["Khai báo input email và password", "Map cột CSV vào các input đó"],
+          title: "Seed constant cho login",
+          steps: ["Thêm base_url dạng text", "Thêm retry_count dạng number", "Thêm feature flags dạng JSON"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Chỉ ghi input bắt buộc trong notes.",
-          fix: "Thêm row trong input schema để validation chặn manual, batch, hoặc triggered run còn thiếu dữ liệu.",
+          mistake: "Dùng Variables cho giá trị cần đổi giữa chừng trong graph.",
+          fix: "Dùng Variables cho context ban đầu và dùng node Set Variables cho runtime changes phụ thuộc step trước đó.",
         },
       ],
     },
