@@ -518,6 +518,29 @@
   overflow: hidden;
 }
 
+.workflow-settings-help-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-right: 40px;
+}
+
+.workflow-settings-help-language {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  background: #0f0f0f;
+}
+
+.workflow-settings-help-language [data-slot="button"] {
+  min-height: 30px;
+  border-radius: 9999px;
+}
+
 .workflow-settings-help-body {
   display: grid;
   gap: 14px;

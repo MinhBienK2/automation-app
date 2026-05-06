@@ -207,6 +207,17 @@ describe("Workflow detail integration", () => {
       name: "Browser help",
     }));
     expect(await screen.findByText("Browser Settings Help")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "English" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Tiếng Việt" }));
+    expect(await screen.findByText("Trợ giúp Cài đặt Trình duyệt")).toBeInTheDocument();
+    expect(screen.getByText("Tên hồ sơ")).toBeInTheDocument();
+    expect(screen.getByText("Máy chủ proxy")).toBeInTheDocument();
+    expect(screen.getByText("Chính sách thử thách")).toBeInTheDocument();
+    expect(screen.getByText(/Không dùng mục này để vượt qua CAPTCHA/i))
+      .toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(within(settingsDialog).getByRole("button", {

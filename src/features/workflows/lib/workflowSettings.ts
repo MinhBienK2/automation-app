@@ -11,6 +11,14 @@ export type WorkflowSettingsSection = {
 export type WorkflowSettingsHelpContent = {
   title: string;
   summary: string;
+  uiLabels: {
+    bestFor: string;
+    notFor: string;
+    precedence: string;
+    fieldGuide: string;
+    commonMistakes: string;
+    safetyNotes: string;
+  };
   bestFor: string[];
   notFor?: string[];
   precedence?: string[];
@@ -36,6 +44,13 @@ export type WorkflowSettingsHelpContent = {
     fix: string;
   }>;
 };
+
+export type WorkflowSettingsHelpLanguage = "en" | "vi";
+
+export type WorkflowSettingsLocalizedHelp = Record<
+  WorkflowSettingsHelpLanguage,
+  WorkflowSettingsHelpContent
+>;
 
 export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
@@ -167,263 +182,1082 @@ export function tagsToInput(tags: string[]) {
   return tags.join(", ");
 }
 
+const enLabels = {
+  bestFor: "Use it when",
+  notFor: "Do not use it for",
+  precedence: "Precedence and overrides",
+  fieldGuide: "Field guide",
+  commonMistakes: "Common mistakes",
+  safetyNotes: "Safety notes",
+};
+
+const viLabels = {
+  bestFor: "Nên dùng khi",
+  notFor: "Không dùng cho",
+  precedence: "Thứ tự ưu tiên và ghi đè",
+  fieldGuide: "Giải thích từng field",
+  commonMistakes: "Lỗi thường gặp",
+  safetyNotes: "Lưu ý an toàn",
+};
+
 export const workflowSettingsHelp: Record<
   WorkflowSettingsSectionId,
-  WorkflowSettingsHelpContent
+  WorkflowSettingsLocalizedHelp
 > = {
   general: {
-    title: "General Settings Help",
-    summary:
-      "General settings identify the workflow in lists, headers, search, exports, duplicates, and future shared workspaces.",
-    bestFor: ["Naming the workflow", "Adding search tags", "Keeping operator notes"],
-    notFor: ["Changing browser launch behavior", "Changing graph execution order"],
-    precedence: ["Metadata travels with the workflow and does not affect runner output."],
-    fieldGuide: [
-      {
-        name: "Workflow name",
-        description: "Required display name used by the list, header, export, and duplicate flows.",
-      },
-      {
-        name: "Description, tags, and notes",
-        description:
-          "Optional metadata that helps users find and understand the workflow without editing graph logic.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "QA login workflow",
-        steps: ["Name it after the business flow", "Add tags such as qa and login"],
-      },
-    ],
-    commonMistakes: [
-      {
-        mistake: "Using notes to describe required runtime inputs.",
-        fix: "Define those values under Inputs & Variables so runs can validate them.",
-      },
-    ],
+    en: {
+      title: "General Settings Help",
+      summary:
+        "General settings describe what this workflow is, who should recognize it, and how it appears in lists, headers, exports, duplicates, and future shared workspaces without changing how the graph runs.",
+      uiLabels: enLabels,
+      bestFor: [
+        "Creating a readable name that operators can recognize without opening the graph.",
+        "Adding description, tags, and notes that make search, handoff, and review easier.",
+      ],
+      notFor: [
+        "Changing browser launch behavior, proxy routing, retries, schedules, or graph execution order.",
+      ],
+      precedence: [
+        "General metadata travels with the workflow, but runner decisions come from Execution, Browser, Environment, Inputs, Triggers, and graph nodes.",
+      ],
+      fieldGuide: [
+        {
+          name: "Workflow name",
+          description:
+            "Required display name used by the workflow list, breadcrumb, detail header, save feedback, export labels, duplicate flows, and any future shared workspace references.",
+          whenToUse:
+            "Use a business-flow name such as Checkout smoke test instead of a technical note, so another user can pick the right workflow quickly.",
+        },
+        {
+          name: "Description",
+          description:
+            "Short human explanation of what the workflow proves, which system it touches, and what a successful run means. It is for orientation, not validation.",
+          whenToUse:
+            "Use it when the workflow name alone is not enough to explain scope, environment, expected user journey, or ownership.",
+        },
+        {
+          name: "Tags",
+          description:
+            "Comma-separated search labels normalized to lowercase and deduplicated, useful for grouping workflows by team, environment, feature area, or smoke-suite purpose.",
+          whenToUse:
+            "Use tags for filtering and scanning, not for values that the runner needs at execution time.",
+        },
+        {
+          name: "Notes",
+          description:
+            "Free-form operator context for maintenance reminders, assumptions, external ticket links, or review notes that should stay with the workflow draft.",
+          whenToUse:
+            "Use notes for human handoff details; move any required runtime value into Inputs & Variables instead.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "QA login workflow",
+          steps: ["Name it after the business flow", "Add tags such as qa, login, and smoke"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Putting required email, password, or environment values only in notes.",
+          fix: "Define those values under Inputs & Variables so manual, batch, and triggered runs can validate them.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Cài đặt Chung",
+      summary:
+        "Cài đặt Chung mô tả workflow này là gì, người dùng nên nhận ra nó ra sao, và nó xuất hiện thế nào trong danh sách, tiêu đề, export, bản sao, hoặc workspace dùng chung sau này mà không làm thay đổi cách graph chạy.",
+      uiLabels: viLabels,
+      bestFor: [
+        "Đặt tên rõ để người vận hành nhận ra workflow mà không cần mở graph.",
+        "Thêm mô tả, tag, và ghi chú để tìm kiếm, bàn giao, và review dễ hơn.",
+      ],
+      notFor: [
+        "Không dùng mục này để đổi cách mở browser, proxy, retry, lịch chạy, hoặc thứ tự chạy của graph.",
+      ],
+      precedence: [
+        "Metadata ở General đi cùng workflow, còn quyết định runtime nằm ở Execution, Browser, Environment, Inputs, Triggers, và các node trong graph.",
+      ],
+      fieldGuide: [
+        {
+          name: "Tên workflow",
+          description:
+            "Tên hiển thị bắt buộc, được dùng ở danh sách workflow, breadcrumb, header chi tiết, trạng thái save, export, duplicate, và các tham chiếu workspace sau này.",
+          whenToUse:
+            "Đặt theo luồng nghiệp vụ như Checkout smoke test thay vì ghi chú kỹ thuật, để người khác chọn đúng workflow nhanh hơn.",
+        },
+        {
+          name: "Mô tả",
+          description:
+            "Phần giải thích ngắn về workflow kiểm tra điều gì, chạm tới hệ thống nào, và một lần chạy thành công có ý nghĩa gì. Đây là định hướng cho người đọc, không phải rule validate.",
+          whenToUse:
+            "Dùng khi tên workflow chưa đủ để nói rõ phạm vi, môi trường, hành trình người dùng, hoặc người chịu trách nhiệm.",
+        },
+        {
+          name: "Tags",
+          description:
+            "Danh sách nhãn phân tách bằng dấu phẩy, được chuẩn hóa chữ thường và loại trùng, giúp gom workflow theo team, môi trường, tính năng, hoặc bộ smoke test.",
+          whenToUse:
+            "Dùng tag để lọc và scan danh sách; đừng dùng tag cho giá trị mà runner cần khi chạy.",
+        },
+        {
+          name: "Ghi chú",
+          description:
+            "Vùng ghi tự do cho nhắc nhở bảo trì, giả định, link ticket bên ngoài, hoặc ghi chú review cần đi kèm bản nháp workflow.",
+          whenToUse:
+            "Dùng cho thông tin bàn giao giữa người với người; giá trị bắt buộc khi chạy phải đưa vào Inputs & Variables.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Workflow đăng nhập QA",
+          steps: ["Đặt tên theo luồng nghiệp vụ", "Thêm tag như qa, login, và smoke"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Chỉ ghi email, password, hoặc environment bắt buộc trong ghi chú.",
+          fix: "Đưa các giá trị đó vào Inputs & Variables để run manual, batch, và trigger đều được validate.",
+        },
+      ],
+    },
   },
   execution: {
-    title: "Execution Settings Help",
-    summary:
-      "Execution settings define default run policy when actions, batch requests, or terminal nodes do not provide a more specific value.",
-    bestFor: ["Default action timeouts", "Batch run defaults", "Browser retention policy"],
-    notFor: ["Per-step selector waits", "App editor preferences"],
-    precedence: [
-      "Workflow Settings apply before per-run overrides.",
-      "Action-level timeout and retry fields override these defaults for that action.",
-    ],
-    fieldGuide: [
-      {
-        name: "Timeouts and retries",
-        description:
-          "Use these as baseline limits for workflows where most actions share the same tolerance.",
-      },
-      {
-        name: "Browser retention",
-        description:
-          "Retain keeps the browser available after terminal outcomes; close ends the session by default.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "Slow staging site",
-        steps: ["Set a higher default action timeout", "Use action overrides for one known slow step"],
-      },
-    ],
-    commonMistakes: [
-      {
-        mistake: "Using workflow max duration instead of action timeouts.",
-        fix: "Use max duration for the whole run, and action timeouts for individual waits.",
-      },
-    ],
+    en: {
+      title: "Execution Settings Help",
+      summary:
+        "Execution settings define the workflow-level run policy used when graph actions, batch requests, or terminal nodes do not provide a more specific timeout, retry, browser-retention, or failure behavior.",
+      uiLabels: enLabels,
+      bestFor: [
+        "Setting baseline action limits for workflows where most steps have similar tolerance.",
+        "Controlling batch defaults and what happens to the browser after a terminal outcome.",
+      ],
+      notFor: ["Per-selector waits, browser launch identity, scheduled dispatch, or app editor preferences."],
+      precedence: [
+        "Workflow settings apply before per-run overrides.",
+        "Action-level timeout and retry fields override these defaults for that one action.",
+      ],
+      fieldGuide: [
+        {
+          name: "Default action timeout ms",
+          description:
+            "Maximum time a normal action should wait before it is considered failed when that action has no explicit timeout of its own.",
+          whenToUse:
+            "Use it to give the whole workflow a sane baseline for pages that are consistently fast, slow, or unstable.",
+        },
+        {
+          name: "Default retry attempts",
+          description:
+            "Number of extra tries an action can receive by default after a recoverable failure, before the workflow applies the failure policy.",
+          whenToUse:
+            "Use it for transient staging flakiness, and keep it low when failures should reveal product regressions quickly.",
+        },
+        {
+          name: "Default retry interval ms",
+          description:
+            "Delay between default retry attempts, measured in milliseconds, so repeated actions do not immediately hit the same temporary failure.",
+          whenToUse:
+            "Use it with retry attempts when backend queues, slow UI transitions, or short network hiccups need breathing room.",
+        },
+        {
+          name: "Max workflow duration ms",
+          description:
+            "Upper bound for the whole run, covering all graph steps, retries, waits, and terminal handling, regardless of individual action limits.",
+          whenToUse:
+            "Use it as a guardrail so a workflow cannot run forever when a loop, slow page, or hidden failure keeps it alive.",
+        },
+        {
+          name: "Browser retention",
+          description:
+            "Default decision for whether the browser session remains available after success, failure, or stop when terminal nodes do not choose otherwise.",
+          whenToUse:
+            "Choose retain for debugging or manual inspection, and close for unattended runs where cleanup matters more.",
+        },
+        {
+          name: "Failure policy",
+          description:
+            "Workflow-level rule for what happens after an unrecovered action failure. The current policy stops on the first failure to keep diagnostics clear.",
+          whenToUse:
+            "Use it to understand why later branches did not run; broader continue policies should only be added when reporting can stay explicit.",
+        },
+        {
+          name: "Batch concurrency limit",
+          description:
+            "Maximum number of batch rows that may run at the same time when a workflow is executed over multiple input rows.",
+          whenToUse:
+            "Use it to protect test environments, third-party services, local CPU, and account limits from too many simultaneous browser sessions.",
+        },
+        {
+          name: "Batch headless default",
+          description:
+            "Default browser visibility for batch rows. Headless runs without visible windows, while non-headless keeps browser windows available.",
+          whenToUse:
+            "Use headless for routine unattended batches, and visible mode when you need to observe or debug the row behavior.",
+        },
+        {
+          name: "Stop batch on first failed row",
+          description:
+            "Batch control that stops launching or continuing further rows after one row fails, instead of collecting failures across the batch.",
+          whenToUse:
+            "Use it when one failure likely means shared setup is broken and continuing would waste time or create noisy side effects.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Slow staging site",
+          steps: ["Set a higher default action timeout", "Use action overrides for one known slow step"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Using max workflow duration as a replacement for action timeouts.",
+          fix: "Use max duration for the whole run, and action timeouts for individual waits and selectors.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Cài đặt Thực thi",
+      summary:
+        "Cài đặt Thực thi định nghĩa chính sách chạy cấp workflow, được dùng khi action trong graph, batch request, hoặc terminal node chưa đặt timeout, retry, giữ browser, hoặc cách xử lý lỗi cụ thể hơn.",
+      uiLabels: viLabels,
+      bestFor: [
+        "Đặt giới hạn mặc định cho workflow có phần lớn step chịu timeout và retry giống nhau.",
+        "Điều khiển mặc định của batch và việc browser còn mở hay đóng sau khi kết thúc.",
+      ],
+      notFor: ["Không dùng cho wait từng selector, danh tính browser khi launch, lịch trigger, hoặc preference của editor."],
+      precedence: [
+        "Workflow Settings áp dụng trước override của từng lần chạy.",
+        "Timeout và retry đặt trực tiếp trong action sẽ ghi đè default này cho action đó.",
+      ],
+      fieldGuide: [
+        {
+          name: "Default action timeout ms",
+          description:
+            "Thời gian tối đa một action thông thường được chờ trước khi bị tính là failed, nếu action đó không có timeout riêng.",
+          whenToUse:
+            "Dùng để đặt nền chung cho workflow chạy trên trang luôn nhanh, luôn chậm, hoặc hay dao động.",
+        },
+        {
+          name: "Default retry attempts",
+          description:
+            "Số lần thử lại mặc định sau một lỗi có thể phục hồi, trước khi workflow áp dụng failure policy.",
+          whenToUse:
+            "Dùng cho môi trường staging hay lỗi tạm thời; giữ thấp nếu bạn muốn lỗi sản phẩm lộ ra nhanh.",
+        },
+        {
+          name: "Default retry interval ms",
+          description:
+            "Khoảng nghỉ giữa các lần retry mặc định, tính bằng mili giây, để action không đập lại ngay vào cùng một lỗi tạm thời.",
+          whenToUse:
+            "Dùng cùng retry attempts khi backend queue, chuyển trạng thái UI chậm, hoặc mạng chập chờn cần thêm thời gian.",
+        },
+        {
+          name: "Max workflow duration ms",
+          description:
+            "Giới hạn tổng cho cả lần chạy, bao gồm mọi graph step, retry, wait, và xử lý terminal, bất kể từng action đặt timeout thế nào.",
+          whenToUse:
+            "Dùng như hàng rào an toàn để workflow không chạy mãi khi loop, trang chậm, hoặc lỗi ẩn giữ run còn sống.",
+        },
+        {
+          name: "Browser retention",
+          description:
+            "Quyết định mặc định browser còn được giữ sau success, failure, hoặc stop hay không, khi terminal node chưa đặt lựa chọn riêng.",
+          whenToUse:
+            "Chọn retain khi cần debug hoặc xem lại màn hình; chọn close cho run tự động cần dọn session.",
+        },
+        {
+          name: "Failure policy",
+          description:
+            "Luật cấp workflow cho việc xử lý một action fail sau khi đã hết retry. Hiện tại chính sách dừng ở lỗi đầu tiên để diagnostic rõ ràng.",
+          whenToUse:
+            "Dùng để hiểu vì sao các nhánh sau không chạy; chỉ thêm continue policy khi báo cáo lỗi vẫn đủ rõ.",
+        },
+        {
+          name: "Batch concurrency limit",
+          description:
+            "Số dòng batch tối đa được chạy đồng thời khi workflow chạy trên nhiều dòng input, trực tiếp ảnh hưởng tới số browser session mở cùng lúc.",
+          whenToUse:
+            "Dùng để bảo vệ môi trường test, dịch vụ bên thứ ba, CPU local, và giới hạn tài khoản khỏi quá nhiều browser cùng lúc.",
+        },
+        {
+          name: "Batch headless default",
+          description:
+            "Mặc định browser có hiển thị cửa sổ hay chạy ẩn khi chạy batch. Headless không mở cửa sổ, non-headless cho phép quan sát.",
+          whenToUse:
+            "Dùng headless cho batch tự động thường lệ; dùng hiện cửa sổ khi cần quan sát hoặc debug hành vi từng dòng.",
+        },
+        {
+          name: "Stop batch on first failed row",
+          description:
+            "Điều khiển batch dừng chạy các dòng tiếp theo sau khi một dòng fail, thay vì tiếp tục gom lỗi của cả batch.",
+          whenToUse:
+            "Dùng khi một lỗi thường nghĩa là setup chung đã hỏng và chạy tiếp chỉ tốn thời gian hoặc tạo side effect nhiễu.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Site staging chậm",
+          steps: ["Tăng default action timeout", "Đặt override riêng cho một step chậm đã biết"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Dùng max workflow duration thay cho timeout của từng action.",
+          fix: "Dùng max duration cho toàn run, và dùng action timeout cho từng wait hoặc selector cụ thể.",
+        },
+      ],
+    },
   },
   browser: {
-    title: "Browser Settings Help",
-    summary:
-      "Browser settings are launch-level defaults for Chromium, including profile, proxy, user agent, viewport, touch, and challenge checkpoint handling.",
-    bestFor: ["Repeatable browser profiles", "Authorized proxy routing", "Device defaults"],
-    notFor: ["Bypassing challenges", "Changing proxy or profile halfway through a run"],
-    precedence: [
-      "Browser settings are resolved before Chromium launches.",
-      "Graph viewport and user-agent actions may override context later when supported.",
-    ],
-    fieldGuide: [
-      {
-        name: "Profile and proxy",
-        description:
-          "Launch-level settings that require a new run to change reliably.",
-        overrideBehavior: "Legacy Use Profile and Use Proxy nodes are compatibility hints only.",
-      },
-      {
-        name: "Challenge policy",
-        description:
-          "Controls authorized human checkpoint handling. It does not bypass site protections.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "Mobile viewport run",
-        steps: ["Set viewport dimensions", "Enable mobile", "Enable touch when testing touch-only UI"],
-      },
-    ],
-    relatedGraphActions: [
-      {
-        action: "Set Viewport",
-        relationship: "runtime_override",
-        explanation: "Changes viewport later in the workflow after the browser has launched.",
-      },
-      {
-        action: "Use Proxy",
-        relationship: "compatibility",
-        explanation: "Kept for saved graphs; prefer Browser settings for new work.",
-      },
-    ],
-    safetyNotes: [
-      "Proxy and challenge controls are for authorized testing and repeatable environments.",
-    ],
-    commonMistakes: [
-      {
-        mistake: "Expecting proxy changes to apply after the run starts.",
-        fix: "Save Browser settings and start a new run.",
-      },
-    ],
+    en: {
+      title: "Browser Settings Help",
+      summary:
+        "Browser settings are launch-level defaults for Chromium: profile identity, authorized proxy routing, user agent, viewport, touch behavior, headless mode, and safe handling of human challenge checkpoints.",
+      uiLabels: enLabels,
+      bestFor: [
+        "Making browser launch behavior repeatable across manual, batch, and triggered runs.",
+        "Keeping profile, proxy, device, and checkpoint behavior in one audited place.",
+      ],
+      notFor: [
+        "Bypassing challenges, evading site protections, or changing proxy and profile halfway through a run.",
+      ],
+      precedence: [
+        "Browser settings are resolved before Chromium launches, so profile and proxy changes need a new run.",
+        "Graph actions such as Set Viewport may override context later when that action explicitly runs.",
+      ],
+      fieldGuide: [
+        {
+          name: "Profile name",
+          description:
+            "Named browser profile to launch with saved cookies, storage, and identity state where supported. Leaving it empty uses the default run profile.",
+          whenToUse:
+            "Use it when a workflow needs a consistent signed-in testing profile or isolated state between teams.",
+        },
+        {
+          name: "Proxy enabled",
+          description:
+            "Master switch for proxy routing. When off, proxy server, username, and password are ignored even if values remain saved.",
+          whenToUse:
+            "Use it to temporarily disable authorized proxy routing without deleting the server and credential fields.",
+        },
+        {
+          name: "Proxy server",
+          description:
+            "Full proxy endpoint used at browser launch, such as http://proxy.local:8080. It should point to infrastructure you are allowed to use.",
+          whenToUse:
+            "Use it for corporate, QA, geo, or network-isolated test routes that must be consistent from the first request.",
+        },
+        {
+          name: "Proxy username",
+          description:
+            "Optional account name sent to the configured proxy when that proxy requires authentication separate from the server URL.",
+          whenToUse:
+            "Use it when your proxy provider issues credentials separately; leave blank for unauthenticated proxies.",
+        },
+        {
+          name: "Proxy password",
+          description:
+            "Optional secret for proxy authentication. Treat it as sensitive run configuration and avoid placing this value in notes or screenshots.",
+          whenToUse:
+            "Use it only for authorized proxy accounts, and rotate it according to the same policy as other shared test secrets.",
+        },
+        {
+          name: "User agent",
+          description:
+            "Browser user-agent string presented to pages at launch, useful for testing rendering or compatibility paths that depend on client identity.",
+          whenToUse:
+            "Use it when the target app has supported desktop, mobile, bot, or legacy-browser code paths that must be tested explicitly.",
+        },
+        {
+          name: "Viewport width and height",
+          description:
+            "Initial browser viewport size in pixels. Width and height together control responsive layouts before any graph viewport action runs.",
+          whenToUse:
+            "Use fixed dimensions when selectors, screenshots, or responsive UI branches must start from a predictable canvas size.",
+        },
+        {
+          name: "Mobile viewport",
+          description:
+            "Flag that asks the browser context to emulate mobile viewport behavior in addition to the numeric width and height.",
+          whenToUse:
+            "Use it when validating mobile-specific layout or browser behavior, not just a narrow desktop window.",
+        },
+        {
+          name: "Touch input",
+          description:
+            "Flag that enables touch-capable input behavior for pages that distinguish touch interaction from mouse interaction.",
+          whenToUse:
+            "Use it for mobile menus, drag handles, or components that only expose behavior when touch support exists.",
+        },
+        {
+          name: "Challenge policy",
+          description:
+            "Controls safe handling of authorized human checkpoints: ignore, detect only, or pause for a human. It does not solve or bypass protections.",
+          whenToUse:
+            "Use detect only for reporting checkpoints and pause for human when an approved operator must continue the test manually.",
+        },
+        {
+          name: "Headless default",
+          description:
+            "Default launch visibility for this workflow. Headless runs without a visible browser window; non-headless opens a visible browser.",
+          whenToUse:
+            "Use headless for routine automation and visible mode when debugging, reviewing, or handling manual checkpoints.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Mobile viewport run",
+          steps: ["Set viewport dimensions", "Enable mobile", "Enable touch when testing touch-only UI"],
+        },
+      ],
+      relatedGraphActions: [
+        {
+          action: "Set Viewport",
+          relationship: "runtime_override",
+          explanation: "Changes viewport later in the workflow after the browser has launched.",
+        },
+      ],
+      safetyNotes: [
+        "Proxy and challenge controls are for authorized testing and repeatable environments.",
+      ],
+      commonMistakes: [
+        {
+          mistake: "Expecting proxy changes to apply after the run starts.",
+          fix: "Save Browser settings and start a new run because launch-level values are resolved before Chromium opens.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Cài đặt Trình duyệt",
+      summary:
+        "Cài đặt Trình duyệt là default ở thời điểm mở Chromium: hồ sơ đăng nhập, proxy được phép dùng, user agent, viewport, touch, headless, và cách xử lý an toàn các checkpoint cần con người.",
+      uiLabels: viLabels,
+      bestFor: [
+        "Giữ hành vi mở browser lặp lại giống nhau cho manual, batch, và triggered runs.",
+        "Gom profile, proxy, thiết bị, và checkpoint vào một nơi dễ kiểm tra.",
+      ],
+      notFor: [
+        "Không dùng mục này để vượt qua CAPTCHA, né cơ chế bảo vệ website, hoặc đổi proxy/profile giữa chừng trong một run.",
+      ],
+      precedence: [
+        "Browser settings được resolve trước khi Chromium mở, nên thay profile hoặc proxy cần bắt đầu run mới.",
+        "Graph action như Set Viewport có thể ghi đè context sau đó, nếu action đó thực sự chạy.",
+      ],
+      fieldGuide: [
+        {
+          name: "Tên hồ sơ",
+          description:
+            "Tên profile browser dùng khi launch, có thể mang theo cookie, storage, và trạng thái đăng nhập đã lưu nếu backend hỗ trợ. Để trống sẽ dùng profile mặc định của run.",
+          whenToUse:
+            "Dùng khi workflow cần trạng thái đăng nhập test ổn định hoặc cần tách state giữa team, môi trường, hay tài khoản.",
+        },
+        {
+          name: "Bật proxy",
+          description:
+            "Công tắc tổng cho routing qua proxy. Khi tắt, máy chủ proxy, username, và password sẽ bị bỏ qua dù giá trị vẫn còn lưu.",
+          whenToUse:
+            "Dùng để tạm ngưng proxy được phép dùng mà không phải xóa server và credential đã nhập.",
+        },
+        {
+          name: "Máy chủ proxy",
+          description:
+            "Endpoint proxy đầy đủ dùng ngay lúc browser mở, ví dụ http://proxy.local:8080. Giá trị này phải trỏ tới hạ tầng bạn có quyền sử dụng.",
+          whenToUse:
+            "Dùng cho mạng công ty, QA, geo test, hoặc tuyến mạng cô lập cần nhất quán từ request đầu tiên.",
+        },
+        {
+          name: "Tên đăng nhập proxy",
+          description:
+            "Tên tài khoản tùy chọn gửi tới proxy khi proxy yêu cầu xác thực tách riêng khỏi URL máy chủ.",
+          whenToUse:
+            "Dùng khi nhà cung cấp proxy cấp credential riêng; để trống nếu proxy không cần xác thực.",
+        },
+        {
+          name: "Mật khẩu proxy",
+          description:
+            "Secret tùy chọn cho xác thực proxy. Hãy coi đây là cấu hình nhạy cảm và tránh đưa giá trị này vào notes hoặc ảnh chụp màn hình.",
+          whenToUse:
+            "Chỉ dùng cho tài khoản proxy được phép, và xoay vòng secret theo chính sách giống các secret test dùng chung.",
+        },
+        {
+          name: "User agent",
+          description:
+            "Chuỗi user-agent browser gửi cho trang ngay từ lúc launch, hữu ích khi test rendering hoặc nhánh compatibility dựa vào danh tính client.",
+          whenToUse:
+            "Dùng khi app đích có nhánh desktop, mobile, bot, hoặc browser cũ cần được kiểm tra rõ ràng.",
+        },
+        {
+          name: "Chiều rộng và chiều cao viewport",
+          description:
+            "Kích thước viewport ban đầu theo pixel. Width và height cùng quyết định layout responsive trước khi graph chạy bất kỳ action đổi viewport nào.",
+          whenToUse:
+            "Dùng kích thước cố định khi selector, screenshot, hoặc nhánh responsive phải bắt đầu từ một canvas dự đoán được.",
+        },
+        {
+          name: "Viewport mobile",
+          description:
+            "Cờ yêu cầu browser context mô phỏng hành vi viewport mobile, ngoài việc đặt width và height bằng số.",
+          whenToUse:
+            "Dùng khi kiểm tra layout hoặc hành vi mobile thật sự, không chỉ là cửa sổ desktop hẹp.",
+        },
+        {
+          name: "Touch input",
+          description:
+            "Cờ bật hành vi input có touch cho những trang phân biệt tương tác chạm với tương tác chuột.",
+          whenToUse:
+            "Dùng cho menu mobile, drag handle, hoặc component chỉ mở hành vi khi browser báo có touch support.",
+        },
+        {
+          name: "Chính sách thử thách",
+          description:
+            "Điều khiển cách xử lý checkpoint cần con người: bỏ qua, chỉ phát hiện, hoặc pause để người thật thao tác. Nó không giải hay bypass bảo vệ của website.",
+          whenToUse:
+            "Dùng detect only để ghi nhận checkpoint; dùng pause for human khi operator được phê duyệt cần tiếp tục test thủ công.",
+        },
+        {
+          name: "Mặc định headless",
+          description:
+            "Mặc định browser có hiển thị cửa sổ hay chạy ẩn cho workflow này. Headless không mở cửa sổ; non-headless mở browser nhìn thấy được.",
+          whenToUse:
+            "Dùng headless cho automation thường lệ; dùng hiện cửa sổ khi debug, review, hoặc xử lý checkpoint thủ công.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Run viewport mobile",
+          steps: ["Đặt width và height", "Bật mobile", "Bật touch khi UI cần tương tác chạm"],
+        },
+      ],
+      relatedGraphActions: [
+        {
+          action: "Set Viewport",
+          relationship: "runtime_override",
+          explanation: "Có thể đổi viewport sau khi browser đã mở, đúng tại vị trí node đó chạy trong graph.",
+        },
+      ],
+      safetyNotes: [
+        "Proxy và challenge control chỉ dành cho kiểm thử được phép và môi trường lặp lại được.",
+      ],
+      commonMistakes: [
+        {
+          mistake: "Nghĩ rằng đổi proxy sẽ áp dụng ngay khi run đang chạy.",
+          fix: "Hãy save Browser settings và bắt đầu run mới, vì giá trị launch-level được resolve trước khi Chromium mở.",
+        },
+      ],
+    },
   },
   environment: {
-    title: "Environment Settings Help",
-    summary:
-      "Environment settings apply browser-context defaults after launch and before the first graph step.",
-    bestFor: ["Geolocation defaults", "Permissions", "Headers", "Storage and cookies"],
-    notFor: ["Launch profile or proxy", "App-level editor preferences"],
-    precedence: [
-      "Environment defaults apply before graph execution.",
-      "Graph environment actions may override them later by execution order.",
-    ],
-    fieldGuide: [
-      {
-        name: "Locale, timezone, geolocation",
-        description: "Use for workflows whose target pages change behavior by location or locale.",
-      },
-      {
-        name: "Storage and cookies",
-        description: "Seed known browser context values before the graph starts.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "Regional smoke run",
-        steps: ["Set locale", "Set timezone", "Grant required permissions"],
-      },
-    ],
-    relatedGraphActions: [
-      {
-        action: "Set Geolocation",
-        relationship: "runtime_override",
-        explanation: "Can change location defaults later in a run.",
-      },
-    ],
-    commonMistakes: [
-      {
-        mistake: "Adding setup nodes for values that never change.",
-        fix: "Move stable defaults into Environment settings.",
-      },
-    ],
+    en: {
+      title: "Environment Settings Help",
+      summary:
+        "Environment settings apply browser-context defaults after launch and before the first graph step, shaping location, permissions, headers, downloads, cookies, and storage without changing browser launch identity.",
+      uiLabels: enLabels,
+      bestFor: ["Setting stable locale, timezone, geolocation, permissions, headers, and seeded browser state."],
+      notFor: ["Proxy, profile, user-agent launch identity, or values that change many times during the graph."],
+      precedence: [
+        "Environment defaults apply before graph execution.",
+        "Graph environment actions may override these values later by execution order.",
+      ],
+      fieldGuide: [
+        {
+          name: "Locale and timezone",
+          description:
+            "Locale controls language and regional formatting; timezone controls date and time behavior exposed to the page context.",
+          whenToUse:
+            "Use them when pages render prices, dates, language, or regional content differently across markets.",
+        },
+        {
+          name: "Latitude and longitude",
+          description:
+            "Geolocation coordinates seeded before the graph starts, usually paired with a geolocation permission grant.",
+          whenToUse:
+            "Use them for maps, store locators, delivery coverage, or flows whose UI changes by physical location.",
+        },
+        {
+          name: "Permissions",
+          description:
+            "Comma-separated browser permissions granted before the first graph step, such as geolocation or notifications where supported.",
+          whenToUse:
+            "Use stable permissions here when every run needs them; use graph actions only when permission timing is part of the test.",
+        },
+        {
+          name: "Download directory",
+          description:
+            "Default local folder where downloaded files should be written for this workflow, when the runtime supports controlled downloads.",
+          whenToUse:
+            "Use it when the workflow validates generated reports, invoices, exports, or other downloaded artifacts.",
+        },
+        {
+          name: "Extra HTTP headers",
+          description:
+            "Additional request headers injected before graph execution, written one header per line as Name: Value.",
+          whenToUse:
+            "Use them for test routing, feature flags, correlation ids, or approved environment selectors that must exist from the first request.",
+        },
+        {
+          name: "Cookies and storage",
+          description:
+            "Seeded browser state for cookies, local storage, session storage, and restore references before the graph starts.",
+          whenToUse:
+            "Use it when a workflow needs known context but should not spend graph steps recreating the same state every run.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Regional smoke run",
+          steps: ["Set locale", "Set timezone", "Grant required permissions"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Adding setup nodes for values that never change.",
+          fix: "Move stable defaults into Environment settings and keep graph nodes for values that change by execution order.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Cài đặt Môi trường",
+      summary:
+        "Cài đặt Môi trường áp dụng default cho browser context sau khi launch và trước graph step đầu tiên, gồm vị trí, permission, header, download, cookie, và storage mà không đổi danh tính launch của browser.",
+      uiLabels: viLabels,
+      bestFor: ["Đặt locale, timezone, geolocation, permission, header, và state browser ổn định."],
+      notFor: ["Không dùng cho proxy, profile, user-agent lúc launch, hoặc giá trị thay đổi nhiều lần trong graph."],
+      precedence: [
+        "Environment defaults áp dụng trước khi graph chạy.",
+        "Graph action về environment có thể ghi đè các giá trị này sau đó theo đúng thứ tự execution.",
+      ],
+      fieldGuide: [
+        {
+          name: "Locale và timezone",
+          description:
+            "Locale điều khiển ngôn ngữ và định dạng vùng; timezone điều khiển hành vi ngày giờ mà page context nhìn thấy.",
+          whenToUse:
+            "Dùng khi trang hiển thị giá, ngày tháng, ngôn ngữ, hoặc nội dung vùng khác nhau theo thị trường.",
+        },
+        {
+          name: "Latitude và longitude",
+          description:
+            "Tọa độ geolocation được seed trước khi graph bắt đầu, thường đi kèm permission geolocation.",
+          whenToUse:
+            "Dùng cho bản đồ, tìm cửa hàng, vùng giao hàng, hoặc flow có UI thay đổi theo vị trí thực.",
+        },
+        {
+          name: "Permissions",
+          description:
+            "Danh sách permission browser phân tách bằng dấu phẩy, được cấp trước graph step đầu tiên, ví dụ geolocation hoặc notifications nếu runtime hỗ trợ.",
+          whenToUse:
+            "Dùng permission ổn định ở đây khi mọi run đều cần; chỉ dùng graph action nếu thời điểm xin quyền là một phần của test.",
+        },
+        {
+          name: "Download directory",
+          description:
+            "Thư mục local mặc định để ghi file download cho workflow này, khi runtime hỗ trợ điều khiển download.",
+          whenToUse:
+            "Dùng khi workflow cần validate report, invoice, export, hoặc artifact tải xuống.",
+        },
+        {
+          name: "Extra HTTP headers",
+          description:
+            "Header request bổ sung được inject trước khi graph chạy, nhập mỗi dòng theo dạng Name: Value.",
+          whenToUse:
+            "Dùng cho test routing, feature flag, correlation id, hoặc selector môi trường đã được phê duyệt cần có từ request đầu tiên.",
+        },
+        {
+          name: "Cookies và storage",
+          description:
+            "State browser được seed cho cookies, local storage, session storage, và session restore reference trước khi graph bắt đầu.",
+          whenToUse:
+            "Dùng khi workflow cần context đã biết nhưng không nên tốn graph step để dựng lại cùng một state mỗi lần chạy.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Smoke test theo vùng",
+          steps: ["Đặt locale", "Đặt timezone", "Cấp permission cần thiết"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Thêm setup node cho giá trị không bao giờ thay đổi.",
+          fix: "Chuyển default ổn định vào Environment settings và giữ graph node cho giá trị thay đổi theo thứ tự chạy.",
+        },
+      ],
+    },
   },
   inputs: {
-    title: "Inputs & Variables Settings Help",
-    summary:
-      "Inputs & Variables define the initial data contract for manual, batch, triggered, and future API-driven runs.",
-    bestFor: ["Required run inputs", "Initial variables", "Batch column mapping"],
-    notFor: ["Mutating values during graph execution"],
-    precedence: [
-      "Saved defaults load first.",
-      "Manual, batch, or trigger values override defaults for that run.",
-      "Graph Set Variables writes override by execution order.",
-    ],
-    fieldGuide: [
-      {
-        name: "Input schema",
-        description: "Declares expected names, types, defaults, required flags, and descriptions.",
-      },
-      {
-        name: "Initial variables",
-        description: "Seed the variable store before the first executable graph step.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "Batch login rows",
-        steps: ["Define email and password inputs", "Map CSV columns to those inputs"],
-      },
-    ],
-    commonMistakes: [
-      {
-        mistake: "Writing required inputs only in notes.",
-        fix: "Add input schema rows so validation can block incomplete runs.",
-      },
-    ],
+    en: {
+      title: "Inputs & Variables Settings Help",
+      summary:
+        "Inputs & Variables define the data contract loaded before execution, so manual runs, batch rows, triggered runs, and graph variable nodes can agree on names, types, defaults, and required values.",
+      uiLabels: enLabels,
+      bestFor: ["Declaring required runtime inputs, safe defaults, initial variables, and batch column mapping."],
+      notFor: ["Changing values after graph execution has already begun; use Set Variables nodes for that."],
+      precedence: [
+        "Saved defaults load first.",
+        "Manual, batch, or trigger values override defaults for that run.",
+        "Graph Set Variables writes override prior values by execution order.",
+      ],
+      fieldGuide: [
+        {
+          name: "Input schema",
+          description:
+            "Rows that declare input name, value type, required flag, default value, and human description for values supplied at run time.",
+          whenToUse:
+            "Use it for data the workflow cannot safely assume, such as account, environment, search term, or target record id.",
+        },
+        {
+          name: "Required flag",
+          description:
+            "Marks an input as mandatory when no default or run override exists, allowing validation to block incomplete runs early.",
+          whenToUse:
+            "Use it for values that would make the workflow ambiguous, unsafe, or guaranteed to fail if missing.",
+        },
+        {
+          name: "Default value",
+          description:
+            "Fallback value loaded when the run does not provide a value for that input, useful for safe examples or common environments.",
+          whenToUse:
+            "Use defaults for non-secret, low-risk values; avoid hiding production-like secrets in defaults.",
+        },
+        {
+          name: "Initial variables",
+          description:
+            "Variables seeded before the first executable graph step, using typed name and value rows that graph actions can reference.",
+          whenToUse:
+            "Use them for stable computed-like values or constants that should be available without adding an early Set Variables node.",
+        },
+        {
+          name: "Batch mapping",
+          description:
+            "Mapping between batch source columns and workflow input names, so each row can resolve the correct runtime values.",
+          whenToUse:
+            "Use it when a CSV or external row source should drive repeated runs with different accounts, records, or parameters.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Batch login rows",
+          steps: ["Define email and password inputs", "Map CSV columns to those inputs"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Writing required inputs only in notes.",
+          fix: "Add input schema rows so validation can block incomplete manual, batch, or triggered runs.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Inputs & Variables",
+      summary:
+        "Inputs & Variables định nghĩa data contract được load trước khi chạy, để manual run, batch row, triggered run, và variable node trong graph thống nhất về tên, type, default, và giá trị bắt buộc.",
+      uiLabels: viLabels,
+      bestFor: ["Khai báo runtime input bắt buộc, default an toàn, initial variables, và mapping cột batch."],
+      notFor: ["Không dùng để đổi giá trị sau khi graph đã bắt đầu; hãy dùng Set Variables node cho việc đó."],
+      precedence: [
+        "Saved defaults được load đầu tiên.",
+        "Giá trị từ manual, batch, hoặc trigger ghi đè default cho run đó.",
+        "Graph Set Variables ghi đè giá trị trước đó theo đúng thứ tự execution.",
+      ],
+      fieldGuide: [
+        {
+          name: "Input schema",
+          description:
+            "Các dòng khai báo tên input, type giá trị, cờ required, default value, và mô tả cho giá trị được cung cấp lúc chạy.",
+          whenToUse:
+            "Dùng cho dữ liệu workflow không nên tự giả định, như account, environment, từ khóa tìm kiếm, hoặc id bản ghi đích.",
+        },
+        {
+          name: "Cờ required",
+          description:
+            "Đánh dấu input là bắt buộc khi không có default hoặc override của run, giúp validation chặn run thiếu dữ liệu từ sớm.",
+          whenToUse:
+            "Dùng cho giá trị mà nếu thiếu sẽ làm workflow mơ hồ, không an toàn, hoặc chắc chắn thất bại.",
+        },
+        {
+          name: "Default value",
+          description:
+            "Giá trị fallback được load khi run không cung cấp input đó, hữu ích cho ví dụ an toàn hoặc môi trường thường dùng.",
+          whenToUse:
+            "Dùng default cho giá trị không phải secret và ít rủi ro; tránh giấu secret giống production trong default.",
+        },
+        {
+          name: "Initial variables",
+          description:
+            "Biến được seed trước executable graph step đầu tiên, gồm name, type, và value để graph action có thể tham chiếu.",
+          whenToUse:
+            "Dùng cho constant hoặc giá trị ổn định cần có sẵn mà không muốn thêm Set Variables node ở đầu graph.",
+        },
+        {
+          name: "Batch mapping",
+          description:
+            "Mapping giữa cột của batch source và tên input workflow, để mỗi row resolve đúng runtime value.",
+          whenToUse:
+            "Dùng khi CSV hoặc nguồn row bên ngoài cần chạy lặp với account, record, hoặc tham số khác nhau.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Batch nhiều dòng đăng nhập",
+          steps: ["Khai báo input email và password", "Map cột CSV vào các input đó"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Chỉ ghi input bắt buộc trong notes.",
+          fix: "Thêm row trong input schema để validation chặn manual, batch, hoặc triggered run còn thiếu dữ liệu.",
+        },
+      ],
+    },
   },
   triggers: {
-    title: "Triggers Settings Help",
-    summary:
-      "Triggers persist orchestration intent for manual-only, one-time, interval, and future calendar or event runs.",
-    bestFor: ["Saved schedules", "Missed-run policy", "Trigger input sources"],
-    notFor: ["Running unsaved graph drafts", "Replacing manual runs"],
-    precedence: [
-      "Triggered runs use the saved graph and saved Workflow Settings at dispatch time.",
-    ],
-    fieldGuide: [
-      {
-        name: "Mode",
-        description: "Manual keeps automatic dispatch disabled; once and interval add schedule validation.",
-      },
-      {
-        name: "Concurrency policy",
-        description: "Controls what a trigger should do when the workflow is already running.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "Hourly availability check",
-        steps: ["Enable triggers", "Choose interval", "Set interval seconds"],
-      },
-    ],
-    commonMistakes: [
-      {
-        mistake: "Expecting triggers to run unsaved graph edits.",
-        fix: "Save the graph before relying on trigger dispatch.",
-      },
-    ],
+    en: {
+      title: "Triggers Settings Help",
+      summary:
+        "Triggers store orchestration intent for manual-only, one-time, interval, and future scheduled runs, using the saved graph and saved Workflow Settings at dispatch time.",
+      uiLabels: enLabels,
+      bestFor: ["Saving schedule intent, missed-run behavior, trigger input source, and already-running behavior."],
+      notFor: ["Running unsaved graph drafts, replacing manual runs, or changing graph validation rules."],
+      precedence: ["Triggered runs use the saved graph and saved settings, not unsaved editor state."],
+      fieldGuide: [
+        {
+          name: "Trigger enabled",
+          description:
+            "Master switch for automatic dispatch. When disabled, trigger details can remain saved but should not start runs.",
+          whenToUse:
+            "Use it to pause a schedule without deleting interval, input source, or concurrency policy choices.",
+        },
+        {
+          name: "Mode",
+          description:
+            "Dispatch style for the trigger: manual keeps automation off, once stores a one-time time, and interval stores repeated cadence.",
+          whenToUse:
+            "Use manual for drafts, once for a planned single run, and interval for recurring health checks.",
+        },
+        {
+          name: "Interval seconds",
+          description:
+            "Cadence for interval mode, measured in seconds, controlling how often the scheduler should attempt a run.",
+          whenToUse:
+            "Use it for recurring checks, and keep the interval longer than typical workflow duration unless concurrency policy is intentional.",
+        },
+        {
+          name: "Once at",
+          description:
+            "Target timestamp for one-time mode, representing when the scheduler should attempt the saved workflow run.",
+          whenToUse:
+            "Use it for planned validation windows, release checks, or delayed tests where manual clicking is not desired.",
+        },
+        {
+          name: "Input source and batch source",
+          description:
+            "Saved references describing where trigger-supplied input values or batch rows should come from when dispatch happens.",
+          whenToUse:
+            "Use them when the scheduled run should pull a known input set instead of relying only on defaults.",
+        },
+        {
+          name: "Missed-run policy",
+          description:
+            "Rule for what the scheduler should do if a planned run time was missed while the app or scheduler was unavailable.",
+          whenToUse:
+            "Use skip when stale runs are not useful; use catch-up only when late execution still has business value.",
+        },
+        {
+          name: "Concurrency policy",
+          description:
+            "Rule for what a trigger should do when the workflow is already running at the next dispatch time.",
+          whenToUse:
+            "Use skip if overlapping browser sessions would corrupt data, overload services, or confuse run results.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Hourly availability check",
+          steps: ["Enable triggers", "Choose interval", "Set interval seconds"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Expecting triggers to run unsaved graph edits.",
+          fix: "Save the graph and settings before relying on trigger dispatch.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Triggers",
+      summary:
+        "Triggers lưu ý định điều phối cho run manual-only, one-time, interval, và các kiểu schedule sau này, dùng graph đã save và Workflow Settings đã save tại thời điểm dispatch.",
+      uiLabels: viLabels,
+      bestFor: ["Lưu lịch chạy, cách xử lý missed run, nguồn input của trigger, và hành vi khi workflow đang chạy."],
+      notFor: ["Không dùng để chạy draft graph chưa save, thay thế manual run, hoặc đổi rule validate graph."],
+      precedence: ["Triggered run dùng graph và settings đã save, không dùng state editor chưa lưu."],
+      fieldGuide: [
+        {
+          name: "Bật trigger",
+          description:
+            "Công tắc tổng cho dispatch tự động. Khi tắt, chi tiết trigger vẫn có thể được lưu nhưng không nên khởi chạy run.",
+          whenToUse:
+            "Dùng để tạm dừng schedule mà không xóa interval, nguồn input, hoặc concurrency policy đã chọn.",
+        },
+        {
+          name: "Mode",
+          description:
+            "Kiểu dispatch của trigger: manual tắt tự động, once lưu một thời điểm chạy một lần, interval lưu chu kỳ lặp.",
+          whenToUse:
+            "Dùng manual cho draft, once cho một run đã lên kế hoạch, và interval cho health check định kỳ.",
+        },
+        {
+          name: "Interval seconds",
+          description:
+            "Chu kỳ của interval mode, tính bằng giây, quyết định scheduler thử chạy workflow thường xuyên thế nào.",
+          whenToUse:
+            "Dùng cho check lặp lại; nên để interval dài hơn thời gian workflow thường chạy trừ khi concurrency policy đã được cân nhắc.",
+        },
+        {
+          name: "Once at",
+          description:
+            "Timestamp mục tiêu cho once mode, biểu thị lúc scheduler nên thử chạy workflow đã save và dùng settings đã persist tại thời điểm đó.",
+          whenToUse:
+            "Dùng cho khung validation đã hẹn, release check, hoặc test trì hoãn khi không muốn bấm thủ công.",
+        },
+        {
+          name: "Input source và batch source",
+          description:
+            "Tham chiếu đã lưu mô tả trigger lấy input value hoặc batch row từ đâu khi dispatch xảy ra, thay vì nhập tay trước mỗi run.",
+          whenToUse:
+            "Dùng khi scheduled run cần kéo một bộ input đã biết thay vì chỉ dựa vào default.",
+        },
+        {
+          name: "Missed-run policy",
+          description:
+            "Luật cho scheduler khi bỏ lỡ một thời điểm chạy vì app hoặc scheduler không khả dụng, ví dụ bỏ qua hoặc xử lý bù tùy giá trị nghiệp vụ.",
+          whenToUse:
+            "Dùng skip khi run muộn không còn hữu ích; chỉ dùng catch-up khi chạy trễ vẫn có giá trị nghiệp vụ.",
+        },
+        {
+          name: "Concurrency policy",
+          description:
+            "Luật cho trigger khi workflow vẫn đang chạy tại thời điểm dispatch tiếp theo, giúp tránh nhiều run chồng lấn cùng sửa một hệ thống.",
+          whenToUse:
+            "Dùng skip nếu nhiều browser session chồng nhau có thể làm hỏng dữ liệu, quá tải dịch vụ, hoặc gây nhiễu kết quả.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Check availability mỗi giờ",
+          steps: ["Bật triggers", "Chọn interval", "Đặt interval seconds"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Nghĩ trigger sẽ chạy graph edit chưa save.",
+          fix: "Hãy save graph và settings trước khi dựa vào trigger dispatch.",
+        },
+      ],
+    },
   },
   advanced: {
-    title: "Advanced Settings Help",
-    summary:
-      "Advanced settings collect compatibility warnings, diagnostics, rare debug controls, and future migration helpers.",
-    bestFor: ["Compatibility warnings", "Debug logging", "Settings JSON troubleshooting"],
-    notFor: ["Normal workflow behavior", "Everyday browser or input configuration"],
-    precedence: ["Advanced warnings explain conflicts but do not replace section ownership."],
-    fieldGuide: [
-      {
-        name: "Compatibility warnings",
-        description:
-          "Highlights legacy setup nodes that overlap with modern Workflow Settings sections.",
-      },
-      {
-        name: "Debug logging",
-        description:
-          "Controls future diagnostics and must redact secret values in logs and exports.",
-      },
-    ],
-    workflowExamples: [
-      {
-        title: "Legacy setup cleanup",
-        steps: ["Review warnings", "Move stable launch values into Browser settings"],
-      },
-    ],
-    commonMistakes: [
-      {
-        mistake: "Treating Advanced as the default settings page.",
-        fix: "Use the owning section for normal configuration.",
-      },
-    ],
+    en: {
+      title: "Advanced Settings Help",
+      summary:
+        "Advanced settings collect compatibility warnings, diagnostics, debug logging, experimental flags, and future migration helpers for rare troubleshooting rather than normal workflow configuration.",
+      uiLabels: enLabels,
+      bestFor: ["Reviewing compatibility warnings, enabling targeted diagnostics, and understanding migration hints."],
+      notFor: ["Everyday browser, input, environment, schedule, or execution configuration."],
+      precedence: ["Advanced warnings explain conflicts but do not replace the section that owns the actual setting."],
+      fieldGuide: [
+        {
+          name: "Compatibility warnings",
+          description:
+            "Read-only warnings that highlight legacy setup nodes or saved data that overlap with modern Workflow Settings sections.",
+          whenToUse:
+            "Use them when a workflow behaves unexpectedly after import, migration, or loading an older graph.",
+        },
+        {
+          name: "Debug logging level",
+          description:
+            "Diagnostic verbosity intended for troubleshooting runner, settings, and integration behavior while keeping secret values redacted.",
+          whenToUse:
+            "Use it briefly while investigating a concrete issue, then return it to off to reduce noise and sensitive context exposure.",
+        },
+        {
+          name: "Experimental flags",
+          description:
+            "Feature gates for unfinished or compatibility-sensitive behavior that should not be required for normal workflow authoring.",
+          whenToUse:
+            "Use only when a migration note, developer instruction, or controlled test explicitly asks for a flag.",
+        },
+        {
+          name: "Settings diagnostics",
+          description:
+            "Troubleshooting context such as JSON previews, migration hints, or exportable state that helps compare saved settings with UI expectations.",
+          whenToUse:
+            "Use it to verify what is persisted when the form, saved graph, and runtime behavior appear out of sync.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Legacy setup cleanup",
+          steps: ["Review warnings", "Move stable launch values into Browser settings"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Treating Advanced as the default settings page.",
+          fix: "Use the owning section for normal configuration and keep Advanced for diagnostics or compatibility review.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Cài đặt Nâng cao",
+      summary:
+        "Cài đặt Nâng cao gom compatibility warning, diagnostics, debug logging, experimental flags, và helper migration sau này cho các tình huống troubleshooting hiếm, không phải cấu hình thường ngày.",
+      uiLabels: viLabels,
+      bestFor: ["Review compatibility warning, bật diagnostic có mục tiêu, và hiểu gợi ý migration."],
+      notFor: ["Không dùng cho cấu hình browser, input, environment, schedule, hoặc execution thường ngày."],
+      precedence: ["Warning ở Advanced giải thích xung đột nhưng không thay thế section sở hữu setting thật."],
+      fieldGuide: [
+        {
+          name: "Compatibility warnings",
+          description:
+            "Các cảnh báo chỉ đọc, chỉ ra setup node legacy hoặc dữ liệu đã lưu bị trùng trách nhiệm với Workflow Settings hiện đại.",
+          whenToUse:
+            "Dùng khi workflow hành xử lạ sau import, migration, hoặc khi mở một graph cũ.",
+        },
+        {
+          name: "Debug logging level",
+          description:
+            "Mức độ chi tiết log để troubleshoot runner, settings, và integration, đồng thời vẫn phải redact secret value.",
+          whenToUse:
+            "Chỉ bật tạm thời khi điều tra một lỗi cụ thể, rồi trả về off để giảm nhiễu và giảm lộ ngữ cảnh nhạy cảm.",
+        },
+        {
+          name: "Experimental flags",
+          description:
+            "Feature gate cho hành vi chưa hoàn thiện hoặc nhạy cảm về compatibility, không nên bắt buộc trong authoring workflow bình thường.",
+          whenToUse:
+            "Chỉ dùng khi migration note, developer instruction, hoặc controlled test yêu cầu rõ một flag.",
+        },
+        {
+          name: "Settings diagnostics",
+          description:
+            "Ngữ cảnh troubleshooting như JSON preview, migration hint, hoặc state có thể export để so saved settings với kỳ vọng UI.",
+          whenToUse:
+            "Dùng để xác minh dữ liệu đã persist khi form, graph đã save, và hành vi runtime có vẻ không khớp nhau.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Dọn setup legacy",
+          steps: ["Review warnings", "Chuyển launch value ổn định vào Browser settings"],
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Xem Advanced là trang settings mặc định.",
+          fix: "Dùng đúng section sở hữu cấu hình thường ngày và giữ Advanced cho diagnostics hoặc compatibility review.",
+        },
+      ],
+    },
   },
 };

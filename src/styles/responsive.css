@@ -38,6 +38,7 @@
 
   .browser-config-header,
   .workflow-settings-section-header,
+  .workflow-settings-help-header,
   .run-issue-header,
   .run-issue-item {
     display: grid;
@@ -126,5 +127,9 @@
 
   .workflow-settings-tab {
     flex: 0 0 auto;
+  }
+
+  .workflow-settings-help-header {
+    padding-right: 32px;
   }
 }

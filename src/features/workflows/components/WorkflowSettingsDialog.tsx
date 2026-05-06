@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
   WorkflowBrowserChallengePolicy,
@@ -33,6 +34,7 @@ import { Textarea } from "../../../components/ui/textarea";
 import {
   tagsFromInput,
   tagsToInput,
+  type WorkflowSettingsHelpLanguage,
   workflowSettingsHelp,
   workflowSettingsSections,
 } from "../lib/workflowSettings";
@@ -84,10 +86,6 @@ export function WorkflowSettingsDialog({
                 <DialogTitle>Workflow Settings</DialogTitle>
               </div>
             </div>
-            <DialogDescription>
-              Configure identity, execution, browser, environment, inputs,
-              triggers, and compatibility behavior for this workflow.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="workflow-settings-body">
@@ -120,7 +118,7 @@ export function WorkflowSettingsDialog({
               <div className="workflow-settings-section-header">
                 <div>
                   <h2 id="workflow-settings-section-title">{activeMeta.label}</h2>
-                  <p>{workflowSettingsHelp[activeSection].summary}</p>
+                  <p>{workflowSettingsHelp[activeSection].en.summary}</p>
                 </div>
                 <WorkflowSettingsHelpButton section={activeSection} />
               </div>
@@ -194,7 +192,10 @@ function WorkflowSettingsHelpButton({
 }: {
   section: WorkflowSettingsSectionId;
 }) {
-  const help = workflowSettingsHelp[section];
+  const [language, setLanguage] = useState<WorkflowSettingsHelpLanguage>("en");
+  const help = workflowSettingsHelp[section][language];
+  const labels = help.uiLabels;
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -210,27 +211,48 @@ function WorkflowSettingsHelpButton({
       </DialogTrigger>
       <DialogContent className="workflow-settings-help-dialog">
         <DialogHeader>
-          <DialogTitle>{help.title}</DialogTitle>
+          <div className="workflow-settings-help-header">
+            <DialogTitle>{help.title}</DialogTitle>
+            <div
+              aria-label="Help language"
+              className="workflow-settings-help-language"
+              role="group"
+            >
+              {(["en", "vi"] as const).map((option) => (
+                <Button
+                  key={option}
+                  aria-pressed={language === option}
+                  size="sm"
+                  type="button"
+                  variant={language === option ? "default" : "ghost"}
+                  onClick={() => setLanguage(option)}
+                >
+                  {option === "en" ? "English" : "Tiếng Việt"}
+                </Button>
+              ))}
+            </div>
+          </div>
           <DialogDescription>{help.summary}</DialogDescription>
         </DialogHeader>
         <div className="workflow-settings-help-body">
-          <HelpBlock title="Use it when" items={help.bestFor} />
-          {help.notFor ? <HelpBlock title="Do not use it for" items={help.notFor} /> : null}
+          <HelpBlock title={labels.bestFor} items={help.bestFor} />
+          {help.notFor ? <HelpBlock title={labels.notFor} items={help.notFor} /> : null}
           {help.precedence ? (
-            <HelpBlock title="Precedence and overrides" items={help.precedence} />
+            <HelpBlock title={labels.precedence} items={help.precedence} />
           ) : null}
           <div className="workflow-settings-help-list">
-            <h3>Field guide</h3>
+            <h3>{labels.fieldGuide}</h3>
             {help.fieldGuide.map((field) => (
               <div key={field.name}>
                 <strong>{field.name}</strong>
                 <p>{field.description}</p>
+                {field.whenToUse ? <p>{field.whenToUse}</p> : null}
                 {field.overrideBehavior ? <p>{field.overrideBehavior}</p> : null}
               </div>
             ))}
           </div>
           <div className="workflow-settings-help-list">
-            <h3>Common mistakes</h3>
+            <h3>{labels.commonMistakes}</h3>
             {help.commonMistakes.map((item) => (
               <div key={item.mistake}>
                 <strong>{item.mistake}</strong>
@@ -238,7 +260,7 @@ function WorkflowSettingsHelpButton({
               </div>
             ))}
           </div>
-          {help.safetyNotes ? <HelpBlock title="Safety notes" items={help.safetyNotes} /> : null}
+          {help.safetyNotes ? <HelpBlock title={labels.safetyNotes} items={help.safetyNotes} /> : null}
         </div>
       </DialogContent>
     </Dialog>

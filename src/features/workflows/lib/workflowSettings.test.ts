@@ -39,11 +39,22 @@ describe("workflow settings model", () => {
     ]);
 
     for (const section of workflowSettingsSections) {
-      const help = workflowSettingsHelp[section.id];
-      expect(help.title).toContain(section.label);
-      expect(help.summary.length).toBeGreaterThan(20);
-      expect(help.fieldGuide.length).toBeGreaterThan(0);
-      expect(help.commonMistakes.length).toBeGreaterThan(0);
+      const helpByLanguage = workflowSettingsHelp[section.id];
+
+      expect(Object.keys(helpByLanguage).sort()).toEqual(["en", "vi"]);
+
+      for (const language of ["en", "vi"] as const) {
+        const help = helpByLanguage[language];
+        expect(help.title.length).toBeGreaterThan(10);
+        expect(help.summary.length).toBeGreaterThan(80);
+        expect(help.fieldGuide.length).toBeGreaterThanOrEqual(3);
+        expect(help.commonMistakes.length).toBeGreaterThan(0);
+
+        for (const field of help.fieldGuide) {
+          expect(field.description.length).toBeGreaterThan(90);
+          expect(field.whenToUse?.length ?? 0).toBeGreaterThan(40);
+        }
+      }
     }
   });
 });
