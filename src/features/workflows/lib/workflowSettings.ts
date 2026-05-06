@@ -1,4 +1,5 @@
 import type {
+  WorkflowBrowserConfig,
   WorkflowSettings,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
@@ -61,6 +62,121 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "triggers", label: "Triggers" },
   { id: "advanced", label: "Advanced" },
 ];
+
+export type BrowserDeviceProfileId =
+  | "default"
+  | "desktop_chrome"
+  | "android_chrome"
+  | "iphone_safari"
+  | "custom";
+
+type BrowserDeviceConfig = Pick<
+  WorkflowBrowserConfig,
+  "user_agent" | "viewport_width" | "viewport_height" | "mobile" | "touch"
+>;
+
+type BrowserDevicePreset = {
+  id: Exclude<BrowserDeviceProfileId, "custom">;
+  label: string;
+  config: BrowserDeviceConfig;
+};
+
+export const browserDeviceProfilePresets: BrowserDevicePreset[] = [
+  {
+    id: "default",
+    label: "Default browser",
+    config: {
+      user_agent: null,
+      viewport_width: null,
+      viewport_height: null,
+      mobile: false,
+      touch: false,
+    },
+  },
+  {
+    id: "desktop_chrome",
+    label: "Desktop Chrome",
+    config: {
+      user_agent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      viewport_width: 1365,
+      viewport_height: 768,
+      mobile: false,
+      touch: false,
+    },
+  },
+  {
+    id: "android_chrome",
+    label: "Android Chrome",
+    config: {
+      user_agent:
+        "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      viewport_width: 390,
+      viewport_height: 844,
+      mobile: true,
+      touch: true,
+    },
+  },
+  {
+    id: "iphone_safari",
+    label: "iPhone Safari",
+    config: {
+      user_agent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      viewport_width: 390,
+      viewport_height: 844,
+      mobile: true,
+      touch: true,
+    },
+  },
+];
+
+export const browserDeviceProfileOptions = [
+  ...browserDeviceProfilePresets.map(({ id, label }) => ({ id, label })),
+  { id: "custom" as const, label: "Custom user agent" },
+];
+
+export function createDefaultBrowserProfileName(seed = randomProfileSeed()) {
+  const safeSeed = seed
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `profile-${safeSeed || randomProfileSeed()}`;
+}
+
+function randomProfileSeed() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID().slice(0, 8);
+  }
+  return Math.random().toString(36).slice(2, 10);
+}
+
+export function applyBrowserDeviceProfile<T extends BrowserDeviceConfig>(
+  config: T,
+  profileId: BrowserDeviceProfileId,
+): T {
+  const preset = browserDeviceProfilePresets.find((candidate) => candidate.id === profileId);
+  if (!preset) return config;
+  return { ...config, ...preset.config };
+}
+
+export function detectBrowserDeviceProfile(config: BrowserDeviceConfig): BrowserDeviceProfileId {
+  const preset = browserDeviceProfilePresets.find((candidate) =>
+    browserDeviceConfigMatches(config, candidate.config),
+  );
+  return preset?.id ?? "custom";
+}
+
+function browserDeviceConfigMatches(config: BrowserDeviceConfig, preset: BrowserDeviceConfig) {
+  return (
+    (config.user_agent ?? null) === preset.user_agent &&
+    (config.viewport_width ?? null) === preset.viewport_width &&
+    (config.viewport_height ?? null) === preset.viewport_height &&
+    config.mobile === preset.mobile &&
+    config.touch === preset.touch
+  );
+}
 
 export function defaultWorkflowSettings({
   workflowId,
@@ -512,7 +628,7 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Browser Settings Help",
       summary:
-        "Browser settings are launch-level defaults for Chromium: profile identity, authorized proxy routing, user agent, viewport, touch behavior, headless mode, and safe handling of human challenge checkpoints.",
+        "Browser settings are launch-level defaults for Chromium: profile identity, authorized proxy routing, coherent device profile, user agent, viewport, touch behavior, headless mode, and safe handling of human challenge checkpoints.",
       uiLabels: enLabels,
       bestFor: [
         "Making browser launch behavior repeatable across manual, batch, and triggered runs.",
@@ -527,11 +643,18 @@ export const workflowSettingsHelp: Record<
       ],
       fieldGuide: [
         {
+          name: "Reuse login session",
+          description:
+            "Checkbox that decides whether the run opens a persistent named browser profile or a clean temporary profile. Turning it on generates a stable profile name when the field is empty.",
+          whenToUse:
+            "Use it for approved accounts that should stay signed in between runs; turn it off when every run should start from a fresh browser state.",
+        },
+        {
           name: "Profile name",
           description:
-            "Named browser profile to launch with saved cookies, storage, and identity state where supported. Leaving it empty uses the default run profile.",
+            "Named browser profile to launch with saved cookies, storage, and identity state where supported. The app can generate this value when Reuse login session is enabled.",
           whenToUse:
-            "Use it when a workflow needs a consistent signed-in testing profile or isolated state between teams.",
+            "Keep one stable profile name per account and device profile, such as tiktok-main-desktop, so login state and device identity do not drift across runs.",
         },
         {
           name: "Proxy enabled",
@@ -562,11 +685,18 @@ export const workflowSettingsHelp: Record<
             "Use it only for authorized proxy accounts, and rotate it according to the same policy as other shared test secrets.",
         },
         {
+          name: "Device profile",
+          description:
+            "Preset that keeps user agent, viewport size, mobile emulation, and touch capability aligned as one launch identity instead of asking operators to paste a raw user-agent string.",
+          whenToUse:
+            "Use Default for normal desktop Chromium, Desktop Chrome for stable desktop testing, Android Chrome or iPhone Safari for mobile-layout runs, and Custom only when you know the exact client identity required.",
+        },
+        {
           name: "User agent",
           description:
-            "Browser user-agent string presented to pages at launch, useful for testing rendering or compatibility paths that depend on client identity.",
+            "Browser user-agent string presented to pages at launch. Presets fill this automatically; direct editing is reserved for Custom so the string does not drift away from viewport and touch settings.",
           whenToUse:
-            "Use it when the target app has supported desktop, mobile, bot, or legacy-browser code paths that must be tested explicitly.",
+            "Use Custom only when the target app has a documented desktop, mobile, bot, or legacy-browser code path that must be tested explicitly.",
         },
         {
           name: "Viewport width and height",
@@ -625,12 +755,16 @@ export const workflowSettingsHelp: Record<
           mistake: "Expecting proxy changes to apply after the run starts.",
           fix: "Save Browser settings and start a new run because launch-level values are resolved before Chromium opens.",
         },
+        {
+          mistake: "Randomizing user agents on a profile that stores a signed-in session.",
+          fix: "Keep one stable device profile per browser profile, for example tiktok-main-desktop and tiktok-main-mobile as separate profiles.",
+        },
       ],
     },
     vi: {
       title: "Trợ giúp Cài đặt Trình duyệt",
       summary:
-        "Cài đặt Trình duyệt là default ở thời điểm mở Chromium: hồ sơ đăng nhập, proxy được phép dùng, user agent, viewport, touch, headless, và cách xử lý an toàn các checkpoint cần con người.",
+        "Cài đặt Trình duyệt là default ở thời điểm mở Chromium: hồ sơ đăng nhập, proxy được phép dùng, device profile nhất quán, user agent, viewport, touch, headless, và cách xử lý an toàn các checkpoint cần con người.",
       uiLabels: viLabels,
       bestFor: [
         "Giữ hành vi mở browser lặp lại giống nhau cho manual, batch, và triggered runs.",
@@ -645,11 +779,18 @@ export const workflowSettingsHelp: Record<
       ],
       fieldGuide: [
         {
+          name: "Lưu lại phiên đăng nhập",
+          description:
+            "Checkbox quyết định run sẽ mở browser profile có tên để lưu state lâu dài hay dùng profile tạm sạch. Khi bật mà tên profile đang trống, app sẽ tự sinh một tên ổn định.",
+          whenToUse:
+            "Dùng cho tài khoản được phép cần giữ đăng nhập giữa các lần chạy; tắt khi mỗi run cần bắt đầu từ browser state sạch.",
+        },
+        {
           name: "Tên hồ sơ",
           description:
-            "Tên profile browser dùng khi launch, có thể mang theo cookie, storage, và trạng thái đăng nhập đã lưu nếu backend hỗ trợ. Để trống sẽ dùng profile mặc định của run.",
+            "Tên profile browser dùng khi launch, có thể mang theo cookie, storage, và trạng thái đăng nhập đã lưu nếu backend hỗ trợ. App có thể tự sinh giá trị này khi bật Lưu lại phiên đăng nhập.",
           whenToUse:
-            "Dùng khi workflow cần trạng thái đăng nhập test ổn định hoặc cần tách state giữa team, môi trường, hay tài khoản.",
+            "Giữ một tên profile ổn định cho mỗi tài khoản và device profile, ví dụ tiktok-main-desktop, để state đăng nhập và danh tính thiết bị không đổi qua lại giữa các run.",
         },
         {
           name: "Bật proxy",
@@ -680,11 +821,18 @@ export const workflowSettingsHelp: Record<
             "Chỉ dùng cho tài khoản proxy được phép, và xoay vòng secret theo chính sách giống các secret test dùng chung.",
         },
         {
+          name: "Device profile",
+          description:
+            "Preset giữ user agent, kích thước viewport, mô phỏng mobile, và khả năng touch đi cùng nhau như một danh tính launch thống nhất thay vì bắt operator tự paste chuỗi user-agent thô.",
+          whenToUse:
+            "Dùng Default cho Chromium desktop bình thường, Desktop Chrome cho test desktop ổn định, Android Chrome hoặc iPhone Safari cho layout mobile, và Custom chỉ khi biết chính xác client identity cần dùng.",
+        },
+        {
           name: "User agent",
           description:
-            "Chuỗi user-agent browser gửi cho trang ngay từ lúc launch, hữu ích khi test rendering hoặc nhánh compatibility dựa vào danh tính client.",
+            "Chuỗi user-agent browser gửi cho trang ngay từ lúc launch. Preset sẽ tự điền field này; chỉ edit trực tiếp khi chọn Custom để chuỗi không lệch khỏi viewport và touch settings.",
           whenToUse:
-            "Dùng khi app đích có nhánh desktop, mobile, bot, hoặc browser cũ cần được kiểm tra rõ ràng.",
+            "Chỉ dùng Custom khi app đích có nhánh desktop, mobile, bot, hoặc browser cũ được tài liệu hóa và cần test rõ ràng.",
         },
         {
           name: "Chiều rộng và chiều cao viewport",
@@ -742,6 +890,10 @@ export const workflowSettingsHelp: Record<
         {
           mistake: "Nghĩ rằng đổi proxy sẽ áp dụng ngay khi run đang chạy.",
           fix: "Hãy save Browser settings và bắt đầu run mới, vì giá trị launch-level được resolve trước khi Chromium mở.",
+        },
+        {
+          mistake: "Random user agent trên một profile đang lưu session đăng nhập.",
+          fix: "Giữ một device profile ổn định cho mỗi browser profile, ví dụ tiktok-main-desktop và tiktok-main-mobile là hai profile riêng.",
         },
       ],
     },

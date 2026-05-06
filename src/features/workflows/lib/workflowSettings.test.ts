@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  applyBrowserDeviceProfile,
+  createDefaultBrowserProfileName,
   defaultWorkflowSettings,
   workflowSettingsHelp,
   workflowSettingsSections,
@@ -56,5 +58,30 @@ describe("workflow settings model", () => {
         }
       }
     }
+  });
+
+  test("applies browser device profile presets as coherent launch settings", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Login flow",
+    });
+
+    const android = applyBrowserDeviceProfile(settings.browser, "android_chrome");
+
+    expect(android.user_agent).toContain("Android");
+    expect(android.user_agent).toContain("Chrome/");
+    expect(android.viewport_width).toBe(390);
+    expect(android.viewport_height).toBe(844);
+    expect(android.mobile).toBe(true);
+    expect(android.touch).toBe(true);
+
+    const custom = applyBrowserDeviceProfile(android, "custom");
+
+    expect(custom).toEqual(android);
+  });
+
+  test("creates readable generated browser profile names", () => {
+    expect(createDefaultBrowserProfileName("abc123")).toBe("profile-abc123");
+    expect(createDefaultBrowserProfileName("A B/C")).toBe("profile-A_B_C");
   });
 });

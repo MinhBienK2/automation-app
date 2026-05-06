@@ -105,6 +105,10 @@ impl AppState {
         *active_run = Some(ActiveRun {
             cancellation: cancellation.clone(),
         });
+        drop(active_run);
+
+        self.close_retained_sessions().await;
+
         *self.inner.run_state.lock().await = RunStateDto {
             status: RunStatus::Running,
             mode,
@@ -117,6 +121,17 @@ impl AppState {
         };
 
         Some(cancellation)
+    }
+
+    async fn close_retained_sessions(&self) {
+        let sessions = {
+            let mut retained_sessions = self.inner.retained_sessions.lock().await;
+            std::mem::take(&mut *retained_sessions)
+        };
+
+        for mut session in sessions {
+            let _ = session.close().await;
+        }
     }
 
     pub async fn stop_active_run(&self) -> Option<RunStateDto> {
@@ -198,4 +213,68 @@ pub enum AppStateError {
     Sqlx(#[from] sqlx::Error),
     #[error("migration error: {0}")]
     Migration(#[from] sqlx::migrate::MigrateError),
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::{
+        domain::ActionConfig,
+        runner::{
+            BrowserSession, ProgressCallback, RunExecution, RunExecutor, RunExecutorFuture,
+            RunnerCancellation,
+        },
+    };
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct UnusedRunExecutor;
+
+    impl RunExecutor for UnusedRunExecutor {
+        fn run_steps(
+            &self,
+            _steps: Vec<ActionConfig>,
+            _browser_config: Option<crate::domain::WorkflowBrowserConfig>,
+            _cancellation: RunnerCancellation,
+            _progress: ProgressCallback,
+        ) -> RunExecutorFuture {
+            Box::pin(async move {
+                Ok(RunExecution {
+                    status: crate::runner::RunnerStatus::Success,
+                    failed_step: None,
+                    session: None,
+                    close_browser: false,
+                })
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn begin_run_drops_retained_browser_sessions_from_previous_run() {
+        let db_path = std::env::temp_dir().join(format!(
+            "wam-app-state-test-{}.sqlite",
+            uuid::Uuid::new_v4()
+        ));
+        let state = AppState::initialize_with_runner(&db_path, Arc::new(UnusedRunExecutor))
+            .await
+            .expect("init state");
+
+        state
+            .finish_run(
+                RunStatus::Success,
+                None,
+                Some(BrowserSession::detached_for_test()),
+                false,
+            )
+            .await;
+        assert_eq!(state.inner.retained_sessions.lock().await.len(), 1);
+
+        let cancellation = state.begin_run(RunMode::RunWorkflow, None).await;
+
+        assert!(cancellation.is_some());
+        assert_eq!(state.inner.retained_sessions.lock().await.len(), 0);
+        let _ = std::fs::remove_file(db_path);
+    }
 }

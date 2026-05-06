@@ -28,7 +28,9 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
 - Browser sessions are retained in `AppState` after terminal outcomes unless a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
+- Starting a new run closes any retained sessions from previous terminal outcomes before Chromium launches, so persistent profile directories are not reused while an older browser process still owns the profile lock.
 - Browser launch settings come from Workflow Settings Browser. Legacy browser config commands map to that section.
+- Named browser profiles use persistent Chromium user data directories under the user's app data directory at `workflow-automation-manager/browser-profiles/<profile>`. Runs without a profile continue to use temporary user data directories.
 - Before graph actions run, the command layer prepends supported Environment defaults and Inputs & Variables seed values from Workflow Settings.
 - Execution settings currently fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
 

@@ -192,8 +192,10 @@ describe("Workflow detail integration", () => {
     expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(
       "qa-profile",
     );
+    expect(within(settingsDialog).getByLabelText("Reuse login session")).toBeChecked();
     expect(within(settingsDialog).getByLabelText("Proxy enabled")).toBeChecked();
-    expect(within(settingsDialog).getByPlaceholderText("WorkflowBot/1.0")).toBeInTheDocument();
+    expect(within(settingsDialog).getByLabelText("Device profile")).toHaveValue("custom");
+    expect(within(settingsDialog).getByLabelText("User agent")).toHaveValue("WorkflowBot/1.0");
     await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
     await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
     await userEvent.clear(within(settingsDialog).getByLabelText("Viewport width"));

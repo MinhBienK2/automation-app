@@ -34,9 +34,10 @@
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by `AppState::finish_run`.
 - `AppState::finish_run` captures runtime outputs before retaining the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
-- Workflow Settings Browser can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts.
+- `AppState::begin_run` closes retained sessions from previous terminal runs before a new run launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
+- Workflow Settings Browser can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts. The frontend exposes coherent device profile presets that write those existing user agent, viewport, mobile, and touch fields together.
 - Legacy browser config commands are compatibility wrappers over Workflow Settings Browser.
-- Temporary user data directories are used unless a profile action config selects a persistent profile.
+- Temporary user data directories are used unless a profile action config or Workflow Settings Browser profile selects a persistent profile. Persistent profile data is stored under the user's app data directory in `workflow-automation-manager/browser-profiles/<profile>`, not under the OS temp directory.
 
 ## Cancellation
 

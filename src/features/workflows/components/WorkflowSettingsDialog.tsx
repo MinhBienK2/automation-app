@@ -32,8 +32,13 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import {
+  applyBrowserDeviceProfile,
+  browserDeviceProfileOptions,
+  createDefaultBrowserProfileName,
+  detectBrowserDeviceProfile,
   tagsFromInput,
   tagsToInput,
+  type BrowserDeviceProfileId,
   type WorkflowSettingsHelpLanguage,
   workflowSettingsHelp,
   workflowSettingsSections,
@@ -431,17 +436,52 @@ function BrowserSettingsSection({
   value: WorkflowSettingsBrowser;
   onChange: (value: WorkflowSettingsBrowser) => void;
 }) {
+  const detectedDeviceProfile = detectBrowserDeviceProfile(value);
+  const [selectedDeviceProfile, setSelectedDeviceProfile] =
+    useState<BrowserDeviceProfileId | null>(null);
+  const [reuseSession, setReuseSession] = useState(Boolean(value.profile_name));
+  const deviceProfile = selectedDeviceProfile ?? detectedDeviceProfile;
+  const updateDevice = (
+    patch: Pick<
+      Partial<WorkflowSettingsBrowser>,
+      "user_agent" | "viewport_width" | "viewport_height" | "mobile" | "touch"
+    >,
+  ) => {
+    setSelectedDeviceProfile("custom");
+    onChange({ ...value, ...patch });
+  };
+  const updateDeviceProfile = (profileId: BrowserDeviceProfileId) => {
+    setSelectedDeviceProfile(profileId);
+    onChange(applyBrowserDeviceProfile(value, profileId));
+  };
+  const updateReuseSession = (enabled: boolean) => {
+    setReuseSession(enabled);
+    onChange({
+      ...value,
+      profile_name: enabled
+        ? value.profile_name ?? createDefaultBrowserProfileName()
+        : null,
+    });
+  };
+
   return (
     <div className="workflow-settings-form">
       <fieldset className="workflow-settings-fieldset">
         <legend>Launch</legend>
         <div className="workflow-settings-grid workflow-settings-grid-two">
+          <ToggleField
+            id="browser-reuse-session"
+            label="Reuse login session"
+            checked={reuseSession}
+            onChange={updateReuseSession}
+          />
           <Label htmlFor="browser-profile-name">
             Profile name
             <Input
               id="browser-profile-name"
-              placeholder="qa-profile"
+              placeholder="Generated when reuse is enabled"
               value={value.profile_name ?? ""}
+              disabled={!reuseSession}
               onChange={(event) =>
                 onChange({
                   ...value,
@@ -454,10 +494,11 @@ function BrowserSettingsSection({
             User agent
             <Input
               id="browser-user-agent"
-              placeholder="WorkflowBot/1.0"
+              placeholder="Select Custom user agent to edit"
               value={value.user_agent ?? ""}
+              disabled={deviceProfile !== "custom"}
               onChange={(event) =>
-                onChange({ ...value, user_agent: nullableText(event.currentTarget.value) })
+                updateDevice({ user_agent: nullableText(event.currentTarget.value) })
               }
             />
           </Label>
@@ -522,29 +563,45 @@ function BrowserSettingsSection({
       <fieldset className="workflow-settings-fieldset">
         <legend>Device</legend>
         <div className="workflow-settings-grid workflow-settings-grid-four">
+          <Label htmlFor="browser-device-profile">
+            Device profile
+            <Select
+              id="browser-device-profile"
+              value={deviceProfile}
+              onChange={(event) =>
+                updateDeviceProfile(event.currentTarget.value as BrowserDeviceProfileId)
+              }
+            >
+              {browserDeviceProfileOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Label>
           <NumberField
             id="browser-viewport-width"
             label="Viewport width"
             value={value.viewport_width}
-            onChange={(next) => onChange({ ...value, viewport_width: next })}
+            onChange={(next) => updateDevice({ viewport_width: next })}
           />
           <NumberField
             id="browser-viewport-height"
             label="Viewport height"
             value={value.viewport_height}
-            onChange={(next) => onChange({ ...value, viewport_height: next })}
+            onChange={(next) => updateDevice({ viewport_height: next })}
           />
           <ToggleField
             id="browser-mobile"
             label="Mobile viewport"
             checked={value.mobile}
-            onChange={(checked) => onChange({ ...value, mobile: checked })}
+            onChange={(checked) => updateDevice({ mobile: checked })}
           />
           <ToggleField
             id="browser-touch"
             label="Touch input"
             checked={value.touch}
-            onChange={(checked) => onChange({ ...value, touch: checked })}
+            onChange={(checked) => updateDevice({ touch: checked })}
           />
         </div>
       </fieldset>

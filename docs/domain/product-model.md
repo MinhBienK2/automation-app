@@ -17,7 +17,7 @@ Workflow Automation Manager is a Tauri desktop app for building and running brow
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Graph autosave is an app-level editing preference controlled from Settings.
 - Workflow Settings is the per-workflow configuration aggregate for workflow identity, execution defaults, browser launch profile, environment defaults, initial inputs/variables, triggers, and advanced compatibility diagnostics.
-- The Browser section of Workflow Settings owns launch profile, proxy, user agent, viewport, mobile/touch flags, headed/headless default, and challenge handling policy. Legacy browser config commands map to this section for compatibility.
+- The Browser section of Workflow Settings owns the reuse-login-session control, launch profile, proxy, device profile presets, user agent, viewport, mobile/touch flags, headed/headless default, and challenge handling policy. Enabling reuse generates or uses a named persistent browser profile; disabling reuse clears the profile name so runs use temporary browser state. Device profile presets keep user agent, viewport, mobile, and touch settings coherent; legacy browser config commands map to this section for compatibility.
 
 ## User Workflows
 

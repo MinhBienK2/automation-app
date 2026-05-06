@@ -13,6 +13,8 @@ Preserve these unless the task explicitly changes them.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
 - Workflow Settings contains General, Execution, Browser, Environment, Inputs & Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
+- Workflow Settings Browser exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
+- Workflow Settings Browser exposes a Device profile selector for Default browser, Desktop Chrome, Android Chrome, iPhone Safari, and Custom user agent. Presets update user agent, viewport width/height, mobile, and touch settings together; raw user-agent editing is reserved for Custom.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
@@ -70,6 +72,7 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute the compiled saved graph.
 - Full runs use persisted Workflow Settings as the run baseline. Browser settings are resolved before browser launch; Environment defaults and Inputs & Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset.
+- Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
 - Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Browser sessions remain open after success, failure, and stop unless the terminal End Success, End Failure, or Stop Workflow node has its close-browser option enabled.

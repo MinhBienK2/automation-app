@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Save } from "lucide-react";
 import type {
   WorkflowBrowserChallengePolicy,
@@ -7,6 +8,13 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
+import {
+  applyBrowserDeviceProfile,
+  browserDeviceProfileOptions,
+  createDefaultBrowserProfileName,
+  detectBrowserDeviceProfile,
+  type BrowserDeviceProfileId,
+} from "../lib/workflowSettings";
 
 type WorkflowBrowserConfigPanelProps = {
   config: WorkflowBrowserConfig;
@@ -23,8 +31,34 @@ export function WorkflowBrowserConfigPanel({
   onChange,
   onSave,
 }: WorkflowBrowserConfigPanelProps) {
+  const detectedDeviceProfile = detectBrowserDeviceProfile(config);
+  const [selectedDeviceProfile, setSelectedDeviceProfile] =
+    useState<BrowserDeviceProfileId | null>(null);
+  const [reuseSession, setReuseSession] = useState(Boolean(config.profile_name));
+  const deviceProfile = selectedDeviceProfile ?? detectedDeviceProfile;
   const update = (patch: Partial<WorkflowBrowserConfig>) => {
     onChange({ ...config, ...patch });
+  };
+  const updateDevice = (
+    patch: Pick<
+      Partial<WorkflowBrowserConfig>,
+      "user_agent" | "viewport_width" | "viewport_height" | "mobile" | "touch"
+    >,
+  ) => {
+    setSelectedDeviceProfile("custom");
+    update(patch);
+  };
+  const updateDeviceProfile = (profileId: BrowserDeviceProfileId) => {
+    setSelectedDeviceProfile(profileId);
+    onChange(applyBrowserDeviceProfile(config, profileId));
+  };
+  const updateReuseSession = (enabled: boolean) => {
+    setReuseSession(enabled);
+    update({
+      profile_name: enabled
+        ? config.profile_name ?? createDefaultBrowserProfileName()
+        : null,
+    });
   };
 
   return (
@@ -43,12 +77,23 @@ export function WorkflowBrowserConfigPanel({
       <fieldset className="browser-config-section">
         <legend>Launch</legend>
         <div className="browser-config-grid browser-config-grid-two">
+          <Label htmlFor="browser-reuse-session" className="browser-config-toggle">
+            <input
+              id="browser-reuse-session"
+              type="checkbox"
+              checked={reuseSession}
+              onChange={(event) => updateReuseSession(event.currentTarget.checked)}
+            />
+            Reuse login session
+          </Label>
+
           <Label htmlFor="browser-profile-name">
             Profile name
             <Input
               id="browser-profile-name"
-              placeholder="qa-profile"
+              placeholder="Generated when reuse is enabled"
               value={config.profile_name ?? ""}
+              disabled={!reuseSession}
               onChange={(event) =>
                 update({ profile_name: nullableText(event.currentTarget.value) })
               }
@@ -59,10 +104,11 @@ export function WorkflowBrowserConfigPanel({
             User agent
             <Input
               id="browser-user-agent"
-              placeholder="WorkflowBot/1.0"
+              placeholder="Select Custom user agent to edit"
               value={config.user_agent ?? ""}
+              disabled={deviceProfile !== "custom"}
               onChange={(event) =>
-                update({ user_agent: nullableText(event.currentTarget.value) })
+                updateDevice({ user_agent: nullableText(event.currentTarget.value) })
               }
             />
           </Label>
@@ -128,6 +174,23 @@ export function WorkflowBrowserConfigPanel({
       <fieldset className="browser-config-section">
         <legend>Device</legend>
         <div className="browser-config-grid browser-config-grid-device">
+          <Label htmlFor="browser-device-profile">
+            Device profile
+            <Select
+              id="browser-device-profile"
+              value={deviceProfile}
+              onChange={(event) =>
+                updateDeviceProfile(event.currentTarget.value as BrowserDeviceProfileId)
+              }
+            >
+              {browserDeviceProfileOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Label>
+
           <Label htmlFor="browser-viewport-width">
             Viewport width
             <Input
@@ -138,7 +201,7 @@ export function WorkflowBrowserConfigPanel({
               placeholder="1280"
               value={numberInputValue(config.viewport_width)}
               onChange={(event) =>
-                update({ viewport_width: nullableNumber(event.currentTarget.value) })
+                updateDevice({ viewport_width: nullableNumber(event.currentTarget.value) })
               }
             />
           </Label>
@@ -153,7 +216,7 @@ export function WorkflowBrowserConfigPanel({
               placeholder="720"
               value={numberInputValue(config.viewport_height)}
               onChange={(event) =>
-                update({ viewport_height: nullableNumber(event.currentTarget.value) })
+                updateDevice({ viewport_height: nullableNumber(event.currentTarget.value) })
               }
             />
           </Label>
@@ -163,7 +226,7 @@ export function WorkflowBrowserConfigPanel({
               id="browser-mobile"
               type="checkbox"
               checked={config.mobile}
-              onChange={(event) => update({ mobile: event.currentTarget.checked })}
+              onChange={(event) => updateDevice({ mobile: event.currentTarget.checked })}
             />
             Mobile viewport
           </Label>
@@ -173,7 +236,7 @@ export function WorkflowBrowserConfigPanel({
               id="browser-touch"
               type="checkbox"
               checked={config.touch}
-              onChange={(event) => update({ touch: event.currentTarget.checked })}
+              onChange={(event) => updateDevice({ touch: event.currentTarget.checked })}
             />
             Touch input
           </Label>

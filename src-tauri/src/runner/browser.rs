@@ -200,6 +200,22 @@ pub struct BrowserSession {
 }
 
 impl BrowserSession {
+    #[cfg(test)]
+    pub(crate) fn detached_for_test() -> Self {
+        Self {
+            browser: None,
+            pages: Vec::new(),
+            current_page_index: 0,
+            active_frame_xpath: None,
+            download_directory: None,
+            known_downloads: HashSet::new(),
+            handler: tokio::spawn(async {}),
+            user_data_dir: None,
+            persistent_user_data_dir: false,
+            open: true,
+        }
+    }
+
     async fn launch(
         options: &RunnerOptions,
         launch_settings: &LaunchSettings,
@@ -497,13 +513,44 @@ fn profile_user_data_dir(name: &str) -> PathBuf {
             }
         })
         .collect::<String>();
-    std::env::temp_dir()
-        .join("wam-profiles")
+    app_data_dir()
+        .join("workflow-automation-manager")
+        .join("browser-profiles")
         .join(if safe_name.is_empty() {
             "default".to_string()
         } else {
             safe_name
         })
+}
+
+fn app_data_dir() -> PathBuf {
+    if cfg!(target_os = "windows") {
+        if let Some(path) = non_empty_env_path("APPDATA") {
+            return path;
+        }
+    }
+
+    if cfg!(target_os = "macos") {
+        if let Some(home) = non_empty_env_path("HOME") {
+            return home.join("Library").join("Application Support");
+        }
+    }
+
+    if let Some(path) = non_empty_env_path("XDG_DATA_HOME") {
+        return path;
+    }
+
+    if let Some(home) = non_empty_env_path("HOME") {
+        return home.join(".local").join("share");
+    }
+
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
+fn non_empty_env_path(key: &str) -> Option<PathBuf> {
+    std::env::var_os(key)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
 }
 
 fn stable_files_in(directory: &Path) -> Result<HashSet<PathBuf>, RunnerError> {
@@ -706,5 +753,13 @@ mod tests {
             Some("https://example.com")
         ));
         assert!(!should_reuse_startup_blank_page(2, 1, Some("about:blank")));
+    }
+
+    #[test]
+    fn profile_user_data_dir_uses_app_data_not_temp() {
+        let path = super::profile_user_data_dir("TikTok Main!");
+
+        assert!(!path.starts_with(std::env::temp_dir()));
+        assert!(path.ends_with("workflow-automation-manager/browser-profiles/TikTok_Main_"));
     }
 }
