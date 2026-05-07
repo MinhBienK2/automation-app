@@ -314,6 +314,11 @@ export function defaultWorkflowSettings({
       max_workflow_duration_ms: null,
       browser_retention: "retain",
       failure_policy: "stop_on_first_failure",
+      wait_between_nodes_enabled: false,
+      wait_between_nodes_random: false,
+      wait_between_nodes_ms: null,
+      wait_between_nodes_min_ms: null,
+      wait_between_nodes_max_ms: null,
       batch_concurrency_limit: null,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
@@ -604,6 +609,13 @@ export const workflowSettingsHelp: Record<
             "Use it to understand why later branches did not run; broader continue policies should only be added when reporting can stay explicit.",
         },
         {
+          name: "Wait between nodes",
+          description:
+            "Optional pause inserted between graph nodes when neither side is an explicit Wait or Random Wait node. Fixed mode uses one duration; random mode picks a duration inside the configured min/max range.",
+          whenToUse:
+            "Use it when most node transitions need the same pacing, and add explicit Wait or Random Wait nodes where one transition needs a different delay.",
+        },
+        {
           name: "Batch concurrency limit",
           description:
             "Maximum number of batch rows that may run at the same time when a workflow is executed over multiple input rows.",
@@ -694,6 +706,13 @@ export const workflowSettingsHelp: Record<
             "Luật cấp workflow cho việc xử lý một action fail sau khi đã hết retry. Hiện tại chính sách dừng ở lỗi đầu tiên để diagnostic rõ ràng.",
           whenToUse:
             "Dùng để hiểu vì sao các nhánh sau không chạy; chỉ thêm continue policy khi báo cáo lỗi vẫn đủ rõ.",
+        },
+        {
+          name: "Wait between nodes",
+          description:
+            "Khoảng nghỉ tùy chọn được chèn giữa các node trong graph khi hai bên không phải node Wait hoặc Random Wait rõ ràng. Chế độ cố định dùng một thời lượng; chế độ random chọn thời lượng trong ngưỡng min/max.",
+          whenToUse:
+            "Dùng khi hầu hết chuyển tiếp giữa node cần cùng nhịp chờ, và thêm node Wait hoặc Random Wait riêng ở vị trí cần delay khác.",
         },
         {
           name: "Batch concurrency limit",

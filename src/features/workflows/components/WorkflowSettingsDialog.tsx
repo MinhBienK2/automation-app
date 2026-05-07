@@ -479,6 +479,53 @@ function ExecutionSettingsSection({
           </Select>
         </Label>
       </div>
+      <fieldset className="workflow-settings-fieldset">
+        <legend>Wait between nodes</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-two">
+          <ToggleField
+            id="workflow-settings-node-wait-enabled"
+            label="Enable wait between nodes"
+            checked={value.wait_between_nodes_enabled ?? false}
+            onChange={(checked) =>
+              onChange({ ...value, wait_between_nodes_enabled: checked })
+            }
+          />
+          <ToggleField
+            id="workflow-settings-node-wait-random"
+            label="Randomize wait time"
+            checked={value.wait_between_nodes_random ?? false}
+            onChange={(checked) => onChange({ ...value, wait_between_nodes_random: checked })}
+          />
+        </div>
+        {value.wait_between_nodes_random ? (
+          <div className="workflow-settings-grid workflow-settings-grid-two">
+            <NumberField
+              id="workflow-settings-node-wait-min"
+              label="Minimum wait ms"
+              value={value.wait_between_nodes_min_ms}
+              onChange={(next) => onChange({ ...value, wait_between_nodes_min_ms: next })}
+            />
+            <NumberField
+              id="workflow-settings-node-wait-max"
+              label="Maximum wait ms"
+              value={value.wait_between_nodes_max_ms}
+              onChange={(next) => onChange({ ...value, wait_between_nodes_max_ms: next })}
+            />
+          </div>
+        ) : (
+          <div className="workflow-settings-grid workflow-settings-grid-two">
+            <NumberField
+              id="workflow-settings-node-wait-duration"
+              label="Wait between nodes ms"
+              value={value.wait_between_nodes_ms}
+              onChange={(next) => onChange({ ...value, wait_between_nodes_ms: next })}
+            />
+          </div>
+        )}
+        <span className="workflow-settings-hint">
+          Explicit Wait and Random Wait nodes override this global wait at their position.
+        </span>
+      </fieldset>
       <div className="workflow-settings-grid workflow-settings-grid-three">
         <NumberField
           id="workflow-settings-batch-concurrency"

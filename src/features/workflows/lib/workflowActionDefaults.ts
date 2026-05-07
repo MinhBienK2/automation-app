@@ -16,6 +16,8 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           timeout_ms: null,
         },
       };
+    case "random_wait":
+      return { type: actionType, config: { min_ms: 500, max_ms: 1500 } };
     case "input_text":
       return {
         type: actionType,

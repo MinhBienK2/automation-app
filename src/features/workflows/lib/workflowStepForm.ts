@@ -26,8 +26,10 @@ export type ActionConfigField =
   | "keys"
   | "match_mode"
   | "match_by"
+  | "max_ms"
   | "max_attempts"
   | "method"
+  | "min_ms"
   | "mode"
   | "name"
   | "offset_x"
@@ -91,6 +93,8 @@ export function updateActionConfigField(
       return updateNavigateConfigField(config, field, value);
     case "wait":
       return updateWaitConfigField(config, field, value);
+    case "random_wait":
+      return updateRandomWaitConfigField(config, field, value);
     case "input_text":
       return updateInputTextConfigField(config, field, value);
     case "clear_input":
@@ -439,6 +443,18 @@ function updateWaitConfigField(
   }
 
   return { type: "wait", config: { ...config.config, [field]: value } };
+}
+
+function updateRandomWaitConfigField(
+  config: Extract<ActionConfig, { type: "random_wait" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "min_ms" || field === "max_ms") {
+    return { type: "random_wait", config: { ...config.config, [field]: Number(value) } };
+  }
+
+  return config;
 }
 
 function updateInputTextConfigField(

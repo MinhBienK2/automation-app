@@ -1,6 +1,7 @@
 export type ActionType =
   | "navigate"
   | "wait"
+  | "random_wait"
   | "input_text"
   | "clear_input"
   | "click"
@@ -165,6 +166,11 @@ export type WorkflowSettingsExecution = {
   max_workflow_duration_ms?: number | null;
   browser_retention: WorkflowBrowserRetention;
   failure_policy: WorkflowFailurePolicy;
+  wait_between_nodes_enabled?: boolean;
+  wait_between_nodes_random?: boolean;
+  wait_between_nodes_ms?: number | null;
+  wait_between_nodes_min_ms?: number | null;
+  wait_between_nodes_max_ms?: number | null;
   batch_concurrency_limit?: number | null;
   batch_headless: boolean;
   batch_stop_on_first_failed_row: boolean;
@@ -302,6 +308,13 @@ export type ActionConfig =
         url?: string | null;
         duration_ms?: number | null;
         timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "random_wait";
+      config: {
+        min_ms: number;
+        max_ms: number;
       };
     }
   | {

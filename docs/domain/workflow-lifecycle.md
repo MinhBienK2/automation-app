@@ -53,7 +53,7 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, applies Browser settings before launch, applies Environment defaults and Variables before the first graph step, and fills missing action timeouts from Execution defaults.
+- `run_workflow` loads and validates saved Workflow Settings, applies Browser settings before launch, applies Environment defaults and Variables before the first graph step, fills missing action timeouts from Execution defaults, and inserts configured Execution waits between graph nodes. Explicit Wait and Random Wait nodes override the global wait at their position.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is still a valid saved legacy draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.

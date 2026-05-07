@@ -15,6 +15,22 @@ describe("workflow step form config helpers", () => {
     });
   });
 
+  test("updates random wait bounds as numbers", () => {
+    const config: ActionConfig = {
+      type: "random_wait",
+      config: { min_ms: 500, max_ms: 1500 },
+    };
+
+    expect(updateActionConfigField(config, "min_ms", "750")).toEqual({
+      type: "random_wait",
+      config: { min_ms: 750, max_ms: 1500 },
+    });
+    expect(updateActionConfigField(config, "max_ms", "2500")).toEqual({
+      type: "random_wait",
+      config: { min_ms: 500, max_ms: 2500 },
+    });
+  });
+
   test("updates scroll direction and pixels with typed values", () => {
     const config: ActionConfig = {
       type: "scroll",

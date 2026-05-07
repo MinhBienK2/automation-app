@@ -26,6 +26,9 @@ describe("workflow UI action taxonomy", () => {
     ]);
     expect(actionGroups.map((group) => group.label)).not.toContain("Core");
 
+    expect(actionGroups.find((group) => group.label === "Wait")?.actions)
+      .toEqual(["wait", "random_wait"]);
+
     expect(actionGroups.find((group) => group.label === "Navigation")?.actions)
       .toEqual([
         "navigate",

@@ -16,7 +16,7 @@ Current visible action groups are semantic and defined in `src/lib/workflowUi.ts
 - Element Interaction: click, hover, drag/drop, focus/blur, and scroll.
 - Form Fields: fill, clear, select, checkbox/radio, upload, submit, custom dropdown, and rich text.
 - Keyboard: key presses, hotkeys, character-by-character typing, clipboard, and paste.
-- Wait: wait conditions.
+- Wait: fixed duration/condition waits and random duration waits.
 - Capture Data: text/attribute/field/table/list extraction, screenshots, and downloads that create outputs.
 - Browser Context: frames, dialogs, download folder, viewport, geolocation, permissions, and user agent.
 - Variables & Checks: set variables, set JSON variables, assert element, assert text.

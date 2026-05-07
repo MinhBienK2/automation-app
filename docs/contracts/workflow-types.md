@@ -66,6 +66,11 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
     max_workflow_duration_ms,
     browser_retention,
     failure_policy,
+    wait_between_nodes_enabled,
+    wait_between_nodes_random,
+    wait_between_nodes_ms,
+    wait_between_nodes_min_ms,
+    wait_between_nodes_max_ms,
     batch_concurrency_limit,
     batch_headless,
     batch_stop_on_first_failed_row,
@@ -157,6 +162,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `retry` max attempts and delay.
 - `manual_approval` reason and optional timeout.
 - `rate_limit` delay.
+- `wait` duration/condition waits and `random_wait` min/max duration waits.
 - `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, `end_success`, and `end_failure`.
 
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
@@ -218,6 +224,8 @@ New variable authoring stores multiple rows:
 `repeat_for_each` supports manual `items` or `array_variable`. Variable-array mode requires a non-empty `array_variable` and uses the current runtime array value in order.
 
 Terminal End Success, End Failure, and Stop Workflow graph nodes can carry `close_browser: true` in their node config. The compiler maps that to executable `stop_workflow` configs so the runner closes the browser after outputs are captured. Missing or false keeps the browser session retained.
+
+Execution settings can insert a global wait between compiled graph nodes. Fixed mode inserts a duration `wait` using `wait_between_nodes_ms`; random mode inserts `random_wait` using `wait_between_nodes_min_ms` and `wait_between_nodes_max_ms`. Explicit `wait` and `random_wait` nodes override the global setting at their position, so the compiler does not add an extra global wait immediately before or after them.
 
 ## Change Checklist
 

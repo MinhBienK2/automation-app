@@ -331,6 +331,28 @@ fn workflow_settings_rejects_invalid_cross_section_values() {
         "Default action timeout must be greater than 0",
     );
 
+    let mut bad_wait = WorkflowSettings::default_for_workflow(&workflow);
+    bad_wait.execution.wait_between_nodes_enabled = true;
+    bad_wait.execution.wait_between_nodes_ms = Some(0);
+    assert_validation_message(
+        bad_wait.validate().expect_err("zero node wait should fail"),
+        "execution.wait_between_nodes_ms",
+        "Wait between nodes must be greater than 0",
+    );
+
+    let mut bad_random_wait = WorkflowSettings::default_for_workflow(&workflow);
+    bad_random_wait.execution.wait_between_nodes_enabled = true;
+    bad_random_wait.execution.wait_between_nodes_random = true;
+    bad_random_wait.execution.wait_between_nodes_min_ms = Some(3000);
+    bad_random_wait.execution.wait_between_nodes_max_ms = Some(1000);
+    assert_validation_message(
+        bad_random_wait
+            .validate()
+            .expect_err("invalid random wait range should fail"),
+        "execution.wait_between_nodes_max_ms",
+        "Random wait maximum must be greater than or equal to minimum",
+    );
+
     let mut bad_trigger = WorkflowSettings::default_for_workflow(&workflow);
     bad_trigger.triggers.enabled = true;
     bad_trigger.triggers.mode =
@@ -342,6 +364,37 @@ fn workflow_settings_rejects_invalid_cross_section_values() {
             .expect_err("zero interval should fail"),
         "triggers.interval_seconds",
         "Trigger interval must be greater than 0",
+    );
+}
+
+#[test]
+fn random_wait_config_validates_range() {
+    let valid = ActionConfig::RandomWait {
+        min_ms: 250,
+        max_ms: 750,
+    };
+    valid.validate().expect("valid random wait range");
+
+    assert_validation_message(
+        ActionConfig::RandomWait {
+            min_ms: 0,
+            max_ms: 750,
+        }
+        .validate()
+        .expect_err("zero random wait minimum should fail"),
+        "min_ms",
+        "Minimum wait must be greater than 0",
+    );
+
+    assert_validation_message(
+        ActionConfig::RandomWait {
+            min_ms: 1000,
+            max_ms: 500,
+        }
+        .validate()
+        .expect_err("inverted random wait range should fail"),
+        "max_ms",
+        "Maximum wait must be greater than or equal to minimum",
     );
 }
 

@@ -24,6 +24,10 @@ pub fn default_config(action_type: ActionType) -> ActionConfig {
             duration_ms: Some(1000),
             timeout_ms: None,
         },
+        ActionType::RandomWait => ActionConfig::RandomWait {
+            min_ms: 500,
+            max_ms: 1500,
+        },
         ActionType::InputText => ActionConfig::InputText {
             xpath: String::new(),
             iframe_xpath: None,

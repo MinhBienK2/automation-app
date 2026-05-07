@@ -8,6 +8,7 @@ use super::ValidationError;
 pub enum ActionType {
     Navigate,
     Wait,
+    RandomWait,
     InputText,
     ClearInput,
     Click,
@@ -102,6 +103,7 @@ impl ActionType {
         match self {
             Self::Navigate => "navigate",
             Self::Wait => "wait",
+            Self::RandomWait => "random_wait",
             Self::InputText => "input_text",
             Self::ClearInput => "clear_input",
             Self::Click => "click",
@@ -196,6 +198,7 @@ impl ActionType {
         match self {
             Self::Navigate => "Navigate",
             Self::Wait => "Wait",
+            Self::RandomWait => "Random Wait",
             Self::InputText => "Input Text",
             Self::ClearInput => "Clear Input",
             Self::Click => "Click",
@@ -518,6 +521,10 @@ pub enum ActionConfig {
         duration_ms: Option<u64>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
+    },
+    RandomWait {
+        min_ms: u64,
+        max_ms: u64,
     },
     InputText {
         xpath: String,
@@ -1124,6 +1131,7 @@ impl ActionConfig {
         match self {
             Self::Navigate { .. } => ActionType::Navigate,
             Self::Wait { .. } => ActionType::Wait,
+            Self::RandomWait { .. } => ActionType::RandomWait,
             Self::InputText { .. } => ActionType::InputText,
             Self::ClearInput { .. } => ActionType::ClearInput,
             Self::Click { .. } => ActionType::Click,
@@ -1267,6 +1275,18 @@ impl ActionConfig {
             } => Err(ValidationError::new(
                 "timeout_ms",
                 "Timeout must be greater than 0",
+            )),
+            Self::RandomWait { min_ms: 0, .. } => Err(ValidationError::new(
+                "min_ms",
+                "Minimum wait must be greater than 0",
+            )),
+            Self::RandomWait { max_ms: 0, .. } => Err(ValidationError::new(
+                "max_ms",
+                "Maximum wait must be greater than 0",
+            )),
+            Self::RandomWait { min_ms, max_ms } if max_ms < min_ms => Err(ValidationError::new(
+                "max_ms",
+                "Maximum wait must be greater than or equal to minimum",
             )),
             Self::InputText { xpath, .. } if xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))

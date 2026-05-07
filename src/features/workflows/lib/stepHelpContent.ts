@@ -213,6 +213,30 @@ const baseStepHelpContent: Record<Exclude<ActionType, PhaseOneActionType>, Bilin
       commonMistakes: ["Using fixed Duration when Wait element visible would be more stable.", "XPath must point to the element being checked."],
     },
   },
+  random_wait: {
+    vi: {
+      title: "Trợ giúp Random Wait",
+      summary: "Chờ một khoảng thời gian ngẫu nhiên trong ngưỡng min/max trước khi chạy step tiếp theo.",
+      useWhen: ["Dùng khi cần nhịp chạy tự nhiên hơn giữa các thao tác.", "Dùng thay cho Wait duration cố định khi muốn mỗi lần chạy có độ trễ khác nhau."],
+      fields: [
+        { name: "Minimum wait ms", description: "Ngưỡng thấp nhất, tính bằng mili-giây." },
+        { name: "Maximum wait ms", description: "Ngưỡng cao nhất, tính bằng mili-giây; phải lớn hơn hoặc bằng Minimum wait ms." },
+      ],
+      examples: ["Minimum wait ms: 500, Maximum wait ms: 1500"],
+      commonMistakes: ["Đặt maximum nhỏ hơn minimum.", "Dùng random wait để che lỗi timing thay vì chờ điều kiện cụ thể khi có thể dùng Wait element/text/URL."],
+    },
+    en: {
+      title: "Random Wait Help",
+      summary: "Wait for a random duration inside a configured min/max range before running the next step.",
+      useWhen: ["Use when a workflow needs a less mechanical rhythm between actions.", "Use instead of a fixed duration wait when each run should vary the pause."],
+      fields: [
+        { name: "Minimum wait ms", description: "The shortest allowed pause, in milliseconds." },
+        { name: "Maximum wait ms", description: "The longest allowed pause, in milliseconds; must be greater than or equal to Minimum wait ms." },
+      ],
+      examples: ["Minimum wait ms: 500, Maximum wait ms: 1500"],
+      commonMistakes: ["Setting the maximum lower than the minimum.", "Using random wait to mask a timing bug when a condition-based Wait would be more reliable."],
+    },
+  },
   input_text: {
     vi: {
       title: "Trợ giúp Fill Field",
@@ -859,6 +883,8 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["URL", "Wait until", "Timeout ms"];
     case "wait":
       return ["Condition", "Duration ms", "XPath", "Text", "URL contains", "Timeout ms"];
+    case "random_wait":
+      return ["Minimum wait ms", "Maximum wait ms"];
     case "input_text":
       return ["XPath", "Text", "Clear before input", "Typing mode", "Iframe XPath", "Delay ms", "Wait until", "Timeout ms"];
     case "clear_input":

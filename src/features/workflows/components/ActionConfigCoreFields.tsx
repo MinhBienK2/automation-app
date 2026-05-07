@@ -146,6 +146,33 @@ export function CoreActionFields({
           </Label>
         </>
       );
+    case "random_wait":
+      return (
+        <>
+          <Label>
+            Minimum wait ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.min_ms}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "min_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+          <Label>
+            Maximum wait ms
+            <Input
+              min="1"
+              type="number"
+              value={config.config.max_ms}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "max_ms", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </>
+      );
     case "input_text":
       return (
         <>

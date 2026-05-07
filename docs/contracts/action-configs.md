@@ -66,4 +66,6 @@ Preserve serde compatibility for existing configs unless a migration or import/e
 
 - `open_url` -> `navigate`
 - `sleep` -> `wait` with `condition: "duration"` and `duration_ms`
+
+`random_wait` is a first-class wait action with `min_ms` and `max_ms`. Both values must be greater than zero, and `max_ms` must be greater than or equal to `min_ms`.
 - `type_text` -> `input_text`

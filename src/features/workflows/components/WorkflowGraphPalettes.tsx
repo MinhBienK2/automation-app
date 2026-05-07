@@ -616,6 +616,7 @@ const commonActionTypes: ActionType[] = [
 export const actionDescriptions: Record<ActionType, string> = {
   navigate: "Open a page",
   wait: "Pause or wait for a condition",
+  random_wait: "Pause for a random duration",
   input_text: "Fill a field",
   clear_input: "Clear a field",
   click: "Click an element",

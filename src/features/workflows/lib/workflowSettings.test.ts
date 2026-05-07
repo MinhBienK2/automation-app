@@ -23,6 +23,11 @@ describe("workflow settings model", () => {
     expect(settings.general.name).toBe("Login flow");
     expect(settings.general.tags).toEqual([]);
     expect(settings.execution.browser_retention).toBe("retain");
+    expect(settings.execution.wait_between_nodes_enabled).toBe(false);
+    expect(settings.execution.wait_between_nodes_random).toBe(false);
+    expect(settings.execution.wait_between_nodes_ms).toBeNull();
+    expect(settings.execution.wait_between_nodes_min_ms).toBeNull();
+    expect(settings.execution.wait_between_nodes_max_ms).toBeNull();
     expect(settings.browser.challenge_policy).toBe("none");
     expect(settings.environment.permissions).toEqual([]);
     expect(settings.inputs.input_schema).toEqual([]);

@@ -514,6 +514,151 @@ async fn run_workflow_applies_execution_default_timeout_to_actions_without_timeo
 }
 
 #[tokio::test]
+async fn run_workflow_inserts_global_wait_between_non_wait_nodes() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Global wait")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![
+            navigate_node("first", "https://example.com/one"),
+            navigate_node("second", "https://example.com/two"),
+        ]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.wait_between_nodes_enabled = true;
+    settings.execution.wait_between_nodes_ms = Some(250);
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let runs = runner.recorded_runs();
+    assert_eq!(runs[0].len(), 3);
+    assert!(matches!(runs[0][0], ActionConfig::Navigate { .. }));
+    match &runs[0][1] {
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            duration_ms,
+            ..
+        } => assert_eq!(*duration_ms, Some(250)),
+        other => panic!("expected inserted wait action, got {other:?}"),
+    }
+    assert!(matches!(runs[0][2], ActionConfig::Navigate { .. }));
+}
+
+#[tokio::test]
+async fn run_workflow_lets_explicit_wait_nodes_override_global_wait() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Wait override")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![
+            navigate_node("first", "https://example.com/one"),
+            action_node("explicit-wait"),
+            navigate_node("second", "https://example.com/two"),
+        ]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.wait_between_nodes_enabled = true;
+    settings.execution.wait_between_nodes_ms = Some(999);
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let runs = runner.recorded_runs();
+    assert_eq!(runs[0].len(), 3);
+    match &runs[0][1] {
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            duration_ms,
+            ..
+        } => assert_eq!(*duration_ms, Some(100)),
+        other => panic!("expected explicit wait action, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn run_workflow_inserts_global_wait_inside_nested_graph_blocks() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Nested wait")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node_with_config(
+            "branch",
+            "Branch",
+            serde_json::json!({
+                "type": "if_condition",
+                "config": {
+                    "condition": { "kind": "output_equals", "name": "ready", "value": "true" },
+                    "then_steps": [
+                        { "type": "navigate", "config": { "url": "https://example.com/one" } },
+                        { "type": "navigate", "config": { "url": "https://example.com/two" } }
+                    ],
+                    "else_steps": []
+                }
+            }),
+        )]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.wait_between_nodes_enabled = true;
+    settings.execution.wait_between_nodes_ms = Some(300);
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let runs = runner.recorded_runs();
+    match &runs[0][0] {
+        ActionConfig::IfCondition { then_steps, .. } => {
+            assert_eq!(then_steps.len(), 3);
+            match &then_steps[1] {
+                ActionConfig::Wait {
+                    condition: WaitCondition::Duration,
+                    duration_ms,
+                    ..
+                } => assert_eq!(*duration_ms, Some(300)),
+                other => panic!("expected nested inserted wait, got {other:?}"),
+            }
+        }
+        other => panic!("expected if condition action, got {other:?}"),
+    }
+}
+
+#[tokio::test]
 async fn run_workflow_rejects_required_settings_input_without_value_before_runner_start() {
     let runner = RecordingRunExecutor::new();
     let (state, _db_path) = test_state_with_runner(runner.clone()).await;
@@ -1632,6 +1777,19 @@ fn action_node(id: &str) -> GraphNode {
             "config": {
                 "condition": "duration",
                 "duration_ms": 100
+            }
+        }),
+    )
+}
+
+fn navigate_node(id: &str, url: &str) -> GraphNode {
+    action_node_with_config(
+        id,
+        "Navigate",
+        serde_json::json!({
+            "type": "navigate",
+            "config": {
+                "url": url
             }
         }),
     )

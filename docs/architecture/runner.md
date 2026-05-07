@@ -32,7 +32,8 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Browser launch settings come from Workflow Settings Browser. Legacy browser config commands map to that section.
 - Named browser profiles use persistent Chromium user data directories under the user's app data directory at `workflow-automation-manager/browser-profiles/<profile>`. Runs without a profile continue to use temporary user data directories.
 - Before graph actions run, the command layer prepends supported Environment defaults and Variables seed values from Workflow Settings.
-- Execution settings currently fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
+- Execution settings fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
+- Execution settings can insert fixed or random waits between compiled graph nodes before the runner receives steps. Explicit Wait and Random Wait nodes override the global wait at their position.
 
 ## Belongs Here
 

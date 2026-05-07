@@ -10,6 +10,7 @@ import type {
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
   wait: "Wait",
+  random_wait: "Random Wait",
   input_text: "Fill Field",
   clear_input: "Clear Field",
   click: "Click",
@@ -142,7 +143,7 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   },
   {
     label: "Wait",
-    actions: ["wait"],
+    actions: ["wait", "random_wait"],
   },
   {
     label: "Capture Data",
@@ -264,6 +265,8 @@ export function stepSummary(step: WorkflowStep) {
         return `${step.config.config.duration_ms ?? 0}ms`;
       }
       return step.config.config.condition;
+    case "random_wait":
+      return `${step.config.config.min_ms}-${step.config.config.max_ms}ms`;
     case "input_text":
       return step.config.config.xpath || "No XPath";
     case "clear_input":

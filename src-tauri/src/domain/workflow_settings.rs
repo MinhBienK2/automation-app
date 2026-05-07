@@ -184,6 +184,16 @@ pub struct WorkflowSettingsExecution {
     pub browser_retention: WorkflowBrowserRetention,
     #[serde(default = "default_failure_policy")]
     pub failure_policy: WorkflowFailurePolicy,
+    #[serde(default)]
+    pub wait_between_nodes_enabled: bool,
+    #[serde(default)]
+    pub wait_between_nodes_random: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait_between_nodes_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait_between_nodes_min_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait_between_nodes_max_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub batch_concurrency_limit: Option<usize>,
     #[serde(default)]
@@ -557,6 +567,41 @@ impl WorkflowSettings {
                 ));
             }
         }
+        if settings.execution.wait_between_nodes_enabled {
+            if settings.execution.wait_between_nodes_random {
+                validate_required_positive_u64(
+                    &mut issues,
+                    "wait_between_nodes_min_ms",
+                    "Random wait minimum must be greater than 0",
+                    settings.execution.wait_between_nodes_min_ms,
+                );
+                validate_required_positive_u64(
+                    &mut issues,
+                    "wait_between_nodes_max_ms",
+                    "Random wait maximum must be greater than 0",
+                    settings.execution.wait_between_nodes_max_ms,
+                );
+                if let (Some(min_ms), Some(max_ms)) = (
+                    settings.execution.wait_between_nodes_min_ms,
+                    settings.execution.wait_between_nodes_max_ms,
+                ) {
+                    if max_ms < min_ms {
+                        issues.push(SettingsValidationIssue::error(
+                            WorkflowSettingsSection::Execution,
+                            "wait_between_nodes_max_ms",
+                            "Random wait maximum must be greater than or equal to minimum",
+                        ));
+                    }
+                }
+            } else {
+                validate_required_positive_u64(
+                    &mut issues,
+                    "wait_between_nodes_ms",
+                    "Wait between nodes must be greater than 0",
+                    settings.execution.wait_between_nodes_ms,
+                );
+            }
+        }
 
         if let Err(error) = settings
             .browser
@@ -712,6 +757,21 @@ fn validate_input_default(
     }
 }
 
+fn validate_required_positive_u64(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    value: Option<u64>,
+) {
+    if value.unwrap_or_default() == 0 {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Execution,
+            field,
+            message,
+        ));
+    }
+}
+
 fn validate_positive_u64(
     issues: &mut Vec<SettingsValidationIssue>,
     section: WorkflowSettingsSection,
@@ -784,6 +844,11 @@ fn default_execution() -> WorkflowSettingsExecution {
         max_workflow_duration_ms: None,
         browser_retention: WorkflowBrowserRetention::Retain,
         failure_policy: WorkflowFailurePolicy::StopOnFirstFailure,
+        wait_between_nodes_enabled: false,
+        wait_between_nodes_random: false,
+        wait_between_nodes_ms: None,
+        wait_between_nodes_min_ms: None,
+        wait_between_nodes_max_ms: None,
         batch_concurrency_limit: None,
         batch_headless: false,
         batch_stop_on_first_failed_row: false,

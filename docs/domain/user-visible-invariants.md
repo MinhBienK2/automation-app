@@ -17,6 +17,7 @@ Preserve these unless the task explicitly changes them.
 - Variables can be edited as typed rows or as a JSON object. Switching modes keeps both views synchronized: nested JSON becomes dot-path rows, and dot-path rows become nested JSON.
 - Workflow Settings Browser exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
 - Workflow Settings Browser exposes a Device profile selector for Default browser, Desktop Chrome, Android Chrome, iPhone Safari, and Custom user agent. Presets update user agent, viewport width/height, mobile, and touch settings together; raw user-agent editing is reserved for Custom.
+- Workflow Settings Execution exposes wait-between-nodes controls. Users can enable a fixed wait or random wait range between graph nodes. Explicit Wait and Random Wait nodes override the global setting at their position.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it. Browser help keeps persisted field keys such as `profile_name`, `proxy_server`, and `challenge_policy` visible even in Vietnamese.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
@@ -36,6 +37,7 @@ Preserve these unless the task explicitly changes them.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
+- The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.
 - Graph undo/redo applies to graph edit snapshots only. Run state, validation results, save status, settings, and workflow metadata are not part of graph undo history.
@@ -78,6 +80,7 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute the compiled saved graph.
 - Full runs use persisted Workflow Settings as the run baseline. Browser settings are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset.
+- Execution wait-between-nodes settings are applied after graph compile and before runner start, excluding setup steps and explicit Wait/Random Wait override nodes.
 - Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
 - Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.

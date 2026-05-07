@@ -7,7 +7,7 @@ use crate::{
     domain::{
         ActionConfig, CompiledGraphStep, CompiledWorkflowGraph, GraphValidationIssue,
         GraphValidationLevel, RunMode, RunValidationIssue, RunValidationIssueSource,
-        ValidationError, VariableAssignment, VariableValueType, WorkflowGraph,
+        ValidationError, VariableAssignment, VariableValueType, WaitCondition, WorkflowGraph,
         WorkflowInputValueType, WorkflowSettings, WorkflowSettingsIssueLevel,
         WorkflowSettingsSection,
     },
@@ -124,13 +124,15 @@ pub async fn run_workflow_graph_impl(
     settings.validate().map_err(CommandError::validation)?;
     validate_run_settings(&settings)?;
 
-    let mut compiled_steps = compiled_steps
+    let compiled_steps = compiled_steps
         .into_iter()
         .map(|mut step| {
             step.config = apply_execution_defaults(step.config, &settings);
+            step.config = apply_nested_wait_between_nodes(step.config, &settings);
             step
         })
         .collect::<Vec<_>>();
+    let mut compiled_steps = insert_wait_between_graph_nodes(compiled_steps, &settings);
     let mut settings_steps = settings_prelude_steps(&settings);
     settings_steps.append(&mut compiled_steps);
     let compiled_steps = settings_steps;
@@ -159,6 +161,162 @@ pub async fn run_workflow_graph_impl(
     }
 
     start_background_run(state, steps, RunMode::RunWorkflow, None, browser_config).await
+}
+
+fn insert_wait_between_graph_nodes(
+    steps: Vec<CompiledGraphStep>,
+    settings: &WorkflowSettings,
+) -> Vec<CompiledGraphStep> {
+    if !settings.execution.wait_between_nodes_enabled || steps.len() < 2 {
+        return steps;
+    }
+
+    let mut with_waits = Vec::with_capacity(steps.len().saturating_mul(2));
+    let mut iter = steps.into_iter().peekable();
+    while let Some(step) = iter.next() {
+        let should_insert = iter
+            .peek()
+            .is_some_and(|next| !is_wait_override(&step.config) && !is_wait_override(&next.config));
+        with_waits.push(step);
+        if should_insert {
+            let index = with_waits.len();
+            with_waits.push(global_wait_step(settings, index));
+        }
+    }
+
+    with_waits
+}
+
+fn global_wait_step(settings: &WorkflowSettings, index: usize) -> CompiledGraphStep {
+    let config = if settings.execution.wait_between_nodes_random {
+        ActionConfig::RandomWait {
+            min_ms: settings.execution.wait_between_nodes_min_ms.unwrap_or(1000),
+            max_ms: settings.execution.wait_between_nodes_max_ms.unwrap_or(1000),
+        }
+    } else {
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(settings.execution.wait_between_nodes_ms.unwrap_or(1000)),
+            timeout_ms: None,
+        }
+    };
+
+    CompiledGraphStep {
+        node_id: format!("__settings:execution:wait-between-nodes:{index}"),
+        label: "Wait between nodes".to_string(),
+        config,
+    }
+}
+
+fn apply_nested_wait_between_nodes(
+    config: ActionConfig,
+    settings: &WorkflowSettings,
+) -> ActionConfig {
+    if !settings.execution.wait_between_nodes_enabled {
+        return config;
+    }
+
+    let original = config.clone();
+    let Ok(mut value) = serde_json::to_value(config) else {
+        return original;
+    };
+    apply_nested_wait_between_nodes_value(&mut value, settings);
+    serde_json::from_value(value).unwrap_or(original)
+}
+
+fn apply_nested_wait_between_nodes_value(value: &mut Value, settings: &WorkflowSettings) {
+    let Some(config) = value.get_mut("config").and_then(Value::as_object_mut) else {
+        return;
+    };
+
+    for key in [
+        "then_steps",
+        "else_steps",
+        "steps",
+        "failed_steps",
+        "default_steps",
+        "try_steps",
+        "success_steps",
+        "error_steps",
+        "finally_steps",
+        "primary_steps",
+        "fallback_steps",
+        "timeout_steps",
+    ] {
+        if let Some(Value::Array(steps)) = config.get_mut(key) {
+            insert_wait_between_action_values(steps, settings);
+        }
+    }
+
+    if let Some(Value::Array(cases)) = config.get_mut("cases") {
+        for case in cases {
+            if let Some(Value::Array(steps)) = case.get_mut("steps") {
+                insert_wait_between_action_values(steps, settings);
+            }
+        }
+    }
+
+    if let Some(step) = config.get_mut("step") {
+        apply_nested_wait_between_nodes_value(step, settings);
+    }
+}
+
+fn insert_wait_between_action_values(steps: &mut Vec<Value>, settings: &WorkflowSettings) {
+    for step in steps.iter_mut() {
+        apply_nested_wait_between_nodes_value(step, settings);
+    }
+
+    if steps.len() < 2 {
+        return;
+    }
+
+    let mut index = 1;
+    while index < steps.len() {
+        let previous_overrides = action_value_is_wait_override(&steps[index - 1]);
+        let next_overrides = action_value_is_wait_override(&steps[index]);
+        if !previous_overrides && !next_overrides {
+            steps.insert(index, global_wait_action_value(settings));
+            index += 1;
+        }
+        index += 1;
+    }
+}
+
+fn global_wait_action_value(settings: &WorkflowSettings) -> Value {
+    if settings.execution.wait_between_nodes_random {
+        serde_json::json!({
+            "type": "random_wait",
+            "config": {
+                "min_ms": settings.execution.wait_between_nodes_min_ms.unwrap_or(1000),
+                "max_ms": settings.execution.wait_between_nodes_max_ms.unwrap_or(1000)
+            }
+        })
+    } else {
+        serde_json::json!({
+            "type": "wait",
+            "config": {
+                "condition": "duration",
+                "duration_ms": settings.execution.wait_between_nodes_ms.unwrap_or(1000)
+            }
+        })
+    }
+}
+
+fn action_value_is_wait_override(value: &Value) -> bool {
+    value
+        .get("type")
+        .and_then(Value::as_str)
+        .is_some_and(|action_type| matches!(action_type, "wait" | "random_wait"))
+}
+
+fn is_wait_override(config: &ActionConfig) -> bool {
+    matches!(
+        config,
+        ActionConfig::Wait { .. } | ActionConfig::RandomWait { .. }
+    )
 }
 
 fn validate_run_settings(settings: &WorkflowSettings) -> Result<(), CommandError> {

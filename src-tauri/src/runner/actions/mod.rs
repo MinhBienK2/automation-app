@@ -92,6 +92,17 @@ pub(super) async fn execute_action(
                 _ = cancellation.cancelled() => Ok(ActionExecution::Stopped),
             }
         }
+        ActionConfig::RandomWait { min_ms, max_ms } => {
+            let wait_ms = if min_ms == max_ms {
+                min_ms
+            } else {
+                fastrand::u64(min_ms..=max_ms)
+            };
+            tokio::select! {
+                _ = tokio::time::sleep(Duration::from_millis(wait_ms)) => Ok(ActionExecution::Complete),
+                _ = cancellation.cancelled() => Ok(ActionExecution::Stopped),
+            }
+        }
         ActionConfig::Wait {
             condition,
             xpath,
