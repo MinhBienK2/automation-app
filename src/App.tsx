@@ -145,6 +145,8 @@ function App() {
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
+  const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] =
+    useState<WorkflowSummary | null>(null);
   const [exportPackageWorkflow, setExportPackageWorkflow] =
     useState<WorkflowSummary | null>(null);
   const [exportPackageIncludeFlow, setExportPackageIncludeFlow] = useState(true);
@@ -338,20 +340,34 @@ function App() {
     }
   }
 
-  async function deleteWorkflow(id: string) {
-    if (!window.confirm("Delete this workflow?")) return;
+  function deleteWorkflow(id: string) {
+    setAppError("");
+    setDeleteWorkflowCandidate(
+      workflows.find((workflow) => workflow.id === id) ?? null,
+    );
+  }
 
-    await deleteWorkflowCommand(id);
-    if (selectedWorkflowId === id) {
-      setSelectedWorkflowId(null);
-      setDetail(null);
-      setWorkflowGraph(null);
-      setWorkflowSettings(null);
-      setGraphIssues([]);
-      setGraphIssuesNeedRecheck(false);
-      setScreen("list");
+  async function confirmDeleteWorkflow() {
+    if (!deleteWorkflowCandidate) return;
+    const id = deleteWorkflowCandidate.id;
+    setAppError("");
+
+    try {
+      await deleteWorkflowCommand(id);
+      setDeleteWorkflowCandidate(null);
+      if (selectedWorkflowId === id) {
+        setSelectedWorkflowId(null);
+        setDetail(null);
+        setWorkflowGraph(null);
+        setWorkflowSettings(null);
+        setGraphIssues([]);
+        setGraphIssuesNeedRecheck(false);
+        setScreen("list");
+      }
+      await loadWorkflows();
+    } catch (error) {
+      setAppError(commandMessage(error));
     }
-    await loadWorkflows();
   }
 
   async function duplicateWorkflow(workflow: WorkflowSummary) {
@@ -909,6 +925,44 @@ function App() {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <Dialog
+        open={Boolean(deleteWorkflowCandidate)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteWorkflowCandidate(null);
+        }}
+      >
+        {deleteWorkflowCandidate ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Workflow</p>
+              <DialogTitle>Delete Workflow</DialogTitle>
+              <DialogDescription>
+                This removes {deleteWorkflowCandidate.name} from the app. This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {appError ? <p className="field-error">{appError}</p> : null}
+            <DialogFooter className="form-actions">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  void confirmDeleteWorkflow();
+                }}
+              >
+                Delete Workflow
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setDeleteWorkflowCandidate(null)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
           </DialogContent>
         ) : null}
       </Dialog>

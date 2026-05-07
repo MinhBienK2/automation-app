@@ -13,6 +13,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Execution, Browser, Environment, Variables, Triggers, Advanced, and section help.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
+- `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
 - `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, Browser device profile presets, tag parsing, Browser compatibility mapping, and bilingual settings help content.
 - `src/features/workflows/components/RunIssuePanel.tsx`: blocking validation, runtime failure, and system/startup issue presentation.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
@@ -23,7 +24,6 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. These catalogs own detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
-- `src/features/workflows/components/StepForm.tsx`: legacy step form container; list-step UI is no longer rendered.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
 - `src/lib/workflowApi.ts`: Tauri invoke wrappers.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
@@ -50,6 +50,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.
+- Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands.
 
 ## Does Not Belong Here
 

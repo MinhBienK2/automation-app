@@ -16,7 +16,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { ScrollArea } from "../../../components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { graphNodeLabel } from "../lib/workflowGraph";
 import {
   actionGroups,
@@ -323,25 +323,16 @@ export function NodeHelpDialog({
           </div>
         </DialogHeader>
 
-        <Tabs
+        <SegmentedControl
+          ariaLabel="Help language"
+          className="help-language-switch"
           value={language}
-          onValueChange={(value) => onLanguageChange(value as GraphNodeHelpLanguage)}
-        >
-          <TabsList className="help-language-switch" aria-label="Help language">
-            <TabsTrigger
-              className={language === "vi" ? "help-language-active" : ""}
-              value="vi"
-            >
-              Tiếng Việt
-            </TabsTrigger>
-            <TabsTrigger
-              className={language === "en" ? "help-language-active" : ""}
-              value="en"
-            >
-              English
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          options={[
+            { value: "vi", label: "Tiếng Việt" },
+            { value: "en", label: "English" },
+          ]}
+          onValueChange={onLanguageChange}
+        />
 
         {content ? (
           <ScrollArea className="step-help-body">

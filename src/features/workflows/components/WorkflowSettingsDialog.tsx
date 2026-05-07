@@ -29,7 +29,9 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { Select } from "../../../components/ui/select";
+import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
 import {
@@ -256,24 +258,16 @@ function WorkflowSettingsHelpButton({
         <DialogHeader>
           <div className="workflow-settings-help-header">
             <DialogTitle>{help.title}</DialogTitle>
-            <div
-              aria-label="Help language"
+            <SegmentedControl
+              ariaLabel="Help language"
               className="workflow-settings-help-language"
-              role="group"
-            >
-              {(["en", "vi"] as const).map((option) => (
-                <Button
-                  key={option}
-                  aria-pressed={language === option}
-                  size="sm"
-                  type="button"
-                  variant={language === option ? "default" : "ghost"}
-                  onClick={() => setLanguage(option)}
-                >
-                  {option === "en" ? "English" : "Tiếng Việt"}
-                </Button>
-              ))}
-            </div>
+              value={language}
+              options={[
+                { value: "en", label: "English" },
+                { value: "vi", label: "Tiếng Việt" },
+              ]}
+              onValueChange={setLanguage}
+            />
           </div>
           <DialogDescription>{help.summary}</DialogDescription>
         </DialogHeader>
@@ -876,22 +870,16 @@ function InputsSettingsSection({
 
   return (
     <div className="workflow-settings-form">
-      <div className="workflow-settings-mode-toggle" role="group" aria-label="Variable edit mode">
-        <Button
-          type="button"
-          variant={mode === "rows" ? "default" : "secondary"}
-          onClick={() => switchMode("rows")}
-        >
-          Rows
-        </Button>
-        <Button
-          type="button"
-          variant={mode === "json" ? "default" : "secondary"}
-          onClick={() => switchMode("json")}
-        >
-          JSON
-        </Button>
-      </div>
+      <SegmentedControl
+        ariaLabel="Variable edit mode"
+        className="workflow-settings-mode-toggle"
+        value={mode}
+        options={[
+          { value: "rows", label: "Rows" },
+          { value: "json", label: "JSON" },
+        ]}
+        onValueChange={switchMode}
+      />
 
       {mode === "rows" ? (
         <SetVariablesConfigFields
@@ -1076,15 +1064,12 @@ function ToggleField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <Label htmlFor={id} className="workflow-settings-toggle">
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-      />
-      {label}
-    </Label>
+    <SwitchField
+      id={id}
+      checked={checked}
+      label={label}
+      onCheckedChange={onChange}
+    />
   );
 }
 

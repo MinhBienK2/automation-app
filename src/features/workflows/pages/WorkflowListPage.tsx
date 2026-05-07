@@ -2,6 +2,7 @@ import { Copy, Download, Eye, Pencil, Trash2, Upload } from "lucide-react";
 import type { WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
+import { IconButton } from "../../../components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -101,50 +102,45 @@ export function WorkflowListPage({
                 </div>
               </div>
               <div className="row-actions">
-                <Button
-                  aria-label="View Details"
-                  size="icon"
+                <IconButton
+                  label="View Details"
                   type="button"
                   onClick={() => onOpenWorkflow(workflow.id)}
                 >
                   <Eye aria-hidden="true" />
-                </Button>
-                <Button
+                </IconButton>
+                <IconButton
                   variant="secondary"
-                  size="icon"
                   type="button"
-                  aria-label={`Edit ${workflow.name}`}
+                  label={`Edit ${workflow.name}`}
                   onClick={() => onOpenEditWorkflow(workflow)}
                 >
                   <Pencil aria-hidden="true" />
-                </Button>
-                <Button
-                  aria-label={`Duplicate ${workflow.name}`}
-                  size="icon"
+                </IconButton>
+                <IconButton
+                  label={`Duplicate ${workflow.name}`}
                   type="button"
                   variant="secondary"
                   onClick={() => onDuplicateWorkflow(workflow)}
                 >
                   <Copy aria-hidden="true" />
-                </Button>
-                <Button
-                  aria-label={`Export ${workflow.name}`}
-                  size="icon"
+                </IconButton>
+                <IconButton
+                  label={`Export ${workflow.name}`}
                   type="button"
                   variant="secondary"
                   onClick={() => onOpenExportWorkflow(workflow)}
                 >
                   <Download aria-hidden="true" />
-                </Button>
-                <Button
-                  aria-label={`Delete ${workflow.name}`}
-                  size="icon"
+                </IconButton>
+                <IconButton
+                  label={`Delete ${workflow.name}`}
                   type="button"
                   variant="destructive"
                   onClick={() => onDeleteWorkflow(workflow.id)}
                 >
                   <Trash2 aria-hidden="true" />
-                </Button>
+                </IconButton>
               </div>
             </Card>
           ))

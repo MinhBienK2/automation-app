@@ -5,7 +5,8 @@
 - Frontend types: `src/types/workflow.ts`
 - UI helpers: `src/lib/workflowUi.ts`
 - App orchestration: `src/App.tsx`
-- Monitor: `src/features/workflows/components/TestStepMonitor.tsx`
+- Graph run presentation: `src/features/workflows/components/WorkflowGraphEditor.tsx`
+- Run issue presentation: `src/features/workflows/components/RunIssuePanel.tsx`
 - Status bar: `src/features/workflows/components/RunStatusBar.tsx`
 - Rust run domain: `src-tauri/src/domain/run.rs`
 - App state: `src-tauri/src/app_state.rs`
@@ -43,7 +44,6 @@ Run errors include:
 ## UI Expectations
 
 - `App.tsx` polls `get_run_state` while status is `running`.
-- Test monitor derives per-step status from target/current/completed/error.
 - Run status bar displays terminal and error states.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
 - Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids.

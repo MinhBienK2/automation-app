@@ -9,7 +9,8 @@ Check:
 - `src/types/workflow.ts`
 - `src/lib/workflowUi.ts`
 - `src/features/workflows/lib/workflowStepForm.ts`
-- `src/features/workflows/components/StepForm.tsx`
+- `src/features/workflows/components/ActionConfigEditor.tsx`
+- `src/features/workflows/components/ActionConfig*Fields.tsx`
 - `src-tauri/src/domain/action_config.rs`
 - `src-tauri/src/domain/validation.rs`
 - `src-tauri/src/services/run_service.rs`
@@ -47,7 +48,7 @@ Check:
 - `src-tauri/src/runner/`
 - `src-tauri/src/services/run_service.rs`
 - `src-tauri/src/app_state.rs`
-- `src/features/workflows/components/TestStepMonitor.tsx`
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`
 - `src/features/workflows/components/RunStatusBar.tsx`
 
 Risk:
@@ -70,4 +71,3 @@ Risk:
 - Existing workflows fail to deserialize.
 - Step order becomes non-contiguous.
 - Workflow list sorting or step counts drift.
-

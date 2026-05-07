@@ -202,15 +202,17 @@ describe("Workflow detail integration", () => {
     expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(
       "qa-profile",
     );
-    expect(within(settingsDialog).getByLabelText("Reuse login session")).toBeChecked();
-    expect(within(settingsDialog).getByLabelText("Proxy enabled")).toBeChecked();
+    expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
+      .toHaveAttribute("aria-checked", "true");
+    expect(within(settingsDialog).getByRole("switch", { name: "Proxy enabled" }))
+      .toHaveAttribute("aria-checked", "true");
     expect(within(settingsDialog).getByLabelText("Device profile")).toHaveValue("custom");
     expect(within(settingsDialog).getByLabelText("User agent")).toHaveValue("WorkflowBot/1.0");
     await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
     await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
     await userEvent.clear(within(settingsDialog).getByLabelText("Viewport width"));
     await userEvent.type(within(settingsDialog).getByLabelText("Viewport width"), "1440");
-    await userEvent.click(within(settingsDialog).getByLabelText("Touch input"));
+    await userEvent.click(within(settingsDialog).getByRole("switch", { name: "Touch input" }));
     await userEvent.selectOptions(
       within(settingsDialog).getByLabelText("Challenge policy"),
       "detect_only",

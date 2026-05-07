@@ -16,6 +16,8 @@ import { Input } from "./input";
 import { Label } from "./label";
 import { ScrollArea } from "./scroll-area";
 import { Select } from "./select";
+import { SegmentedControl } from "./segmented-control";
+import { Switch, SwitchField } from "./switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Textarea } from "./textarea";
 import {
@@ -71,6 +73,7 @@ describe("shadcn UI components", () => {
   });
 
   test("renders the remaining shared primitives", async () => {
+    const user = userEvent.setup();
     render(
       <TooltipProvider>
         <Card>
@@ -85,6 +88,22 @@ describe("shadcn UI components", () => {
               <option value="element_visible">Element visible</option>
             </Select>
             <Textarea aria-label="Step notes" defaultValue="Check selector" />
+            <Switch aria-label="Use browser profile" checked onCheckedChange={() => {}} />
+            <SwitchField
+              checked={false}
+              label="Autosave graph changes"
+              description="Save edits automatically."
+              onCheckedChange={() => {}}
+            />
+            <SegmentedControl
+              ariaLabel="Help language"
+              value="vi"
+              options={[
+                { value: "vi", label: "VI" },
+                { value: "en", label: "EN" },
+              ]}
+              onValueChange={() => {}}
+            />
             <Tabs defaultValue="vi">
               <TabsList>
                 <TabsTrigger value="vi">Tiếng Việt</TabsTrigger>
@@ -112,7 +131,16 @@ describe("shadcn UI components", () => {
     expect(screen.getByLabelText("Condition")).toHaveValue("duration");
     expect(screen.getByLabelText("Step notes")).toHaveValue("Check selector");
 
-    await userEvent.click(screen.getByRole("tab", { name: "English" }));
+    expect(screen.getByRole("switch", { name: "Use browser profile" }))
+      .toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: "Autosave graph changes" }))
+      .toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "VI" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(screen.getByRole("tab", { name: "English" }));
 
     expect(screen.getByText("Content")).toBeInTheDocument();
   });

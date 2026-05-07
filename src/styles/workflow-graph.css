@@ -4,7 +4,6 @@
   padding: 16px;
 }
 
-.workflow-graph-heading h2,
 .graph-inspector h2 {
   font-size: 18px;
   font-weight: 400;
@@ -37,23 +36,11 @@
   border-right: 1px solid #242424;
 }
 
-.graph-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.graph-palette,
 .graph-inspector {
   display: grid;
   align-content: start;
   gap: 10px;
   min-width: 0;
-}
-
-.graph-palette button {
-  justify-content: start;
 }
 
 .graph-inspector-header {
@@ -613,12 +600,6 @@
   background: #171717;
 }
 
-.graph-move-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
 .graph-node-context-menu {
   position: fixed;
   z-index: 60;
@@ -648,18 +629,6 @@
 
 .graph-node-context-menu button:disabled {
   opacity: 0.45;
-}
-
-.graph-connect-form {
-  display: grid;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid #242424;
-}
-
-.graph-connect-form h3 {
-  font-size: 14px;
-  font-weight: 400;
 }
 
 .graph-node-issues {

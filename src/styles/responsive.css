@@ -24,19 +24,14 @@
     display: grid;
   }
 
-  .builder-grid,
-  .monitor-grid,
   .workflow-graph-layout,
-  .graph-runtime-grid,
   .graph-shortcut-guide,
   .workflow-settings-body,
-  .browser-config-grid,
   .workflow-settings-grid,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
   }
 
-  .browser-config-header,
   .workflow-settings-section-header,
   .workflow-settings-help-header,
   .run-issue-header,
@@ -44,7 +39,6 @@
     display: grid;
   }
 
-  .browser-config-actions,
   .run-issue-header-actions,
   .run-issue-actions {
     justify-content: stretch;
@@ -52,14 +46,6 @@
 
   .workflow-settings-help-overview {
     grid-template-columns: 1fr;
-  }
-
-  .step-detail-panel {
-    position: static;
-  }
-
-  .step-list {
-    max-height: none;
   }
 
   .workflow-card .row-actions,

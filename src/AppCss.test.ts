@@ -18,7 +18,6 @@ const cssFiles = [
   "src/styles/workflows.css",
   "src/styles/workflow-graph.css",
   "src/styles/modals.css",
-  "src/styles/monitor.css",
   "src/styles/responsive.css",
 ];
 const css = cssFiles
@@ -38,7 +37,7 @@ describe("App CSS", () => {
     expect(appCss).toContain('@import "./styles/workflows.css";');
     expect(appCss).toContain('@import "./styles/workflow-graph.css";');
     expect(appCss).toContain('@import "./styles/modals.css";');
-    expect(appCss).toContain('@import "./styles/monitor.css";');
+    expect(appCss).not.toContain('@import "./styles/monitor.css";');
     expect(appCss).toContain('@import "./styles/responsive.css";');
     expect(appCss.split("\n").length).toBeLessThanOrEqual(12);
   });
@@ -81,13 +80,7 @@ describe("App CSS", () => {
     const actionCategoryActive = cssRule(".action-category-active,\n.action-category:hover");
     const actionResultList = cssRule(".action-result-list");
     const actionResult = cssRule(".action-result");
-    const monitorStepStatus = cssRule(".monitor-step-status");
     const pageBackButton = cssRule(".page-back-button");
-    const stepList = cssRule(".step-list");
-    const stepDetailPanel = cssRule(".step-detail-panel");
-    const stepItem = cssRule(".step-item");
-    const stepDragHandle = cssRule(".step-drag-handle");
-    const builderTitle = cssRule(".builder-steps-title");
     const toastAlert = cssRule(".toast-alert");
 
     expect(addStepPalette).toContain("width: min(760px, calc(100vw - 48px))");
@@ -99,18 +92,14 @@ describe("App CSS", () => {
     expect(css).toContain(".action-result-list {\n  grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(actionResult).toContain("min-height: 58px");
     expect(css).not.toContain(".action-picker-menu");
-    expect(monitorStepStatus).toContain("min-width: 74px");
+    expect(css).not.toContain(".monitor-dialog");
+    expect(css).not.toContain(".monitor-step-status");
+    expect(css).not.toContain(".browser-config-dialog");
+    expect(css).not.toContain(".browser-config-toggle");
+    expect(css).not.toContain(".builder-grid");
+    expect(css).not.toContain(".step-list");
+    expect(css).not.toContain(".step-detail-panel");
     expect(pageBackButton).toContain("border: 1px solid #2e2e2e");
-    expect(stepList).toContain("max-height: min(560px, calc(100dvh - 360px))");
-    expect(stepList).toContain("overflow-y: auto");
-    expect(stepList).toContain("scrollbar-width: none");
-    expect(css).toContain(".step-list::-webkit-scrollbar");
-    expect(css).toContain("display: none");
-    expect(stepDetailPanel).toContain("position: sticky");
-    expect(stepDetailPanel).toContain("top: 20px");
-    expect(stepItem).toContain("min-height: 44px");
-    expect(stepDragHandle).toContain("min-height: 44px");
-    expect(builderTitle).toContain("font-size: 17px");
     expect(toastAlert).toContain("position: fixed");
     expect(toastAlert).toContain("z-index: 70");
     expect(toastAlert).toContain("bottom: 24px");

@@ -168,3 +168,47 @@ small {
   color: #898989;
   font-size: 12px;
 }
+
+.switch-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.switch-field-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.switch-field-copy strong {
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.segmented-control {
+  display: inline-flex;
+  width: fit-content;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #2e2e2e;
+  border-radius: 9999px;
+  background: #0f0f0f;
+}
+
+.segmented-control-button {
+  min-height: 30px;
+  border-radius: 9999px;
+}
+
+.segmented-control-button[data-state="active"] {
+  border-color: rgba(62, 207, 142, 0.48);
+  color: #3ecf8e;
+}

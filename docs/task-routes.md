@@ -25,7 +25,7 @@ Update docs: task routes, product model, overview, or invariants only if the tas
 
 Read: `domain/action-taxonomy.md`, `domain/cross-feature-impact-map.md`, `architecture/frontend.md`, `architecture/domain.md`, `architecture/runner.md`, `contracts/action-configs.md`, `contracts/workflow-types.md`
 
-Verify: `src/types/workflow.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/StepForm.tsx`, `src-tauri/src/domain/action_config.rs`, `src-tauri/src/domain/validation.rs`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/runner/actions/`, `README.md`
+Verify: `src/types/workflow.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/ActionConfigEditor.tsx`, `src/features/workflows/components/ActionConfig*Fields.tsx`, `src-tauri/src/domain/action_config.rs`, `src-tauri/src/domain/validation.rs`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/runner/actions/`, `README.md`
 
 Checks: `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `cd src-tauri && cargo test --test domain_validation`, `cd src-tauri && cargo test --test command_api`; add runner tests when execution changes.
 
@@ -95,9 +95,9 @@ Update docs: execution semantics, runner architecture, run-state contract, impac
 
 Read: `domain/execution-semantics.md`, `architecture/frontend.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/App.tsx`, `src/features/workflows/components/TestStepMonitor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/lib/workflowUi.ts`, `src-tauri/src/app_state.rs`, `src-tauri/src/services/run_service.rs`
+Verify: `src/App.tsx`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowUi.ts`, `src-tauri/src/app_state.rs`, `src-tauri/src/services/run_service.rs`
 
-Checks: `npm test -- src/features/workflows/components/TestStepMonitor.test.tsx`, `cd src-tauri && cargo test --test command_api`
+Checks: `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `cd src-tauri && cargo test --test command_api`
 
 Update docs: run-state contract, execution semantics, frontend/runner docs.
 

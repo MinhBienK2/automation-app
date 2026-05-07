@@ -12,7 +12,6 @@ Focused commands:
 
 - `npm test -- src/lib/workflowApi.test.ts`
 - `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`
-- `npm test -- src/features/workflows/components/TestStepMonitor.test.tsx`
 - `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`
 - `npx tsc --noEmit`
 
@@ -37,4 +36,3 @@ Focused commands:
 - Run focused tests first.
 - Add broader checks when touching shared contracts or cross-layer behavior.
 - Docs-only changes do not require TDD.
-

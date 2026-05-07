@@ -17,7 +17,7 @@ describe("StepHelpModal", () => {
     const header = within(help).getByTestId("action-help-header");
 
     expect(within(header).getByText("Hướng dẫn action")).toBeInTheDocument();
-    expect(within(header).getByRole("tablist", { name: "Help language" }))
+    expect(within(header).getByRole("group", { name: "Help language" }))
       .toHaveClass("help-language-switch-compact");
     expect(within(help).getByText("Tất cả field và option")).toBeInTheDocument();
   });

@@ -105,6 +105,9 @@ describe("Workflow list integration", () => {
     expect(within(workflowCard as HTMLElement).getByRole("button", {
       name: "Delete Login flow",
     })).toBeInTheDocument();
+    expect(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Delete Login flow",
+    })).toHaveAttribute("data-tooltip", "Delete Login flow");
     expect(within(workflowCard as HTMLElement).queryByText("View Details"))
       .not.toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).queryByText("Edit"))
@@ -113,6 +116,27 @@ describe("Workflow list integration", () => {
       .not.toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).queryByText("Delete"))
       .not.toBeInTheDocument();
+  });
+
+  test("confirms deletion in an app dialog instead of using the browser confirm", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm");
+    mockTauriCommands(listWorkflowScenario([workflow]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Delete Login flow" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Delete Workflow" });
+    expect(within(dialog).getByText(/This removes Login flow/i)).toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete Workflow" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("delete_workflow", {
+        id: "workflow-1",
+      });
+    });
   });
 
   test("duplicates a workflow from the list", async () => {

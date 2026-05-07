@@ -24,21 +24,21 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
-    const autosaveToggle = screen.getByRole("checkbox", {
+    const autosaveToggle = screen.getByRole("switch", {
       name: "Autosave graph changes",
     });
-    expect(autosaveToggle).toBeChecked();
+    expect(autosaveToggle).toHaveAttribute("aria-checked", "true");
 
     await userEvent.click(autosaveToggle);
-    expect(autosaveToggle).not.toBeChecked();
+    expect(autosaveToggle).toHaveAttribute("aria-checked", "false");
 
     unmount();
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
     expect(
-      screen.getByRole("checkbox", { name: "Autosave graph changes" }),
-    ).not.toBeChecked();
+      screen.getByRole("switch", { name: "Autosave graph changes" }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 
   test("shows graph keyboard and mouse guidance in settings", async () => {

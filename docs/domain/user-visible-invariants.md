@@ -54,8 +54,11 @@ Preserve these unless the task explicitly changes them.
 
 - Workflow list and detail remain separate screens.
 - Workflow list does not expose legacy step counts or raw `updated_at` values; graph editing state belongs in the detail screen.
+- Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
+- Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
+- On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.

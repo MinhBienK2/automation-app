@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { ScrollArea } from "../../../components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import {
   stepHelpContent,
   type ActionFieldReference,
@@ -49,29 +49,16 @@ export function StepHelpModal({
             </DialogDescription>
           </div>
 
-          <Tabs
-            className="help-language-tabs-compact"
+          <SegmentedControl
+            ariaLabel="Help language"
+            className="help-language-switch help-language-switch-compact help-language-tabs-compact"
             value={language}
-            onValueChange={(value) => onLanguageChange(value as StepHelpLanguage)}
-          >
-            <TabsList
-              className="help-language-switch help-language-switch-compact"
-              aria-label="Help language"
-            >
-              <TabsTrigger
-                className={language === "vi" ? "help-language-active" : ""}
-                value="vi"
-              >
-                VI
-              </TabsTrigger>
-              <TabsTrigger
-                className={language === "en" ? "help-language-active" : ""}
-                value="en"
-              >
-                EN
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+            options={[
+              { value: "vi", label: "VI" },
+              { value: "en", label: "EN" },
+            ]}
+            onValueChange={onLanguageChange}
+          />
         </DialogHeader>
 
         <ScrollArea className="step-help-body">
