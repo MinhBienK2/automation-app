@@ -8,13 +8,12 @@ import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
-  exportWorkflow,
+  duplicateWorkflow as duplicateWorkflowCommand,
   exportWorkflowPackage,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
-  importWorkflow,
   importWorkflowPackage,
   listWorkflows,
   previewWorkflowPackage,
@@ -375,21 +374,7 @@ function App() {
     const copyName = `Copy of ${workflow.name}`;
 
     try {
-      const exported = await exportWorkflow(workflow.id);
-      const graph = await getWorkflowGraph(workflow.id);
-      const imported = await importWorkflow(exported);
-      const copiedWorkflowId = imported.workflow.id;
-
-      await saveWorkflowGraph(copiedWorkflowId, graph);
-      await renameWorkflowCommand(copiedWorkflowId, copyName);
-
-      if (exported.settings) {
-        await saveWorkflowSettingsSection(copiedWorkflowId, "general", {
-          ...exported.settings.general,
-          name: copyName,
-        });
-      }
-
+      await duplicateWorkflowCommand(workflow.id, copyName);
       await loadWorkflows();
     } catch (error) {
       setAppError(commandMessage(error));

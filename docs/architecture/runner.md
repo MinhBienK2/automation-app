@@ -27,13 +27,15 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
-- Browser sessions are retained in `AppState` after terminal outcomes unless a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
+- Browser sessions are retained in `AppState` after terminal outcomes unless Workflow Settings Execution browser retention is `close` or a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
 - Starting a new run closes any retained sessions from previous terminal outcomes before Chromium launches, so persistent profile directories are not reused while an older browser process still owns the profile lock.
-- Browser launch settings come from Workflow Settings Browser. Legacy browser config commands map to that section.
+- Browser launch settings come from Workflow Settings Browser. `browser.headless` switches `BrowserRunExecutor` from the default headed Chromium launch to headless mode. Legacy browser config commands map to the Browser section.
 - Named browser profiles use persistent Chromium user data directories under the user's app data directory at `workflow-automation-manager/browser-profiles/<profile>`. Runs without a profile continue to use temporary user data directories.
 - Before graph actions run, the command layer prepends supported Environment defaults and Variables seed values from Workflow Settings.
 - Execution settings fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
 - Execution settings can insert fixed or random waits between compiled graph nodes before the runner receives steps. Explicit Wait and Random Wait nodes override the global wait at their position.
+- Execution max duration is enforced in `run_service` with the same cancellation token used by Stop. Timeout finishes the run as failed with a workflow-level timeout error.
+- Batch execution compiles the saved graph, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, closes each row session, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
 
 ## Belongs Here
 

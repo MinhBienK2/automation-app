@@ -8,7 +8,7 @@ Preserve these unless the task explicitly changes them.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
 - Workflow list `Edit` opens Workflow Settings at General.
-- Workflow list row actions are icon-only controls with accessible labels for View Details, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and copied settings where available.
+- Workflow list row actions are icon-only controls with accessible labels for View Details, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and full copied settings without package-export sanitization.
 - Workflow list exposes Import Workflow. Import reads a workflow package, shows a preview, and always creates a new workflow; it never overwrites an existing workflow.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
@@ -18,6 +18,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings Browser exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
 - Workflow Settings Browser exposes a Device profile selector for Default browser, Desktop Chrome, Android Chrome, iPhone Safari, and Custom user agent. Presets update user agent, viewport width/height, mobile, and touch settings together; raw user-agent editing is reserved for Custom.
 - Workflow Settings Execution exposes wait-between-nodes controls. Users can enable a fixed wait or random wait range between graph nodes. Explicit Wait and Random Wait nodes override the global setting at their position.
+- Workflow Settings Triggers is a planned/compatibility section until a scheduler service exists. It must not present trigger modes or policies as active scheduling controls.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it. Browser help keeps persisted field keys such as `profile_name`, `proxy_server`, and `challenge_policy` visible even in Vietnamese.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
@@ -79,12 +80,12 @@ Preserve these unless the task explicitly changes them.
 ## Runner Behavior
 
 - Full runs execute the compiled saved graph.
-- Full runs use persisted Workflow Settings as the run baseline. Browser settings are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset.
+- Full runs use persisted Workflow Settings as the run baseline. Browser settings, including headless mode, are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset; Execution max duration cancels and fails overlong runs with a timeout reason.
 - Execution wait-between-nodes settings are applied after graph compile and before runner start, excluding setup steps and explicit Wait/Random Wait override nodes.
 - Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
 - Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
-- Browser sessions remain open after success, failure, and stop unless the terminal End Success, End Failure, or Stop Workflow node has its close-browser option enabled.
+- Browser sessions remain open after success, failure, and stop by default. Workflow Settings Execution browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 

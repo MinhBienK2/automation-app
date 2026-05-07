@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::{Component, Path, PathBuf};
 use tauri::State;
 
 use crate::{
@@ -8,21 +9,22 @@ use crate::{
         ActionConfig, ActionType, BatchRunRequest, BatchRunRowResult, BatchRunSummary,
         ClickWaitUntil, CompiledWorkflowGraph, ElementSnapshot, GeneratedFixture,
         GraphValidationIssue, OrchestrationSchedule, RecordedEvent, RunMode, RunStatus,
-        RunValidationIssue, SelectorCandidate, SettingsValidationIssue, ValidationError, Workflow,
-        WorkflowBrowserConfig, WorkflowExport, WorkflowGraph, WorkflowPackage,
-        WorkflowPackageExportOptions, WorkflowPackageImportOptions, WorkflowPackagePreview,
-        WorkflowSettings, WorkflowSettingsSection,
+        RunValidationIssue, SelectorCandidate, SettingsValidationIssue, ValidationError,
+        VariableAssignment, Workflow, WorkflowBrowserConfig, WorkflowExport, WorkflowGraph,
+        WorkflowPackage, WorkflowPackageExportOptions, WorkflowPackageImportOptions,
+        WorkflowPackagePreview, WorkflowSettings, WorkflowSettingsSection,
     },
     repositories::{RepositoryError, WorkflowDetail, WorkflowSummary},
     runner::{RunnerCancellation, RunnerStatus},
-    services::run_service::{default_config, start_background_run},
+    services::run_service::{default_config, start_background_run, BackgroundRunOptions},
 };
 
 mod graph;
 mod import_export;
 pub use graph::{
-    compile_workflow_graph_impl, get_workflow_graph_impl, run_workflow_graph_impl,
-    save_workflow_graph_impl, validate_workflow_graph_impl, validate_workflow_run_impl,
+    build_workflow_run_plan, compile_workflow_graph_impl, get_workflow_graph_impl,
+    run_workflow_graph_impl, save_workflow_graph_impl, validate_workflow_graph_impl,
+    validate_workflow_run_impl,
 };
 pub use import_export::{
     export_workflow_impl, export_workflow_package_impl, import_workflow_impl,
@@ -216,6 +218,55 @@ pub async fn delete_workflow_impl(state: &AppState, id: &str) -> Result<(), Comm
         .map_err(CommandError::from)
 }
 
+pub async fn duplicate_workflow_impl(
+    state: &AppState,
+    workflow_id: &str,
+    name: &str,
+) -> Result<WorkflowDetail, CommandError> {
+    let candidate = Workflow::new(name);
+    candidate.validate().map_err(CommandError::validation)?;
+
+    let source = state
+        .repository()
+        .get_workflow(workflow_id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+    let graph = get_workflow_graph_impl(state, workflow_id).await?;
+    let mut settings = get_workflow_settings_impl(state, workflow_id).await?;
+    let copied_workflow = create_workflow_impl(state, name).await?;
+
+    save_workflow_graph_impl(state, &copied_workflow.id, graph).await?;
+
+    settings.workflow_id = copied_workflow.id.clone();
+    settings.general.name = copied_workflow.name.clone();
+    settings.created_at = None;
+    settings.updated_at = None;
+    settings.general.created_at = None;
+    settings.general.updated_at = None;
+    save_workflow_settings_impl(state, &copied_workflow.id, settings).await?;
+
+    for step in source.steps {
+        let created = state
+            .repository()
+            .add_step(&copied_workflow.id, step.config.clone())
+            .await
+            .map_err(CommandError::from)?;
+        state
+            .repository()
+            .update_step(&created.id, &step.name, step.config)
+            .await
+            .map_err(CommandError::from)?;
+    }
+
+    state
+        .repository()
+        .get_workflow(&copied_workflow.id)
+        .await
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError::message("Workflow not found after duplicate"))
+}
+
 pub async fn add_step_impl(
     state: &AppState,
     workflow_id: &str,
@@ -296,7 +347,7 @@ pub async fn test_step_impl(
         detail.steps[..=selected_index].to_vec(),
         RunMode::TestStep,
         Some(step_id.to_string()),
-        None,
+        BackgroundRunOptions::default(),
     )
     .await
 }
@@ -322,41 +373,70 @@ pub async fn run_batch_workflow_impl(
 ) -> Result<BatchRunSummary, CommandError> {
     request.validate().map_err(CommandError::validation)?;
 
-    let detail = state
-        .repository()
-        .get_workflow(workflow_id)
-        .await
-        .map_err(CommandError::from)?
-        .ok_or_else(|| CommandError::message("Workflow not found"))?;
+    let plan = build_workflow_run_plan(state, workflow_id).await?;
+    let effective_concurrency = request
+        .concurrency_limit
+        .or(plan.settings.execution.batch_concurrency_limit)
+        .unwrap_or(1);
+    if effective_concurrency != 1 {
+        return Err(CommandError {
+            message: "Batch concurrency above 1 is not available until isolated browser sessions are supported".to_string(),
+            field: Some("concurrency_limit".to_string()),
+        });
+    }
+
     let run_executor = state.run_executor();
-    let base_steps = detail
+    let base_steps = plan
         .steps
         .iter()
         .map(|step| step.config.clone())
         .collect::<Vec<_>>();
+    let batch_variable_insert_index = plan
+        .steps
+        .iter()
+        .rposition(|step| step.id.starts_with("__settings:"))
+        .map(|index| index + 1)
+        .unwrap_or(0);
+    let mut browser_config = plan.browser_config;
+    browser_config.headless = request
+        .headless
+        .unwrap_or(plan.settings.execution.batch_headless);
     let mut results = Vec::with_capacity(request.rows.len());
 
     for (row_index, row) in request.rows.into_iter().enumerate() {
-        let mut action_configs = row
+        let mut action_configs = base_steps.clone();
+        let variables = row
             .into_iter()
-            .map(|(name, value)| ActionConfig::SetVariable {
-                name: Some(name),
-                value: Some(value),
-                value_type: None,
-                variables: Vec::new(),
+            .map(|(name, value)| VariableAssignment {
+                name,
+                value,
+                value_type: crate::domain::VariableValueType::Text,
             })
             .collect::<Vec<_>>();
-        action_configs.extend(base_steps.clone());
+        if !variables.is_empty() {
+            action_configs.insert(
+                batch_variable_insert_index.min(action_configs.len()),
+                ActionConfig::SetVariable {
+                    name: None,
+                    value: None,
+                    value_type: None,
+                    variables,
+                },
+            );
+        }
 
-        let outcome = run_executor
+        let mut outcome = run_executor
             .run_steps(
                 action_configs,
-                None,
+                Some(browser_config.clone()),
                 RunnerCancellation::new(),
                 Box::new(|_| {}),
             )
             .await
             .map_err(|error| CommandError::message(error.to_string()))?;
+        if let Some(mut session) = outcome.session.take() {
+            let _ = session.close().await;
+        }
         let (status, error) = match outcome.status {
             RunnerStatus::Success => (RunStatus::Success, None),
             RunnerStatus::Stopped => (RunStatus::Stopped, None),
@@ -371,6 +451,10 @@ pub async fn run_batch_workflow_impl(
             status,
             error,
         });
+
+        if plan.settings.execution.batch_stop_on_first_failed_row && status == RunStatus::Failed {
+            break;
+        }
     }
 
     let succeeded = results
@@ -508,17 +592,61 @@ pub async fn generate_fixture_impl(
     path: String,
     body_html: String,
 ) -> Result<GeneratedFixture, CommandError> {
-    if path.trim().is_empty() {
+    let output_path = resolve_fixture_output_path(&path)?;
+    let html = format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>{body_html}</body></html>"
+    );
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|error| CommandError::message(error.to_string()))?;
+    }
+    std::fs::write(&output_path, html).map_err(|error| CommandError::message(error.to_string()))?;
+    Ok(GeneratedFixture {
+        path: output_path.display().to_string(),
+    })
+}
+
+fn resolve_fixture_output_path(path: &str) -> Result<PathBuf, CommandError> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
         return Err(CommandError {
             message: "Fixture path is required".to_string(),
             field: Some("path".to_string()),
         });
     }
-    let html = format!(
-        "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>{body_html}</body></html>"
-    );
-    std::fs::write(&path, html).map_err(|error| CommandError::message(error.to_string()))?;
-    Ok(GeneratedFixture { path })
+
+    let candidate = Path::new(trimmed);
+    let mut components = candidate.components();
+    let Some(Component::Normal(file_name)) = components.next() else {
+        return Err(invalid_fixture_path());
+    };
+    if components.next().is_some() {
+        return Err(invalid_fixture_path());
+    }
+    let file_name = Path::new(file_name);
+    if file_name
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_none_or(|extension| !extension.eq_ignore_ascii_case("html"))
+    {
+        return Err(CommandError {
+            message: "Fixture file name must end with .html".to_string(),
+            field: Some("path".to_string()),
+        });
+    }
+
+    Ok(std::env::temp_dir()
+        .join("workflow-automation-manager")
+        .join("fixtures")
+        .join(file_name))
+}
+
+fn invalid_fixture_path() -> CommandError {
+    CommandError {
+        message: "Fixture path must be a file name inside the development fixture directory"
+            .to_string(),
+        field: Some("path".to_string()),
+    }
 }
 
 fn escape_xpath_literal(value: &str) -> String {
@@ -619,6 +747,15 @@ pub async fn rename_workflow(
 #[tauri::command]
 pub async fn delete_workflow(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
     delete_workflow_impl(&state, &id).await
+}
+
+#[tauri::command]
+pub async fn duplicate_workflow(
+    state: State<'_, AppState>,
+    workflow_id: String,
+    name: String,
+) -> Result<WorkflowDetail, CommandError> {
+    duplicate_workflow_impl(&state, &workflow_id, &name).await
 }
 
 #[tauri::command]

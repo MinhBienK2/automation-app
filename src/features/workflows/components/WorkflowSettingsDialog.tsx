@@ -5,7 +5,6 @@ import type {
   WorkflowBrowserChallengePolicy,
   WorkflowDebugLoggingLevel,
   WorkflowFailurePolicy,
-  WorkflowMissedRunPolicy,
   WorkflowSettings,
   WorkflowSettingsAdvanced,
   WorkflowSettingsBrowser,
@@ -15,8 +14,6 @@ import type {
   WorkflowSettingsInputs,
   WorkflowSettingsSectionId,
   WorkflowSettingsTriggers,
-  WorkflowTriggerConcurrencyPolicy,
-  WorkflowTriggerMode,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import {
@@ -961,92 +958,46 @@ function emptyVariableRow(): VariableAssignment {
 
 function TriggersSettingsSection({
   value,
-  onChange,
+  onChange: _onChange,
 }: {
   value: WorkflowSettingsTriggers;
   onChange: (value: WorkflowSettingsTriggers) => void;
 }) {
   return (
     <div className="workflow-settings-form">
-      <div className="workflow-settings-grid workflow-settings-grid-three">
-        <ToggleField
-          id="workflow-settings-trigger-enabled"
-          label="Trigger enabled"
-          checked={value.enabled}
-          onChange={(checked) => onChange({ ...value, enabled: checked })}
-        />
-        <Label htmlFor="workflow-settings-trigger-mode">
-          Mode
-          <Select
-            id="workflow-settings-trigger-mode"
-            value={value.mode}
-            onChange={(event) =>
-              onChange({ ...value, mode: event.currentTarget.value as WorkflowTriggerMode })
-            }
-          >
-            <option value="manual">Manual only</option>
-            <option value="once">Once</option>
-            <option value="interval">Interval</option>
-            <option value="cron">Cron/calendar</option>
-            <option value="event">Event</option>
-          </Select>
-        </Label>
-        <NumberField
-          id="workflow-settings-trigger-interval"
-          label="Interval seconds"
-          value={value.interval_seconds}
-          onChange={(next) => onChange({ ...value, interval_seconds: next })}
-        />
-      </div>
-      <div className="workflow-settings-grid workflow-settings-grid-two">
-        <Label htmlFor="workflow-settings-trigger-once">
-          Once at
-          <Input
-            id="workflow-settings-trigger-once"
-            placeholder="2026-05-06T10:00:00Z"
-            value={value.once_at ?? ""}
-            onChange={(event) =>
-              onChange({ ...value, once_at: nullableText(event.currentTarget.value) })
-            }
-          />
-        </Label>
-        <Label htmlFor="workflow-settings-trigger-concurrency">
-          Concurrency policy
-          <Select
-            id="workflow-settings-trigger-concurrency"
-            value={value.concurrency_policy}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                concurrency_policy: event.currentTarget
-                  .value as WorkflowTriggerConcurrencyPolicy,
-              })
-            }
-          >
-            <option value="skip_if_running">Skip if running</option>
-            <option value="queue_one">Queue one</option>
-            <option value="reject">Reject</option>
-          </Select>
-        </Label>
-      </div>
-      <Label htmlFor="workflow-settings-missed-run-policy">
-        Missed-run policy
-        <Select
-          id="workflow-settings-missed-run-policy"
-          value={value.missed_run_policy}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              missed_run_policy: event.currentTarget.value as WorkflowMissedRunPolicy,
-            })
-          }
-        >
-          <option value="skip">Skip</option>
-          <option value="run_next_eligible">Run next eligible instance</option>
-        </Select>
-      </Label>
+      <section className="workflow-settings-planned-panel" aria-label="Trigger status">
+        <p>
+          Triggers are saved for compatibility, but automatic scheduling is not
+          active in this build.
+        </p>
+        <dl>
+          <div>
+            <dt>Saved mode</dt>
+            <dd>{triggerModeLabel(value.mode)}</dd>
+          </div>
+          <div>
+            <dt>Saved state</dt>
+            <dd>{value.enabled ? "Enabled in saved data" : "Disabled"}</dd>
+          </div>
+        </dl>
+      </section>
     </div>
   );
+}
+
+function triggerModeLabel(mode: WorkflowSettingsTriggers["mode"]) {
+  switch (mode) {
+    case "once":
+      return "Once";
+    case "interval":
+      return "Interval";
+    case "cron":
+      return "Cron/calendar";
+    case "event":
+      return "Event";
+    case "manual":
+      return "Manual only";
+  }
 }
 
 function AdvancedSettingsSection({

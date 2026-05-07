@@ -48,7 +48,8 @@ impl OrchestrationSchedule {
 pub struct BatchRunRequest {
     pub rows: Vec<BTreeMap<String, String>>,
     pub concurrency_limit: Option<usize>,
-    pub headless: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub headless: Option<bool>,
 }
 
 impl BatchRunRequest {

@@ -38,8 +38,9 @@ Run errors include:
 - `begin_run` closes retained browser sessions from previous terminal runs, then sets status to `running`, mode, target step id, and clears progress/error.
 - Progress events set current step and completed step ids.
 - `stop_run` sets status to `stopped` and clears error.
-- `finish_run` clears active run, clears current step, captures `window.__wamOutputs` from the retained browser session when present, sets terminal status, and retains session when present.
+- `finish_run` clears active run, clears current step, captures `window.__wamOutputs` from the browser session when present, sets terminal status, and either retains or closes the session according to the resolved terminal/browser-retention policy.
 - Infrastructure failure sets status to `failed` without retained session.
+- When Workflow Settings `execution.max_workflow_duration_ms` is set, the background run cancels through the normal cancellation token at that limit. The terminal state is `failed` with a workflow-level timeout reason such as `Workflow exceeded maximum duration of <ms> ms`.
 
 ## UI Expectations
 

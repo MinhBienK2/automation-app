@@ -251,11 +251,64 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       };
     case "retry_block":
       return { type: actionType, config: { max_attempts: 3, delay_ms: null, steps: [] } };
+    case "switch_condition":
+      return {
+        type: actionType,
+        config: { expression: "name", cases: [], default_steps: [] },
+      };
+    case "while_loop":
+      return {
+        type: actionType,
+        config: {
+          condition: { kind: "output_equals", name: "name", value: "true" },
+          max_attempts: 1,
+          timeout_ms: null,
+          steps: [],
+        },
+      };
+    case "repeat_until":
+      return {
+        type: actionType,
+        config: {
+          condition: { kind: "output_equals", name: "name", value: "true" },
+          max_attempts: 1,
+          timeout_ms: null,
+          steps: [],
+          timeout_steps: [],
+        },
+      };
+    case "try_catch":
+      return {
+        type: actionType,
+        config: { try_steps: [], success_steps: [], error_steps: [], finally_steps: [] },
+      };
+    case "fallback_block":
+      return { type: actionType, config: { primary_steps: [], fallback_steps: [] } };
+    case "break_loop":
+    case "continue_loop":
+      return { type: actionType, config: {} };
     case "stop_workflow":
       return {
         type: actionType,
         config: { status: "success", reason: null, close_browser: false },
       };
+    case "transform_variable":
+      return {
+        type: actionType,
+        config: { source_name: "input", target_name: "output", expression: "" },
+      };
+    case "assert_output":
+      return {
+        type: actionType,
+        config: { name: "output", match_mode: "equals", value: "" },
+      };
+    case "run_subworkflow":
+      return {
+        type: actionType,
+        config: { workflow_id: "", input_mapping: [], output_mapping: [] },
+      };
+    case "domain_allowlist":
+      return { type: actionType, config: { domains: [] } };
     case "use_profile":
       return { type: actionType, config: { name: "default" } };
     case "save_session":

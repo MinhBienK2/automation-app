@@ -6,7 +6,7 @@
 - Rust validates a non-blank workflow name in `src-tauri/src/domain/workflow.rs`.
 - Repository trims and stores the workflow with timestamps, then creates a `Start -> New node` draft graph. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
-- The workflow list exposes icon-only row actions for view, edit settings, duplicate, export, and delete. Duplicate exports the source workflow, imports it as a new workflow, copies the saved graph JSON, renames the copy to `Copy of <name>`, saves copied General settings when present, and refreshes the list.
+- The workflow list exposes icon-only row actions for view, edit settings, duplicate, export, and delete. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, remaps full Workflow Settings to the new workflow id without package-export sanitization, preserves legacy step rows for compatibility, and refreshes the list.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import previews the package and always creates a new workflow; it never overwrites an existing workflow.
 
 ## Open Detail
@@ -53,14 +53,24 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, applies Browser settings before launch, applies Environment defaults and Variables before the first graph step, fills missing action timeouts from Execution defaults, and inserts configured Execution waits between graph nodes. Explicit Wait and Random Wait nodes override the global wait at their position.
+- `run_workflow` loads and validates saved Workflow Settings, applies Browser settings before launch including headless mode, applies Environment defaults and Variables before the first graph step, fills missing action timeouts from Execution defaults, inserts configured Execution waits between graph nodes, enforces maximum workflow duration, and applies browser retention as the default terminal session policy. Explicit Wait and Random Wait nodes override the global wait at their position.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is still a valid saved legacy draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `get_run_state` while status is `running`.
 - Invalid advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
 - Graph runs share the same run-state lifecycle as full workflow runs.
-- End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, terminal runs retain the browser session as before.
+- End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Execution browser retention decides whether terminal runs retain or close the browser session.
+
+## Workflow Settings Triggers
+
+- Trigger settings are persisted for forward compatibility but are not an active scheduler. The Triggers section presents the saved intent as planned behavior instead of active scheduling controls.
+
+## Batch Workflow
+
+- `run_batch_workflow` compiles the saved graph, prepends each row's values as runtime variables after settings setup actions, applies Browser settings and batch headless defaults, runs rows sequentially, closes each row browser session, and returns per-row status.
+- `batch_concurrency_limit` values above 1 are rejected until isolated browser sessions support safe parallel rows.
+- `batch_stop_on_first_failed_row` stops scheduling additional rows after the first failed row.
 
 ## Stop
 
@@ -78,6 +88,7 @@
 - Users choose whether to include Flow and which Workflow Settings sections to include.
 - Export calls `export_workflow_package`, opens the native system Save dialog with a suggested `.workflow.json` file name, and writes the `workflow_package` version 2 JSON to the selected path.
 - Canceling the native Save dialog leaves the export dialog open and does not create a file.
+- The shipped filesystem capability enables `writeTextFile`; the native Save dialog scopes the selected path for that write instead of granting arbitrary filesystem write access.
 - Flow export uses the saved `WorkflowGraph`.
 - Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including proxy passwords, download directory, cookies, storage rows, and session restore refs.
 

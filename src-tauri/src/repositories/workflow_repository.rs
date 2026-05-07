@@ -298,6 +298,7 @@ impl WorkflowRepository {
                 mobile: row.get::<i64, _>("mobile") != 0,
                 touch: row.get::<i64, _>("touch") != 0,
                 challenge_policy,
+                headless: false,
             })
         })
         .transpose()

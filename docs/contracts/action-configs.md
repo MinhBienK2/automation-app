@@ -14,12 +14,10 @@
 
 ## Required Sync Points
 
+Every serialized action type that can cross the Tauri boundary must be represented by TypeScript `ActionType` and `ActionConfig`, and by Rust `ActionType` and `ActionConfig`. The visible Add Action palette is a narrower product subset maintained in `workflowUi.ts` and the graph palette helpers.
+
 Every user-addable action type must have:
 
-- TypeScript `ActionType`.
-- TypeScript `ActionConfig` variant.
-- Rust `ActionType`.
-- Rust `ActionConfig` variant.
 - Rust `ActionType::as_str` and `ActionType::label`.
 - Default config in `default_config`.
 - UI label/group in `workflowUi.ts`.
@@ -28,7 +26,7 @@ Every user-addable action type must have:
 - Domain validation when fields have constraints.
 - Runner execution or intentional no-op/unsupported behavior.
 
-Graph-internal executable configs such as `if_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are Rust/TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. Graph-native nodes are the user-facing control-flow authoring surface, so these control-flow configs are not listed in the main user action palette. Variable configs include backward-compatible `set_variable`, multi-row `set_variable`, and `set_json_variables`. Hidden compatibility actions such as `set_checkbox`, reliability actions, and human checkpoint actions remain serde-compatible and editable when loaded from existing workflows, but are not visible in the main Add Action picker. They still require serde compatibility, validation, and runner or command-layer execution semantics.
+Graph-internal executable configs such as `if_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are Rust/TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Variable configs include backward-compatible `set_variable`, multi-row `set_variable`, and `set_json_variables`. Hidden compatibility actions such as `set_checkbox`, reliability actions, and human checkpoint actions remain serde-compatible and editable when loaded from existing workflows, but are not visible in the main Add Action picker. They still require serde compatibility, validation, and runner or command-layer execution semantics.
 
 Terminal graph nodes can compile to `stop_workflow` with `close_browser: true`. When `close_browser` is missing or false, terminal runs keep retaining the browser session. When true, the runner still captures outputs first and then closes the browser instead of retaining the session.
 

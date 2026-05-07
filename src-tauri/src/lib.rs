@@ -69,6 +69,7 @@ pub fn run() {
             commands::save_workflow_browser_config,
             commands::rename_workflow,
             commands::delete_workflow,
+            commands::duplicate_workflow,
             commands::get_workflow_graph,
             commands::save_workflow_graph,
             commands::validate_workflow_graph,
@@ -86,6 +87,7 @@ pub fn run() {
             commands::suggest_selectors,
             commands::normalize_recorded_events,
             commands::dry_run_validate_config,
+            #[cfg(debug_assertions)]
             commands::generate_fixture,
         ])
         .run(tauri::generate_context!())

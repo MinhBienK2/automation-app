@@ -3,8 +3,8 @@ import { invokeMock, resetTauriInvoke } from "../tests/mocks/tauri";
 import {
   exportWorkflow,
   exportWorkflowPackage,
+  duplicateWorkflow,
   dryRunValidateConfig,
-  generateFixture,
   compileWorkflowGraph,
   getWorkflowSettings,
   getWorkflowBrowserConfig,
@@ -53,6 +53,7 @@ describe("workflow API phase ten commands", () => {
       enabled: true,
       kind: { kind: "interval", every_seconds: 60 },
     });
+    await duplicateWorkflow("workflow-1", "Copy of Export me");
     await exportWorkflow("workflow-1");
     await importWorkflow(exported);
     await runBatchWorkflow("workflow-1", {
@@ -73,7 +74,6 @@ describe("workflow API phase ten commands", () => {
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
     });
-    await generateFixture("/tmp/fixture.html", "<button>Save</button>");
 
     expect(invokeMock).toHaveBeenCalledWith("validate_schedule", {
       schedule: {
@@ -81,6 +81,10 @@ describe("workflow API phase ten commands", () => {
         enabled: true,
         kind: { kind: "interval", every_seconds: 60 },
       },
+    });
+    expect(invokeMock).toHaveBeenCalledWith("duplicate_workflow", {
+      workflowId: "workflow-1",
+      name: "Copy of Export me",
     });
     expect(invokeMock).toHaveBeenCalledWith("export_workflow", {
       workflowId: "workflow-1",
@@ -109,10 +113,6 @@ describe("workflow API phase ten commands", () => {
     });
     expect(invokeMock).toHaveBeenCalledWith("dry_run_validate_config", {
       config: { type: "wait", config: { condition: "duration", duration_ms: 1000 } },
-    });
-    expect(invokeMock).toHaveBeenCalledWith("generate_fixture", {
-      path: "/tmp/fixture.html",
-      bodyHtml: "<button>Save</button>",
     });
   });
 

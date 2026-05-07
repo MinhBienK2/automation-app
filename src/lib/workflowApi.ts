@@ -5,7 +5,6 @@ import type {
   BatchRunSummary,
   CompiledWorkflowGraph,
   ElementSnapshot,
-  GeneratedFixture,
   GraphValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
@@ -93,6 +92,10 @@ export function deleteWorkflow(id: string) {
   return invoke("delete_workflow", { id });
 }
 
+export function duplicateWorkflow(workflowId: string, name: string) {
+  return invoke<WorkflowDetail>("duplicate_workflow", { workflowId, name });
+}
+
 export function getWorkflowGraph(workflowId: string) {
   return invoke<WorkflowGraph>("get_workflow_graph", { workflowId });
 }
@@ -170,8 +173,4 @@ export function normalizeRecordedEvents(events: RecordedEvent[]) {
 
 export function dryRunValidateConfig(config: ActionConfig) {
   return invoke("dry_run_validate_config", { config });
-}
-
-export function generateFixture(path: string, bodyHtml: string) {
-  return invoke<GeneratedFixture>("generate_fixture", { path, bodyHtml });
 }

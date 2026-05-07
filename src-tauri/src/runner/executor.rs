@@ -61,7 +61,14 @@ impl RunExecutor for BrowserRunExecutor {
         cancellation: RunnerCancellation,
         mut progress: ProgressCallback,
     ) -> RunExecutorFuture {
-        let runner = BrowserRunner::new(self.options.clone());
+        let mut options = self.options.clone();
+        if browser_config
+            .as_ref()
+            .is_some_and(|config| config.headless)
+        {
+            options.headed = false;
+        }
+        let runner = BrowserRunner::new(options);
 
         Box::pin(async move {
             let outcome = runner

@@ -22,12 +22,14 @@ The Tauri command layer is the contract between React and Rust.
 - Validation before persistence or execution.
 - Workflow Settings load/save/section-save commands, run validation, and validation before persistence or execution.
 - Legacy workflow browser runtime config commands map to Workflow Settings Browser.
-- Import/export, batch run, builder assist command logic.
+- Import/export, duplicate, batch run, builder assist command logic.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
 - `run_subworkflow` nodes are expanded here before the browser runner starts, with cycle detection.
 - Product-facing workflow execution goes through `run_workflow`, which runs the saved workflow graph with saved Workflow Settings as the run baseline. The UI saves the current graph and dirty settings sections before invoking it.
+- Product-facing local copy goes through `duplicate_workflow`, which copies saved graph and full local settings without package-export sanitization.
+- Debug-only fixture generation is not part of the production invoke surface.
 - List-step authoring commands are retired from Tauri registration; legacy Rust helpers may remain internal until import/export and persistence cleanup is complete.
 
 ## Does Not Belong Here

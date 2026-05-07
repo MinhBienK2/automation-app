@@ -202,6 +202,7 @@ fn workflow_browser_config_defaults_and_validation_match_launch_time_settings() 
         mobile: false,
         touch: false,
         challenge_policy: WorkflowBrowserChallengePolicy::PauseForHuman,
+        headless: false,
     }
     .normalized();
 

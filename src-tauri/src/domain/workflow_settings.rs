@@ -247,7 +247,7 @@ impl WorkflowSettingsBrowser {
             mobile: config.mobile,
             touch: config.touch,
             challenge_policy: config.challenge_policy,
-            headless: false,
+            headless: config.headless,
         }
     }
 
@@ -265,6 +265,7 @@ impl WorkflowSettingsBrowser {
             mobile: self.mobile,
             touch: self.touch,
             challenge_policy: self.challenge_policy,
+            headless: self.headless,
         }
         .normalized()
     }

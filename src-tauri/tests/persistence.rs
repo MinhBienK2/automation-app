@@ -352,6 +352,7 @@ async fn workflow_browser_config_persists_round_trips_and_cascades() {
         mobile: false,
         touch: true,
         challenge_policy: WorkflowBrowserChallengePolicy::DetectOnly,
+        headless: false,
     };
 
     repo.save_workflow_browser_config(config.clone())

@@ -8,6 +8,7 @@ use crate::{
     },
     runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
 };
+use std::time::Duration;
 
 pub fn default_config(action_type: ActionType) -> ActionConfig {
     match action_type {
@@ -490,7 +491,7 @@ pub async fn start_background_run(
     steps: Vec<WorkflowStep>,
     mode: RunMode,
     target_step_id: Option<String>,
-    browser_config: Option<WorkflowBrowserConfig>,
+    options: BackgroundRunOptions,
 ) -> Result<RunStateDto, CommandError> {
     let cancellation = state
         .begin_run(mode, target_step_id)
@@ -499,6 +500,9 @@ pub async fn start_background_run(
     let run_state = state.run_state().await;
     let task_state = state.clone();
     let run_executor = state.run_executor();
+    let browser_config = options.browser_config;
+    let default_close_browser = options.default_close_browser;
+    let max_workflow_duration_ms = options.max_workflow_duration_ms;
     let action_configs = steps
         .iter()
         .map(|step| step.config.clone())
@@ -527,63 +531,129 @@ pub async fn start_background_run(
                 }
             }
         });
-        let result = run_executor
-            .run_steps(
-                action_configs,
-                browser_config,
-                cancellation,
-                Box::new(move |progress| {
-                    let _ = progress_tx.send(progress);
-                }),
-            )
-            .await;
+        let cancellation_for_timeout = cancellation.clone();
+        let run_future = run_executor.run_steps(
+            action_configs,
+            browser_config,
+            cancellation,
+            Box::new(move |progress| {
+                let _ = progress_tx.send(progress);
+            }),
+        );
+        let completion = if let Some(max_duration_ms) = max_workflow_duration_ms {
+            tokio::pin!(run_future);
+            tokio::select! {
+                result = &mut run_future => RunCompletion::Finished(result),
+                _ = tokio::time::sleep(Duration::from_millis(max_duration_ms)) => {
+                    cancellation_for_timeout.cancel();
+                    match tokio::time::timeout(Duration::from_secs(5), &mut run_future).await {
+                        Ok(result) => RunCompletion::TimedOut {
+                            max_duration_ms,
+                            result: Some(result),
+                        },
+                        Err(_) => RunCompletion::TimedOut {
+                            max_duration_ms,
+                            result: None,
+                        },
+                    }
+                }
+            }
+        } else {
+            RunCompletion::Finished(run_future.await)
+        };
         let _ = progress_task.await;
-        complete_background_run(task_state, steps, result).await;
+        complete_background_run(task_state, steps, completion, default_close_browser).await;
     });
 
     Ok(run_state)
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct BackgroundRunOptions {
+    pub browser_config: Option<WorkflowBrowserConfig>,
+    pub default_close_browser: bool,
+    pub max_workflow_duration_ms: Option<u64>,
+}
+
+enum RunCompletion {
+    Finished(Result<RunExecution, RunnerError>),
+    TimedOut {
+        max_duration_ms: u64,
+        result: Option<Result<RunExecution, RunnerError>>,
+    },
+}
+
 async fn complete_background_run(
     state: AppState,
     steps: Vec<WorkflowStep>,
-    result: Result<RunExecution, RunnerError>,
+    completion: RunCompletion,
+    default_close_browser: bool,
 ) {
-    match result {
-        Ok(outcome) => {
-            let (status, error) = match outcome.status {
-                RunnerStatus::Success => (RunStatus::Success, None),
-                RunnerStatus::Stopped => (RunStatus::Stopped, None),
-                RunnerStatus::Failed => {
-                    let error = outcome.failed_step.as_ref().map(|failed_step| {
-                        if let Some(step) = steps.get(failed_step.step_number.saturating_sub(1)) {
-                            RunError::for_step(
-                                step.id.clone(),
-                                failed_step.step_number,
-                                step.name.clone(),
-                                step.action_type.as_str(),
-                                failed_step.reason.clone(),
-                            )
-                        } else {
-                            RunError::new(
-                                failed_step.step_number,
-                                "unknown",
-                                failed_step.reason.clone(),
-                            )
-                        }
-                    });
-                    (RunStatus::Failed, error)
-                }
-            };
+    match completion {
+        RunCompletion::TimedOut {
+            max_duration_ms,
+            result,
+        } => {
+            let error = RunError::new(
+                0,
+                "workflow",
+                format!("Workflow exceeded maximum duration of {max_duration_ms} ms"),
+            );
+            if let Some(Ok(outcome)) = result {
+                state
+                    .finish_run(
+                        RunStatus::Failed,
+                        Some(error),
+                        outcome.session,
+                        outcome.close_browser || default_close_browser,
+                    )
+                    .await;
+            } else {
+                state.fail_run_without_session(error).await;
+            }
+        }
+        RunCompletion::Finished(result) => match result {
+            Ok(outcome) => {
+                let (status, error) = match outcome.status {
+                    RunnerStatus::Success => (RunStatus::Success, None),
+                    RunnerStatus::Stopped => (RunStatus::Stopped, None),
+                    RunnerStatus::Failed => {
+                        let error = outcome.failed_step.as_ref().map(|failed_step| {
+                            if let Some(step) = steps.get(failed_step.step_number.saturating_sub(1))
+                            {
+                                RunError::for_step(
+                                    step.id.clone(),
+                                    failed_step.step_number,
+                                    step.name.clone(),
+                                    step.action_type.as_str(),
+                                    failed_step.reason.clone(),
+                                )
+                            } else {
+                                RunError::new(
+                                    failed_step.step_number,
+                                    "unknown",
+                                    failed_step.reason.clone(),
+                                )
+                            }
+                        });
+                        (RunStatus::Failed, error)
+                    }
+                };
 
-            state
-                .finish_run(status, error, outcome.session, outcome.close_browser)
-                .await;
-        }
-        Err(error) => {
-            state
-                .fail_run_without_session(RunError::new(0, "runner", error.to_string()))
-                .await;
-        }
+                state
+                    .finish_run(
+                        status,
+                        error,
+                        outcome.session,
+                        outcome.close_browser || default_close_browser,
+                    )
+                    .await;
+            }
+            Err(error) => {
+                state
+                    .fail_run_without_session(RunError::new(0, "runner", error.to_string()))
+                    .await;
+            }
+        },
     }
 }

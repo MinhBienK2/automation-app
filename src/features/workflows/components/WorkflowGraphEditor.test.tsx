@@ -809,6 +809,29 @@ describe("Workflow graph editor integration", () => {
       .toHaveClass("graph-canvas-pan-mode");
   });
 
+  test("keeps toolbar pan mode active after temporary spacebar panning ends", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
+    const canvas = within(editor).getByLabelText("Workflow graph canvas");
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Pan canvas mode" }));
+    expect(canvas).toHaveClass("graph-canvas-pan-mode");
+
+    await userEvent.keyboard("[Space]");
+
+    expect(within(toolbar).getByRole("button", { name: "Pan canvas mode" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(canvas).toHaveClass("graph-canvas-pan-mode");
+  });
+
   test("validates and runs graph without the old runtime panels", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),

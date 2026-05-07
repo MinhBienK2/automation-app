@@ -3,7 +3,8 @@ mod support;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use support::{
-    poll_status, test_state, test_state_with_runner, FakeRunExecutor, RecordingRunExecutor,
+    poll_status, test_state, test_state_with_runner, FakeRunExecutor, FakeRunOutcome,
+    RecordingRunExecutor,
 };
 use workflow_automation_manager_lib::{
     commands,
@@ -12,11 +13,11 @@ use workflow_automation_manager_lib::{
         GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
         GraphViewport, HeaderPair, OrchestrationSchedule, RecordedEvent, RunStatus, ScheduleKind,
         ScrollDirection, VariableAssignment, VariableValueType, WaitCondition,
-        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
-        WorkflowInputValueType, WorkflowPackageExportOptions, WorkflowPackageImportOptions,
-        WorkflowSettings, WorkflowSettingsCookie, WorkflowSettingsGeolocation,
-        WorkflowSettingsInputRow, WorkflowSettingsSection, WorkflowSettingsStorageEntry,
-        WorkflowTriggerMode,
+        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowBrowserRetention,
+        WorkflowGraph, WorkflowInputValueType, WorkflowPackageExportOptions,
+        WorkflowPackageImportOptions, WorkflowSettings, WorkflowSettingsCookie,
+        WorkflowSettingsGeolocation, WorkflowSettingsInputRow, WorkflowSettingsSection,
+        WorkflowSettingsStorageEntry, WorkflowTriggerMode,
     },
 };
 
@@ -142,6 +143,86 @@ async fn graph_commands_generate_save_validate_and_run_workflow_graphs() {
 }
 
 #[tokio::test]
+async fn duplicate_workflow_copies_graph_and_unsanitized_settings() {
+    let (state, _db_path) = test_state().await;
+    let workflow = commands::create_workflow_impl(&state, "Source flow")
+        .await
+        .expect("create");
+    let legacy_step = commands::add_step_impl(&state, &workflow.id, ActionType::Wait)
+        .await
+        .expect("legacy step");
+    commands::update_step_impl(
+        &state,
+        &legacy_step.id,
+        "Legacy wait",
+        ActionConfig::Wait {
+            condition: WaitCondition::Duration,
+            xpath: None,
+            text: None,
+            url: None,
+            duration_ms: Some(250),
+            timeout_ms: None,
+        },
+    )
+    .await
+    .expect("update legacy step");
+
+    let graph = graph_with_action_path(vec![navigate_node("open", "https://example.test")]);
+    commands::save_workflow_graph_impl(&state, &workflow.id, graph.clone())
+        .await
+        .expect("save graph");
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.browser.proxy_enabled = true;
+    settings.browser.proxy_server = Some("http://proxy.local:8080".to_string());
+    settings.browser.proxy_username = Some("agent".to_string());
+    settings.browser.proxy_password = Some("secret-password".to_string());
+    settings.environment.download_directory = Some("/tmp/source-downloads".to_string());
+    settings.environment.cookies = vec![WorkflowSettingsCookie {
+        name: "session".to_string(),
+        value: "abc123".to_string(),
+        domain: Some("example.test".to_string()),
+        path: Some("/".to_string()),
+    }];
+    settings.environment.local_storage = vec![WorkflowSettingsStorageEntry {
+        key: "token".to_string(),
+        value: "local-secret".to_string(),
+    }];
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    let copied = commands::duplicate_workflow_impl(&state, &workflow.id, "Copy of Source flow")
+        .await
+        .expect("duplicate");
+
+    assert_ne!(copied.workflow.id, workflow.id);
+    assert_eq!(copied.workflow.name, "Copy of Source flow");
+    assert_eq!(copied.steps.len(), 1);
+    assert_eq!(copied.steps[0].name, "Legacy wait");
+
+    let copied_graph = commands::get_workflow_graph_impl(&state, &copied.workflow.id)
+        .await
+        .expect("copied graph");
+    assert_eq!(copied_graph, graph);
+
+    let copied_settings = commands::get_workflow_settings_impl(&state, &copied.workflow.id)
+        .await
+        .expect("copied settings");
+    assert_eq!(copied_settings.general.name, "Copy of Source flow");
+    assert_eq!(
+        copied_settings.browser.proxy_password.as_deref(),
+        Some("secret-password")
+    );
+    assert_eq!(
+        copied_settings.environment.download_directory.as_deref(),
+        Some("/tmp/source-downloads")
+    );
+    assert_eq!(copied_settings.environment.cookies.len(), 1);
+    assert_eq!(copied_settings.environment.local_storage.len(), 1);
+}
+
+#[tokio::test]
 async fn workflow_browser_config_commands_round_trip_and_validate() {
     let (state, _db_path) = test_state().await;
     let workflow = commands::create_workflow_impl(&state, "Runtime config")
@@ -171,6 +252,7 @@ async fn workflow_browser_config_commands_round_trip_and_validate() {
         mobile: false,
         touch: false,
         challenge_policy: WorkflowBrowserChallengePolicy::PauseForHuman,
+        headless: false,
     };
     commands::save_workflow_browser_config_impl(&state, &workflow.id, config.clone())
         .await
@@ -261,6 +343,7 @@ async fn workflow_settings_commands_round_trip_validate_and_map_browser_config()
             mobile: false,
             touch: false,
             challenge_policy: WorkflowBrowserChallengePolicy::DetectOnly,
+            headless: false,
         },
     )
     .await
@@ -366,6 +449,7 @@ async fn run_workflow_uses_saved_browser_config_before_legacy_launch_actions() {
             mobile: false,
             touch: true,
             challenge_policy: WorkflowBrowserChallengePolicy::DetectOnly,
+            headless: false,
         },
     )
     .await
@@ -389,6 +473,72 @@ async fn run_workflow_uses_saved_browser_config_before_legacy_launch_actions() {
     assert_eq!(recorded.user_agent.as_deref(), Some("WorkflowBot/1.0"));
     assert_eq!(recorded.viewport_width, Some(1280));
     assert!(recorded.touch);
+}
+
+#[tokio::test]
+async fn run_workflow_applies_headless_and_browser_retention_settings() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Runtime truth")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.browser.headless = true;
+    settings.execution.browser_retention = WorkflowBrowserRetention::Close;
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let recorded_browser_configs = runner.recorded_browser_configs();
+    let recorded = recorded_browser_configs[0]
+        .as_ref()
+        .expect("workflow browser config should be passed to runner");
+    assert!(recorded.headless);
+}
+
+#[tokio::test]
+async fn run_workflow_max_duration_cancels_and_reports_timeout_failure() {
+    let (state, _db_path) = test_state_with_runner(FakeRunExecutor::stopped_on_cancel()).await;
+    let workflow = commands::create_workflow_impl(&state, "Timeout run")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.max_workflow_duration_ms = Some(25);
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Failed).await;
+
+    let run_state = commands::get_run_state_impl(&state).await;
+    let error = run_state
+        .error
+        .expect("timeout failure should include error");
+    assert!(error.reason.contains("exceeded maximum duration"));
 }
 
 #[tokio::test]
@@ -1552,8 +1702,8 @@ fn import_workflow_normalizes_legacy_export_actions() {
 #[tokio::test]
 async fn phase_ten_batch_runs_account_for_each_input_row() {
     let runner = Arc::new(FakeRunExecutor::sequence(vec![
-        support::FakeRunOutcome::Success,
-        support::FakeRunOutcome::Failed {
+        FakeRunOutcome::Success,
+        FakeRunOutcome::Failed {
             step_number: 1,
             reason: "row failed".to_string(),
         },
@@ -1581,6 +1731,13 @@ async fn phase_ten_batch_runs_account_for_each_input_row() {
     )
     .await
     .expect("update");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node(&step.id)]),
+    )
+    .await
+    .expect("save graph");
 
     let mut first = BTreeMap::new();
     first.insert("email".to_string(), "a@example.com".to_string());
@@ -1593,7 +1750,7 @@ async fn phase_ten_batch_runs_account_for_each_input_row() {
         BatchRunRequest {
             rows: vec![first, second],
             concurrency_limit: Some(1),
-            headless: false,
+            headless: Some(false),
         },
     )
     .await
@@ -1607,6 +1764,137 @@ async fn phase_ten_batch_runs_account_for_each_input_row() {
     assert_eq!(summary.results[1].status, RunStatus::Failed);
     assert_eq!(summary.results[1].error.as_deref(), Some("row failed"));
     assert_eq!(runner.run_count(), 2);
+}
+
+#[tokio::test]
+async fn run_batch_workflow_uses_saved_graph_and_settings_defaults() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Graph batch")
+        .await
+        .expect("create");
+    let legacy = commands::add_step_impl(&state, &workflow.id, ActionType::Navigate)
+        .await
+        .expect("legacy step");
+    commands::update_step_impl(
+        &state,
+        &legacy.id,
+        "Legacy navigate",
+        ActionConfig::Navigate {
+            url: "https://legacy.example".to_string(),
+            wait_until: None,
+            timeout_ms: None,
+        },
+    )
+    .await
+    .expect("update legacy step");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.batch_concurrency_limit = Some(1);
+    settings.execution.batch_headless = true;
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    let mut row = BTreeMap::new();
+    row.insert("email".to_string(), "a@example.com".to_string());
+    let summary = commands::run_batch_workflow_impl(
+        &state,
+        &workflow.id,
+        BatchRunRequest {
+            rows: vec![row],
+            concurrency_limit: None,
+            headless: None,
+        },
+    )
+    .await
+    .expect("batch run");
+
+    assert_eq!(summary.succeeded, 1);
+    let runs = runner.recorded_runs();
+    assert!(matches!(runs[0][0], ActionConfig::SetVariable { .. }));
+    assert!(matches!(runs[0][1], ActionConfig::Wait { .. }));
+    assert!(
+        runs[0]
+            .iter()
+            .all(|config| !matches!(config, ActionConfig::Navigate { .. })),
+        "batch should execute saved graph steps, not legacy workflow_steps"
+    );
+    let recorded_browser_configs = runner.recorded_browser_configs();
+    let recorded = recorded_browser_configs[0]
+        .as_ref()
+        .expect("batch browser config");
+    assert!(recorded.headless);
+}
+
+#[tokio::test]
+async fn run_batch_workflow_stops_after_first_failed_row_when_settings_enable_it() {
+    let runner = Arc::new(FakeRunExecutor::sequence(vec![
+        FakeRunOutcome::Failed {
+            step_number: 1,
+            reason: "row failed".to_string(),
+        },
+        FakeRunOutcome::Success,
+    ]));
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Stop batch")
+        .await
+        .expect("create");
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.execution.batch_stop_on_first_failed_row = true;
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    let first = BTreeMap::from([("email".to_string(), "a@example.com".to_string())]);
+    let second = BTreeMap::from([("email".to_string(), "b@example.com".to_string())]);
+    let summary = commands::run_batch_workflow_impl(
+        &state,
+        &workflow.id,
+        BatchRunRequest {
+            rows: vec![first, second],
+            concurrency_limit: Some(1),
+            headless: Some(false),
+        },
+    )
+    .await
+    .expect("batch run");
+
+    assert_eq!(summary.total, 1);
+    assert_eq!(summary.failed, 1);
+    assert_eq!(runner.run_count(), 1);
+}
+
+#[tokio::test]
+async fn generate_fixture_rejects_paths_outside_dev_fixture_directory() {
+    let absolute_error = commands::generate_fixture_impl(
+        "/tmp/fixture.html".to_string(),
+        "<button>Save</button>".to_string(),
+    )
+    .await
+    .expect_err("absolute fixture paths should be rejected");
+    assert_eq!(absolute_error.field.as_deref(), Some("path"));
+
+    let traversal_error = commands::generate_fixture_impl(
+        "../fixture.html".to_string(),
+        "<button>Save</button>".to_string(),
+    )
+    .await
+    .expect_err("parent traversal should be rejected");
+    assert_eq!(traversal_error.field.as_deref(), Some("path"));
 }
 
 #[tokio::test]
@@ -1685,9 +1973,9 @@ async fn phase_twelve_dry_run_validation_and_fixture_generation_work() {
     .expect_err("invalid config rejected");
     assert_eq!(invalid.field.as_deref(), Some("xpath"));
 
-    let path = std::env::temp_dir().join(format!("wam-fixture-{}.html", uuid::Uuid::new_v4()));
+    let path = format!("wam-fixture-{}.html", uuid::Uuid::new_v4());
     let fixture = commands::generate_fixture_impl(
-        path.display().to_string(),
+        path,
         "<button data-testid=\"save-button\">Save</button>".to_string(),
     )
     .await

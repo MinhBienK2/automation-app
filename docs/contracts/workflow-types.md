@@ -44,7 +44,8 @@ Workflow browser config remains as a legacy compatibility command shape:
   viewport_height: number | null,
   mobile: boolean,
   touch: boolean,
-  challenge_policy: "none" | "detect_only" | "pause_for_human"
+  challenge_policy: "none" | "detect_only" | "pause_for_human",
+  headless: boolean
 }
 ```
 
@@ -141,6 +142,22 @@ Package export options serialize as `{ include_flow, settings_sections }`, where
 Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import.
 
 Export sanitizes machine-local or sensitive fields by default: `settings.browser.proxy_password`, `settings.environment.download_directory`, `settings.environment.cookies`, `settings.environment.local_storage`, `settings.environment.session_storage`, and `settings.environment.session_restore_ref`.
+
+Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and full Workflow Settings to a new workflow id, including fields that package export sanitizes for external sharing.
+
+## Batch Run Shape
+
+`BatchRunRequest` serializes as:
+
+```text
+{
+  rows: Array<Record<string, string>>,
+  concurrency_limit?: number | null,
+  headless?: boolean | null
+}
+```
+
+When `concurrency_limit` or `headless` is omitted, the backend uses Workflow Settings Execution defaults. Concurrency values above 1 are rejected until rows can run in isolated browser/session contexts.
 
 ## Graph Shape
 

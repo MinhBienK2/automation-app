@@ -3,7 +3,7 @@
 ## Runner Model
 
 - Runs execute ordered action configs.
-- `run_workflow` executes all workflow steps.
+- `run_workflow` executes the compiled saved graph.
 - `test_step` executes from the first step through the selected step.
 - Background execution is started by `src-tauri/src/services/run_service.rs`.
 - Browser execution lives under `src-tauri/src/runner/`.
@@ -16,6 +16,8 @@
 - Variables settings seed the runtime variable store before graph actions. Legacy input schema data remains persisted for compatibility but is not exposed by the current Variables UI.
 - Execution settings fill missing action `timeout_ms` fields from `default_action_timeout_ms`; action-level timeouts remain more specific.
 - Execution settings can insert a wait between graph nodes. Fixed mode inserts a duration wait; random mode inserts a random wait within the configured min/max range. Explicit `wait` and `random_wait` graph nodes override the global wait at their position and prevent an extra inserted wait next to them.
+- Execution `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
+- Execution `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
@@ -28,6 +30,15 @@
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
+- Workflow Settings Triggers are persisted planned metadata only. No scheduler service runs trigger modes or policies yet, and the UI presents them as planned rather than active controls.
+
+## Batch Execution
+
+- `run_batch_workflow` uses the same saved graph/settings plan as `run_workflow`.
+- Each row is inserted as a `set_variable` setup action after persisted settings setup actions and before graph actions.
+- Request `headless` overrides `execution.batch_headless`; omitted request values use settings defaults.
+- Concurrency above 1 is rejected until parallel row isolation is implemented.
+- When `batch_stop_on_first_failed_row` is true, row execution stops after the first failed row.
 
 ## Browser Sessions
 

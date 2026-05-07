@@ -140,19 +140,12 @@ describe("Workflow list integration", () => {
   });
 
   test("duplicates a workflow from the list", async () => {
-    const graph = linearGraphFromSteps([sleepStep]);
     const copiedWorkflow = {
       id: "workflow-copy",
       name: "Copy of Login flow",
       step_count: 0,
       created_at: "2",
       updated_at: "2",
-    };
-    const importedWorkflow = {
-      id: copiedWorkflow.id,
-      name: "Login flow (imported)",
-      created_at: copiedWorkflow.created_at,
-      updated_at: copiedWorkflow.updated_at,
     };
     let listCalls = 0;
 
@@ -162,19 +155,15 @@ describe("Workflow list integration", () => {
         listCalls += 1;
         return listCalls === 1 ? [workflow] : [workflow, copiedWorkflow];
       },
-      export_workflow: {
-        version: 1,
-        workflow,
-        steps: [sleepStep],
-        settings: null,
-      },
-      get_workflow_graph: graph,
-      import_workflow: {
-        workflow: importedWorkflow,
+      duplicate_workflow: {
+        workflow: {
+          id: copiedWorkflow.id,
+          name: copiedWorkflow.name,
+          created_at: copiedWorkflow.created_at,
+          updated_at: copiedWorkflow.updated_at,
+        },
         steps: [sleepStep],
       },
-      save_workflow_graph: undefined,
-      rename_workflow: undefined,
     });
 
     renderApp();
@@ -184,18 +173,8 @@ describe("Workflow list integration", () => {
     }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("export_workflow", {
+      expect(invokeMock).toHaveBeenCalledWith("duplicate_workflow", {
         workflowId: "workflow-1",
-      });
-      expect(invokeMock).toHaveBeenCalledWith("get_workflow_graph", {
-        workflowId: "workflow-1",
-      });
-      expect(invokeMock).toHaveBeenCalledWith("save_workflow_graph", {
-        workflowId: "workflow-copy",
-        graph,
-      });
-      expect(invokeMock).toHaveBeenCalledWith("rename_workflow", {
-        id: "workflow-copy",
         name: "Copy of Login flow",
       });
     });

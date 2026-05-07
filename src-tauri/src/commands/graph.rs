@@ -7,11 +7,11 @@ use crate::{
     domain::{
         ActionConfig, CompiledGraphStep, CompiledWorkflowGraph, GraphValidationIssue,
         GraphValidationLevel, RunMode, RunValidationIssue, RunValidationIssueSource,
-        ValidationError, VariableAssignment, VariableValueType, WaitCondition, WorkflowGraph,
-        WorkflowInputValueType, WorkflowSettings, WorkflowSettingsIssueLevel,
-        WorkflowSettingsSection,
+        ValidationError, VariableAssignment, VariableValueType, WaitCondition,
+        WorkflowBrowserConfig, WorkflowBrowserRetention, WorkflowGraph, WorkflowInputValueType,
+        WorkflowSettings, WorkflowSettingsIssueLevel, WorkflowSettingsSection, WorkflowStep,
     },
-    services::run_service::start_background_run,
+    services::run_service::{start_background_run, BackgroundRunOptions},
 };
 
 use super::CommandError;
@@ -106,6 +106,35 @@ pub async fn run_workflow_graph_impl(
     state: &AppState,
     workflow_id: &str,
 ) -> Result<RunStateDto, CommandError> {
+    let plan = build_workflow_run_plan(state, workflow_id).await?;
+
+    start_background_run(
+        state,
+        plan.steps,
+        RunMode::RunWorkflow,
+        None,
+        BackgroundRunOptions {
+            browser_config: Some(plan.browser_config),
+            default_close_browser: plan.default_close_browser,
+            max_workflow_duration_ms: plan.max_workflow_duration_ms,
+        },
+    )
+    .await
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkflowRunPlan {
+    pub steps: Vec<WorkflowStep>,
+    pub browser_config: WorkflowBrowserConfig,
+    pub default_close_browser: bool,
+    pub max_workflow_duration_ms: Option<u64>,
+    pub settings: WorkflowSettings,
+}
+
+pub async fn build_workflow_run_plan(
+    state: &AppState,
+    workflow_id: &str,
+) -> Result<WorkflowRunPlan, CommandError> {
     let graph = get_workflow_graph_impl(state, workflow_id).await?;
     let compiled = graph.compile().map_err(CommandError::validation)?;
     let compiled_steps = expand_compiled_steps(
@@ -142,7 +171,7 @@ pub async fn run_workflow_graph_impl(
         .enumerate()
         .map(|(index, compiled_step)| {
             let action_type = compiled_step.config.action_type();
-            crate::domain::WorkflowStep {
+            WorkflowStep {
                 id: compiled_step.node_id,
                 name: compiled_step.label,
                 workflow_id: workflow_id.to_string(),
@@ -155,12 +184,19 @@ pub async fn run_workflow_graph_impl(
         })
         .collect::<Vec<_>>();
 
-    let browser_config = Some(settings.browser.to_browser_config(workflow_id));
-    if let Some(config) = &browser_config {
-        config.validate().map_err(CommandError::validation)?;
-    }
+    let browser_config = settings.browser.to_browser_config(workflow_id);
+    browser_config
+        .validate()
+        .map_err(CommandError::validation)?;
 
-    start_background_run(state, steps, RunMode::RunWorkflow, None, browser_config).await
+    Ok(WorkflowRunPlan {
+        steps,
+        browser_config,
+        default_close_browser: settings.execution.browser_retention
+            == WorkflowBrowserRetention::Close,
+        max_workflow_duration_ms: settings.execution.max_workflow_duration_ms,
+        settings,
+    })
 }
 
 fn insert_wait_between_graph_nodes(

@@ -17,6 +17,7 @@
 - `create_workflow`
 - `rename_workflow`
 - `delete_workflow`
+- `duplicate_workflow`
 - `get_workflow_graph`
 - `save_workflow_graph`
 - `validate_workflow_graph`
@@ -41,7 +42,8 @@
 - `suggest_selectors`
 - `normalize_recorded_events`
 - `dry_run_validate_config`
-- `generate_fixture`
+
+Debug builds also register `generate_fixture` for local fixture development. It is gated out of production command registration.
 
 ## Error Contract
 
@@ -72,7 +74,9 @@ Keep `CommandError` compatible with frontend error extraction in `src/lib/workfl
   - `save_workflow_settings_section`: `{ workflowId, section, sectionValue }`
   - `validate_workflow_settings`: `{ settings }`
   - `validate_workflow_run`: `{ workflowId }`
-- `run_workflow`: `{ workflowId }`; the frontend saves the current graph first, then this command validates, compiles, and runs the saved graph.
+- `duplicate_workflow`: `{ workflowId, name }`; creates a new workflow, copies saved graph JSON and Workflow Settings without export sanitization, remaps settings to the new workflow id, and returns `WorkflowDetail`.
+- `run_workflow`: `{ workflowId }`; the frontend saves the current graph first, then this command validates, compiles, loads Workflow Settings, and runs the saved graph.
+- `run_batch_workflow`: `{ workflowId, request }`, where `request` has `rows`, optional `concurrency_limit`, and optional `headless`. The command compiles the saved graph, applies Workflow Settings defaults when request values are omitted, and currently rejects concurrency above 1 until browser/session isolation supports parallel rows.
 - Workflow package command payloads:
   - `export_workflow_package`: `{ workflowId, options }`, where `options` selects `include_flow` and `settings_sections`.
   - `preview_workflow_package`: `{ package }`; validates package kind/version/name and reports available sections before import.
@@ -86,9 +90,16 @@ Package export sanitizes machine-local or sensitive settings fields by default. 
 
 `import_workflow_package` validates the package header and selected Settings sections before creating the new workflow. The imported workflow name is derived as `<package workflow name> (imported)`, selected Flow is saved to the new workflow id, and selected Settings are remapped to the new workflow id with General name updated to the imported name.
 
+`duplicate_workflow` is the product-facing copy path inside the same local app. It intentionally does not use package sanitization because users expect a duplicate to preserve local settings such as proxy password, cookies, storage rows, and download directory. External sharing still uses `export_workflow_package`.
+
+## Security Notes
+
+- Package export writes through the native `save` dialog. The frontend uses `writeTextFile`, and the desktop capability enables only that fs command; the selected save path is scoped by the dialog plugin instead of a static `**` filesystem grant.
+- `generate_fixture` accepts only a single `.html` filename and writes under a development fixture directory when compiled in debug mode. Absolute paths, nested paths, parent traversal, and non-HTML names are rejected.
+
 ## Retired Product Commands
 
-The list-step builder is no longer a product surface. `add_step`, `update_step`, `delete_step`, `reorder_steps`, `test_step`, and `run_workflow_graph` are not registered Tauri commands. Some Rust implementation helpers and repository methods may remain temporarily for import/export compatibility and legacy test coverage.
+The list-step builder is no longer a product surface. `add_step`, `update_step`, `delete_step`, `reorder_steps`, `test_step`, and `run_workflow_graph` are not registered Tauri commands. Legacy `export_workflow` and `import_workflow` remain registered for compatibility with v1 ordered-step exports; graph-first product import/export uses workflow packages, and graph-first local copying uses `duplicate_workflow`.
 
 ## Change Checklist
 

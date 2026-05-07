@@ -36,6 +36,8 @@ pub struct WorkflowBrowserConfig {
     pub touch: bool,
     #[serde(default)]
     pub challenge_policy: WorkflowBrowserChallengePolicy,
+    #[serde(default)]
+    pub headless: bool,
 }
 
 impl WorkflowBrowserConfig {
@@ -53,6 +55,7 @@ impl WorkflowBrowserConfig {
             mobile: false,
             touch: false,
             challenge_policy: WorkflowBrowserChallengePolicy::None,
+            headless: false,
         }
     }
 
@@ -70,6 +73,7 @@ impl WorkflowBrowserConfig {
             mobile: self.mobile,
             touch: self.touch,
             challenge_policy: self.challenge_policy,
+            headless: self.headless,
         }
     }
 

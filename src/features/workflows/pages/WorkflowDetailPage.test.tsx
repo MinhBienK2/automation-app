@@ -301,6 +301,33 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
+  test("shows trigger settings as planned instead of active scheduler controls", async () => {
+    mockTauriCommands(workflowDetailScenario([sleepStep]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
+    });
+
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Triggers" }));
+
+    expect(
+      within(settingsDialog).getByText(/Triggers are saved for compatibility/i),
+    ).toBeInTheDocument();
+    expect(
+      within(settingsDialog).queryByRole("checkbox", { name: "Enable trigger" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(settingsDialog).queryByLabelText("Trigger mode"),
+    ).not.toBeInTheDocument();
+  });
+
   test("shows blocking validation issues in the run issue panel", async () => {
     mockTauriCommands({
       ...workflowDetailScenario([sleepStep]),

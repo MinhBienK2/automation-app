@@ -434,6 +434,45 @@
   line-height: 1.4;
 }
 
+.workflow-settings-planned-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(62, 207, 142, 0.3);
+  border-radius: 8px;
+  background: rgba(41, 41, 41, 0.84);
+}
+
+.workflow-settings-planned-panel p {
+  margin: 0;
+  color: #fafafa;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.workflow-settings-planned-panel dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.workflow-settings-planned-panel div {
+  display: grid;
+  gap: 4px;
+}
+
+.workflow-settings-planned-panel dt {
+  color: #898989;
+  font-size: 12px;
+}
+
+.workflow-settings-planned-panel dd {
+  margin: 0;
+  color: #b4b4b4;
+  font-size: 14px;
+}
+
 .workflow-settings-help-dialog {
   width: min(760px, calc(100vw - 48px));
   max-height: min(760px, calc(100dvh - 48px));

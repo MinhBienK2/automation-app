@@ -37,7 +37,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Workflow Settings editing through list Edit and detail Settings, Execution wait-between-nodes controls, Browser device profile presets that coherently fill user agent, viewport, mobile, and touch settings, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
-- Workflow Package import/export interaction from the workflow list. Export chooses Flow and selected Workflow Settings sections, opens the native Save dialog, writes package JSON through the Tauri filesystem plugin, and relies on backend sanitization. Import reads package JSON, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
+- Workflow list duplicate and Workflow Package import/export interaction. Duplicate calls `duplicate_workflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, opens the native Save dialog, writes package JSON through the Tauri filesystem plugin, and relies on backend sanitization. Import reads package JSON, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, and workflow examples with the same modal structure. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
@@ -46,7 +46,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Variable authoring UI for Set Variables, Set JSON Variables, Repeat For Each manual/array modes, and template token insertion/highlighting in supported text fields.
 - Variable picker catalogs known graph variables from Set Variables rows, Set JSON Variables keys, and output-producing action nodes when available.
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and keyboard shortcuts without changing persisted `WorkflowGraph` shape.
-- Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
+- Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
+- Workflow Settings Triggers is currently a planned/compatibility section. The UI shows saved trigger intent and scheduling policy values without active scheduler controls until a scheduler service exists.
 - Command invocation through `workflowApi.ts`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.

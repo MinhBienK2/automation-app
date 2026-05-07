@@ -178,7 +178,9 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
-  const [isPanMode, setIsPanMode] = useState(false);
+  const [isToolbarPanMode, setIsToolbarPanMode] = useState(false);
+  const [isSpacePanActive, setIsSpacePanActive] = useState(false);
+  const isPanMode = isToolbarPanMode || isSpacePanActive;
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
@@ -404,7 +406,7 @@ export function WorkflowGraphEditor({
 
       if (event.code === "Space") {
         event.preventDefault();
-        setIsPanMode(true);
+        setIsSpacePanActive(true);
         return;
       }
 
@@ -502,12 +504,12 @@ export function WorkflowGraphEditor({
     function handleKeyUp(event: KeyboardEvent) {
       if (event.code === "Space") {
         event.preventDefault();
-        setIsPanMode(false);
+        setIsSpacePanActive(false);
       }
     }
 
     function stopPanMode() {
-      setIsPanMode(false);
+      setIsSpacePanActive(false);
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -788,15 +790,15 @@ export function WorkflowGraphEditor({
   return (
     <section className="workflow-graph-editor panel" aria-label="Visual Graph">
       <WorkflowGraphToolbar
-        isPanMode={isPanMode}
+        isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}
         onRedo={redoGraphEdit}
-        onSelectMode={() => setIsPanMode(false)}
-        onTogglePanMode={() => setIsPanMode((current) => !current)}
+        onSelectMode={() => setIsToolbarPanMode(false)}
+        onTogglePanMode={() => setIsToolbarPanMode((current) => !current)}
         onUndo={undoGraphEdit}
       />
 

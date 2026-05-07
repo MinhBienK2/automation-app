@@ -52,7 +52,18 @@ export type ActionType =
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
+  | "switch_condition"
+  | "while_loop"
+  | "repeat_until"
+  | "try_catch"
+  | "fallback_block"
+  | "break_loop"
+  | "continue_loop"
   | "stop_workflow"
+  | "transform_variable"
+  | "assert_output"
+  | "run_subworkflow"
+  | "domain_allowlist"
   | "use_profile"
   | "save_session"
   | "load_session"
@@ -121,6 +132,7 @@ export type WorkflowBrowserConfig = {
   mobile: boolean;
   touch: boolean;
   challenge_policy: WorkflowBrowserChallengePolicy;
+  headless?: boolean | null;
 };
 
 export type WorkflowSettingsSectionId =
@@ -177,7 +189,7 @@ export type WorkflowSettingsExecution = {
   output_retention_days?: number | null;
 };
 
-export type WorkflowSettingsBrowser = Omit<WorkflowBrowserConfig, "workflow_id"> & {
+export type WorkflowSettingsBrowser = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
   headless: boolean;
 };
 
@@ -912,7 +924,7 @@ export type OrchestrationSchedule = {
 export type BatchRunRequest = {
   rows: Array<Record<string, string>>;
   concurrency_limit?: number | null;
-  headless: boolean;
+  headless?: boolean | null;
 };
 
 export type BatchRunRowResult = {
@@ -993,10 +1005,6 @@ export type SelectorCandidate = {
 export type RecordedEvent =
   | { type: "click"; xpath: string }
   | { type: "input_text"; xpath: string; text: string };
-
-export type GeneratedFixture = {
-  path: string;
-};
 
 export type RunState = {
   status: RunStatus;
