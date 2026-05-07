@@ -86,4 +86,21 @@ describe("ActionConfigEditor", () => {
       },
     });
   });
+
+  test("shows the visible default delay for Fill Field type keys mode", () => {
+    const config: ActionConfig = {
+      type: "input_text",
+      config: {
+        xpath: "//*[@name='email']",
+        text: "user@example.com",
+        clear_before_input: true,
+        typing_mode: "type",
+        delay_ms: null,
+      },
+    };
+
+    render(<ActionConfigEditor config={config} onChange={vi.fn()} />);
+
+    expect(screen.getByLabelText("Delay ms")).toHaveValue(80);
+  });
 });

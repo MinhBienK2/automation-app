@@ -27,7 +27,10 @@ pub(super) fn input_text_script(
     let text = json_string(options.text)?;
     let clear_before_input = options.clear_before_input;
     let typing_mode = input_typing_mode_value(options.typing_mode);
-    let delay_ms = options.delay_ms.unwrap_or(0);
+    let delay_ms = match options.typing_mode {
+        Some(InputTypingMode::Type) => options.delay_ms.unwrap_or(80),
+        Some(InputTypingMode::SetValue) | None => options.delay_ms.unwrap_or(0),
+    };
     let wait_until = click_wait_until_value(options.wait_until);
     let timeout_ms = options.timeout_ms.unwrap_or(5000);
 
@@ -84,10 +87,12 @@ pub(super) fn input_text_script(
           const typeCharacters = async (node) => {{
             if (clearBeforeInput && setNativeValue(node, "")) emit(node, "");
             for (const character of text) {{
+              node.dispatchEvent(new KeyboardEvent("keydown", {{ key: character, bubbles: true }}));
               const current = "value" in node ? node.value : node.textContent || "";
               if (setNativeValue(node, current + character)) emit(node, character);
               else if (node.isContentEditable) {{ node.textContent = current + character; emit(node, character); }}
               else return false;
+              node.dispatchEvent(new KeyboardEvent("keyup", {{ key: character, bubbles: true }}));
               if (delayMs > 0) await new Promise((done) => setTimeout(done, delayMs));
             }}
             return true;
@@ -314,5 +319,24 @@ mod tests {
         assert!(clear.contains("waitUntil"));
         assert!(editable.contains("contenteditable"));
         assert!(editable.contains("InputEvent"));
+    }
+
+    #[test]
+    fn input_type_mode_defaults_to_visible_key_sequence() {
+        let input = input_text_script(InputTextScriptOptions {
+            xpath: "//*[@name='email']",
+            iframe_xpath: None,
+            text: "abc",
+            clear_before_input: true,
+            typing_mode: Some(InputTypingMode::Type),
+            delay_ms: None,
+            wait_until: Some(ClickWaitUntil::Visible),
+            timeout_ms: Some(3000),
+        })
+        .unwrap();
+
+        assert!(input.contains("const delayMs = 80"));
+        assert!(input.contains("KeyboardEvent(\"keydown\""));
+        assert!(input.contains("KeyboardEvent(\"keyup\""));
     }
 }

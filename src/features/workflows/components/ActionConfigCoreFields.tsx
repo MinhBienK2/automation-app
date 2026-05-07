@@ -12,6 +12,10 @@ type ActionFieldsProps = {
   variableOptions?: VariableOption[];
 };
 
+function inputTextDelayValue(config: Extract<ActionConfig, { type: "input_text" }>): number {
+  return config.config.delay_ms ?? (config.config.typing_mode === "type" ? 80 : 1);
+}
+
 export function CoreActionFields({
   config,
   onChange,
@@ -240,7 +244,7 @@ export function CoreActionFields({
             <Input
               min="1"
               type="number"
-              value={config.config.delay_ms ?? 1}
+              value={inputTextDelayValue(config)}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
               }

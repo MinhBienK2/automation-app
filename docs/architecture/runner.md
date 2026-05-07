@@ -52,7 +52,9 @@ Browser action script builders live under `src-tauri/src/runner/actions/` and ar
 - `pointer.rs`: click, force DOM click, hover, and drag/drop pointer interactions.
 - `scroll.rs`: page, container, into-view, and until-visible scrolling.
 - `wait.rs`: wait condition polling scripts.
-- `input.rs`: text input, clearing input, and contenteditable updates.
+- `input.rs`: text input, clearing input, and contenteditable updates. `Fill Field`
+  can either set field values directly or, when `typing_mode` is `type`, focus the
+  element and emit per-character key/input/change events with a visible default delay.
 - `form.rs`: select, checkbox/radio, custom option, and submit form actions.
 - `keyboard.rs`: key press, hotkey, and typed key sequence actions.
 - `clipboard.rs`: in-run clipboard store and paste actions.
