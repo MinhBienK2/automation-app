@@ -74,8 +74,8 @@ describe("Workflow detail integration", () => {
     expect(within(titleRow).queryByRole("heading", { name: "Login flow" }))
       .not.toBeInTheDocument();
     expect(within(titleRow).getByText("Workflow Detail")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("Graph workspace")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("Updated 1")).toBeInTheDocument();
+    expect(within(controlsRow).queryByText("Graph workspace")).not.toBeInTheDocument();
+    expect(within(controlsRow).queryByText("Updated 1")).not.toBeInTheDocument();
     expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Idle")).toHaveAttribute(
       "data-slot",
@@ -225,15 +225,15 @@ describe("Workflow detail integration", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Tiếng Việt" }));
     expect(await screen.findByText("Trợ giúp Cài đặt Trình duyệt")).toBeInTheDocument();
-    expect(screen.getByText("Tên hồ sơ")).toBeInTheDocument();
-    expect(screen.getByText("Máy chủ proxy")).toBeInTheDocument();
-    expect(screen.getByText("Chính sách thử thách")).toBeInTheDocument();
+    expect(screen.getByText("profile_name")).toBeInTheDocument();
+    expect(screen.getByText("proxy_server")).toBeInTheDocument();
+    expect(screen.getByText("challenge_policy")).toBeInTheDocument();
     expect(screen.getByText(/Không dùng mục này để vượt qua CAPTCHA/i))
       .toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(within(settingsDialog).getByRole("button", {
-      name: "Save Browser",
+      name: "Save Settings",
     }));
 
     expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
@@ -249,6 +249,54 @@ describe("Workflow detail integration", () => {
         challenge_policy: "detect_only",
       }),
     });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Workflow settings saved.",
+    );
+  });
+
+  test("asks before closing workflow settings with unsaved changes", async () => {
+    mockTauriCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_settings_section: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
+    });
+
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "General" }));
+    await userEvent.type(within(settingsDialog).getByLabelText("Description"), " changed");
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Close dialog",
+    }));
+
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: "Unsaved changes",
+    });
+    expect(within(confirmDialog).getByText(/You have unsaved changes/i))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(confirmDialog).getByRole("button", {
+      name: "Keep editing",
+    }));
+    expect(screen.getByRole("dialog", { name: "Workflow Settings" })).toBeInTheDocument();
+
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Close dialog",
+    }));
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Discard changes",
+    }));
+
+    expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
+      .not.toBeInTheDocument();
   });
 
   test("shows blocking validation issues in the run issue panel", async () => {

@@ -31,6 +31,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
+import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
 import {
   applyBrowserDeviceProfile,
   browserDeviceProfileOptions,
@@ -54,25 +55,28 @@ type WorkflowSettingsDialogProps = {
   open: boolean;
   settings: WorkflowSettings | null;
   activeSection: WorkflowSettingsSectionId;
-  saveStatuses: Partial<Record<WorkflowSettingsSectionId, string>>;
   error?: string;
+  hasUnsavedChanges: boolean;
   onOpenChange: (open: boolean) => void;
   onActiveSectionChange: (section: WorkflowSettingsSectionId) => void;
   onSettingsChange: (settings: WorkflowSettings) => void;
-  onSaveSection: (section: WorkflowSettingsSectionId) => void | Promise<void>;
+  onSaveSettings: () => void | boolean | Promise<void | boolean>;
+  onDiscardChanges: () => void;
 };
 
 export function WorkflowSettingsDialog({
   open,
   settings,
   activeSection,
-  saveStatuses,
   error,
+  hasUnsavedChanges,
   onOpenChange,
   onActiveSectionChange,
   onSettingsChange,
-  onSaveSection,
+  onSaveSettings,
+  onDiscardChanges,
 }: WorkflowSettingsDialogProps) {
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const activeMeta =
     workflowSettingsSections.find((section) => section.id === activeSection) ??
     workflowSettingsSections[0];
@@ -85,17 +89,46 @@ export function WorkflowSettingsDialog({
     onSettingsChange({ ...settings, [section]: value });
   };
 
+  const requestOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && hasUnsavedChanges) {
+      setConfirmCloseOpen(true);
+      return;
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const saveAndClose = async () => {
+    const saved = await onSaveSettings();
+    if (saved === false) return;
+    onOpenChange(false);
+    setConfirmCloseOpen(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={requestOpenChange}>
       {settings ? (
         <DialogContent className="workflow-settings-dialog">
           <DialogHeader className="workflow-settings-dialog-header">
             <div className="workflow-settings-title-row">
-              <Settings aria-hidden="true" />
-              <div>
-                <p className="eyebrow">Workflow</p>
-                <DialogTitle>Workflow Settings</DialogTitle>
+              <div className="workflow-settings-title-copy">
+                <Settings aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Workflow</p>
+                  <DialogTitle>Workflow Settings</DialogTitle>
+                </div>
               </div>
+              <Button
+                className="workflow-settings-save-button"
+                shape="pill"
+                type="button"
+                onClick={() => {
+                  void onSaveSettings();
+                }}
+              >
+                <Save aria-hidden="true" />
+                Save Settings
+              </Button>
             </div>
           </DialogHeader>
 
@@ -132,11 +165,6 @@ export function WorkflowSettingsDialog({
                   <p>{workflowSettingsHelp[activeSection].en.summary}</p>
                 </div>
                 <WorkflowSettingsHelpButton section={activeSection} />
-              </div>
-
-              <div className="workflow-settings-status-row">
-                <span>Save status</span>
-                <strong>{saveStatuses[activeSection] ?? "Saved"}</strong>
               </div>
 
               {error ? <p className="field-error">{error}</p> : null}
@@ -184,17 +212,21 @@ export function WorkflowSettingsDialog({
                 />
               ) : null}
 
-              <div className="workflow-settings-actions">
-                <Button type="button" onClick={() => onSaveSection(activeSection)}>
-                  <Save aria-hidden="true" />
-                  Save {activeMeta.label}
-                </Button>
-              </div>
             </section>
           </div>
         </DialogContent>
       ) : null}
     </Dialog>
+    <UnsavedChangesDialog
+      open={confirmCloseOpen}
+      onKeepEditing={() => setConfirmCloseOpen(false)}
+      onDiscardChanges={() => {
+        onDiscardChanges();
+        setConfirmCloseOpen(false);
+      }}
+      onSaveAndClose={saveAndClose}
+    />
+    </>
   );
 }
 
@@ -246,22 +278,42 @@ function WorkflowSettingsHelpButton({
           <DialogDescription>{help.summary}</DialogDescription>
         </DialogHeader>
         <div className="workflow-settings-help-body">
-          <HelpBlock title={labels.bestFor} items={help.bestFor} />
-          {help.notFor ? <HelpBlock title={labels.notFor} items={help.notFor} /> : null}
-          {help.precedence ? (
-            <HelpBlock title={labels.precedence} items={help.precedence} />
-          ) : null}
-          <div className="workflow-settings-help-list">
+          <div className="workflow-settings-help-overview">
+            <HelpBlock title={labels.bestFor} items={help.bestFor} />
+            {help.notFor ? <HelpBlock title={labels.notFor} items={help.notFor} /> : null}
+            {help.precedence ? (
+              <HelpBlock title={labels.precedence} items={help.precedence} />
+            ) : null}
+          </div>
+          <div className="workflow-settings-help-list workflow-settings-help-fields">
             <h3>{labels.fieldGuide}</h3>
-            {help.fieldGuide.map((field) => (
+            {help.fieldGuide.map((field, index) => (
               <div key={field.name}>
-                <strong>{field.name}</strong>
+                <strong>{settingsHelpFieldName(section, field.name, index)}</strong>
+                {settingsHelpFieldName(section, field.name, index) !== field.name ? (
+                  <span>{field.name}</span>
+                ) : null}
                 <p>{field.description}</p>
                 {field.whenToUse ? <p>{field.whenToUse}</p> : null}
                 {field.overrideBehavior ? <p>{field.overrideBehavior}</p> : null}
               </div>
             ))}
           </div>
+          {help.workflowExamples.length > 0 ? (
+            <div className="workflow-settings-help-list workflow-settings-help-examples">
+              <h3>Examples</h3>
+              {help.workflowExamples.map((example) => (
+                <div key={example.title}>
+                  <strong>{example.title}</strong>
+                  <ul>
+                    {example.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="workflow-settings-help-list">
             <h3>{labels.commonMistakes}</h3>
             {help.commonMistakes.map((item) => (
@@ -276,6 +328,30 @@ function WorkflowSettingsHelpButton({
       </DialogContent>
     </Dialog>
   );
+}
+
+function settingsHelpFieldName(
+  section: WorkflowSettingsSectionId,
+  fallbackName: string,
+  index: number,
+) {
+  if (section !== "browser") return fallbackName;
+
+  return [
+    "reuse_login_session",
+    "profile_name",
+    "proxy_enabled",
+    "proxy_server",
+    "proxy_username",
+    "proxy_password",
+    "device_profile",
+    "user_agent",
+    "viewport_width / viewport_height",
+    "mobile",
+    "touch",
+    "challenge_policy",
+    "headless",
+  ][index] ?? fallbackName;
 }
 
 function HelpBlock({ title, items }: { title: string; items: string[] }) {

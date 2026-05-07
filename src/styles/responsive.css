@@ -45,10 +45,13 @@
   }
 
   .browser-config-actions,
-  .workflow-settings-actions,
   .run-issue-header-actions,
   .run-issue-actions {
     justify-content: stretch;
+  }
+
+  .workflow-settings-help-overview {
+    grid-template-columns: 1fr;
   }
 
   .step-detail-panel {
@@ -131,6 +134,15 @@
 
   .workflow-settings-help-header {
     padding-right: 32px;
+  }
+
+  .workflow-settings-title-row {
+    display: grid;
+  }
+
+  .workflow-settings-save-button {
+    width: fit-content;
+    margin-right: 38px;
   }
 
   .workflow-card .row-actions {

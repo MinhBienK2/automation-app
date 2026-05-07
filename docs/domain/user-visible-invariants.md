@@ -12,12 +12,13 @@ Preserve these unless the task explicitly changes them.
 - Workflow list exposes Import Workflow. Import reads a workflow package, shows a preview, and always creates a new workflow; it never overwrites an existing workflow.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
-- Workflow Settings contains General, Execution, Browser, Environment, Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen.
+- Workflow Settings contains General, Execution, Browser, Environment, Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
 - Workflow Settings Variables only exposes initial variable values. It hides the legacy input schema and batch mapping fields from the UI, while preserving those persisted fields for compatibility.
 - Variables can be edited as typed rows or as a JSON object. Switching modes keeps both views synchronized: nested JSON becomes dot-path rows, and dot-path rows become nested JSON.
 - Workflow Settings Browser exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
 - Workflow Settings Browser exposes a Device profile selector for Default browser, Desktop Chrome, Android Chrome, iPhone Safari, and Custom user agent. Presets update user agent, viewport width/height, mobile, and touch settings together; raw user-agent editing is reserved for Custom.
-- Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it.
+- Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it. Browser help keeps persisted field keys such as `profile_name`, `proxy_server`, and `challenge_policy` visible even in Vietnamese.
+- Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
@@ -57,7 +58,7 @@ Preserve these unless the task explicitly changes them.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
-- Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off.
+- Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.

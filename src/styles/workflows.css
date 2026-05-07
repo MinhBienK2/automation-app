@@ -434,11 +434,23 @@
 .workflow-settings-title-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
-.workflow-settings-title-row > svg {
+.workflow-settings-title-copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflow-settings-title-copy > svg {
   color: #3ecf8e;
+}
+
+.workflow-settings-save-button {
+  margin-right: 38px;
 }
 
 .workflow-settings-body {
@@ -499,26 +511,6 @@
 .workflow-settings-help-trigger {
   border-color: rgba(62, 207, 142, 0.36);
   color: #3ecf8e;
-}
-
-.workflow-settings-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 38px;
-  padding: 9px 11px;
-  border: 1px solid rgba(62, 207, 142, 0.28);
-  border-radius: 8px;
-  background: rgba(62, 207, 142, 0.04);
-  color: #898989;
-  font-size: 13px;
-}
-
-.workflow-settings-status-row strong {
-  color: #3ecf8e;
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .workflow-settings-form {
@@ -593,18 +585,6 @@
   line-height: 1.4;
 }
 
-.workflow-settings-actions {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid #242424;
-  background: #171717;
-}
-
 .workflow-settings-help-dialog {
   width: min(760px, calc(100vw - 48px));
   max-height: min(760px, calc(100dvh - 48px));
@@ -640,6 +620,12 @@
   gap: 14px;
   min-height: 0;
   overflow-y: auto;
+}
+
+.workflow-settings-help-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .workflow-settings-help-list {
@@ -678,10 +664,50 @@
   font-weight: 500;
 }
 
+.workflow-settings-help-fields > div strong {
+  width: fit-content;
+  padding: 2px 7px;
+  border: 1px solid rgba(62, 207, 142, 0.36);
+  border-radius: 6px;
+  color: #3ecf8e;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.workflow-settings-help-fields > div span {
+  color: #b4b4b4;
+  font-size: 13px;
+}
+
 .workflow-settings-help-list p {
   color: #b4b4b4;
   font-size: 14px;
   line-height: 1.5;
+}
+
+.workflow-settings-help-examples ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #b4b4b4;
+}
+
+.unsaved-changes-dialog {
+  width: min(480px, calc(100vw - 48px));
+}
+
+.unsaved-changes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+
+.app-toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 80;
 }
 
 .run-issue-panel {

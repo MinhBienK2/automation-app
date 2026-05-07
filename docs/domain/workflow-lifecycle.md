@@ -35,7 +35,8 @@
 - Control blocks treat branch ports as work inside the block and continuation ports as work after the block. `If`, `Switch`, and `Try/Catch` expose `done` continuation ports; loop and fallback blocks continue through their existing `done` ports, and retry continues through `success`.
 - Missing optional branch ports are allowed and compile as no-op paths. Missing continuation ports end the current path successfully. Required body ports such as loop body, retry try, try/catch try, and fallback primary block validation/run.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
-- `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. General updates workflow summary metadata; Browser maps legacy browser config fields into `settings.browser`.
+- `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header and saves dirty sections through that section command. General updates workflow summary metadata; Browser maps legacy browser config fields into `settings.browser`.
+- Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.

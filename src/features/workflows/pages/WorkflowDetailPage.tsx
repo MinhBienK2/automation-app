@@ -85,7 +85,7 @@ export function WorkflowDetailPage({
         ariaLabel="Workflow detail header"
         backLabel="Back to Workflows"
         eyebrow="Workflow Detail"
-        meta={["Graph workspace", graphSaveStatus, `Updated ${detail.workflow.updated_at}`]}
+        meta={[graphSaveStatus]}
         status={
           <RunStatusBar
             state={runState}

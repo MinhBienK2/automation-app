@@ -467,7 +467,7 @@ describe("Workflow list integration", () => {
 
     await userEvent.clear(within(dialog).getByLabelText("Workflow name"));
     await userEvent.type(within(dialog).getByLabelText("Workflow name"), "Updated login flow");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save General" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Settings" }));
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {

@@ -58,6 +58,7 @@ button {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
+  line-height: 20px;
 }
 
 button:hover:not(:disabled) {
@@ -79,6 +80,7 @@ textarea {
   border-radius: 6px;
   background: #0f0f0f;
   color: #fafafa;
+  line-height: 20px;
   outline: none;
 }
 

@@ -109,19 +109,6 @@ function graphSaveStatusLabel(status: GraphSaveStatus) {
   }
 }
 
-function workflowSettingsSaveStatusLabel(status: WorkflowSettingsSaveStatus) {
-  switch (status) {
-    case "saved":
-      return "Saved";
-    case "unsaved":
-      return "Unsaved changes";
-    case "saving":
-      return "Saving...";
-    case "failed":
-      return "Save failed";
-  }
-}
-
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -132,6 +119,8 @@ function App() {
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
   const [workflowSettings, setWorkflowSettings] =
+    useState<WorkflowSettings | null>(null);
+  const [workflowSettingsSavedSnapshot, setWorkflowSettingsSavedSnapshot] =
     useState<WorkflowSettings | null>(null);
   const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] =
     useState(false);
@@ -168,6 +157,7 @@ function App() {
   const [importPackageSections, setImportPackageSections] =
     useState<WorkflowSettingsSectionId[]>([]);
   const [appError, setAppError] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
 
@@ -271,16 +261,18 @@ function App() {
         setWorkflowGraph(linearGraphFromSteps(loaded.steps));
       }
       try {
-        setWorkflowSettings(await getWorkflowSettings(id));
+        const loadedSettings = await getWorkflowSettings(id);
+        setWorkflowSettings(loadedSettings);
+        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
       } catch {
-        setWorkflowSettings(
-          defaultWorkflowSettings({
-            workflowId: id,
-            workflowName: loaded.workflow.name,
-            createdAt: loaded.workflow.created_at,
-            updatedAt: loaded.workflow.updated_at,
-          }),
-        );
+        const fallbackSettings = defaultWorkflowSettings({
+          workflowId: id,
+          workflowName: loaded.workflow.name,
+          createdAt: loaded.workflow.created_at,
+          updatedAt: loaded.workflow.updated_at,
+        });
+        setWorkflowSettings(fallbackSettings);
+        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(fallbackSettings));
       }
       setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
       graphRevisionRef.current = 0;
@@ -517,6 +509,7 @@ function App() {
       );
       const nextSettings = isWorkflowSettings(saved) ? saved : workflowSettings;
       setWorkflowSettings(nextSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(nextSettings));
       if (section === "general") {
         updateLoadedWorkflowName(nextSettings.general.name);
       }
@@ -544,6 +537,17 @@ function App() {
       }
     }
 
+    return true;
+  }
+
+  async function persistWorkflowSettings() {
+    const saved = await persistDirtyWorkflowSettings();
+    if (!saved) return false;
+    if (workflowSettings) {
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
+    }
+    setToastMessage("Workflow settings saved.");
+    window.setTimeout(() => setToastMessage(""), 2200);
     return true;
   }
 
@@ -654,16 +658,18 @@ function App() {
     setWorkflowSettingsActiveSection(section);
 
     try {
-      setWorkflowSettings(await getWorkflowSettings(workflow.id));
+      const loadedSettings = await getWorkflowSettings(workflow.id);
+      setWorkflowSettings(loadedSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
     } catch {
-      setWorkflowSettings(
-        defaultWorkflowSettings({
-          workflowId: workflow.id,
-          workflowName: workflow.name,
-          createdAt: workflow.created_at,
-          updatedAt: workflow.updated_at,
-        }),
-      );
+      const fallbackSettings = defaultWorkflowSettings({
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        createdAt: workflow.created_at,
+        updatedAt: workflow.updated_at,
+      });
+      setWorkflowSettings(fallbackSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(fallbackSettings));
     }
     setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
     setWorkflowSettingsDialogOpen(true);
@@ -672,17 +678,30 @@ function App() {
   function openDetailWorkflowSettings(section: WorkflowSettingsSectionId) {
     if (!detail) return;
     if (!workflowSettings) {
-      setWorkflowSettings(
-        defaultWorkflowSettings({
-          workflowId: detail.workflow.id,
-          workflowName: detail.workflow.name,
-          createdAt: detail.workflow.created_at,
-          updatedAt: detail.workflow.updated_at,
-        }),
-      );
+      const fallbackSettings = defaultWorkflowSettings({
+        workflowId: detail.workflow.id,
+        workflowName: detail.workflow.name,
+        createdAt: detail.workflow.created_at,
+        updatedAt: detail.workflow.updated_at,
+      });
+      setWorkflowSettings(fallbackSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(fallbackSettings));
     }
     setWorkflowSettingsActiveSection(section);
     setWorkflowSettingsDialogOpen(true);
+  }
+
+  function closeWorkflowSettingsDialog() {
+    setWorkflowSettingsDialogOpen(false);
+    setAppError("");
+  }
+
+  function discardWorkflowSettingsChanges() {
+    if (workflowSettingsSavedSnapshot) {
+      setWorkflowSettings(cloneWorkflowSettings(workflowSettingsSavedSnapshot));
+    }
+    setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
+    closeWorkflowSettingsDialog();
   }
 
   function updateLoadedWorkflowName(name: string) {
@@ -763,20 +782,27 @@ function App() {
         open={workflowSettingsDialogOpen}
         settings={workflowSettings}
         activeSection={workflowSettingsActiveSection}
-        saveStatuses={Object.fromEntries(
-          Object.entries(workflowSettingsSaveStatuses).map(([section, status]) => [
-            section,
-            workflowSettingsSaveStatusLabel(status),
-          ]),
-        )}
         error={appError}
-        onOpenChange={setWorkflowSettingsDialogOpen}
+        hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
+          (status) => status === "unsaved",
+        )}
+        onOpenChange={(open) => {
+          if (open) {
+            setWorkflowSettingsDialogOpen(true);
+            return;
+          }
+          closeWorkflowSettingsDialog();
+        }}
         onActiveSectionChange={setWorkflowSettingsActiveSection}
         onSettingsChange={changeWorkflowSettings}
-        onSaveSection={async (section) => {
-          await persistWorkflowSettingsSection(section, { force: true });
-        }}
+        onSaveSettings={persistWorkflowSettings}
+        onDiscardChanges={discardWorkflowSettingsChanges}
       />
+      {toastMessage ? (
+        <div className="toast-alert app-toast" role="status">
+          {toastMessage}
+        </div>
+      ) : null}
       <Dialog
         open={Boolean(exportPackageWorkflow)}
         onOpenChange={(open) => {
@@ -900,6 +926,10 @@ function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     triggers: status,
     advanced: status,
   };
+}
+
+function cloneWorkflowSettings(settings: WorkflowSettings) {
+  return JSON.parse(JSON.stringify(settings)) as WorkflowSettings;
 }
 
 function PackageFlowCheckbox({
