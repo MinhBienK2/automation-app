@@ -1,6 +1,8 @@
 # Workflow Automation Manager
 
-Rust desktop MVP for building and running browser automation workflows.
+Rust desktop app for building and running authorized adversarial browser automation workflows against company-owned systems.
+
+The project is an internal red-team automation lab. Its explicit goal is to make automated workflows pass through the company's existing production and staging defenses in controlled owned environments, then produce evidence that helps security, trust, anti-abuse, and production teams find detection gaps and harden defenses. The lab models fake engagement, account integrity, network reputation, device/browser fingerprinting, behavioral analytics, velocity checks, graph detection, content/spam controls, risk scoring, challenge flows, API abuse, and coordinated bot scenarios.
 
 ## Development Commands
 
