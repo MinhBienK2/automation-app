@@ -139,6 +139,7 @@ export type WorkflowSettingsSectionId =
   | "general"
   | "execution"
   | "browser"
+  | "behavior"
   | "environment"
   | "inputs"
   | "triggers"
@@ -161,6 +162,151 @@ export type WorkflowInputValueType =
   | "object"
   | "secret_ref";
 export type WorkflowDebugLoggingLevel = "off" | "error" | "info" | "debug";
+export type BehaviorPersonaType =
+  | "new_user"
+  | "returning_user"
+  | "power_user"
+  | "mobile_user"
+  | "reader"
+  | "viewer"
+  | "buyer"
+  | "operator_defined";
+export type BehaviorStrictness =
+  | "observe_only"
+  | "assistive"
+  | "realistic"
+  | "stress_test";
+export type BehaviorDistribution = "uniform" | "normal" | "log_normal";
+export type BehaviorPointerPathStyle = "direct" | "curved" | "hesitant";
+export type BehaviorClickOffsetPolicy =
+  | "center_biased"
+  | "area_weighted"
+  | "operator_defined";
+export type BehaviorMoveSpeedProfile = "slow" | "normal" | "fast" | "variable";
+export type BehaviorTypingMode = "set_value" | "human_type" | "mixed";
+export type BehaviorCorrectionPolicy = "backspace" | "select_all_rewrite" | "none";
+export type BehaviorBudgetExceededAction = "pause" | "fail" | "manual_approval";
+export type BehaviorEvidenceExportFormat = "json" | "json_and_markdown";
+
+export type BehaviorTimedRange = {
+  min: number;
+  max: number;
+  distribution: BehaviorDistribution;
+};
+
+export type BehaviorCountRange = {
+  min: number;
+  max: number;
+};
+
+export type BehaviorProbabilityTimedRange = {
+  min: number;
+  max: number;
+  probability: number;
+};
+
+export type BehaviorDwellRange = {
+  min: number;
+  max: number;
+};
+
+export type BehaviorScrollChunkRange = {
+  min: number;
+  max: number;
+  distribution: BehaviorDistribution;
+};
+
+export type BehaviorVideoWatchPolicy = {
+  min_ratio: number;
+  max_ratio: number;
+  skip_probability: number;
+  replay_probability: number;
+};
+
+export type BehaviorActionRateCap = {
+  action_type: string;
+  max_per_minute: number;
+};
+
+export type BehaviorCooldownWindow = {
+  action_type: string;
+  min_ms: number;
+  max_ms: number;
+};
+
+export type BehaviorSessionDuration = {
+  min: number;
+  max: number;
+};
+
+export type BehaviorTimingPolicy = {
+  reaction_time_ms: BehaviorTimedRange;
+  between_actions_ms: BehaviorTimedRange;
+  burst_action_count: BehaviorCountRange;
+  burst_cooldown_ms: BehaviorProbabilityTimedRange;
+  long_pause_ms: BehaviorProbabilityTimedRange;
+  max_actions_per_minute?: number | null;
+};
+
+export type BehaviorPointerPolicy = {
+  path_style: BehaviorPointerPathStyle;
+  click_offset_policy: BehaviorClickOffsetPolicy;
+  hover_before_click_probability: number;
+  dwell_before_click_ms: BehaviorDwellRange;
+  overshoot_probability: number;
+  move_speed_profile: BehaviorMoveSpeedProfile;
+};
+
+export type BehaviorTypingPolicy = {
+  mode: BehaviorTypingMode;
+  key_delay_ms: BehaviorTimedRange;
+  word_pause_ms: BehaviorProbabilityTimedRange;
+  sentence_pause_ms: BehaviorProbabilityTimedRange;
+  typo_probability: number;
+  correction_policy: BehaviorCorrectionPolicy;
+  paste_probability: number;
+};
+
+export type BehaviorScrollPolicy = {
+  scroll_chunk_px: BehaviorScrollChunkRange;
+  pause_between_scrolls_ms: BehaviorTimedRange;
+  backtrack_probability: number;
+  read_dwell_per_100_words_ms: BehaviorDwellRange;
+  video_watch_policy: BehaviorVideoWatchPolicy;
+};
+
+export type BehaviorVelocityBudget = {
+  per_domain_actions_per_minute?: number | null;
+  per_action_caps: BehaviorActionRateCap[];
+  cooldown_windows: BehaviorCooldownWindow[];
+  session_duration_ms?: BehaviorSessionDuration | null;
+  daily_action_budget?: number | null;
+  on_budget_exceeded: BehaviorBudgetExceededAction;
+};
+
+export type BehaviorEvidencePolicy = {
+  timeline_enabled: boolean;
+  screenshots_enabled: boolean;
+  histograms_enabled: boolean;
+  redact_sensitive_values: boolean;
+  export_format: BehaviorEvidenceExportFormat;
+};
+
+export type BehaviorProfile = {
+  enabled: boolean;
+  profile_name: string;
+  persona_type: BehaviorPersonaType;
+  seed?: string | null;
+  strictness: BehaviorStrictness;
+  account_ref: string;
+  target_domains: string[];
+  timing: BehaviorTimingPolicy;
+  pointer: BehaviorPointerPolicy;
+  typing: BehaviorTypingPolicy;
+  scroll: BehaviorScrollPolicy;
+  velocity: BehaviorVelocityBudget;
+  evidence: BehaviorEvidencePolicy;
+};
 
 export type WorkflowSettingsGeneral = {
   name: string;
@@ -268,6 +414,7 @@ export type WorkflowSettings = {
   general: WorkflowSettingsGeneral;
   execution: WorkflowSettingsExecution;
   browser: WorkflowSettingsBrowser;
+  behavior: BehaviorProfile;
   environment: WorkflowSettingsEnvironment;
   inputs: WorkflowSettingsInputs;
   triggers: WorkflowSettingsTriggers;

@@ -21,6 +21,7 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - `BrowserRunExecutor` runs action configs through `BrowserRunner`.
 - `BrowserRunExecutor` accepts optional workflow browser runtime config and passes it to `BrowserRunner` before launch.
 - `BrowserRunner` emits `StepStarted` and `StepCompleted`.
+- `run_service` can wrap those progress events with Behavior Lab telemetry when Workflow Settings Behavior is enabled. It scores the captured action timeline after terminal state and merges a `behavior_report` object into run outputs without changing `RunExecutor` or browser action dispatch contracts.
 - `run_service` maps progress step numbers back to workflow step ids.
 - Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
 - Variable actions write to the browser session output store. `set_variable` accepts typed rows, renders templates before parsing values, flattens object fields into dotted output keys, and keeps array values whole. `set_json_variables` renders and parses a JSON object before storing flattened keys.
@@ -35,6 +36,7 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Execution settings fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
 - Execution settings can insert fixed or random waits between compiled graph nodes before the runner receives steps. Explicit Wait and Random Wait nodes override the global wait at their position.
 - Execution max duration is enforced in `run_service` with the same cancellation token used by Stop. Timeout finishes the run as failed with a workflow-level timeout error.
+- Behavior Lab currently observes and scores action progress, velocity, click-offset coverage, uniform timing, and telemetry completeness. It does not automatically solve challenges or rewrite graph intent.
 - Batch execution compiles the saved graph, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, closes each row session, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
 
 ## Belongs Here
@@ -44,6 +46,7 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Action dispatch and browser interaction.
 - Cancellation-aware execution.
 - Runner-level errors and outcomes.
+- Behavior Lab telemetry collection and report output owned by `run_service`.
 
 ## Action Modules
 

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    RunStatus, ValidationError, Workflow, WorkflowGraph, WorkflowSettings,
+    BehaviorProfile, RunStatus, ValidationError, Workflow, WorkflowGraph, WorkflowSettings,
     WorkflowSettingsAdvanced, WorkflowSettingsBrowser, WorkflowSettingsEnvironment,
     WorkflowSettingsExecution, WorkflowSettingsGeneral, WorkflowSettingsInputs,
     WorkflowSettingsSection, WorkflowSettingsTriggers, WorkflowStep,
@@ -126,6 +126,8 @@ pub struct WorkflowPackageSettings {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub browser: Option<WorkflowSettingsBrowser>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub behavior: Option<BehaviorProfile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<WorkflowSettingsEnvironment>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inputs: Option<WorkflowSettingsInputs>,
@@ -140,6 +142,7 @@ impl WorkflowPackageSettings {
         self.general.is_none()
             && self.execution.is_none()
             && self.browser.is_none()
+            && self.behavior.is_none()
             && self.environment.is_none()
             && self.inputs.is_none()
             && self.triggers.is_none()

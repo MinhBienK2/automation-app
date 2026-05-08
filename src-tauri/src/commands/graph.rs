@@ -11,7 +11,7 @@ use crate::{
         WorkflowBrowserConfig, WorkflowBrowserRetention, WorkflowGraph, WorkflowInputValueType,
         WorkflowSettings, WorkflowSettingsIssueLevel, WorkflowSettingsSection, WorkflowStep,
     },
-    services::run_service::{start_background_run, BackgroundRunOptions},
+    services::run_service::{start_background_run, BackgroundRunOptions, BehaviorRunContext},
 };
 
 use super::CommandError;
@@ -117,6 +117,11 @@ pub async fn run_workflow_graph_impl(
             browser_config: Some(plan.browser_config),
             default_close_browser: plan.default_close_browser,
             max_workflow_duration_ms: plan.max_workflow_duration_ms,
+            behavior_context: plan
+                .settings
+                .behavior
+                .enabled
+                .then(|| BehaviorRunContext::new(workflow_id, plan.settings.behavior.clone())),
         },
     )
     .await
@@ -400,6 +405,7 @@ fn settings_section_prefix(section: WorkflowSettingsSection) -> &'static str {
         WorkflowSettingsSection::General => "general",
         WorkflowSettingsSection::Execution => "execution",
         WorkflowSettingsSection::Browser => "browser",
+        WorkflowSettingsSection::Behavior => "behavior",
         WorkflowSettingsSection::Environment => "environment",
         WorkflowSettingsSection::Inputs => "inputs",
         WorkflowSettingsSection::Triggers => "triggers",

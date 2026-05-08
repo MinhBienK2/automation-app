@@ -385,6 +385,7 @@ impl WorkflowRepository {
               general_json,
               execution_json,
               browser_json,
+              behavior_json,
               environment_json,
               inputs_json,
               triggers_json,
@@ -415,6 +416,7 @@ impl WorkflowRepository {
                 general: serde_json::from_str(&row.get::<String, _>("general_json"))?,
                 execution: serde_json::from_str(&row.get::<String, _>("execution_json"))?,
                 browser: serde_json::from_str(&row.get::<String, _>("browser_json"))?,
+                behavior: serde_json::from_str(&row.get::<String, _>("behavior_json"))?,
                 environment: serde_json::from_str(&row.get::<String, _>("environment_json"))?,
                 inputs: serde_json::from_str(&row.get::<String, _>("inputs_json"))?,
                 triggers: serde_json::from_str(&row.get::<String, _>("triggers_json"))?,
@@ -451,6 +453,7 @@ impl WorkflowRepository {
               general_json,
               execution_json,
               browser_json,
+              behavior_json,
               environment_json,
               inputs_json,
               triggers_json,
@@ -458,12 +461,13 @@ impl WorkflowRepository {
               created_at,
               updated_at
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
             ON CONFLICT(workflow_id) DO UPDATE SET
               version = excluded.version,
               general_json = excluded.general_json,
               execution_json = excluded.execution_json,
               browser_json = excluded.browser_json,
+              behavior_json = excluded.behavior_json,
               environment_json = excluded.environment_json,
               inputs_json = excluded.inputs_json,
               triggers_json = excluded.triggers_json,
@@ -476,6 +480,7 @@ impl WorkflowRepository {
         .bind(serde_json::to_string(&settings.general)?)
         .bind(serde_json::to_string(&settings.execution)?)
         .bind(serde_json::to_string(&settings.browser)?)
+        .bind(serde_json::to_string(&settings.behavior)?)
         .bind(serde_json::to_string(&settings.environment)?)
         .bind(serde_json::to_string(&settings.inputs)?)
         .bind(serde_json::to_string(&settings.triggers)?)

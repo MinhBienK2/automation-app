@@ -4,9 +4,10 @@ use support::{temp_db_path, test_repository};
 use workflow_automation_manager_lib::{
     db::{create_sqlite_pool, run_migrations},
     domain::{
-        ActionConfig, GraphEdge, GraphNode, GraphNodeType, GraphPort, GraphPortDirection,
-        GraphPosition, GraphViewport, InputTypingMode, ScrollDirection, WaitCondition,
-        WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph, WorkflowSettings,
+        ActionConfig, BehaviorEvidenceExportFormat, GraphEdge, GraphNode, GraphNodeType, GraphPort,
+        GraphPortDirection, GraphPosition, GraphViewport, InputTypingMode, ScrollDirection,
+        WaitCondition, WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowGraph,
+        WorkflowSettings,
     },
     repositories::WorkflowRepository,
 };
@@ -400,7 +401,14 @@ async fn workflow_settings_persist_round_trip_lazy_defaults_and_cascade() {
     settings.browser.profile_name = Some("release".to_string());
     settings.browser.proxy_enabled = true;
     settings.browser.proxy_server = Some("http://proxy.local:8080".to_string());
+    settings.browser.challenge_policy = WorkflowBrowserChallengePolicy::PauseForHuman;
     settings.execution.default_action_timeout_ms = Some(5000);
+    settings.behavior.enabled = true;
+    settings.behavior.profile_name = "QA returning buyer".to_string();
+    settings.behavior.seed = Some("release-seed".to_string());
+    settings.behavior.account_ref = "qa-buyer-01".to_string();
+    settings.behavior.target_domains = vec!["example.com".to_string()];
+    settings.behavior.evidence.export_format = BehaviorEvidenceExportFormat::JsonAndMarkdown;
 
     repo.save_workflow_settings(settings.clone())
         .await
@@ -415,6 +423,15 @@ async fn workflow_settings_persist_round_trip_lazy_defaults_and_cascade() {
     assert_eq!(loaded.general.tags, vec!["qa", "login"]);
     assert_eq!(loaded.browser.profile_name.as_deref(), Some("release"));
     assert_eq!(loaded.execution.default_action_timeout_ms, Some(5000));
+    assert!(loaded.behavior.enabled);
+    assert_eq!(loaded.behavior.profile_name, "QA returning buyer");
+    assert_eq!(loaded.behavior.seed.as_deref(), Some("release-seed"));
+    assert_eq!(loaded.behavior.account_ref, "qa-buyer-01");
+    assert_eq!(loaded.behavior.target_domains, vec!["example.com"]);
+    assert_eq!(
+        loaded.behavior.evidence.export_format,
+        BehaviorEvidenceExportFormat::JsonAndMarkdown
+    );
 
     let renamed = repo
         .get_workflow(&workflow.id)

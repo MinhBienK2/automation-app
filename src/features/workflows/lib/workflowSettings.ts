@@ -1,4 +1,5 @@
 import type {
+  BehaviorProfile,
   VariableAssignment,
   VariableValueType,
   WorkflowBrowserConfig,
@@ -59,6 +60,7 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
   { id: "execution", label: "Execution" },
   { id: "browser", label: "Browser" },
+  { id: "behavior", label: "Behavior" },
   { id: "environment", label: "Environment" },
   { id: "inputs", label: "Variables" },
   { id: "triggers", label: "Triggers" },
@@ -285,6 +287,70 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+export function defaultBehaviorProfile(): BehaviorProfile {
+  return {
+    enabled: false,
+    profile_name: "Default behavior profile",
+    persona_type: "returning_user",
+    seed: null,
+    strictness: "observe_only",
+    account_ref: "",
+    target_domains: [],
+    timing: {
+      reaction_time_ms: { min: 250, max: 900, distribution: "log_normal" },
+      between_actions_ms: { min: 400, max: 1600, distribution: "log_normal" },
+      burst_action_count: { min: 2, max: 5 },
+      burst_cooldown_ms: { min: 1500, max: 5000, probability: 0.2 },
+      long_pause_ms: { min: 8000, max: 30000, probability: 0.05 },
+      max_actions_per_minute: 30,
+    },
+    pointer: {
+      path_style: "curved",
+      click_offset_policy: "center_biased",
+      hover_before_click_probability: 0.35,
+      dwell_before_click_ms: { min: 120, max: 700 },
+      overshoot_probability: 0.05,
+      move_speed_profile: "variable",
+    },
+    typing: {
+      mode: "mixed",
+      key_delay_ms: { min: 35, max: 180, distribution: "log_normal" },
+      word_pause_ms: { min: 180, max: 750, probability: 0.25 },
+      sentence_pause_ms: { min: 500, max: 1600, probability: 0.15 },
+      typo_probability: 0.01,
+      correction_policy: "backspace",
+      paste_probability: 0.05,
+    },
+    scroll: {
+      scroll_chunk_px: { min: 180, max: 900, distribution: "log_normal" },
+      pause_between_scrolls_ms: { min: 250, max: 1800, distribution: "log_normal" },
+      backtrack_probability: 0.08,
+      read_dwell_per_100_words_ms: { min: 800, max: 4500 },
+      video_watch_policy: {
+        min_ratio: 0.35,
+        max_ratio: 0.9,
+        skip_probability: 0.15,
+        replay_probability: 0.03,
+      },
+    },
+    velocity: {
+      per_domain_actions_per_minute: 30,
+      per_action_caps: [],
+      cooldown_windows: [],
+      session_duration_ms: null,
+      daily_action_budget: null,
+      on_budget_exceeded: "fail",
+    },
+    evidence: {
+      timeline_enabled: true,
+      screenshots_enabled: false,
+      histograms_enabled: true,
+      redact_sensitive_values: true,
+      export_format: "json",
+    },
+  };
+}
+
 export function defaultWorkflowSettings({
   workflowId,
   workflowName,
@@ -338,6 +404,7 @@ export function defaultWorkflowSettings({
       challenge_policy: "none",
       headless: false,
     },
+    behavior: defaultBehaviorProfile(),
     environment: {
       geolocation: null,
       permissions: [],
@@ -1020,6 +1087,140 @@ export const workflowSettingsHelp: Record<
         {
           mistake: "Random user agent trên một profile đang lưu session đăng nhập.",
           fix: "Giữ một device profile ổn định cho mỗi browser profile, ví dụ tiktok-main-desktop và tiktok-main-mobile là hai profile riêng.",
+        },
+      ],
+    },
+  },
+  behavior: {
+    en: {
+      title: "Behavior Settings Help",
+      summary:
+        "Behavior settings enable the Behavioral Analytics Lab for authorized owned-domain runs, tying a named test account, domain allowlist, seed, profile policy, and evidence report to the workflow without changing the graph's intended actions.",
+      uiLabels: enLabels,
+      bestFor: [
+        "Observing and scoring whether a run looks mechanical before tuning timing or interaction policy.",
+        "Keeping account label, target domains, seed, and report options in one auditable run-level profile.",
+      ],
+      notFor: [
+        "Solving challenges, bypassing third-party controls, or generating unrelated engagement outside an authorized test plan.",
+      ],
+      precedence: [
+        "Behavior settings are validated before the browser launches when the lab is enabled.",
+        "The current implementation records and scores telemetry first; deeper pointer and typing modulation remains profile data for the runner layer.",
+      ],
+      fieldGuide: [
+        {
+          name: "Enable Behavior Lab",
+          description:
+            "Master switch for behavior telemetry, scoring, and report output. When enabled, the run requires explicit target domains, a seed, and challenge handling through Browser settings so evidence remains reproducible.",
+          whenToUse:
+            "Turn it on for authorized red-team simulations where security, trust, or production teams need a report explaining behavior signals observed during a run.",
+        },
+        {
+          name: "Persona and strictness",
+          description:
+            "Persona describes the test-user posture, while strictness controls whether the run only observes, assists with conservative policy, or enforces realistic and stress-test guardrails more aggressively.",
+          whenToUse:
+            "Use observe-only when baselining an existing workflow; use realistic only after account label, allowlist, seed, and challenge policy are ready.",
+        },
+        {
+          name: "Account label, target domains, and seed",
+          description:
+            "These are the audit anchors for a behavior run. Account label names the approved test account, target domains bound execution to owned hosts, and seed makes reports comparable across repeated runs.",
+          whenToUse:
+            "Set all three before sharing run evidence with detection owners, especially when comparing detector behavior before and after policy changes.",
+        },
+        {
+          name: "Evidence logging",
+          description:
+            "Controls whether timeline and histogram data are exported, whether sensitive values are redacted, and which report format the runner should attach after terminal state.",
+          whenToUse:
+            "Keep redaction enabled for normal review, and disable only timeline logging when a minimal report is enough for a smoke check.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Owned checkout behavior baseline",
+          steps: [
+            "Set target domain to the staging commerce host",
+            "Use a named QA buyer account label",
+            "Run observe-only first and review behavior_report anomalies",
+          ],
+        },
+      ],
+      safetyNotes: [
+        "Behavior Lab requires owned or explicitly authorized targets and does not solve CAPTCHA or hidden challenge flows.",
+      ],
+      commonMistakes: [
+        {
+          mistake: "Enabling realistic strictness without a named account label or target domain.",
+          fix: "Fill Account label, Target domains, Seed, and set Browser challenge policy to Detect only or Pause for human before running.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Cài đặt Hành vi",
+      summary:
+        "Cài đặt Hành vi bật Behavioral Analytics Lab cho run trên domain sở hữu hoặc được ủy quyền, gắn account test, allowlist domain, seed, policy profile, và report bằng chứng vào workflow mà không đổi ý định của graph.",
+      uiLabels: viLabels,
+      bestFor: [
+        "Quan sát và chấm điểm xem run có quá máy móc hay không trước khi chỉnh timing hoặc interaction policy.",
+        "Gom account label, target domains, seed, và report options vào một profile cấp run có thể audit.",
+      ],
+      notFor: [
+        "Không dùng để giải challenge, bypass control bên thứ ba, hoặc tạo engagement ngoài kế hoạch kiểm thử được phép.",
+      ],
+      precedence: [
+        "Behavior settings được validate trước khi browser mở nếu lab đang bật.",
+        "Bản hiện tại ghi telemetry và scoring trước; pointer và typing modulation sâu hơn là dữ liệu profile cho lớp runner sau này.",
+      ],
+      fieldGuide: [
+        {
+          name: "Enable Behavior Lab",
+          description:
+            "Công tắc tổng cho telemetry hành vi, scoring, và output report. Khi bật, run cần target domain rõ ràng, seed, và policy xử lý challenge ở Browser settings để bằng chứng có thể lặp lại.",
+          whenToUse:
+            "Bật cho red-team simulation được phép khi security, trust, hoặc production team cần report giải thích tín hiệu hành vi đã quan sát trong run.",
+        },
+        {
+          name: "Persona và strictness",
+          description:
+            "Persona mô tả tư thế người dùng test, còn strictness quyết định run chỉ quan sát, hỗ trợ policy thận trọng, hay enforce guardrail realistic và stress-test chặt hơn.",
+          whenToUse:
+            "Dùng observe-only khi baseline workflow hiện có; dùng realistic sau khi account label, allowlist, seed, và challenge policy đã sẵn sàng.",
+        },
+        {
+          name: "Account label, target domains, và seed",
+          description:
+            "Đây là các neo audit của behavior run. Account label đặt tên tài khoản test được duyệt, target domains giới hạn host sở hữu, và seed giúp so sánh report giữa nhiều run.",
+          whenToUse:
+            "Điền đủ ba field trước khi chia sẻ bằng chứng run cho chủ sở hữu detector, nhất là khi so sánh trước và sau khi đổi policy.",
+        },
+        {
+          name: "Evidence logging",
+          description:
+            "Điều khiển timeline và histogram có export hay không, giá trị nhạy cảm có được redact hay không, và format report mà runner attach khi run kết thúc.",
+          whenToUse:
+            "Giữ redaction bật cho review thông thường; chỉ tắt timeline logging khi smoke check chỉ cần report tối thiểu.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Baseline hành vi checkout nội bộ",
+          steps: [
+            "Đặt target domain là host staging thương mại",
+            "Dùng account label của QA buyer",
+            "Chạy observe-only trước và xem anomaly trong behavior_report",
+          ],
+        },
+      ],
+      safetyNotes: [
+        "Behavior Lab yêu cầu target thuộc sở hữu hoặc được ủy quyền rõ ràng và không giải CAPTCHA hoặc hidden challenge flow.",
+      ],
+      commonMistakes: [
+        {
+          mistake: "Bật realistic strictness nhưng chưa có account label hoặc target domain.",
+          fix: "Điền Account label, Target domains, Seed, và đặt Browser challenge policy thành Detect only hoặc Pause for human trước khi run.",
         },
       ],
     },

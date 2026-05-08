@@ -31,6 +31,7 @@ import type {
   WorkflowPackage,
   WorkflowSettings,
 } from "../types/workflow";
+import { defaultBehaviorProfile } from "../features/workflows/lib/workflowSettings";
 
 describe("workflow API phase ten commands", () => {
   test("invokes orchestration commands with frontend-safe payloads", async () => {
@@ -285,6 +286,7 @@ describe("workflow API settings commands", () => {
         challenge_policy: "none",
         headless: false,
       },
+      behavior: defaultBehaviorProfile(),
       environment: {
         geolocation: null,
         permissions: [],

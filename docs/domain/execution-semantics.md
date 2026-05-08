@@ -12,6 +12,7 @@
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
+- Behavior Lab settings validate before browser launch when enabled. The run is blocked without an explicit seed, target domain allowlist, and Browser challenge policy of Detect only or Pause for human; non-observe strictness also requires an account label.
 - Environment defaults from Workflow Settings compile into setup actions before graph actions: geolocation, permission grants, extra headers, download directory, cookies, localStorage, and sessionStorage.
 - Variables settings seed the runtime variable store before graph actions. Legacy input schema data remains persisted for compatibility but is not exposed by the current Variables UI.
 - Execution settings fill missing action `timeout_ms` fields from `default_action_timeout_ms`; action-level timeouts remain more specific.
@@ -28,6 +29,7 @@
 - Mode values are `none`, `run_workflow`, and `test_step`.
 - Step progress reports current step id/number and completed step ids.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
+- Terminal run state includes `behavior_report` in outputs when Workflow Settings Behavior is enabled. This report is generated from runner progress telemetry and scorer output after the run reaches a terminal state.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 - Workflow Settings Triggers are persisted planned metadata only. No scheduler service runs trigger modes or policies yet, and the UI presents them as planned rather than active controls.

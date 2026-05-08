@@ -74,6 +74,7 @@ Keep `CommandError` compatible with frontend error extraction in `src/lib/workfl
   - `save_workflow_settings_section`: `{ workflowId, section, sectionValue }`
   - `validate_workflow_settings`: `{ settings }`
   - `validate_workflow_run`: `{ workflowId }`
+  - `section` may be `general`, `execution`, `browser`, `behavior`, `environment`, `inputs`, `triggers`, or `advanced`.
 - `duplicate_workflow`: `{ workflowId, name }`; creates a new workflow, copies saved graph JSON and Workflow Settings without export sanitization, remaps settings to the new workflow id, and returns `WorkflowDetail`.
 - `run_workflow`: `{ workflowId }`; the frontend saves the current graph first, then this command validates, compiles, loads Workflow Settings, and runs the saved graph.
 - `run_batch_workflow`: `{ workflowId, request }`, where `request` has `rows`, optional `concurrency_limit`, and optional `headless`. The command compiles the saved graph, applies Workflow Settings defaults when request values are omitted, and currently rejects concurrency above 1 until browser/session isolation supports parallel rows.

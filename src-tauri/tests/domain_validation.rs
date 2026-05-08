@@ -1,11 +1,12 @@
 use workflow_automation_manager_lib::domain::{
-    ActionConfig, ActionType, AssertOutputMatchMode, AssertTextMatchMode, CheckboxState,
-    ClearInputMethod, ClickButton, ClickMode, ClickPosition, ClickWaitUntil, GraphEdge, GraphNode,
-    GraphNodeType, GraphPort, GraphPortDirection, GraphPosition, GraphValidationLevel,
-    GraphViewport, HeaderPair, InputTypingMode, RunError, RunStatus, ScrollBehavior, ScrollBlock,
-    ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy, SwitchCase, ValidationError,
-    VariableMapping, WaitCondition, Workflow, WorkflowBrowserChallengePolicy,
-    WorkflowBrowserConfig, WorkflowCondition, WorkflowGraph, WorkflowSettings, WorkflowStep,
+    ActionConfig, ActionType, AssertOutputMatchMode, AssertTextMatchMode, BehaviorStrictness,
+    CheckboxState, ClearInputMethod, ClickButton, ClickMode, ClickPosition, ClickWaitUntil,
+    GraphEdge, GraphNode, GraphNodeType, GraphPort, GraphPortDirection, GraphPosition,
+    GraphValidationLevel, GraphViewport, HeaderPair, InputTypingMode, RunError, RunStatus,
+    ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline, ScrollMode, SelectOptionMatchBy,
+    SwitchCase, ValidationError, VariableMapping, WaitCondition, Workflow,
+    WorkflowBrowserChallengePolicy, WorkflowBrowserConfig, WorkflowCondition, WorkflowGraph,
+    WorkflowSettings, WorkflowStep,
 };
 use workflow_automation_manager_lib::services::run_service::default_config;
 
@@ -286,11 +287,82 @@ fn workflow_settings_defaults_and_validation_cover_all_sections() {
     );
     assert!(settings.environment.permissions.is_empty());
     assert!(settings.inputs.input_schema.is_empty());
+    assert!(!settings.behavior.enabled);
+    assert_eq!(
+        settings.behavior.strictness,
+        BehaviorStrictness::ObserveOnly
+    );
     assert!(!settings.triggers.enabled);
     assert!(settings.advanced.compatibility_warnings.is_empty());
     settings
         .validate()
         .expect("default settings should validate");
+}
+
+#[test]
+fn workflow_behavior_settings_validate_guardrails_and_ranges() {
+    let workflow = Workflow {
+        id: "workflow-1".to_string(),
+        name: "Login flow".to_string(),
+        created_at: "1".to_string(),
+        updated_at: "2".to_string(),
+    };
+
+    let mut missing_allowlist = WorkflowSettings::default_for_workflow(&workflow);
+    missing_allowlist.behavior.enabled = true;
+    missing_allowlist.behavior.seed = Some("seed-1".to_string());
+    missing_allowlist.behavior.account_ref = "qa-account".to_string();
+    missing_allowlist.browser.challenge_policy = WorkflowBrowserChallengePolicy::PauseForHuman;
+    assert_validation_message(
+        missing_allowlist
+            .validate()
+            .expect_err("enabled behavior lab should require target domains"),
+        "behavior.target_domains",
+        "Behavior Lab requires at least one target domain",
+    );
+
+    let mut missing_account = WorkflowSettings::default_for_workflow(&workflow);
+    missing_account.behavior.enabled = true;
+    missing_account.behavior.seed = Some("seed-1".to_string());
+    missing_account.behavior.strictness = BehaviorStrictness::Realistic;
+    missing_account.behavior.target_domains = vec!["example.com".to_string()];
+    missing_account.browser.challenge_policy = WorkflowBrowserChallengePolicy::PauseForHuman;
+    assert_validation_message(
+        missing_account
+            .validate()
+            .expect_err("realistic behavior lab should require account label"),
+        "behavior.account_ref",
+        "Behavior Lab requires an account label outside observe-only mode",
+    );
+
+    let mut no_challenge_policy = WorkflowSettings::default_for_workflow(&workflow);
+    no_challenge_policy.behavior.enabled = true;
+    no_challenge_policy.behavior.seed = Some("seed-1".to_string());
+    no_challenge_policy.behavior.account_ref = "qa-account".to_string();
+    no_challenge_policy.behavior.target_domains = vec!["example.com".to_string()];
+    assert_validation_message(
+        no_challenge_policy
+            .validate()
+            .expect_err("behavior lab should require challenge detection policy"),
+        "browser.challenge_policy",
+        "Behavior Lab requires challenge detection or pause-for-human handling",
+    );
+
+    let mut invalid_timing = WorkflowSettings::default_for_workflow(&workflow);
+    invalid_timing.behavior.enabled = true;
+    invalid_timing.behavior.seed = Some("seed-1".to_string());
+    invalid_timing.behavior.account_ref = "qa-account".to_string();
+    invalid_timing.behavior.target_domains = vec!["example.com".to_string()];
+    invalid_timing.browser.challenge_policy = WorkflowBrowserChallengePolicy::PauseForHuman;
+    invalid_timing.behavior.timing.reaction_time_ms.min = 900;
+    invalid_timing.behavior.timing.reaction_time_ms.max = 100;
+    assert_validation_message(
+        invalid_timing
+            .validate()
+            .expect_err("invalid timing range should fail"),
+        "behavior.timing.reaction_time_ms",
+        "Behavior reaction time maximum must be greater than or equal to minimum",
+    );
 }
 
 #[test]

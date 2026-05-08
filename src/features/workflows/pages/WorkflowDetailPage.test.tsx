@@ -12,6 +12,7 @@ import {
   workflowDetailScenario,
 } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+import { defaultWorkflowSettings } from "../lib/workflowSettings";
 
 describe("Workflow detail integration", () => {
   beforeEach(() => {
@@ -254,6 +255,84 @@ describe("Workflow detail integration", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Workflow settings saved.",
     );
+  });
+
+  test("edits workflow behavior lab settings from the Behavior section", async () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Login flow",
+      createdAt: "1",
+      updatedAt: "1",
+    });
+    mockTauriCommands({
+      ...workflowDetailScenario([sleepStep]),
+      get_workflow_settings: {
+        ...settings,
+        browser: {
+          ...settings.browser,
+          challenge_policy: "pause_for_human",
+        },
+      },
+      save_workflow_settings_section: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
+    });
+
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Behavior" }));
+    await userEvent.click(within(settingsDialog).getByRole("switch", {
+      name: "Enable Behavior Lab",
+    }));
+    await userEvent.selectOptions(
+      within(settingsDialog).getByLabelText("Persona"),
+      "buyer",
+    );
+    await userEvent.selectOptions(
+      within(settingsDialog).getByLabelText("Strictness"),
+      "realistic",
+    );
+    await userEvent.clear(within(settingsDialog).getByLabelText("Account label"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Account label"), "qa-buyer-01");
+    await userEvent.clear(within(settingsDialog).getByLabelText("Target domains"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Target domains"), "example.com");
+    await userEvent.clear(within(settingsDialog).getByLabelText("Seed"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Seed"), "behavior-seed-1");
+    await userEvent.clear(within(settingsDialog).getByLabelText("Max actions per minute"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Max actions per minute"), "12");
+    await userEvent.click(within(settingsDialog).getByRole("switch", {
+      name: "Evidence logging",
+    }));
+
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Save Settings",
+    }));
+
+    expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
+      workflowId: "workflow-1",
+      section: "behavior",
+      sectionValue: expect.objectContaining({
+        enabled: true,
+        persona_type: "buyer",
+        strictness: "realistic",
+        account_ref: "qa-buyer-01",
+        target_domains: ["example.com"],
+        seed: "behavior-seed-1",
+        timing: expect.objectContaining({
+          max_actions_per_minute: 12,
+        }),
+        evidence: expect.objectContaining({
+          timeline_enabled: false,
+        }),
+      }),
+    });
   });
 
   test("asks before closing workflow settings with unsaved changes", async () => {

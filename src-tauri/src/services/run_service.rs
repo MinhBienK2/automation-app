@@ -2,13 +2,21 @@ use crate::{
     app_state::{AppState, RunStateDto},
     commands::CommandError,
     domain::{
-        ActionConfig, ActionType, CheckboxState, ClearInputMethod, HeaderPair, InputTypingMode,
-        RunError, RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy, VariableAssignment,
-        VariableValueType, WaitCondition, WorkflowBrowserConfig, WorkflowStep,
+        ActionConfig, ActionType, BehaviorProfile, CheckboxState, ClearInputMethod, HeaderPair,
+        InputTypingMode, RunError, RunMode, RunStatus, ScrollDirection, SelectOptionMatchBy,
+        VariableAssignment, VariableValueType, WaitCondition, WorkflowBrowserConfig, WorkflowStep,
     },
     runner::{RunExecution, RunnerError, RunnerProgress, RunnerStatus},
 };
-use std::time::Duration;
+use serde::Serialize;
+use serde_json::{json, Value};
+use std::{
+    collections::BTreeMap,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::Mutex;
+use uuid::Uuid;
 
 pub fn default_config(action_type: ActionType) -> ActionConfig {
     match action_type {
@@ -503,6 +511,9 @@ pub async fn start_background_run(
     let browser_config = options.browser_config;
     let default_close_browser = options.default_close_browser;
     let max_workflow_duration_ms = options.max_workflow_duration_ms;
+    let behavior_collector = options
+        .behavior_context
+        .map(|context| Arc::new(Mutex::new(BehaviorTelemetryCollector::new(context, &steps))));
     let action_configs = steps
         .iter()
         .map(|step| step.config.clone())
@@ -513,8 +524,12 @@ pub async fn start_background_run(
             tokio::sync::mpsc::unbounded_channel::<RunnerProgress>();
         let progress_state = task_state.clone();
         let progress_steps = steps.clone();
+        let progress_behavior_collector = behavior_collector.clone();
         let progress_task = tokio::spawn(async move {
             while let Some(progress) = progress_rx.recv().await {
+                if let Some(collector) = progress_behavior_collector.as_ref() {
+                    collector.lock().await.record_progress(&progress);
+                }
                 match progress {
                     RunnerProgress::StepStarted { step_number } => {
                         if let Some(step) = progress_steps.get(step_number.saturating_sub(1)) {
@@ -562,7 +577,19 @@ pub async fn start_background_run(
             RunCompletion::Finished(run_future.await)
         };
         let _ = progress_task.await;
-        complete_background_run(task_state, steps, completion, default_close_browser).await;
+        let behavior_outputs = if let Some(collector) = behavior_collector {
+            collector.lock().await.finish_outputs()
+        } else {
+            BTreeMap::new()
+        };
+        complete_background_run(
+            task_state,
+            steps,
+            completion,
+            default_close_browser,
+            behavior_outputs,
+        )
+        .await;
     });
 
     Ok(run_state)
@@ -573,6 +600,24 @@ pub struct BackgroundRunOptions {
     pub browser_config: Option<WorkflowBrowserConfig>,
     pub default_close_browser: bool,
     pub max_workflow_duration_ms: Option<u64>,
+    pub behavior_context: Option<BehaviorRunContext>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BehaviorRunContext {
+    pub run_id: String,
+    pub workflow_id: String,
+    pub profile: BehaviorProfile,
+}
+
+impl BehaviorRunContext {
+    pub fn new(workflow_id: impl Into<String>, profile: BehaviorProfile) -> Self {
+        Self {
+            run_id: Uuid::new_v4().to_string(),
+            workflow_id: workflow_id.into(),
+            profile,
+        }
+    }
 }
 
 enum RunCompletion {
@@ -588,6 +633,7 @@ async fn complete_background_run(
     steps: Vec<WorkflowStep>,
     completion: RunCompletion,
     default_close_browser: bool,
+    behavior_outputs: BTreeMap<String, Value>,
 ) {
     match completion {
         RunCompletion::TimedOut {
@@ -601,11 +647,12 @@ async fn complete_background_run(
             );
             if let Some(Ok(outcome)) = result {
                 state
-                    .finish_run(
+                    .finish_run_with_extra_outputs(
                         RunStatus::Failed,
                         Some(error),
                         outcome.session,
                         outcome.close_browser || default_close_browser,
+                        behavior_outputs,
                     )
                     .await;
             } else {
@@ -641,11 +688,12 @@ async fn complete_background_run(
                 };
 
                 state
-                    .finish_run(
+                    .finish_run_with_extra_outputs(
                         status,
                         error,
                         outcome.session,
                         outcome.close_browser || default_close_browser,
+                        behavior_outputs,
                     )
                     .await;
             }
@@ -656,4 +704,219 @@ async fn complete_background_run(
             }
         },
     }
+}
+
+#[derive(Debug)]
+struct BehaviorTelemetryCollector {
+    context: BehaviorRunContext,
+    started_at_ms: u128,
+    finished_at_ms: Option<u128>,
+    events: Vec<BehaviorTelemetryEvent>,
+    step_metadata: Vec<BehaviorStepMetadata>,
+}
+
+#[derive(Debug, Clone)]
+struct BehaviorStepMetadata {
+    step_id: String,
+    step_name: String,
+    action_type: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BehaviorTelemetryEvent {
+    step_id: String,
+    step_number: usize,
+    step_name: String,
+    action_type: String,
+    started_at_ms: u128,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    finished_at_ms: Option<u128>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    duration_ms: Option<u128>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BehaviorAnomaly {
+    code: &'static str,
+    severity: &'static str,
+    message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    step_id: Option<String>,
+}
+
+impl BehaviorTelemetryCollector {
+    fn new(context: BehaviorRunContext, steps: &[WorkflowStep]) -> Self {
+        Self {
+            context,
+            started_at_ms: now_ms(),
+            finished_at_ms: None,
+            events: Vec::new(),
+            step_metadata: steps
+                .iter()
+                .map(|step| BehaviorStepMetadata {
+                    step_id: step.id.clone(),
+                    step_name: step.name.clone(),
+                    action_type: step.action_type.as_str().to_string(),
+                })
+                .collect(),
+        }
+    }
+
+    fn record_progress(&mut self, progress: &RunnerProgress) {
+        match progress {
+            RunnerProgress::StepStarted { step_number } => {
+                let Some(metadata) = self.step_metadata.get(step_number.saturating_sub(1)) else {
+                    return;
+                };
+                self.events.push(BehaviorTelemetryEvent {
+                    step_id: metadata.step_id.clone(),
+                    step_number: *step_number,
+                    step_name: metadata.step_name.clone(),
+                    action_type: metadata.action_type.clone(),
+                    started_at_ms: now_ms(),
+                    finished_at_ms: None,
+                    duration_ms: None,
+                });
+            }
+            RunnerProgress::StepCompleted { step_number } => {
+                let finished_at_ms = now_ms();
+                if let Some(event) = self.events.iter_mut().rev().find(|event| {
+                    event.step_number == *step_number && event.finished_at_ms.is_none()
+                }) {
+                    event.duration_ms = Some(finished_at_ms.saturating_sub(event.started_at_ms));
+                    event.finished_at_ms = Some(finished_at_ms);
+                }
+            }
+        }
+    }
+
+    fn finish_outputs(&mut self) -> BTreeMap<String, Value> {
+        self.finished_at_ms = Some(now_ms());
+        let report = self.report_value();
+        BTreeMap::from([("behavior_report".to_string(), report)])
+    }
+
+    fn report_value(&self) -> Value {
+        let anomalies = score_behavior(&self.context.profile, &self.events, self.started_at_ms);
+        let severity = report_severity(&anomalies);
+        let summary_score = summary_score(&anomalies);
+        json!({
+            "run_id": self.context.run_id,
+            "workflow_id": self.context.workflow_id,
+            "profile_name": self.context.profile.profile_name,
+            "persona_type": self.context.profile.persona_type,
+            "strictness": self.context.profile.strictness,
+            "account_ref": self.context.profile.account_ref,
+            "seed": self.context.profile.seed.clone().unwrap_or_default(),
+            "target_domains": self.context.profile.target_domains,
+            "started_at_ms": self.started_at_ms,
+            "finished_at_ms": self.finished_at_ms.unwrap_or_else(now_ms),
+            "events": self.events,
+            "anomalies": anomalies,
+            "summary_score": summary_score,
+            "severity": severity,
+            "report_metadata": {
+                "format": self.context.profile.evidence.export_format,
+                "timeline_enabled": self.context.profile.evidence.timeline_enabled,
+                "histograms_enabled": self.context.profile.evidence.histograms_enabled,
+                "redacted_sensitive_values": self.context.profile.evidence.redact_sensitive_values
+            }
+        })
+    }
+}
+
+fn score_behavior(
+    profile: &BehaviorProfile,
+    events: &[BehaviorTelemetryEvent],
+    started_at_ms: u128,
+) -> Vec<BehaviorAnomaly> {
+    let mut anomalies = Vec::new();
+    if events.is_empty() || events.iter().any(|event| event.finished_at_ms.is_none()) {
+        anomalies.push(BehaviorAnomaly {
+            code: "telemetry_incomplete",
+            severity: "high",
+            message: "Behavior telemetry did not capture a complete action timeline.".to_string(),
+            step_id: None,
+        });
+    }
+
+    let finished_at_ms = events
+        .iter()
+        .filter_map(|event| event.finished_at_ms)
+        .max()
+        .unwrap_or(started_at_ms + 1);
+    let elapsed_ms = finished_at_ms.saturating_sub(started_at_ms).max(1);
+    let actions_per_minute = (events.len() as u128 * 60_000) / elapsed_ms;
+    let max_actions = profile
+        .timing
+        .max_actions_per_minute
+        .or(profile.velocity.per_domain_actions_per_minute);
+    if let Some(max_actions) = max_actions {
+        if actions_per_minute > u128::from(max_actions) {
+            anomalies.push(BehaviorAnomaly {
+                code: "action_rate_too_high",
+                severity: "high",
+                message: format!(
+                    "Observed approximately {actions_per_minute} actions per minute against a profile budget of {max_actions}."
+                ),
+                step_id: None,
+            });
+        }
+    }
+
+    if let Some(event) = events.iter().find(|event| event.action_type == "click") {
+        anomalies.push(BehaviorAnomaly {
+            code: "click_positions_too_centered",
+            severity: "medium",
+            message: "Click actions did not report target-bounded offset telemetry in this run."
+                .to_string(),
+            step_id: Some(event.step_id.clone()),
+        });
+    }
+
+    if events.len() >= 3 {
+        let durations = events
+            .iter()
+            .filter_map(|event| event.duration_ms)
+            .collect::<Vec<_>>();
+        if durations.len() >= 3 && durations.windows(2).all(|window| window[0] == window[1]) {
+            anomalies.push(BehaviorAnomaly {
+                code: "timing_too_uniform",
+                severity: "medium",
+                message: "Action durations were uniform across the captured timeline.".to_string(),
+                step_id: None,
+            });
+        }
+    }
+
+    anomalies
+}
+
+fn report_severity(anomalies: &[BehaviorAnomaly]) -> &'static str {
+    if anomalies.iter().any(|anomaly| anomaly.severity == "high") {
+        "high"
+    } else if anomalies.iter().any(|anomaly| anomaly.severity == "medium") {
+        "medium"
+    } else if anomalies.is_empty() {
+        "none"
+    } else {
+        "low"
+    }
+}
+
+fn summary_score(anomalies: &[BehaviorAnomaly]) -> u32 {
+    anomalies
+        .iter()
+        .fold(100u32, |score, anomaly| match anomaly.severity {
+            "high" => score.saturating_sub(30),
+            "medium" => score.saturating_sub(15),
+            _ => score.saturating_sub(5),
+        })
+}
+
+fn now_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
 }

@@ -11,10 +11,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
-- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Execution, Browser, Environment, Variables, Triggers, Advanced, and section help.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Execution, Browser, Behavior, Environment, Variables, Triggers, Advanced, and section help.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
-- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, Browser device profile presets, tag parsing, Browser compatibility mapping, and bilingual settings help content.
+- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, Browser device profile presets, Behavior Lab defaults, tag parsing, Browser compatibility mapping, and bilingual settings help content.
 - `src/features/workflows/components/RunIssuePanel.tsx`: blocking validation, runtime failure, and system/startup issue presentation.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
@@ -36,7 +36,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Visual graph editing state before persistence.
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
-- Workflow Settings editing through list Edit and detail Settings, Execution wait-between-nodes controls, Browser device profile presets that coherently fill user agent, viewport, mobile, and touch settings, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
+- Workflow Settings editing through list Edit and detail Settings, Execution wait-between-nodes controls, Browser device profile presets that coherently fill user agent, viewport, mobile, and touch settings, compact Behavior Lab controls for persona, strictness, account label, target domains, seed, velocity, and evidence logging, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
 - Workflow list duplicate and Workflow Package import/export interaction. Duplicate calls `duplicate_workflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, opens the native Save dialog, writes package JSON through the Tauri filesystem plugin, and relies on backend sanitization. Import reads package JSON, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.

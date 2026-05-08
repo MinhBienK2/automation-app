@@ -287,6 +287,7 @@ fn package_settings_from_workflow_settings(
         general: None,
         execution: None,
         browser: None,
+        behavior: None,
         environment: None,
         inputs: None,
         triggers: None,
@@ -311,6 +312,10 @@ fn package_settings_from_workflow_settings(
                     omitted_fields.push("settings.browser.proxy_password".to_string());
                 }
                 package_settings.browser = Some(browser);
+            }
+            WorkflowSettingsSection::Behavior => {
+                included_sections.push("settings.behavior".to_string());
+                package_settings.behavior = Some(settings.behavior.clone());
             }
             WorkflowSettingsSection::Environment => {
                 included_sections.push("settings.environment".to_string());
@@ -382,6 +387,9 @@ fn available_package_settings_sections(
     if settings.browser.is_some() {
         sections.push(WorkflowSettingsSection::Browser);
     }
+    if settings.behavior.is_some() {
+        sections.push(WorkflowSettingsSection::Behavior);
+    }
     if settings.environment.is_some() {
         sections.push(WorkflowSettingsSection::Environment);
     }
@@ -449,6 +457,12 @@ fn selected_package_settings(
                     .clone()
                     .ok_or_else(|| missing_settings_section("Browser"))?;
             }
+            WorkflowSettingsSection::Behavior => {
+                settings.behavior = package_settings
+                    .behavior
+                    .clone()
+                    .ok_or_else(|| missing_settings_section("Behavior"))?;
+            }
             WorkflowSettingsSection::Environment => {
                 settings.environment = package_settings
                     .environment
@@ -494,6 +508,7 @@ fn normalized_sections(sections: &[WorkflowSettingsSection]) -> Vec<WorkflowSett
         WorkflowSettingsSection::General,
         WorkflowSettingsSection::Execution,
         WorkflowSettingsSection::Browser,
+        WorkflowSettingsSection::Behavior,
         WorkflowSettingsSection::Environment,
         WorkflowSettingsSection::Inputs,
         WorkflowSettingsSection::Triggers,

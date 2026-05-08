@@ -162,11 +162,24 @@ impl AppState {
         session: Option<BrowserSession>,
         close_browser: bool,
     ) {
-        let outputs = if let Some(session) = session.as_ref() {
+        self.finish_run_with_extra_outputs(status, error, session, close_browser, BTreeMap::new())
+            .await;
+    }
+
+    pub async fn finish_run_with_extra_outputs(
+        &self,
+        status: RunStatus,
+        error: Option<RunError>,
+        session: Option<BrowserSession>,
+        close_browser: bool,
+        extra_outputs: BTreeMap<String, serde_json::Value>,
+    ) {
+        let mut outputs = if let Some(session) = session.as_ref() {
             session.captured_outputs().await.unwrap_or_default()
         } else {
             BTreeMap::new()
         };
+        outputs.extend(extra_outputs);
         if let Some(mut session) = session {
             if close_browser {
                 let _ = session.close().await;

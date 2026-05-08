@@ -960,6 +960,7 @@ function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     general: status,
     execution: status,
     browser: status,
+    behavior: status,
     environment: status,
     inputs: status,
     triggers: status,

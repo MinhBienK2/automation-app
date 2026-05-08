@@ -141,6 +141,11 @@ pub async fn save_workflow_settings_section_impl(
                 CommandError::message(format!("Invalid Browser settings: {error}"))
             })?;
         }
+        WorkflowSettingsSection::Behavior => {
+            settings.behavior = serde_json::from_value(section_value).map_err(|error| {
+                CommandError::message(format!("Invalid Behavior settings: {error}"))
+            })?;
+        }
         WorkflowSettingsSection::Environment => {
             settings.environment = serde_json::from_value(section_value).map_err(|error| {
                 CommandError::message(format!("Invalid Environment settings: {error}"))

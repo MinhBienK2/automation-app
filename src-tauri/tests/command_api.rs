@@ -631,6 +631,100 @@ async fn run_workflow_applies_environment_and_input_settings_before_graph_steps(
 }
 
 #[tokio::test]
+async fn run_workflow_attaches_behavior_report_when_behavior_lab_is_enabled() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Behavior lab evidence")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![
+            navigate_node("open", "https://example.com/start"),
+            action_node_with_config(
+                "cta",
+                "Click CTA",
+                serde_json::json!({
+                    "type": "click",
+                    "config": { "xpath": "//*[@id='cta']" }
+                }),
+            ),
+            action_node("settle"),
+        ]),
+    )
+    .await
+    .expect("save graph");
+
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.browser.challenge_policy = WorkflowBrowserChallengePolicy::DetectOnly;
+    settings.behavior.enabled = true;
+    settings.behavior.profile_name = "QA returning buyer".to_string();
+    settings.behavior.seed = Some("behavior-seed-1".to_string());
+    settings.behavior.account_ref = "qa-buyer-01".to_string();
+    settings.behavior.target_domains = vec!["example.com".to_string()];
+    settings.behavior.timing.max_actions_per_minute = Some(1);
+    commands::save_workflow_settings_impl(&state, &workflow.id, settings)
+        .await
+        .expect("save settings");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let run_state = commands::get_run_state_impl(&state).await;
+    let report = run_state
+        .outputs
+        .get("behavior_report")
+        .expect("behavior report should be attached to run outputs");
+
+    assert_eq!(report["workflow_id"], workflow.id);
+    assert_eq!(report["profile_name"], "QA returning buyer");
+    assert_eq!(report["account_ref"], "qa-buyer-01");
+    assert_eq!(report["seed"], "behavior-seed-1");
+    assert_eq!(report["target_domains"][0], "example.com");
+    assert_eq!(report["events"].as_array().expect("events array").len(), 3);
+    let anomaly_codes = report["anomalies"]
+        .as_array()
+        .expect("anomalies array")
+        .iter()
+        .filter_map(|anomaly| anomaly["code"].as_str())
+        .collect::<Vec<_>>();
+    assert!(
+        anomaly_codes.contains(&"action_rate_too_high"),
+        "expected high velocity anomaly in {anomaly_codes:?}"
+    );
+}
+
+#[tokio::test]
+async fn run_workflow_omits_behavior_report_when_behavior_lab_is_disabled() {
+    let runner = RecordingRunExecutor::new();
+    let (state, _db_path) = test_state_with_runner(runner.clone()).await;
+    let workflow = commands::create_workflow_impl(&state, "Behavior disabled")
+        .await
+        .expect("create");
+
+    commands::save_workflow_graph_impl(
+        &state,
+        &workflow.id,
+        graph_with_action_path(vec![action_node("wait")]),
+    )
+    .await
+    .expect("save graph");
+
+    commands::run_workflow_impl(&state, &workflow.id)
+        .await
+        .expect("run workflow");
+    poll_status(&state, RunStatus::Success).await;
+
+    let run_state = commands::get_run_state_impl(&state).await;
+    assert!(!run_state.outputs.contains_key("behavior_report"));
+    assert_eq!(runner.recorded_runs()[0].len(), 1);
+}
+
+#[tokio::test]
 async fn run_workflow_applies_execution_default_timeout_to_actions_without_timeout() {
     let runner = RecordingRunExecutor::new();
     let (state, _db_path) = test_state_with_runner(runner.clone()).await;

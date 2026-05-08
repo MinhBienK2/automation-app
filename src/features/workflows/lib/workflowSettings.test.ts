@@ -29,6 +29,11 @@ describe("workflow settings model", () => {
     expect(settings.execution.wait_between_nodes_min_ms).toBeNull();
     expect(settings.execution.wait_between_nodes_max_ms).toBeNull();
     expect(settings.browser.challenge_policy).toBe("none");
+    expect(settings.behavior.enabled).toBe(false);
+    expect(settings.behavior.profile_name).toBe("Default behavior profile");
+    expect(settings.behavior.strictness).toBe("observe_only");
+    expect(settings.behavior.timing.max_actions_per_minute).toBe(30);
+    expect(settings.behavior.evidence.redact_sensitive_values).toBe(true);
     expect(settings.environment.permissions).toEqual([]);
     expect(settings.inputs.input_schema).toEqual([]);
     expect(settings.triggers.enabled).toBe(false);
@@ -41,6 +46,7 @@ describe("workflow settings model", () => {
       "general",
       "execution",
       "browser",
+      "behavior",
       "environment",
       "inputs",
       "triggers",

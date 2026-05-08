@@ -31,6 +31,13 @@ pub use workflow_graph::{
     WorkflowGraph,
 };
 pub use workflow_settings::{
+    BehaviorActionRateCap, BehaviorBudgetExceededAction, BehaviorClickOffsetPolicy,
+    BehaviorCooldownWindow, BehaviorCorrectionPolicy, BehaviorCountRange, BehaviorDistribution,
+    BehaviorDwellRange, BehaviorEvidenceExportFormat, BehaviorEvidencePolicy,
+    BehaviorMoveSpeedProfile, BehaviorPersonaType, BehaviorPointerPathStyle, BehaviorPointerPolicy,
+    BehaviorProbabilityTimedRange, BehaviorProfile, BehaviorScrollChunkRange, BehaviorScrollPolicy,
+    BehaviorSessionDuration, BehaviorStrictness, BehaviorTimedRange, BehaviorTimingPolicy,
+    BehaviorTypingMode, BehaviorTypingPolicy, BehaviorVelocityBudget, BehaviorVideoWatchPolicy,
     RunValidationIssue, RunValidationIssueSource, SettingsValidationIssue,
     WorkflowBrowserRetention, WorkflowDebugLoggingLevel, WorkflowFailurePolicy,
     WorkflowInputValueType, WorkflowMissedRunPolicy, WorkflowSettings, WorkflowSettingsAdvanced,

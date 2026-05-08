@@ -13,6 +13,7 @@ pub enum WorkflowSettingsSection {
     General,
     Execution,
     Browser,
+    Behavior,
     Environment,
     Inputs,
     Triggers,
@@ -74,6 +75,19 @@ impl SettingsValidationIssue {
             field: Some(field.into()),
             message: message.into(),
             level: WorkflowSettingsIssueLevel::Error,
+        }
+    }
+
+    fn warning(
+        section: WorkflowSettingsSection,
+        field: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            section,
+            field: Some(field.into()),
+            message: message.into(),
+            level: WorkflowSettingsIssueLevel::Warning,
         }
     }
 
@@ -153,6 +167,247 @@ pub enum WorkflowDebugLoggingLevel {
     Error,
     Info,
     Debug,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorPersonaType {
+    NewUser,
+    ReturningUser,
+    PowerUser,
+    MobileUser,
+    Reader,
+    Viewer,
+    Buyer,
+    OperatorDefined,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorStrictness {
+    ObserveOnly,
+    Assistive,
+    Realistic,
+    StressTest,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorDistribution {
+    Uniform,
+    Normal,
+    LogNormal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorPointerPathStyle {
+    Direct,
+    Curved,
+    Hesitant,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorClickOffsetPolicy {
+    CenterBiased,
+    AreaWeighted,
+    OperatorDefined,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorMoveSpeedProfile {
+    Slow,
+    Normal,
+    Fast,
+    Variable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorTypingMode {
+    SetValue,
+    HumanType,
+    Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorCorrectionPolicy {
+    Backspace,
+    SelectAllRewrite,
+    None,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorBudgetExceededAction {
+    Pause,
+    Fail,
+    ManualApproval,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BehaviorEvidenceExportFormat {
+    Json,
+    JsonAndMarkdown,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorTimedRange {
+    pub min: u64,
+    pub max: u64,
+    pub distribution: BehaviorDistribution,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BehaviorCountRange {
+    pub min: u32,
+    pub max: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorProbabilityTimedRange {
+    pub min: u64,
+    pub max: u64,
+    pub probability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BehaviorDwellRange {
+    pub min: u64,
+    pub max: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorScrollChunkRange {
+    pub min: i64,
+    pub max: i64,
+    pub distribution: BehaviorDistribution,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorVideoWatchPolicy {
+    pub min_ratio: f64,
+    pub max_ratio: f64,
+    pub skip_probability: f64,
+    pub replay_probability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BehaviorActionRateCap {
+    pub action_type: String,
+    pub max_per_minute: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BehaviorCooldownWindow {
+    pub action_type: String,
+    pub min_ms: u64,
+    pub max_ms: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BehaviorSessionDuration {
+    pub min: u64,
+    pub max: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorTimingPolicy {
+    pub reaction_time_ms: BehaviorTimedRange,
+    pub between_actions_ms: BehaviorTimedRange,
+    pub burst_action_count: BehaviorCountRange,
+    pub burst_cooldown_ms: BehaviorProbabilityTimedRange,
+    pub long_pause_ms: BehaviorProbabilityTimedRange,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_actions_per_minute: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorPointerPolicy {
+    pub path_style: BehaviorPointerPathStyle,
+    pub click_offset_policy: BehaviorClickOffsetPolicy,
+    pub hover_before_click_probability: f64,
+    pub dwell_before_click_ms: BehaviorDwellRange,
+    pub overshoot_probability: f64,
+    pub move_speed_profile: BehaviorMoveSpeedProfile,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorTypingPolicy {
+    pub mode: BehaviorTypingMode,
+    pub key_delay_ms: BehaviorTimedRange,
+    pub word_pause_ms: BehaviorProbabilityTimedRange,
+    pub sentence_pause_ms: BehaviorProbabilityTimedRange,
+    pub typo_probability: f64,
+    pub correction_policy: BehaviorCorrectionPolicy,
+    pub paste_probability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorScrollPolicy {
+    pub scroll_chunk_px: BehaviorScrollChunkRange,
+    pub pause_between_scrolls_ms: BehaviorTimedRange,
+    pub backtrack_probability: f64,
+    pub read_dwell_per_100_words_ms: BehaviorDwellRange,
+    pub video_watch_policy: BehaviorVideoWatchPolicy,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorVelocityBudget {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub per_domain_actions_per_minute: Option<u32>,
+    #[serde(default)]
+    pub per_action_caps: Vec<BehaviorActionRateCap>,
+    #[serde(default)]
+    pub cooldown_windows: Vec<BehaviorCooldownWindow>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_duration_ms: Option<BehaviorSessionDuration>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub daily_action_budget: Option<u32>,
+    pub on_budget_exceeded: BehaviorBudgetExceededAction,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BehaviorEvidencePolicy {
+    pub timeline_enabled: bool,
+    pub screenshots_enabled: bool,
+    pub histograms_enabled: bool,
+    pub redact_sensitive_values: bool,
+    pub export_format: BehaviorEvidenceExportFormat,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BehaviorProfile {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_behavior_profile_name")]
+    pub profile_name: String,
+    #[serde(default = "default_behavior_persona_type")]
+    pub persona_type: BehaviorPersonaType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<String>,
+    #[serde(default = "default_behavior_strictness")]
+    pub strictness: BehaviorStrictness,
+    #[serde(default)]
+    pub account_ref: String,
+    #[serde(default)]
+    pub target_domains: Vec<String>,
+    #[serde(default = "default_behavior_timing")]
+    pub timing: BehaviorTimingPolicy,
+    #[serde(default = "default_behavior_pointer")]
+    pub pointer: BehaviorPointerPolicy,
+    #[serde(default = "default_behavior_typing")]
+    pub typing: BehaviorTypingPolicy,
+    #[serde(default = "default_behavior_scroll")]
+    pub scroll: BehaviorScrollPolicy,
+    #[serde(default = "default_behavior_velocity")]
+    pub velocity: BehaviorVelocityBudget,
+    #[serde(default = "default_behavior_evidence")]
+    pub evidence: BehaviorEvidencePolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -391,6 +646,8 @@ pub struct WorkflowSettings {
     pub execution: WorkflowSettingsExecution,
     #[serde(default = "default_browser")]
     pub browser: WorkflowSettingsBrowser,
+    #[serde(default = "default_behavior")]
+    pub behavior: BehaviorProfile,
     #[serde(default = "default_environment")]
     pub environment: WorkflowSettingsEnvironment,
     #[serde(default = "default_inputs")]
@@ -420,6 +677,7 @@ impl WorkflowSettings {
             },
             execution: default_execution(),
             browser: default_browser(),
+            behavior: default_behavior(),
             environment: default_environment(),
             inputs: default_inputs(),
             triggers: default_triggers(),
@@ -460,6 +718,7 @@ impl WorkflowSettings {
                 headless: self.browser.headless,
                 ..browser
             },
+            behavior: normalized_behavior(&self.behavior),
             environment: WorkflowSettingsEnvironment {
                 geolocation: self.environment.geolocation.clone(),
                 permissions: self
@@ -616,6 +875,8 @@ impl WorkflowSettings {
             ));
         }
 
+        validate_behavior_profile(&mut issues, &settings);
+
         if let Some(geolocation) = &settings.environment.geolocation {
             if !(-90.0..=90.0).contains(&geolocation.latitude) {
                 issues.push(SettingsValidationIssue::error(
@@ -718,6 +979,359 @@ impl WorkflowSettings {
     }
 }
 
+fn validate_behavior_profile(
+    issues: &mut Vec<SettingsValidationIssue>,
+    settings: &WorkflowSettings,
+) {
+    let behavior = &settings.behavior;
+    if !behavior.enabled {
+        return;
+    }
+
+    if behavior.profile_name.trim().is_empty() {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            "profile_name",
+            "Behavior profile name is required",
+        ));
+    }
+    if behavior
+        .seed
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .is_empty()
+    {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            "seed",
+            "Behavior Lab requires an explicit seed",
+        ));
+    }
+    if behavior.target_domains.is_empty() {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            "target_domains",
+            "Behavior Lab requires at least one target domain",
+        ));
+    }
+    for domain in &behavior.target_domains {
+        let domain = domain.trim();
+        if domain.is_empty() || domain.contains("://") || domain.contains('*') {
+            issues.push(SettingsValidationIssue::error(
+                WorkflowSettingsSection::Behavior,
+                "target_domains",
+                "Behavior target domains must be explicit hostnames without scheme or wildcard",
+            ));
+            break;
+        }
+    }
+
+    if behavior.account_ref.trim().is_empty() {
+        let message = "Behavior Lab requires an account label outside observe-only mode";
+        if behavior.strictness == BehaviorStrictness::ObserveOnly {
+            issues.push(SettingsValidationIssue::warning(
+                WorkflowSettingsSection::Behavior,
+                "account_ref",
+                message,
+            ));
+        } else {
+            issues.push(SettingsValidationIssue::error(
+                WorkflowSettingsSection::Behavior,
+                "account_ref",
+                message,
+            ));
+        }
+    }
+
+    if settings.browser.challenge_policy == WorkflowBrowserChallengePolicy::None {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Browser,
+            "challenge_policy",
+            "Behavior Lab requires challenge detection or pause-for-human handling",
+        ));
+    }
+
+    validate_timed_range(
+        issues,
+        "timing.reaction_time_ms",
+        "Behavior reaction time maximum must be greater than or equal to minimum",
+        &behavior.timing.reaction_time_ms,
+    );
+    validate_timed_range(
+        issues,
+        "timing.between_actions_ms",
+        "Behavior between-actions maximum must be greater than or equal to minimum",
+        &behavior.timing.between_actions_ms,
+    );
+    validate_count_range(
+        issues,
+        "timing.burst_action_count",
+        "Behavior burst action maximum must be greater than or equal to minimum",
+        behavior.timing.burst_action_count.min,
+        behavior.timing.burst_action_count.max,
+    );
+    validate_probability_timed_range(
+        issues,
+        "timing.burst_cooldown_ms",
+        "Behavior burst cooldown maximum must be greater than or equal to minimum",
+        &behavior.timing.burst_cooldown_ms,
+    );
+    validate_probability_timed_range(
+        issues,
+        "timing.long_pause_ms",
+        "Behavior long pause maximum must be greater than or equal to minimum",
+        &behavior.timing.long_pause_ms,
+    );
+    validate_optional_positive_u32(
+        issues,
+        "timing.max_actions_per_minute",
+        "Behavior max actions per minute must be greater than 0",
+        behavior.timing.max_actions_per_minute,
+    );
+
+    validate_probability(
+        issues,
+        "pointer.hover_before_click_probability",
+        "Behavior hover probability must be between 0 and 1",
+        behavior.pointer.hover_before_click_probability,
+    );
+    validate_probability(
+        issues,
+        "pointer.overshoot_probability",
+        "Behavior overshoot probability must be between 0 and 1",
+        behavior.pointer.overshoot_probability,
+    );
+    validate_u64_range(
+        issues,
+        "pointer.dwell_before_click_ms",
+        "Behavior click dwell maximum must be greater than or equal to minimum",
+        behavior.pointer.dwell_before_click_ms.min,
+        behavior.pointer.dwell_before_click_ms.max,
+    );
+
+    validate_timed_range(
+        issues,
+        "typing.key_delay_ms",
+        "Behavior key delay maximum must be greater than or equal to minimum",
+        &behavior.typing.key_delay_ms,
+    );
+    validate_probability_timed_range(
+        issues,
+        "typing.word_pause_ms",
+        "Behavior word pause maximum must be greater than or equal to minimum",
+        &behavior.typing.word_pause_ms,
+    );
+    validate_probability_timed_range(
+        issues,
+        "typing.sentence_pause_ms",
+        "Behavior sentence pause maximum must be greater than or equal to minimum",
+        &behavior.typing.sentence_pause_ms,
+    );
+    validate_probability(
+        issues,
+        "typing.typo_probability",
+        "Behavior typo probability must be between 0 and 1",
+        behavior.typing.typo_probability,
+    );
+    validate_probability(
+        issues,
+        "typing.paste_probability",
+        "Behavior paste probability must be between 0 and 1",
+        behavior.typing.paste_probability,
+    );
+
+    if behavior.scroll.scroll_chunk_px.max < behavior.scroll.scroll_chunk_px.min {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            "scroll.scroll_chunk_px",
+            "Behavior scroll chunk maximum must be greater than or equal to minimum",
+        ));
+    }
+    validate_timed_range(
+        issues,
+        "scroll.pause_between_scrolls_ms",
+        "Behavior scroll pause maximum must be greater than or equal to minimum",
+        &behavior.scroll.pause_between_scrolls_ms,
+    );
+    validate_probability(
+        issues,
+        "scroll.backtrack_probability",
+        "Behavior scroll backtrack probability must be between 0 and 1",
+        behavior.scroll.backtrack_probability,
+    );
+    validate_u64_range(
+        issues,
+        "scroll.read_dwell_per_100_words_ms",
+        "Behavior read dwell maximum must be greater than or equal to minimum",
+        behavior.scroll.read_dwell_per_100_words_ms.min,
+        behavior.scroll.read_dwell_per_100_words_ms.max,
+    );
+    validate_ratio_range(
+        issues,
+        "scroll.video_watch_policy",
+        "Behavior video watch ratio must be between 0 and 1 with max greater than or equal to min",
+        behavior.scroll.video_watch_policy.min_ratio,
+        behavior.scroll.video_watch_policy.max_ratio,
+    );
+    validate_probability(
+        issues,
+        "scroll.video_watch_policy.skip_probability",
+        "Behavior video skip probability must be between 0 and 1",
+        behavior.scroll.video_watch_policy.skip_probability,
+    );
+    validate_probability(
+        issues,
+        "scroll.video_watch_policy.replay_probability",
+        "Behavior video replay probability must be between 0 and 1",
+        behavior.scroll.video_watch_policy.replay_probability,
+    );
+
+    validate_optional_positive_u32(
+        issues,
+        "velocity.per_domain_actions_per_minute",
+        "Behavior per-domain action budget must be greater than 0",
+        behavior.velocity.per_domain_actions_per_minute,
+    );
+    validate_optional_positive_u32(
+        issues,
+        "velocity.daily_action_budget",
+        "Behavior daily action budget must be greater than 0",
+        behavior.velocity.daily_action_budget,
+    );
+    for cap in &behavior.velocity.per_action_caps {
+        if cap.action_type.trim().is_empty() || cap.max_per_minute == 0 {
+            issues.push(SettingsValidationIssue::error(
+                WorkflowSettingsSection::Behavior,
+                "velocity.per_action_caps",
+                "Behavior per-action caps require an action type and positive max per minute",
+            ));
+            break;
+        }
+    }
+    for window in &behavior.velocity.cooldown_windows {
+        if window.action_type.trim().is_empty() || window.max_ms < window.min_ms {
+            issues.push(SettingsValidationIssue::error(
+                WorkflowSettingsSection::Behavior,
+                "velocity.cooldown_windows",
+                "Behavior cooldown windows require an action type and valid min/max milliseconds",
+            ));
+            break;
+        }
+    }
+    if let Some(session_duration) = &behavior.velocity.session_duration_ms {
+        validate_u64_range(
+            issues,
+            "velocity.session_duration_ms",
+            "Behavior session duration maximum must be greater than or equal to minimum",
+            session_duration.min,
+            session_duration.max,
+        );
+    }
+}
+
+fn validate_timed_range(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    range: &BehaviorTimedRange,
+) {
+    validate_u64_range(issues, field, message, range.min, range.max);
+}
+
+fn validate_probability_timed_range(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    range: &BehaviorProbabilityTimedRange,
+) {
+    validate_u64_range(issues, field, message, range.min, range.max);
+    validate_probability(
+        issues,
+        field,
+        "Behavior probability must be between 0 and 1",
+        range.probability,
+    );
+}
+
+fn validate_count_range(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    min: u32,
+    max: u32,
+) {
+    if max < min {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            field,
+            message,
+        ));
+    }
+}
+
+fn validate_u64_range(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    min: u64,
+    max: u64,
+) {
+    if max < min {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            field,
+            message,
+        ));
+    }
+}
+
+fn validate_ratio_range(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    min: f64,
+    max: f64,
+) {
+    if !(0.0..=1.0).contains(&min) || !(0.0..=1.0).contains(&max) || max < min {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            field,
+            message,
+        ));
+    }
+}
+
+fn validate_probability(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    probability: f64,
+) {
+    if !(0.0..=1.0).contains(&probability) {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            field,
+            message,
+        ));
+    }
+}
+
+fn validate_optional_positive_u32(
+    issues: &mut Vec<SettingsValidationIssue>,
+    field: &str,
+    message: &str,
+    value: Option<u32>,
+) {
+    if value == Some(0) {
+        issues.push(SettingsValidationIssue::error(
+            WorkflowSettingsSection::Behavior,
+            field,
+            message,
+        ));
+    }
+}
+
 fn validate_input_default(
     issues: &mut Vec<SettingsValidationIssue>,
     value_type: WorkflowInputValueType,
@@ -802,6 +1416,7 @@ fn section_field_prefix(section: WorkflowSettingsSection) -> &'static str {
         WorkflowSettingsSection::General => "general",
         WorkflowSettingsSection::Execution => "execution",
         WorkflowSettingsSection::Browser => "browser",
+        WorkflowSettingsSection::Behavior => "behavior",
         WorkflowSettingsSection::Environment => "environment",
         WorkflowSettingsSection::Inputs => "inputs",
         WorkflowSettingsSection::Triggers => "triggers",
@@ -871,6 +1486,191 @@ fn default_browser() -> WorkflowSettingsBrowser {
         touch: false,
         challenge_policy: WorkflowBrowserChallengePolicy::None,
         headless: false,
+    }
+}
+
+fn default_behavior_profile_name() -> String {
+    "Default behavior profile".to_string()
+}
+
+fn default_behavior_persona_type() -> BehaviorPersonaType {
+    BehaviorPersonaType::ReturningUser
+}
+
+fn default_behavior_strictness() -> BehaviorStrictness {
+    BehaviorStrictness::ObserveOnly
+}
+
+fn default_behavior() -> BehaviorProfile {
+    BehaviorProfile {
+        enabled: false,
+        profile_name: default_behavior_profile_name(),
+        persona_type: default_behavior_persona_type(),
+        seed: None,
+        strictness: default_behavior_strictness(),
+        account_ref: String::new(),
+        target_domains: Vec::new(),
+        timing: default_behavior_timing(),
+        pointer: default_behavior_pointer(),
+        typing: default_behavior_typing(),
+        scroll: default_behavior_scroll(),
+        velocity: default_behavior_velocity(),
+        evidence: default_behavior_evidence(),
+    }
+}
+
+fn default_behavior_timing() -> BehaviorTimingPolicy {
+    BehaviorTimingPolicy {
+        reaction_time_ms: BehaviorTimedRange {
+            min: 250,
+            max: 900,
+            distribution: BehaviorDistribution::LogNormal,
+        },
+        between_actions_ms: BehaviorTimedRange {
+            min: 400,
+            max: 1600,
+            distribution: BehaviorDistribution::LogNormal,
+        },
+        burst_action_count: BehaviorCountRange { min: 2, max: 5 },
+        burst_cooldown_ms: BehaviorProbabilityTimedRange {
+            min: 1500,
+            max: 5000,
+            probability: 0.2,
+        },
+        long_pause_ms: BehaviorProbabilityTimedRange {
+            min: 8000,
+            max: 30000,
+            probability: 0.05,
+        },
+        max_actions_per_minute: Some(30),
+    }
+}
+
+fn default_behavior_pointer() -> BehaviorPointerPolicy {
+    BehaviorPointerPolicy {
+        path_style: BehaviorPointerPathStyle::Curved,
+        click_offset_policy: BehaviorClickOffsetPolicy::CenterBiased,
+        hover_before_click_probability: 0.35,
+        dwell_before_click_ms: BehaviorDwellRange { min: 120, max: 700 },
+        overshoot_probability: 0.05,
+        move_speed_profile: BehaviorMoveSpeedProfile::Variable,
+    }
+}
+
+fn default_behavior_typing() -> BehaviorTypingPolicy {
+    BehaviorTypingPolicy {
+        mode: BehaviorTypingMode::Mixed,
+        key_delay_ms: BehaviorTimedRange {
+            min: 35,
+            max: 180,
+            distribution: BehaviorDistribution::LogNormal,
+        },
+        word_pause_ms: BehaviorProbabilityTimedRange {
+            min: 180,
+            max: 750,
+            probability: 0.25,
+        },
+        sentence_pause_ms: BehaviorProbabilityTimedRange {
+            min: 500,
+            max: 1600,
+            probability: 0.15,
+        },
+        typo_probability: 0.01,
+        correction_policy: BehaviorCorrectionPolicy::Backspace,
+        paste_probability: 0.05,
+    }
+}
+
+fn default_behavior_scroll() -> BehaviorScrollPolicy {
+    BehaviorScrollPolicy {
+        scroll_chunk_px: BehaviorScrollChunkRange {
+            min: 180,
+            max: 900,
+            distribution: BehaviorDistribution::LogNormal,
+        },
+        pause_between_scrolls_ms: BehaviorTimedRange {
+            min: 250,
+            max: 1800,
+            distribution: BehaviorDistribution::LogNormal,
+        },
+        backtrack_probability: 0.08,
+        read_dwell_per_100_words_ms: BehaviorDwellRange {
+            min: 800,
+            max: 4500,
+        },
+        video_watch_policy: BehaviorVideoWatchPolicy {
+            min_ratio: 0.35,
+            max_ratio: 0.9,
+            skip_probability: 0.15,
+            replay_probability: 0.03,
+        },
+    }
+}
+
+fn default_behavior_velocity() -> BehaviorVelocityBudget {
+    BehaviorVelocityBudget {
+        per_domain_actions_per_minute: Some(30),
+        per_action_caps: Vec::new(),
+        cooldown_windows: Vec::new(),
+        session_duration_ms: None,
+        daily_action_budget: None,
+        on_budget_exceeded: BehaviorBudgetExceededAction::Fail,
+    }
+}
+
+fn default_behavior_evidence() -> BehaviorEvidencePolicy {
+    BehaviorEvidencePolicy {
+        timeline_enabled: true,
+        screenshots_enabled: false,
+        histograms_enabled: true,
+        redact_sensitive_values: true,
+        export_format: BehaviorEvidenceExportFormat::Json,
+    }
+}
+
+fn normalized_behavior(behavior: &BehaviorProfile) -> BehaviorProfile {
+    let mut seen_domains = BTreeSet::new();
+    BehaviorProfile {
+        enabled: behavior.enabled,
+        profile_name: behavior.profile_name.trim().to_string(),
+        persona_type: behavior.persona_type,
+        seed: trimmed_option(&behavior.seed),
+        strictness: behavior.strictness,
+        account_ref: behavior.account_ref.trim().to_string(),
+        target_domains: behavior
+            .target_domains
+            .iter()
+            .map(|domain| domain.trim().to_ascii_lowercase())
+            .filter(|domain| !domain.is_empty())
+            .filter(|domain| seen_domains.insert(domain.clone()))
+            .collect(),
+        timing: behavior.timing.clone(),
+        pointer: behavior.pointer.clone(),
+        typing: behavior.typing.clone(),
+        scroll: behavior.scroll.clone(),
+        velocity: BehaviorVelocityBudget {
+            per_action_caps: behavior
+                .velocity
+                .per_action_caps
+                .iter()
+                .map(|cap| BehaviorActionRateCap {
+                    action_type: cap.action_type.trim().to_string(),
+                    max_per_minute: cap.max_per_minute,
+                })
+                .collect(),
+            cooldown_windows: behavior
+                .velocity
+                .cooldown_windows
+                .iter()
+                .map(|window| BehaviorCooldownWindow {
+                    action_type: window.action_type.trim().to_string(),
+                    min_ms: window.min_ms,
+                    max_ms: window.max_ms,
+                })
+                .collect(),
+            ..behavior.velocity.clone()
+        },
+        evidence: behavior.evidence.clone(),
     }
 }
 

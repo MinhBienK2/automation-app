@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
+  BehaviorPersonaType,
+  BehaviorProfile,
+  BehaviorStrictness,
   VariableAssignment,
   WorkflowBrowserChallengePolicy,
   WorkflowDebugLoggingLevel,
@@ -184,6 +187,12 @@ export function WorkflowSettingsDialog({
                 <BrowserSettingsSection
                   value={settings.browser}
                   onChange={(value) => updateSection("browser", value)}
+                />
+              ) : null}
+              {activeSection === "behavior" ? (
+                <BehaviorSettingsSection
+                  value={settings.behavior}
+                  onChange={(value) => updateSection("behavior", value)}
                 />
               ) : null}
               {activeSection === "environment" ? (
@@ -752,6 +761,206 @@ function BrowserSettingsSection({
           onChange={(checked) => onChange({ ...value, headless: checked })}
         />
       </div>
+    </div>
+  );
+}
+
+function BehaviorSettingsSection({
+  value,
+  onChange,
+}: {
+  value: BehaviorProfile;
+  onChange: (value: BehaviorProfile) => void;
+}) {
+  const updateTiming = (patch: Partial<BehaviorProfile["timing"]>) => {
+    onChange({ ...value, timing: { ...value.timing, ...patch } });
+  };
+  const updateEvidence = (patch: Partial<BehaviorProfile["evidence"]>) => {
+    onChange({ ...value, evidence: { ...value.evidence, ...patch } });
+  };
+
+  return (
+    <div className="workflow-settings-form">
+      <fieldset className="workflow-settings-fieldset">
+        <legend>Behavior Lab</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-two">
+          <ToggleField
+            id="behavior-enabled"
+            label="Enable Behavior Lab"
+            checked={value.enabled}
+            onChange={(checked) => onChange({ ...value, enabled: checked })}
+          />
+          <Label htmlFor="behavior-profile-name">
+            Profile name
+            <Input
+              id="behavior-profile-name"
+              value={value.profile_name}
+              onChange={(event) =>
+                onChange({ ...value, profile_name: event.currentTarget.value })
+              }
+            />
+          </Label>
+          <Label htmlFor="behavior-persona">
+            Persona
+            <Select
+              id="behavior-persona"
+              value={value.persona_type}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  persona_type: event.currentTarget.value as BehaviorPersonaType,
+                })
+              }
+            >
+              <option value="new_user">New user</option>
+              <option value="returning_user">Returning user</option>
+              <option value="power_user">Power user</option>
+              <option value="mobile_user">Mobile user</option>
+              <option value="reader">Reader</option>
+              <option value="viewer">Viewer</option>
+              <option value="buyer">Buyer</option>
+              <option value="operator_defined">Operator defined</option>
+            </Select>
+          </Label>
+          <Label htmlFor="behavior-strictness">
+            Strictness
+            <Select
+              id="behavior-strictness"
+              value={value.strictness}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  strictness: event.currentTarget.value as BehaviorStrictness,
+                })
+              }
+            >
+              <option value="observe_only">Observe only</option>
+              <option value="assistive">Assistive</option>
+              <option value="realistic">Realistic</option>
+              <option value="stress_test">Stress test</option>
+            </Select>
+          </Label>
+        </div>
+      </fieldset>
+
+      <fieldset className="workflow-settings-fieldset">
+        <legend>Audit guardrails</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-three">
+          <Label htmlFor="behavior-account-ref">
+            Account label
+            <Input
+              id="behavior-account-ref"
+              placeholder="qa-buyer-01"
+              value={value.account_ref}
+              onChange={(event) =>
+                onChange({ ...value, account_ref: event.currentTarget.value })
+              }
+            />
+          </Label>
+          <Label htmlFor="behavior-target-domains">
+            Target domains
+            <Input
+              id="behavior-target-domains"
+              placeholder="example.com, staging.example.com"
+              value={value.target_domains.join(", ")}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  target_domains: commaList(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label htmlFor="behavior-seed">
+            Seed
+            <Input
+              id="behavior-seed"
+              placeholder="repeatable-seed"
+              value={value.seed ?? ""}
+              onChange={(event) =>
+                onChange({ ...value, seed: nullableText(event.currentTarget.value) })
+              }
+            />
+          </Label>
+        </div>
+      </fieldset>
+
+      <fieldset className="workflow-settings-fieldset">
+        <legend>Timing and velocity</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-three">
+          <NumberField
+            id="behavior-reaction-min"
+            label="Reaction min ms"
+            value={value.timing.reaction_time_ms.min}
+            onChange={(next) =>
+              updateTiming({
+                reaction_time_ms: {
+                  ...value.timing.reaction_time_ms,
+                  min: next ?? 0,
+                },
+              })
+            }
+          />
+          <NumberField
+            id="behavior-reaction-max"
+            label="Reaction max ms"
+            value={value.timing.reaction_time_ms.max}
+            onChange={(next) =>
+              updateTiming({
+                reaction_time_ms: {
+                  ...value.timing.reaction_time_ms,
+                  max: next ?? 0,
+                },
+              })
+            }
+          />
+          <NumberField
+            id="behavior-actions-per-minute"
+            label="Max actions per minute"
+            value={value.timing.max_actions_per_minute}
+            onChange={(next) => updateTiming({ max_actions_per_minute: next })}
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className="workflow-settings-fieldset">
+        <legend>Evidence</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-three">
+          <ToggleField
+            id="behavior-evidence-timeline"
+            label="Evidence logging"
+            checked={value.evidence.timeline_enabled}
+            onChange={(checked) => updateEvidence({ timeline_enabled: checked })}
+          />
+          <ToggleField
+            id="behavior-evidence-histograms"
+            label="Histograms"
+            checked={value.evidence.histograms_enabled}
+            onChange={(checked) => updateEvidence({ histograms_enabled: checked })}
+          />
+          <ToggleField
+            id="behavior-evidence-redaction"
+            label="Redact sensitive values"
+            checked={value.evidence.redact_sensitive_values}
+            onChange={(checked) => updateEvidence({ redact_sensitive_values: checked })}
+          />
+          <Label htmlFor="behavior-report-format">
+            Report format
+            <Select
+              id="behavior-report-format"
+              value={value.evidence.export_format}
+              onChange={(event) =>
+                updateEvidence({
+                  export_format: event.currentTarget.value as BehaviorProfile["evidence"]["export_format"],
+                })
+              }
+            >
+              <option value="json">JSON</option>
+              <option value="json_and_markdown">JSON and Markdown</option>
+            </Select>
+          </Label>
+        </div>
+      </fieldset>
     </div>
   );
 }

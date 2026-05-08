@@ -19,7 +19,7 @@ Frontend and backend must agree on:
 - `Workflow`: `id`, `name`, `created_at`, `updated_at`.
 - `WorkflowStep`: legacy/internal step row shape used by import/export compatibility and compiled graph runner adapters.
 - `WorkflowDetail`: currently `workflow`, `steps` for compatibility, while the product UI loads graph authoring data through `get_workflow_graph`.
-- `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `execution`, `browser`, `environment`, `inputs`, `triggers`, and `advanced` sections.
+- `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `execution`, `browser`, `behavior`, `environment`, `inputs`, `triggers`, and `advanced` sections.
 - `WorkflowBrowserConfig`: legacy compatibility shape loaded through `get_workflow_browser_config`; command handlers map it to `WorkflowSettings.browser`.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
@@ -78,6 +78,28 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
     output_retention_days
   },
   browser: WorkflowBrowserConfig without workflow_id plus headless,
+  behavior: {
+    enabled,
+    profile_name,
+    persona_type,
+    seed,
+    strictness,
+    account_ref,
+    target_domains,
+    timing: {
+      reaction_time_ms,
+      between_actions_ms,
+      burst_action_count,
+      burst_cooldown_ms,
+      long_pause_ms,
+      max_actions_per_minute
+    },
+    pointer,
+    typing,
+    scroll,
+    velocity,
+    evidence
+  },
   environment: {
     geolocation,
     permissions,
@@ -111,6 +133,8 @@ Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
 
+Behavior settings serialize the Behavioral Analytics Lab profile. When `behavior.enabled` is true, backend validation requires `seed`, at least one explicit `target_domains` host, and Browser `challenge_policy` set to `detect_only` or `pause_for_human`. `account_ref` is a warning in `observe_only` and an error in `assistive`, `realistic`, or `stress_test`. Terminal run outputs include `behavior_report` with timeline events, summary score, severity, anomaly codes, profile name, account label, target domains, and seed.
+
 The UI labels the persisted `inputs` section as Variables and currently edits only `initial_variables`. `input_schema` and `batch_mapping` remain in the contract for saved-data compatibility.
 
 ## Workflow Package Shape
@@ -122,13 +146,14 @@ Workflow Package v2 is the current user-facing import/export format. It is graph
   kind: "workflow_package",
   version: 2,
   workflow: { name },
-  included_sections: ["flow", "settings.general"],
+  included_sections: ["flow", "settings.general", "settings.behavior"],
   omitted_fields: ["settings.browser.proxy_password"],
   flow: WorkflowGraph | null,
   settings: {
     general,
     execution,
     browser,
+    behavior,
     environment,
     inputs,
     triggers,
