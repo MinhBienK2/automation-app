@@ -103,6 +103,50 @@ function createStreamingRunnerScript() {
   };
 }
 
+function createIgnoringCancelRunnerScript() {
+  const directory = mkdtempSync(path.join(tmpdir(), "cloak-runner-ignore-cancel-"));
+  const runnerEntry = path.join(directory, "runner.mjs");
+  writeFileSync(
+    runnerEntry,
+    `
+      import readline from "node:readline";
+
+      const lines = readline.createInterface({
+        input: process.stdin,
+        crlfDelay: Number.POSITIVE_INFINITY,
+      });
+
+      function send(message) {
+        process.stdout.write(JSON.stringify(message) + "\\n");
+      }
+
+      lines.on("line", (line) => {
+        const message = JSON.parse(line);
+        if (message.type === "healthCheck") {
+          send({
+            id: message.id,
+            ok: true,
+            payload: {
+              protocolVersion: 1,
+              ok: true,
+              capabilities: { actions: [], transport: "stdio-jsonl", browserEngine: "cloakbrowser" }
+            }
+          });
+          return;
+        }
+        if (message.type === "cancelRun") {
+          return;
+        }
+      });
+    `,
+  );
+
+  return {
+    runnerEntry,
+    dispose: () => rmSync(directory, { recursive: true, force: true }),
+  };
+}
+
 describe("RunnerSupervisor", () => {
   test("spawns the local runner process and completes the health handshake", async () => {
     const supervisor = createRunnerSupervisor({
@@ -137,6 +181,26 @@ describe("RunnerSupervisor", () => {
 
       expect(result).toEqual({ runId: "run_process_1", status: "completed" });
       expect(events.map((event) => event.type)).toEqual(["run.started", "run.completed"]);
+    } finally {
+      await supervisor.shutdown();
+      script.dispose();
+    }
+  });
+
+  test("kills and restarts the runner when cancelRun does not respond", async () => {
+    const script = createIgnoringCancelRunnerScript();
+    const supervisor = createRunnerSupervisor({
+      runnerEntry: script.runnerEntry,
+      requestTimeoutMs: 200,
+    });
+
+    try {
+      await expect(supervisor.cancelRun({ runId: "run_1" })).rejects.toThrow(
+        "Runner request 'cancelRun' timed out.",
+      );
+      await expect(supervisor.healthCheck()).resolves.toMatchObject({
+        ok: true,
+      });
     } finally {
       await supervisor.shutdown();
       script.dispose();

@@ -15,6 +15,7 @@ export type RunnerHealth = {
 
 type RunnerSupervisorOptions = {
   runnerEntry: string;
+  requestTimeoutMs?: number;
 };
 
 type PendingRequest<T> = {
@@ -40,16 +41,17 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
   function ensureStarted() {
     if (child && !child.killed) return;
 
-    child = spawn(process.execPath, [path.resolve(options.runnerEntry)], {
+    const spawnedChild = spawn(process.execPath, [path.resolve(options.runnerEntry)], {
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
         ELECTRON_CLOAK_RUNNER: "1",
       },
     });
+    child = spawnedChild;
 
-    child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
+    spawnedChild.stdout.setEncoding("utf8");
+    spawnedChild.stdout.on("data", (chunk: string) => {
       stdoutBuffer += chunk;
       let newlineIndex = stdoutBuffer.indexOf("\n");
       while (newlineIndex >= 0) {
@@ -62,7 +64,8 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
       }
     });
 
-    child.on("exit", (code, signal) => {
+    spawnedChild.on("exit", (code, signal) => {
+      if (child !== spawnedChild) return;
       const error = new Error(`Runner exited before response (code=${code ?? "null"}, signal=${signal ?? "null"}).`);
       for (const request of pending.values()) {
         clearTimeout(request.timeout);
@@ -115,7 +118,7 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
       const timeout = setTimeout(() => {
         pending.delete(requestId);
         reject(new Error(`Runner request '${type}' timed out.`));
-      }, 5_000);
+      }, options.requestTimeoutMs ?? 5_000);
 
       pending.set(requestId, {
         resolve: resolve as PendingRequest<unknown>["resolve"],
@@ -136,8 +139,14 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
       return request<RunnerResult>("startRun", payload as unknown as Record<string, unknown>, onEvent);
     },
 
-    cancelRun(input: { runId: string }) {
-      return request<{ ok: true }>("cancelRun", input);
+    async cancelRun(input: { runId: string }) {
+      try {
+        return await request<{ ok: true }>("cancelRun", input);
+      } catch (error) {
+        child?.kill();
+        child = null;
+        throw error;
+      }
     },
 
     async shutdown() {
