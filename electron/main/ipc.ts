@@ -62,6 +62,9 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
     api.profiles.checkAvailability(input),
   );
 
+  ipcMain.handle("evidence.getRunSummary", (_event, input: { runId: string }) =>
+    api.evidence.getRunSummary(input),
+  );
   ipcMain.handle("evidence.listEvents", (_event, input: { runId: string }) =>
     api.evidence.listEvents(input),
   );

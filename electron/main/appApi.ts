@@ -893,6 +893,10 @@ export function createAppApi(options: AppApiOptions) {
     },
 
     evidence: {
+      async getRunSummary(input: { runId: string }) {
+        return options.storage.getRun(input.runId);
+      },
+
       async listEvents(input: { runId: string }) {
         return options.storage.listRunEvents(input.runId);
       },

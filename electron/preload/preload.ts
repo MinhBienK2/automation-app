@@ -52,6 +52,7 @@ const api = {
       ipcRenderer.invoke("profile.checkAvailability", input),
   },
   evidence: {
+    getRunSummary: (input: { runId: string }) => ipcRenderer.invoke("evidence.getRunSummary", input),
     listEvents: (input: { runId: string }) => ipcRenderer.invoke("evidence.listEvents", input),
     listArtifacts: (input: { runId: string }) =>
       ipcRenderer.invoke("evidence.listArtifacts", input),

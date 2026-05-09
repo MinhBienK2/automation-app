@@ -91,6 +91,7 @@ type ElectronCloakBrowserApi = {
     checkAvailability?: (input: { id: string }) => Promise<IdentityProfileAvailability>;
   };
   evidence?: {
+    getRunSummary?: (input: { runId: string }) => Promise<RunHistoryRecord>;
     listEvents?: (input: { runId: string }) => Promise<RunEvidenceEvent[]>;
     listArtifacts?: (input: { runId: string }) => Promise<RunEvidenceArtifact[]>;
     exportRun?: (input: { runId: string }) => Promise<RunEvidenceExport>;

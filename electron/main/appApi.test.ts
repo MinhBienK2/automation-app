@@ -223,6 +223,11 @@ describe("Electron app API", () => {
     await expect(api.evidence.listEvents({ runId: run.id })).resolves.toEqual([
       expect.objectContaining({ type: "run.started" }),
     ]);
+    await expect(api.evidence.getRunSummary({ runId: run.id })).resolves.toMatchObject({
+      id: run.id,
+      workflowId: workflow.id,
+      status: "running",
+    });
     await expect(api.evidence.listArtifacts({ runId: run.id })).resolves.toEqual([]);
     await expect(api.evidence.exportRun({ runId: run.id })).resolves.toMatchObject({
       evidence: [

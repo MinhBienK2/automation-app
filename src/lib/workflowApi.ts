@@ -263,6 +263,12 @@ export function checkIdentityProfileAvailability(id: string) {
   return invoke<IdentityProfileAvailability>("check_identity_profile_availability", { id });
 }
 
+export function getRunEvidenceSummary(runId: string) {
+  const api = electronApi();
+  if (api?.evidence?.getRunSummary) return api.evidence.getRunSummary({ runId });
+  return invoke<RunHistoryRecord>("get_run_evidence_summary", { runId });
+}
+
 export function listRunEvidenceEvents(runId: string) {
   const api = electronApi();
   if (api?.evidence?.listEvents) return api.evidence.listEvents({ runId });

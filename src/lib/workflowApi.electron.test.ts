@@ -7,6 +7,7 @@ import {
   getWorkflowDefaults,
   getWorkflowSettings,
   checkIdentityProfileAvailability,
+  getRunEvidenceSummary,
   listEnvironments,
   listRunProfiles,
   listWorkflows,
@@ -81,6 +82,11 @@ describe("workflowApi Electron bridge", () => {
         }),
       },
       evidence: {
+        getRunSummary: vi.fn().mockResolvedValue({
+          id: "run_1",
+          workflowId: "wf_2",
+          status: "completed",
+        }),
         exportRun: vi.fn().mockResolvedValue({
           runId: "run_1",
           events: [],
@@ -149,6 +155,11 @@ describe("workflowApi Electron bridge", () => {
       locked: false,
       reason: null,
     });
+    await expect(getRunEvidenceSummary("run_1")).resolves.toEqual({
+      id: "run_1",
+      workflowId: "wf_2",
+      status: "completed",
+    });
     await expect(exportRunEvidence("run_1")).resolves.toEqual({
       runId: "run_1",
       events: [],
@@ -190,6 +201,7 @@ describe("workflowApi Electron bridge", () => {
     expect(api.runs.onEvent).toHaveBeenCalledTimes(1);
     expect(api.profiles.list).toHaveBeenCalledTimes(1);
     expect(api.profiles.checkAvailability).toHaveBeenCalledWith({ id: "idp_1" });
+    expect(api.evidence.getRunSummary).toHaveBeenCalledWith({ runId: "run_1" });
     expect(api.evidence.exportRun).toHaveBeenCalledWith({ runId: "run_1" });
     expect(api.policy.get).toHaveBeenCalledTimes(1);
     expect(api.policy.save).toHaveBeenCalledWith({
