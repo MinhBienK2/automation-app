@@ -219,4 +219,61 @@ describe("Electron storage service", () => {
 
     expect(storage.listIdentityProfiles()).toEqual([]);
   });
+
+  test("stores sanitized evidence records and exports a compact run evidence view", () => {
+    const workflow = storage.createWorkflow({ name: "Evidence test" });
+    const run = storage.createRun({
+      workflowId: workflow.id,
+      graphVersionId: storage.getActiveGraphVersion(workflow.id).id,
+      runProfileSnapshot: { timeoutMs: 30_000 },
+      identityProfileSnapshot: { id: "idp_1", name: "Owned profile" },
+      environmentSnapshot: {},
+      operatorLabel: "local",
+    });
+    storage.appendRunEvent(run.id, {
+      type: "preflight.verdictReceived",
+      severity: "info",
+      payload: { verdict: "passed" },
+    });
+
+    const evidence = storage.createEvidenceRecord({
+      runId: run.id,
+      evidenceType: "preflight_verdict",
+      payload: {
+        verdict: "passed",
+        proxy: {
+          label: "owned-egress",
+          password: "raw-password",
+          secretRef: "secret://proxy/owned",
+        },
+        headers: {
+          authorization: "Bearer raw-token",
+        },
+      },
+    });
+
+    expect(evidence.sanitizedPayload).toEqual({
+      verdict: "passed",
+      proxy: {
+        label: "owned-egress",
+        password: "[redacted]",
+        secretRef: "secret://proxy/owned",
+      },
+      headers: {
+        authorization: "[redacted]",
+      },
+    });
+    expect(storage.listEvidenceRecords(run.id)).toEqual([evidence]);
+    expect(storage.exportRunEvidence(run.id)).toMatchObject({
+      runId: run.id,
+      events: [expect.objectContaining({ type: "preflight.verdictReceived" })],
+      artifacts: [],
+      evidence: [
+        expect.objectContaining({
+          evidenceType: "preflight_verdict",
+          payload: evidence.sanitizedPayload,
+        }),
+      ],
+    });
+  });
 });

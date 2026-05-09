@@ -6,6 +6,9 @@ import type {
   IdentityProfile,
   IdentityProfileInput,
   IdentityProfileValidationIssue,
+  RunEvidenceArtifact,
+  RunEvidenceEvent,
+  RunEvidenceExport,
   RunValidationIssue,
   RunState,
   SettingsValidationIssue,
@@ -69,6 +72,14 @@ type ElectronCloakBrowserApi = {
     validate?: (input: {
       profile: IdentityProfile | IdentityProfileInput;
     }) => Promise<IdentityProfileValidationIssue[]>;
+  };
+  evidence?: {
+    listEvents?: (input: { runId: string }) => Promise<RunEvidenceEvent[]>;
+    listArtifacts?: (input: { runId: string }) => Promise<RunEvidenceArtifact[]>;
+    exportRun?: (input: { runId: string }) => Promise<RunEvidenceExport>;
+    sanitize?: (input: {
+      payload: Record<string, unknown>;
+    }) => Promise<Record<string, unknown>>;
   };
 };
 

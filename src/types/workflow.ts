@@ -1082,6 +1082,43 @@ export type IdentityProfileValidationIssue = {
   level: "error" | "warning";
 };
 
+export type RunEvidenceEvent = {
+  id: string;
+  runId: string;
+  sequence: number;
+  type: string;
+  severity: string;
+  nodeId: string | null;
+  actionId: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type RunEvidenceArtifact = {
+  id: string;
+  runId: string;
+  eventId?: string | null;
+  type: string;
+  relativePath: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksum: string;
+  sanitized: boolean;
+  createdAt: string;
+};
+
+export type RunEvidenceExport = {
+  runId: string;
+  events: RunEvidenceEvent[];
+  artifacts: RunEvidenceArtifact[];
+  evidence: Array<{
+    id: string;
+    evidenceType: string;
+    payload: Record<string, unknown>;
+    createdAt: string;
+  }>;
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;

@@ -11,6 +11,9 @@ import type {
   IdentityProfileValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
+  RunEvidenceArtifact,
+  RunEvidenceEvent,
+  RunEvidenceExport,
   RunValidationIssue,
   RunState,
   SelectorCandidate,
@@ -214,6 +217,30 @@ export function validateIdentityProfile(profile: IdentityProfile | IdentityProfi
   const api = electronApi();
   if (api?.profiles?.validate) return api.profiles.validate({ profile });
   return invoke<IdentityProfileValidationIssue[]>("validate_identity_profile", { profile });
+}
+
+export function listRunEvidenceEvents(runId: string) {
+  const api = electronApi();
+  if (api?.evidence?.listEvents) return api.evidence.listEvents({ runId });
+  return invoke<RunEvidenceEvent[]>("list_run_evidence_events", { runId });
+}
+
+export function listRunEvidenceArtifacts(runId: string) {
+  const api = electronApi();
+  if (api?.evidence?.listArtifacts) return api.evidence.listArtifacts({ runId });
+  return invoke<RunEvidenceArtifact[]>("list_run_evidence_artifacts", { runId });
+}
+
+export function exportRunEvidence(runId: string) {
+  const api = electronApi();
+  if (api?.evidence?.exportRun) return api.evidence.exportRun({ runId });
+  return invoke<RunEvidenceExport>("export_run_evidence", { runId });
+}
+
+export function sanitizeEvidencePayload(payload: Record<string, unknown>) {
+  const api = electronApi();
+  if (api?.evidence?.sanitize) return api.evidence.sanitize({ payload });
+  return invoke<Record<string, unknown>>("sanitize_evidence_payload", { payload });
 }
 
 export function validateSchedule(schedule: OrchestrationSchedule) {

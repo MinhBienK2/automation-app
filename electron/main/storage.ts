@@ -91,6 +91,36 @@ export type IdentityProfileValidationIssue = {
   level: "error" | "warning";
 };
 
+export type EvidenceRecordInput = {
+  runId: string;
+  evidenceType: string;
+  payload: Record<string, unknown>;
+  sanitizedPayload?: Record<string, unknown> | null;
+  exportable?: boolean;
+};
+
+export type EvidenceRecord = {
+  id: string;
+  runId: string;
+  evidenceType: string;
+  payload: Record<string, unknown>;
+  sanitizedPayload: Record<string, unknown> | null;
+  exportable: boolean;
+  createdAt: string;
+};
+
+export type RunEvidenceExport = {
+  runId: string;
+  events: RunEventRecord[];
+  artifacts: ArtifactRecord[];
+  evidence: Array<{
+    id: string;
+    evidenceType: string;
+    payload: Record<string, unknown>;
+    createdAt: string;
+  }>;
+};
+
 export type StorageService = ReturnType<typeof createStorageService>;
 
 type Row = Record<string, unknown>;
@@ -180,6 +210,57 @@ function identityProfileFromRow(row: Row): IdentityProfileRecord {
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
+}
+
+function evidenceRecordFromRow(row: Row): EvidenceRecord {
+  return {
+    id: String(row.id),
+    runId: String(row.run_id),
+    evidenceType: String(row.evidence_type),
+    payload: parseJson<Record<string, unknown>>(row.payload_json, {}),
+    sanitizedPayload:
+      typeof row.sanitized_payload_json === "string"
+        ? parseJson<Record<string, unknown>>(row.sanitized_payload_json, {})
+        : null,
+    exportable: Number(row.exportable) === 1,
+    createdAt: String(row.created_at),
+  };
+}
+
+const sensitiveEvidenceKeys = new Set([
+  "password",
+  "proxyPassword",
+  "rawPassword",
+  "token",
+  "accessToken",
+  "refreshToken",
+  "authorization",
+  "apiKey",
+  "cookie",
+  "cookies",
+  "localStorage",
+  "sessionStorage",
+]);
+
+function sanitizeEvidenceValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeEvidenceValue(item));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => [
+      key,
+      sensitiveEvidenceKeys.has(key) ? "[redacted]" : sanitizeEvidenceValue(nestedValue),
+    ]),
+  );
+}
+
+function sanitizeEvidencePayload(payload: Record<string, unknown>) {
+  return sanitizeEvidenceValue(payload) as Record<string, unknown>;
 }
 
 function hasRawProxySecret(proxyReference: Record<string, unknown>) {
@@ -879,6 +960,64 @@ export function createStorageService(options: StorageServiceOptions) {
       profile: IdentityProfileRecord | IdentityProfileInput,
     ): IdentityProfileValidationIssue[] {
       return validateIdentityProfileRecord(profile);
+    },
+
+    sanitizeEvidencePayload(payload: Record<string, unknown>) {
+      return sanitizeEvidencePayload(payload);
+    },
+
+    createEvidenceRecord(input: EvidenceRecordInput): EvidenceRecord {
+      const evidenceId = id("evd");
+      const timestamp = nowIso();
+      const sanitizedPayload = input.sanitizedPayload ?? sanitizeEvidencePayload(input.payload);
+      database()
+        .prepare(
+          `INSERT INTO evidence_records
+            (id, run_id, evidence_type, payload_json, sanitized_payload_json, exportable, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          evidenceId,
+          input.runId,
+          input.evidenceType,
+          JSON.stringify(input.payload),
+          JSON.stringify(sanitizedPayload),
+          input.exportable === false ? 0 : 1,
+          timestamp,
+        );
+      return {
+        id: evidenceId,
+        runId: input.runId,
+        evidenceType: input.evidenceType,
+        payload: input.payload,
+        sanitizedPayload,
+        exportable: input.exportable !== false,
+        createdAt: timestamp,
+      };
+    },
+
+    listEvidenceRecords(runId: string): EvidenceRecord[] {
+      return (
+        database()
+          .prepare("SELECT * FROM evidence_records WHERE run_id = ? ORDER BY created_at ASC")
+          .all(runId) as Row[]
+      ).map(evidenceRecordFromRow);
+    },
+
+    exportRunEvidence(runId: string): RunEvidenceExport {
+      return {
+        runId,
+        events: this.listRunEvents(runId),
+        artifacts: this.listArtifacts(runId).filter((artifact) => artifact.sanitized),
+        evidence: this.listEvidenceRecords(runId)
+          .filter((record) => record.exportable)
+          .map((record) => ({
+            id: record.id,
+            evidenceType: record.evidenceType,
+            payload: record.sanitizedPayload ?? sanitizeEvidencePayload(record.payload),
+            createdAt: record.createdAt,
+          })),
+      };
     },
 
     saveWorkflowSettings(workflowId: string, settings: Record<string, unknown>) {

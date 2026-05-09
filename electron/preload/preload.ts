@@ -41,6 +41,13 @@ const api = {
     delete: (input: { id: string }) => ipcRenderer.invoke("profile.delete", input),
     validate: (input: unknown) => ipcRenderer.invoke("profile.validate", input),
   },
+  evidence: {
+    listEvents: (input: { runId: string }) => ipcRenderer.invoke("evidence.listEvents", input),
+    listArtifacts: (input: { runId: string }) =>
+      ipcRenderer.invoke("evidence.listArtifacts", input),
+    exportRun: (input: { runId: string }) => ipcRenderer.invoke("evidence.exportRun", input),
+    sanitize: (input: unknown) => ipcRenderer.invoke("evidence.sanitize", input),
+  },
 };
 
 contextBridge.exposeInMainWorld("cloakBrowser", api);

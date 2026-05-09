@@ -137,6 +137,47 @@ describe("Electron app API", () => {
     await expect(api.profiles.list()).resolves.toEqual([]);
   });
 
+  test("exposes sanitized run evidence through the app facade", async () => {
+    const workflow = storage.createWorkflow({ name: "Evidence facade" });
+    const run = storage.createRun({
+      workflowId: workflow.id,
+      graphVersionId: storage.getActiveGraphVersion(workflow.id).id,
+      runProfileSnapshot: {},
+      identityProfileSnapshot: { id: "idp_1", name: "Owned" },
+      environmentSnapshot: {},
+      operatorLabel: "local",
+    });
+    storage.appendRunEvent(run.id, {
+      type: "run.started",
+      severity: "info",
+      payload: { workflowId: workflow.id },
+    });
+    storage.createEvidenceRecord({
+      runId: run.id,
+      evidenceType: "identity_snapshot",
+      payload: {
+        profileId: "idp_1",
+        proxy: { label: "owned", password: "raw-password" },
+      },
+    });
+
+    await expect(api.evidence.listEvents({ runId: run.id })).resolves.toEqual([
+      expect.objectContaining({ type: "run.started" }),
+    ]);
+    await expect(api.evidence.listArtifacts({ runId: run.id })).resolves.toEqual([]);
+    await expect(api.evidence.exportRun({ runId: run.id })).resolves.toMatchObject({
+      evidence: [
+        expect.objectContaining({
+          evidenceType: "identity_snapshot",
+          payload: {
+            profileId: "idp_1",
+            proxy: { label: "owned", password: "[redacted]" },
+          },
+        }),
+      ],
+    });
+  });
+
   test("starts a configured vertical-slice run and persists events plus artifact metadata", async () => {
     const workflow = await api.workflows.create({ name: "Runnable flow" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });

@@ -51,7 +51,7 @@ Child spec implementation summary:
 | 05 Action Catalog And Locator | PARTIAL |
 | 06 CloakRunner | PARTIAL: supervised `startRun` protocol implemented; real CloakBrowser smoke, retries/timeouts, downloads, traces, and forceful cleanup remain |
 | 07 Identity Profile And Fingerprint Preflight | PARTIAL: storage CRUD, app/preload API, renderer wrappers, and basic coherence validation implemented; preflight gate and profile locking remain |
-| 08 Run Evidence And Audit | PARTIAL |
+| 08 Run Evidence And Audit | PARTIAL: run events, artifacts, evidence records, sanitizer, compact export, and API surface implemented; evidence viewer, operator audit, strict policy, and preflight integration remain |
 | 09 UI/UX Feature Parity | PARTIAL |
 | 10 Packaging And Release | PARTIAL |
 | 11 Testing And Acceptance | PARTIAL |

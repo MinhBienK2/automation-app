@@ -49,4 +49,15 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
   ipcMain.handle("profile.update", (_event, input) => api.profiles.update(input));
   ipcMain.handle("profile.delete", (_event, input: { id: string }) => api.profiles.delete(input));
   ipcMain.handle("profile.validate", (_event, input) => api.profiles.validate(input));
+
+  ipcMain.handle("evidence.listEvents", (_event, input: { runId: string }) =>
+    api.evidence.listEvents(input),
+  );
+  ipcMain.handle("evidence.listArtifacts", (_event, input: { runId: string }) =>
+    api.evidence.listArtifacts(input),
+  );
+  ipcMain.handle("evidence.exportRun", (_event, input: { runId: string }) =>
+    api.evidence.exportRun(input),
+  );
+  ipcMain.handle("evidence.sanitize", (_event, input) => api.evidence.sanitize(input));
 }

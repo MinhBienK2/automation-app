@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import {
   createWorkflow,
+  exportRunEvidence,
   getWorkflowSettings,
   listWorkflows,
   listIdentityProfiles,
@@ -49,6 +50,14 @@ describe("workflowApi Electron bridge", () => {
       profiles: {
         list: vi.fn().mockResolvedValue([{ id: "idp_1", name: "Owned profile" }]),
       },
+      evidence: {
+        exportRun: vi.fn().mockResolvedValue({
+          runId: "run_1",
+          events: [],
+          artifacts: [],
+          evidence: [],
+        }),
+      },
     };
     Object.defineProperty(window, "cloakBrowser", {
       configurable: true,
@@ -68,6 +77,12 @@ describe("workflowApi Electron bridge", () => {
     await expect(validateWorkflowRun("wf_2")).resolves.toEqual([]);
     await expect(runWorkflow("wf_2")).resolves.toEqual({ status: "running" });
     await expect(listIdentityProfiles()).resolves.toEqual([{ id: "idp_1", name: "Owned profile" }]);
+    await expect(exportRunEvidence("run_1")).resolves.toEqual({
+      runId: "run_1",
+      events: [],
+      artifacts: [],
+      evidence: [],
+    });
 
     expect(api.workflows.list).toHaveBeenCalledTimes(1);
     expect(api.workflows.create).toHaveBeenCalledWith({ name: "New" });
@@ -80,6 +95,7 @@ describe("workflowApi Electron bridge", () => {
     expect(api.settings.validateRun).toHaveBeenCalledWith({ workflowId: "wf_2" });
     expect(api.runs.start).toHaveBeenCalledWith({ workflowId: "wf_2" });
     expect(api.profiles.list).toHaveBeenCalledTimes(1);
+    expect(api.evidence.exportRun).toHaveBeenCalledWith({ runId: "run_1" });
     expect(invokeMock).not.toHaveBeenCalled();
   });
 });

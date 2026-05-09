@@ -683,6 +683,24 @@ export function createAppApi(options: AppApiOptions) {
       },
     },
 
+    evidence: {
+      async listEvents(input: { runId: string }) {
+        return options.storage.listRunEvents(input.runId);
+      },
+
+      async listArtifacts(input: { runId: string }) {
+        return options.storage.listArtifacts(input.runId);
+      },
+
+      async exportRun(input: { runId: string }) {
+        return options.storage.exportRunEvidence(input.runId);
+      },
+
+      async sanitize(input: { payload: Record<string, unknown> }) {
+        return options.storage.sanitizeEvidencePayload(input.payload);
+      },
+    },
+
     graphs: {
       async loadActive(input: { workflowId: string }) {
         const graph = options.storage.loadActiveGraph(input.workflowId);
