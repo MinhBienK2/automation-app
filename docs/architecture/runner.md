@@ -58,6 +58,7 @@ The Electron rebuild adds a Node runner foundation that executes runner-native p
 - `createCloakBrowserAdapter` uses the `cloakbrowser` package as the browser launch source and maps locator-first action configs to Playwright-style page/locator APIs.
 - `RunnerSupervisor` supervises the local runner process through stdio JSONL health, `startRun`, event streaming, `cancelRun`, and shutdown messages. `electron/runner/stdioRunner.ts` is the build entry that validates the start payload, executes `runPlan` with the CloakBrowser adapter, streams runner events back to main, and returns a terminal result. The app API persists streamed events and artifact metadata from the process-backed path, while keeping the in-process runner core path for focused tests and transition fallback.
 - Electron app Stop tracks the active run id and forwards operator stop requests to supervised `cancelRun` when a process-backed run is active.
+- Electron app Stop also writes sanitized `operator_action` evidence before forwarding cancellation.
 - Remaining Electron runner gaps are real CloakBrowser smoke coverage for navigate/fill/click/wait and preflight, action retry and timeout events, downloads/traces, and forceful browser/process cleanup after non-cooperative cancellation or runner crash.
 
 ## Belongs Here

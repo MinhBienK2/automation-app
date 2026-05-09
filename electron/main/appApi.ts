@@ -1065,6 +1065,15 @@ export function createAppApi(options: AppApiOptions) {
       async stop() {
         const runId = activeRunId;
         if (runId && options.runner?.cancelRun) {
+          options.storage.createEvidenceRecord({
+            runId,
+            evidenceType: "operator_action",
+            payload: {
+              action: "stop",
+              operatorLabel: "local",
+              runId,
+            },
+          });
           await options.runner.cancelRun({ runId });
         }
         lastRunState = {

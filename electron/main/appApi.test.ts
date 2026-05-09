@@ -580,6 +580,15 @@ describe("Electron app API", () => {
       status: "cancelled",
       terminalReason: "Operator stopped run.",
     });
+    expect(storage.listEvidenceRecords(payload.runId)).toEqual([
+      expect.objectContaining({
+        evidenceType: "operator_action",
+        sanitizedPayload: expect.objectContaining({
+          action: "stop",
+          operatorLabel: "local",
+        }),
+      }),
+    ]);
   });
 
   test("passes workspace allowed origins into the runner policy snapshot", async () => {
