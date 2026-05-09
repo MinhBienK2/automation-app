@@ -9,16 +9,16 @@
 - `src/features/workflows/components/ActionConfig*Fields.tsx`
 - `electron/backend/graphCompiler.ts`
 - `electron/backend/commands.ts`
-- Temporary Rust parity reference: `src-tauri/src/domain/`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/runner/actions/`
+- `electron/backend/runner.ts`
 
 ## Required Sync Points
 
-Every serialized action type that can cross the Electron IPC boundary must be represented by TypeScript `ActionType` and `ActionConfig`. During the migration, Rust `ActionType` and `ActionConfig` remain a temporary parity reference until the Tauri code is removed. The visible Add Action palette is a narrower product subset maintained in `workflowUi.ts` and the graph palette helpers.
+Every serialized action type that can cross the Electron IPC boundary must be represented by TypeScript `ActionType` and `ActionConfig`. The visible Add Action palette is a narrower product subset maintained in `workflowUi.ts` and the graph palette helpers.
 
 Every user-addable action type must have:
 
-- Rust `ActionType::as_str` and `ActionType::label`.
-- Default config in `default_config`.
+- TypeScript action type and config shape.
+- Default config in frontend defaults or graph compiler settings prelude when applicable.
 - UI label/group in `workflowUi.ts`.
 - UI summary in `stepSummary`.
 - Form support in workflow step form logic/components when user editable.
@@ -62,9 +62,9 @@ Recovery config semantics must preserve failure behavior when recovery branches 
 
 ## Persistence
 
-Configs persist as JSON in `workflow_steps.config_json`.
+Configs persist as JSON inside `workflows.graph_json` and workflow package `flow` payloads. Legacy `WorkflowStep.config` remains a DTO/import-export compatibility shape.
 
-Preserve serde compatibility for existing configs unless a migration or import/export compatibility path is intentionally added.
+Preserve JSON compatibility for existing configs unless a migration or import/export compatibility path is intentionally added.
 
 ## Removed Legacy Actions
 

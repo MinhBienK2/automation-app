@@ -15,20 +15,20 @@ Focused commands:
 - `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`
 - `npx tsc --noEmit`
 
-## Rust Tests
+## Electron Backend Tests
 
-- Command API: `src-tauri/tests/command_api.rs`
-- Domain validation: `src-tauri/tests/domain_validation.rs`
-- Persistence: `src-tauri/tests/persistence.rs`
-- Runner spike: `src-tauri/tests/runner_spike.rs`
-- Support helpers: `src-tauri/tests/support/`
+- Command API and persistence: `electron/backend/commands.test.ts`
+- Graph validation/compiler: `electron/backend/graphCompiler.test.ts`
+- Runner unit coverage: `electron/backend/runner.test.ts`
+- CloakBrowser launch smoke: `electron/backend/runner.smoke.test.ts`
 
 Focused commands:
 
-- `cd src-tauri && cargo test --test command_api`
-- `cd src-tauri && cargo test --test domain_validation`
-- `cd src-tauri && cargo test --test persistence`
-- `cd src-tauri && cargo test --test runner_spike`
+- `npm test -- electron/backend/commands.test.ts`
+- `npm test -- electron/backend/graphCompiler.test.ts`
+- `npm test -- electron/backend/runner.test.ts`
+- `npm test -- electron/backend/runner.smoke.test.ts`
+- `npm run build:electron`
 
 ## Policy
 

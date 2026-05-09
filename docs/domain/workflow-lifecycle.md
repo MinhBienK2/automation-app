@@ -3,7 +3,7 @@
 ## Create
 
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
-- Rust validates a non-blank workflow name in `src-tauri/src/domain/workflow.rs`.
+- Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, then creates a `Start -> New node` draft graph. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, edit settings, duplicate, export, and delete. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, remaps full Workflow Settings to the new workflow id without package-export sanitization, preserves legacy step rows for compatibility, and refreshes the list.
@@ -46,8 +46,8 @@
 
 ## Legacy Step Rows
 
-- List-step authoring is retired from the product UI and Tauri command registration.
-- Internal Rust helpers and repository methods for `workflow_steps` may remain temporarily for import/export compatibility and legacy tests.
+- List-step authoring is retired from the product UI and Electron command registration.
+- Legacy ordered step rows remain a DTO/import-export compatibility shape, not a production authoring surface.
 
 ## Run Full Workflow
 

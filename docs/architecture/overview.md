@@ -26,15 +26,12 @@ SQLite
   -> run_steps
 ```
 
-## Migration State
+## Runtime State
 
 The renderer command boundary is Electron IPC. The TypeScript backend owns
 workflow CRUD, graph document storage, Workflow Settings, browser-config
-compatibility, package import/export, and SQLite persistence.
-
-`src-tauri/` remains in the repository as a temporary implementation reference
-for graph compilation and runner parity. It is not required by the Electron
-command boundary.
+compatibility, package import/export, graph validation/compilation, SQLite
+persistence, run orchestration, and CloakBrowser execution.
 
 ## Boundaries
 
@@ -44,7 +41,7 @@ command boundary.
 - Electron main owns app lifecycle, app data paths, native dialogs, and IPC registration.
 - Node backend commands own validation before persistence or execution.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
-- Runner code owns CloakBrowser/Playwright execution once ported in later plans.
+- Runner code owns CloakBrowser/Playwright execution.
 
 ## Read By Task
 

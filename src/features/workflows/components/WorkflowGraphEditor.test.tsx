@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
+import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridge } from "../../../tests/mocks/electron";
 import { sleepStep } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
@@ -25,7 +25,7 @@ const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
 
 describe("Workflow graph editor integration", () => {
   beforeEach(() => {
-    resetTauriInvoke();
+    resetWorkflowBridge();
     window.localStorage.setItem(
       "workflow-manager:settings:v1",
       JSON.stringify({ graphAutosaveEnabled: false }),
@@ -35,7 +35,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("adds selects deletes and saves logic nodes through the grouped React Flow workspace", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
     });
@@ -91,7 +91,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith(
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
         "save_workflow_graph",
         expect.objectContaining({
           workflowId: "workflow-1",
@@ -145,7 +145,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("opens graph shortcuts from the toolbar", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -165,7 +165,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("offers separate variable authoring nodes from Add Variable", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -183,7 +183,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -204,7 +204,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -230,7 +230,7 @@ describe("Workflow graph editor integration", () => {
       now += 1;
       return now;
     });
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -258,7 +258,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       const graph = (saveCall?.[1] as {
@@ -281,7 +281,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("cancels a pending port connection when released on empty canvas", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -304,7 +304,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -345,7 +345,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("edits logic node config through structured inspector fields", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
     });
@@ -376,7 +376,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall).toBeTruthy();
@@ -406,7 +406,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("edits action node config through the graph inspector", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -427,7 +427,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -453,7 +453,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("opens detailed action help from the graph inspector", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -479,7 +479,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("opens detailed logic node help from the graph inspector and context menu", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -514,7 +514,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("adds an action node by choosing an action type from the palette", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -540,7 +540,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -563,7 +563,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("simplifies graph toolbar palettes and shows Fill Field for input text", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -604,7 +604,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -626,7 +626,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("changes action node type from the graph inspector", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -652,7 +652,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -691,7 +691,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("focuses action type search when opened and closes the dropdown on outside click", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -710,7 +710,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("persists close browser options from end nodes", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -729,7 +729,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -750,7 +750,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("inserts variables discovered from graph variable nodes into template fields", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -785,7 +785,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("shows icon graph tools for history and viewport modes", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -810,7 +810,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("keeps toolbar pan mode active after temporary spacebar panning ends", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -833,7 +833,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("validates and runs graph without the old runtime panels", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       validate_workflow_graph: [
         {
@@ -871,7 +871,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Validate" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith(
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
         "validate_workflow_graph",
         expect.objectContaining({
           graph: expect.objectContaining({
@@ -895,7 +895,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Run" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith(
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
         "save_workflow_graph",
         expect.objectContaining({
           workflowId: "workflow-1",
@@ -906,7 +906,7 @@ describe("Workflow graph editor integration", () => {
           }),
         }),
       );
-      expect(invokeMock).toHaveBeenCalledWith("run_workflow", {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow", {
         workflowId: "workflow-1",
       });
     });
@@ -916,7 +916,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("simplifies the logic palette while keeping hidden graph nodes compatible", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       get_workflow_graph: {
         version: 1,
@@ -998,7 +998,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -1032,7 +1032,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("shows node context actions on the canvas without the custom edge overlay", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
     });
@@ -1057,7 +1057,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("opens new workflows with a selected draft New node", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -1076,7 +1076,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("adds and configures a toolbar New node draft", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
     });
@@ -1096,7 +1096,7 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = invokeMock.mock.calls.find(
+      const saveCall = workflowCommandCallMock.mock.calls.find(
         ([command]) => command === "save_workflow_graph",
       );
       expect(saveCall?.[1]).toEqual(
@@ -1120,7 +1120,7 @@ describe("Workflow graph editor integration", () => {
 
   test("shows a multi-selection summary with bulk graph actions", async () => {
     vi.mocked(Date.now).mockReturnValue(42);
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
     });
@@ -1149,7 +1149,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("handles graph keyboard shortcuts without firing inside config fields", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });

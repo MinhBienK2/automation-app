@@ -11,7 +11,6 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - `electron/backend/runner.smoke.test.ts`
 - `electron/backend/commands.ts`
 - `electron/backend/graphCompiler.ts`
-- Temporary Rust parity reference: `src-tauri/src/runner/`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/app_state.rs`
 
 ## Current Behavior
 
@@ -49,22 +48,18 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 ## Action Modules
 
-Browser action dispatch now lives in `electron/backend/runner.ts` and is grouped by user behavior. The old Rust action modules remain a temporary reference until final Tauri removal:
+Browser action dispatch lives in `electron/backend/runner.ts` and is grouped by user behavior:
 
-- `pointer.rs`: click target geometry and explicit force-DOM fallback helpers. Click, hover, double/right click, and drag/drop dispatch browser-level mouse primitives from `actions/mod.rs`.
-- `scroll.rs`: page, container, into-view, and until-visible scrolling.
-- `wait.rs`: wait condition polling scripts.
-- `input.rs`: text input, clearing input, and contenteditable updates. `Fill Field`
+- Pointer: click, hover, double/right click, and drag/drop dispatch browser-level primitives where possible.
+- Scroll: page, container, into-view, and until-visible scrolling.
+- Wait: duration, page, URL, text, and element waits with cancellation support.
+- Input: text input, clearing input, and contenteditable updates. `Fill Field`
   can either set field values directly or, when `typing_mode` is `type`, focus the
   element and emit per-character key/input/change events with a visible default delay.
-- `form.rs`: select, checkbox/radio, custom option, and submit form actions.
-- `keyboard.rs`: legacy keyboard script-builder tests. Runtime press-key, hotkey, type-sequence, and high-fidelity fill-field paths dispatch browser-level keyboard primitives from `actions/mod.rs`.
-- `target.rs`: structured target resolver that maps ordered locator bundles and iframe targets to runtime XPath/frame context.
-- `clipboard.rs`: in-run clipboard store and paste actions.
-- `element.rs`: focus and blur element actions.
-- `data_capture.rs`: output extraction and storage scripts.
-- Variable and loop storage helpers live in `actions/mod.rs` because they coordinate runner control flow and browser output state.
-- `actionability.rs`, `js.rs`: shared helper code used by action modules.
+- Forms/keyboard/clipboard: select, checkbox/radio, submit, key presses, hotkeys, in-run clipboard, and paste actions.
+- Target resolution: structured target bundles map to Playwright selectors; XPath strings remain supported.
+- Data capture: text, attribute, input value, list/table, screenshot, download, and JavaScript outputs.
+- Variables/control flow: variable mutation, loops, branches, retries, try/catch, fallback, stop, output assertions, and domain allowlists.
 
 ## Does Not Belong Here
 

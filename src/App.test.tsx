@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { invokeMock, mockTauriCommands, resetTauriInvoke } from "./tests/mocks/tauri";
+import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridge } from "./tests/mocks/electron";
 import { workflow } from "./tests/mocks/workflowFixtures";
 import {
   listWorkflowScenario,
@@ -11,13 +11,13 @@ import { renderApp } from "./tests/utils/renderApp";
 
 describe("App settings and graph autosave", () => {
   beforeEach(() => {
-    resetTauriInvoke();
+    resetWorkflowBridge();
     window.localStorage.clear();
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
   test("opens settings from the sidebar and persists the autosave preference", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     const { unmount } = renderApp();
 
@@ -42,7 +42,7 @@ describe("App settings and graph autosave", () => {
   });
 
   test("shows graph keyboard and mouse guidance in settings", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
@@ -59,7 +59,7 @@ describe("App settings and graph autosave", () => {
 
   test("autosaves graph changes by default", async () => {
     const saveGraph = vi.fn().mockResolvedValue(undefined);
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: saveGraph,
     });
@@ -96,7 +96,7 @@ describe("App settings and graph autosave", () => {
 
   test("keeps the draft visible when autosave fails and does not run the stale saved graph", async () => {
     const saveGraph = vi.fn().mockRejectedValue(new Error("disk is full"));
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: saveGraph,
       run_workflow: {
@@ -133,13 +133,13 @@ describe("App settings and graph autosave", () => {
     await waitFor(() => {
       expect(saveGraph).toHaveBeenCalled();
     });
-    expect(invokeMock).not.toHaveBeenCalledWith("run_workflow", {
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
       workflowId: "workflow-1",
     });
   });
 
   test("renders primary graph actions only in the workflow header", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });

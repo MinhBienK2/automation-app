@@ -68,8 +68,8 @@ failed calls. This preserves the command-facing error shape used by
 - Renderer wrapper names remain camelCase.
 - IPC channels are namespaced strings in `electron/ipc.ts`, for example
   `workflow:listWorkflows`.
-- Bridge method arguments use the same TypeScript DTO shapes as the old wrapper
-  API, but no Tauri casing conversion is involved.
+- Bridge method arguments use the shared TypeScript DTO shapes; no casing conversion
+  happens at the Electron boundary.
 - Native save-dialog and file-writing behavior is owned by Electron main through
   `saveWorkflowPackageFile`; package JSON is not written from the renderer.
 - Command errors serialize as `{ message: string, field?: string | null }`.
@@ -80,11 +80,9 @@ Electron main initializes SQLite in app data, and Node command handlers now use
 the TypeScript workflow repository for workflow CRUD, graph documents, Workflow
 Settings, browser-config compatibility, and workflow package import/export.
 
-Graph validation/compilation and runner execution are still limited to shell
-behavior until their dedicated parity plans complete.
-
-`src-tauri/` remains in the repository as a temporary reference during the
-migration. It is not the renderer command boundary after Plan 01.
+Graph validation/compilation, run orchestration, SQLite persistence, workflow
+package import/export, and CloakBrowser runner execution are owned by the
+Electron backend.
 
 ## Change Checklist
 

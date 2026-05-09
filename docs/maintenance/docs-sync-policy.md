@@ -19,7 +19,7 @@ Agents must read:
 - Workflow lifecycle semantics.
 - Action configs, defaults, labels, summaries, validation, or execution.
 - Electron IPC command names, payloads, responses, or errors.
-- TypeScript/Rust DTO shapes.
+- TypeScript DTO shapes.
 - Persistence schema, ordering, timestamps, or serialization.
 - Runner progress, cancellation, failure, or browser-session behavior.
 - Test expectations or verification commands.

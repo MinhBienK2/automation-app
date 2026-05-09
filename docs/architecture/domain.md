@@ -10,7 +10,6 @@ Domain code defines workflow/action/run types and business validation.
 - `electron/backend/graphCompiler.ts`
 - `electron/backend/commands.ts`
 - `electron/backend/graphCompiler.test.ts`
-- Temporary Rust parity reference: `src-tauri/src/domain/`, `src-tauri/tests/domain_validation.rs`
 
 ## Belongs Here
 

@@ -4,9 +4,9 @@
 
 - TypeScript union: `src/types/workflow.ts`
 - UI labels/groups: `src/lib/workflowUi.ts`
-- Rust enum/config: `src-tauri/src/domain/action_config.rs`
-- Defaults: `src-tauri/src/services/run_service.rs`
-- Runner dispatch: `src-tauri/src/runner/actions/mod.rs`
+- Graph compiler/defaults: `electron/backend/graphCompiler.ts`
+- Runner dispatch: `electron/backend/runner.ts`
+- Command validation/orchestration: `electron/backend/commands.ts`
 
 ## UI Groups
 
@@ -48,7 +48,6 @@ Removed legacy actions: `open_url`, `sleep`, and `type_text` are migrated or nor
 When adding or changing an action, keep these in sync:
 
 - TypeScript `ActionType` and `ActionConfig`.
-- Rust `ActionType` and `ActionConfig`.
 - UI label, group, summary, and form behavior.
 - Default config.
 - Validation.

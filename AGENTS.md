@@ -8,17 +8,15 @@
 - Keep scope bounded to owned or explicitly authorized targets. Sensitive automation must preserve auditability through domain allowlists, named test accounts, reproducible browser identity settings, clear run outputs, and explicit operator controls.
 
 ## Package Manager
-- Use **npm** for the frontend: `npm install`, `npm run tauri dev`, `npm run build`, `npm test`
-- Use **cargo** inside `src-tauri/`: `cargo test`, `cargo fmt --check`, `cargo clippy --all-targets --all-features`
+- Use **npm**: `npm install`, `npm run electron:dev`, `npm run build`, `npm test`, `npm run electron:pack`
 
 ## File-Scoped Commands
 | Task | Command |
 |------|---------|
-| Frontend test file | `npm test -- path/to/file.test.ts[x]` |
-| Typecheck frontend | `npx tsc --noEmit` |
-| Rust test file | `cd src-tauri && cargo test --test command_api` |
-| Rust single test | `cd src-tauri && cargo test test_name` |
-| Rust format check | `cd src-tauri && cargo fmt --check` |
+| Test file | `npm test -- path/to/file.test.ts[x]` |
+| Typecheck renderer | `npx tsc --noEmit` |
+| Build Electron main/preload | `npm run build:electron` |
+| Electron package | `npm run electron:pack` |
 
 ## TDD Requirement
 Before implementing any feature, bug fix, refactor, or behavior change, agents MUST use `.agents/skills/test-driven-development`.
@@ -41,21 +39,19 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 
 ## Project Structure
 - Frontend UI lives in `src/App.tsx`, `src/App.css`, `src/layouts/`, and `src/features/workflows/`; tests use Vitest and Testing Library next to feature, layout, lib, and CSS files.
-- Tauri commands live in `src-tauri/src/commands.rs`; keep command-facing errors serializable through `CommandError`.
-- Domain validation belongs in `src-tauri/src/domain/`; persistence belongs in `src-tauri/src/repositories/` and SQL migrations.
-- Browser execution code belongs in `src-tauri/src/runner/`; preserve stop/run state behavior when changing runner flow.
+- Electron IPC lives in `electron/ipc.ts`, `electron/preload.ts`, `electron/main.ts`, and typed wrappers in `src/lib/workflowApi.ts`.
+- Electron backend commands, SQLite persistence, graph compiler, and CloakBrowser runner live under `electron/backend/`.
 - Agent source-of-truth docs live under `docs/`; historical plans/specs live under `docs/superpowers/`; smoke checklist lives in `README.md`.
 
 ## Key Conventions
-- Keep Rust domain types `Serialize`/`Deserialize` compatible with the TypeScript shapes used by Tauri `invoke`.
 - Add or update focused tests when changing validation, commands, persistence, runner behavior, or user-visible workflow UI.
-- Prefer existing action config variants and command names; update both Rust and TypeScript types when adding an action.
+- Prefer existing action config variants and command names; update TypeScript DTOs and Electron backend handlers together when adding an action.
 - Keep the desktop smoke checklist in `README.md` accurate when workflow behavior changes.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **tik-automation** (3945 symbols, 8059 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **tik-automation** (4730 symbols, 9661 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

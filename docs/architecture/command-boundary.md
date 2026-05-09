@@ -17,10 +17,6 @@ Node/Electron backend.
 - Electron SQLite bootstrap: `electron/backend/database.ts`
 - Electron repository: `electron/backend/workflowRepository.ts`
 - Command contract: `docs/contracts/electron-ipc.md`
-- Temporary reference runtime during migration: `src-tauri/`
-
-The Rust/Tauri source tree remains as a reference while graph compiler and
-runner parity are ported. It is no longer the renderer command boundary.
 
 ## Belongs Here
 
@@ -39,7 +35,7 @@ runner parity are ported. It is no longer the renderer command boundary.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the saved workflow graph with saved Workflow Settings as the run baseline. The UI saves the current graph and dirty settings sections before invoking it.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies saved graph and full local settings without package-export sanitization.
 - Debug-only fixture generation is not part of the production command surface.
-- List-step authoring commands remain retired from the production command surface; legacy Rust helpers may remain internal until final Tauri removal.
+- List-step authoring commands remain retired from the production command surface.
 
 ## Does Not Belong Here
 

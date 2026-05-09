@@ -2,10 +2,10 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import {
-  invokeMock,
-  mockTauriCommands,
-  resetTauriInvoke,
-} from "../../../tests/mocks/tauri";
+  workflowCommandCallMock,
+  mockWorkflowBridgeCommands,
+  resetWorkflowBridge,
+} from "../../../tests/mocks/electron";
 import { sleepStep, workflow } from "../../../tests/mocks/workflowFixtures";
 import {
   idleRunState,
@@ -15,11 +15,11 @@ import { renderApp } from "../../../tests/utils/renderApp";
 
 describe("Workflow detail integration", () => {
   beforeEach(() => {
-    resetTauriInvoke();
+    resetWorkflowBridge();
   });
 
   test("opens workflow details on a separate screen and returns to the list", async () => {
-    mockTauriCommands(workflowDetailScenario([sleepStep]));
+    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
@@ -44,7 +44,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("shows workflow detail header without inline workflow name editing", async () => {
-    mockTauriCommands(workflowDetailScenario([sleepStep]));
+    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
@@ -94,7 +94,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("opens workflow settings on the Browser section from the detail header", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       get_workflow_settings: {
         workflow_id: "workflow-1",
@@ -238,7 +238,7 @@ describe("Workflow detail integration", () => {
       name: "Save Settings",
     }));
 
-    expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("save_workflow_settings_section", {
       workflowId: "workflow-1",
       section: "browser",
       sectionValue: expect.objectContaining({
@@ -257,7 +257,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("asks before closing workflow settings with unsaved changes", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_settings_section: undefined,
     });
@@ -302,7 +302,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("shows trigger settings as planned instead of active scheduler controls", async () => {
-    mockTauriCommands(workflowDetailScenario([sleepStep]));
+    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
@@ -329,7 +329,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("shows blocking validation issues in the run issue panel", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       validate_workflow_graph: [
         {
@@ -357,7 +357,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("keeps graph issues visible after an edit and marks them for recheck", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       validate_workflow_graph: [
         {
@@ -389,7 +389,7 @@ describe("Workflow detail integration", () => {
 
   test("disables graph run actions while running and polls final failure", async () => {
     let runStateCalls = 0;
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       list_workflows: [workflow],
       get_workflow: { workflow, steps: [sleepStep] },
       get_workflow_browser_config: {

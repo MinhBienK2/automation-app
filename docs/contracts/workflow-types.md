@@ -6,8 +6,8 @@
 - Electron bridge: `src/types/electron.ts`
 - Node command handlers: `electron/backend/commands.ts`
 - TypeScript graph compiler: `electron/backend/graphCompiler.ts`
+- CloakBrowser runner: `electron/backend/runner.ts`
 - SQLite repository: `electron/backend/workflowRepository.ts`
-- Temporary Rust parity reference: `src-tauri/src/domain/`
 
 ## Workflow Shapes
 
@@ -195,7 +195,7 @@ The Electron backend compiler currently emits action, manual approval, rate limi
 
 Settings prelude compilation is represented in TypeScript. It can prepend setup actions for geolocation, permissions, headers, downloads, cookies, storage, fingerprint preflight, persisted variables, default action timeouts, interaction fidelity defaults, and global waits between graph nodes.
 
-Executable frontend/Rust ports must agree:
+Executable frontend/backend ports must agree:
 
 - `start`: output `out`
 - `end_success` / `end_failure`: input `in`
@@ -213,13 +213,13 @@ Executable frontend/Rust ports must agree:
 
 ## Action Config Shape
 
-Action configs use a tagged shape compatible with Rust serde:
+Action configs use a tagged TypeScript DTO shape:
 
 ```text
 { type: "click", config: { ... } }
 ```
 
-The `type` string must match Rust `ActionType` snake_case serialization.
+The `type` string must match the TypeScript `ActionType` union.
 
 `set_variable` remains backward compatible with saved single-value configs:
 
@@ -255,7 +255,7 @@ Execution settings can insert a global wait between compiled graph nodes. Fixed 
 
 ## Change Checklist
 
-- Update TypeScript and Rust together.
+- Update TypeScript DTOs, graph compiler, runner, and UI defaults together.
 - Update default configs for new action variants.
 - Update persistence tests if stored JSON shape changes.
 - Update command tests if command response shape changes.

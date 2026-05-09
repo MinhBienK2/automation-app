@@ -10,7 +10,6 @@
 - Status bar: `src/features/workflows/components/RunStatusBar.tsx`
 - Electron runner: `electron/backend/runner.ts`
 - Electron command handlers: `electron/backend/commands.ts`
-- Temporary Rust parity reference: `src-tauri/src/domain/run.rs`, `src-tauri/src/app_state.rs`, `src-tauri/src/services/run_service.rs`
 
 ## Shape
 
@@ -55,7 +54,7 @@ Run errors include:
 
 ## Change Checklist
 
-- Update TypeScript and Rust types together.
+- Update TypeScript run-state types and Electron command/runner tests together.
 - Update monitor/status tests.
 - Update command tests when lifecycle semantics change.
 - Update `docs/domain/execution-semantics.md`.

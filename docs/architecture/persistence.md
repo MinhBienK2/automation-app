@@ -9,8 +9,6 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Electron SQLite bootstrap: `electron/backend/database.ts`
 - Electron workflow repository: `electron/backend/workflowRepository.ts`
 - Electron command handlers: `electron/backend/commands.ts`
-- Temporary reference repository: `src-tauri/src/repositories/workflow_repository.rs`
-- Temporary reference migrations: `src-tauri/migrations/`
 
 ## Current Behavior
 
@@ -25,7 +23,7 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.
-- Legacy ordered-step tables and old Rust migrations are intentionally not migrated into the new Electron data format.
+- Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here
 

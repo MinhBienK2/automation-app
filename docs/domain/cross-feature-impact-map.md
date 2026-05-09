@@ -15,7 +15,6 @@ Check:
 - `electron/backend/commands.ts`
 - `electron/backend/graphCompiler.test.ts`
 - `electron/backend/commands.test.ts`
-- Temporary Rust parity references under `src-tauri/src/domain/`, `src-tauri/src/services/run_service.rs`, and `src-tauri/src/runner/actions/`
 - `README.md` smoke checklist
 
 Risk:
@@ -35,10 +34,11 @@ Check:
 - `electron/ipc.ts`
 - `electron/backend/commands.ts`
 - `electron/backend/commands.test.ts`
+- `src/tests/mocks/electron.ts`
 
 Risk:
 
-- Invoke names or payload keys drift.
+- Bridge method names or payload keys drift.
 - Errors stop being field-addressable.
 - UI tests mock old command names.
 
@@ -46,9 +46,10 @@ Risk:
 
 Check:
 
-- `src-tauri/src/runner/`
-- `src-tauri/src/services/run_service.rs`
-- `src-tauri/src/app_state.rs`
+- `electron/backend/runner.ts`
+- `electron/backend/runner.test.ts`
+- `electron/backend/runner.smoke.test.ts`
+- `electron/backend/commands.ts`
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`
 - `src/features/workflows/components/RunStatusBar.tsx`
 
@@ -62,7 +63,6 @@ Risk:
 
 Check:
 
-- `src-tauri/migrations/`
 - `electron/backend/database.ts`
 - `electron/backend/workflowRepository.ts`
 - `electron/backend/commands.ts`

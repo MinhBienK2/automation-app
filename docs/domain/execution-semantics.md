@@ -6,7 +6,7 @@
 - `run_workflow` executes the compiled saved graph.
 - `test_step` executes from the first step through the selected step.
 - During the Electron migration, graph validation and compilation are owned by `electron/backend/graphCompiler.ts`.
-- Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` and Playwright-compatible page/context APIs. `src-tauri/src/runner/` remains a temporary parity reference until the migration is complete.
+- Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` and Playwright-compatible page/context APIs.
 - Visual graphs compile to executable action configs, including graph-internal control configs for switch, guarded loops, try/catch, fallback, loop break/continue, output assertions, transforms, subworkflow expansion, and domain allowlists.
 - Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
