@@ -26,6 +26,7 @@ import type {
   SelectorCandidate,
   SettingsValidationIssue,
   WorkflowBrowserConfig,
+  WorkflowDefaults,
   WorkflowGraph,
   Workflow,
   WorkflowDetail,
@@ -144,6 +145,23 @@ export function duplicateWorkflow(workflowId: string, name: string) {
   const api = electronApi();
   if (api?.workflows?.duplicate) return api.workflows.duplicate({ workflowId, name });
   return invoke<WorkflowDetail>("duplicate_workflow", { workflowId, name });
+}
+
+export function getWorkflowDefaults(workflowId: string) {
+  const api = electronApi();
+  if (api?.workflows?.getDefaults) return api.workflows.getDefaults({ workflowId });
+  return invoke<WorkflowDefaults>("get_workflow_defaults", { workflowId });
+}
+
+export function updateWorkflowDefaults(
+  workflowId: string,
+  defaults: Partial<Omit<WorkflowDefaults, "workflowId">>,
+) {
+  const api = electronApi();
+  if (api?.workflows?.updateDefaults) {
+    return api.workflows.updateDefaults({ workflowId, defaults });
+  }
+  return invoke<WorkflowDefaults>("update_workflow_defaults", { workflowId, defaults });
 }
 
 export function getWorkflowGraph(workflowId: string) {

@@ -12,6 +12,12 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
   ipcMain.handle("workflow.duplicate", (_event, input: { workflowId: string; name: string }) =>
     api.workflows.duplicate(input),
   );
+  ipcMain.handle("workflow.getDefaults", (_event, input: { workflowId: string }) =>
+    api.workflows.getDefaults(input),
+  );
+  ipcMain.handle("workflow.updateDefaults", (_event, input) =>
+    api.workflows.updateDefaults(input),
+  );
 
   ipcMain.handle("settings.get", (_event, input: { workflowId: string }) => api.settings.get(input));
   ipcMain.handle("settings.save", (_event, input) => api.settings.save(input));

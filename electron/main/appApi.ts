@@ -69,6 +69,13 @@ type LegacyWorkflowDetail = {
   steps: unknown[];
 };
 
+type WorkflowDefaults = {
+  workflowId: string;
+  defaultRunProfileId: string | null;
+  defaultIdentityProfileId: string | null;
+  defaultEnvironmentId: string | null;
+};
+
 type LegacyGraphPort = {
   id: string;
   label: string;
@@ -267,6 +274,15 @@ function toLegacySummary(workflow: WorkflowRecord): LegacyWorkflowSummary {
   return {
     ...toLegacyWorkflow(workflow),
     step_count: 0,
+  };
+}
+
+function toWorkflowDefaults(workflow: WorkflowRecord): WorkflowDefaults {
+  return {
+    workflowId: workflow.id,
+    defaultRunProfileId: workflow.defaultRunProfileId,
+    defaultIdentityProfileId: workflow.defaultIdentityProfileId,
+    defaultEnvironmentId: workflow.defaultEnvironmentId,
   };
 }
 
@@ -736,6 +752,17 @@ export function createAppApi(options: AppApiOptions) {
 
       async delete(input: { id: string }) {
         options.storage.softDeleteWorkflow(input.id);
+      },
+
+      async getDefaults(input: { workflowId: string }) {
+        return toWorkflowDefaults(options.storage.getWorkflow(input.workflowId));
+      },
+
+      async updateDefaults(input: {
+        workflowId: string;
+        defaults: Partial<Omit<WorkflowDefaults, "workflowId">>;
+      }) {
+        return toWorkflowDefaults(options.storage.updateWorkflowDefaults(input.workflowId, input.defaults));
       },
     },
 

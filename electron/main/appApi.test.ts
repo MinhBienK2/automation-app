@@ -91,6 +91,65 @@ describe("Electron app API", () => {
     expect((await api.graphs.loadActive({ workflowId: duplicate.workflow.id })).nodes).toHaveLength(2);
   });
 
+  test("exposes workflow default profile selection through the app facade", async () => {
+    const workflow = await api.workflows.create({ name: "Default-backed workflow" });
+    const runProfile = storage.createRunProfile({
+      workflowId: workflow.id,
+      name: "Strict",
+      timeoutPolicy: { runTimeoutMs: 30_000 },
+      retentionPolicy: { browserRetention: "close" },
+      evidencePolicy: { screenshots: true },
+    });
+    const identityProfile = storage.createIdentityProfile({
+      name: "Owned identity",
+      persistentProfilePath: "owned-identity",
+      deviceIdentity: {
+        viewport: { width: 1280, height: 720 },
+        mobile: false,
+        touch: false,
+      },
+      locale: { locale: "en-US", timezone: "America/New_York" },
+      headedPolicy: "allow_headless",
+      preflightPolicy: { enabled: false },
+    });
+    const environment = storage.createEnvironment({
+      name: "Owned env",
+      permissions: ["geolocation"],
+      headers: {},
+      initialVariables: {},
+    });
+
+    await expect(api.workflows.getDefaults({ workflowId: workflow.id })).resolves.toEqual({
+      workflowId: workflow.id,
+      defaultRunProfileId: null,
+      defaultIdentityProfileId: null,
+      defaultEnvironmentId: null,
+    });
+
+    await expect(
+      api.workflows.updateDefaults({
+        workflowId: workflow.id,
+        defaults: {
+          defaultRunProfileId: runProfile.id,
+          defaultIdentityProfileId: identityProfile.id,
+          defaultEnvironmentId: environment.id,
+        },
+      }),
+    ).resolves.toEqual({
+      workflowId: workflow.id,
+      defaultRunProfileId: runProfile.id,
+      defaultIdentityProfileId: identityProfile.id,
+      defaultEnvironmentId: environment.id,
+    });
+
+    await expect(api.workflows.getDefaults({ workflowId: workflow.id })).resolves.toEqual({
+      workflowId: workflow.id,
+      defaultRunProfileId: runProfile.id,
+      defaultIdentityProfileId: identityProfile.id,
+      defaultEnvironmentId: environment.id,
+    });
+  });
+
   test("exposes identity profile CRUD and validation through the app facade", async () => {
     const profile = await api.profiles.create({
       name: "Owned desktop",

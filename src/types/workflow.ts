@@ -119,6 +119,13 @@ export type Workflow = {
   updated_at: string;
 };
 
+export type WorkflowDefaults = {
+  workflowId: string;
+  defaultRunProfileId: string | null;
+  defaultIdentityProfileId: string | null;
+  defaultEnvironmentId: string | null;
+};
+
 export type WorkflowBrowserConfig = {
   workflow_id: string;
   profile_name?: string | null;

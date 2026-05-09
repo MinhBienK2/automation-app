@@ -9,6 +9,8 @@ const api = {
     delete: (input: { id: string }) => ipcRenderer.invoke("workflow.delete", input),
     duplicate: (input: { workflowId: string; name: string }) =>
       ipcRenderer.invoke("workflow.duplicate", input),
+    getDefaults: (input: { workflowId: string }) => ipcRenderer.invoke("workflow.getDefaults", input),
+    updateDefaults: (input: unknown) => ipcRenderer.invoke("workflow.updateDefaults", input),
   },
   settings: {
     get: (input: { workflowId: string }) => ipcRenderer.invoke("settings.get", input),

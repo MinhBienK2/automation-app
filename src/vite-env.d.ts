@@ -21,6 +21,7 @@ import type {
   SettingsValidationIssue,
   Workflow,
   WorkflowBrowserConfig,
+  WorkflowDefaults,
   WorkflowDetail,
   WorkflowGraph,
   WorkflowSettings,
@@ -37,6 +38,11 @@ type ElectronCloakBrowserApi = {
     rename?: (input: { id: string; name: string }) => Promise<void>;
     delete?: (input: { id: string }) => Promise<void>;
     duplicate?: (input: { workflowId: string; name: string }) => Promise<WorkflowDetail>;
+    getDefaults?: (input: { workflowId: string }) => Promise<WorkflowDefaults>;
+    updateDefaults?: (input: {
+      workflowId: string;
+      defaults: Partial<Omit<WorkflowDefaults, "workflowId">>;
+    }) => Promise<WorkflowDefaults>;
   };
   settings?: {
     get?: (input: { workflowId: string }) => Promise<WorkflowSettings>;

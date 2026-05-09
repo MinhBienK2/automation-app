@@ -4,6 +4,7 @@ import {
   createWorkflow,
   exportRunEvidence,
   getWorkspacePolicy,
+  getWorkflowDefaults,
   getWorkflowSettings,
   checkIdentityProfileAvailability,
   listEnvironments,
@@ -13,6 +14,7 @@ import {
   listRuns,
   onRunEvent,
   runWorkflow,
+  updateWorkflowDefaults,
   saveWorkflowSettingsSection,
   saveWorkspacePolicy,
   validateWorkflowRun,
@@ -45,6 +47,18 @@ describe("workflowApi Electron bridge", () => {
       workflows: {
         list: vi.fn().mockResolvedValue([{ id: "wf_1", name: "Flow", step_count: 0 }]),
         create: vi.fn().mockResolvedValue({ id: "wf_2", name: "New" }),
+        getDefaults: vi.fn().mockResolvedValue({
+          workflowId: "wf_2",
+          defaultRunProfileId: "rp_1",
+          defaultIdentityProfileId: "idp_1",
+          defaultEnvironmentId: "env_1",
+        }),
+        updateDefaults: vi.fn().mockResolvedValue({
+          workflowId: "wf_2",
+          defaultRunProfileId: "rp_1",
+          defaultIdentityProfileId: "idp_1",
+          defaultEnvironmentId: "env_1",
+        }),
       },
       settings: {
         get: vi.fn().mockResolvedValue({ workflow_id: "wf_2", browser: { headless: true } }),
@@ -94,6 +108,24 @@ describe("workflowApi Electron bridge", () => {
 
     await expect(listWorkflows()).resolves.toEqual([{ id: "wf_1", name: "Flow", step_count: 0 }]);
     await expect(createWorkflow("New")).resolves.toEqual({ id: "wf_2", name: "New" });
+    await expect(getWorkflowDefaults("wf_2")).resolves.toEqual({
+      workflowId: "wf_2",
+      defaultRunProfileId: "rp_1",
+      defaultIdentityProfileId: "idp_1",
+      defaultEnvironmentId: "env_1",
+    });
+    await expect(
+      updateWorkflowDefaults("wf_2", {
+        defaultRunProfileId: "rp_1",
+        defaultIdentityProfileId: "idp_1",
+        defaultEnvironmentId: "env_1",
+      }),
+    ).resolves.toEqual({
+      workflowId: "wf_2",
+      defaultRunProfileId: "rp_1",
+      defaultIdentityProfileId: "idp_1",
+      defaultEnvironmentId: "env_1",
+    });
     await expect(getWorkflowSettings("wf_2")).resolves.toEqual({
       workflow_id: "wf_2",
       browser: { headless: true },
@@ -137,6 +169,15 @@ describe("workflowApi Electron bridge", () => {
 
     expect(api.workflows.list).toHaveBeenCalledTimes(1);
     expect(api.workflows.create).toHaveBeenCalledWith({ name: "New" });
+    expect(api.workflows.getDefaults).toHaveBeenCalledWith({ workflowId: "wf_2" });
+    expect(api.workflows.updateDefaults).toHaveBeenCalledWith({
+      workflowId: "wf_2",
+      defaults: {
+        defaultRunProfileId: "rp_1",
+        defaultIdentityProfileId: "idp_1",
+        defaultEnvironmentId: "env_1",
+      },
+    });
     expect(api.settings.get).toHaveBeenCalledWith({ workflowId: "wf_2" });
     expect(api.settings.saveSection).toHaveBeenCalledWith({
       workflowId: "wf_2",
