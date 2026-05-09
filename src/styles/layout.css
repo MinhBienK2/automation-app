@@ -333,3 +333,47 @@
 .settings-panel .graph-shortcut-guide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+.workspace-policy-form {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-policy-field {
+  display: grid;
+  gap: 8px;
+  color: #b4b4b4;
+  font-size: 13px;
+}
+
+.workspace-policy-field > span {
+  color: #fafafa;
+  font-size: 14px;
+}
+
+.workspace-policy-field textarea {
+  min-height: 108px;
+  resize: vertical;
+  border: 1px solid #363636;
+  border-radius: 6px;
+  background: #0f0f0f;
+  color: #fafafa;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.workspace-policy-field textarea:focus {
+  border-color: rgba(62, 207, 142, 0.48);
+}
+
+.workspace-policy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.workspace-policy-actions span {
+  color: #898989;
+  font-size: 13px;
+}
