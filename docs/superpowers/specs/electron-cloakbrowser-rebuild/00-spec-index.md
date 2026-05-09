@@ -46,7 +46,7 @@ Child spec implementation summary:
 | --- | --- |
 | 01 Product Model | PARTIAL |
 | 02 Electron App Architecture | IMPLEMENTATION DONE for M1 plus renderer run-event forwarding foundation |
-| 03 Data And Storage | IMPLEMENTATION DONE for M1 plus terminal run status, identity profiles, evidence records, and compact evidence export foundations |
+| 03 Data And Storage | IMPLEMENTATION DONE for M1 plus workspace allowed-origin policy, terminal run status, identity profiles, evidence records, and compact evidence export foundations |
 | 04 Workflow Graph And Builder | PARTIAL |
 | 05 Action Catalog And Locator | PARTIAL |
 | 06 CloakRunner | PARTIAL: supervised `startRun`/`cancelRun`, event streaming, preflight gate, screenshot artifacts, allowlist checks, runtime retries, and action timeouts implemented; real CloakBrowser smoke, downloads, traces, and forceful cleanup remain |

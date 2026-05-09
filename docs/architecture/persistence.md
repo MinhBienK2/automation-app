@@ -35,7 +35,7 @@ The Electron rebuild has a separate new SQLite workspace schema in `electron/mai
 - `reorder_steps` rewrites indexes through temporary negative values.
 - Child step changes touch the parent workflow `updated_at`.
 - Graph, Workflow Settings, and legacy browser config saves touch the parent workflow `updated_at`.
-- Electron storage initializes `workspace.db` under app data, creates the rebuild schema from empty state, stores one active graph version per workflow, records workflow default profile references, appends monotonic run events, marks run records with terminal status/reason, lists run history by workflow, registers file-backed artifact metadata, persists Identity Profile records, validates basic identity coherence, stores sanitized evidence records, exports compact run evidence views, and hides soft-deleted workflows.
+- Electron storage initializes `workspace.db` under app data, creates the rebuild schema from empty state, stores one active graph version per workflow, records workflow default profile references, persists workspace allowed-origin policy, appends monotonic run events, marks run records with terminal status/reason, lists run history by workflow, registers file-backed artifact metadata, persists Identity Profile records, validates basic identity coherence, stores sanitized evidence records, exports compact run evidence views, and hides soft-deleted workflows.
 - Electron workflow settings snapshots are a transition facade for the current renderer and are not old database migration.
 
 ## Belongs Here

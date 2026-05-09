@@ -43,6 +43,23 @@ describe("Electron storage service", () => {
     expect(storage.getWorkspace().id).toBe("local");
   });
 
+  test("persists workspace operator policy for owned allowed origins", () => {
+    expect(storage.getWorkspacePolicy()).toEqual({
+      allowedOrigins: [],
+      maxConcurrency: 1,
+    });
+
+    storage.saveWorkspacePolicy({
+      allowedOrigins: ["https://owned.example.test"],
+      maxConcurrency: 1,
+    });
+
+    expect(storage.getWorkspacePolicy()).toEqual({
+      allowedOrigins: ["https://owned.example.test"],
+      maxConcurrency: 1,
+    });
+  });
+
   test("creates a workflow with an active draft graph and hides soft-deleted rows", () => {
     const workflow = storage.createWorkflow({
       name: "Owned staging smoke",

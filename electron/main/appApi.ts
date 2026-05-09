@@ -820,6 +820,7 @@ export function createAppApi(options: AppApiOptions) {
         const identityProfileSnapshot = workflow.defaultIdentityProfileId
           ? identitySnapshotFromProfile(options.storage.getIdentityProfile(workflow.defaultIdentityProfileId))
           : defaultIdentitySnapshot();
+        const operatorPolicySnapshot = options.storage.getWorkspacePolicy();
         const run = options.storage.createRun({
           workflowId: input.workflowId,
           graphVersionId: activeVersion.id,
@@ -843,10 +844,7 @@ export function createAppApi(options: AppApiOptions) {
           identityProfileSnapshot,
           environmentSnapshot: { initialVariables: {} },
           artifactDirectories: artifactDirectories(options.appDataDir, run.id),
-          operatorPolicySnapshot: {
-            allowedOrigins: [],
-            maxConcurrency: 1,
-          },
+          operatorPolicySnapshot,
         };
 
         const persistEvent = (event: RunnerEvent) => {

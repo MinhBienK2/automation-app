@@ -514,4 +514,39 @@ describe("Electron app API", () => {
       terminalReason: "Operator stopped run.",
     });
   });
+
+  test("passes workspace allowed origins into the runner policy snapshot", async () => {
+    storage.saveWorkspacePolicy({
+      allowedOrigins: ["https://owned.example.test"],
+      maxConcurrency: 1,
+    });
+    const workflow = await api.workflows.create({ name: "Allowlisted run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = {
+      type: "navigate",
+      config: { url: "https://owned.example.test/login" },
+    };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const payloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          payloads.push(payload);
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(payloads[0]?.operatorPolicySnapshot).toEqual({
+      allowedOrigins: ["https://owned.example.test"],
+      maxConcurrency: 1,
+    });
+  });
 });

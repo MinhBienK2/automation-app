@@ -43,6 +43,11 @@ export type RunRecord = {
   operatorLabel: string;
 };
 
+export type WorkspacePolicy = {
+  allowedOrigins: string[];
+  maxConcurrency: number;
+};
+
 export type RunEventRecord = {
   id: string;
   runId: string;
@@ -213,6 +218,17 @@ function runFromRow(row: Row): RunRecord {
     endedAt: row.ended_at ? String(row.ended_at) : null,
     terminalReason: row.terminal_reason ? String(row.terminal_reason) : null,
     operatorLabel: String(row.operator_label),
+  };
+}
+
+function normalizeWorkspacePolicy(value: unknown): WorkspacePolicy {
+  const policy = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return {
+    allowedOrigins: Array.isArray(policy.allowedOrigins) ? policy.allowedOrigins.map(String) : [],
+    maxConcurrency:
+      typeof policy.maxConcurrency === "number" && policy.maxConcurrency > 0
+        ? Math.floor(policy.maxConcurrency)
+        : 1,
   };
 }
 
@@ -571,6 +587,28 @@ export function createStorageService(options: StorageServiceOptions) {
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at),
       };
+    },
+
+    getWorkspacePolicy(): WorkspacePolicy {
+      const row = database()
+        .prepare("SELECT policy_json FROM workspace_policies WHERE id = 'local_policy'")
+        .get() as Row | undefined;
+      return normalizeWorkspacePolicy(row ? parseJson(row.policy_json, {}) : {});
+    },
+
+    saveWorkspacePolicy(policy: WorkspacePolicy): WorkspacePolicy {
+      const normalized = normalizeWorkspacePolicy(policy);
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `INSERT INTO workspace_policies (id, workspace_id, policy_json, updated_at)
+           VALUES ('local_policy', 'local', ?, ?)
+           ON CONFLICT(id) DO UPDATE SET
+             policy_json = excluded.policy_json,
+             updated_at = excluded.updated_at`,
+        )
+        .run(JSON.stringify(normalized), timestamp);
+      return this.getWorkspacePolicy();
     },
 
     createWorkflow(input: {
