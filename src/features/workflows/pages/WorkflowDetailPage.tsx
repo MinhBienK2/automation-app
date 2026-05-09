@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Settings } from "lucide-react";
 import type {
+  ElectronRunEvent,
   GraphValidationIssue,
   RunState,
   WorkflowGraph,
@@ -25,6 +26,7 @@ type WorkflowDetailPageProps = {
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
   graphIssuesNeedRecheck: boolean;
+  runEvents: ElectronRunEvent[];
   onBack: () => void;
   onOpenWorkflowSettings: () => void;
   onStopRun: () => void;
@@ -43,6 +45,7 @@ export function WorkflowDetailPage({
   workflowGraph,
   graphIssues,
   graphIssuesNeedRecheck,
+  runEvents,
   onBack,
   onOpenWorkflowSettings,
   onStopRun,
@@ -91,6 +94,7 @@ export function WorkflowDetailPage({
             state={runState}
             error={appError}
             hasBlockingIssues={hasBlockingIssues}
+            runEvents={runEvents}
           />
         }
         title={detail.workflow.name}

@@ -285,6 +285,40 @@
   color: #fca5a5;
 }
 
+.run-event-stream {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  max-height: 108px;
+  margin: 4px 0 0;
+  padding: 8px 0 0;
+  overflow: auto;
+  border-top: 1px solid #242424;
+  list-style: none;
+}
+
+.run-event-stream li {
+  display: grid;
+  grid-template-columns: minmax(104px, auto) 1fr;
+  gap: 8px;
+  align-items: center;
+  min-height: 22px;
+  font-size: 12px;
+}
+
+.run-event-type {
+  color: #3ecf8e;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+}
+
+.run-event-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: #b4b4b4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workflow-settings-dialog {
   width: min(1040px, calc(100vw - 48px));
   max-height: min(860px, calc(100dvh - 48px));

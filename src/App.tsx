@@ -16,6 +16,7 @@ import {
   getWorkflowSettings,
   importWorkflowPackage,
   listWorkflows,
+  onRunEvent,
   previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
@@ -46,6 +47,7 @@ import {
 import { Label } from "./components/ui/label";
 import type {
   GraphValidationIssue,
+  ElectronRunEvent,
   RunState,
   WorkflowGraph,
   WorkflowDetail,
@@ -140,6 +142,7 @@ function App() {
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
   const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
   const [runState, setRunState] = useState<RunState>(initialRunState);
+  const [runEvents, setRunEvents] = useState<ElectronRunEvent[]>([]);
   const [workflowDialogMode, setWorkflowDialogMode] =
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
@@ -173,6 +176,12 @@ function App() {
   useEffect(() => {
     void loadWorkflows();
     void refreshRunState();
+  }, []);
+
+  useEffect(() => {
+    return onRunEvent((event) => {
+      setRunEvents((current) => [...current, event].slice(-12));
+    });
   }, []);
 
   useEffect(() => {
@@ -561,6 +570,7 @@ function App() {
       if (!saved) return;
       const settingsSaved = await persistDirtyWorkflowSettings();
       if (!settingsSaved) return;
+      setRunEvents([]);
       const state = await runWorkflowCommand(detail.workflow.id);
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
@@ -752,6 +762,7 @@ function App() {
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
+            runEvents={runEvents}
             onBack={backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser")}
             onStopRun={stopRun}
