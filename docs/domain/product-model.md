@@ -50,6 +50,7 @@ Users can:
 - Electron main/preload: `electron/main.ts`, `electron/preload.ts`
 - Node command handlers: `electron/backend/commands.ts`
 - SQLite bootstrap: `electron/backend/database.ts`
+- Workflow repository: `electron/backend/workflowRepository.ts`
 - Temporary Rust/Tauri reference during migration: `src-tauri/`
 
 ## Invariant

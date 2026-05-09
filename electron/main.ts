@@ -1,6 +1,7 @@
 import path from "node:path";
+import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import {
   createWorkflowCommandHandlers,
   serializeCommandError,
@@ -62,7 +63,26 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
 app.whenReady().then(() => {
   const appPaths = createAppPaths(app.getPath("appData"));
   const database = initializeDatabase(appPaths);
-  registerWorkflowIpc(createWorkflowCommandHandlers({ appPaths, database }));
+  registerWorkflowIpc(
+    createWorkflowCommandHandlers({
+      appPaths,
+      database,
+      async saveWorkflowPackageFile(packageValue) {
+        const { canceled, filePath } = await dialog.showSaveDialog({
+          defaultPath: path.join(
+            appPaths.rootDir,
+            `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
+          ),
+          filters: [{ name: "Workflow package", extensions: ["json"] }],
+          title: "Export Workflow",
+        });
+        if (canceled || !filePath) return null;
+
+        await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
+        return filePath;
+      },
+    }),
+  );
   createMainWindow();
 
   app.on("activate", () => {
@@ -77,3 +97,12 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
+
+function filenameFromWorkflowName(name: string) {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "workflow";
+}

@@ -75,9 +75,9 @@ Update docs: domain architecture, action config contract, user-visible invariant
 
 Read: `architecture/persistence.md`, `contracts/workflow-types.md`, `domain/workflow-lifecycle.md`
 
-Verify: `electron/backend/database.ts`, `electron/backend/commands.ts`, repository tests once added, import/export code in the Electron backend if persisted shape changes; use `src-tauri/` only as a temporary parity reference during migration
+Verify: `electron/backend/database.ts`, `electron/backend/workflowRepository.ts`, `electron/backend/commands.ts`, repository/command tests, import/export code in the Electron backend if persisted shape changes; use `src-tauri/` only as a temporary parity reference during migration
 
-Checks: Electron repository tests once added, `npm run build:electron`; add command tests when command results change.
+Checks: `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; add narrower repository tests when repository behavior changes independently of command handlers.
 
 Update docs: persistence architecture, workflow types, workflow lifecycle.
 

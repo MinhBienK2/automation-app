@@ -15,11 +15,12 @@ Node/Electron backend.
 - Electron main registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
 - Electron SQLite bootstrap: `electron/backend/database.ts`
+- Electron repository: `electron/backend/workflowRepository.ts`
 - Command contract: `docs/contracts/electron-ipc.md`
 - Temporary reference runtime during migration: `src-tauri/`
 
-Plan 01 keeps the Rust/Tauri source tree as a reference while parity is ported.
-It is no longer the renderer command boundary.
+The Rust/Tauri source tree remains as a reference while graph compiler and
+runner parity are ported. It is no longer the renderer command boundary.
 
 ## Belongs Here
 

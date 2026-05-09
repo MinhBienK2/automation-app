@@ -2,12 +2,13 @@
 
 ## Purpose
 
-Persistence stores workflows, versioned workflow graph authoring data, per-workflow settings, runs, and run steps in SQLite. Plan 01 creates the Electron app data directories and the first Node-owned SQLite schema; full command parity is completed in the storage plan.
+Persistence stores workflows, versioned workflow graph authoring data, per-workflow settings, runs, and run steps in SQLite. Electron/Node now owns the production persistence layer.
 
 ## Key Files
 
 - Electron SQLite bootstrap: `electron/backend/database.ts`
-- Electron command stubs: `electron/backend/commands.ts`
+- Electron workflow repository: `electron/backend/workflowRepository.ts`
+- Electron command handlers: `electron/backend/commands.ts`
 - Temporary reference repository: `src-tauri/src/repositories/workflow_repository.rs`
 - Temporary reference migrations: `src-tauri/migrations/`
 
@@ -15,24 +16,16 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 
 - Electron app data uses `appData/automation-app`.
 - The current schema creates document-shaped `workflows` plus queryable `runs` and `run_steps`.
-- Plan 01 command handlers use in-memory workflow data while the database schema is bootstrapped; Plan 02 moves command parity onto SQLite.
 - `listWorkflows` returns workflow summaries with the legacy `step_count` field.
 - Summaries sort by `updated_at DESC`, then name ascending.
-- `get_workflow` currently returns workflow metadata plus legacy ordered steps for compatibility; product graph authoring data is loaded from `get_workflow_graph`.
+- `getWorkflow` returns workflow metadata plus empty legacy ordered steps for compatibility; product graph authoring data is loaded from `getWorkflowGraph`.
 - New workflows create a `Start -> New node` draft workflow graph with an unconfigured action node saved as `config: null`.
-- Workflow graph authoring data is stored in `workflow_graphs.graph_json` keyed by `workflow_id`.
-- Workflow browser runtime config is stored in `workflow_browser_configs` keyed by `workflow_id`.
-- The new schema stores graph and settings documents as JSON columns on `workflows`.
-- Workflows without a settings row return lazy defaults based on workflow metadata and any legacy browser config row.
+- Workflow graph authoring data is stored in `workflows.graph_json`.
+- Workflow Settings are stored in `workflows.settings_json`.
+- Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
-- Workflows without a graph row still open through a compatibility linear graph fallback.
-- Legacy browser config rows are read into lazy Workflow Settings defaults when no settings row exists.
-- Removed legacy step configs are migrated or normalized on read: `open_url` to `navigate`, `sleep` to duration `wait`, and `type_text` to `input_text`.
-- `add_step` appends with `MAX(order_index) + 1`.
-- `delete_step` compacts order indexes.
-- `reorder_steps` rewrites indexes through temporary negative values.
-- Child step changes touch the parent workflow `updated_at`.
-- Graph, Workflow Settings, and legacy browser config saves touch the parent workflow `updated_at`.
+- Saving graph JSON touches the parent workflow `updated_at`.
+- Legacy ordered-step tables and old Rust migrations are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here
 

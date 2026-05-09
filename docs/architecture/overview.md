@@ -18,6 +18,7 @@ Electron main
   -> IPC registration and native dialogs
 Node/TypeScript backend
   -> electron/backend/commands.ts command handlers
+  -> electron/backend/workflowRepository.ts workflow repository
   -> electron/backend/database.ts SQLite bootstrap
 SQLite
   -> workflows
@@ -27,13 +28,13 @@ SQLite
 
 ## Migration State
 
-Plan 01 has moved the renderer command boundary from Tauri `invoke` to Electron
-IPC and added a minimal SQLite bootstrap. The TypeScript command handlers are
-stub/in-memory until the domain, storage, and command parity plan replaces them.
+The renderer command boundary is Electron IPC. The TypeScript backend owns
+workflow CRUD, graph document storage, Workflow Settings, browser-config
+compatibility, package import/export, and SQLite persistence.
 
 `src-tauri/` remains in the repository as a temporary implementation reference
-for domain rules, persistence behavior, graph compilation, and runner parity. It
-is not required by the Electron shell introduced in Plan 01.
+for graph compilation and runner parity. It is not required by the Electron
+command boundary.
 
 ## Boundaries
 

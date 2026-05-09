@@ -3,13 +3,10 @@
 ## Source Files
 
 - TypeScript: `src/types/workflow.ts`
-- Rust workflow domain: `src-tauri/src/domain/workflow.rs`
-- Rust action configs: `src-tauri/src/domain/action_config.rs`
-- Rust graph domain: `src-tauri/src/domain/workflow_graph.rs`
-- Rust settings domain: `src-tauri/src/domain/workflow_settings.rs`
-- Rust browser config domain: `src-tauri/src/domain/browser_config.rs`
-- Rust run types: `src-tauri/src/domain/run.rs`
-- Repository DTOs: `src-tauri/src/repositories/workflow_repository.rs`
+- Electron bridge: `src/types/electron.ts`
+- Node command handlers: `electron/backend/commands.ts`
+- SQLite repository: `electron/backend/workflowRepository.ts`
+- Temporary Rust parity reference: `src-tauri/src/domain/`
 
 ## Workflow Shapes
 

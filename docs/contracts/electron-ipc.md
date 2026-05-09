@@ -9,6 +9,7 @@
 - IPC channels: `electron/ipc.ts`
 - Main process registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
+- SQLite repository: `electron/backend/workflowRepository.ts`
 
 ## Current Boundary
 
@@ -73,12 +74,14 @@ failed calls. This preserves the command-facing error shape used by
   `saveWorkflowPackageFile`; package JSON is not written from the renderer.
 - Command errors serialize as `{ message: string, field?: string | null }`.
 
-## Phase 01 Behavior
+## Persistence And Command Parity
 
-Plan 01 provides the Electron shell, preload bridge, typed renderer wrapper, app
-data directory creation, and a minimal SQLite schema bootstrap. The command
-handler module intentionally uses stub/in-memory behavior until the Node
-persistence and command parity plan replaces it.
+Electron main initializes SQLite in app data, and Node command handlers now use
+the TypeScript workflow repository for workflow CRUD, graph documents, Workflow
+Settings, browser-config compatibility, and workflow package import/export.
+
+Graph validation/compilation and runner execution are still limited to shell
+behavior until their dedicated parity plans complete.
 
 `src-tauri/` remains in the repository as a temporary reference during the
 migration. It is not the renderer command boundary after Plan 01.
