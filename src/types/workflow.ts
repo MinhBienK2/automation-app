@@ -1119,6 +1119,17 @@ export type RunEvidenceExport = {
   }>;
 };
 
+export type RunHistoryRecord = {
+  id: string;
+  workflowId: string;
+  graphVersionId: string;
+  status: string;
+  startedAt: string;
+  endedAt: string | null;
+  terminalReason: string | null;
+  operatorLabel: string;
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;

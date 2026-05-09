@@ -9,6 +9,7 @@ import type {
   RunEvidenceArtifact,
   RunEvidenceEvent,
   RunEvidenceExport,
+  RunHistoryRecord,
   RunValidationIssue,
   RunState,
   SettingsValidationIssue,
@@ -56,6 +57,7 @@ type ElectronCloakBrowserApi = {
     compile?: (input: { graph: WorkflowGraph }) => Promise<CompiledWorkflowGraph>;
   };
   runs?: {
+    list?: (input?: { workflowId?: string; limit?: number }) => Promise<RunHistoryRecord[]>;
     start?: (input: { workflowId: string }) => Promise<RunState>;
     stop?: () => Promise<RunState>;
     getState?: () => Promise<RunState>;

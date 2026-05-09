@@ -413,4 +413,24 @@ describe("Electron app API", () => {
     });
     expect(payloads[0]?.identityProfileSnapshot.proxy).not.toHaveProperty("password");
   });
+
+  test("exposes workflow run history through the app facade", async () => {
+    const workflow = await api.workflows.create({ name: "Run history facade" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+
+    const runState = await api.runs.start({ workflowId: workflow.id });
+    const history = await api.runs.list({ workflowId: workflow.id });
+
+    expect(history).toEqual([
+      expect.objectContaining({
+        id: runState.run_id,
+        workflowId: workflow.id,
+        status: "completed",
+      }),
+    ]);
+  });
 });

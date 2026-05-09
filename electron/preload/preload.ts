@@ -29,6 +29,7 @@ const api = {
     compile: (input: unknown) => ipcRenderer.invoke("graph.compile", input),
   },
   runs: {
+    list: (input?: { workflowId?: string; limit?: number }) => ipcRenderer.invoke("run.list", input ?? {}),
     start: (input: { workflowId: string }) => ipcRenderer.invoke("run.start", input),
     stop: () => ipcRenderer.invoke("run.stop"),
     getState: () => ipcRenderer.invoke("run.getState"),

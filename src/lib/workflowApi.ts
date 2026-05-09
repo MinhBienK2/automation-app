@@ -14,6 +14,7 @@ import type {
   RunEvidenceArtifact,
   RunEvidenceEvent,
   RunEvidenceExport,
+  RunHistoryRecord,
   RunValidationIssue,
   RunState,
   SelectorCandidate,
@@ -166,6 +167,12 @@ export function runWorkflow(workflowId: string) {
   const api = electronApi();
   if (api?.runs?.start) return api.runs.start({ workflowId });
   return invoke<RunState>("run_workflow", { workflowId });
+}
+
+export function listRuns(input: { workflowId?: string; limit?: number } = {}) {
+  const api = electronApi();
+  if (api?.runs?.list) return api.runs.list(input);
+  return invoke<RunHistoryRecord[]>("list_runs", input);
 }
 
 export function stopRun() {

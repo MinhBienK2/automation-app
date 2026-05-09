@@ -51,8 +51,8 @@ Child spec implementation summary:
 | 05 Action Catalog And Locator | PARTIAL |
 | 06 CloakRunner | PARTIAL: supervised `startRun`, event streaming, preflight gate, screenshot artifacts, allowlist checks, runtime retries, and action timeouts implemented; real CloakBrowser smoke, downloads, traces, and forceful cleanup remain |
 | 07 Identity Profile And Fingerprint Preflight | PARTIAL: storage CRUD, app/preload API, renderer wrappers, basic coherence validation, workflow default profile run wiring, and runner preflight gate implemented; profile locking, full UI wiring, and real owned probe smoke remain |
-| 08 Run Evidence And Audit | PARTIAL: run events, terminal run status, artifacts, evidence records, sanitizer, compact export, API surface, and preflight evidence persistence implemented; evidence viewer, operator audit, and strict policy remain |
-| 09 UI/UX Feature Parity | PARTIAL |
+| 08 Run Evidence And Audit | PARTIAL: run events, terminal run status, run history, artifacts, evidence records, sanitizer, compact export, API surface, and preflight evidence persistence implemented; evidence viewer, operator audit, and strict policy remain |
+| 09 UI/UX Feature Parity | PARTIAL: Electron preload/API foundations exist for workflow, graph, settings, run start/state/history, identity profiles, and evidence export; user-facing Electron-native editors/viewers and streamed events remain |
 | 10 Packaging And Release | PARTIAL |
 | 11 Testing And Acceptance | PARTIAL |
 

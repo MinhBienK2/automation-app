@@ -801,6 +801,10 @@ export function createAppApi(options: AppApiOptions) {
     },
 
     runs: {
+      async list(input: { workflowId?: string; limit?: number } = {}) {
+        return options.storage.listRuns(input);
+      },
+
       async start(input: { workflowId: string }): Promise<RunStateWithId> {
         const graph = options.storage.loadActiveGraph(input.workflowId);
         if (!graph) throw new Error(`Workflow '${input.workflowId}' has no active graph.`);

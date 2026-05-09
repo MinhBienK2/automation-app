@@ -822,6 +822,27 @@ export function createStorageService(options: StorageServiceOptions) {
       return this.getRun(inputRunId);
     },
 
+    listRuns(input: { workflowId?: string; limit?: number } = {}): RunRecord[] {
+      const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
+      const rows = input.workflowId
+        ? (database()
+            .prepare(
+              `SELECT * FROM runs
+               WHERE workflow_id = ?
+               ORDER BY started_at DESC, id DESC
+               LIMIT ?`,
+            )
+            .all(input.workflowId, limit) as Row[])
+        : (database()
+            .prepare(
+              `SELECT * FROM runs
+               ORDER BY started_at DESC, id DESC
+               LIMIT ?`,
+            )
+            .all(limit) as Row[]);
+      return rows.map(runFromRow);
+    },
+
     appendRunEvent(
       runId: string,
       input: {

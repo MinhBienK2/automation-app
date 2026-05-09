@@ -169,6 +169,38 @@ describe("Electron storage service", () => {
     expect(storage.getRun(run.id)).toEqual(finished);
   });
 
+  test("lists run history for a workflow with newest run first", () => {
+    const workflow = storage.createWorkflow({ name: "Run history" });
+    const graphVersionId = storage.getActiveGraphVersion(workflow.id).id;
+    const first = storage.createRun({
+      workflowId: workflow.id,
+      graphVersionId,
+      runProfileSnapshot: {},
+      identityProfileSnapshot: { id: "idp_1", name: "Owned" },
+      environmentSnapshot: {},
+      operatorLabel: "local",
+    });
+    const second = storage.createRun({
+      workflowId: workflow.id,
+      graphVersionId,
+      runProfileSnapshot: {},
+      identityProfileSnapshot: { id: "idp_1", name: "Owned" },
+      environmentSnapshot: {},
+      operatorLabel: "local",
+    });
+
+    storage.finishRun(first.id, { status: "failed", terminalReason: "first failed" });
+    storage.finishRun(second.id, { status: "completed" });
+
+    expect(storage.listRuns({ workflowId: workflow.id }).map((run) => run.id)).toEqual([
+      second.id,
+      first.id,
+    ]);
+    expect(storage.listRuns({ workflowId: workflow.id, limit: 1 })).toEqual([
+      expect.objectContaining({ id: second.id }),
+    ]);
+  });
+
   test("persists identity profiles and validates coherence before use", () => {
     const profile = storage.createIdentityProfile({
       name: "Owned mobile profile",

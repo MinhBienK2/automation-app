@@ -39,6 +39,9 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
   ipcMain.handle("graph.validate", (_event, input) => api.graphs.validate(input));
   ipcMain.handle("graph.compile", (_event, input) => api.graphs.compile(input));
 
+  ipcMain.handle("run.list", (_event, input: { workflowId?: string; limit?: number } = {}) =>
+    api.runs.list(input),
+  );
   ipcMain.handle("run.start", (_event, input: { workflowId: string }) => api.runs.start(input));
   ipcMain.handle("run.stop", () => api.runs.stop());
   ipcMain.handle("run.getState", () => api.runs.getState());
