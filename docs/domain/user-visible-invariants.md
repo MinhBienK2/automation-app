@@ -82,6 +82,7 @@ Preserve these unless the task explicitly changes them.
 ## Runner Behavior
 
 - Full runs execute the compiled saved graph.
+- Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
 - Full runs use persisted Workflow Settings as the run baseline. Browser settings, including headless mode, are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset; Execution max duration cancels and fails overlong runs with a timeout reason.
 - Fingerprint preflight, when enabled, runs after browser/environment setup and before graph actions; a blocked or malformed verdict stops execution before user workflow actions.
 - Execution wait-between-nodes settings are applied after graph compile and before runner start, excluding setup steps and explicit Wait/Random Wait override nodes.

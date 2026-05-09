@@ -68,6 +68,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 14. Generate selector suggestions from an element snapshot, normalize recorded click/input events, dry-run validate a config, and in a debug build generate a local fixture HTML file from a single `.html` filename.
 15. Move graph nodes, reopen the workflow, and confirm node positions persist.
 16. Save Workflow Settings, save the graph, and run the graph workflow.
+17. Confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, uses headed/headless according to Workflow Settings, and stores named profile data under the app data browser profile directory.
 17. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
 17. Confirm runner evidence outputs include `__action_traces`, and when fingerprint preflight is enabled against an allowlisted JSON probe, `fingerprint_preflight` is stored or the run blocks before graph actions with the probe mismatch reason.
 18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.

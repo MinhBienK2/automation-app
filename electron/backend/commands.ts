@@ -32,6 +32,7 @@ import {
   compileWorkflowGraph as compileGraph,
   validateWorkflowGraph as validateGraph,
 } from "./graphCompiler.js";
+import { BrowserWorkflowRunner } from "./runner.js";
 import { WorkflowRepository } from "./workflowRepository.js";
 
 export type CommandError = {
@@ -44,6 +45,7 @@ export type WorkflowCommandHandlers = ReturnType<typeof createWorkflowCommandHan
 type CommandContext = {
   appPaths: AppPaths;
   database: DatabaseSync;
+  runner?: Pick<BrowserWorkflowRunner, "run" | "closeRetainedContext">;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
 };
 
@@ -70,6 +72,9 @@ const idleRunState: RunState = {
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
+  const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
+  let currentRunState = idleRunState;
+  let currentRunAbortController: AbortController | null = null;
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
@@ -248,25 +253,49 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return compileGraph(graph);
     },
 
-    runWorkflow(workflowId: string): RunState {
+    async runWorkflow(workflowId: string): Promise<RunState> {
       requireWorkflow(workflowId);
-      return {
+      const graph = this.getWorkflowGraph(workflowId);
+      const runIssues = this.validateWorkflowRun(workflowId);
+      const firstError = runIssues.find((issue) => issue.level === "error");
+      if (firstError) {
+        throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
+      }
+
+      currentRunAbortController = new AbortController();
+      currentRunState = {
         ...idleRunState,
-        status: "success",
+        status: "running",
         mode: "run_workflow",
       };
+      try {
+        currentRunState = await runner.run({
+          graph: compileGraph(graph),
+          settings: getSettings(workflowId),
+          mode: "run_workflow",
+          signal: currentRunAbortController.signal,
+        });
+        return currentRunState;
+      } finally {
+        currentRunAbortController = null;
+      }
     },
 
-    stopRun() {
-      return {
+    async stopRun() {
+      currentRunAbortController?.abort();
+      if (!currentRunAbortController) {
+        await runner.closeRetainedContext?.();
+      }
+      currentRunState = {
         ...idleRunState,
         status: "stopped",
         mode: "run_workflow",
       };
+      return currentRunState;
     },
 
     getRunState() {
-      return idleRunState;
+      return currentRunState;
     },
 
     validateSchedule(schedule: OrchestrationSchedule) {
@@ -708,7 +737,7 @@ function normalizeSettingsBrowser(
   };
 }
 
-function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSettings {
+export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSettings {
   const browser = configToSettingsBrowser(defaultBrowserConfig(workflow.id));
   return {
     workflow_id: workflow.id,

@@ -2,47 +2,44 @@
 
 ## Purpose
 
-The runner executes action configs in a headed Chromium browser and reports progress back to app state.
+The Electron runner executes compiled action configs through CloakBrowser's Playwright runtime and reports progress through the shared run-state contract.
 
 ## Key Files
 
-- `src-tauri/src/runner/browser.rs`
-- `src-tauri/src/runner/actions/mod.rs`
-- `src-tauri/src/runner/actions/`
-- `src-tauri/src/runner/executor.rs`
-- `src-tauri/src/runner/cancellation.rs`
-- `src-tauri/src/runner/error.rs`
-- `src-tauri/src/services/run_service.rs`
-- `src-tauri/src/app_state.rs`
-- `src-tauri/tests/runner_spike.rs`
+- `electron/backend/runner.ts`
+- `electron/backend/runner.test.ts`
+- `electron/backend/runner.smoke.test.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/graphCompiler.ts`
+- Temporary Rust parity reference: `src-tauri/src/runner/`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/app_state.rs`
 
 ## Current Behavior
 
-- `BrowserRunExecutor` runs action configs through `BrowserRunner`.
-- `BrowserRunExecutor` accepts optional workflow browser runtime config and passes it to `BrowserRunner` before launch.
-- `BrowserRunner` emits `StepStarted` and `StepCompleted`.
-- `run_service` maps progress step numbers back to workflow step ids.
+- `BrowserWorkflowRunner` runs action configs through CloakBrowser and Playwright-compatible page/context APIs.
+- CloakBrowser `humanize` is enabled by default for both temporary and persistent contexts.
+- `BrowserWorkflowRunner` maps Workflow Settings Browser and Environment values to CloakBrowser launch/context options before the first page action.
+- Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC.
 - Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
 - Variable actions write to the browser session output store. `set_variable` accepts typed rows, renders templates before parsing values, flattens object fields into dotted output keys, and keeps array values whole. `set_json_variables` renders and parses a JSON object before storing flattened keys.
 - `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
 - Action failures produce failed outcomes with optional failure screenshots.
 - Runner infrastructure errors fail the run without a retained session.
-- Browser sessions are retained in `AppState` after terminal outcomes unless Workflow Settings Execution browser retention is `close` or a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
-- Starting a new run closes any retained sessions from previous terminal outcomes before Chromium launches, so persistent profile directories are not reused while an older browser process still owns the profile lock.
-- Browser launch settings come from Workflow Settings Browser. `browser.headless` switches `BrowserRunExecutor` from the default headed Chromium launch to headless mode. Legacy browser config commands map to the Browser section.
+- Browser sessions are retained in the Electron runner after terminal outcomes unless Workflow Settings Execution browser retention is `close` or a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
+- Starting a new run closes any retained session from previous terminal outcomes before CloakBrowser launches, so persistent profile directories are not reused while an older browser process still owns the profile lock.
+- Browser launch settings come from Workflow Settings Browser. `browser.headless` switches CloakBrowser between headed and headless mode. Legacy browser config commands map to the Browser section.
 - Fingerprint preflight is compiled as settings setup when enabled. The runner opens the configured probe URL, parses the JSON verdict in-page, stores sanitized `fingerprint_preflight` evidence, and fails before graph actions when the verdict is malformed or not passed.
-- Named browser profiles use persistent Chromium user data directories under the user's app data directory at `workflow-automation-manager/browser-profiles/<profile>`. Runs without a profile continue to use temporary user data directories.
+- Named browser profiles use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile>`. Runs without a profile use temporary contexts that close after the run.
 - Before graph actions run, the command layer prepends supported Environment defaults and Variables seed values from Workflow Settings.
 - Execution settings fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
 - Execution interaction fidelity settings are applied before the runner receives steps. `high` currently migrates compatible fill-field defaults to typed keyboard input while preserving explicit direct-value configs.
 - Execution settings can insert fixed or random waits between compiled graph nodes before the runner receives steps. Explicit Wait and Random Wait nodes override the global wait at their position.
-- Execution max duration is enforced in `run_service` with the same cancellation token used by Stop. Timeout finishes the run as failed with a workflow-level timeout error.
+- Cancellation is checked between actions and inside long waits through an `AbortSignal`. Stop returns a stopped run state and closes temporary contexts according to retention policy.
 - Batch execution compiles the saved graph, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, closes each row session, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
-- `BrowserRunner` records compact action traces into the browser output store under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
+- `BrowserWorkflowRunner` records compact action traces into outputs under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
 
 ## Belongs Here
 
-- Chromium session launch and tab/frame/download behavior.
+- CloakBrowser session launch and tab/frame/download behavior.
 - Workflow Settings Browser application at browser launch.
 - Action dispatch and browser interaction.
 - Cancellation-aware execution.
@@ -50,7 +47,7 @@ The runner executes action configs in a headed Chromium browser and reports prog
 
 ## Action Modules
 
-Browser action script builders live under `src-tauri/src/runner/actions/` and are grouped by user behavior:
+Browser action dispatch now lives in `electron/backend/runner.ts` and is grouped by user behavior. The old Rust action modules remain a temporary reference until final Tauri removal:
 
 - `pointer.rs`: click target geometry and explicit force-DOM fallback helpers. Click, hover, double/right click, and drag/drop dispatch browser-level mouse primitives from `actions/mod.rs`.
 - `scroll.rs`: page, container, into-view, and until-visible scrolling.

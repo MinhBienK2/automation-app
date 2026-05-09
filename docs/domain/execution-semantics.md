@@ -6,12 +6,13 @@
 - `run_workflow` executes the compiled saved graph.
 - `test_step` executes from the first step through the selected step.
 - During the Electron migration, graph validation and compilation are owned by `electron/backend/graphCompiler.ts`.
-- Browser execution is being ported into the Electron backend; `src-tauri/src/runner/` remains a temporary parity reference until the migration is complete.
+- Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` and Playwright-compatible page/context APIs. `src-tauri/src/runner/` remains a temporary parity reference until the migration is complete.
 - Visual graphs compile to executable action configs, including graph-internal control configs for switch, guarded loops, try/catch, fallback, loop break/continue, output assertions, transforms, subworkflow expansion, and domain allowlists.
 - Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
+- Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment defaults from Workflow Settings compile into setup actions before graph actions: geolocation, permission grants, extra headers, download directory, cookies, localStorage, and sessionStorage.
 - Variables settings seed the runtime variable store before graph actions. Legacy input schema data remains persisted for compatibility but is not exposed by the current Variables UI.
@@ -46,14 +47,14 @@
 
 ## Browser Sessions
 
-- Runner launches a headed Chromium browser by default through `BrowserRunExecutor`.
+- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` is enabled by default.
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
-- Browser sessions are retained after success, failure, and stop by `AppState::finish_run`.
-- `AppState::finish_run` captures runtime outputs before retaining the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
-- `AppState::begin_run` closes retained sessions from previous terminal runs before a new run launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
+- Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
+- The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
+- Starting a new run closes retained sessions from previous terminal runs before a new CloakBrowser context launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
 - Workflow Settings Browser can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts. The frontend exposes coherent device profile presets that write those existing user agent, viewport, mobile, and touch fields together.
 - Legacy browser config commands are compatibility wrappers over Workflow Settings Browser.
-- Temporary user data directories are used unless a profile action config or Workflow Settings Browser profile selects a persistent profile. Persistent profile data is stored under the user's app data directory in `workflow-automation-manager/browser-profiles/<profile>`, not under the OS temp directory.
+- Temporary CloakBrowser contexts are used unless Workflow Settings Browser selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile>`, not under the OS temp directory.
 
 ## Cancellation
 

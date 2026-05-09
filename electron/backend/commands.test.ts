@@ -14,6 +14,8 @@ import {
   type AppPaths,
 } from "./database";
 import type {
+  CompiledWorkflowGraph,
+  RunState,
   WorkflowGraph,
   WorkflowPackage,
   WorkflowSettings,
@@ -231,13 +233,100 @@ describe("Electron workflow command handlers", () => {
       message: "Boom",
     });
   });
+
+  test("runs saved workflow graph through the Electron browser runner", async () => {
+    const runnerCalls: Array<{
+      graph: CompiledWorkflowGraph;
+      settings: WorkflowSettings;
+      mode: string;
+    }> = [];
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: {
+          graph: CompiledWorkflowGraph;
+          settings: WorkflowSettings;
+          mode: string;
+        }): Promise<RunState> {
+          runnerCalls.push(request);
+          return {
+            status: "success",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: ["visit"],
+            outputs: { title: "Fixture" },
+            error: null,
+          };
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Runnable");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    const result = await handlers.runWorkflow(workflow.id);
+
+    expect(result).toMatchObject({
+      status: "success",
+      completed_step_ids: ["visit"],
+      outputs: { title: "Fixture" },
+    });
+    expect(runnerCalls).toHaveLength(1);
+    expect(runnerCalls[0]?.mode).toBe("run_workflow");
+    expect(runnerCalls[0]?.settings.workflow_id).toBe(workflow.id);
+    expect(runnerCalls[0]?.graph.steps).toEqual([
+      expect.objectContaining({
+        node_id: "visit",
+        config: { type: "navigate", config: { url: "https://owned.test" } },
+      }),
+    ]);
+  });
 });
 
-async function createTestHandlers() {
+function runnableGraph(): WorkflowGraph {
+  return {
+    version: 1,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+      {
+        id: "visit",
+        node_type: "action",
+        label: "Visit",
+        position: { x: 200, y: 0 },
+        config: { type: "navigate", config: { url: "https://owned.test" } },
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: "start-visit",
+        source_node_id: "start",
+        source_port: "out",
+        target_node_id: "visit",
+        target_port: "in",
+      },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+async function createTestHandlers(
+  overrides: Partial<Parameters<typeof createWorkflowCommandHandlers>[0]> = {},
+) {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-app-"));
   tempRoots.push(tempRoot);
   const appPaths = createAppPaths(tempRoot);
   const database = initializeDatabase(appPaths);
-  const handlers = createWorkflowCommandHandlers({ appPaths, database });
+  const handlers = createWorkflowCommandHandlers({ appPaths, database, ...overrides });
   return { appPaths, database, handlers };
 }
