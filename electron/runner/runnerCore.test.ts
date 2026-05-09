@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -189,6 +189,47 @@ describe("CloakRunner core", () => {
     });
     expect(events.find((event) => event.type === "run.failed")).toMatchObject({
       payload: expect.objectContaining({ category: "system" }),
+    });
+  });
+
+  test("rejects screenshot artifact paths outside the allocated directory before capture", async () => {
+    const events: RunnerEvent[] = [];
+    let screenshotCalled = false;
+    const adapter = fakeAdapter();
+    adapter.screenshot = async () => {
+      screenshotCalled = true;
+      return Buffer.from("should-not-write");
+    };
+    const plan = basePlan([
+      {
+        id: "step_shot",
+        sourceNodeId: "shot",
+        actionType: "take_screenshot",
+        label: "Screenshot",
+        config: { type: "take_screenshot", fileName: "../leak.png" },
+      },
+    ]);
+
+    const result = await runPlan(payload(plan), adapter, {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("failed");
+    expect(screenshotCalled).toBe(false);
+    expect(existsSync(path.join(artifactDir, "leak.png"))).toBe(false);
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "step.started",
+      "issue.created",
+      "step.failed",
+      "run.failed",
+    ]);
+    expect(events.find((event) => event.type === "issue.created")).toMatchObject({
+      payload: expect.objectContaining({
+        category: "validation",
+        message: "Artifact file path must stay inside the allocated screenshots directory.",
+      }),
     });
   });
 

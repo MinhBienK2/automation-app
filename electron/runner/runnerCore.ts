@@ -70,6 +70,21 @@ function relativeArtifactPath(runId: string, kind: "screenshots" | "downloads" |
   return `runs/${runId}/${kind}/${fileName}`;
 }
 
+function resolveArtifactPath(root: string, kind: "screenshots" | "downloads" | "traces", fileName: string) {
+  if (fileName.includes("\0")) {
+    throw new RunnerActionError("Artifact file path contains an invalid character.", "validation");
+  }
+  const rootPath = path.resolve(root);
+  const artifactPath = path.resolve(rootPath, fileName);
+  if (artifactPath !== rootPath && !artifactPath.startsWith(`${rootPath}${path.sep}`)) {
+    throw new RunnerActionError(
+      `Artifact file path must stay inside the allocated ${kind} directory.`,
+      "validation",
+    );
+  }
+  return artifactPath;
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -320,7 +335,11 @@ export async function runPlan(
                   break;
                 case "take_screenshot": {
                   const fileName = step.config.fileName || `${step.sourceNodeId}.png`;
-                  const screenshotPath = path.join(payload.artifactDirectories.screenshots, fileName);
+                  const screenshotPath = resolveArtifactPath(
+                    payload.artifactDirectories.screenshots,
+                    "screenshots",
+                    fileName,
+                  );
                   const screenshot = await adapter.screenshot({
                     path: screenshotPath,
                     fullPage: (step.config as ScreenshotActionConfig).fullPage,
