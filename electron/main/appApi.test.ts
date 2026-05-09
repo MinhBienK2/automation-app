@@ -292,4 +292,53 @@ describe("Electron app API", () => {
       }),
     ]);
   });
+
+  test("persists preflight verdict runner events as sanitized evidence records", async () => {
+    const workflow = await api.workflows.create({ name: "Preflight evidence flow" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload, onEvent: (event: RunnerEvent) => void): Promise<RunnerResult> {
+          onEvent({
+            type: "preflight.verdictReceived",
+            severity: "info",
+            runId: payload.runId,
+            payload: {
+              passed: true,
+              verdict: "passed",
+              proxy: { label: "owned", password: "raw-password" },
+            },
+            createdAt: "2026-05-09T00:00:00.000Z",
+          });
+          onEvent({
+            type: "run.completed",
+            severity: "info",
+            runId: payload.runId,
+            payload: { status: "completed" },
+            createdAt: "2026-05-09T00:00:01.000Z",
+          });
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    const runState = await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(storage.listEvidenceRecords(runState.run_id ?? "")).toEqual([
+      expect.objectContaining({
+        evidenceType: "preflight_verdict",
+        sanitizedPayload: expect.objectContaining({
+          passed: true,
+          proxy: { label: "owned", password: "[redacted]" },
+        }),
+      }),
+    ]);
+  });
 });

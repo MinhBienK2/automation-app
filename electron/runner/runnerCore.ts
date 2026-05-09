@@ -70,6 +70,10 @@ function relativeArtifactPath(runId: string, kind: "screenshots" | "downloads" |
   return `runs/${runId}/${kind}/${fileName}`;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
 function event(input: Omit<RunnerEvent, "createdAt">): RunnerEvent {
   return {
     ...input,
@@ -113,6 +117,123 @@ export async function runPlan(
         headless: payload.identityProfileSnapshot.headless,
       },
     });
+
+    const preflightPolicy = payload.identityProfileSnapshot.preflightPolicy;
+    if (preflightPolicy?.enabled) {
+      emit({
+        type: "preflight.started",
+        severity: "info",
+        runId: payload.runId,
+        payload: {
+          profileId: payload.identityProfileSnapshot.id,
+          probeOrigin: new URL(preflightPolicy.probeUrl).origin,
+        },
+      });
+
+      try {
+        if (!originAllowed(preflightPolicy.probeUrl, preflightPolicy.allowedOrigins)) {
+          throw new RunnerActionError(
+            `Fingerprint preflight probe is outside the owned allowlist: ${preflightPolicy.probeUrl}`,
+            "policy",
+          );
+        }
+        await adapter.navigate({ type: "navigate", url: preflightPolicy.probeUrl });
+        const verdictText = await adapter.extractText({
+          type: "extract_text",
+          locator: preflightPolicy.verdictLocator ?? {
+            strategy: "css",
+            value: "body",
+            filters: { visible: true },
+            fallbacks: [],
+          },
+          outputName: "fingerprint_preflight_verdict",
+        });
+        const verdict = asRecord(JSON.parse(verdictText));
+        if (!verdict || typeof verdict.passed !== "boolean") {
+          throw new RunnerActionError("Fingerprint preflight verdict is malformed.", "validation");
+        }
+
+        emit({
+          type: "preflight.verdictReceived",
+          severity: verdict.passed ? "info" : "warning",
+          runId: payload.runId,
+          payload: verdict,
+        });
+
+        if (verdict.passed !== true) {
+          const reason = `Fingerprint preflight blocked run with verdict '${String(verdict.verdict ?? "blocked")}'.`;
+          emit({
+            type: "issue.created",
+            severity: "error",
+            runId: payload.runId,
+            payload: {
+              category: "policy",
+              message: reason,
+            },
+          });
+          emit({
+            type: "preflight.failed",
+            severity: "error",
+            runId: payload.runId,
+            payload: {
+              reason,
+              verdict: verdict.verdict ?? null,
+            },
+          });
+          emit({
+            type: "run.failed",
+            severity: "error",
+            runId: payload.runId,
+            payload: {
+              category: "policy",
+              reason,
+            },
+          });
+          return { runId: payload.runId, status: "failed", reason };
+        }
+
+        emit({
+          type: "preflight.passed",
+          severity: "info",
+          runId: payload.runId,
+          payload: {
+            verdict: verdict.verdict ?? "passed",
+          },
+        });
+      } catch (error) {
+        const actionError =
+          error instanceof RunnerActionError
+            ? error
+            : new RunnerActionError(error instanceof Error ? error.message : String(error), "validation");
+        emit({
+          type: "issue.created",
+          severity: "error",
+          runId: payload.runId,
+          payload: {
+            category: actionError.category,
+            message: actionError.message,
+          },
+        });
+        emit({
+          type: "preflight.failed",
+          severity: "error",
+          runId: payload.runId,
+          payload: {
+            reason: actionError.message,
+          },
+        });
+        emit({
+          type: "run.failed",
+          severity: "error",
+          runId: payload.runId,
+          payload: {
+            category: actionError.category,
+            reason: actionError.message,
+          },
+        });
+        return { runId: payload.runId, status: "failed", reason: actionError.message };
+      }
+    }
 
     for (const step of payload.runPlan.steps) {
       if (isCancelled()) {

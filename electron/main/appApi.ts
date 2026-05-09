@@ -797,6 +797,17 @@ export function createAppApi(options: AppApiOptions) {
               sanitized: event.payload.sanitized === true,
             });
           }
+
+          if (event.type === "preflight.verdictReceived") {
+            options.storage.createEvidenceRecord({
+              runId: run.id,
+              evidenceType: "preflight_verdict",
+              payload: {
+                ...event.payload,
+                eventId: persisted.id,
+              },
+            });
+          }
         };
 
         const result = options.runner

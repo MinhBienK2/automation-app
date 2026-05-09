@@ -188,4 +188,64 @@ describe("CloakRunner core", () => {
     expect(events.filter((event) => event.type === "run.cancelled")).toHaveLength(1);
     expect(events.some((event) => event.type === "run.completed")).toBe(false);
   });
+
+  test("blocks workflow actions when owned fingerprint preflight returns a blocking verdict", async () => {
+    const events: RunnerEvent[] = [];
+    let clickExecuted = false;
+    const adapter = fakeAdapter();
+    adapter.extractText = async () =>
+      JSON.stringify({
+        passed: false,
+        verdict: "blocked",
+        risk_score: 92,
+        run_id: "probe-run-1",
+        profile_id: "id_default",
+        mismatches: [{ field: "timezone", severity: "error" }],
+        evidence: { families: ["browser", "network"] },
+      });
+    adapter.click = async () => {
+      clickExecuted = true;
+    };
+    const plan = basePlan([
+      {
+        id: "step_click",
+        sourceNodeId: "click",
+        actionType: "click",
+        label: "Click",
+        config: {
+          type: "click",
+          locator: { strategy: "text", value: "Continue", filters: { visible: true }, fallbacks: [] },
+        },
+      },
+    ]);
+    const runPayload = payload(plan);
+    runPayload.identityProfileSnapshot.preflightPolicy = {
+      enabled: true,
+      probeUrl: "https://owned.example.test/fingerprint",
+      allowedOrigins: ["https://owned.example.test"],
+    };
+
+    const result = await runPlan(runPayload, adapter, {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("failed");
+    expect(clickExecuted).toBe(false);
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "preflight.started",
+      "preflight.verdictReceived",
+      "issue.created",
+      "preflight.failed",
+      "run.failed",
+    ]);
+    expect(events.find((event) => event.type === "preflight.verdictReceived")).toMatchObject({
+      payload: expect.objectContaining({
+        verdict: "blocked",
+        passed: false,
+        profile_id: "id_default",
+      }),
+    });
+  });
 });

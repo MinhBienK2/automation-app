@@ -143,6 +143,12 @@ export type IdentityProfileSnapshot = {
   } | null;
   profileReuseEnabled: boolean;
   persistentProfilePath?: string | null;
+  preflightPolicy?: {
+    enabled: boolean;
+    probeUrl: string;
+    allowedOrigins: string[];
+    verdictLocator?: LocatorConfig;
+  };
 };
 
 export type EnvironmentSnapshot = {
