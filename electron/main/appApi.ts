@@ -815,6 +815,10 @@ export function createAppApi(options: AppApiOptions) {
           : await runPlan(payload, options.createAdapter(), {
               emit: persistEvent,
             });
+        options.storage.finishRun(run.id, {
+          status: result.status,
+          terminalReason: result.reason ?? null,
+        });
 
         lastRunState = {
           run_id: run.id,

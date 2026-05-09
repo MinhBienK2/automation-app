@@ -144,6 +144,31 @@ describe("Electron storage service", () => {
     expect(storage.listArtifacts(run.id)).toEqual([artifact]);
   });
 
+  test("marks run records with terminal status and reason", () => {
+    const workflow = storage.createWorkflow({ name: "Run terminal status" });
+    const run = storage.createRun({
+      workflowId: workflow.id,
+      graphVersionId: storage.getActiveGraphVersion(workflow.id).id,
+      runProfileSnapshot: {},
+      identityProfileSnapshot: { id: "idp_1", name: "Owned" },
+      environmentSnapshot: {},
+      operatorLabel: "local",
+    });
+
+    const finished = storage.finishRun(run.id, {
+      status: "failed",
+      terminalReason: "preflight blocked",
+    });
+
+    expect(finished).toMatchObject({
+      id: run.id,
+      status: "failed",
+      terminalReason: "preflight blocked",
+    });
+    expect(finished.endedAt).toEqual(expect.any(String));
+    expect(storage.getRun(run.id)).toEqual(finished);
+  });
+
   test("persists identity profiles and validates coherence before use", () => {
     const profile = storage.createIdentityProfile({
       name: "Owned mobile profile",

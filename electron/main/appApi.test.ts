@@ -211,6 +211,10 @@ describe("Electron app API", () => {
         relativePath: `runs/${runState.run_id}/screenshots/final.png`,
       }),
     ]);
+    expect(storage.getRun(runState.run_id ?? "")).toMatchObject({
+      status: "completed",
+      terminalReason: null,
+    });
   });
 
   test("uses the supervised runner client when provided and persists streamed events", async () => {

@@ -195,6 +195,19 @@ function artifactFromRow(row: Row): ArtifactRecord {
   };
 }
 
+function runFromRow(row: Row): RunRecord {
+  return {
+    id: String(row.id),
+    workflowId: String(row.workflow_id),
+    graphVersionId: String(row.graph_version_id),
+    status: String(row.status),
+    startedAt: String(row.started_at),
+    endedAt: row.ended_at ? String(row.ended_at) : null,
+    terminalReason: row.terminal_reason ? String(row.terminal_reason) : null,
+    operatorLabel: String(row.operator_label),
+  };
+}
+
 function identityProfileFromRow(row: Row): IdentityProfileRecord {
   return {
     id: String(row.id),
@@ -750,6 +763,22 @@ export function createStorageService(options: StorageServiceOptions) {
         terminalReason: null,
         operatorLabel: input.operatorLabel,
       };
+    },
+
+    getRun(runId: string): RunRecord {
+      const row = database().prepare("SELECT * FROM runs WHERE id = ?").get(runId) as
+        | Row
+        | undefined;
+      if (!row) throw new Error(`Run '${runId}' not found.`);
+      return runFromRow(row);
+    },
+
+    finishRun(inputRunId: string, input: { status: string; terminalReason?: string | null }): RunRecord {
+      const timestamp = nowIso();
+      database()
+        .prepare("UPDATE runs SET status = ?, ended_at = ?, terminal_reason = ? WHERE id = ?")
+        .run(input.status, timestamp, input.terminalReason ?? null, inputRunId);
+      return this.getRun(inputRunId);
     },
 
     appendRunEvent(
