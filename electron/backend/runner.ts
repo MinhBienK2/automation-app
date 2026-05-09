@@ -109,12 +109,13 @@ type RunnerOptions = {
   random?: () => number;
 };
 
-type RunnerRunRequest = {
+export type RunnerRunRequest = {
   graph: CompiledWorkflowGraph;
   settings: WorkflowSettings;
   mode: RunMode;
   targetStepId?: string | null;
   signal?: AbortSignal;
+  onProgress?: (state: Partial<RunState>) => void;
 };
 
 type Runtime = {
@@ -195,8 +196,18 @@ export class BrowserWorkflowRunner {
         this.throwIfCancelled(runtime.signal);
         state.current_step_id = step.node_id;
         state.current_step_number = stepNumber;
+        request.onProgress?.({
+          current_step_id: step.node_id,
+          current_step_number: stepNumber,
+          completed_step_ids: [...state.completed_step_ids],
+        });
         await this.executeStep(runtime, step);
         state.completed_step_ids.push(step.node_id);
+        request.onProgress?.({
+          current_step_id: step.node_id,
+          current_step_number: stepNumber,
+          completed_step_ids: [...state.completed_step_ids],
+        });
         if (request.targetStepId === step.node_id) break;
       }
       state.status = "success";

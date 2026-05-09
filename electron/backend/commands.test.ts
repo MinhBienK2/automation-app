@@ -281,6 +281,254 @@ describe("Electron workflow command handlers", () => {
       }),
     ]);
   });
+
+  test("keeps one active run, exposes running state, and persists terminal evidence", async () => {
+    let finishRun: ((state: RunState) => void) | null = null;
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        async run(): Promise<RunState> {
+          return new Promise((resolve) => {
+            finishRun = resolve;
+          });
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Lifecycle");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    const runPromise = handlers.runWorkflow(workflow.id);
+    expect(handlers.getRunState()).toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+    });
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
+      message: "A workflow run is already active",
+      field: "run",
+    });
+
+    finishRun?.({
+      status: "success",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: ["visit"],
+      outputs: {
+        title: "Fixture",
+        __action_traces: [
+          {
+            node_id: "visit",
+            action_type: "navigate",
+            status: "success",
+            mode: "browser",
+          },
+        ],
+      },
+      error: null,
+    });
+
+    await expect(runPromise).resolves.toMatchObject({
+      status: "success",
+      completed_step_ids: ["visit"],
+      outputs: { title: "Fixture" },
+    });
+    expect(handlers.getRunState()).toMatchObject({ status: "success" });
+
+    const runRows = database
+      .prepare("SELECT workflow_id, status, outputs_json, error_json FROM runs")
+      .all() as Array<Record<string, string | null>>;
+    expect(runRows).toHaveLength(1);
+    expect(runRows[0]).toMatchObject({
+      workflow_id: workflow.id,
+      status: "success",
+      error_json: null,
+    });
+    expect(JSON.parse(runRows[0]?.outputs_json ?? "{}")).toMatchObject({
+      title: "Fixture",
+    });
+
+    const stepRows = database
+      .prepare("SELECT node_id, step_number, action_type, status, trace_json FROM run_steps")
+      .all() as Array<Record<string, string | number | null>>;
+    expect(stepRows).toEqual([
+      expect.objectContaining({
+        node_id: "visit",
+        step_number: 1,
+        action_type: "navigate",
+        status: "success",
+      }),
+    ]);
+    expect(JSON.parse(String(stepRows[0]?.trace_json))).toMatchObject({
+      node_id: "visit",
+      action_type: "navigate",
+    });
+  });
+
+  test("maps runner progress into getRunState while a run is active", async () => {
+    let finishRun: ((state: RunState) => void) | null = null;
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: {
+          onProgress?: (state: Partial<RunState>) => void;
+        }): Promise<RunState> {
+          request.onProgress?.({
+            current_step_id: "visit",
+            current_step_number: 1,
+            completed_step_ids: [],
+          });
+          return new Promise((resolve) => {
+            finishRun = resolve;
+          });
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Progress");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    const runPromise = handlers.runWorkflow(workflow.id);
+
+    expect(handlers.getRunState()).toMatchObject({
+      status: "running",
+      current_step_id: "visit",
+      current_step_number: 1,
+      completed_step_ids: [],
+    });
+
+    finishRun?.({
+      status: "success",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: ["visit"],
+      outputs: {},
+      error: null,
+    });
+    await runPromise;
+  });
+
+  test("fails an overlong run through max workflow duration timeout", async () => {
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: { signal?: AbortSignal }): Promise<RunState> {
+          await new Promise<void>((resolve) => {
+            request.signal?.addEventListener("abort", resolve, { once: true });
+          });
+          return {
+            status: "stopped",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: [],
+            outputs: {},
+            error: null,
+          };
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Timeout");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      execution: {
+        ...settings.execution,
+        max_workflow_duration_ms: 1,
+      },
+    });
+
+    const result = await handlers.runWorkflow(workflow.id);
+
+    expect(result).toMatchObject({
+      status: "failed",
+      error: {
+        reason: "Workflow exceeded maximum duration of 1 ms",
+      },
+    });
+  });
+
+  test("runs batch rows sequentially with row variables and stop-on-first-failed-row", async () => {
+    const runnerCalls: CompiledWorkflowGraph[] = [];
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: { graph: CompiledWorkflowGraph }): Promise<RunState> {
+          runnerCalls.push(request.graph);
+          const rowIndex = runnerCalls.length - 1;
+          return {
+            status: rowIndex === 0 ? "success" : "failed",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: rowIndex === 0 ? ["visit"] : [],
+            outputs: rowIndex === 0 ? { ok: true } : {},
+            error:
+              rowIndex === 0
+                ? null
+                : {
+                    step_id: "visit",
+                    step_number: 1,
+                    action_type: "navigate",
+                    reason: "row failed",
+                  },
+          };
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Batch");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      execution: {
+        ...settings.execution,
+        batch_stop_on_first_failed_row: true,
+      },
+    });
+
+    await expect(
+      handlers.runBatchWorkflow(workflow.id, {
+        rows: [{ name: "A" }],
+        concurrency_limit: 2,
+      }),
+    ).rejects.toMatchObject({
+      field: "concurrency_limit",
+    });
+
+    const summary = await handlers.runBatchWorkflow(workflow.id, {
+      rows: [{ name: "A" }, { name: "B" }, { name: "C" }],
+    });
+
+    expect(summary).toEqual({
+      total: 3,
+      succeeded: 1,
+      failed: 1,
+      results: [
+        { row_index: 0, status: "success", error: null },
+        { row_index: 1, status: "failed", error: "row failed" },
+      ],
+    });
+    expect(runnerCalls).toHaveLength(2);
+    expect(runnerCalls[0]?.steps[0]).toMatchObject({
+      node_id: "batch-row-0",
+      config: {
+        type: "set_variable",
+        config: {
+          variables: [{ name: "name", value_type: "text", value: "A" }],
+        },
+      },
+    });
+    expect(runnerCalls[1]?.steps[0]).toMatchObject({
+      node_id: "batch-row-1",
+      config: {
+        type: "set_variable",
+        config: {
+          variables: [{ name: "name", value_type: "text", value: "B" }],
+        },
+      },
+    });
+  });
 });
 
 function runnableGraph(): WorkflowGraph {

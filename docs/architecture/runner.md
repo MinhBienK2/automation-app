@@ -19,6 +19,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - CloakBrowser `humanize` is enabled by default for both temporary and persistent contexts.
 - `BrowserWorkflowRunner` maps Workflow Settings Browser and Environment values to CloakBrowser launch/context options before the first page action.
 - Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC.
+- Command handlers own run orchestration around the runner: one active run at a time, begin/finish state transitions, max-duration timeout, SQLite run persistence, and batch row sequencing.
 - Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
 - Variable actions write to the browser session output store. `set_variable` accepts typed rows, renders templates before parsing values, flattens object fields into dotted output keys, and keeps array values whole. `set_json_variables` renders and parses a JSON object before storing flattened keys.
 - `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
@@ -34,8 +35,9 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Execution interaction fidelity settings are applied before the runner receives steps. `high` currently migrates compatible fill-field defaults to typed keyboard input while preserving explicit direct-value configs.
 - Execution settings can insert fixed or random waits between compiled graph nodes before the runner receives steps. Explicit Wait and Random Wait nodes override the global wait at their position.
 - Cancellation is checked between actions and inside long waits through an `AbortSignal`. Stop returns a stopped run state and closes temporary contexts according to retention policy.
-- Batch execution compiles the saved graph, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, closes each row session, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
+- Batch execution compiles the saved graph, prepends row variables, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, persists one run per executed row, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
 - `BrowserWorkflowRunner` records compact action traces into outputs under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
+- `run_steps.trace_json` stores action trace entries when the runner emits them, and failed step rows carry serialized run errors for later evidence/history views.
 
 ## Belongs Here
 

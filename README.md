@@ -81,6 +81,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 25. Confirm challenge detection writes an output, human verification pause is logged, and resume waits for the expected condition.
 26. Confirm fallback selector stores the selected XPath, retry step retries the nested action, checkpoint screenshot exists, and failed steps include a failure screenshot path.
 27. Confirm batch run results account for each executed row, separate success from failure, use saved graph steps rather than legacy ordered steps, apply batch headless defaults, reject concurrency above 1, and stop after the first failed row when configured.
+28. Confirm terminal workflow and batch row runs create SQLite `runs` and `run_steps` evidence with outputs, action traces, failed-step errors, and failure screenshot paths when failures occur.
 28. Confirm Run JavaScript stores output, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.
 29. Confirm selector suggestions prefer stable attributes and recorder output maps to the action taxonomy.
 30. Confirm bad XPath fails immediately with a short message.

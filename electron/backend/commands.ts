@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   ActionConfig,
@@ -75,6 +76,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   let currentRunState = idleRunState;
   let currentRunAbortController: AbortController | null = null;
+  let currentRunId: string | null = null;
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
@@ -255,29 +257,67 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     async runWorkflow(workflowId: string): Promise<RunState> {
       requireWorkflow(workflowId);
+      if (currentRunAbortController) {
+        throw commandError("A workflow run is already active", "run");
+      }
       const graph = this.getWorkflowGraph(workflowId);
+      const compiledGraph = compileGraph(graph);
       const runIssues = this.validateWorkflowRun(workflowId);
       const firstError = runIssues.find((issue) => issue.level === "error");
       if (firstError) {
         throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
       }
 
+      const settings = getSettings(workflowId);
       currentRunAbortController = new AbortController();
+      currentRunId = beginRun(context.database, workflowId, settings, graph);
       currentRunState = {
         ...idleRunState,
         status: "running",
         mode: "run_workflow",
       };
+      let timedOut = false;
+      const timeoutMs = settings.execution.max_workflow_duration_ms;
+      const timeoutHandle = timeoutMs
+        ? setTimeout(() => {
+            timedOut = true;
+            currentRunAbortController?.abort();
+          }, timeoutMs)
+        : null;
       try {
         currentRunState = await runner.run({
-          graph: compileGraph(graph),
-          settings: getSettings(workflowId),
+          graph: compiledGraph,
+          settings,
           mode: "run_workflow",
           signal: currentRunAbortController.signal,
+          onProgress(progress) {
+            currentRunState = {
+              ...currentRunState,
+              ...progress,
+              status: "running",
+              mode: "run_workflow",
+            };
+          },
         });
+        if (timedOut && currentRunState.status === "stopped") {
+          currentRunState = {
+            ...currentRunState,
+            status: "failed",
+            error: {
+              step_id: currentRunState.error?.step_id ?? null,
+              step_number: currentRunState.error?.step_number ?? 0,
+              step_name: currentRunState.error?.step_name ?? null,
+              action_type: currentRunState.error?.action_type ?? "workflow",
+              reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
+            },
+          };
+        }
+        finishRun(context.database, currentRunId, compiledGraph, currentRunState);
         return currentRunState;
       } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
         currentRunAbortController = null;
+        currentRunId = null;
       }
     },
 
@@ -397,20 +437,60 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return { workflow, steps: [] };
     },
 
-    runBatchWorkflow(
+    async runBatchWorkflow(
       workflowId: string,
       request: BatchRunRequest,
     ) {
       requireWorkflow(workflowId);
+      const settings = getSettings(workflowId);
+      const concurrencyLimit =
+        request.concurrency_limit ?? settings.execution.batch_concurrency_limit ?? 1;
+      if (concurrencyLimit > 1) {
+        throw commandError(
+          "Batch concurrency above 1 is not supported until row isolation is implemented",
+          "concurrency_limit",
+        );
+      }
+      const graph = this.getWorkflowGraph(workflowId);
+      const compiledGraph = compileGraph(graph);
+      const batchSettings: WorkflowSettings = {
+        ...settings,
+        browser: {
+          ...settings.browser,
+          headless: request.headless ?? settings.execution.batch_headless,
+        },
+      };
+      const results = [];
+      let succeeded = 0;
+      let failed = 0;
+      for (const [rowIndex, row] of request.rows.entries()) {
+        const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
+        const runId = beginRun(context.database, workflowId, batchSettings, graph);
+        const result = await runner.run({
+          graph: rowGraph,
+          settings: batchSettings,
+          mode: "run_workflow",
+        });
+        finishRun(context.database, runId, rowGraph, result);
+        if (result.status === "success") {
+          succeeded += 1;
+        } else {
+          failed += 1;
+        }
+        results.push({
+          row_index: rowIndex,
+          status: result.status,
+          error: result.error?.reason ?? null,
+        });
+        if (result.status !== "success" && settings.execution.batch_stop_on_first_failed_row) {
+          break;
+        }
+      }
       return {
         total: request.rows.length,
-        succeeded: request.rows.length,
-        failed: 0,
-        results: request.rows.map((_, rowIndex) => ({
-          row_index: rowIndex,
-          status: "success" as const,
-          error: null,
-        })),
+        succeeded,
+        failed,
+        results,
       };
     },
 
@@ -807,6 +887,119 @@ export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSett
     },
     created_at: workflow.created_at,
     updated_at: workflow.updated_at,
+  };
+}
+
+function beginRun(
+  database: DatabaseSync,
+  workflowId: string,
+  settings: WorkflowSettings,
+  graph: WorkflowGraph,
+) {
+  const runId = randomUUID();
+  database
+    .prepare(
+      `INSERT INTO runs (
+        id,
+        workflow_id,
+        status,
+        started_at,
+        settings_snapshot_json,
+        graph_snapshot_json
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      runId,
+      workflowId,
+      "running",
+      new Date().toISOString(),
+      JSON.stringify(settings),
+      JSON.stringify(graph),
+    );
+  return runId;
+}
+
+function finishRun(
+  database: DatabaseSync,
+  runId: string | null,
+  graph: CompiledWorkflowGraph,
+  state: RunState,
+) {
+  if (!runId) return;
+  database
+    .prepare(
+      `UPDATE runs
+       SET status = ?,
+           finished_at = ?,
+           outputs_json = ?,
+           error_json = ?
+       WHERE id = ?`,
+    )
+    .run(
+      state.status,
+      new Date().toISOString(),
+      JSON.stringify(state.outputs ?? {}),
+      state.error ? JSON.stringify(state.error) : null,
+      runId,
+    );
+
+  const traces = Array.isArray(state.outputs?.__action_traces)
+    ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
+    : [];
+  const insertStep = database.prepare(
+    `INSERT INTO run_steps (
+      id,
+      run_id,
+      node_id,
+      step_number,
+      action_type,
+      status,
+      finished_at,
+      trace_json,
+      error_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  for (const [index, step] of graph.steps.entries()) {
+    const trace = traces.find((candidate) => candidate.node_id === step.node_id);
+    const failed = state.error?.step_id === step.node_id;
+    const completed = state.completed_step_ids.includes(step.node_id);
+    insertStep.run(
+      randomUUID(),
+      runId,
+      step.node_id,
+      index + 1,
+      step.config.type,
+      failed ? "failed" : completed ? "success" : "skipped",
+      trace || failed ? new Date().toISOString() : null,
+      trace ? JSON.stringify(trace) : null,
+      failed && state.error ? JSON.stringify(state.error) : null,
+    );
+  }
+}
+
+function prependBatchRowVariables(
+  graph: CompiledWorkflowGraph,
+  rowIndex: number,
+  row: Record<string, string>,
+): CompiledWorkflowGraph {
+  return {
+    steps: [
+      {
+        node_id: `batch-row-${rowIndex}`,
+        label: `Batch row ${rowIndex + 1}`,
+        config: {
+          type: "set_variable",
+          config: {
+            variables: Object.entries(row).map(([name, value]) => ({
+              name,
+              value_type: "text",
+              value,
+            })),
+          },
+        },
+      },
+      ...graph.steps,
+    ],
   };
 }
 

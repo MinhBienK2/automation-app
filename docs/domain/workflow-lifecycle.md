@@ -41,7 +41,7 @@
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
 - Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
-- `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, expands subworkflow nodes through the command layer, and starts the existing runner path.
+- `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects a second active run, creates a SQLite run record, and starts the Electron CloakBrowser runner.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 
 ## Legacy Step Rows
@@ -51,7 +51,7 @@
 
 ## Run Full Workflow
 
-- `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the background runner.
+- `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
 - `run_workflow` loads and validates saved Workflow Settings, applies Browser settings before launch including headless mode, applies Environment defaults and Variables before the first graph step, fills missing action timeouts from Execution defaults, inserts configured Execution waits between graph nodes, enforces maximum workflow duration, and applies browser retention as the default terminal session policy. Explicit Wait and Random Wait nodes override the global wait at their position.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
@@ -60,6 +60,7 @@
 - UI polls `get_run_state` while status is `running`.
 - Invalid advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
 - Graph runs share the same run-state lifecycle as full workflow runs.
+- Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`.
 - End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Execution browser retention decides whether terminal runs retain or close the browser session.
 
 ## Workflow Settings Triggers
@@ -68,7 +69,7 @@
 
 ## Batch Workflow
 
-- `run_batch_workflow` compiles the saved graph, prepends each row's values as runtime variables after settings setup actions, applies Browser settings and batch headless defaults, runs rows sequentially, closes each row browser session, and returns per-row status.
+- `run_batch_workflow` compiles the saved graph, prepends each row's values as runtime variables after settings setup actions, applies Browser settings and batch headless defaults, runs rows sequentially, persists each executed row as a run with step evidence, closes each row browser session, and returns per-row status.
 - `batch_concurrency_limit` values above 1 are rejected until isolated browser sessions support safe parallel rows.
 - `batch_stop_on_first_failed_row` stops scheduling additional rows after the first failed row.
 

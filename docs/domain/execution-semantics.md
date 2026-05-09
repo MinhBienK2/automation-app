@@ -13,6 +13,7 @@
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
+- Command handlers reject a second active run, persist begin/finish records to SQLite `runs`, persist compiled step evidence to `run_steps`, and update live run state from runner progress callbacks.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment defaults from Workflow Settings compile into setup actions before graph actions: geolocation, permission grants, extra headers, download directory, cookies, localStorage, and sessionStorage.
 - Variables settings seed the runtime variable store before graph actions. Legacy input schema data remains persisted for compatibility but is not exposed by the current Variables UI.
@@ -43,7 +44,8 @@
 - Each row is inserted as a `set_variable` setup action after persisted settings setup actions and before graph actions.
 - Request `headless` overrides `execution.batch_headless`; omitted request values use settings defaults.
 - Concurrency above 1 is rejected until parallel row isolation is implemented.
-- When `batch_stop_on_first_failed_row` is true, row execution stops after the first failed row.
+- Rows execute sequentially and each executed row is persisted as a run record with its own step evidence.
+- When `batch_stop_on_first_failed_row` is true, row execution stops after the first failed row and the summary reports only executed rows in `results`.
 
 ## Browser Sessions
 
@@ -61,6 +63,7 @@
 - `stop_run` cancels the active run through `RunnerCancellation`.
 - App state immediately reflects `stopped`.
 - Runner loops check cancellation between steps and action code must preserve responsive cancellation for long operations.
+- In the Electron runner, cancellation is carried by an `AbortSignal`; long waits listen to the signal and command state returns `stopped` promptly while the runner finishes cleanup.
 
 ## Failure Behavior
 
