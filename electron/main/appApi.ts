@@ -693,6 +693,10 @@ function workspaceConcurrencyLimitReason(maxConcurrency: number) {
   return `Workspace concurrency limit of ${maxConcurrency} active run is already reached.`;
 }
 
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function createAppApi(options: AppApiOptions) {
   let lastRunState: RunStateWithId = {
     status: "idle",
@@ -1045,15 +1049,16 @@ export function createAppApi(options: AppApiOptions) {
           runId: string,
           type: string,
           payload: Record<string, unknown>,
+          severity: RunnerEvent["severity"] = "info",
         ) => {
           const persisted = options.storage.appendRunEvent(runId, {
             type,
-            severity: "info",
+            severity,
             payload,
           });
           options.onRunEvent?.({
             type,
-            severity: "info",
+            severity,
             runId,
             payload,
             createdAt: persisted.createdAt,
@@ -1129,11 +1134,35 @@ export function createAppApi(options: AppApiOptions) {
             options.onRunEvent?.(event);
           };
 
-          const result = options.runner
-            ? await options.runner.startRun(payload, persistEvent)
-            : await runPlan(payload, options.createAdapter(), {
-                emit: persistEvent,
-              });
+          let result: RunnerResult;
+          try {
+            result = options.runner
+              ? await options.runner.startRun(payload, persistEvent)
+              : await runPlan(payload, options.createAdapter(), {
+                  emit: persistEvent,
+                });
+          } catch (error) {
+            const reason = errorMessage(error);
+            appendAppRunEvent(
+              run.id,
+              "issue.created",
+              {
+                category: "system",
+                message: reason,
+              },
+              "error",
+            );
+            appendAppRunEvent(
+              run.id,
+              "run.failed",
+              {
+                category: "system",
+                reason,
+              },
+              "error",
+            );
+            result = { runId: run.id, status: "failed", reason };
+          }
           options.storage.finishRun(run.id, {
             status: result.status,
             terminalReason: result.reason ?? null,

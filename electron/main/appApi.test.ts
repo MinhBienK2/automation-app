@@ -423,6 +423,42 @@ describe("Electron app API", () => {
     ]);
   });
 
+  test("persists failed terminal status when the supervised runner throws", async () => {
+    const workflow = await api.workflows.create({ name: "Process failure flow" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(): Promise<RunnerResult> {
+          throw new Error("runner process crashed");
+        },
+      },
+    });
+
+    const runState = await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(runState).toMatchObject({
+      status: "failed",
+      error: expect.objectContaining({
+        reason: "runner process crashed",
+      }),
+    });
+    expect(storage.getRun(runState.run_id ?? "")).toMatchObject({
+      status: "failed",
+      terminalReason: "runner process crashed",
+    });
+    expect(storage.listRunEvents(runState.run_id ?? "").map((event) => event.type)).toEqual([
+      "issue.created",
+      "run.failed",
+    ]);
+  });
+
   test("persists preflight verdict runner events as sanitized evidence records", async () => {
     const workflow = await api.workflows.create({ name: "Preflight evidence flow" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });
