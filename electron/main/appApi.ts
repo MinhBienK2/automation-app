@@ -40,6 +40,14 @@ export type AppApiOptions = {
   onRunEvent?: (event: RunnerEvent) => void;
 };
 
+type IdentityProfileAvailability = {
+  profileId: string;
+  persistentProfilePath: string | null;
+  available: boolean;
+  locked: boolean;
+  reason: string | null;
+};
+
 type LegacyActionConfig = {
   type: string;
   config: Record<string, unknown>;
@@ -661,6 +669,10 @@ function environmentSnapshotFromEnvironment(
   };
 }
 
+function persistentProfileInUseReason(persistentProfilePath: string) {
+  return `Persistent identity profile '${persistentProfilePath}' is already in use.`;
+}
+
 export function createAppApi(options: AppApiOptions) {
   let lastRunState: RunStateWithId = {
     status: "idle",
@@ -826,6 +838,22 @@ export function createAppApi(options: AppApiOptions) {
       }) {
         return options.storage.validateIdentityProfile(input.profile);
       },
+
+      async checkAvailability(input: { id: string }): Promise<IdentityProfileAvailability> {
+        const profile = options.storage.getIdentityProfile(input.id);
+        const persistentProfilePath = profile.persistentProfilePath?.trim() || null;
+        const locked = persistentProfilePath
+          ? activePersistentProfilePaths.has(persistentProfilePath)
+          : false;
+
+        return {
+          profileId: profile.id,
+          persistentProfilePath,
+          available: !locked,
+          locked,
+          reason: locked && persistentProfilePath ? persistentProfileInUseReason(persistentProfilePath) : null,
+        };
+      },
     },
 
     evidence: {
@@ -965,7 +993,7 @@ export function createAppApi(options: AppApiOptions) {
         const persistentProfilePath = identityProfileSnapshot.persistentProfilePath?.trim() || null;
         if (persistentProfilePath) {
           if (activePersistentProfilePaths.has(persistentProfilePath)) {
-            throw new Error(`Persistent identity profile '${persistentProfilePath}' is already in use.`);
+            throw new Error(persistentProfileInUseReason(persistentProfilePath));
           }
           activePersistentProfilePaths.add(persistentProfilePath);
         }

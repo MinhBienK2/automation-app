@@ -52,6 +52,9 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
   ipcMain.handle("profile.update", (_event, input) => api.profiles.update(input));
   ipcMain.handle("profile.delete", (_event, input: { id: string }) => api.profiles.delete(input));
   ipcMain.handle("profile.validate", (_event, input) => api.profiles.validate(input));
+  ipcMain.handle("profile.checkAvailability", (_event, input: { id: string }) =>
+    api.profiles.checkAvailability(input),
+  );
 
   ipcMain.handle("evidence.listEvents", (_event, input: { runId: string }) =>
     api.evidence.listEvents(input),

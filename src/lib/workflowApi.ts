@@ -10,6 +10,7 @@ import type {
   ElementSnapshot,
   GraphValidationIssue,
   IdentityProfile,
+  IdentityProfileAvailability,
   IdentityProfileInput,
   IdentityProfileValidationIssue,
   OrchestrationSchedule,
@@ -236,6 +237,12 @@ export function validateIdentityProfile(profile: IdentityProfile | IdentityProfi
   const api = electronApi();
   if (api?.profiles?.validate) return api.profiles.validate({ profile });
   return invoke<IdentityProfileValidationIssue[]>("validate_identity_profile", { profile });
+}
+
+export function checkIdentityProfileAvailability(id: string) {
+  const api = electronApi();
+  if (api?.profiles?.checkAvailability) return api.profiles.checkAvailability({ id });
+  return invoke<IdentityProfileAvailability>("check_identity_profile_availability", { id });
 }
 
 export function listRunEvidenceEvents(runId: string) {

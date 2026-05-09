@@ -46,6 +46,8 @@ const api = {
     update: (input: unknown) => ipcRenderer.invoke("profile.update", input),
     delete: (input: { id: string }) => ipcRenderer.invoke("profile.delete", input),
     validate: (input: unknown) => ipcRenderer.invoke("profile.validate", input),
+    checkAvailability: (input: { id: string }) =>
+      ipcRenderer.invoke("profile.checkAvailability", input),
   },
   evidence: {
     listEvents: (input: { runId: string }) => ipcRenderer.invoke("evidence.listEvents", input),

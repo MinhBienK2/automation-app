@@ -7,6 +7,7 @@ import type {
   EnvironmentInput,
   GraphValidationIssue,
   IdentityProfile,
+  IdentityProfileAvailability,
   IdentityProfileInput,
   IdentityProfileValidationIssue,
   RunEvidenceArtifact,
@@ -81,6 +82,7 @@ type ElectronCloakBrowserApi = {
     validate?: (input: {
       profile: IdentityProfile | IdentityProfileInput;
     }) => Promise<IdentityProfileValidationIssue[]>;
+    checkAvailability?: (input: { id: string }) => Promise<IdentityProfileAvailability>;
   };
   evidence?: {
     listEvents?: (input: { runId: string }) => Promise<RunEvidenceEvent[]>;

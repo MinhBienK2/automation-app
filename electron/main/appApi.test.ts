@@ -551,6 +551,77 @@ describe("Electron app API", () => {
     expect(payloads).toHaveLength(2);
   });
 
+  test("reports persistent identity profile availability while a run holds the lock", async () => {
+    const workflow = await api.workflows.create({ name: "Availability-backed run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const profile = storage.createIdentityProfile({
+      name: "Availability profile",
+      persistentProfilePath: "availability-profile",
+      deviceIdentity: {
+        viewport: { width: 1280, height: 720 },
+        mobile: false,
+        touch: false,
+      },
+      locale: { locale: "en-US", timezone: "America/New_York" },
+      headedPolicy: "allow_headless",
+      preflightPolicy: { enabled: false },
+    });
+    storage.updateWorkflowDefaults(workflow.id, { defaultIdentityProfileId: profile.id });
+
+    let resolveStarted: (payload: StartRunPayload) => void = () => undefined;
+    let resolveRun: (result: RunnerResult) => void = () => undefined;
+    const started = new Promise<StartRunPayload>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const runCompletion = new Promise<RunnerResult>((resolve) => {
+      resolveRun = resolve;
+    });
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          resolveStarted(payload);
+          return runCompletion;
+        },
+      },
+    });
+
+    await expect(processApi.profiles.checkAvailability({ id: profile.id })).resolves.toEqual({
+      profileId: profile.id,
+      persistentProfilePath: "availability-profile",
+      available: true,
+      locked: false,
+      reason: null,
+    });
+
+    const firstStart = processApi.runs.start({ workflowId: workflow.id });
+    const firstPayload = await started;
+    await expect(processApi.profiles.checkAvailability({ id: profile.id })).resolves.toEqual({
+      profileId: profile.id,
+      persistentProfilePath: "availability-profile",
+      available: false,
+      locked: true,
+      reason: "Persistent identity profile 'availability-profile' is already in use.",
+    });
+
+    resolveRun({ runId: firstPayload.runId, status: "completed" });
+    await firstStart;
+
+    await expect(processApi.profiles.checkAvailability({ id: profile.id })).resolves.toEqual({
+      profileId: profile.id,
+      persistentProfilePath: "availability-profile",
+      available: true,
+      locked: false,
+      reason: null,
+    });
+  });
+
   test("exposes workflow run history through the app facade", async () => {
     const workflow = await api.workflows.create({ name: "Run history facade" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });

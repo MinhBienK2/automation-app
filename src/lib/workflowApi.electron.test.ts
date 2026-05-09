@@ -5,6 +5,7 @@ import {
   exportRunEvidence,
   getWorkspacePolicy,
   getWorkflowSettings,
+  checkIdentityProfileAvailability,
   listEnvironments,
   listRunProfiles,
   listWorkflows,
@@ -57,6 +58,13 @@ describe("workflowApi Electron bridge", () => {
       },
       profiles: {
         list: vi.fn().mockResolvedValue([{ id: "idp_1", name: "Owned profile" }]),
+        checkAvailability: vi.fn().mockResolvedValue({
+          profileId: "idp_1",
+          persistentProfilePath: "owned-profile",
+          available: true,
+          locked: false,
+          reason: null,
+        }),
       },
       evidence: {
         exportRun: vi.fn().mockResolvedValue({
@@ -102,6 +110,13 @@ describe("workflowApi Electron bridge", () => {
     const unsubscribe = onRunEvent(vi.fn());
     unsubscribe();
     await expect(listIdentityProfiles()).resolves.toEqual([{ id: "idp_1", name: "Owned profile" }]);
+    await expect(checkIdentityProfileAvailability("idp_1")).resolves.toEqual({
+      profileId: "idp_1",
+      persistentProfilePath: "owned-profile",
+      available: true,
+      locked: false,
+      reason: null,
+    });
     await expect(exportRunEvidence("run_1")).resolves.toEqual({
       runId: "run_1",
       events: [],
@@ -133,6 +148,7 @@ describe("workflowApi Electron bridge", () => {
     expect(api.runs.list).toHaveBeenCalledWith({ workflowId: "wf_2" });
     expect(api.runs.onEvent).toHaveBeenCalledTimes(1);
     expect(api.profiles.list).toHaveBeenCalledTimes(1);
+    expect(api.profiles.checkAvailability).toHaveBeenCalledWith({ id: "idp_1" });
     expect(api.evidence.exportRun).toHaveBeenCalledWith({ runId: "run_1" });
     expect(api.policy.get).toHaveBeenCalledTimes(1);
     expect(api.policy.save).toHaveBeenCalledWith({

@@ -1082,6 +1082,14 @@ export type IdentityProfileValidationIssue = {
   level: "error" | "warning";
 };
 
+export type IdentityProfileAvailability = {
+  profileId: string;
+  persistentProfilePath: string | null;
+  available: boolean;
+  locked: boolean;
+  reason: string | null;
+};
+
 export type RunEvidenceEvent = {
   id: string;
   runId: string;
