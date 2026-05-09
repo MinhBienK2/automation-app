@@ -86,6 +86,29 @@ function delay(durationMs: number) {
   return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number | null | undefined,
+  onTimeout: () => void,
+): Promise<T> {
+  if (!timeoutMs || timeoutMs <= 0) return promise;
+
+  let timeout: NodeJS.Timeout | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          onTimeout();
+          reject(new RunnerActionError(`Action timed out after ${timeoutMs}ms.`, "runtime"));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export async function runPlan(
   payload: StartRunPayload,
   adapter: BrowserAutomationAdapter,
@@ -269,68 +292,87 @@ export async function runPlan(
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         try {
-          switch (step.config.type) {
-            case "navigate":
-              if (!originAllowed(step.config.url, payload.operatorPolicySnapshot.allowedOrigins)) {
-                throw new RunnerActionError(
-                  `Navigation origin is outside the allowed operator policy: ${step.config.url}`,
-                  "policy",
-                );
+          const timeoutMs = step.timeoutMs ?? ("timeoutMs" in step.config ? step.config.timeoutMs : null);
+          await withTimeout(
+            (async () => {
+              switch (step.config.type) {
+                case "navigate":
+                  if (!originAllowed(step.config.url, payload.operatorPolicySnapshot.allowedOrigins)) {
+                    throw new RunnerActionError(
+                      `Navigation origin is outside the allowed operator policy: ${step.config.url}`,
+                      "policy",
+                    );
+                  }
+                  await adapter.navigate(step.config);
+                  break;
+                case "click":
+                  await adapter.click(step.config);
+                  break;
+                case "fill":
+                  await adapter.fill(step.config);
+                  break;
+                case "wait":
+                  await adapter.wait(step.config);
+                  break;
+                case "take_screenshot": {
+                  const fileName = step.config.fileName || `${step.sourceNodeId}.png`;
+                  const screenshotPath = path.join(payload.artifactDirectories.screenshots, fileName);
+                  const screenshot = await adapter.screenshot({
+                    path: screenshotPath,
+                    fullPage: (step.config as ScreenshotActionConfig).fullPage,
+                  });
+                  const buffer = Buffer.isBuffer(screenshot) ? screenshot : Buffer.from(screenshot);
+                  writeFileSync(screenshotPath, buffer);
+                  emit({
+                    type: "artifact.created",
+                    severity: "info",
+                    runId: payload.runId,
+                    nodeId: step.sourceNodeId,
+                    actionId: step.id,
+                    payload: {
+                      type: "screenshot",
+                      relativePath: relativeArtifactPath(payload.runId, "screenshots", fileName),
+                      mimeType: "image/png",
+                      sizeBytes: buffer.byteLength,
+                      checksum: checksum(buffer),
+                      sanitized: true,
+                    },
+                  });
+                  break;
+                }
+                case "extract_text": {
+                  const value = await adapter.extractText(step.config);
+                  emit({
+                    type: "output.captured",
+                    severity: "info",
+                    runId: payload.runId,
+                    nodeId: step.sourceNodeId,
+                    actionId: step.id,
+                    payload: {
+                      name: step.config.outputName,
+                      value,
+                      locator: locatorSummary(step.config.locator),
+                    },
+                  });
+                  break;
+                }
               }
-              await adapter.navigate(step.config);
-              break;
-            case "click":
-              await adapter.click(step.config);
-              break;
-            case "fill":
-              await adapter.fill(step.config);
-              break;
-            case "wait":
-              await adapter.wait(step.config);
-              break;
-            case "take_screenshot": {
-              const fileName = step.config.fileName || `${step.sourceNodeId}.png`;
-              const screenshotPath = path.join(payload.artifactDirectories.screenshots, fileName);
-              const screenshot = await adapter.screenshot({
-                path: screenshotPath,
-                fullPage: (step.config as ScreenshotActionConfig).fullPage,
-              });
-              const buffer = Buffer.isBuffer(screenshot) ? screenshot : Buffer.from(screenshot);
-              writeFileSync(screenshotPath, buffer);
+            })(),
+            timeoutMs,
+            () =>
               emit({
-                type: "artifact.created",
-                severity: "info",
+                type: "action.timeout",
+                severity: "error",
                 runId: payload.runId,
                 nodeId: step.sourceNodeId,
                 actionId: step.id,
                 payload: {
-                  type: "screenshot",
-                  relativePath: relativeArtifactPath(payload.runId, "screenshots", fileName),
-                  mimeType: "image/png",
-                  sizeBytes: buffer.byteLength,
-                  checksum: checksum(buffer),
-                  sanitized: true,
+                  actionType: step.actionType,
+                  timeoutMs,
+                  attempt,
                 },
-              });
-              break;
-            }
-            case "extract_text": {
-              const value = await adapter.extractText(step.config);
-              emit({
-                type: "output.captured",
-                severity: "info",
-                runId: payload.runId,
-                nodeId: step.sourceNodeId,
-                actionId: step.id,
-                payload: {
-                  name: step.config.outputName,
-                  value,
-                  locator: locatorSummary(step.config.locator),
-                },
-              });
-              break;
-            }
-          }
+              }),
+          );
 
           actionError = null;
           break;

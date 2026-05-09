@@ -296,4 +296,41 @@ describe("CloakRunner core", () => {
       }),
     });
   });
+
+  test("fails an action once when its runner timeout expires", async () => {
+    const events: RunnerEvent[] = [];
+    const adapter = fakeAdapter();
+    adapter.wait = () => new Promise(() => undefined);
+    const plan = basePlan([
+      {
+        id: "step_wait",
+        sourceNodeId: "wait",
+        actionType: "wait",
+        label: "Wait forever",
+        config: { type: "wait", durationMs: 60_000 },
+        timeoutMs: 5,
+      },
+    ]);
+
+    const result = await runPlan(payload(plan), adapter, {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("failed");
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "step.started",
+      "action.timeout",
+      "issue.created",
+      "step.failed",
+      "run.failed",
+    ]);
+    expect(events.find((event) => event.type === "action.timeout")).toMatchObject({
+      payload: expect.objectContaining({
+        timeoutMs: 5,
+      }),
+    });
+    expect(events.filter((event) => event.type === "run.failed")).toHaveLength(1);
+  });
 });
