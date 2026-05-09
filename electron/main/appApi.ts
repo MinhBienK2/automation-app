@@ -673,6 +673,10 @@ function persistentProfileInUseReason(persistentProfilePath: string) {
   return `Persistent identity profile '${persistentProfilePath}' is already in use.`;
 }
 
+function workspaceConcurrencyLimitReason(maxConcurrency: number) {
+  return `Workspace concurrency limit of ${maxConcurrency} active run is already reached.`;
+}
+
 export function createAppApi(options: AppApiOptions) {
   let lastRunState: RunStateWithId = {
     status: "idle",
@@ -685,6 +689,7 @@ export function createAppApi(options: AppApiOptions) {
     error: null,
   };
   let activeRunId: string | null = null;
+  const activeRunIds = new Set<string>();
   const activePersistentProfilePaths = new Set<string>();
 
   return {
@@ -990,6 +995,10 @@ export function createAppApi(options: AppApiOptions) {
           : null;
         const environmentSnapshot = environmentSnapshotFromEnvironment(environment);
         const operatorPolicySnapshot = options.storage.getWorkspacePolicy();
+        const maxConcurrency = Math.max(1, Math.floor(operatorPolicySnapshot.maxConcurrency));
+        if (activeRunIds.size >= maxConcurrency) {
+          throw new Error(workspaceConcurrencyLimitReason(maxConcurrency));
+        }
         const persistentProfilePath = identityProfileSnapshot.persistentProfilePath?.trim() || null;
         if (persistentProfilePath) {
           if (activePersistentProfilePaths.has(persistentProfilePath)) {
@@ -1036,6 +1045,7 @@ export function createAppApi(options: AppApiOptions) {
           });
           runIdForCleanup = run.id;
           activeRunId = run.id;
+          activeRunIds.add(run.id);
           if (profileLockPayload) {
             appendAppRunEvent(run.id, "identity.profileLockAcquired", profileLockPayload);
           }
@@ -1134,6 +1144,9 @@ export function createAppApi(options: AppApiOptions) {
           } finally {
             if (activeRunId === runIdForCleanup) {
               activeRunId = null;
+            }
+            if (runIdForCleanup) {
+              activeRunIds.delete(runIdForCleanup);
             }
             if (persistentProfilePath) {
               activePersistentProfilePaths.delete(persistentProfilePath);

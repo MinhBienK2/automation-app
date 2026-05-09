@@ -482,6 +482,10 @@ describe("Electron app API", () => {
   });
 
   test("prevents concurrent runs from sharing a persistent identity profile", async () => {
+    storage.saveWorkspacePolicy({
+      allowedOrigins: [],
+      maxConcurrency: 2,
+    });
     const firstWorkflow = await api.workflows.create({ name: "Persistent profile first" });
     const secondWorkflow = await api.workflows.create({ name: "Persistent profile second" });
     for (const workflow of [firstWorkflow, secondWorkflow]) {
@@ -822,6 +826,59 @@ describe("Electron app API", () => {
       allowedOrigins: ["https://owned.example.test"],
       maxConcurrency: 1,
     });
+  });
+
+  test("enforces workspace max concurrency before starting a runner payload", async () => {
+    storage.saveWorkspacePolicy({
+      allowedOrigins: [],
+      maxConcurrency: 1,
+    });
+    const firstWorkflow = await api.workflows.create({ name: "Concurrent first" });
+    const secondWorkflow = await api.workflows.create({ name: "Concurrent second" });
+    for (const workflow of [firstWorkflow, secondWorkflow]) {
+      const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+      const draft = graph.nodes[1];
+      if (!draft) throw new Error("Missing draft graph node.");
+      draft.config = { type: "wait", config: { duration_ms: 1 } };
+      await api.graphs.save({ workflowId: workflow.id, graph });
+    }
+
+    let resolveStarted: (payload: StartRunPayload) => void = () => undefined;
+    let resolveRun: (result: RunnerResult) => void = () => undefined;
+    const started = new Promise<StartRunPayload>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const runCompletion = new Promise<RunnerResult>((resolve) => {
+      resolveRun = resolve;
+    });
+    const payloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          payloads.push(payload);
+          if (payloads.length === 1) {
+            resolveStarted(payload);
+            return runCompletion;
+          }
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    const firstStart = processApi.runs.start({ workflowId: firstWorkflow.id });
+    const firstPayload = await started;
+    try {
+      await expect(processApi.runs.start({ workflowId: secondWorkflow.id })).rejects.toThrow(
+        "Workspace concurrency limit of 1 active run is already reached.",
+      );
+      expect(payloads).toHaveLength(1);
+    } finally {
+      resolveRun({ runId: firstPayload.runId, status: "completed" });
+      await firstStart;
+    }
   });
 
   test("resolves workflow default run profile into runner policy and plan defaults", async () => {
