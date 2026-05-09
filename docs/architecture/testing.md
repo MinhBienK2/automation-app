@@ -20,7 +20,7 @@ Focused commands:
 
 - Storage and graph model: `electron/main/storage.test.ts`, `electron/main/graph.test.ts`
 - App API and preload-shaped facade: `electron/main/appApi.test.ts`, `src/lib/workflowApi.electron.test.ts`
-- Runner core and process health: `electron/runner/runnerCore.test.ts`, `electron/main/runnerSupervisor.test.ts`
+- Runner core and process protocol: `electron/runner/runnerCore.test.ts`, `electron/main/runnerSupervisor.test.ts`
 
 Focused commands:
 

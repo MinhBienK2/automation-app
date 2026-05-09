@@ -12,16 +12,24 @@ import type {
   ExtractTextActionConfig,
   FillActionConfig,
   LocatorConfig,
+  RunnerEvent,
   RunnerActionConfig,
+  RunnerResult,
   RunPlan,
   StartRunPayload,
   WaitActionConfig,
 } from "../shared/product.js";
 
+export type RunnerProcessClient = {
+  startRun(payload: StartRunPayload, onEvent: (event: RunnerEvent) => void): Promise<RunnerResult>;
+  cancelRun?: (input: { runId: string }) => Promise<{ ok: true }>;
+};
+
 export type AppApiOptions = {
   storage: StorageService;
   appDataDir: string;
   createAdapter: () => BrowserAutomationAdapter;
+  runner?: RunnerProcessClient;
 };
 
 type LegacyActionConfig = {
@@ -715,34 +723,38 @@ export function createAppApi(options: AppApiOptions) {
           },
         };
 
-        const result = await runPlan(payload, options.createAdapter(), {
-          emit: (event) => {
-            const persisted = options.storage.appendRunEvent(run.id, {
-              type: event.type,
-              severity: event.severity,
-              nodeId: event.nodeId ?? null,
-              actionId: event.actionId ?? null,
-              payload: event.payload,
+        const persistEvent = (event: RunnerEvent) => {
+          const persisted = options.storage.appendRunEvent(run.id, {
+            type: event.type,
+            severity: event.severity,
+            nodeId: event.nodeId ?? null,
+            actionId: event.actionId ?? null,
+            payload: event.payload,
+          });
+
+          if (event.type === "step.completed" && event.nodeId) {
+            completedStepIds.push(event.nodeId);
+          }
+
+          if (event.type === "artifact.created") {
+            options.storage.registerArtifact({
+              runId: run.id,
+              eventId: persisted.id,
+              type: String(event.payload.type),
+              relativePath: String(event.payload.relativePath),
+              mimeType: String(event.payload.mimeType),
+              sizeBytes: Number(event.payload.sizeBytes),
+              checksum: String(event.payload.checksum),
+              sanitized: event.payload.sanitized === true,
             });
+          }
+        };
 
-            if (event.type === "step.completed" && event.nodeId) {
-              completedStepIds.push(event.nodeId);
-            }
-
-            if (event.type === "artifact.created") {
-              options.storage.registerArtifact({
-                runId: run.id,
-                eventId: persisted.id,
-                type: String(event.payload.type),
-                relativePath: String(event.payload.relativePath),
-                mimeType: String(event.payload.mimeType),
-                sizeBytes: Number(event.payload.sizeBytes),
-                checksum: String(event.payload.checksum),
-                sanitized: event.payload.sanitized === true,
-              });
-            }
-          },
-        });
+        const result = options.runner
+          ? await options.runner.startRun(payload, persistEvent)
+          : await runPlan(payload, options.createAdapter(), {
+              emit: persistEvent,
+            });
 
         lastRunState = {
           run_id: run.id,

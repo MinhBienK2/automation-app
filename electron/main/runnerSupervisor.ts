@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import type { RunnerEvent, RunnerResult, StartRunPayload } from "../shared/product.js";
 
 export type RunnerHealth = {
   protocolVersion: 1;
@@ -16,23 +17,25 @@ type RunnerSupervisorOptions = {
   runnerEntry: string;
 };
 
-type PendingRequest = {
-  resolve: (value: RunnerHealth | { ok: true }) => void;
+type PendingRequest<T> = {
+  resolve: (value: T) => void;
   reject: (error: Error) => void;
   timeout: NodeJS.Timeout;
+  onEvent?: (event: RunnerEvent) => void;
 };
 
 type RunnerResponse = {
   id?: string;
+  type?: string;
   ok?: boolean;
   error?: string;
-  payload?: RunnerHealth | { ok: true };
+  payload?: unknown;
 };
 
 export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
   let child: ChildProcessWithoutNullStreams | null = null;
   let stdoutBuffer = "";
-  const pending = new Map<string, PendingRequest>();
+  const pending = new Map<string, PendingRequest<unknown>>();
 
   function ensureStarted() {
     if (child && !child.killed) return;
@@ -81,6 +84,12 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
     if (!message.id) return;
     const request = pending.get(message.id);
     if (!request) return;
+
+    if (message.type === "event") {
+      request.onEvent?.(message.payload as RunnerEvent);
+      return;
+    }
+
     pending.delete(message.id);
     clearTimeout(request.timeout);
 
@@ -91,7 +100,11 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
     }
   }
 
-  function request<T extends RunnerHealth | { ok: true }>(type: string, payload?: Record<string, unknown>) {
+  function request<T>(
+    type: string,
+    payload?: Record<string, unknown>,
+    onEvent?: (event: RunnerEvent) => void,
+  ) {
     ensureStarted();
     if (!child) throw new Error("Runner process did not start.");
 
@@ -105,9 +118,10 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
       }, 5_000);
 
       pending.set(requestId, {
-        resolve: resolve as PendingRequest["resolve"],
+        resolve: resolve as PendingRequest<unknown>["resolve"],
         reject,
         timeout,
+        onEvent,
       });
       child?.stdin.write(`${message}\n`);
     });
@@ -116,6 +130,14 @@ export function createRunnerSupervisor(options: RunnerSupervisorOptions) {
   return {
     healthCheck() {
       return request<RunnerHealth>("healthCheck");
+    },
+
+    startRun(payload: StartRunPayload, onEvent: (event: RunnerEvent) => void) {
+      return request<RunnerResult>("startRun", payload as unknown as Record<string, unknown>, onEvent);
+    },
+
+    cancelRun(input: { runId: string }) {
+      return request<{ ok: true }>("cancelRun", input);
     },
 
     async shutdown() {

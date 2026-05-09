@@ -33,7 +33,7 @@ Electron Main
   -> electron/main/ipc.ts typed IPC routing
   -> electron/main/appApi.ts preload-shaped product API facade
   -> electron/main/storage.ts new SQLite workspace schema
-  -> electron/main/runnerSupervisor.ts local runner process health supervision
+  -> electron/main/runnerSupervisor.ts local runner process health and startRun supervision
 
 Preload
   -> electron/preload/preload.ts contextBridge API
@@ -45,7 +45,8 @@ React Renderer
 Runner
   -> electron/runner/runnerCore.ts runner-native plan execution and events
   -> electron/runner/cloakBrowserAdapter.ts CloakBrowser/Playwright adapter
-  -> electron/runner/stdio-runner.mjs health-check process used by supervisor tests
+  -> electron/runner/stdioRunner.ts JSONL runner process entry for health, startRun, cancelRun, and shutdown
+  -> electron/runner/stdio-runner.mjs health-check fixture used by supervisor tests
 ```
 
 ## Boundaries

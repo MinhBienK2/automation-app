@@ -19,6 +19,7 @@ The Electron rebuild adds a Node runner foundation that executes runner-native p
 - `src-tauri/tests/runner_spike.rs`
 - `electron/runner/runnerCore.ts`
 - `electron/runner/cloakBrowserAdapter.ts`
+- `electron/runner/stdioRunner.ts`
 - `electron/main/runnerSupervisor.ts`
 - `electron/runner/stdio-runner.mjs`
 - `electron/runner/runnerCore.test.ts`
@@ -49,7 +50,8 @@ The Electron rebuild adds a Node runner foundation that executes runner-native p
 - `BrowserRunner` records compact action traces into the browser output store under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
 - Electron runner core consumes compiled `RunPlan` payloads, enforces origin allowlists for navigation, emits deterministic lifecycle/step/issue/artifact events, supports cooperative cancellation between actions, and writes artifacts only under main-allocated run directories.
 - `createCloakBrowserAdapter` uses the `cloakbrowser` package as the browser launch source and maps locator-first action configs to Playwright-style page/locator APIs.
-- `RunnerSupervisor` currently proves the local runner process boundary through a stdio JSONL health handshake. Full process-backed `startRun` remains the next runner milestone before replacing the in-process app API vertical slice.
+- `RunnerSupervisor` supervises the local runner process through stdio JSONL health, `startRun`, event streaming, `cancelRun`, and shutdown messages. `electron/runner/stdioRunner.ts` is the build entry that validates the start payload, executes `runPlan` with the CloakBrowser adapter, streams runner events back to main, and returns a terminal result. The app API persists streamed events and artifact metadata from the process-backed path, while keeping the in-process runner core path for focused tests and transition fallback.
+- Remaining Electron runner gaps are real CloakBrowser smoke coverage for navigate/fill/click/wait, action retry and timeout events, downloads/traces, and forceful browser/process cleanup after non-cooperative cancellation or runner crash.
 
 ## Belongs Here
 

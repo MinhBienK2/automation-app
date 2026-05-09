@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAppApi } from "./appApi.js";
 import { registerIpcHandlers } from "./ipc.js";
+import { createRunnerSupervisor } from "./runnerSupervisor.js";
 import { createStorageService } from "./storage.js";
 import { createCloakBrowserAdapter } from "../runner/cloakBrowserAdapter.js";
 
@@ -55,14 +56,19 @@ async function createWindow() {
 function bootstrapServices() {
   const storage = createStorageService({ appDataDir: app.getPath("userData") });
   storage.initialize();
+  const runner = createRunnerSupervisor({
+    runnerEntry: path.join(__dirname, "..", "runner", "stdioRunner.js"),
+  });
   const api = createAppApi({
     storage,
     appDataDir: app.getPath("userData"),
     createAdapter: createCloakBrowserAdapter,
+    runner,
   });
   registerIpcHandlers(ipcMain, api);
 
   app.on("before-quit", () => {
+    void runner.shutdown();
     storage.close();
   });
 }

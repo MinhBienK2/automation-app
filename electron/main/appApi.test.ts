@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createAppApi, type AppApi } from "./appApi";
 import { createStorageService, type StorageService } from "./storage";
 import type { BrowserAutomationAdapter } from "../runner/runnerCore";
+import type { RunnerEvent, RunnerResult, StartRunPayload } from "../shared/product";
 
 let appDataDir = "";
 let storage: StorageService;
@@ -121,6 +122,86 @@ describe("Electron app API", () => {
       expect.objectContaining({
         type: "screenshot",
         relativePath: `runs/${runState.run_id}/screenshots/final.png`,
+      }),
+    ]);
+  });
+
+  test("uses the supervised runner client when provided and persists streamed events", async () => {
+    const workflow = await api.workflows.create({ name: "Process-backed flow" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "take_screenshot", config: { file_name: "process.png" } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+
+    const startPayloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: () => {
+        throw new Error("in-process adapter should not be used when runner is provided");
+      },
+      runner: {
+        async startRun(payload: StartRunPayload, onEvent: (event: RunnerEvent) => void): Promise<RunnerResult> {
+          startPayloads.push(payload);
+          onEvent({
+            type: "run.started",
+            severity: "info",
+            runId: payload.runId,
+            payload: { workflowId: payload.workflowId },
+            createdAt: "2026-05-09T00:00:00.000Z",
+          });
+          onEvent({
+            type: "artifact.created",
+            severity: "info",
+            runId: payload.runId,
+            nodeId: payload.runPlan.steps[0]?.sourceNodeId,
+            actionId: payload.runPlan.steps[0]?.id,
+            payload: {
+              type: "screenshot",
+              relativePath: `runs/${payload.runId}/screenshots/process.png`,
+              mimeType: "image/png",
+              sizeBytes: 10,
+              checksum: "sha256:test",
+              sanitized: true,
+            },
+            createdAt: "2026-05-09T00:00:01.000Z",
+          });
+          onEvent({
+            type: "step.completed",
+            severity: "info",
+            runId: payload.runId,
+            nodeId: payload.runPlan.steps[0]?.sourceNodeId,
+            actionId: payload.runPlan.steps[0]?.id,
+            payload: { actionType: "take_screenshot" },
+            createdAt: "2026-05-09T00:00:02.000Z",
+          });
+          onEvent({
+            type: "run.completed",
+            severity: "info",
+            runId: payload.runId,
+            payload: { status: "completed" },
+            createdAt: "2026-05-09T00:00:03.000Z",
+          });
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    const runState = await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(startPayloads).toHaveLength(1);
+    expect(runState.status).toBe("success");
+    expect(storage.listRunEvents(runState.run_id ?? "").map((event) => event.type)).toEqual([
+      "run.started",
+      "artifact.created",
+      "step.completed",
+      "run.completed",
+    ]);
+    expect(storage.listArtifacts(runState.run_id ?? "")).toEqual([
+      expect.objectContaining({
+        type: "screenshot",
+        relativePath: `runs/${runState.run_id}/screenshots/process.png`,
       }),
     ]);
   });

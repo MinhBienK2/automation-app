@@ -49,7 +49,7 @@ Child spec implementation summary:
 | 03 Data And Storage | IMPLEMENTATION DONE for M1 |
 | 04 Workflow Graph And Builder | PARTIAL |
 | 05 Action Catalog And Locator | PARTIAL |
-| 06 CloakRunner | PARTIAL |
+| 06 CloakRunner | PARTIAL: supervised `startRun` protocol implemented; real CloakBrowser smoke, retries/timeouts, downloads, traces, and forceful cleanup remain |
 | 07 Identity Profile And Fingerprint Preflight | PENDING |
 | 08 Run Evidence And Audit | PARTIAL |
 | 09 UI/UX Feature Parity | PARTIAL |
