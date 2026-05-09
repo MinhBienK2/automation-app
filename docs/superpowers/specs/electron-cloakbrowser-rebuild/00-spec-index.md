@@ -28,6 +28,38 @@ local navigation file for the child spec set.
 
 - `parity-matrix.md`
 
+## Current Implementation Progress
+
+Last updated: 2026-05-09.
+
+- M0 Spec Baseline: DONE.
+- M1 Foundation: DONE.
+- M2 Runner Vertical Slice: PARTIAL.
+- M3 Core Feature Parity: PENDING.
+- M4 Production Identity And Evidence: PENDING.
+- M5 Packaging: PARTIAL.
+- M6 Acceptance And Decommission: PENDING.
+
+Child spec implementation summary:
+
+| Spec | Implementation Status |
+| --- | --- |
+| 01 Product Model | PARTIAL |
+| 02 Electron App Architecture | IMPLEMENTATION DONE for M1 |
+| 03 Data And Storage | IMPLEMENTATION DONE for M1 |
+| 04 Workflow Graph And Builder | PARTIAL |
+| 05 Action Catalog And Locator | PARTIAL |
+| 06 CloakRunner | PARTIAL |
+| 07 Identity Profile And Fingerprint Preflight | PENDING |
+| 08 Run Evidence And Audit | PARTIAL |
+| 09 UI/UX Feature Parity | PARTIAL |
+| 10 Packaging And Release | PARTIAL |
+| 11 Testing And Acceptance | PARTIAL |
+
+The master spec contains the detailed comments and verification evidence. Any
+future implementation slice that completes a child spec milestone must update
+both this summary and the master spec progress table.
+
 ## Dependency Order
 
 ```text

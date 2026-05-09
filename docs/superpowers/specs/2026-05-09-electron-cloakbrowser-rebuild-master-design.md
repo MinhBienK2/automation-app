@@ -9,6 +9,100 @@ the app as an Electron/Node product that is native to Playwright and
 CloakBrowser. It is not an implementation plan and does not authorize coding by
 itself.
 
+## Implementation Progress
+
+Last updated: 2026-05-09.
+
+Overall status: **in progress**. M0 Spec Baseline is complete. M1 Foundation is
+implemented and verified as the first rebuild slice. M2 Runner Vertical Slice is
+partially implemented. M3-M6 are not complete.
+
+Progress terms:
+
+- `SPEC DONE`: the child spec has scope, contracts, dependencies, and acceptance
+  criteria with no blocking open questions.
+- `IMPLEMENTATION DONE`: the code for that child spec's current milestone scope
+  is implemented, documented, and verified by the listed checks.
+- `PARTIAL`: a useful vertical slice exists, but required acceptance criteria
+  remain.
+- `PENDING`: no meaningful implementation slice is complete yet.
+
+Update rule:
+
+- Every time a child spec reaches `IMPLEMENTATION DONE` for a milestone, update
+  this section in the same change.
+- Add a short comment describing what was completed, what evidence/checks prove
+  it, and what remains for later milestones.
+- Do not mark a child spec `IMPLEMENTATION DONE` just because scaffolding exists.
+  The acceptance criteria for the current milestone must be met.
+
+### Milestone Status
+
+| Milestone | Status | Comment |
+| --- | --- | --- |
+| M0 Spec Baseline | DONE | Master spec, child specs, and parity matrix exist with no blocking open questions for foundation work. |
+| M1 Foundation | DONE | Electron main/preload boundary, IPC facade, new SQLite initializer, runner health process, tests, frontend build, Electron build, and Linux unpacked packaging smoke are complete. |
+| M2 Runner Vertical Slice | PARTIAL | In-process app API can create a workflow, compile a simple graph, execute runner core events, enforce navigation allowlist in runner tests, and register screenshot artifacts. Full CloakBrowser-backed navigate/fill/click/wait execution through the supervised runner process and streamed UI updates remain. |
+| M3 Core Feature Parity | PENDING | Existing React UI is bridged to Electron for foundation APIs, but full P0 parity is not complete. |
+| M4 Production Identity And Evidence | PENDING | Identity/preflight/evidence concepts exist in specs and partial storage/event scaffolding, but full product implementation is not complete. |
+| M5 Packaging | PARTIAL | Linux unpacked `electron-builder --dir` smoke passes. Windows/macOS installers, signing/notarization, release manifest, and CloakBrowser binary distribution policy remain. |
+| M6 Acceptance And Decommission | PENDING | Tauri/Rust app is still present as fallback; no decommission decision yet. |
+
+### Child Spec Implementation Status
+
+| Child Spec | Spec Status | Implementation Status | Comment |
+| --- | --- | --- | --- |
+| 01 Product Model | SPEC DONE | PARTIAL | Canonical concepts are reflected in shared Electron types and docs. Full workspace/profile/environment/run-profile model is not complete. |
+| 02 Electron App Architecture | SPEC DONE | IMPLEMENTATION DONE for M1 | `electron/main/main.ts`, `electron/preload/preload.ts`, `electron/main/ipc.ts`, `src/lib/workflowApi.ts`, and `src/vite-env.d.ts` implement isolated renderer, typed preload API, IPC routing, and Tauri fallback. Verified by `src/lib/workflowApi.electron.test.ts`, `npm run build`, and `npm run build:electron`. |
+| 03 Data And Storage | SPEC DONE | IMPLEMENTATION DONE for M1 | `electron/main/storage.ts` initializes the new SQLite workspace schema, workflows, active graph versions, run events, artifacts, soft delete, duplicate, and temporary settings snapshots. Verified by `electron/main/storage.test.ts`. Full secret references, import/export, retention cleanup, and profile inventories remain. |
+| 04 Workflow Graph And Builder | SPEC DONE | PARTIAL | `electron/main/graph.ts` creates draft graphs, validates basic run blockers, enforces port uniqueness, and compiles simple linear action graphs to runner plans. Full graph logic/control compilation, debug model, and Electron-native graph UI parity remain. |
+| 05 Action Catalog And Locator | SPEC DONE | PARTIAL | Runner/shared types and CloakBrowser adapter support locator-first navigate, click, fill, wait, screenshot, and extract-text shapes. Full action catalog schemas, defaults, summaries, help metadata, and P0/P1 runner mappings remain. |
+| 06 CloakRunner | SPEC DONE | PARTIAL | `electron/runner/runnerCore.ts` executes runner plans with structured lifecycle/step/issue/artifact events, cancellation between actions, screenshot artifacts, and allowlist checks. `runnerSupervisor` proves process health. Full supervised process `startRun`, retries/timeouts, downloads, traces, and real CloakBrowser smoke remain. |
+| 07 Identity Profile And Fingerprint Preflight | SPEC DONE | PENDING | Only minimal identity snapshot fields exist for runner payloads. Saved identity profiles, coherence validation, persistent profile locking, proxy refs, and owned preflight verdict gate remain. |
+| 08 Run Evidence And Audit | SPEC DONE | PARTIAL | Run events and artifact metadata are stored, and runner events include action/issue/artifact payloads. Full evidence records, sanitization service, export, preflight evidence, and operator audit trail remain. |
+| 09 UI/UX Feature Parity | SPEC DONE | PARTIAL | Existing React UI can call Electron preload APIs for workflow, graph, settings, and run foundation commands. Full Electron-native parity for run history, identity editor, evidence viewer, import/export, issue panel, and streamed events remains. |
+| 10 Packaging And Release | SPEC DONE | PARTIAL | Electron builder config and Linux unpacked package smoke pass. Windows/macOS targets, signing/notarization, release manifest, checksum verification, and CloakBrowser distribution mode remain. |
+| 11 Testing And Acceptance | SPEC DONE | PARTIAL | Electron-focused unit tests, full frontend Vitest suite, frontend build, Electron build, and Linux packaging smoke pass. Full E2E, real CloakBrowser runner tests, packaging smoke per OS, and P0/P1 acceptance gates remain. |
+
+### Completed Implementation Slice: 2026-05-09 Foundation
+
+DONE in this slice:
+
+- Electron app shell with secure BrowserWindow defaults.
+- Preload `window.cloakBrowser` API and IPC route registration.
+- Renderer API bridge that uses Electron preload when present and Tauri invoke
+  as fallback.
+- New Electron SQLite storage initializer and repository-style service.
+- Workflow create/list/get/rename/delete/duplicate foundation.
+- Active graph save/load, draft graph creation, basic validation, and simple
+  compile-to-run-plan.
+- Workflow Settings compatibility facade for the existing React UI.
+- Runner core event sequence, allowlist failure, cancellation, screenshot
+  artifact registration, and basic output capture event.
+- CloakBrowser adapter scaffold using locator-first Playwright-style APIs.
+- Runner process health-check supervisor over JSONL stdio.
+- Electron build and Linux unpacked packaging smoke.
+
+Verification for this slice:
+
+- `npm test`
+- `npm run build`
+- `npm run build:electron`
+- `npm run electron:package`
+
+Known remaining blockers before replacement:
+
+- Full P0 action catalog execution through real CloakBrowser.
+- Supervised runner-process `startRun` protocol instead of only health-check
+  plus in-process vertical slice.
+- First-class Identity Profile CRUD and validation.
+- Fingerprint preflight gate against allowlisted owned probe URLs.
+- Evidence export and sanitizer.
+- Electron-native import/export package flow.
+- Run history and streamed run monitor UI.
+- Windows/macOS packaging and platform smoke.
+- Tauri/Rust decommission or fallback decision.
+
 ## Purpose
 
 Rebuild the browser automation product as a new Electron/Node desktop app that
