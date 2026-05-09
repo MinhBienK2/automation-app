@@ -178,6 +178,12 @@ export async function runPlan(
       });
 
       try {
+        if (preflightPolicy.allowedOrigins.length === 0) {
+          throw new RunnerActionError(
+            "Fingerprint preflight probe requires a non-empty owned allowlist.",
+            "policy",
+          );
+        }
         if (!originAllowed(preflightPolicy.probeUrl, preflightPolicy.allowedOrigins)) {
           throw new RunnerActionError(
             `Fingerprint preflight probe is outside the owned allowlist: ${preflightPolicy.probeUrl}`,

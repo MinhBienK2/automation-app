@@ -373,6 +373,54 @@ describe("CloakRunner core", () => {
     });
   });
 
+  test("blocks fingerprint preflight probes when no owned allowlist is configured", async () => {
+    const events: RunnerEvent[] = [];
+    let navigated = false;
+    const adapter = fakeAdapter();
+    adapter.navigate = async () => {
+      navigated = true;
+    };
+    const plan = basePlan([
+      {
+        id: "step_click",
+        sourceNodeId: "click",
+        actionType: "click",
+        label: "Click",
+        config: {
+          type: "click",
+          locator: { strategy: "text", value: "Continue", filters: { visible: true }, fallbacks: [] },
+        },
+      },
+    ]);
+    const runPayload = payload(plan);
+    runPayload.identityProfileSnapshot.preflightPolicy = {
+      enabled: true,
+      probeUrl: "https://owned.example.test/fingerprint",
+      allowedOrigins: [],
+    };
+
+    const result = await runPlan(runPayload, adapter, {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("failed");
+    expect(navigated).toBe(false);
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "preflight.started",
+      "issue.created",
+      "preflight.failed",
+      "run.failed",
+    ]);
+    expect(events.find((event) => event.type === "issue.created")).toMatchObject({
+      payload: expect.objectContaining({
+        category: "policy",
+        message: "Fingerprint preflight probe requires a non-empty owned allowlist.",
+      }),
+    });
+  });
+
   test("retries failed actions and emits retry events before succeeding", async () => {
     const events: RunnerEvent[] = [];
     let attempts = 0;
