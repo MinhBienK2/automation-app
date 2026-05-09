@@ -622,6 +622,63 @@ describe("Electron app API", () => {
     });
   });
 
+  test("persists persistent identity profile lock lifecycle events", async () => {
+    const workflow = await api.workflows.create({ name: "Profile lock audit run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const profile = storage.createIdentityProfile({
+      name: "Audited profile",
+      persistentProfilePath: "audited-profile",
+      deviceIdentity: {
+        viewport: { width: 1280, height: 720 },
+        mobile: false,
+        touch: false,
+      },
+      locale: { locale: "en-US", timezone: "America/New_York" },
+      headedPolicy: "allow_headless",
+      preflightPolicy: { enabled: false },
+    });
+    storage.updateWorkflowDefaults(workflow.id, { defaultIdentityProfileId: profile.id });
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload, onEvent: (event: RunnerEvent) => void): Promise<RunnerResult> {
+          onEvent({
+            type: "run.completed",
+            severity: "info",
+            runId: payload.runId,
+            payload: { status: "completed" },
+            createdAt: "2026-05-09T00:00:00.000Z",
+          });
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    const runState = await processApi.runs.start({ workflowId: workflow.id });
+    const events = storage.listRunEvents(runState.run_id ?? "");
+
+    expect(events.map((event) => event.type)).toEqual([
+      "identity.profileLockAcquired",
+      "run.completed",
+      "identity.profileLockReleased",
+    ]);
+    expect(events[0]?.payload).toMatchObject({
+      profileId: profile.id,
+      profileName: "Audited profile",
+      persistentProfilePath: "audited-profile",
+    });
+    expect(events[2]?.payload).toMatchObject({
+      profileId: profile.id,
+      persistentProfilePath: "audited-profile",
+    });
+  });
+
   test("exposes workflow run history through the app facade", async () => {
     const workflow = await api.workflows.create({ name: "Run history facade" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });

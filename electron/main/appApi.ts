@@ -998,6 +998,32 @@ export function createAppApi(options: AppApiOptions) {
           activePersistentProfilePaths.add(persistentProfilePath);
         }
         let runIdForCleanup: string | null = null;
+        const profileLockPayload = persistentProfilePath
+          ? {
+              profileId: identityProfileSnapshot.id,
+              profileName: identityProfileSnapshot.name,
+              persistentProfilePath,
+            }
+          : null;
+        const appendAppRunEvent = (
+          runId: string,
+          type: string,
+          payload: Record<string, unknown>,
+        ) => {
+          const persisted = options.storage.appendRunEvent(runId, {
+            type,
+            severity: "info",
+            payload,
+          });
+          options.onRunEvent?.({
+            type,
+            severity: "info",
+            runId,
+            payload,
+            createdAt: persisted.createdAt,
+          });
+          return persisted;
+        };
 
         try {
           const run = options.storage.createRun({
@@ -1010,6 +1036,9 @@ export function createAppApi(options: AppApiOptions) {
           });
           runIdForCleanup = run.id;
           activeRunId = run.id;
+          if (profileLockPayload) {
+            appendAppRunEvent(run.id, "identity.profileLockAcquired", profileLockPayload);
+          }
           const completedStepIds: string[] = [];
           const payload: StartRunPayload = {
             protocolVersion: 1,
@@ -1098,11 +1127,17 @@ export function createAppApi(options: AppApiOptions) {
           };
           return lastRunState;
         } finally {
-          if (activeRunId === runIdForCleanup) {
-            activeRunId = null;
-          }
-          if (persistentProfilePath) {
-            activePersistentProfilePaths.delete(persistentProfilePath);
+          try {
+            if (runIdForCleanup && profileLockPayload) {
+              appendAppRunEvent(runIdForCleanup, "identity.profileLockReleased", profileLockPayload);
+            }
+          } finally {
+            if (activeRunId === runIdForCleanup) {
+              activeRunId = null;
+            }
+            if (persistentProfilePath) {
+              activePersistentProfilePaths.delete(persistentProfilePath);
+            }
           }
         }
       },
