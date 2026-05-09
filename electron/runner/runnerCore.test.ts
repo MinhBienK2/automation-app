@@ -102,12 +102,22 @@ describe("CloakRunner core", () => {
       "run.started",
       "identity.profileResolved",
       "step.started",
+      "action.trace",
       "step.completed",
       "step.started",
       "artifact.created",
+      "action.trace",
       "step.completed",
       "run.completed",
     ]);
+    expect(events.find((event) => event.type === "action.trace")).toMatchObject({
+      payload: expect.objectContaining({
+        actionType: "navigate",
+        mode: "browser_input",
+        status: "completed",
+        durationMs: expect.any(Number),
+      }),
+    });
     expect(events.find((event) => event.type === "artifact.created")).toMatchObject({
       payload: expect.objectContaining({
         type: "screenshot",
@@ -144,6 +154,7 @@ describe("CloakRunner core", () => {
       "identity.profileResolved",
       "step.started",
       "issue.created",
+      "action.trace",
       "step.completed",
       "run.completed",
     ]);
@@ -397,6 +408,7 @@ describe("CloakRunner core", () => {
       "identity.profileResolved",
       "step.started",
       "action.retrying",
+      "action.trace",
       "step.completed",
       "run.completed",
     ]);

@@ -54,6 +54,7 @@ The Electron rebuild adds a Node runner foundation that executes runner-native p
 - Electron runner core can execute an identity preflight policy before workflow actions by navigating to an allowlisted owned probe URL, reading a JSON verdict from the page body or configured locator, emitting preflight events, and failing the run before graph steps when the verdict is malformed or blocking.
 - Runner steps honor runtime retry policy for runtime failures, emit `action.retrying` with attempt metadata, and avoid retrying validation or policy failures.
 - Runner-level action timeouts wrap each attempt, emit `action.timeout`, and then use the normal issue/step-failed/run-failed path so a timed-out action creates exactly one terminal run event.
+- Successful runner actions emit compact `action.trace` records with action type, mode, locator summary, completion timestamps, duration, and fallback metadata before `step.completed`.
 - Screenshot artifact write failures create system issues; non-strict evidence policy lets the step continue with a warning, while strict evidence policy fails the step and run.
 - Electron app API resolves the workflow default Run Profile before execution and applies run timeout, evidence policy, browser retention, default action timeout, and retry policy to the runner payload.
 - Electron app API resolves the workflow default Environment before execution and applies initial variables, permissions, and extra HTTP headers to the runner payload.

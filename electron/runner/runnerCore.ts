@@ -306,6 +306,8 @@ export async function runPlan(
         },
       });
 
+      const actionStartedAt = createdAt();
+      const actionStartedMs = Date.now();
       const maxAttempts = Math.max(1, step.retry?.attempts ?? 1);
       let actionError: RunnerActionError | null = null;
 
@@ -484,6 +486,24 @@ export async function runPlan(
         return { runId: payload.runId, status: "failed", reason: actionError.message };
       }
 
+      const actionCompletedAt = createdAt();
+      emit({
+        type: "action.trace",
+        severity: "info",
+        runId: payload.runId,
+        nodeId: step.sourceNodeId,
+        actionId: step.id,
+        payload: {
+          actionType: step.actionType,
+          mode: modeForAction(step.config.type),
+          locator: locatorSummary("locator" in step.config ? step.config.locator : undefined),
+          status: "completed",
+          fallbackUsed: false,
+          startedAt: actionStartedAt,
+          completedAt: actionCompletedAt,
+          durationMs: Math.max(0, Date.now() - actionStartedMs),
+        },
+      });
       emit({
         type: "step.completed",
         severity: "info",

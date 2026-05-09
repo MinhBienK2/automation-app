@@ -333,6 +333,7 @@ describe("Electron app API", () => {
       "identity.profileResolved",
       "step.started",
       "artifact.created",
+      "action.trace",
       "step.completed",
       "run.completed",
     ]);
@@ -825,6 +826,7 @@ describe("Electron app API", () => {
       "identity.profileResolved",
       "step.started",
       "artifact.created",
+      "action.trace",
       "step.completed",
       "run.completed",
     ]);
