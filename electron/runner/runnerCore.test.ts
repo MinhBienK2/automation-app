@@ -248,4 +248,52 @@ describe("CloakRunner core", () => {
       }),
     });
   });
+
+  test("retries failed actions and emits retry events before succeeding", async () => {
+    const events: RunnerEvent[] = [];
+    let attempts = 0;
+    const adapter = fakeAdapter();
+    adapter.click = async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw new Error("temporary actionability failure");
+      }
+    };
+    const plan = basePlan([
+      {
+        id: "step_click",
+        sourceNodeId: "click",
+        actionType: "click",
+        label: "Click",
+        config: {
+          type: "click",
+          locator: { strategy: "text", value: "Continue", filters: { visible: true }, fallbacks: [] },
+        },
+        retry: { attempts: 2, intervalMs: 0 },
+      },
+    ]);
+
+    const result = await runPlan(payload(plan), adapter, {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("completed");
+    expect(attempts).toBe(2);
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "step.started",
+      "action.retrying",
+      "step.completed",
+      "run.completed",
+    ]);
+    expect(events.find((event) => event.type === "action.retrying")).toMatchObject({
+      payload: expect.objectContaining({
+        attempt: 1,
+        nextAttempt: 2,
+        maxAttempts: 2,
+        reason: "temporary actionability failure",
+      }),
+    });
+  });
 });

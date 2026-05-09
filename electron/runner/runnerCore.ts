@@ -81,6 +81,11 @@ function event(input: Omit<RunnerEvent, "createdAt">): RunnerEvent {
   };
 }
 
+function delay(durationMs: number) {
+  if (durationMs <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
+}
+
 export async function runPlan(
   payload: StartRunPayload,
   adapter: BrowserAutomationAdapter,
@@ -259,86 +264,107 @@ export async function runPlan(
         },
       });
 
-      try {
-        switch (step.config.type) {
-          case "navigate":
-            if (!originAllowed(step.config.url, payload.operatorPolicySnapshot.allowedOrigins)) {
-              throw new RunnerActionError(
-                `Navigation origin is outside the allowed operator policy: ${step.config.url}`,
-                "policy",
-              );
-            }
-            await adapter.navigate(step.config);
-            break;
-          case "click":
-            await adapter.click(step.config);
-            break;
-          case "fill":
-            await adapter.fill(step.config);
-            break;
-          case "wait":
-            await adapter.wait(step.config);
-            break;
-          case "take_screenshot": {
-            const fileName = step.config.fileName || `${step.sourceNodeId}.png`;
-            const screenshotPath = path.join(payload.artifactDirectories.screenshots, fileName);
-            const screenshot = await adapter.screenshot({
-              path: screenshotPath,
-              fullPage: (step.config as ScreenshotActionConfig).fullPage,
-            });
-            const buffer = Buffer.isBuffer(screenshot) ? screenshot : Buffer.from(screenshot);
-            writeFileSync(screenshotPath, buffer);
-            emit({
-              type: "artifact.created",
-              severity: "info",
-              runId: payload.runId,
-              nodeId: step.sourceNodeId,
-              actionId: step.id,
-              payload: {
-                type: "screenshot",
-                relativePath: relativeArtifactPath(payload.runId, "screenshots", fileName),
-                mimeType: "image/png",
-                sizeBytes: buffer.byteLength,
-                checksum: checksum(buffer),
-                sanitized: true,
-              },
-            });
-            break;
-          }
-          case "extract_text": {
-            const value = await adapter.extractText(step.config);
-            emit({
-              type: "output.captured",
-              severity: "info",
-              runId: payload.runId,
-              nodeId: step.sourceNodeId,
-              actionId: step.id,
-              payload: {
-                name: step.config.outputName,
-                value,
-                locator: locatorSummary(step.config.locator),
-              },
-            });
-            break;
-          }
-        }
+      const maxAttempts = Math.max(1, step.retry?.attempts ?? 1);
+      let actionError: RunnerActionError | null = null;
 
-        emit({
-          type: "step.completed",
-          severity: "info",
-          runId: payload.runId,
-          nodeId: step.sourceNodeId,
-          actionId: step.id,
-          payload: {
-            actionType: step.actionType,
-            mode: modeForAction(step.config.type),
-          },
-        });
-      } catch (error) {
-        const actionError =
-          error instanceof RunnerActionError
-            ? error
-            : new RunnerActionError(error instanceof Error ? error.message : String(error), "runtime");
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          switch (step.config.type) {
+            case "navigate":
+              if (!originAllowed(step.config.url, payload.operatorPolicySnapshot.allowedOrigins)) {
+                throw new RunnerActionError(
+                  `Navigation origin is outside the allowed operator policy: ${step.config.url}`,
+                  "policy",
+                );
+              }
+              await adapter.navigate(step.config);
+              break;
+            case "click":
+              await adapter.click(step.config);
+              break;
+            case "fill":
+              await adapter.fill(step.config);
+              break;
+            case "wait":
+              await adapter.wait(step.config);
+              break;
+            case "take_screenshot": {
+              const fileName = step.config.fileName || `${step.sourceNodeId}.png`;
+              const screenshotPath = path.join(payload.artifactDirectories.screenshots, fileName);
+              const screenshot = await adapter.screenshot({
+                path: screenshotPath,
+                fullPage: (step.config as ScreenshotActionConfig).fullPage,
+              });
+              const buffer = Buffer.isBuffer(screenshot) ? screenshot : Buffer.from(screenshot);
+              writeFileSync(screenshotPath, buffer);
+              emit({
+                type: "artifact.created",
+                severity: "info",
+                runId: payload.runId,
+                nodeId: step.sourceNodeId,
+                actionId: step.id,
+                payload: {
+                  type: "screenshot",
+                  relativePath: relativeArtifactPath(payload.runId, "screenshots", fileName),
+                  mimeType: "image/png",
+                  sizeBytes: buffer.byteLength,
+                  checksum: checksum(buffer),
+                  sanitized: true,
+                },
+              });
+              break;
+            }
+            case "extract_text": {
+              const value = await adapter.extractText(step.config);
+              emit({
+                type: "output.captured",
+                severity: "info",
+                runId: payload.runId,
+                nodeId: step.sourceNodeId,
+                actionId: step.id,
+                payload: {
+                  name: step.config.outputName,
+                  value,
+                  locator: locatorSummary(step.config.locator),
+                },
+              });
+              break;
+            }
+          }
+
+          actionError = null;
+          break;
+        } catch (error) {
+          actionError =
+            error instanceof RunnerActionError
+              ? error
+              : new RunnerActionError(error instanceof Error ? error.message : String(error), "runtime");
+
+          if (attempt < maxAttempts && actionError.category === "runtime") {
+            emit({
+              type: "action.retrying",
+              severity: "warning",
+              runId: payload.runId,
+              nodeId: step.sourceNodeId,
+              actionId: step.id,
+              payload: {
+                actionType: step.actionType,
+                attempt,
+                nextAttempt: attempt + 1,
+                maxAttempts,
+                intervalMs: step.retry?.intervalMs ?? 0,
+                reason: actionError.message,
+              },
+            });
+            await delay(step.retry?.intervalMs ?? 0);
+            continue;
+          }
+
+          break;
+        }
+      }
+
+      if (actionError) {
         emit({
           type: "issue.created",
           severity: "error",
@@ -372,6 +398,18 @@ export async function runPlan(
         });
         return { runId: payload.runId, status: "failed", reason: actionError.message };
       }
+
+      emit({
+        type: "step.completed",
+        severity: "info",
+        runId: payload.runId,
+        nodeId: step.sourceNodeId,
+        actionId: step.id,
+        payload: {
+          actionType: step.actionType,
+          mode: modeForAction(step.config.type),
+        },
+      });
     }
 
     emit({
