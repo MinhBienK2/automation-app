@@ -4,6 +4,8 @@
 
 The runner executes action configs in a headed Chromium browser and reports progress back to app state.
 
+The Electron rebuild adds a Node runner foundation that executes runner-native plans and emits structured events. It is separate from the Tauri/Rust runner and is implemented under `electron/runner/`.
+
 ## Key Files
 
 - `src-tauri/src/runner/browser.rs`
@@ -15,6 +17,12 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - `src-tauri/src/services/run_service.rs`
 - `src-tauri/src/app_state.rs`
 - `src-tauri/tests/runner_spike.rs`
+- `electron/runner/runnerCore.ts`
+- `electron/runner/cloakBrowserAdapter.ts`
+- `electron/main/runnerSupervisor.ts`
+- `electron/runner/stdio-runner.mjs`
+- `electron/runner/runnerCore.test.ts`
+- `electron/main/runnerSupervisor.test.ts`
 
 ## Current Behavior
 
@@ -39,6 +47,9 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Execution max duration is enforced in `run_service` with the same cancellation token used by Stop. Timeout finishes the run as failed with a workflow-level timeout error.
 - Batch execution compiles the saved graph, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, closes each row session, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
 - `BrowserRunner` records compact action traces into the browser output store under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
+- Electron runner core consumes compiled `RunPlan` payloads, enforces origin allowlists for navigation, emits deterministic lifecycle/step/issue/artifact events, supports cooperative cancellation between actions, and writes artifacts only under main-allocated run directories.
+- `createCloakBrowserAdapter` uses the `cloakbrowser` package as the browser launch source and maps locator-first action configs to Playwright-style page/locator APIs.
+- `RunnerSupervisor` currently proves the local runner process boundary through a stdio JSONL health handshake. Full process-backed `startRun` remains the next runner milestone before replacing the in-process app API vertical slice.
 
 ## Belongs Here
 
@@ -77,5 +88,6 @@ Browser action script builders live under `src-tauri/src/runner/actions/` and ar
 
 - Preserve cancellation behavior.
 - Update runner tests for action behavior.
+- Update Electron runner tests for `electron/runner/runnerCore.ts` and process-supervision changes.
 - Update command tests when run state semantics change.
 - Update `docs/contracts/run-state.md` for status/progress changes.

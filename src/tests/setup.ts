@@ -62,36 +62,42 @@ class ResizeObserverMock implements ResizeObserver {
   disconnect() {}
 }
 
-Object.defineProperties(HTMLElement.prototype, {
-  offsetHeight: {
-    configurable: true,
-    get() {
-      return this.classList?.contains("react-flow__node") ? 64 : 600;
+if (typeof HTMLElement !== "undefined") {
+  Object.defineProperties(HTMLElement.prototype, {
+    offsetHeight: {
+      configurable: true,
+      get() {
+        return this.classList?.contains("react-flow__node") ? 64 : 600;
+      },
     },
-  },
-  offsetWidth: {
-    configurable: true,
-    get() {
-      return this.classList?.contains("react-flow__node") ? 160 : 800;
+    offsetWidth: {
+      configurable: true,
+      get() {
+        return this.classList?.contains("react-flow__node") ? 160 : 800;
+      },
     },
-  },
-});
-
-const svgPrototype = SVGElement.prototype as unknown as {
-  getBBox?: () => DOMRect;
-};
-
-if (!svgPrototype.getBBox) {
-  svgPrototype.getBBox = () => ({
-    x: 0,
-    y: 0,
-    width: 80,
-    height: 20,
-  } as DOMRect);
+  });
 }
 
-vi.stubGlobal("DOMMatrixReadOnly", DOMMatrixReadOnlyMock);
-vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+if (typeof SVGElement !== "undefined") {
+  const svgPrototype = SVGElement.prototype as unknown as {
+    getBBox?: () => DOMRect;
+  };
+
+  if (!svgPrototype.getBBox) {
+    svgPrototype.getBBox = () => ({
+      x: 0,
+      y: 0,
+      width: 80,
+      height: 20,
+    } as DOMRect);
+  }
+}
+
+if (typeof window !== "undefined") {
+  vi.stubGlobal("DOMMatrixReadOnly", DOMMatrixReadOnlyMock);
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+}
 
 afterEach(() => {
   cleanup();

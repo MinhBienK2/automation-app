@@ -5,12 +5,16 @@
 Persistence stores workflows, versioned workflow graph authoring data, and per-workflow settings in SQLite. Legacy ordered workflow step rows still exist for compatibility paths, but they are no longer the product authoring source of truth.
 Legacy workflow-level browser runtime config rows still exist for compatibility, but product-facing browser launch settings now live in `workflow_settings.browser_json`.
 
+The Electron rebuild has a separate new SQLite workspace schema in `electron/main/storage.ts`. It does not migrate the Tauri database and follows the rebuild storage spec: workflows, active graph versions, run profiles, identity profiles, environments, runs, run events, artifacts, evidence records, and a temporary renderer settings snapshot facade while the existing React UI is reused.
+
 ## Key Files
 
 - `src-tauri/src/repositories/workflow_repository.rs`
 - `src-tauri/migrations/`
 - `src-tauri/src/db/mod.rs`
 - `src-tauri/tests/persistence.rs`
+- `electron/main/storage.ts`
+- `electron/main/storage.test.ts`
 
 ## Current Behavior
 
@@ -31,6 +35,8 @@ Legacy workflow-level browser runtime config rows still exist for compatibility,
 - `reorder_steps` rewrites indexes through temporary negative values.
 - Child step changes touch the parent workflow `updated_at`.
 - Graph, Workflow Settings, and legacy browser config saves touch the parent workflow `updated_at`.
+- Electron storage initializes `workspace.db` under app data, creates the rebuild schema from empty state, stores one active graph version per workflow, appends monotonic run events, registers file-backed artifact metadata, and hides soft-deleted workflows.
+- Electron workflow settings snapshots are a transition facade for the current renderer and are not old database migration.
 
 ## Belongs Here
 
@@ -51,7 +57,8 @@ Legacy workflow-level browser runtime config rows still exist for compatibility,
 
 ## Change Checklist
 
-- Add a migration for schema changes.
+- Add a migration or schema initializer change for schema changes.
 - Update repository tests.
+- Update Electron storage tests when changing `electron/main/storage.ts`.
 - Consider import/export compatibility.
 - Preserve existing workflow deserialization unless intentionally migrating data.

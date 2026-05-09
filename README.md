@@ -1,6 +1,6 @@
 # Workflow Automation Manager
 
-Rust desktop app for building and running authorized adversarial browser automation workflows against company-owned systems.
+Desktop app for building and running authorized adversarial browser automation workflows against company-owned systems. The current production app is Tauri/Rust-backed, and the Electron/Node + Playwright/CloakBrowser rebuild foundation now lives alongside it under `electron/`.
 
 The project is an internal red-team automation lab. Its explicit goal is to make automated workflows pass through the company's existing production and staging defenses in controlled owned environments, then produce evidence that helps security, trust, anti-abuse, and production teams find detection gaps and harden defenses. The lab models fake engagement, account integrity, network reputation, device/browser fingerprinting, behavioral analytics, velocity checks, graph detection, content/spam controls, risk scoring, challenge flows, API abuse, and coordinated bot scenarios.
 
@@ -18,10 +18,28 @@ Run the desktop app in development:
 npm run tauri dev
 ```
 
+Build and run the Electron rebuild shell from the compiled frontend:
+
+```bash
+npm run electron:dev
+```
+
 Build the frontend:
 
 ```bash
 npm run build
+```
+
+Build Electron main/preload/runner TypeScript:
+
+```bash
+npm run build:electron
+```
+
+Package the Electron rebuild as an unpacked local app directory:
+
+```bash
+npm run electron:package
 ```
 
 Run Rust tests:
@@ -34,7 +52,7 @@ cargo test
 Run frontend tests:
 
 ```bash
-npm test -- --run
+npm test
 ```
 
 Check Rust formatting:
@@ -92,3 +110,13 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 34. Run the graph and confirm blocking validation issues appear in the run issue panel before execution, runtime failures identify the failed graph node and can select it, system/startup errors remain readable, canvas run highlights use semantic colors, and subworkflow expansion updates from run state.
 35. Confirm Chromium remains open after success, failure, and stop by default, closes when Workflow Settings browser retention is set to close, closes when an End or Stop Workflow node has Close browser after workflow ends enabled, and max workflow duration fails an overlong run with a timeout message.
 36. Delete the workflow.
+
+## Electron Rebuild Smoke Checklist
+
+This smoke path covers the new Electron foundation from `docs/superpowers/specs/2026-05-09-electron-cloakbrowser-rebuild-master-design.md`.
+
+1. Run `npm test -- electron/main/storage.test.ts electron/main/graph.test.ts electron/runner/runnerCore.test.ts electron/main/runnerSupervisor.test.ts electron/main/appApi.test.ts src/lib/workflowApi.electron.test.ts`.
+2. Run `npm run build` and `npm run build:electron`.
+3. Run `npm run electron:package` and confirm `release/linux-unpacked` is produced on Linux.
+4. Launch the packaged or dev Electron app, create a workflow, open detail, and confirm the preload API loads the draft graph and default Workflow Settings without Tauri.
+5. Configure a screenshot action on the draft node, run it, and confirm run events plus screenshot artifact metadata are persisted in the Electron SQLite workspace.

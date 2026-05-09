@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The frontend renders workflow management UI, owns interaction state, and calls typed Tauri command wrappers.
+The frontend renders workflow management UI, owns interaction state, and calls typed desktop API wrappers. In the current Tauri app those wrappers call Tauri commands. In the Electron rebuild, the same `workflowApi.ts` wrappers first use the preload `window.cloakBrowser` API when available, then fall back to Tauri invoke for the existing app.
 
 ## Key Files
 
@@ -25,7 +25,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
-- `src/lib/workflowApi.ts`: Tauri invoke wrappers.
+- `src/lib/workflowApi.ts`: desktop API wrappers; Electron preload first, Tauri invoke fallback.
+- `src/vite-env.d.ts`: typed `window.cloakBrowser` preload surface for the Electron rebuild.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
 - `src/types/workflow.ts`: DTO and action config types.
 
@@ -48,7 +49,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and keyboard shortcuts without changing persisted `WorkflowGraph` shape.
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
 - Workflow Settings Triggers is currently a planned/compatibility section. The UI shows saved trigger intent and scheduling policy values without active scheduler controls until a scheduler service exists.
-- Command invocation through `workflowApi.ts`.
+- Command invocation through `workflowApi.ts`. New Electron-compatible calls should be added to the preload surface and wrapper fallback together.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.
 - Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands.
@@ -66,4 +67,4 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Keep props and DTO shapes aligned with `src/types/workflow.ts`.
 - Update focused component/page tests.
 - Read `DESIGN.md` before layout or styling changes.
-- Keep command names centralized in `workflowApi.ts`.
+- Keep desktop API names centralized in `workflowApi.ts`; update `src/lib/workflowApi.test.ts` for Tauri fallback and `src/lib/workflowApi.electron.test.ts` for Electron preload behavior.

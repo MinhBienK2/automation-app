@@ -666,6 +666,7 @@ describe("Workflow graph editor integration", () => {
                   type: "click",
                   config: {
                     xpath: "//button",
+                    target: null,
                     iframe_xpath: null,
                     mode: null,
                     button: null,

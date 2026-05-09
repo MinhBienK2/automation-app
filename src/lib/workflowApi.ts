@@ -26,15 +26,27 @@ import type {
   WorkflowSummary,
 } from "../types/workflow";
 
+function electronApi() {
+  return typeof window !== "undefined" ? window.cloakBrowser : undefined;
+}
+
 export function listWorkflows() {
+  const api = electronApi();
+  if (api?.workflows?.list) return api.workflows.list();
   return invoke<WorkflowSummary[]>("list_workflows");
 }
 
 export function getWorkflow(id: string) {
+  const api = electronApi();
+  if (api?.workflows?.get) return api.workflows.get({ id });
   return invoke<WorkflowDetail | null>("get_workflow", { id });
 }
 
 export function getWorkflowBrowserConfig(workflowId: string) {
+  const api = electronApi();
+  if (api?.settings?.getBrowserConfig) {
+    return api.settings.getBrowserConfig({ workflowId });
+  }
   return invoke<WorkflowBrowserConfig>("get_workflow_browser_config", { workflowId });
 }
 
@@ -42,10 +54,16 @@ export function saveWorkflowBrowserConfig(
   workflowId: string,
   config: WorkflowBrowserConfig,
 ) {
+  const api = electronApi();
+  if (api?.settings?.saveBrowserConfig) {
+    return api.settings.saveBrowserConfig({ workflowId, config });
+  }
   return invoke("save_workflow_browser_config", { workflowId, config });
 }
 
 export function getWorkflowSettings(workflowId: string) {
+  const api = electronApi();
+  if (api?.settings?.get) return api.settings.get({ workflowId });
   return invoke<WorkflowSettings>("get_workflow_settings", { workflowId });
 }
 
@@ -53,6 +71,8 @@ export function saveWorkflowSettings(
   workflowId: string,
   settings: WorkflowSettings,
 ) {
+  const api = electronApi();
+  if (api?.settings?.save) return api.settings.save({ workflowId, settings });
   return invoke<WorkflowSettings>("save_workflow_settings", { workflowId, settings });
 }
 
@@ -63,6 +83,10 @@ export function saveWorkflowSettingsSection<
   section: Section,
   sectionValue: WorkflowSettings[Section],
 ) {
+  const api = electronApi();
+  if (api?.settings?.saveSection) {
+    return api.settings.saveSection({ workflowId, section, sectionValue });
+  }
   return invoke<WorkflowSettings>("save_workflow_settings_section", {
     workflowId,
     section,
@@ -71,56 +95,82 @@ export function saveWorkflowSettingsSection<
 }
 
 export function validateWorkflowSettings(settings: WorkflowSettings) {
+  const api = electronApi();
+  if (api?.settings?.validate) return api.settings.validate({ settings });
   return invoke<SettingsValidationIssue[]>("validate_workflow_settings", {
     settings,
   });
 }
 
 export function validateWorkflowRun(workflowId: string) {
+  const api = electronApi();
+  if (api?.settings?.validateRun) return api.settings.validateRun({ workflowId });
   return invoke<RunValidationIssue[]>("validate_workflow_run", { workflowId });
 }
 
 export function createWorkflow(name: string) {
+  const api = electronApi();
+  if (api?.workflows?.create) return api.workflows.create({ name });
   return invoke<Workflow>("create_workflow", { name });
 }
 
 export function renameWorkflow(id: string, name: string) {
+  const api = electronApi();
+  if (api?.workflows?.rename) return api.workflows.rename({ id, name });
   return invoke("rename_workflow", { id, name });
 }
 
 export function deleteWorkflow(id: string) {
+  const api = electronApi();
+  if (api?.workflows?.delete) return api.workflows.delete({ id });
   return invoke("delete_workflow", { id });
 }
 
 export function duplicateWorkflow(workflowId: string, name: string) {
+  const api = electronApi();
+  if (api?.workflows?.duplicate) return api.workflows.duplicate({ workflowId, name });
   return invoke<WorkflowDetail>("duplicate_workflow", { workflowId, name });
 }
 
 export function getWorkflowGraph(workflowId: string) {
+  const api = electronApi();
+  if (api?.graphs?.loadActive) return api.graphs.loadActive({ workflowId });
   return invoke<WorkflowGraph>("get_workflow_graph", { workflowId });
 }
 
 export function saveWorkflowGraph(workflowId: string, graph: WorkflowGraph) {
+  const api = electronApi();
+  if (api?.graphs?.save) return api.graphs.save({ workflowId, graph });
   return invoke("save_workflow_graph", { workflowId, graph });
 }
 
 export function validateWorkflowGraph(graph: WorkflowGraph) {
+  const api = electronApi();
+  if (api?.graphs?.validate) return api.graphs.validate({ graph });
   return invoke<GraphValidationIssue[]>("validate_workflow_graph", { graph });
 }
 
 export function compileWorkflowGraph(graph: WorkflowGraph) {
+  const api = electronApi();
+  if (api?.graphs?.compile) return api.graphs.compile({ graph });
   return invoke<CompiledWorkflowGraph>("compile_workflow_graph", { graph });
 }
 
 export function runWorkflow(workflowId: string) {
+  const api = electronApi();
+  if (api?.runs?.start) return api.runs.start({ workflowId });
   return invoke<RunState>("run_workflow", { workflowId });
 }
 
 export function stopRun() {
+  const api = electronApi();
+  if (api?.runs?.stop) return api.runs.stop();
   return invoke<RunState>("stop_run");
 }
 
 export function getRunState() {
+  const api = electronApi();
+  if (api?.runs?.getState) return api.runs.getState();
   return invoke<RunState>("get_run_state");
 }
 

@@ -21,6 +21,18 @@ Checks: none until code or tests change.
 
 Update docs: task routes, product model, overview, or invariants only if the task changes current truth.
 
+## Electron CloakBrowser Rebuild
+
+Use for implementing the Electron/Node + Playwright/CloakBrowser rebuild described under `docs/superpowers/specs/electron-cloakbrowser-rebuild/`.
+
+Read: `architecture/overview.md`, `architecture/frontend.md`, `architecture/persistence.md`, `architecture/runner.md`, `architecture/testing.md`, and the relevant child spec under `docs/superpowers/specs/electron-cloakbrowser-rebuild/`
+
+Verify: `electron/main/`, `electron/preload/`, `electron/runner/`, `electron/shared/`, `src/lib/workflowApi.ts`, `src/vite-env.d.ts`, `package.json`, `tsconfig.electron.json`
+
+Checks: `npm test -- electron/main/storage.test.ts electron/main/graph.test.ts electron/runner/runnerCore.test.ts electron/main/runnerSupervisor.test.ts electron/main/appApi.test.ts src/lib/workflowApi.electron.test.ts`, `npm run build:electron`, `npm run build`, `npm run electron:package` when packaging changed.
+
+Update docs: overview, frontend, persistence, runner, testing architecture, README smoke checklist, and rebuild specs if milestone scope or acceptance changes.
+
 ## Add Or Change An Action Type
 
 Read: `domain/action-taxonomy.md`, `domain/cross-feature-impact-map.md`, `architecture/frontend.md`, `architecture/domain.md`, `architecture/runner.md`, `contracts/action-configs.md`, `contracts/workflow-types.md`

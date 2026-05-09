@@ -3,9 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "dist-electron/main/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "electron:dev": "npm run build && npm run build:electron && electron dist-electron/main/main.js",
+    "electron:package": "npm run build && npm run build:electron && electron-builder --dir",
+    "electron:dist": "npm run build && npm run build:electron && electron-builder",
     "test": "vitest run",
     "preview": "vite preview",
     "tauri": "tauri"
@@ -23,8 +28,10 @@
     "@tauri-apps/plugin-opener": "^2",
     "@xyflow/react": "^12.10.2",
     "class-variance-authority": "^0.7.1",
+    "cloakbrowser": "^0.3.27",
     "clsx": "^2.1.1",
     "lucide-react": "^1.11.0",
+    "playwright-core": "^1.59.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.5.0"
@@ -39,10 +46,45 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "electron": "^42.0.1",
+    "electron-builder": "^26.8.1",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4.2.4",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
     "vitest": "^4.1.5"
+  },
+  "build": {
+    "appId": "internal.cloakbrowser.automation-lab",
+    "productName": "CloakBrowser Automation Lab",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/runner/stdio-runner.mjs",
+        "to": "runner/stdio-runner.mjs"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   }
 }

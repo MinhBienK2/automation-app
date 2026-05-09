@@ -2,6 +2,8 @@
 
 ## Layers
 
+Current Tauri/Rust app:
+
 ```text
 React UI
   -> src/App.tsx orchestration
@@ -23,6 +25,29 @@ SQLite
   -> workflow_browser_configs (legacy compatibility)
 ```
 
+Electron/CloakBrowser rebuild foundation:
+
+```text
+Electron Main
+  -> electron/main/main.ts app lifecycle/window security
+  -> electron/main/ipc.ts typed IPC routing
+  -> electron/main/appApi.ts preload-shaped product API facade
+  -> electron/main/storage.ts new SQLite workspace schema
+  -> electron/main/runnerSupervisor.ts local runner process health supervision
+
+Preload
+  -> electron/preload/preload.ts contextBridge API
+
+React Renderer
+  -> existing src/ UI during transition
+  -> src/lib/workflowApi.ts selects Electron preload API when available, otherwise Tauri invoke
+
+Runner
+  -> electron/runner/runnerCore.ts runner-native plan execution and events
+  -> electron/runner/cloakBrowserAdapter.ts CloakBrowser/Playwright adapter
+  -> electron/runner/stdio-runner.mjs health-check process used by supervisor tests
+```
+
 ## Boundaries
 
 - Frontend owns interaction state and rendering.
@@ -31,6 +56,8 @@ SQLite
 - Domain owns business validation and serde-compatible types.
 - Repository owns SQL, timestamps, ordering, and JSON persistence.
 - Runner owns Chromium session behavior and action execution.
+- During the rebuild, Electron code is parallel to the Tauri app. Do not remove Tauri/Rust paths until parity and decommission milestones are explicitly met.
+- Electron renderer code must go through preload `window.cloakBrowser`; it must not use Node, SQLite, Playwright, or CloakBrowser directly.
 
 ## Read By Task
 

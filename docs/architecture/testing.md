@@ -11,9 +11,22 @@
 Focused commands:
 
 - `npm test -- src/lib/workflowApi.test.ts`
+- `npm test -- src/lib/workflowApi.electron.test.ts`
 - `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`
 - `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`
 - `npx tsc --noEmit`
+
+## Electron Rebuild Tests
+
+- Storage and graph model: `electron/main/storage.test.ts`, `electron/main/graph.test.ts`
+- App API and preload-shaped facade: `electron/main/appApi.test.ts`, `src/lib/workflowApi.electron.test.ts`
+- Runner core and process health: `electron/runner/runnerCore.test.ts`, `electron/main/runnerSupervisor.test.ts`
+
+Focused commands:
+
+- `npm test -- electron/main/storage.test.ts electron/main/graph.test.ts electron/runner/runnerCore.test.ts electron/main/runnerSupervisor.test.ts electron/main/appApi.test.ts src/lib/workflowApi.electron.test.ts`
+- `npm run build:electron`
+- `npm run electron:package` when packaging or Electron entry points change.
 
 ## Rust Tests
 
