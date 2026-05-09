@@ -345,4 +345,72 @@ describe("Electron app API", () => {
       }),
     ]);
   });
+
+  test("resolves the workflow default identity profile into the runner payload", async () => {
+    const workflow = await api.workflows.create({ name: "Identity-backed run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const profile = storage.createIdentityProfile({
+      name: "Owned desktop identity",
+      persistentProfilePath: "owned-desktop-01",
+      deviceIdentity: {
+        viewport: { width: 1440, height: 900 },
+        userAgent: "Owned UA",
+        mobile: false,
+        touch: false,
+      },
+      locale: { locale: "en-US", timezone: "America/New_York" },
+      proxyReference: {
+        server: "http://owned-proxy.test:8080",
+        label: "owned-egress",
+        region: "US",
+        secretRef: "secret://proxy/owned",
+      },
+      headedPolicy: "headed_only",
+      preflightPolicy: {
+        enabled: true,
+        probeUrl: "https://owned.example.test/fingerprint",
+        allowedOrigins: ["https://owned.example.test"],
+      },
+    });
+    storage.updateWorkflowDefaults(workflow.id, { defaultIdentityProfileId: profile.id });
+    const payloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          payloads.push(payload);
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(payloads[0]?.identityProfileSnapshot).toMatchObject({
+      id: profile.id,
+      name: "Owned desktop identity",
+      headless: false,
+      viewport: { width: 1440, height: 900 },
+      userAgent: "Owned UA",
+      locale: "en-US",
+      timezone: "America/New_York",
+      persistentProfilePath: "owned-desktop-01",
+      proxy: {
+        server: "http://owned-proxy.test:8080",
+        label: "owned-egress",
+        region: "US",
+      },
+      preflightPolicy: {
+        enabled: true,
+        probeUrl: "https://owned.example.test/fingerprint",
+      },
+    });
+    expect(payloads[0]?.identityProfileSnapshot.proxy).not.toHaveProperty("password");
+  });
 });

@@ -15,6 +15,9 @@ export type WorkflowRecord = {
   description: string;
   tags: string[];
   notes: string;
+  defaultRunProfileId: string | null;
+  defaultIdentityProfileId: string | null;
+  defaultEnvironmentId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -149,6 +152,11 @@ function workflowFromRow(row: Row): WorkflowRecord {
     description: String(row.description ?? ""),
     tags: parseJson<string[]>(row.tags_json, []),
     notes: String(row.notes ?? ""),
+    defaultRunProfileId: row.default_run_profile_id ? String(row.default_run_profile_id) : null,
+    defaultIdentityProfileId: row.default_identity_profile_id
+      ? String(row.default_identity_profile_id)
+      : null,
+    defaultEnvironmentId: row.default_environment_id ? String(row.default_environment_id) : null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -637,6 +645,39 @@ export function createStorageService(options: StorageServiceOptions) {
           input.description ?? current.description,
           JSON.stringify(input.tags ?? current.tags),
           input.notes ?? current.notes,
+          timestamp,
+          workflowId,
+        );
+      return this.getWorkflow(workflowId);
+    },
+
+    updateWorkflowDefaults(
+      workflowId: string,
+      input: Partial<{
+        defaultRunProfileId: string | null;
+        defaultIdentityProfileId: string | null;
+        defaultEnvironmentId: string | null;
+      }>,
+    ): WorkflowRecord {
+      const current = this.getWorkflow(workflowId);
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `UPDATE workflows
+           SET default_run_profile_id = ?, default_identity_profile_id = ?,
+               default_environment_id = ?, updated_at = ?
+           WHERE id = ? AND deleted_at IS NULL`,
+        )
+        .run(
+          input.defaultRunProfileId === undefined
+            ? current.defaultRunProfileId
+            : input.defaultRunProfileId,
+          input.defaultIdentityProfileId === undefined
+            ? current.defaultIdentityProfileId
+            : input.defaultIdentityProfileId,
+          input.defaultEnvironmentId === undefined
+            ? current.defaultEnvironmentId
+            : input.defaultEnvironmentId,
           timestamp,
           workflowId,
         );

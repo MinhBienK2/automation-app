@@ -5,13 +5,14 @@ import {
   type ElectronWorkflowGraph,
   type GraphNodeType,
 } from "./graph.js";
-import type { StorageService, WorkflowRecord } from "./storage.js";
+import type { IdentityProfileRecord, StorageService, WorkflowRecord } from "./storage.js";
 import { runPlan, type BrowserAutomationAdapter } from "../runner/runnerCore.js";
 import type {
   ClickActionConfig,
   ExtractTextActionConfig,
   FillActionConfig,
   LocatorConfig,
+  IdentityProfileSnapshot,
   RunnerEvent,
   RunnerActionConfig,
   RunnerResult,
@@ -518,6 +519,78 @@ function artifactDirectories(appDataDir: string, runId: string) {
   };
 }
 
+function defaultIdentitySnapshot(): IdentityProfileSnapshot {
+  return {
+    id: "id_default",
+    name: "Default CloakBrowser",
+    browserEngine: "cloakbrowser",
+    headless: true,
+    viewport: { width: 1280, height: 720 },
+    profileReuseEnabled: false,
+  };
+}
+
+function numberField(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function stringField(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function identitySnapshotFromProfile(profile: IdentityProfileRecord): IdentityProfileSnapshot {
+  const deviceIdentity = profile.deviceIdentity;
+  const viewport = deviceIdentity.viewport as { width?: unknown; height?: unknown } | undefined;
+  const width = numberField(viewport?.width);
+  const height = numberField(viewport?.height);
+  const locale = profile.locale;
+  const proxyReference = profile.proxyReference;
+  const proxyServer = stringField(proxyReference.server);
+  const preflightPolicy = profile.preflightPolicy;
+  const preflightEnabled = preflightPolicy.enabled === true;
+  const preflightProbeUrl = stringField(preflightPolicy.probeUrl);
+  const preflightAllowedOrigins = Array.isArray(preflightPolicy.allowedOrigins)
+    ? preflightPolicy.allowedOrigins.map(String)
+    : [];
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    browserEngine: "cloakbrowser",
+    headless:
+      profile.headedPolicy === "headed_only"
+        ? false
+        : profile.headedPolicy === "headless_only"
+          ? true
+          : typeof deviceIdentity.headless === "boolean"
+            ? deviceIdentity.headless
+            : true,
+    viewport: width && height ? { width, height } : undefined,
+    userAgent: stringField(deviceIdentity.userAgent),
+    locale: stringField(locale.locale),
+    timezone: stringField(locale.timezone),
+    proxy: proxyServer
+      ? {
+          server: proxyServer,
+          username: stringField(proxyReference.username),
+          label: stringField(proxyReference.label),
+          region: stringField(proxyReference.region),
+        }
+      : null,
+    profileReuseEnabled: Boolean(profile.persistentProfilePath),
+    persistentProfilePath: profile.persistentProfilePath,
+    preflightPolicy:
+      preflightEnabled && preflightProbeUrl
+        ? {
+            enabled: true,
+            probeUrl: preflightProbeUrl,
+            allowedOrigins: preflightAllowedOrigins,
+            verdictLocator: asRecord(preflightPolicy.verdictLocator) as LocatorConfig | undefined,
+          }
+        : undefined,
+  };
+}
+
 export function createAppApi(options: AppApiOptions) {
   let lastRunState: RunStateWithId = {
     status: "idle",
@@ -731,17 +804,21 @@ export function createAppApi(options: AppApiOptions) {
       async start(input: { workflowId: string }): Promise<RunStateWithId> {
         const graph = options.storage.loadActiveGraph(input.workflowId);
         if (!graph) throw new Error(`Workflow '${input.workflowId}' has no active graph.`);
+        const workflow = options.storage.getWorkflow(input.workflowId);
         const activeVersion = options.storage.getActiveGraphVersion(input.workflowId);
         const plan = compileGraphToRunPlan({
           workflowId: input.workflowId,
           graphVersionId: activeVersion.id,
           graph,
         });
+        const identityProfileSnapshot = workflow.defaultIdentityProfileId
+          ? identitySnapshotFromProfile(options.storage.getIdentityProfile(workflow.defaultIdentityProfileId))
+          : defaultIdentitySnapshot();
         const run = options.storage.createRun({
           workflowId: input.workflowId,
           graphVersionId: activeVersion.id,
           runProfileSnapshot: { timeoutMs: 30_000 },
-          identityProfileSnapshot: { id: "id_default", name: "Default CloakBrowser" },
+          identityProfileSnapshot,
           environmentSnapshot: { initialVariables: {} },
           operatorLabel: "local",
         });
@@ -756,14 +833,7 @@ export function createAppApi(options: AppApiOptions) {
             evidencePolicy: { screenshots: true },
             browserRetention: "close",
           },
-          identityProfileSnapshot: {
-            id: "id_default",
-            name: "Default CloakBrowser",
-            browserEngine: "cloakbrowser",
-            headless: true,
-            viewport: { width: 1280, height: 720 },
-            profileReuseEnabled: false,
-          },
+          identityProfileSnapshot,
           environmentSnapshot: { initialVariables: {} },
           artifactDirectories: artifactDirectories(options.appDataDir, run.id),
           operatorPolicySnapshot: {
