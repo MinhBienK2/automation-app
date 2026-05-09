@@ -91,6 +91,52 @@ describe("Electron app API", () => {
     expect((await api.graphs.loadActive({ workflowId: duplicate.workflow.id })).nodes).toHaveLength(2);
   });
 
+  test("exposes identity profile CRUD and validation through the app facade", async () => {
+    const profile = await api.profiles.create({
+      name: "Owned desktop",
+      description: "Desktop identity for owned systems",
+      persistentProfilePath: "owned-desktop-01",
+      deviceIdentity: {
+        deviceClass: "desktop",
+        viewport: { width: 1280, height: 720 },
+        mobile: false,
+        touch: false,
+      },
+      locale: { locale: "en-US", timezone: "America/New_York" },
+      proxyReference: { label: "owned-egress", secretRef: "secret://proxy/owned" },
+      headedPolicy: "allow_headless",
+      preflightPolicy: { enabled: false },
+    });
+
+    await expect(api.profiles.list()).resolves.toEqual([
+      expect.objectContaining({ id: profile.id, name: "Owned desktop" }),
+    ]);
+    await expect(api.profiles.get({ id: profile.id })).resolves.toMatchObject({
+      persistentProfilePath: "owned-desktop-01",
+    });
+    await expect(
+      api.profiles.validate({
+        profile: {
+          ...profile,
+          persistentProfilePath: "../bad",
+        },
+      }),
+    ).resolves.toEqual([expect.objectContaining({ code: "unsafe_profile_path" })]);
+
+    await api.profiles.update({
+      id: profile.id,
+      profile: { name: "Owned desktop updated" },
+    });
+
+    await expect(api.profiles.get({ id: profile.id })).resolves.toMatchObject({
+      name: "Owned desktop updated",
+    });
+
+    await api.profiles.delete({ id: profile.id });
+
+    await expect(api.profiles.list()).resolves.toEqual([]);
+  });
+
   test("starts a configured vertical-slice run and persists events plus artifact metadata", async () => {
     const workflow = await api.workflows.create({ name: "Runnable flow" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });

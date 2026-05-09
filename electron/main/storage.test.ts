@@ -143,4 +143,80 @@ describe("Electron storage service", () => {
     ]);
     expect(storage.listArtifacts(run.id)).toEqual([artifact]);
   });
+
+  test("persists identity profiles and validates coherence before use", () => {
+    const profile = storage.createIdentityProfile({
+      name: "Owned mobile profile",
+      description: "Mobile identity for owned staging probes",
+      browserEngine: "cloakbrowser",
+      persistentProfilePath: "owned-mobile-01",
+      deviceIdentity: {
+        deviceClass: "mobile",
+        viewport: { width: 390, height: 844 },
+        mobile: true,
+        touch: true,
+        userAgent: "Mozilla/5.0 Mobile",
+      },
+      locale: {
+        locale: "en-US",
+        timezone: "America/New_York",
+        languages: ["en-US", "en"],
+      },
+      proxyReference: {
+        label: "owned-us-east",
+        region: "US",
+        secretRef: "secret://proxy/us-east",
+      },
+      headedPolicy: "allow_headless",
+      preflightPolicy: {
+        enabled: true,
+        probeUrl: "https://owned.example.test/fingerprint",
+        allowedOrigins: ["https://owned.example.test"],
+      },
+    });
+
+    expect(storage.listIdentityProfiles()).toEqual([expect.objectContaining({ id: profile.id })]);
+    expect(storage.getIdentityProfile(profile.id)).toMatchObject({
+      name: "Owned mobile profile",
+      persistentProfilePath: "owned-mobile-01",
+      proxyReference: expect.objectContaining({ secretRef: "secret://proxy/us-east" }),
+    });
+
+    const updated = storage.updateIdentityProfile(profile.id, {
+      name: "Owned mobile profile v2",
+      description: "Updated",
+    });
+
+    expect(updated.name).toBe("Owned mobile profile v2");
+    expect(storage.validateIdentityProfile(updated)).toEqual([]);
+
+    expect(
+      storage.validateIdentityProfile({
+        ...updated,
+        persistentProfilePath: "../unsafe",
+        deviceIdentity: {
+          ...updated.deviceIdentity,
+          deviceClass: "mobile",
+          viewport: { width: 1440, height: 900 },
+          mobile: true,
+          touch: false,
+        },
+        proxyReference: {
+          label: "raw-secret",
+          password: "must-not-store",
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "unsafe_profile_path" }),
+        expect.objectContaining({ code: "mobile_viewport_mismatch" }),
+        expect.objectContaining({ code: "mobile_touch_mismatch" }),
+        expect.objectContaining({ code: "raw_proxy_secret" }),
+      ]),
+    );
+
+    storage.deleteIdentityProfile(profile.id);
+
+    expect(storage.listIdentityProfiles()).toEqual([]);
+  });
 });

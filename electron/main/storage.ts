@@ -57,6 +57,40 @@ export type ArtifactRecord = ArtifactRecordInput & {
   createdAt: string;
 };
 
+export type IdentityProfileRecord = {
+  id: string;
+  name: string;
+  description: string;
+  browserEngine: "cloakbrowser";
+  persistentProfilePath: string | null;
+  deviceIdentity: Record<string, unknown>;
+  locale: Record<string, unknown>;
+  proxyReference: Record<string, unknown>;
+  headedPolicy: string;
+  preflightPolicy: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type IdentityProfileInput = {
+  name: string;
+  description?: string;
+  browserEngine?: "cloakbrowser";
+  persistentProfilePath?: string | null;
+  deviceIdentity?: Record<string, unknown>;
+  locale?: Record<string, unknown>;
+  proxyReference?: Record<string, unknown>;
+  headedPolicy?: string;
+  preflightPolicy?: Record<string, unknown>;
+};
+
+export type IdentityProfileValidationIssue = {
+  code: string;
+  field: string;
+  message: string;
+  level: "error" | "warning";
+};
+
 export type StorageService = ReturnType<typeof createStorageService>;
 
 type Row = Record<string, unknown>;
@@ -129,6 +163,102 @@ function artifactFromRow(row: Row): ArtifactRecord {
     sanitized: Number(row.sanitized) === 1,
     createdAt: String(row.created_at),
   };
+}
+
+function identityProfileFromRow(row: Row): IdentityProfileRecord {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    description: String(row.description ?? ""),
+    browserEngine: "cloakbrowser",
+    persistentProfilePath: row.persistent_profile_path ? String(row.persistent_profile_path) : null,
+    deviceIdentity: parseJson<Record<string, unknown>>(row.device_identity_json, {}),
+    locale: parseJson<Record<string, unknown>>(row.locale_json, {}),
+    proxyReference: parseJson<Record<string, unknown>>(row.proxy_reference_json, {}),
+    headedPolicy: String(row.headed_policy),
+    preflightPolicy: parseJson<Record<string, unknown>>(row.preflight_policy_json, {}),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function hasRawProxySecret(proxyReference: Record<string, unknown>) {
+  return ["password", "proxyPassword", "rawPassword"].some(
+    (key) => typeof proxyReference[key] === "string" && String(proxyReference[key]).length > 0,
+  );
+}
+
+function isSafeProfilePath(value: string) {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) && !value.includes("..");
+}
+
+function validateIdentityProfileRecord(
+  profile: IdentityProfileRecord | IdentityProfileInput,
+): IdentityProfileValidationIssue[] {
+  const issues: IdentityProfileValidationIssue[] = [];
+  const name = typeof profile.name === "string" ? profile.name.trim() : "";
+  const browserEngine = profile.browserEngine ?? "cloakbrowser";
+  const persistentProfilePath = profile.persistentProfilePath;
+  const deviceIdentity = profile.deviceIdentity ?? {};
+  const proxyReference = profile.proxyReference ?? {};
+  const mobile = deviceIdentity.mobile === true || deviceIdentity.deviceClass === "mobile";
+  const viewport = deviceIdentity.viewport as { width?: unknown; height?: unknown } | undefined;
+
+  if (!name) {
+    issues.push({
+      code: "missing_name",
+      field: "name",
+      level: "error",
+      message: "Identity profile name is required.",
+    });
+  }
+
+  if (browserEngine !== "cloakbrowser") {
+    issues.push({
+      code: "unsupported_browser_engine",
+      field: "browserEngine",
+      level: "error",
+      message: "Identity profiles must use the CloakBrowser engine.",
+    });
+  }
+
+  if (persistentProfilePath && !isSafeProfilePath(persistentProfilePath)) {
+    issues.push({
+      code: "unsafe_profile_path",
+      field: "persistentProfilePath",
+      level: "error",
+      message: "Persistent profile path must be a filesystem-safe slug.",
+    });
+  }
+
+  if (mobile && typeof viewport?.width === "number" && viewport.width > 900) {
+    issues.push({
+      code: "mobile_viewport_mismatch",
+      field: "deviceIdentity.viewport.width",
+      level: "error",
+      message: "Mobile identity profiles must not use desktop viewport widths.",
+    });
+  }
+
+  if (mobile && deviceIdentity.touch !== true) {
+    issues.push({
+      code: "mobile_touch_mismatch",
+      field: "deviceIdentity.touch",
+      level: "error",
+      message: "Mobile identity profiles must enable touch input.",
+    });
+  }
+
+  if (hasRawProxySecret(proxyReference)) {
+    issues.push({
+      code: "raw_proxy_secret",
+      field: "proxyReference",
+      level: "error",
+      message: "Identity profiles must store proxy credentials by secret reference, not raw password.",
+    });
+  }
+
+  return issues;
 }
 
 export function createStorageService(options: StorageServiceOptions) {
@@ -626,6 +756,129 @@ export function createStorageService(options: StorageServiceOptions) {
           .prepare("SELECT * FROM artifacts WHERE run_id = ? ORDER BY created_at ASC")
           .all(runId) as Row[]
       ).map(artifactFromRow);
+    },
+
+    createIdentityProfile(input: IdentityProfileInput): IdentityProfileRecord {
+      const normalized: IdentityProfileInput = {
+        browserEngine: "cloakbrowser",
+        description: "",
+        persistentProfilePath: null,
+        deviceIdentity: {},
+        locale: {},
+        proxyReference: {},
+        headedPolicy: "allow_headless",
+        preflightPolicy: { enabled: false },
+        ...input,
+        name: input.name.trim(),
+      };
+      const issues = validateIdentityProfileRecord(normalized);
+      if (issues.some((issue) => issue.level === "error")) {
+        throw new Error(`Invalid identity profile: ${issues[0]?.message ?? "validation failed"}`);
+      }
+
+      const profileId = id("idp");
+      const timestamp = nowIso();
+      const browserEngine = normalized.browserEngine ?? "cloakbrowser";
+      database()
+        .prepare(
+          `INSERT INTO identity_profiles
+            (id, name, description, browser_engine, persistent_profile_path,
+             device_identity_json, locale_json, proxy_reference_json, headed_policy,
+             preflight_policy_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          profileId,
+          normalized.name,
+          normalized.description ?? "",
+          browserEngine,
+          normalized.persistentProfilePath ?? null,
+          JSON.stringify(normalized.deviceIdentity ?? {}),
+          JSON.stringify(normalized.locale ?? {}),
+          JSON.stringify(normalized.proxyReference ?? {}),
+          normalized.headedPolicy ?? "allow_headless",
+          JSON.stringify(normalized.preflightPolicy ?? { enabled: false }),
+          timestamp,
+          timestamp,
+        );
+      return this.getIdentityProfile(profileId);
+    },
+
+    getIdentityProfile(profileId: string): IdentityProfileRecord {
+      const row = database()
+        .prepare("SELECT * FROM identity_profiles WHERE id = ?")
+        .get(profileId) as Row | undefined;
+      if (!row) throw new Error(`Identity profile '${profileId}' not found.`);
+      return identityProfileFromRow(row);
+    },
+
+    listIdentityProfiles(): IdentityProfileRecord[] {
+      return (
+        database()
+          .prepare("SELECT * FROM identity_profiles ORDER BY updated_at DESC, name ASC")
+          .all() as Row[]
+      ).map(identityProfileFromRow);
+    },
+
+    updateIdentityProfile(
+      profileId: string,
+      input: Partial<IdentityProfileInput>,
+    ): IdentityProfileRecord {
+      const current = this.getIdentityProfile(profileId);
+      const next: IdentityProfileRecord = {
+        ...current,
+        ...input,
+        id: current.id,
+        name: input.name?.trim() || current.name,
+        browserEngine: input.browserEngine ?? current.browserEngine,
+        persistentProfilePath:
+          input.persistentProfilePath === undefined
+            ? current.persistentProfilePath
+            : input.persistentProfilePath,
+        deviceIdentity: input.deviceIdentity ?? current.deviceIdentity,
+        locale: input.locale ?? current.locale,
+        proxyReference: input.proxyReference ?? current.proxyReference,
+        headedPolicy: input.headedPolicy ?? current.headedPolicy,
+        preflightPolicy: input.preflightPolicy ?? current.preflightPolicy,
+      };
+      const issues = validateIdentityProfileRecord(next);
+      if (issues.some((issue) => issue.level === "error")) {
+        throw new Error(`Invalid identity profile: ${issues[0]?.message ?? "validation failed"}`);
+      }
+
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `UPDATE identity_profiles
+           SET name = ?, description = ?, browser_engine = ?, persistent_profile_path = ?,
+               device_identity_json = ?, locale_json = ?, proxy_reference_json = ?,
+               headed_policy = ?, preflight_policy_json = ?, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(
+          next.name,
+          next.description,
+          next.browserEngine,
+          next.persistentProfilePath,
+          JSON.stringify(next.deviceIdentity),
+          JSON.stringify(next.locale),
+          JSON.stringify(next.proxyReference),
+          next.headedPolicy,
+          JSON.stringify(next.preflightPolicy),
+          timestamp,
+          profileId,
+        );
+      return this.getIdentityProfile(profileId);
+    },
+
+    deleteIdentityProfile(profileId: string) {
+      database().prepare("DELETE FROM identity_profiles WHERE id = ?").run(profileId);
+    },
+
+    validateIdentityProfile(
+      profile: IdentityProfileRecord | IdentityProfileInput,
+    ): IdentityProfileValidationIssue[] {
+      return validateIdentityProfileRecord(profile);
     },
 
     saveWorkflowSettings(workflowId: string, settings: Record<string, unknown>) {

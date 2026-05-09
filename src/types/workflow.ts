@@ -1048,6 +1048,40 @@ export type WorkflowPackagePreview = {
   omitted_fields: string[];
 };
 
+export type IdentityProfile = {
+  id: string;
+  name: string;
+  description: string;
+  browserEngine: "cloakbrowser";
+  persistentProfilePath: string | null;
+  deviceIdentity: Record<string, unknown>;
+  locale: Record<string, unknown>;
+  proxyReference: Record<string, unknown>;
+  headedPolicy: string;
+  preflightPolicy: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type IdentityProfileInput = {
+  name: string;
+  description?: string;
+  browserEngine?: "cloakbrowser";
+  persistentProfilePath?: string | null;
+  deviceIdentity?: Record<string, unknown>;
+  locale?: Record<string, unknown>;
+  proxyReference?: Record<string, unknown>;
+  headedPolicy?: string;
+  preflightPolicy?: Record<string, unknown>;
+};
+
+export type IdentityProfileValidationIssue = {
+  code: string;
+  field: string;
+  message: string;
+  level: "error" | "warning";
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;

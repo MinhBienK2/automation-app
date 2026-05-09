@@ -33,6 +33,14 @@ const api = {
     stop: () => ipcRenderer.invoke("run.stop"),
     getState: () => ipcRenderer.invoke("run.getState"),
   },
+  profiles: {
+    list: () => ipcRenderer.invoke("profile.list"),
+    get: (input: { id: string }) => ipcRenderer.invoke("profile.get", input),
+    create: (input: unknown) => ipcRenderer.invoke("profile.create", input),
+    update: (input: unknown) => ipcRenderer.invoke("profile.update", input),
+    delete: (input: { id: string }) => ipcRenderer.invoke("profile.delete", input),
+    validate: (input: unknown) => ipcRenderer.invoke("profile.validate", input),
+  },
 };
 
 contextBridge.exposeInMainWorld("cloakBrowser", api);

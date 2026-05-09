@@ -36,7 +36,7 @@ Last updated: 2026-05-09.
 - M1 Foundation: DONE.
 - M2 Runner Vertical Slice: PARTIAL.
 - M3 Core Feature Parity: PENDING.
-- M4 Production Identity And Evidence: PENDING.
+- M4 Production Identity And Evidence: PARTIAL.
 - M5 Packaging: PARTIAL.
 - M6 Acceptance And Decommission: PENDING.
 
@@ -50,7 +50,7 @@ Child spec implementation summary:
 | 04 Workflow Graph And Builder | PARTIAL |
 | 05 Action Catalog And Locator | PARTIAL |
 | 06 CloakRunner | PARTIAL: supervised `startRun` protocol implemented; real CloakBrowser smoke, retries/timeouts, downloads, traces, and forceful cleanup remain |
-| 07 Identity Profile And Fingerprint Preflight | PENDING |
+| 07 Identity Profile And Fingerprint Preflight | PARTIAL: storage CRUD, app/preload API, renderer wrappers, and basic coherence validation implemented; preflight gate and profile locking remain |
 | 08 Run Evidence And Audit | PARTIAL |
 | 09 UI/UX Feature Parity | PARTIAL |
 | 10 Packaging And Release | PARTIAL |

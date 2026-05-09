@@ -3,6 +3,9 @@
 import type {
   CompiledWorkflowGraph,
   GraphValidationIssue,
+  IdentityProfile,
+  IdentityProfileInput,
+  IdentityProfileValidationIssue,
   RunValidationIssue,
   RunState,
   SettingsValidationIssue,
@@ -53,6 +56,19 @@ type ElectronCloakBrowserApi = {
     start?: (input: { workflowId: string }) => Promise<RunState>;
     stop?: () => Promise<RunState>;
     getState?: () => Promise<RunState>;
+  };
+  profiles?: {
+    list?: () => Promise<IdentityProfile[]>;
+    get?: (input: { id: string }) => Promise<IdentityProfile>;
+    create?: (input: IdentityProfileInput) => Promise<IdentityProfile>;
+    update?: (input: {
+      id: string;
+      profile: Partial<IdentityProfileInput>;
+    }) => Promise<IdentityProfile>;
+    delete?: (input: { id: string }) => Promise<void>;
+    validate?: (input: {
+      profile: IdentityProfile | IdentityProfileInput;
+    }) => Promise<IdentityProfileValidationIssue[]>;
   };
 };
 

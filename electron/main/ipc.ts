@@ -42,4 +42,11 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
   ipcMain.handle("run.start", (_event, input: { workflowId: string }) => api.runs.start(input));
   ipcMain.handle("run.stop", () => api.runs.stop());
   ipcMain.handle("run.getState", () => api.runs.getState());
+
+  ipcMain.handle("profile.list", () => api.profiles.list());
+  ipcMain.handle("profile.get", (_event, input: { id: string }) => api.profiles.get(input));
+  ipcMain.handle("profile.create", (_event, input) => api.profiles.create(input));
+  ipcMain.handle("profile.update", (_event, input) => api.profiles.update(input));
+  ipcMain.handle("profile.delete", (_event, input: { id: string }) => api.profiles.delete(input));
+  ipcMain.handle("profile.validate", (_event, input) => api.profiles.validate(input));
 }

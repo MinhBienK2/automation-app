@@ -6,6 +6,9 @@ import type {
   CompiledWorkflowGraph,
   ElementSnapshot,
   GraphValidationIssue,
+  IdentityProfile,
+  IdentityProfileInput,
+  IdentityProfileValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
   RunValidationIssue,
@@ -172,6 +175,45 @@ export function getRunState() {
   const api = electronApi();
   if (api?.runs?.getState) return api.runs.getState();
   return invoke<RunState>("get_run_state");
+}
+
+export function listIdentityProfiles() {
+  const api = electronApi();
+  if (api?.profiles?.list) return api.profiles.list();
+  return invoke<IdentityProfile[]>("list_identity_profiles");
+}
+
+export function getIdentityProfile(id: string) {
+  const api = electronApi();
+  if (api?.profiles?.get) return api.profiles.get({ id });
+  return invoke<IdentityProfile>("get_identity_profile", { id });
+}
+
+export function createIdentityProfile(profile: IdentityProfileInput) {
+  const api = electronApi();
+  if (api?.profiles?.create) return api.profiles.create(profile);
+  return invoke<IdentityProfile>("create_identity_profile", { profile });
+}
+
+export function updateIdentityProfile(
+  id: string,
+  profile: Partial<IdentityProfileInput>,
+) {
+  const api = electronApi();
+  if (api?.profiles?.update) return api.profiles.update({ id, profile });
+  return invoke<IdentityProfile>("update_identity_profile", { id, profile });
+}
+
+export function deleteIdentityProfile(id: string) {
+  const api = electronApi();
+  if (api?.profiles?.delete) return api.profiles.delete({ id });
+  return invoke("delete_identity_profile", { id });
+}
+
+export function validateIdentityProfile(profile: IdentityProfile | IdentityProfileInput) {
+  const api = electronApi();
+  if (api?.profiles?.validate) return api.profiles.validate({ profile });
+  return invoke<IdentityProfileValidationIssue[]>("validate_identity_profile", { profile });
 }
 
 export function validateSchedule(schedule: OrchestrationSchedule) {

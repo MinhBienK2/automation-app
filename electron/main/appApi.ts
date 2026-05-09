@@ -652,6 +652,37 @@ export function createAppApi(options: AppApiOptions) {
       },
     },
 
+    profiles: {
+      async list() {
+        return options.storage.listIdentityProfiles();
+      },
+
+      async get(input: { id: string }) {
+        return options.storage.getIdentityProfile(input.id);
+      },
+
+      async create(input: Parameters<typeof options.storage.createIdentityProfile>[0]) {
+        return options.storage.createIdentityProfile(input);
+      },
+
+      async update(input: {
+        id: string;
+        profile: Parameters<typeof options.storage.updateIdentityProfile>[1];
+      }) {
+        return options.storage.updateIdentityProfile(input.id, input.profile);
+      },
+
+      async delete(input: { id: string }) {
+        options.storage.deleteIdentityProfile(input.id);
+      },
+
+      async validate(input: {
+        profile: Parameters<typeof options.storage.validateIdentityProfile>[0];
+      }) {
+        return options.storage.validateIdentityProfile(input.profile);
+      },
+    },
+
     graphs: {
       async loadActive(input: { workflowId: string }) {
         const graph = options.storage.loadActiveGraph(input.workflowId);

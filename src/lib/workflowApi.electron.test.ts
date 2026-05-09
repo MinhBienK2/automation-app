@@ -4,6 +4,7 @@ import {
   createWorkflow,
   getWorkflowSettings,
   listWorkflows,
+  listIdentityProfiles,
   runWorkflow,
   saveWorkflowSettingsSection,
   validateWorkflowRun,
@@ -45,6 +46,9 @@ describe("workflowApi Electron bridge", () => {
       runs: {
         start: vi.fn().mockResolvedValue({ status: "running" }),
       },
+      profiles: {
+        list: vi.fn().mockResolvedValue([{ id: "idp_1", name: "Owned profile" }]),
+      },
     };
     Object.defineProperty(window, "cloakBrowser", {
       configurable: true,
@@ -63,6 +67,7 @@ describe("workflowApi Electron bridge", () => {
     });
     await expect(validateWorkflowRun("wf_2")).resolves.toEqual([]);
     await expect(runWorkflow("wf_2")).resolves.toEqual({ status: "running" });
+    await expect(listIdentityProfiles()).resolves.toEqual([{ id: "idp_1", name: "Owned profile" }]);
 
     expect(api.workflows.list).toHaveBeenCalledTimes(1);
     expect(api.workflows.create).toHaveBeenCalledWith({ name: "New" });
@@ -74,6 +79,7 @@ describe("workflowApi Electron bridge", () => {
     });
     expect(api.settings.validateRun).toHaveBeenCalledWith({ workflowId: "wf_2" });
     expect(api.runs.start).toHaveBeenCalledWith({ workflowId: "wf_2" });
+    expect(api.profiles.list).toHaveBeenCalledTimes(1);
     expect(invokeMock).not.toHaveBeenCalled();
   });
 });
