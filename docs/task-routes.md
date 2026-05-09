@@ -51,15 +51,15 @@ Checks: focused UI tests; `npm test -- src/AppCss.test.ts` when CSS invariants c
 
 Update docs: frontend architecture or invariants when layout ownership/behavior changes.
 
-## Change A Tauri Command
+## Change An Electron IPC Command
 
-Read: `architecture/command-boundary.md`, `contracts/tauri-commands.md`, `contracts/workflow-types.md`
+Read: `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
 
-Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src-tauri/src/commands.rs`, focused modules under `src-tauri/src/commands/`, `src-tauri/src/domain/workflow_settings.rs`, `src-tauri/src/lib.rs`, `src-tauri/tests/command_api.rs`
+Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src/types/electron.ts`, `electron/preload.ts`, `electron/ipc.ts`, `electron/main.ts`, focused modules under `electron/backend/`
 
-Checks: `npm test -- src/lib/workflowApi.test.ts`, `cd src-tauri && cargo test --test command_api`
+Checks: `npm test -- src/lib/workflowApi.test.ts`, focused Electron backend command tests, `npx tsc --noEmit`, `npm run build:electron`
 
-Update docs: command boundary, Tauri command contract, workflow types when response/payload shapes change.
+Update docs: command boundary, Electron IPC contract, workflow types when response/payload shapes change.
 
 ## Change Domain Validation
 
@@ -75,9 +75,9 @@ Update docs: domain architecture, action config contract, user-visible invariant
 
 Read: `architecture/persistence.md`, `contracts/workflow-types.md`, `domain/workflow-lifecycle.md`
 
-Verify: `src-tauri/src/repositories/workflow_repository.rs`, `src-tauri/src/domain/workflow_settings.rs`, `src-tauri/migrations/`, `src-tauri/tests/persistence.rs`, import/export code in `src-tauri/src/commands/import_export.rs` if persisted shape changes
+Verify: `electron/backend/database.ts`, `electron/backend/commands.ts`, repository tests once added, import/export code in the Electron backend if persisted shape changes; use `src-tauri/` only as a temporary parity reference during migration
 
-Checks: `cd src-tauri && cargo test --test persistence`; add command tests when command results change.
+Checks: Electron repository tests once added, `npm run build:electron`; add command tests when command results change.
 
 Update docs: persistence architecture, workflow types, workflow lifecycle.
 

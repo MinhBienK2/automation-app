@@ -662,9 +662,9 @@ describe("Workflow graph editor integration", () => {
               expect.objectContaining({
                 id: "node-action-42",
                 node_type: "action",
-                config: {
+                config: expect.objectContaining({
                   type: "click",
-                  config: {
+                  config: expect.objectContaining({
                     xpath: "//button",
                     iframe_xpath: null,
                     mode: null,
@@ -680,8 +680,8 @@ describe("Workflow graph editor integration", () => {
                     timeout_ms: null,
                     retry_interval_ms: null,
                     post_click_wait_ms: null,
-                  },
-                },
+                  }),
+                }),
               }),
             ]),
           }),

@@ -75,9 +75,9 @@ Preserve these unless the task explicitly changes them.
 
 ## Command Boundary
 
-- Tauri command errors serialize as `{ message, field }`.
-- TypeScript invoke payload keys match Rust command parameters.
-- TypeScript and Rust DTO shapes remain compatible.
+- Electron IPC command errors serialize as `{ message, field? }`.
+- Renderer code calls the typed `window.workflowApi` bridge through `src/lib/workflowApi.ts`.
+- The renderer must not import Node, Electron, filesystem, SQLite, Playwright, or CloakBrowser APIs directly.
 
 ## Runner Behavior
 

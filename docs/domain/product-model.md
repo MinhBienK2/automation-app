@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Workflow Automation Manager is a Tauri desktop app for building and running browser automation workflows.
+Workflow Automation Manager is an Electron desktop app for building and running browser automation workflows.
 
 ## Core Concepts
 
@@ -10,7 +10,7 @@ Workflow Automation Manager is a Tauri desktop app for building and running brow
 - Legacy workflow step rows have an id, name, workflow id, order index, action type, action-specific config, and timestamps. They remain compatibility data, not the main authoring surface.
 - An action config is the executable behavior produced by graph compilation or legacy compatibility rows.
 - A run executes compiled graph action configs through the Rust runner and reports progress to the UI.
-- Test-step mode remains a legacy/internal run-state mode and is not currently registered as a product Tauri command.
+- Test-step mode remains a legacy/internal run-state mode and is not currently registered as a product command.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and expands subworkflow nodes before runner start.
@@ -45,12 +45,12 @@ Users can:
 
 - Frontend types: `src/types/workflow.ts`
 - UI orchestration: `src/App.tsx`
-- Tauri command wrappers: `src/lib/workflowApi.ts`
-- Rust domain: `src-tauri/src/domain/`
-- Workflow settings domain: `src-tauri/src/domain/workflow_settings.rs`
-- Graph domain: `src-tauri/src/domain/workflow_graph.rs`
-- Persistence: `src-tauri/src/repositories/workflow_repository.rs`
-- Runner: `src-tauri/src/runner/`
+- Electron bridge wrappers: `src/lib/workflowApi.ts`
+- Electron bridge type: `src/types/electron.ts`
+- Electron main/preload: `electron/main.ts`, `electron/preload.ts`
+- Node command handlers: `electron/backend/commands.ts`
+- SQLite bootstrap: `electron/backend/database.ts`
+- Temporary Rust/Tauri reference during migration: `src-tauri/`
 
 ## Invariant
 

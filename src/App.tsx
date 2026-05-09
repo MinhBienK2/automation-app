@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
@@ -19,6 +17,7 @@ import {
   previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
+  saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
   stopRun as stopRunCommand,
@@ -410,14 +409,8 @@ function App() {
         include_flow: exportPackageIncludeFlow,
         settings_sections: exportPackageSections,
       });
-      const filePath = await save({
-        defaultPath: `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
-        filters: [{ name: "Workflow package", extensions: ["json"] }],
-        title: "Export Workflow",
-      });
+      const filePath = await saveWorkflowPackageFile(packageValue);
       if (!filePath) return;
-
-      await writeTextFile(filePath, JSON.stringify(packageValue, null, 2));
       closeExportPackageDialog();
     } catch (error) {
       setAppError(commandMessage(error));
@@ -1048,15 +1041,6 @@ function sectionLabel(section: WorkflowSettingsSectionId) {
     case "advanced":
       return "Advanced";
   }
-}
-
-function filenameFromWorkflowName(name: string) {
-  const normalized = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return normalized || "workflow";
 }
 
 function isWorkflowSettings(value: unknown): value is WorkflowSettings {

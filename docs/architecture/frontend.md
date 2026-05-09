@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The frontend renders workflow management UI, owns interaction state, and calls typed Tauri command wrappers.
+The frontend renders workflow management UI, owns interaction state, and calls typed Electron bridge wrappers.
 
 ## Key Files
 
@@ -25,7 +25,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
-- `src/lib/workflowApi.ts`: Tauri invoke wrappers.
+- `src/lib/workflowApi.ts`: Electron bridge wrappers.
+- `src/types/electron.ts`: renderer-visible bridge contract.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
 - `src/types/workflow.ts`: DTO and action config types.
 
@@ -37,7 +38,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Workflow Settings editing through list Edit and detail Settings, Execution wait-between-nodes controls, Browser device profile presets that coherently fill user agent, viewport, mobile, and touch settings, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
-- Workflow list duplicate and Workflow Package import/export interaction. Duplicate calls `duplicate_workflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, opens the native Save dialog, writes package JSON through the Tauri filesystem plugin, and relies on backend sanitization. Import reads package JSON, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
+- Workflow list duplicate and Workflow Package import/export interaction. Duplicate calls `duplicateWorkflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, and workflow examples with the same modal structure. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
@@ -48,7 +49,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and keyboard shortcuts without changing persisted `WorkflowGraph` shape.
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
 - Workflow Settings Triggers is currently a planned/compatibility section. The UI shows saved trigger intent and scheduling policy values without active scheduler controls until a scheduler service exists.
-- Command invocation through `workflowApi.ts`.
+- Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.
 - Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands.

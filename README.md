@@ -1,6 +1,6 @@
 # Workflow Automation Manager
 
-Rust desktop app for building and running authorized adversarial browser automation workflows against company-owned systems.
+Electron desktop app for building and running authorized adversarial browser automation workflows against company-owned systems.
 
 The project is an internal red-team automation lab. Its explicit goal is to make automated workflows pass through the company's existing production and staging defenses in controlled owned environments, then produce evidence that helps security, trust, anti-abuse, and production teams find detection gaps and harden defenses. The lab models fake engagement, account integrity, network reputation, device/browser fingerprinting, behavioral analytics, velocity checks, graph detection, content/spam controls, risk scoring, challenge flows, API abuse, and coordinated bot scenarios.
 
@@ -15,40 +15,37 @@ npm install
 Run the desktop app in development:
 
 ```bash
-npm run tauri dev
+npm run electron:dev
 ```
 
-Build the frontend:
+Build the renderer and Electron main/preload:
 
 ```bash
 npm run build
 ```
 
-Run Rust tests:
+Package a Linux Electron directory build:
 
 ```bash
-cd src-tauri
-cargo test
+npm run electron:pack
 ```
 
 Run frontend tests:
 
 ```bash
-npm test -- --run
+npm test
 ```
 
-Check Rust formatting:
+Typecheck the renderer:
 
 ```bash
-cd src-tauri
-cargo fmt --check
+npx tsc --noEmit
 ```
 
-Run Rust lint checks:
+Build only the Electron main/preload code:
 
 ```bash
-cd src-tauri
-cargo clippy --all-targets --all-features
+npm run build:electron
 ```
 
 ## MVP Smoke Checklist

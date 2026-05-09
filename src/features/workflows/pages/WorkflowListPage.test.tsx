@@ -1,7 +1,11 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { invokeMock, mockTauriCommands, resetTauriInvoke } from "../../../tests/mocks/tauri";
+import {
+  mockWorkflowBridgeCommands,
+  resetWorkflowBridge,
+  workflowBridgeMock,
+} from "../../../tests/mocks/electron";
 import {
   newWorkflow,
   sleepStep,
@@ -15,28 +19,13 @@ import { renderApp } from "../../../tests/utils/renderApp";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
 import type { WorkflowPackage } from "../../../types/workflow";
 
-const { saveDialogMock, writeTextFileMock } = vi.hoisted(() => ({
-  saveDialogMock: vi.fn(),
-  writeTextFileMock: vi.fn(),
-}));
-
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  save: saveDialogMock,
-}));
-
-vi.mock("@tauri-apps/plugin-fs", () => ({
-  writeTextFile: writeTextFileMock,
-}));
-
 describe("Workflow list integration", () => {
   beforeEach(() => {
-    resetTauriInvoke();
-    saveDialogMock.mockReset();
-    writeTextFileMock.mockReset();
+    resetWorkflowBridge();
   });
 
   test("hides legacy step counts and raw updated timestamps from workflow cards", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...listWorkflowScenario([
         {
           ...workflow,
@@ -59,7 +48,7 @@ describe("Workflow list integration", () => {
   });
 
   test("lists workflows and creates a workflow from a dialog", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...listWorkflowScenario([]),
       create_workflow: workflow,
       get_workflow: { workflow, steps: [] },
@@ -77,16 +66,16 @@ describe("Workflow list integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("create_workflow", {
-        name: "Login flow",
-      });
+      expect(workflowBridgeMock.createWorkflow).toHaveBeenCalledWith(
+        "Login flow",
+      );
     });
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
   });
 
   test("shows icon-only workflow card actions with duplicate", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
@@ -120,7 +109,7 @@ describe("Workflow list integration", () => {
 
   test("confirms deletion in an app dialog instead of using the browser confirm", async () => {
     const confirmSpy = vi.spyOn(window, "confirm");
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
@@ -133,9 +122,9 @@ describe("Workflow list integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete Workflow" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("delete_workflow", {
-        id: "workflow-1",
-      });
+      expect(workflowBridgeMock.deleteWorkflow).toHaveBeenCalledWith(
+        "workflow-1",
+      );
     });
   });
 
@@ -149,7 +138,7 @@ describe("Workflow list integration", () => {
     };
     let listCalls = 0;
 
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_workflows: () => {
         listCalls += 1;
@@ -173,10 +162,10 @@ describe("Workflow list integration", () => {
     }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("duplicate_workflow", {
-        workflowId: "workflow-1",
-        name: "Copy of Login flow",
-      });
+      expect(workflowBridgeMock.duplicateWorkflow).toHaveBeenCalledWith(
+        "workflow-1",
+        "Copy of Login flow",
+      );
     });
     expect(await screen.findByText("Copy of Login flow")).toBeInTheDocument();
   });
@@ -199,12 +188,11 @@ describe("Workflow list integration", () => {
       },
     };
 
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       export_workflow_package: workflowPackage,
+      save_workflow_package_file: "/tmp/login-flow.workflow.json",
     });
-    saveDialogMock.mockResolvedValue("/tmp/login-flow.workflow.json");
-    writeTextFileMock.mockResolvedValue(undefined);
 
     renderApp();
 
@@ -215,9 +203,9 @@ describe("Workflow list integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Export" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("export_workflow_package", {
-        workflowId: "workflow-1",
-        options: {
+      expect(workflowBridgeMock.exportWorkflowPackage).toHaveBeenCalledWith(
+        "workflow-1",
+        {
           include_flow: true,
           settings_sections: [
             "general",
@@ -229,15 +217,9 @@ describe("Workflow list integration", () => {
             "advanced",
           ],
         },
-      });
-      expect(saveDialogMock).toHaveBeenCalledWith({
-        defaultPath: "login-flow.workflow.json",
-        filters: [{ name: "Workflow package", extensions: ["json"] }],
-        title: "Export Workflow",
-      });
-      expect(writeTextFileMock).toHaveBeenCalledWith(
-        "/tmp/login-flow.workflow.json",
-        JSON.stringify(workflowPackage, null, 2),
+      );
+      expect(workflowBridgeMock.saveWorkflowPackageFile).toHaveBeenCalledWith(
+        workflowPackage,
       );
     });
   });
@@ -267,7 +249,7 @@ describe("Workflow list integration", () => {
     };
     let listCalls = 0;
 
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_workflows: () => {
         listCalls += 1;
@@ -357,23 +339,23 @@ describe("Workflow list integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Import" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("preview_workflow_package", {
-        package: workflowPackage,
-      });
-      expect(invokeMock).toHaveBeenCalledWith("import_workflow_package", {
-        package: workflowPackage,
-        options: {
+      expect(workflowBridgeMock.previewWorkflowPackage).toHaveBeenCalledWith(
+        workflowPackage,
+      );
+      expect(workflowBridgeMock.importWorkflowPackage).toHaveBeenCalledWith(
+        workflowPackage,
+        {
           include_flow: true,
           settings_sections: ["general"],
         },
-      });
+      );
     });
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
   });
 
   test("opens workflow settings General from the list edit action", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       get_workflow_settings: {
         workflow_id: "workflow-1",
@@ -473,20 +455,20 @@ describe("Workflow list integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Save Settings" }));
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("save_workflow_settings_section", {
-        workflowId: "workflow-1",
-        section: "general",
-        sectionValue: expect.objectContaining({
+      expect(workflowBridgeMock.saveWorkflowSettingsSection).toHaveBeenCalledWith(
+        "workflow-1",
+        "general",
+        expect.objectContaining({
           name: "Updated login flow",
           description: "Signs into the QA account",
           tags: ["qa"],
         }),
-      });
+      );
     });
   });
 
   test("clears a previous workflow run error when creating a new workflow", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       list_workflows: [workflow],
       get_run_state: idleRunState,
       get_workflow: (args: unknown) => {

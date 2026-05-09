@@ -18,7 +18,7 @@ Agents must read:
 - Business rules.
 - Workflow lifecycle semantics.
 - Action configs, defaults, labels, summaries, validation, or execution.
-- Tauri command names, payloads, responses, or errors.
+- Electron IPC command names, payloads, responses, or errors.
 - TypeScript/Rust DTO shapes.
 - Persistence schema, ordering, timestamps, or serialization.
 - Runner progress, cancellation, failure, or browser-session behavior.
@@ -41,4 +41,3 @@ Before final response:
 - Confirm named files, contracts, and checks still match code.
 - State whether docs were updated.
 - If docs were unchanged, state why no documented behavior/contract changed.
-

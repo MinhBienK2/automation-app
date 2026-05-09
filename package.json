@@ -3,12 +3,35 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "tsc -b && vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "electron:dev": "node scripts/electron-dev.mjs",
+    "electron:pack": "npm run build && electron-builder --linux dir",
     "test": "vitest run",
     "preview": "vite preview",
     "tauri": "tauri"
+  },
+  "build": {
+    "appId": "internal.automation.workflow-manager",
+    "productName": "Automation App",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "category": "Development"
+    }
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -39,6 +62,8 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "electron": "^42.0.1",
+    "electron-builder": "^26.8.1",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4.2.4",
     "typescript": "~5.8.3",
