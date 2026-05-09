@@ -256,6 +256,20 @@ function artifactFromRow(row: Row): ArtifactRecord {
   };
 }
 
+function assertSafeArtifactPath(runId: string, relativePath: string) {
+  const normalized = path.posix.normalize(relativePath.replaceAll("\\", "/"));
+  const expectedPrefix = `runs/${runId}/`;
+  if (
+    normalized !== relativePath ||
+    normalized.startsWith("../") ||
+    normalized.includes("/../") ||
+    !normalized.startsWith(expectedPrefix) ||
+    normalized.length <= expectedPrefix.length
+  ) {
+    throw new Error("Artifact relative path must stay inside the run artifact directory.");
+  }
+}
+
 function runFromRow(row: Row): RunRecord {
   return {
     id: String(row.id),
@@ -1170,6 +1184,7 @@ export function createStorageService(options: StorageServiceOptions) {
     },
 
     registerArtifact(input: ArtifactRecordInput): ArtifactRecord {
+      assertSafeArtifactPath(input.runId, input.relativePath);
       const artifactId = id("art");
       const timestamp = nowIso();
       database()

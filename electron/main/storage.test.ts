@@ -161,6 +161,30 @@ describe("Electron storage service", () => {
     expect(storage.listArtifacts(run.id)).toEqual([artifact]);
   });
 
+  test("rejects artifact metadata paths outside the run artifact layout", () => {
+    const workflow = storage.createWorkflow({ name: "Artifact safety" });
+    const run = storage.createRun({
+      workflowId: workflow.id,
+      graphVersionId: storage.getActiveGraphVersion(workflow.id).id,
+      runProfileSnapshot: {},
+      identityProfileSnapshot: { id: "idp_1", name: "Owned" },
+      environmentSnapshot: {},
+      operatorLabel: "local",
+    });
+
+    expect(() =>
+      storage.registerArtifact({
+        runId: run.id,
+        type: "screenshot",
+        relativePath: `runs/${run.id}/../outside.png`,
+        mimeType: "image/png",
+        sizeBytes: 1,
+        checksum: "sha256:test",
+        sanitized: true,
+      }),
+    ).toThrow("Artifact relative path must stay inside the run artifact directory.");
+  });
+
   test("marks run records with terminal status and reason", () => {
     const workflow = storage.createWorkflow({ name: "Run terminal status" });
     const run = storage.createRun({
