@@ -28,6 +28,10 @@ import type {
   WorkflowSummary,
 } from "../../src/types/workflow.js";
 import type { AppPaths } from "./database.js";
+import {
+  compileWorkflowGraph as compileGraph,
+  validateWorkflowGraph as validateGraph,
+} from "./graphCompiler.js";
 import { WorkflowRepository } from "./workflowRepository.js";
 
 export type CommandError = {
@@ -237,33 +241,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssue[] {
-      if (graph.nodes.length === 0) {
-        return [
-          {
-            level: "error",
-            message: "Workflow graph needs a Start node.",
-          },
-        ];
-      }
-      if (!graph.nodes.some((node) => node.node_type === "start")) {
-        return [
-          {
-            level: "error",
-            message: "Workflow graph needs a Start node.",
-          },
-        ];
-      }
-      return [];
+      return validateGraph(graph);
     },
 
     compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGraph {
-      return {
-        steps: graph.nodes.flatMap((node) =>
-          node.node_type === "action" && node.config
-            ? [{ node_id: node.id, label: node.label, config: node.config as ActionConfig }]
-            : [],
-        ),
-      };
+      return compileGraph(graph);
     },
 
     runWorkflow(workflowId: string): RunState {

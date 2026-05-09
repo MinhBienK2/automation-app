@@ -11,18 +11,17 @@ Check:
 - `src/features/workflows/lib/workflowStepForm.ts`
 - `src/features/workflows/components/ActionConfigEditor.tsx`
 - `src/features/workflows/components/ActionConfig*Fields.tsx`
-- `src-tauri/src/domain/action_config.rs`
-- `src-tauri/src/domain/validation.rs`
-- `src-tauri/src/services/run_service.rs`
-- `src-tauri/src/runner/actions/`
-- `src-tauri/tests/domain_validation.rs`
-- `src-tauri/tests/command_api.rs`
+- `electron/backend/graphCompiler.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/graphCompiler.test.ts`
+- `electron/backend/commands.test.ts`
+- Temporary Rust parity references under `src-tauri/src/domain/`, `src-tauri/src/services/run_service.rs`, and `src-tauri/src/runner/actions/`
 - `README.md` smoke checklist
 
 Risk:
 
 - UI can accept a config the backend rejects.
-- Rust can serialize a shape TypeScript does not understand.
+- Persisted JSON can contain a shape TypeScript does not understand.
 - A step can persist but fail at runner dispatch.
 - Defaults can create invalid configs.
 
@@ -32,8 +31,10 @@ Check:
 
 - `src/lib/workflowApi.ts`
 - `src/lib/workflowApi.test.ts`
-- `src-tauri/src/commands.rs`
-- `src-tauri/tests/command_api.rs`
+- `electron/preload.ts`
+- `electron/ipc.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/commands.test.ts`
 
 Risk:
 
@@ -62,8 +63,10 @@ Risk:
 Check:
 
 - `src-tauri/migrations/`
-- `src-tauri/src/repositories/workflow_repository.rs`
-- `src-tauri/tests/persistence.rs`
+- `electron/backend/database.ts`
+- `electron/backend/workflowRepository.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/commands.test.ts`
 - Import/export commands if persisted shape changes.
 
 Risk:

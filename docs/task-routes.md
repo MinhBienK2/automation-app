@@ -65,9 +65,9 @@ Update docs: command boundary, Electron IPC contract, workflow types when respon
 
 Read: `architecture/domain.md`, `contracts/action-configs.md`, `domain/user-visible-invariants.md`
 
-Verify: `src-tauri/src/domain/validation.rs`, `src-tauri/src/domain/action_config.rs`, `src-tauri/tests/domain_validation.rs`, affected UI error display.
+Verify: `electron/backend/graphCompiler.ts`, `electron/backend/commands.ts`, `electron/backend/graphCompiler.test.ts`, affected UI error display; use `src-tauri/src/domain/` only as a temporary parity reference during migration.
 
-Checks: `cd src-tauri && cargo test --test domain_validation`; add `cd src-tauri && cargo test --test command_api` when command-facing errors change.
+Checks: `npm test -- electron/backend/graphCompiler.test.ts`; add `npm test -- electron/backend/commands.test.ts` when command-facing errors change; run `npm run build:electron` when backend types change.
 
 Update docs: domain architecture, action config contract, user-visible invariants.
 
@@ -85,9 +85,9 @@ Update docs: persistence architecture, workflow types, workflow lifecycle.
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src-tauri/src/runner/`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/app_state.rs`, `src-tauri/tests/runner_spike.rs`, `src-tauri/tests/command_api.rs`
+Verify: `electron/backend/graphCompiler.ts`, Electron runner modules, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`; use `src-tauri/src/runner/`, `src-tauri/src/services/run_service.rs`, and `src-tauri/src/app_state.rs` only as temporary parity references during migration.
 
-Checks: `cd src-tauri && cargo test --test runner_spike`, `cd src-tauri && cargo test --test command_api`
+Checks: focused Electron runner/compiler tests, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`
 
 Update docs: execution semantics, runner architecture, run-state contract, impact map.
 

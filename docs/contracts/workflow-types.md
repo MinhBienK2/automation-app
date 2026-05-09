@@ -5,6 +5,7 @@
 - TypeScript: `src/types/workflow.ts`
 - Electron bridge: `src/types/electron.ts`
 - Node command handlers: `electron/backend/commands.ts`
+- TypeScript graph compiler: `electron/backend/graphCompiler.ts`
 - SQLite repository: `electron/backend/workflowRepository.ts`
 - Temporary Rust parity reference: `src-tauri/src/domain/`
 
@@ -190,7 +191,9 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
-The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for runner-side expansion/execution. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+
+Settings prelude compilation is represented in TypeScript. It can prepend setup actions for geolocation, permissions, headers, downloads, cookies, storage, fingerprint preflight, persisted variables, default action timeouts, interaction fidelity defaults, and global waits between graph nodes.
 
 Executable frontend/Rust ports must agree:
 
