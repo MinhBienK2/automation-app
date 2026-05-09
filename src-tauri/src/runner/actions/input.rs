@@ -201,6 +201,7 @@ pub(super) fn clear_input_script(
     ))
 }
 
+#[cfg(test)]
 pub(super) fn set_contenteditable_script(
     xpath: &str,
     iframe_xpath: Option<&str>,

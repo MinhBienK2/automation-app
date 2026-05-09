@@ -5,6 +5,7 @@ use super::js::optional_json_string;
 pub(super) struct WaitScriptOptions<'a> {
     pub condition: WaitCondition,
     pub xpath: Option<&'a str>,
+    pub iframe_xpath: Option<&'a str>,
     pub text: Option<&'a str>,
     pub url: Option<&'a str>,
     pub duration_ms: Option<u64>,
@@ -14,6 +15,7 @@ pub(super) struct WaitScriptOptions<'a> {
 pub(super) fn wait_script(options: WaitScriptOptions<'_>) -> Result<String, RunnerError> {
     let condition = wait_condition_value(options.condition);
     let xpath = optional_json_string(options.xpath)?;
+    let iframe_xpath = optional_json_string(options.iframe_xpath)?;
     let text = optional_json_string(options.text)?;
     let url = optional_json_string(options.url)?;
     let duration_ms = options.duration_ms.unwrap_or(1000);
@@ -24,12 +26,20 @@ pub(super) fn wait_script(options: WaitScriptOptions<'_>) -> Result<String, Runn
         (() => new Promise((resolve) => {{
           const condition = "{condition}";
           const xpath = {xpath};
+          const iframeXpath = {iframe_xpath};
           const text = {text};
           const url = {url};
           const durationMs = {duration_ms};
           const timeoutMs = {timeout_ms};
           const startedAt = Date.now();
-          const byXpath = (value) => value ? document.evaluate(value, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue : null;
+          const byXpath = (value, rootDocument) => value ? rootDocument.evaluate(value, rootDocument, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue : null;
+          const resolveDocument = () => {{
+            if (!iframeXpath) return {{ ok: true, document }};
+            const iframe = byXpath(iframeXpath, document);
+            if (!iframe) return {{ ok: false, reason: "Iframe XPath not found" }};
+            if (!iframe.contentDocument) return {{ ok: false, reason: "Iframe document is not accessible" }};
+            return {{ ok: true, document: iframe.contentDocument }};
+          }};
           const isVisible = (node) => {{
             if (!node) return false;
             const style = window.getComputedStyle(node);
@@ -42,7 +52,9 @@ pub(super) fn wait_script(options: WaitScriptOptions<'_>) -> Result<String, Runn
             if (condition === "page_load") return document.readyState === "complete";
             if (condition === "url_contains") return window.location.href.includes(url || "");
             if (condition === "text_visible") return document.body?.innerText.includes(text || "");
-            const node = byXpath(xpath);
+            const resolved = resolveDocument();
+            if (!resolved.ok) return false;
+            const node = byXpath(xpath, resolved.document);
             if (condition === "element_attached") return !!node;
             if (condition === "element_detached") return !node;
             if (!node) return false;
@@ -55,7 +67,8 @@ pub(super) fn wait_script(options: WaitScriptOptions<'_>) -> Result<String, Runn
           const tick = () => {{
             if (pass()) return resolve({{ ok: true, reason: "" }});
             if (Date.now() - startedAt >= timeoutMs) {{
-              const reason = xpath && !byXpath(xpath) ? "XPath not found" : "Wait timed out";
+              const resolved = resolveDocument();
+              const reason = !resolved.ok ? resolved.reason : xpath && !byXpath(xpath, resolved.document) ? "XPath not found" : "Wait timed out";
               return resolve({{ ok: false, reason }});
             }}
             setTimeout(tick, 50);
@@ -92,6 +105,7 @@ mod tests {
         let duration = wait_script(WaitScriptOptions {
             condition: WaitCondition::Duration,
             xpath: None,
+            iframe_xpath: None,
             text: None,
             url: None,
             duration_ms: Some(250),
@@ -101,6 +115,7 @@ mod tests {
         let element = wait_script(WaitScriptOptions {
             condition: WaitCondition::ElementVisible,
             xpath: Some("//*[@id='ready']"),
+            iframe_xpath: None,
             text: None,
             url: None,
             duration_ms: None,

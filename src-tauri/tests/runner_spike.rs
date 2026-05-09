@@ -447,6 +447,7 @@ async fn runner_executes_all_mvp_actions_against_visible_chromium() {
                     timeout_ms: None,
                 },
                 ActionConfig::Wait {
+                    target: None,
                     condition: WaitCondition::Duration,
                     xpath: None,
                     text: None,
@@ -455,6 +456,7 @@ async fn runner_executes_all_mvp_actions_against_visible_chromium() {
                     timeout_ms: None,
                 },
                 ActionConfig::InputText {
+                    target: None,
                     xpath: "//*[@name=\"email\"]".to_string(),
                     iframe_xpath: None,
                     text: "user@example.com".to_string(),
@@ -465,6 +467,7 @@ async fn runner_executes_all_mvp_actions_against_visible_chromium() {
                     timeout_ms: None,
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"submit\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -482,6 +485,7 @@ async fn runner_executes_all_mvp_actions_against_visible_chromium() {
                     post_click_wait_ms: None,
                 },
                 ActionConfig::Scroll {
+                    target: None,
                     mode: None,
                     direction: ScrollDirection::Down,
                     pixels: 400,
@@ -544,6 +548,7 @@ async fn runner_fails_immediately_when_xpath_is_missing_and_keeps_browser_open()
                     timeout_ms: None,
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"missing\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -601,6 +606,7 @@ async fn runner_can_stop_during_sleep_without_closing_browser() {
                         timeout_ms: None,
                     },
                     ActionConfig::Wait {
+                        target: None,
                         condition: WaitCondition::Duration,
                         xpath: None,
                         text: None,
@@ -609,6 +615,7 @@ async fn runner_can_stop_during_sleep_without_closing_browser() {
                         timeout_ms: None,
                     },
                     ActionConfig::Scroll {
+                        target: None,
                         mode: None,
                         direction: ScrollDirection::Down,
                         pixels: 400,
@@ -651,24 +658,28 @@ async fn runner_executes_phase_one_human_interaction_actions_against_visible_chr
                     timeout_ms: None,
                 },
                 ActionConfig::DoubleClick {
+                    target: None,
                     xpath: "//*[@id=\"double\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::RightClick {
+                    target: None,
                     xpath: "//*[@id=\"right\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::FocusElement {
+                    target: None,
                     xpath: "//*[@id=\"search\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::TypeSequence {
+                    target: None,
                     xpath: "//*[@id=\"search\"]".to_string(),
                     iframe_xpath: None,
                     text: "abc".to_string(),
@@ -677,6 +688,7 @@ async fn runner_executes_phase_one_human_interaction_actions_against_visible_chr
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::BlurElement {
+                    target: None,
                     xpath: "//*[@id=\"search\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
@@ -686,36 +698,43 @@ async fn runner_executes_phase_one_human_interaction_actions_against_visible_chr
                     text: " pasted".to_string(),
                 },
                 ActionConfig::PasteClipboard {
+                    target: None,
                     xpath: "//*[@id=\"notes\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::Check {
+                    target: None,
                     xpath: "//*[@id=\"terms\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::Uncheck {
+                    target: None,
                     xpath: "//*[@id=\"terms\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::ToggleCheckbox {
+                    target: None,
                     xpath: "//*[@id=\"terms\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::SelectRadio {
+                    target: None,
                     xpath: "//*[@id=\"radio-email\"]".to_string(),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::DragAndDrop {
+                    source_target: None,
+                    target_target: None,
                     source_xpath: "//*[@id=\"source\"]".to_string(),
                     target_xpath: "//*[@id=\"target\"]".to_string(),
                     iframe_xpath: None,
@@ -825,6 +844,7 @@ async fn runner_executes_phase_two_form_and_file_actions_against_visible_chromiu
                     timeout_ms: None,
                 },
                 ActionConfig::UploadFile {
+                    target: None,
                     xpath: "//*[@id=\"file\"]".to_string(),
                     iframe_xpath: None,
                     files: vec![upload_file],
@@ -832,6 +852,7 @@ async fn runner_executes_phase_two_form_and_file_actions_against_visible_chromiu
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::SetContenteditable {
+                    target: None,
                     xpath: "//*[@id=\"editor\"]".to_string(),
                     iframe_xpath: None,
                     text: "New editor text".to_string(),
@@ -840,12 +861,14 @@ async fn runner_executes_phase_two_form_and_file_actions_against_visible_chromiu
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::SelectCustomOption {
+                    trigger_target: None,
                     trigger_xpath: "//*[@id=\"combo\"]".to_string(),
                     option_text: "Vietnam".to_string(),
                     iframe_xpath: None,
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::SubmitForm {
+                    target: None,
                     xpath: Some("//*[@id=\"form\"]".to_string()),
                     iframe_xpath: None,
                     wait_until: Some(ClickWaitUntil::Visible),
@@ -909,12 +932,14 @@ async fn runner_executes_phase_four_data_capture_actions_against_visible_chromiu
                     timeout_ms: None,
                 },
                 ActionConfig::ExtractText {
+                    target: None,
                     xpath: "//*[@id=\"title\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "title".to_string(),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::ExtractAttribute {
+                    target: None,
                     xpath: "//*[@id=\"link\"]".to_string(),
                     iframe_xpath: None,
                     attribute: "data-id".to_string(),
@@ -922,18 +947,21 @@ async fn runner_executes_phase_four_data_capture_actions_against_visible_chromiu
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::ExtractInputValue {
+                    target: None,
                     xpath: "//*[@id=\"email\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "email".to_string(),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::ExtractList {
+                    target: None,
                     xpath: "//*[@id=\"items\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "items".to_string(),
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::ExtractTable {
+                    target: None,
                     xpath: "//*[@id=\"orders\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "orders".to_string(),
@@ -990,6 +1018,7 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
                 },
                 ActionConfig::GoBack {},
                 ActionConfig::Wait {
+                    target: None,
                     condition: WaitCondition::TextVisible,
                     xpath: None,
                     text: Some("Page One".to_string()),
@@ -999,6 +1028,7 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
                 },
                 ActionConfig::GoForward {},
                 ActionConfig::Wait {
+                    target: None,
                     condition: WaitCondition::TextVisible,
                     xpath: None,
                     text: Some("Page Two".to_string()),
@@ -1012,6 +1042,7 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
                 },
                 ActionConfig::SwitchTab { index: 0 },
                 ActionConfig::ExtractText {
+                    target: None,
                     xpath: "//*[@id=\"title\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "tab_zero_title".to_string(),
@@ -1019,6 +1050,7 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
                 },
                 ActionConfig::SwitchTab { index: 1 },
                 ActionConfig::ExtractText {
+                    target: None,
                     xpath: "//*[@id=\"title\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "tab_one_title".to_string(),
@@ -1026,6 +1058,7 @@ async fn runner_executes_phase_three_browser_context_actions_against_visible_chr
                 },
                 ActionConfig::CloseTab { index: Some(1) },
                 ActionConfig::ExtractText {
+                    target: None,
                     xpath: "//*[@id=\"title\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "after_close_title".to_string(),
@@ -1066,9 +1099,11 @@ async fn runner_executes_phase_three_frame_dialog_download_actions_against_visib
                     timeout_ms: None,
                 },
                 ActionConfig::SwitchFrame {
+                    target: None,
                     xpath: Some("//*[@id=\"checkout-frame\"]".to_string()),
                 },
                 ActionConfig::InputText {
+                    target: None,
                     xpath: "//*[@id=\"frame-input\"]".to_string(),
                     iframe_xpath: None,
                     text: "frame value".to_string(),
@@ -1079,13 +1114,18 @@ async fn runner_executes_phase_three_frame_dialog_download_actions_against_visib
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::ExtractInputValue {
+                    target: None,
                     xpath: "//*[@id=\"frame-input\"]".to_string(),
                     iframe_xpath: None,
                     output_name: "frame_value".to_string(),
                     timeout_ms: Some(3000),
                 },
-                ActionConfig::SwitchFrame { xpath: None },
+                ActionConfig::SwitchFrame {
+                    xpath: None,
+                    target: None,
+                },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"prompt\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1106,6 +1146,7 @@ async fn runner_executes_phase_three_frame_dialog_download_actions_against_visib
                     prompt_text: Some("approved".to_string()),
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"confirm\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1127,6 +1168,7 @@ async fn runner_executes_phase_three_frame_dialog_download_actions_against_visib
                     path: download_dir.clone(),
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"download\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1207,6 +1249,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                     variables: Vec::new(),
                 },
                 ActionConfig::InputText {
+                    target: None,
                     xpath: "//*[@id=\"name\"]".to_string(),
                     iframe_xpath: None,
                     text: "Hello {{customer}}".to_string(),
@@ -1217,12 +1260,14 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertElement {
+                    target: None,
                     xpath: "//*[@id=\"name\"]".to_string(),
                     iframe_xpath: None,
                     state: AssertElementState::Visible,
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"status\"]".to_string()),
                     iframe_xpath: None,
                     text: "Ready".to_string(),
@@ -1249,6 +1294,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                 ActionConfig::RepeatTimes {
                     times: 2,
                     steps: vec![ActionConfig::Click {
+                        target: None,
                         xpath: "//*[@id=\"increment\"]".to_string(),
                         iframe_xpath: None,
                         mode: None,
@@ -1281,6 +1327,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                     max_attempts: 3,
                     delay_ms: Some(200),
                     steps: vec![ActionConfig::AssertText {
+                        target: None,
                         xpath: Some("//*[@id=\"status\"]".to_string()),
                         iframe_xpath: None,
                         text: "Eventually Ready".to_string(),
@@ -1295,6 +1342,7 @@ async fn runner_executes_phase_five_logic_actions_against_visible_chromium() {
                     close_browser: false,
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"status\"]".to_string()),
                     iframe_xpath: None,
                     text: "this should not run".to_string(),
@@ -1353,6 +1401,7 @@ async fn runner_fails_try_catch_when_error_branch_is_missing() {
                 },
                 ActionConfig::TryCatch {
                     try_steps: vec![ActionConfig::AssertText {
+                        target: None,
                         xpath: Some("//*[@id=\"status\"]".to_string()),
                         iframe_xpath: None,
                         text: "Missing".to_string(),
@@ -1401,6 +1450,7 @@ async fn runner_fails_fallback_when_fallback_branch_is_missing() {
                 },
                 ActionConfig::FallbackBlock {
                     primary_steps: vec![ActionConfig::AssertText {
+                        target: None,
                         xpath: Some("//*[@id=\"status\"]".to_string()),
                         iframe_xpath: None,
                         text: "Missing".to_string(),
@@ -1450,6 +1500,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     timeout_ms: None,
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"save-local\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1489,6 +1540,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     timeout_ms: None,
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"read-local\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1506,6 +1558,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     post_click_wait_ms: None,
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"status\"]".to_string()),
                     iframe_xpath: None,
                     text: "kept".to_string(),
@@ -1517,6 +1570,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     value: "s3cret".to_string(),
                 },
                 ActionConfig::InputText {
+                    target: None,
                     xpath: "//*[@id=\"password\"]".to_string(),
                     iframe_xpath: None,
                     text: "{{secret:password}}".to_string(),
@@ -1533,6 +1587,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     path: Some("/".to_string()),
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"read-cookie\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1550,6 +1605,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     post_click_wait_ms: None,
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"cookie\"]".to_string()),
                     iframe_xpath: None,
                     text: "token=abc".to_string(),
@@ -1584,6 +1640,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                 },
                 ActionConfig::LoadSession { path: session_path },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"read-local\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1601,6 +1658,7 @@ async fn runner_executes_phase_six_session_profile_secret_actions_against_visibl
                     post_click_wait_ms: None,
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"status\"]".to_string()),
                     iframe_xpath: None,
                     text: "kept".to_string(),
@@ -1656,6 +1714,7 @@ async fn runner_executes_phase_seven_network_device_actions_against_visible_chro
                     timeout_ms: None,
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"ua\"]".to_string()),
                     iframe_xpath: None,
                     text: "WAMPhaseSeven/1.0".to_string(),
@@ -1663,6 +1722,7 @@ async fn runner_executes_phase_seven_network_device_actions_against_visible_chro
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"viewport\"]".to_string()),
                     iframe_xpath: None,
                     text: "390x".to_string(),
@@ -1670,6 +1730,7 @@ async fn runner_executes_phase_seven_network_device_actions_against_visible_chro
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"headers\"]".to_string()),
                     iframe_xpath: None,
                     text: "seven".to_string(),
@@ -1677,6 +1738,7 @@ async fn runner_executes_phase_seven_network_device_actions_against_visible_chro
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"geo\"]".to_string()),
                     iframe_xpath: None,
                     text: "10.77,106.70".to_string(),
@@ -1718,6 +1780,7 @@ async fn runner_executes_phase_eight_human_verification_actions_against_visible_
                     timeout_ms: Some(100),
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"solve\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1736,11 +1799,13 @@ async fn runner_executes_phase_eight_human_verification_actions_against_visible_
                 },
                 ActionConfig::ResumeWhenCondition {
                     condition: WorkflowCondition::ElementVisible {
-                        xpath: "//*[@id=\"content\"]".to_string(),
+                        target: None,
+                        xpath: Some("//*[@id=\"content\"]".to_string()),
                     },
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"content\"]".to_string()),
                     iframe_xpath: None,
                     text: "Welcome after verification".to_string(),
@@ -1795,6 +1860,7 @@ async fn runner_executes_phase_nine_reliability_actions_against_visible_chromium
                     max_attempts: 5,
                     delay_ms: Some(150),
                     step: Box::new(ActionConfig::AssertText {
+                        target: None,
                         xpath: Some("//*[@id=\"status\"]".to_string()),
                         iframe_xpath: None,
                         text: "Ready".to_string(),
@@ -1803,6 +1869,7 @@ async fn runner_executes_phase_nine_reliability_actions_against_visible_chromium
                     }),
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"real-save\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1824,6 +1891,7 @@ async fn runner_executes_phase_nine_reliability_actions_against_visible_chromium
                     screenshot_path: Some(checkpoint_path.clone()),
                 },
                 ActionConfig::AssertText {
+                    target: None,
                     xpath: Some("//*[@id=\"status\"]".to_string()),
                     iframe_xpath: None,
                     text: "Saved".to_string(),
@@ -1865,6 +1933,7 @@ async fn runner_adds_failure_screenshot_path_to_failed_step_reason() {
                     timeout_ms: None,
                 },
                 ActionConfig::Click {
+                    target: None,
                     xpath: "//*[@id=\"missing\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1933,6 +2002,7 @@ async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_c
                     url_patterns: vec!["/analytics".to_string()],
                 },
                 ActionConfig::Click {
+                target: None,
                     xpath: "//*[@id=\"live-button\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1959,6 +2029,7 @@ async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_c
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::Click {
+                target: None,
                     xpath: "//*[@id=\"mock-button\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1976,6 +2047,7 @@ async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_c
                     post_click_wait_ms: None,
                 },
                 ActionConfig::Click {
+                target: None,
                     xpath: "//*[@id=\"blocked-button\"]".to_string(),
                     iframe_xpath: None,
                     mode: None,
@@ -1993,6 +2065,7 @@ async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_c
                     post_click_wait_ms: None,
                 },
                 ActionConfig::AssertText {
+                target: None,
                     xpath: Some("//*[@id=\"mock\"]".to_string()),
                     iframe_xpath: None,
                     text: "mocked".to_string(),
@@ -2000,6 +2073,7 @@ async fn runner_executes_phase_eleven_advanced_runtime_actions_against_visible_c
                     timeout_ms: Some(3000),
                 },
                 ActionConfig::AssertText {
+                target: None,
                     xpath: Some("//*[@id=\"blocked\"]".to_string()),
                     iframe_xpath: None,
                     text: "blocked".to_string(),

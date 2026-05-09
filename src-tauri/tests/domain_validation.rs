@@ -123,6 +123,130 @@ fn set_json_variables_config_requires_root_object() {
 }
 
 #[test]
+fn element_target_can_replace_legacy_xpath_for_element_actions() {
+    let config: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "click",
+        "config": {
+            "xpath": "",
+            "target": {
+                "locators": [
+                    { "kind": "role", "role": "button", "value": "Log in", "exact": true },
+                    { "kind": "css", "value": "button[type='submit']" },
+                    { "kind": "xpath", "value": "//*[@id='login']" }
+                ],
+                "constraints": {
+                    "visible": true,
+                    "enabled": true
+                }
+            }
+        }
+    }))
+    .expect("target-backed click config should deserialize");
+
+    config
+        .validate()
+        .expect("valid target should satisfy the element requirement");
+}
+
+#[test]
+fn element_target_validation_reports_field_addressable_errors() {
+    let empty_target: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "click",
+        "config": {
+            "xpath": "",
+            "target": { "locators": [] }
+        }
+    }))
+    .expect("empty target should deserialize before validation");
+    assert_validation_message(
+        empty_target
+            .validate()
+            .expect_err("empty target locators should fail"),
+        "target",
+        "Element target requires at least one locator",
+    );
+
+    let blank_locator: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "click",
+        "config": {
+            "xpath": "",
+            "target": {
+                "locators": [
+                    { "kind": "css", "value": " " }
+                ]
+            }
+        }
+    }))
+    .expect("blank locator should deserialize before validation");
+    assert_validation_message(
+        blank_locator
+            .validate()
+            .expect_err("blank locator value should fail"),
+        "target",
+        "Target locator value is required",
+    );
+
+    let missing_attribute_name: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "click",
+        "config": {
+            "xpath": "",
+            "target": {
+                "locators": [
+                    { "kind": "attribute", "value": "save-button" }
+                ]
+            }
+        }
+    }))
+    .expect("attribute target should deserialize before validation");
+    assert_validation_message(
+        missing_attribute_name
+            .validate()
+            .expect_err("attribute locator without attribute name should fail"),
+        "target",
+        "Attribute locator requires an attribute name",
+    );
+}
+
+#[test]
+fn element_target_can_replace_xpath_for_wait_and_conditions() {
+    let wait: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "wait",
+        "config": {
+            "condition": "element_visible",
+            "xpath": null,
+            "target": {
+                "locators": [
+                    { "kind": "test_id", "value": "ready-state" }
+                ]
+            }
+        }
+    }))
+    .expect("target-backed wait should deserialize");
+    wait.validate()
+        .expect("valid target should satisfy element wait requirement");
+
+    let condition: ActionConfig = serde_json::from_value(serde_json::json!({
+        "type": "if_condition",
+        "config": {
+            "condition": {
+                "kind": "element_visible",
+                "target": {
+                    "locators": [
+                        { "kind": "text", "value": "Welcome", "exact": true }
+                    ]
+                }
+            },
+            "then_steps": [],
+            "else_steps": []
+        }
+    }))
+    .expect("target-backed condition should deserialize");
+    condition
+        .validate()
+        .expect("valid target should satisfy element condition requirement");
+}
+
+#[test]
 fn repeat_for_each_allows_variable_array_source_without_manual_items() {
     let config: ActionConfig = serde_json::from_value(serde_json::json!({
         "type": "repeat_for_each",
@@ -365,6 +489,43 @@ fn workflow_settings_rejects_invalid_cross_section_values() {
             .expect_err("zero interval should fail"),
         "triggers.interval_seconds",
         "Trigger interval must be greater than 0",
+    );
+}
+
+#[test]
+fn workflow_settings_validate_fingerprint_preflight_gate() {
+    let workflow = Workflow {
+        id: "workflow-1".to_string(),
+        name: "Login flow".to_string(),
+        created_at: "1".to_string(),
+        updated_at: "2".to_string(),
+    };
+    let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+    settings.browser.fingerprint_preflight_enabled = true;
+    settings.browser.fingerprint_probe_url = Some("https://owned.example/probe".to_string());
+    settings.browser.fingerprint_profile_id = Some("desktop-us-chrome-a".to_string());
+    settings.browser.fingerprint_allowed_origins = vec!["https://owned.example".to_string()];
+    settings
+        .validate()
+        .expect("allowlisted fingerprint preflight should validate");
+
+    settings.browser.fingerprint_probe_url = Some("https://other.example/probe".to_string());
+    assert_validation_message(
+        settings
+            .validate()
+            .expect_err("non-allowlisted probe origin should fail"),
+        "browser.fingerprint_probe_url",
+        "Fingerprint probe origin must be in the workflow allowlist",
+    );
+
+    settings.browser.fingerprint_probe_url = Some("https://owned.example/probe".to_string());
+    settings.browser.headless = true;
+    assert_validation_message(
+        settings
+            .validate()
+            .expect_err("headless fingerprint preflight should fail"),
+        "browser.headless",
+        "Fingerprint preflight requires headed browser mode",
     );
 }
 
@@ -1140,6 +1301,7 @@ fn workflow_graph_compiles_loop_error_and_control_nodes_to_executable_configs() 
 fn action_config_validation_covers_required_fields() {
     assert_validation_message(
         ActionConfig::Click {
+            target: None,
             xpath: String::new(),
             iframe_xpath: None,
             mode: None,
@@ -1164,6 +1326,7 @@ fn action_config_validation_covers_required_fields() {
 
     assert_validation_message(
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 0,
@@ -1191,6 +1354,7 @@ fn valid_action_configs_pass_validation() {
             timeout_ms: None,
         },
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1199,6 +1363,7 @@ fn valid_action_configs_pass_validation() {
             timeout_ms: None,
         },
         ActionConfig::InputText {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             text: "user@example.com".to_string(),
@@ -1209,6 +1374,7 @@ fn valid_action_configs_pass_validation() {
             timeout_ms: None,
         },
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@type=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -1226,6 +1392,7 @@ fn valid_action_configs_pass_validation() {
             post_click_wait_ms: None,
         },
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
@@ -1253,6 +1420,7 @@ fn every_action_config_round_trips_through_json() {
             timeout_ms: None,
         },
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1261,6 +1429,7 @@ fn every_action_config_round_trips_through_json() {
             timeout_ms: None,
         },
         ActionConfig::InputText {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             text: "user@example.com".to_string(),
@@ -1271,6 +1440,7 @@ fn every_action_config_round_trips_through_json() {
             timeout_ms: None,
         },
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@type=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -1288,6 +1458,7 @@ fn every_action_config_round_trips_through_json() {
             post_click_wait_ms: None,
         },
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Up,
             pixels: 300,
@@ -1318,6 +1489,7 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
             timeout_ms: Some(5000),
         },
         ActionConfig::InputText {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             text: "user@example.com".to_string(),
@@ -1328,6 +1500,7 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
             timeout_ms: None,
         },
         ActionConfig::ClearInput {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             method: Some(ClearInputMethod::SelectAll),
@@ -1335,6 +1508,7 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
             timeout_ms: None,
         },
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::ElementVisible,
             xpath: Some("//*[@id=\"ready\"]".to_string()),
             text: None,
@@ -1343,6 +1517,7 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
             timeout_ms: Some(3000),
         },
         ActionConfig::SelectOption {
+            target: None,
             xpath: "//*[@name=\"country\"]".to_string(),
             iframe_xpath: None,
             match_by: SelectOptionMatchBy::Label,
@@ -1351,6 +1526,7 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
             timeout_ms: None,
         },
         ActionConfig::SetCheckbox {
+            target: None,
             xpath: "//*[@name=\"terms\"]".to_string(),
             iframe_xpath: None,
             state: CheckboxState::Checked,
@@ -1364,6 +1540,7 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
             keys: vec!["Control".to_string(), "S".to_string()],
         },
         ActionConfig::Hover {
+            target: None,
             xpath: "//*[@id=\"menu\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
@@ -1386,12 +1563,14 @@ fn user_action_taxonomy_configs_validate_and_round_trip() {
 fn phase_four_data_capture_configs_validate_and_round_trip() {
     let configs = [
         ActionConfig::ExtractText {
+            target: None,
             xpath: "//*[@id=\"title\"]".to_string(),
             iframe_xpath: None,
             output_name: "title".to_string(),
             timeout_ms: Some(3000),
         },
         ActionConfig::ExtractAttribute {
+            target: None,
             xpath: "//*[@id=\"link\"]".to_string(),
             iframe_xpath: None,
             attribute: "href".to_string(),
@@ -1399,18 +1578,21 @@ fn phase_four_data_capture_configs_validate_and_round_trip() {
             timeout_ms: Some(3000),
         },
         ActionConfig::ExtractInputValue {
+            target: None,
             xpath: "//*[@id=\"email\"]".to_string(),
             iframe_xpath: None,
             output_name: "email".to_string(),
             timeout_ms: Some(3000),
         },
         ActionConfig::ExtractTable {
+            target: None,
             xpath: "//*[@id=\"orders\"]".to_string(),
             iframe_xpath: None,
             output_name: "orders".to_string(),
             timeout_ms: Some(3000),
         },
         ActionConfig::ExtractList {
+            target: None,
             xpath: "//*[@id=\"items\"]".to_string(),
             iframe_xpath: None,
             output_name: "items".to_string(),
@@ -1436,6 +1618,7 @@ fn phase_four_data_capture_configs_validate_and_round_trip() {
 fn phase_four_data_capture_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::ExtractText {
+            target: None,
             xpath: String::new(),
             iframe_xpath: None,
             output_name: "title".to_string(),
@@ -1449,6 +1632,7 @@ fn phase_four_data_capture_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::ExtractAttribute {
+            target: None,
             xpath: "//*[@id=\"link\"]".to_string(),
             iframe_xpath: None,
             attribute: String::new(),
@@ -1463,6 +1647,7 @@ fn phase_four_data_capture_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::ExtractList {
+            target: None,
             xpath: "//*[@id=\"items\"]".to_string(),
             iframe_xpath: None,
             output_name: String::new(),
@@ -1526,9 +1711,13 @@ fn phase_three_browser_context_configs_validate_required_fields() {
 fn phase_three_frame_dialog_download_configs_validate_and_round_trip() {
     let configs = [
         ActionConfig::SwitchFrame {
+            target: None,
             xpath: Some("//*[@id=\"checkout-frame\"]".to_string()),
         },
-        ActionConfig::SwitchFrame { xpath: None },
+        ActionConfig::SwitchFrame {
+            xpath: None,
+            target: None,
+        },
         ActionConfig::AcceptDialog {
             prompt_text: Some("approved".to_string()),
         },
@@ -1555,6 +1744,7 @@ fn phase_three_frame_dialog_download_configs_validate_and_round_trip() {
 fn phase_three_frame_dialog_download_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::SwitchFrame {
+            target: None,
             xpath: Some(" ".to_string()),
         }
         .validate()
@@ -1601,12 +1791,14 @@ fn phase_five_logic_configs_validate_and_round_trip() {
             variables: Vec::new(),
         },
         ActionConfig::AssertElement {
+            target: None,
             xpath: "//*[@id=\"submit\"]".to_string(),
             iframe_xpath: None,
             state: workflow_automation_manager_lib::domain::AssertElementState::Visible,
             timeout_ms: Some(3000),
         },
         ActionConfig::AssertText {
+            target: None,
             xpath: Some("//*[@id=\"message\"]".to_string()),
             iframe_xpath: None,
             text: "Saved".to_string(),
@@ -1670,6 +1862,7 @@ fn phase_five_logic_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::AssertText {
+            target: None,
             xpath: None,
             iframe_xpath: None,
             text: String::new(),
@@ -1684,6 +1877,7 @@ fn phase_five_logic_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::AssertElement {
+            target: None,
             xpath: String::new(),
             iframe_xpath: None,
             state: workflow_automation_manager_lib::domain::AssertElementState::Visible,
@@ -1929,7 +2123,8 @@ fn phase_eight_human_verification_configs_validate_and_round_trip() {
         },
         ActionConfig::ResumeWhenCondition {
             condition: WorkflowCondition::ElementVisible {
-                xpath: "//*[@id='content']".to_string(),
+                target: None,
+                xpath: Some("//*[@id='content']".to_string()),
             },
             timeout_ms: Some(5000),
         },
@@ -2010,6 +2205,7 @@ fn phase_nine_reliability_configs_validate_and_round_trip() {
             max_attempts: 3,
             delay_ms: Some(100),
             step: Box::new(ActionConfig::AssertText {
+                target: None,
                 xpath: Some("//*[@id='status']".to_string()),
                 iframe_xpath: None,
                 text: "Ready".to_string(),
@@ -2063,6 +2259,7 @@ fn phase_nine_reliability_configs_validate_required_fields() {
             max_attempts: 0,
             delay_ms: None,
             step: Box::new(ActionConfig::Wait {
+                target: None,
                 condition: WaitCondition::Duration,
                 xpath: None,
                 text: None,
@@ -2197,6 +2394,7 @@ fn user_action_taxonomy_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -2212,6 +2410,7 @@ fn user_action_taxonomy_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::ElementVisible,
             xpath: None,
             text: None,
@@ -2227,6 +2426,7 @@ fn user_action_taxonomy_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::SelectOption {
+            target: None,
             xpath: "//*[@name=\"country\"]".to_string(),
             iframe_xpath: None,
             match_by: SelectOptionMatchBy::Label,
@@ -2262,6 +2462,7 @@ fn new_action_types_have_default_configs() {
     assert_eq!(
         default_config(ActionType::Wait),
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -2284,18 +2485,22 @@ fn new_action_types_have_default_configs() {
 fn phase_one_human_interaction_configs_validate_and_round_trip() {
     let configs = [
         ActionConfig::DoubleClick {
+            target: None,
             xpath: "//*[@id=\"item\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::RightClick {
+            target: None,
             xpath: "//*[@id=\"menu-target\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::DragAndDrop {
+            source_target: None,
+            target_target: None,
             source_xpath: "//*[@id=\"source\"]".to_string(),
             target_xpath: "//*[@id=\"target\"]".to_string(),
             iframe_xpath: None,
@@ -2303,18 +2508,21 @@ fn phase_one_human_interaction_configs_validate_and_round_trip() {
             timeout_ms: Some(3000),
         },
         ActionConfig::FocusElement {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::BlurElement {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::TypeSequence {
+            target: None,
             xpath: "//*[@name=\"search\"]".to_string(),
             iframe_xpath: None,
             text: "abc".to_string(),
@@ -2326,30 +2534,35 @@ fn phase_one_human_interaction_configs_validate_and_round_trip() {
             text: "paste me".to_string(),
         },
         ActionConfig::PasteClipboard {
+            target: None,
             xpath: "//*[@name=\"notes\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::Check {
+            target: None,
             xpath: "//*[@name=\"terms\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::Uncheck {
+            target: None,
             xpath: "//*[@name=\"terms\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::ToggleCheckbox {
+            target: None,
             xpath: "//*[@name=\"terms\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::SelectRadio {
+            target: None,
             xpath: "//*[@value=\"email\"]".to_string(),
             iframe_xpath: None,
             wait_until: None,
@@ -2370,6 +2583,7 @@ fn phase_one_human_interaction_configs_validate_and_round_trip() {
 fn phase_one_human_interaction_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::DoubleClick {
+            target: None,
             xpath: String::new(),
             iframe_xpath: None,
             wait_until: None,
@@ -2383,6 +2597,8 @@ fn phase_one_human_interaction_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::DragAndDrop {
+            source_target: None,
+            target_target: None,
             source_xpath: String::new(),
             target_xpath: "//*[@id=\"target\"]".to_string(),
             iframe_xpath: None,
@@ -2397,6 +2613,8 @@ fn phase_one_human_interaction_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::DragAndDrop {
+            source_target: None,
+            target_target: None,
             source_xpath: "//*[@id=\"source\"]".to_string(),
             target_xpath: String::new(),
             iframe_xpath: None,
@@ -2411,6 +2629,7 @@ fn phase_one_human_interaction_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::TypeSequence {
+            target: None,
             xpath: "//*[@name=\"search\"]".to_string(),
             iframe_xpath: None,
             text: String::new(),
@@ -2491,6 +2710,7 @@ fn phase_one_action_types_have_default_configs() {
 fn phase_two_form_and_file_configs_validate_and_round_trip() {
     let configs = [
         ActionConfig::UploadFile {
+            target: None,
             xpath: "//*[@id=\"file\"]".to_string(),
             iframe_xpath: None,
             files: vec!["/tmp/example.txt".to_string()],
@@ -2498,18 +2718,21 @@ fn phase_two_form_and_file_configs_validate_and_round_trip() {
             timeout_ms: Some(3000),
         },
         ActionConfig::SubmitForm {
+            target: None,
             xpath: Some("//*[@id=\"login-form\"]".to_string()),
             iframe_xpath: None,
             wait_until: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::SelectCustomOption {
+            trigger_target: None,
             trigger_xpath: "//*[@role=\"combobox\"]".to_string(),
             option_text: "Vietnam".to_string(),
             iframe_xpath: None,
             timeout_ms: Some(3000),
         },
         ActionConfig::SetContenteditable {
+            target: None,
             xpath: "//*[@contenteditable=\"true\"]".to_string(),
             iframe_xpath: None,
             text: "Hello editor".to_string(),
@@ -2532,6 +2755,7 @@ fn phase_two_form_and_file_configs_validate_and_round_trip() {
 fn phase_two_form_and_file_configs_validate_required_fields() {
     assert_validation_message(
         ActionConfig::UploadFile {
+            target: None,
             xpath: String::new(),
             iframe_xpath: None,
             files: vec!["/tmp/example.txt".to_string()],
@@ -2546,6 +2770,7 @@ fn phase_two_form_and_file_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::UploadFile {
+            target: None,
             xpath: "//*[@id=\"file\"]".to_string(),
             iframe_xpath: None,
             files: vec![],
@@ -2560,6 +2785,7 @@ fn phase_two_form_and_file_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::SelectCustomOption {
+            trigger_target: None,
             trigger_xpath: String::new(),
             option_text: "Vietnam".to_string(),
             iframe_xpath: None,
@@ -2573,6 +2799,7 @@ fn phase_two_form_and_file_configs_validate_required_fields() {
 
     assert_validation_message(
         ActionConfig::SetContenteditable {
+            target: None,
             xpath: "//*[@contenteditable=\"true\"]".to_string(),
             iframe_xpath: None,
             text: String::new(),
@@ -2615,6 +2842,7 @@ fn scroll_config_supports_advanced_modes_and_backwards_compatibility() {
     assert_eq!(
         legacy,
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 300,
@@ -2629,6 +2857,7 @@ fn scroll_config_supports_advanced_modes_and_backwards_compatibility() {
     );
 
     let advanced = ActionConfig::Scroll {
+        target: None,
         mode: Some(ScrollMode::UntilVisible),
         direction: ScrollDirection::Right,
         pixels: 250,
@@ -2656,6 +2885,7 @@ fn click_config_supports_real_user_options_and_backwards_compatibility() {
     assert_eq!(
         legacy,
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -2675,6 +2905,7 @@ fn click_config_supports_real_user_options_and_backwards_compatibility() {
     );
 
     let advanced = ActionConfig::Click {
+        target: None,
         xpath: "//*[@id=\"submit\"]".to_string(),
         iframe_xpath: Some("//*[@id=\"frame\"]".to_string()),
         mode: Some(ClickMode::Real),
@@ -2703,6 +2934,7 @@ fn click_config_supports_real_user_options_and_backwards_compatibility() {
 fn click_config_validates_real_user_options() {
     assert_validation_message(
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -2727,6 +2959,7 @@ fn click_config_validates_real_user_options() {
 
     assert_validation_message(
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: Some(ClickMode::ForceDom),
@@ -2754,6 +2987,7 @@ fn click_config_validates_real_user_options() {
 fn scroll_modes_validate_required_xpath_and_attempts() {
     assert_validation_message(
         ActionConfig::Scroll {
+            target: None,
             mode: Some(ScrollMode::IntoView),
             direction: ScrollDirection::Down,
             pixels: 300,
@@ -2773,6 +3007,7 @@ fn scroll_modes_validate_required_xpath_and_attempts() {
 
     assert_validation_message(
         ActionConfig::Scroll {
+            target: None,
             mode: Some(ScrollMode::UntilVisible),
             direction: ScrollDirection::Down,
             pixels: 300,
@@ -2797,6 +3032,7 @@ fn workflow_step_uses_action_type_from_config() {
         "workflow-1",
         0,
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: None,

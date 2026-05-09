@@ -5,9 +5,11 @@ mod element;
 mod form;
 mod input;
 mod js;
+#[cfg(test)]
 mod keyboard;
 mod pointer;
 mod scroll;
+mod target;
 mod wait;
 
 use std::{future::Future, path::Path, pin::Pin, time::Duration};
@@ -20,7 +22,10 @@ use chromiumoxide::{
             SetDeviceMetricsOverrideParams, SetGeolocationOverrideParams,
             SetTouchEmulationEnabledParams,
         },
-        input::{DispatchMouseEventParams, DispatchMouseEventType, MouseButton},
+        input::{
+            DispatchKeyEventParams, DispatchKeyEventType, DispatchMouseEventParams,
+            DispatchMouseEventType, MouseButton,
+        },
         network::{EnableParams as NetworkEnableParams, Headers, SetExtraHttpHeadersParams},
         page::{
             CaptureScreenshotFormat, GetNavigationHistoryParams, HandleJavaScriptDialogParams,
@@ -33,9 +38,10 @@ use chromiumoxide::{
 };
 
 use crate::domain::{
-    ActionConfig, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode, ClickButton,
-    ClickMode, HeaderPair, ScrollBlock, ScrollInline, StopWorkflowStatus, VariableAssignment,
-    VariableValueType, WaitCondition, WorkflowCondition,
+    ActionConfig, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode, ClearInputMethod,
+    ClickButton, ClickMode, HeaderPair, InputTypingMode, ScrollBlock, ScrollDirection,
+    ScrollInline, ScrollMode, StopWorkflowStatus, VariableAssignment, VariableValueType,
+    WaitCondition, WorkflowCondition,
 };
 
 use self::{
@@ -46,16 +52,11 @@ use self::{
         select_custom_option_script, select_option_script, select_radio_script,
         set_checkbox_script, submit_form_script, toggle_checkbox_script,
     },
-    input::{
-        clear_input_script, input_text_script, set_contenteditable_script, InputTextScriptOptions,
-    },
+    input::{clear_input_script, input_text_script, InputTextScriptOptions},
     js::{ensure_js_action, json_string, optional_json_string},
-    keyboard::{hotkey_script, press_key_script, type_sequence_script},
-    pointer::{
-        click_script, drag_and_drop_script, force_dom_click_script, hover_script,
-        ClickScriptOptions, ClickTargetResult,
-    },
+    pointer::{click_script, force_dom_click_script, ClickScriptOptions, ClickTargetResult},
     scroll::{scroll_script, ScrollScriptOptions},
+    target::{resolve_element_target, resolve_required_element_target, ResolvedTarget},
     wait::{wait_script, WaitScriptOptions},
 };
 use super::{browser::BrowserSession, cancellation::RunnerCancellation, error::RunnerError};
@@ -106,14 +107,26 @@ pub(super) async fn execute_action(
         ActionConfig::Wait {
             condition,
             xpath,
+            target,
             text,
             url,
             duration_ms,
             timeout_ms,
         } => {
+            let resolved = if wait_condition_uses_element(condition) {
+                resolve_element_target(&page, target.as_ref(), xpath.as_deref(), None).await?
+            } else {
+                None
+            };
             let script = wait_script(WaitScriptOptions {
                 condition,
-                xpath: xpath.as_deref(),
+                xpath: resolved
+                    .as_ref()
+                    .map(|target| target.xpath.as_str())
+                    .or(xpath.as_deref()),
+                iframe_xpath: resolved
+                    .as_ref()
+                    .and_then(|target| target.iframe_xpath.as_deref()),
                 text: text.as_deref(),
                 url: url.as_deref(),
                 duration_ms,
@@ -124,6 +137,7 @@ pub(super) async fn execute_action(
         }
         ActionConfig::InputText {
             xpath,
+            target,
             iframe_xpath,
             text,
             clear_before_input,
@@ -133,38 +147,73 @@ pub(super) async fn execute_action(
             timeout_ms,
         } => {
             let text = render_template(&page, &text).await?;
-            let script = input_text_script(InputTextScriptOptions {
-                xpath: &xpath,
-                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
-                text: &text,
-                clear_before_input,
-                typing_mode,
-                delay_ms,
-                wait_until,
-                timeout_ms,
-            })?;
-            ensure_js_action(&page, &script).await?;
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            if matches!(typing_mode, Some(InputTypingMode::Type)) {
+                focus_for_keyboard(&page, &resolved, wait_until, timeout_ms).await?;
+                if clear_before_input {
+                    dispatch_hotkey(&page, &["Control".to_string(), "A".to_string()]).await?;
+                    dispatch_key(&page, "Backspace", 0).await?;
+                }
+                dispatch_text(&page, &text, delay_ms).await?;
+            } else {
+                let script = input_text_script(InputTextScriptOptions {
+                    xpath: &resolved.xpath,
+                    iframe_xpath: resolved.iframe_xpath.as_deref(),
+                    text: &text,
+                    clear_before_input,
+                    typing_mode,
+                    delay_ms,
+                    wait_until,
+                    timeout_ms,
+                })?;
+                ensure_js_action(&page, &script).await?;
+            }
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ClearInput {
             xpath,
+            target,
             iframe_xpath,
             method,
             wait_until,
             timeout_ms,
         } => {
-            let script = clear_input_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
-                method,
-                wait_until,
-                timeout_ms,
-            )?;
-            ensure_js_action(&page, &script).await?;
+            )
+            .await?;
+            if matches!(method, Some(ClearInputMethod::Dom)) {
+                let script = clear_input_script(
+                    &resolved.xpath,
+                    resolved.iframe_xpath.as_deref(),
+                    method,
+                    wait_until,
+                    timeout_ms,
+                )?;
+                ensure_js_action(&page, &script).await?;
+            } else {
+                focus_for_keyboard(&page, &resolved, wait_until, timeout_ms).await?;
+                if matches!(method, Some(ClearInputMethod::Backspace)) {
+                    dispatch_key(&page, "Backspace", 0).await?;
+                } else {
+                    dispatch_hotkey(&page, &["Control".to_string(), "A".to_string()]).await?;
+                    dispatch_key(&page, "Backspace", 0).await?;
+                }
+            }
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Click {
             xpath,
+            target,
             iframe_xpath,
             mode,
             button,
@@ -180,16 +229,21 @@ pub(super) async fn execute_action(
             retry_interval_ms,
             post_click_wait_ms,
         } => {
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
             if matches!(mode, Some(ClickMode::ForceDom)) {
-                let script = force_dom_click_script(
-                    &xpath,
-                    effective_frame(iframe_xpath.as_deref(), session),
-                )?;
+                let script =
+                    force_dom_click_script(&resolved.xpath, resolved.iframe_xpath.as_deref())?;
                 ensure_js_action(&page, &script).await?;
             } else {
                 let script = click_script(ClickScriptOptions {
-                    xpath: &xpath,
-                    iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
+                    xpath: &resolved.xpath,
+                    iframe_xpath: resolved.iframe_xpath.as_deref(),
                     scroll_into_view,
                     block,
                     inline,
@@ -225,6 +279,7 @@ pub(super) async fn execute_action(
             direction,
             pixels,
             xpath,
+            target,
             iframe_xpath,
             behavior,
             block,
@@ -232,32 +287,57 @@ pub(super) async fn execute_action(
             max_attempts,
             wait_ms,
         } => {
-            let script = scroll_script(ScrollScriptOptions {
-                mode,
-                direction,
-                pixels,
-                xpath: xpath.as_deref(),
-                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
-                behavior,
-                block,
-                inline,
-                max_attempts,
-                wait_ms,
-            })?;
-            ensure_js_action(&page, &script).await?;
+            let resolved = resolve_element_target(
+                &page,
+                target.as_ref(),
+                xpath.as_deref(),
+                effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            if matches!(mode.unwrap_or(ScrollMode::Page), ScrollMode::Page) && resolved.is_none() {
+                dispatch_mouse_wheel(&page, direction, pixels).await?;
+            } else {
+                let script = scroll_script(ScrollScriptOptions {
+                    mode,
+                    direction,
+                    pixels,
+                    xpath: resolved
+                        .as_ref()
+                        .map(|target| target.xpath.as_str())
+                        .or(xpath.as_deref()),
+                    iframe_xpath: resolved
+                        .as_ref()
+                        .and_then(|target| target.iframe_xpath.as_deref())
+                        .or_else(|| effective_frame(iframe_xpath.as_deref(), session)),
+                    behavior,
+                    block,
+                    inline,
+                    max_attempts,
+                    wait_ms,
+                })?;
+                ensure_js_action(&page, &script).await?;
+            }
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SelectOption {
             xpath,
+            target,
             iframe_xpath,
             match_by,
             value,
             wait_until,
             timeout_ms,
         } => {
-            let script = select_option_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = select_option_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 match_by,
                 &value,
                 wait_until,
@@ -268,14 +348,22 @@ pub(super) async fn execute_action(
         }
         ActionConfig::SetCheckbox {
             xpath,
+            target,
             iframe_xpath,
             state,
             wait_until,
             timeout_ms,
         } => {
-            let script = set_checkbox_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = set_checkbox_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 state,
                 wait_until,
                 timeout_ms,
@@ -284,39 +372,64 @@ pub(super) async fn execute_action(
             Ok(ActionExecution::Complete)
         }
         ActionConfig::PressKey { key } => {
-            let script = press_key_script(&key)?;
-            ensure_js_action(&page, &script).await?;
+            dispatch_key(&page, &key, 0).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Hotkey { keys } => {
-            let script = hotkey_script(&keys)?;
-            ensure_js_action(&page, &script).await?;
+            dispatch_hotkey(&page, &keys).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::Hover {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = hover_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = click_script(ClickScriptOptions {
+                xpath: &resolved.xpath,
+                iframe_xpath: resolved.iframe_xpath.as_deref(),
+                scroll_into_view: Some(true),
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
                 wait_until,
                 timeout_ms,
-            )?;
-            ensure_js_action(&page, &script).await?;
+                retry_interval_ms: None,
+            })?;
+            let target: ClickTargetResult = page.evaluate(script).await?.into_value()?;
+            if !target.ok {
+                return Err(RunnerError::ActionFailed(target.reason));
+            }
+            dispatch_mouse_hover(&page, Point::new(target.x, target.y)).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::DoubleClick {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
             let script = click_script(ClickScriptOptions {
-                xpath: &xpath,
-                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
+                xpath: &resolved.xpath,
+                iframe_xpath: resolved.iframe_xpath.as_deref(),
                 scroll_into_view: Some(true),
                 block: None,
                 inline: None,
@@ -336,13 +449,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::RightClick {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
             let script = click_script(ClickScriptOptions {
-                xpath: &xpath,
-                iframe_xpath: effective_frame(iframe_xpath.as_deref(), session),
+                xpath: &resolved.xpath,
+                iframe_xpath: resolved.iframe_xpath.as_deref(),
                 scroll_into_view: Some(true),
                 block: None,
                 inline: None,
@@ -368,30 +489,88 @@ pub(super) async fn execute_action(
         }
         ActionConfig::DragAndDrop {
             source_xpath,
+            source_target,
             target_xpath,
+            target_target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = drag_and_drop_script(
+            let legacy_iframe = effective_frame(iframe_xpath.as_deref(), session);
+            let resolved_source = resolve_required_element_target(
+                &page,
+                source_target.as_ref(),
                 &source_xpath,
+                legacy_iframe,
+            )
+            .await?;
+            let resolved_target = resolve_required_element_target(
+                &page,
+                target_target.as_ref(),
                 &target_xpath,
-                effective_frame(iframe_xpath.as_deref(), session),
+                legacy_iframe,
+            )
+            .await?;
+            let iframe_xpath = shared_iframe_xpath(&resolved_source, &resolved_target)?;
+            let source_script = click_script(ClickScriptOptions {
+                xpath: &resolved_source.xpath,
+                iframe_xpath: iframe_xpath.as_deref(),
+                scroll_into_view: Some(true),
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
                 wait_until,
                 timeout_ms,
-            )?;
-            ensure_js_action(&page, &script).await?;
+                retry_interval_ms: None,
+            })?;
+            let target_script = click_script(ClickScriptOptions {
+                xpath: &resolved_target.xpath,
+                iframe_xpath: iframe_xpath.as_deref(),
+                scroll_into_view: Some(true),
+                block: None,
+                inline: None,
+                position: None,
+                offset_x: None,
+                offset_y: None,
+                wait_until,
+                timeout_ms,
+                retry_interval_ms: None,
+            })?;
+            let source: ClickTargetResult = page.evaluate(source_script).await?.into_value()?;
+            if !source.ok {
+                return Err(RunnerError::ActionFailed(source.reason));
+            }
+            let target: ClickTargetResult = page.evaluate(target_script).await?.into_value()?;
+            if !target.ok {
+                return Err(RunnerError::ActionFailed(target.reason));
+            }
+            dispatch_mouse_drag(
+                &page,
+                Point::new(source.x, source.y),
+                Point::new(target.x, target.y),
+            )
+            .await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::FocusElement {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = focus_element_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = focus_element_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 wait_until,
                 timeout_ms,
             )?;
@@ -400,13 +579,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::BlurElement {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = blur_element_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = blur_element_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 wait_until,
                 timeout_ms,
             )?;
@@ -415,6 +602,7 @@ pub(super) async fn execute_action(
         }
         ActionConfig::TypeSequence {
             xpath,
+            target,
             iframe_xpath,
             text,
             delay_ms,
@@ -422,15 +610,15 @@ pub(super) async fn execute_action(
             timeout_ms,
         } => {
             let text = render_template(&page, &text).await?;
-            let script = type_sequence_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
-                &text,
-                delay_ms,
-                wait_until,
-                timeout_ms,
-            )?;
-            ensure_js_action(&page, &script).await?;
+            )
+            .await?;
+            focus_for_keyboard(&page, &resolved, wait_until, timeout_ms).await?;
+            dispatch_text(&page, &text, delay_ms).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::SetClipboard { text } => {
@@ -441,13 +629,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::PasteClipboard {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = paste_clipboard_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = paste_clipboard_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 wait_until,
                 timeout_ms,
             )?;
@@ -456,13 +652,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::Check {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = set_checkbox_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = set_checkbox_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 crate::domain::CheckboxState::Checked,
                 wait_until,
                 timeout_ms,
@@ -472,13 +676,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::Uncheck {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = set_checkbox_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = set_checkbox_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 crate::domain::CheckboxState::Unchecked,
                 wait_until,
                 timeout_ms,
@@ -488,13 +700,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::ToggleCheckbox {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = toggle_checkbox_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = toggle_checkbox_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 wait_until,
                 timeout_ms,
             )?;
@@ -503,13 +723,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::SelectRadio {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = select_radio_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = select_radio_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 wait_until,
                 timeout_ms,
             )?;
@@ -518,15 +746,23 @@ pub(super) async fn execute_action(
         }
         ActionConfig::UploadFile {
             xpath,
+            target,
             iframe_xpath,
             files,
             wait_until: _,
             timeout_ms: _,
         } => {
-            upload_file(
+            let resolved = resolve_required_element_target(
                 &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            upload_file(
+                &page,
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 &files,
             )
             .await?;
@@ -534,13 +770,27 @@ pub(super) async fn execute_action(
         }
         ActionConfig::SubmitForm {
             xpath,
+            target,
             iframe_xpath,
             wait_until,
             timeout_ms,
         } => {
-            let script = submit_form_script(
+            let resolved = resolve_element_target(
+                &page,
+                target.as_ref(),
                 xpath.as_deref(),
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = submit_form_script(
+                resolved
+                    .as_ref()
+                    .map(|target| target.xpath.as_str())
+                    .or(xpath.as_deref()),
+                resolved
+                    .as_ref()
+                    .and_then(|target| target.iframe_xpath.as_deref())
+                    .or_else(|| effective_frame(iframe_xpath.as_deref(), session)),
                 wait_until,
                 timeout_ms,
             )?;
@@ -549,14 +799,22 @@ pub(super) async fn execute_action(
         }
         ActionConfig::SelectCustomOption {
             trigger_xpath,
+            trigger_target,
             option_text,
             iframe_xpath,
             timeout_ms,
         } => {
-            let script = select_custom_option_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                trigger_target.as_ref(),
                 &trigger_xpath,
-                &option_text,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = select_custom_option_script(
+                &resolved.xpath,
+                &option_text,
+                resolved.iframe_xpath.as_deref(),
                 timeout_ms,
             )?;
             ensure_js_action(&page, &script).await?;
@@ -564,6 +822,7 @@ pub(super) async fn execute_action(
         }
         ActionConfig::SetContenteditable {
             xpath,
+            target,
             iframe_xpath,
             text,
             clear_before_input,
@@ -571,26 +830,38 @@ pub(super) async fn execute_action(
             timeout_ms,
         } => {
             let text = render_template(&page, &text).await?;
-            let script = set_contenteditable_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
-                &text,
-                clear_before_input,
-                wait_until,
-                timeout_ms,
-            )?;
-            ensure_js_action(&page, &script).await?;
+            )
+            .await?;
+            focus_for_keyboard(&page, &resolved, wait_until, timeout_ms).await?;
+            if clear_before_input {
+                dispatch_hotkey(&page, &["Control".to_string(), "A".to_string()]).await?;
+                dispatch_key(&page, "Backspace", 0).await?;
+            }
+            dispatch_text(&page, &text, None).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::ExtractText {
             xpath,
+            target,
             iframe_xpath,
             output_name,
             timeout_ms,
         } => {
-            let script = extract_data_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = extract_data_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 &output_name,
                 timeout_ms,
                 ExtractKind::Text,
@@ -600,14 +871,22 @@ pub(super) async fn execute_action(
         }
         ActionConfig::ExtractAttribute {
             xpath,
+            target,
             iframe_xpath,
             attribute,
             output_name,
             timeout_ms,
         } => {
-            let script = extract_data_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = extract_data_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 &output_name,
                 timeout_ms,
                 ExtractKind::Attribute(&attribute),
@@ -617,13 +896,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::ExtractInputValue {
             xpath,
+            target,
             iframe_xpath,
             output_name,
             timeout_ms,
         } => {
-            let script = extract_data_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = extract_data_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 &output_name,
                 timeout_ms,
                 ExtractKind::InputValue,
@@ -633,13 +920,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::ExtractTable {
             xpath,
+            target,
             iframe_xpath,
             output_name,
             timeout_ms,
         } => {
-            let script = extract_data_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = extract_data_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 &output_name,
                 timeout_ms,
                 ExtractKind::Table,
@@ -649,13 +944,21 @@ pub(super) async fn execute_action(
         }
         ActionConfig::ExtractList {
             xpath,
+            target,
             iframe_xpath,
             output_name,
             timeout_ms,
         } => {
-            let script = extract_data_script(
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
                 &xpath,
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = extract_data_script(
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 &output_name,
                 timeout_ms,
                 ExtractKind::List,
@@ -699,8 +1002,10 @@ pub(super) async fn execute_action(
             session.close_tab(index).await?;
             Ok(ActionExecution::Complete)
         }
-        ActionConfig::SwitchFrame { xpath } => {
-            session.switch_frame(xpath);
+        ActionConfig::SwitchFrame { xpath, target } => {
+            let resolved =
+                resolve_element_target(&page, target.as_ref(), xpath.as_deref(), None).await?;
+            session.switch_frame(resolved.map(|target| target.xpath));
             Ok(ActionExecution::Complete)
         }
         ActionConfig::AcceptDialog { prompt_text } => {
@@ -774,10 +1079,18 @@ pub(super) async fn execute_action(
         }
         ActionConfig::AssertElement {
             xpath,
+            target,
             iframe_xpath,
             state,
             timeout_ms,
         } => {
+            let resolved = resolve_required_element_target(
+                &page,
+                target.as_ref(),
+                &xpath,
+                effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
             let condition = match state {
                 AssertElementState::Attached => WaitCondition::ElementAttached,
                 AssertElementState::Visible => WaitCondition::ElementVisible,
@@ -786,8 +1099,8 @@ pub(super) async fn execute_action(
                 AssertElementState::Disabled => WaitCondition::ElementDisabled,
             };
             let script = assert_element_script(
-                &xpath,
-                effective_frame(iframe_xpath.as_deref(), session),
+                &resolved.xpath,
+                resolved.iframe_xpath.as_deref(),
                 condition,
                 timeout_ms,
             )?;
@@ -796,15 +1109,29 @@ pub(super) async fn execute_action(
         }
         ActionConfig::AssertText {
             xpath,
+            target,
             iframe_xpath,
             text,
             match_mode,
             timeout_ms,
         } => {
             let text = render_template(&page, &text).await?;
-            let script = assert_text_script(
+            let resolved = resolve_element_target(
+                &page,
+                target.as_ref(),
                 xpath.as_deref(),
                 effective_frame(iframe_xpath.as_deref(), session),
+            )
+            .await?;
+            let script = assert_text_script(
+                resolved
+                    .as_ref()
+                    .map(|target| target.xpath.as_str())
+                    .or(xpath.as_deref()),
+                resolved
+                    .as_ref()
+                    .and_then(|target| target.iframe_xpath.as_deref())
+                    .or_else(|| effective_frame(iframe_xpath.as_deref(), session)),
                 &text,
                 match_mode,
                 timeout_ms,
@@ -817,7 +1144,7 @@ pub(super) async fn execute_action(
             then_steps,
             else_steps,
         } => {
-            let matches = evaluate_condition(&page, &condition).await?;
+            let matches = evaluate_condition(session, &condition).await?;
             let steps = if matches { then_steps } else { else_steps };
             execute_inline_steps(session, steps, cancellation).await
         }
@@ -924,7 +1251,7 @@ pub(super) async fn execute_action(
                 if deadline.is_some_and(|deadline| tokio::time::Instant::now() >= deadline) {
                     return Ok(ActionExecution::Complete);
                 }
-                if !evaluate_condition(&page, &condition).await? {
+                if !evaluate_condition(session, &condition).await? {
                     return Ok(ActionExecution::Complete);
                 }
                 store_loop_outputs(&page, iteration, max_attempts).await?;
@@ -950,7 +1277,7 @@ pub(super) async fn execute_action(
                 if cancellation.is_cancelled() {
                     return Ok(ActionExecution::Stopped);
                 }
-                if evaluate_condition(&page, &condition).await? {
+                if evaluate_condition(session, &condition).await? {
                     return Ok(ActionExecution::Complete);
                 }
                 if let Some(limit) = max_attempts {
@@ -1180,7 +1507,7 @@ pub(super) async fn execute_action(
             condition,
             timeout_ms,
         } => {
-            wait_for_workflow_condition(&page, &condition, timeout_ms, cancellation).await?;
+            wait_for_workflow_condition(session, &condition, timeout_ms, cancellation).await?;
             Ok(ActionExecution::Complete)
         }
         ActionConfig::FallbackSelector {
@@ -1525,7 +1852,7 @@ fn wait_for_network_script(
 }
 
 async fn wait_for_workflow_condition(
-    page: &Page,
+    session: &BrowserSession,
     condition: &WorkflowCondition,
     timeout_ms: Option<u64>,
     cancellation: &RunnerCancellation,
@@ -1533,7 +1860,7 @@ async fn wait_for_workflow_condition(
     let deadline =
         tokio::time::Instant::now() + Duration::from_millis(timeout_ms.unwrap_or(60_000));
     loop {
-        if evaluate_condition(page, condition).await? {
+        if evaluate_condition(session, condition).await? {
             return Ok(());
         }
         if tokio::time::Instant::now() >= deadline {
@@ -1571,6 +1898,33 @@ fn effective_frame<'a>(
     session: &'a BrowserSession,
 ) -> Option<&'a str> {
     explicit_iframe_xpath.or_else(|| session.frame_xpath())
+}
+
+fn wait_condition_uses_element(condition: WaitCondition) -> bool {
+    matches!(
+        condition,
+        WaitCondition::ElementVisible
+            | WaitCondition::ElementHidden
+            | WaitCondition::ElementAttached
+            | WaitCondition::ElementDetached
+            | WaitCondition::ElementEnabled
+            | WaitCondition::ElementDisabled
+    )
+}
+
+fn shared_iframe_xpath(
+    source: &ResolvedTarget,
+    target: &ResolvedTarget,
+) -> Result<Option<String>, RunnerError> {
+    match (&source.iframe_xpath, &target.iframe_xpath) {
+        (Some(source_iframe), Some(target_iframe)) if source_iframe != target_iframe => {
+            Err(RunnerError::ActionFailed(
+                "Drag and drop targets must resolve inside the same iframe".to_string(),
+            ))
+        }
+        (Some(iframe), _) | (_, Some(iframe)) => Ok(Some(iframe.clone())),
+        (None, None) => Ok(None),
+    }
 }
 
 fn scroll_block_value(block: Option<ScrollBlock>) -> &'static str {
@@ -1670,9 +2024,10 @@ fn store_variable_assignments_script(
 }
 
 async fn evaluate_condition(
-    page: &Page,
+    session: &BrowserSession,
     condition: &WorkflowCondition,
 ) -> Result<bool, RunnerError> {
+    let page = session.current_page()?;
     let script = match condition {
         WorkflowCondition::OutputEquals { name, value } => {
             let name = json_string(name)?;
@@ -1694,11 +2049,23 @@ async fn evaluate_condition(
             let value = json_string(value)?;
             format!(r#"(() => window.location.href.includes({value}))()"#)
         }
-        WorkflowCondition::ElementVisible { xpath } => {
-            let xpath = json_string(xpath)?;
+        WorkflowCondition::ElementVisible { xpath, target } => {
+            let resolved =
+                resolve_element_target(&page, target.as_ref(), xpath.as_deref(), None).await?;
+            let Some(resolved) = resolved else {
+                return Ok(false);
+            };
+            let xpath = json_string(&resolved.xpath)?;
+            let iframe_xpath = optional_json_string(resolved.iframe_xpath.as_deref())?;
             format!(
                 r#"(() => {{
-                  const node = document.evaluate({xpath}, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                  const iframeXpath = {iframe_xpath};
+                  const byXpath = (path, rootDocument) => rootDocument.evaluate(path, rootDocument, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                  const rootDocument = iframeXpath
+                    ? byXpath(iframeXpath, document)?.contentDocument
+                    : document;
+                  if (!rootDocument) return false;
+                  const node = byXpath({xpath}, rootDocument);
                   if (!node || !(node instanceof Element)) return false;
                   const style = window.getComputedStyle(node);
                   const rect = node.getBoundingClientRect();
@@ -2146,6 +2513,190 @@ async fn dispatch_mouse_click(
     .await?;
 
     Ok(())
+}
+
+async fn dispatch_mouse_hover(page: &Page, point: Point) -> Result<(), RunnerError> {
+    page.execute(
+        DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseMoved)
+            .x(point.x)
+            .y(point.y)
+            .button(MouseButton::None)
+            .build()
+            .expect("mouse moved event should be valid"),
+    )
+    .await?;
+    Ok(())
+}
+
+async fn dispatch_mouse_drag(page: &Page, source: Point, target: Point) -> Result<(), RunnerError> {
+    dispatch_mouse_hover(page, source).await?;
+    page.execute(
+        DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MousePressed)
+            .x(source.x)
+            .y(source.y)
+            .button(MouseButton::Left)
+            .buttons(1)
+            .click_count(1)
+            .build()
+            .expect("mouse pressed event should be valid"),
+    )
+    .await?;
+    for step in 1..=8 {
+        let progress = f64::from(step) / 8.0;
+        let point = Point::new(
+            source.x + (target.x - source.x) * progress,
+            source.y + (target.y - source.y) * progress,
+        );
+        page.execute(
+            DispatchMouseEventParams::builder()
+                .r#type(DispatchMouseEventType::MouseMoved)
+                .x(point.x)
+                .y(point.y)
+                .button(MouseButton::Left)
+                .buttons(1)
+                .build()
+                .expect("mouse moved drag event should be valid"),
+        )
+        .await?;
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    page.execute(
+        DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseReleased)
+            .x(target.x)
+            .y(target.y)
+            .button(MouseButton::Left)
+            .buttons(0)
+            .click_count(1)
+            .build()
+            .expect("mouse released event should be valid"),
+    )
+    .await?;
+    Ok(())
+}
+
+async fn dispatch_mouse_wheel(
+    page: &Page,
+    direction: ScrollDirection,
+    pixels: i64,
+) -> Result<(), RunnerError> {
+    let (delta_x, delta_y) = match direction {
+        ScrollDirection::Left => (-(pixels as f64), 0.0),
+        ScrollDirection::Right => (pixels as f64, 0.0),
+        ScrollDirection::Up => (0.0, -(pixels as f64)),
+        ScrollDirection::Down => (0.0, pixels as f64),
+    };
+    page.execute(
+        DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseWheel)
+            .x(0.0)
+            .y(0.0)
+            .delta_x(delta_x)
+            .delta_y(delta_y)
+            .build()
+            .expect("mouse wheel event should be valid"),
+    )
+    .await?;
+    Ok(())
+}
+
+async fn dispatch_key(page: &Page, key: &str, modifiers: i64) -> Result<(), RunnerError> {
+    page.execute(
+        DispatchKeyEventParams::builder()
+            .r#type(DispatchKeyEventType::RawKeyDown)
+            .key(key)
+            .modifiers(modifiers)
+            .build()
+            .expect("raw key down event should be valid"),
+    )
+    .await?;
+    page.execute(
+        DispatchKeyEventParams::builder()
+            .r#type(DispatchKeyEventType::KeyUp)
+            .key(key)
+            .modifiers(modifiers)
+            .build()
+            .expect("key up event should be valid"),
+    )
+    .await?;
+    Ok(())
+}
+
+async fn dispatch_text(page: &Page, text: &str, delay_ms: Option<u64>) -> Result<(), RunnerError> {
+    for character in text.chars() {
+        let value = character.to_string();
+        page.execute(
+            DispatchKeyEventParams::builder()
+                .r#type(DispatchKeyEventType::Char)
+                .text(value.clone())
+                .unmodified_text(value.clone())
+                .key(value)
+                .build()
+                .expect("char event should be valid"),
+        )
+        .await?;
+        if let Some(delay_ms) = delay_ms.filter(|delay| *delay > 0) {
+            tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+        }
+    }
+    Ok(())
+}
+
+async fn dispatch_hotkey(page: &Page, keys: &[String]) -> Result<(), RunnerError> {
+    let Some(key) = keys.last().map(String::as_str) else {
+        return Ok(());
+    };
+    dispatch_key(page, key, modifier_mask(keys)).await
+}
+
+fn modifier_mask(keys: &[String]) -> i64 {
+    let mut mask = 0;
+    for key in keys {
+        if key.eq_ignore_ascii_case("alt") {
+            mask |= 1;
+        }
+        if key.eq_ignore_ascii_case("control") || key.eq_ignore_ascii_case("ctrl") {
+            mask |= 2;
+        }
+        if key.eq_ignore_ascii_case("meta")
+            || key.eq_ignore_ascii_case("cmd")
+            || key.eq_ignore_ascii_case("command")
+        {
+            mask |= 4;
+        }
+        if key.eq_ignore_ascii_case("shift") {
+            mask |= 8;
+        }
+    }
+    mask
+}
+
+async fn focus_for_keyboard(
+    page: &Page,
+    resolved: &ResolvedTarget,
+    wait_until: Option<crate::domain::ClickWaitUntil>,
+    timeout_ms: Option<u64>,
+) -> Result<(), RunnerError> {
+    let script = click_script(ClickScriptOptions {
+        xpath: &resolved.xpath,
+        iframe_xpath: resolved.iframe_xpath.as_deref(),
+        scroll_into_view: Some(true),
+        block: None,
+        inline: None,
+        position: None,
+        offset_x: None,
+        offset_y: None,
+        wait_until,
+        timeout_ms,
+        retry_interval_ms: None,
+    })?;
+    let target: ClickTargetResult = page.evaluate(script).await?.into_value()?;
+    if !target.ok {
+        return Err(RunnerError::ActionFailed(target.reason));
+    }
+    dispatch_mouse_click(page, Point::new(target.x, target.y), None, 1).await
 }
 
 fn mouse_button_for(button: Option<ClickButton>) -> MouseButton {

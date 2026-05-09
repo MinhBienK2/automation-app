@@ -165,7 +165,7 @@ export function updateActionConfigField(
     case "close_tab":
       return { type: "close_tab", config: { index: value ? Number(value) : null } };
     case "switch_frame":
-      return { type: "switch_frame", config: { xpath: value || null } };
+      return { type: "switch_frame", config: { ...config.config, xpath: value || null } };
     case "accept_dialog":
       return { type: "accept_dialog", config: { prompt_text: value || null } };
     case "dismiss_dialog":

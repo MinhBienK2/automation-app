@@ -9,7 +9,8 @@ use crate::{
         GraphValidationLevel, RunMode, RunValidationIssue, RunValidationIssueSource,
         ValidationError, VariableAssignment, VariableValueType, WaitCondition,
         WorkflowBrowserConfig, WorkflowBrowserRetention, WorkflowGraph, WorkflowInputValueType,
-        WorkflowSettings, WorkflowSettingsIssueLevel, WorkflowSettingsSection, WorkflowStep,
+        WorkflowInteractionFidelity, WorkflowSettings, WorkflowSettingsIssueLevel,
+        WorkflowSettingsSection, WorkflowStep, WorkflowTimingProfile,
     },
     services::run_service::{start_background_run, BackgroundRunOptions},
 };
@@ -233,6 +234,7 @@ fn global_wait_step(settings: &WorkflowSettings, index: usize) -> CompiledGraphS
         ActionConfig::Wait {
             condition: WaitCondition::Duration,
             xpath: None,
+            target: None,
             text: None,
             url: None,
             duration_ms: Some(settings.execution.wait_between_nodes_ms.unwrap_or(1000)),
@@ -488,6 +490,29 @@ fn settings_prelude_steps(settings: &WorkflowSettings) -> Vec<CompiledGraphStep>
         ));
     }
 
+    if settings.browser.fingerprint_preflight_enabled {
+        if let Some(probe_url) = settings.browser.fingerprint_probe_url.as_deref() {
+            steps.push(settings_step(
+                "browser:fingerprint-preflight:navigate",
+                "Open fingerprint preflight probe",
+                ActionConfig::Navigate {
+                    url: probe_url.to_string(),
+                    wait_until: None,
+                    timeout_ms: settings.execution.default_action_timeout_ms,
+                },
+            ));
+            steps.push(settings_step(
+                "browser:fingerprint-preflight:verdict",
+                "Validate fingerprint preflight verdict",
+                ActionConfig::ExecuteJs {
+                    script: fingerprint_preflight_script(settings),
+                    output_name: None,
+                    timeout_ms: settings.execution.default_action_timeout_ms,
+                },
+            ));
+        }
+    }
+
     let mut variables = settings
         .inputs
         .input_schema
@@ -521,6 +546,83 @@ fn settings_prelude_steps(settings: &WorkflowSettings) -> Vec<CompiledGraphStep>
     steps
 }
 
+fn fingerprint_preflight_script(settings: &WorkflowSettings) -> String {
+    let profile_id = serde_json::to_string(
+        &settings
+            .browser
+            .fingerprint_profile_id
+            .clone()
+            .unwrap_or_else(|| "unassigned".to_string()),
+    )
+    .unwrap_or_else(|_| "\"unassigned\"".to_string());
+    let workflow_id =
+        serde_json::to_string(&settings.workflow_id).unwrap_or_else(|_| "\"unknown\"".to_string());
+    let proxy_label = serde_json::to_string(&settings.browser.fingerprint_proxy_label)
+        .unwrap_or_else(|_| "null".to_string());
+    let proxy_region = serde_json::to_string(&settings.browser.fingerprint_proxy_region)
+        .unwrap_or_else(|_| "null".to_string());
+    [
+        "const expectedProfileId = ",
+        &profile_id,
+        ";\nconst workflowId = ",
+        &workflow_id,
+        ";\nconst proxyLabel = ",
+        &proxy_label,
+        ";\nconst proxyRegion = ",
+        &proxy_region,
+        ";\n",
+        r#"
+        const parseVerdict = () => {
+          const raw = document.body ? document.body.innerText.trim() : "";
+          if (!raw) throw new Error("Fingerprint probe returned an empty verdict");
+          try {
+            return JSON.parse(raw);
+          } catch (error) {
+            throw new Error("Fingerprint probe returned malformed JSON");
+          }
+        };
+        const verdict = parseVerdict();
+        const required = ["passed", "verdict", "risk_score", "run_id", "profile_id", "mismatches", "evidence"];
+        for (const field of required) {
+          if (!(field in verdict)) throw new Error(`Fingerprint verdict missing required field: ${field}`);
+        }
+        if (typeof verdict.passed !== "boolean") throw new Error("Fingerprint verdict field passed must be boolean");
+        if (!Array.isArray(verdict.mismatches)) throw new Error("Fingerprint verdict mismatches must be an array");
+        const evidence = {
+          workflow_id: workflowId,
+          timestamp_ms: Date.now(),
+          probe_origin: window.location.origin,
+          run_id: String(verdict.run_id || ""),
+          profile_id: String(verdict.profile_id || expectedProfileId),
+          expected_profile_id: expectedProfileId,
+          proxy_label: proxyLabel,
+          proxy_region: proxyRegion,
+          verdict: String(verdict.verdict || ""),
+          risk_score: verdict.risk_score ?? null,
+          passed: verdict.passed,
+          mismatches: verdict.mismatches.map((item) => ({
+            category: String(item.category || "other"),
+            field: String(item.field || "unknown"),
+            severity: String(item.severity || "low"),
+            expected: item.expected == null ? null : String(item.expected),
+            observed: item.observed == null ? null : String(item.observed),
+            reason: String(item.reason || "")
+          })),
+          coverage: verdict.evidence || {}
+        };
+        window.__wamOutputs = window.__wamOutputs || {};
+        window.__wamOutputs.fingerprint_preflight = evidence;
+        if (!verdict.passed) {
+          const firstMismatch = evidence.mismatches[0];
+          const suffix = firstMismatch ? `: ${firstMismatch.category}.${firstMismatch.field} ${firstMismatch.reason}` : "";
+          throw new Error(`Fingerprint preflight blocked run ${evidence.run_id}${suffix}`);
+        }
+        return evidence;
+        "#
+    ]
+    .concat()
+}
+
 fn settings_step(
     id: impl Into<String>,
     label: impl Into<String>,
@@ -545,16 +647,84 @@ fn input_value_type_to_variable_type(value_type: WorkflowInputValueType) -> Vari
 }
 
 fn apply_execution_defaults(config: ActionConfig, settings: &WorkflowSettings) -> ActionConfig {
-    let Some(timeout_ms) = settings.execution.default_action_timeout_ms else {
-        return config;
-    };
-
     let original = config.clone();
     let Ok(mut value) = serde_json::to_value(config) else {
         return original;
     };
-    apply_default_timeout_to_action_value(&mut value, timeout_ms);
+    if let Some(timeout_ms) = settings.execution.default_action_timeout_ms {
+        apply_default_timeout_to_action_value(&mut value, timeout_ms);
+    }
+    if settings.execution.interaction_fidelity == WorkflowInteractionFidelity::High {
+        apply_high_fidelity_defaults_to_action_value(&mut value, settings.execution.timing_profile);
+    }
     serde_json::from_value(value).unwrap_or(original)
+}
+
+fn apply_high_fidelity_defaults_to_action_value(
+    value: &mut Value,
+    timing_profile: WorkflowTimingProfile,
+) {
+    let Some(action_type) = value
+        .get("type")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+    else {
+        return;
+    };
+    let Some(config) = value.get_mut("config").and_then(Value::as_object_mut) else {
+        return;
+    };
+
+    if action_type == "input_text" {
+        config.insert("typing_mode".to_string(), Value::String("type".to_string()));
+        config
+            .entry("delay_ms".to_string())
+            .or_insert(Value::Number(
+                high_fidelity_key_delay(timing_profile).into(),
+            ));
+    }
+
+    for key in [
+        "then_steps",
+        "else_steps",
+        "steps",
+        "failed_steps",
+        "default_steps",
+        "try_steps",
+        "success_steps",
+        "error_steps",
+        "finally_steps",
+        "primary_steps",
+        "fallback_steps",
+        "timeout_steps",
+    ] {
+        if let Some(Value::Array(steps)) = config.get_mut(key) {
+            for step in steps {
+                apply_high_fidelity_defaults_to_action_value(step, timing_profile);
+            }
+        }
+    }
+
+    if let Some(Value::Array(cases)) = config.get_mut("cases") {
+        for case in cases {
+            if let Some(Value::Array(steps)) = case.get_mut("steps") {
+                for step in steps {
+                    apply_high_fidelity_defaults_to_action_value(step, timing_profile);
+                }
+            }
+        }
+    }
+
+    if let Some(step) = config.get_mut("step") {
+        apply_high_fidelity_defaults_to_action_value(step, timing_profile);
+    }
+}
+
+fn high_fidelity_key_delay(timing_profile: WorkflowTimingProfile) -> u64 {
+    match timing_profile {
+        WorkflowTimingProfile::Balanced => 40,
+        WorkflowTimingProfile::SlowRealistic | WorkflowTimingProfile::Custom => 90,
+    }
 }
 
 fn apply_default_timeout_to_action_value(value: &mut Value, timeout_ms: u64) {
@@ -821,4 +991,41 @@ fn expand_action_config_list<'a>(
             .map(|step| step.config)
             .collect())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::Workflow;
+
+    #[test]
+    fn fingerprint_preflight_prelude_preserves_script_written_evidence() {
+        let workflow = Workflow::new("Fingerprint preflight");
+        let mut settings = WorkflowSettings::default_for_workflow(&workflow);
+        settings.browser.fingerprint_preflight_enabled = true;
+        settings.browser.fingerprint_probe_url =
+            Some("https://owned.example.test/fingerprint".to_string());
+        settings.browser.fingerprint_profile_id = Some("owned-profile".to_string());
+
+        let steps = settings_prelude_steps(&settings);
+        let verdict_step = steps
+            .iter()
+            .find(|step| step.node_id == "__settings:browser:fingerprint-preflight:verdict")
+            .expect("fingerprint preflight verdict step should be compiled");
+
+        match &verdict_step.config {
+            ActionConfig::ExecuteJs {
+                script,
+                output_name,
+                ..
+            } => {
+                assert!(
+                    output_name.is_none(),
+                    "preflight script stores structured evidence itself"
+                );
+                assert!(script.contains("window.__wamOutputs.fingerprint_preflight = evidence"));
+            }
+            other => panic!("expected ExecuteJs preflight verdict step, got {other:?}"),
+        }
+    }
 }

@@ -72,7 +72,7 @@ export function ConditionFields({ condition, onChange }: ConditionFieldsProps) {
         <Label>
           XPath
           <Input
-            value={condition.xpath}
+            value={condition.xpath ?? ""}
             onChange={(event) =>
               onChange({ ...condition, xpath: event.currentTarget.value })
             }

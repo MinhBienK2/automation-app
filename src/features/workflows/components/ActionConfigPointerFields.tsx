@@ -38,15 +38,7 @@ export function PointerActionFields({
     case "click":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ElementTargetFields config={config} onChange={onChange} />
           <Label>
             Mode
             <Select
@@ -85,18 +77,6 @@ export function PointerActionFields({
               <option value="right">Right</option>
               <option value="middle">Middle</option>
             </Select>
-          </Label>
-          <Label>
-            Iframe XPath
-            <Input
-              value={config.config.iframe_xpath ?? ""}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
-                )
-              }
-              placeholder="Optional iframe XPath"
-            />
           </Label>
           <Label>
             Scroll into view

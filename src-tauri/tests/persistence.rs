@@ -55,6 +55,7 @@ async fn step_config_round_trips_through_json() {
         .add_step(
             &workflow.id,
             ActionConfig::InputText {
+                target: None,
                 xpath: "//*[@name=\"email\"]".to_string(),
                 iframe_xpath: None,
                 text: "user@example.com".to_string(),
@@ -72,6 +73,7 @@ async fn step_config_round_trips_through_json() {
         &step.id,
         "Scroll page",
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
@@ -96,6 +98,7 @@ async fn step_config_round_trips_through_json() {
     assert_eq!(
         detail.steps[0].config,
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
@@ -153,6 +156,7 @@ async fn repository_normalizes_legacy_step_configs_when_reading_old_databases() 
     assert_eq!(
         detail.steps[1].config,
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -164,6 +168,7 @@ async fn repository_normalizes_legacy_step_configs_when_reading_old_databases() 
     assert_eq!(
         detail.steps[2].config,
         ActionConfig::InputText {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             text: "user@example.com".to_string(),
@@ -189,6 +194,7 @@ async fn reorder_persists_and_delete_compacts_order_indexes() {
         .add_step(
             &workflow.id,
             ActionConfig::Click {
+                target: None,
                 xpath: "//*[@id=\"submit\"]".to_string(),
                 iframe_xpath: None,
                 mode: None,
@@ -435,6 +441,7 @@ async fn workflow_settings_persist_round_trip_lazy_defaults_and_cascade() {
 
 fn wait_duration(duration_ms: u64) -> ActionConfig {
     ActionConfig::Wait {
+        target: None,
         condition: WaitCondition::Duration,
         xpath: None,
         text: None,

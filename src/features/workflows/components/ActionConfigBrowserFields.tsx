@@ -3,6 +3,7 @@ import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { StructuredTargetFields } from "./ActionConfigElementSharedFields";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -62,16 +63,19 @@ export function BrowserActionFields({
       );
     case "switch_frame":
       return (
-        <Label>
-          XPath
-          <Input
-            value={config.config.xpath ?? ""}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-            }
-            placeholder="Blank uses top frame"
-          />
-        </Label>
+        <>
+          <Label>
+            XPath
+            <Input
+              value={config.config.xpath ?? ""}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+              }
+              placeholder="Blank uses top frame"
+            />
+          </Label>
+          <StructuredTargetFields config={config} onChange={onChange} />
+        </>
       );
     case "accept_dialog":
       return (

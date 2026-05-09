@@ -4,6 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { ElementTargetFields, StructuredTargetFields } from "./ActionConfigElementSharedFields";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
@@ -103,15 +104,18 @@ export function CoreActionFields({
             </Label>
           ) : null}
           {config.config.condition.startsWith("element_") ? (
-            <Label>
-              XPath
-              <Input
-                value={config.config.xpath ?? ""}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <>
+              <Label>
+                XPath
+                <Input
+                  value={config.config.xpath ?? ""}
+                  onChange={(event) =>
+                    onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
+                  }
+                />
+              </Label>
+              <StructuredTargetFields config={config} onChange={onChange} />
+            </>
           ) : null}
           {config.config.condition === "text_visible" ? (
             <Label>
@@ -180,15 +184,7 @@ export function CoreActionFields({
     case "input_text":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ElementTargetFields config={config} onChange={onChange} />
           <TemplateTextareaField
             label="Text"
             value={config.config.text}
@@ -226,18 +222,6 @@ export function CoreActionFields({
               <option value="set_value">Set value</option>
               <option value="type">Type keys</option>
             </Select>
-          </Label>
-          <Label>
-            Iframe XPath
-            <Input
-              value={config.config.iframe_xpath ?? ""}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
-                )
-              }
-              placeholder="Optional iframe XPath"
-            />
           </Label>
           <Label>
             Delay ms

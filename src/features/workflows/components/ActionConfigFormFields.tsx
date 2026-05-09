@@ -5,7 +5,11 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { ElementOptionalFields, ElementTargetFields } from "./ActionConfigElementSharedFields";
+import {
+  ElementOptionalFields,
+  ElementTargetFields,
+  StructuredTargetFields,
+} from "./ActionConfigElementSharedFields";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -20,15 +24,7 @@ export function FormActionFields({
     case "select_option":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ElementTargetFields config={config} onChange={onChange} />
           <Label>
             Match by
             <Select
@@ -50,7 +46,6 @@ export function FormActionFields({
               }
             />
           </Label>
-          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "set_checkbox":
@@ -126,6 +121,11 @@ export function FormActionFields({
               }
             />
           </Label>
+          <StructuredTargetFields
+            config={config}
+            onChange={onChange}
+            targetField="source_target"
+          />
           <Label>
             Target XPath
             <Input
@@ -141,21 +141,18 @@ export function FormActionFields({
               }
             />
           </Label>
+          <StructuredTargetFields
+            config={config}
+            onChange={onChange}
+            targetField="target_target"
+          />
           <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "type_sequence":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ElementTargetFields config={config} onChange={onChange} />
           <Label>
             Text
             <Textarea
@@ -176,7 +173,6 @@ export function FormActionFields({
               }
             />
           </Label>
-          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "set_clipboard":
@@ -194,15 +190,7 @@ export function FormActionFields({
     case "upload_file":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ElementTargetFields config={config} onChange={onChange} />
           <Label>
             Files
             <Textarea
@@ -212,23 +200,12 @@ export function FormActionFields({
               }
             />
           </Label>
-          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "submit_form":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-              placeholder="Optional form or field XPath"
-            />
-          </Label>
-          <ElementOptionalFields config={config} onChange={onChange} />
+          <ElementTargetFields config={config} onChange={onChange} />
         </>
       );
     case "select_custom_option":
@@ -249,6 +226,11 @@ export function FormActionFields({
               }
             />
           </Label>
+          <StructuredTargetFields
+            config={config}
+            onChange={onChange}
+            targetField="trigger_target"
+          />
           <Label>
             Option text
             <Input
@@ -260,45 +242,13 @@ export function FormActionFields({
               }
             />
           </Label>
-          <Label>
-            Iframe XPath
-            <Input
-              value={config.config.iframe_xpath ?? ""}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
-                )
-              }
-              placeholder="Optional iframe XPath"
-            />
-          </Label>
-          <Label>
-            Timeout ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.timeout_ms ?? 5000}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
+          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "set_contenteditable":
       return (
         <>
-          <Label>
-            XPath
-            <Input
-              value={config.config.xpath}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ElementTargetFields config={config} onChange={onChange} />
           <Label>
             Text
             <Textarea
@@ -326,7 +276,6 @@ export function FormActionFields({
               <option value="false">No</option>
             </Select>
           </Label>
-          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
 

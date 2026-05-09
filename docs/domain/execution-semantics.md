@@ -15,7 +15,9 @@
 - Environment defaults from Workflow Settings compile into setup actions before graph actions: geolocation, permission grants, extra headers, download directory, cookies, localStorage, and sessionStorage.
 - Variables settings seed the runtime variable store before graph actions. Legacy input schema data remains persisted for compatibility but is not exposed by the current Variables UI.
 - Execution settings fill missing action `timeout_ms` fields from `default_action_timeout_ms`; action-level timeouts remain more specific.
+- Execution settings include interaction fidelity controls. Existing workflows default to `standard`; `high` switches compatible text input defaults to browser-key typing with the selected timing profile.
 - Execution settings can insert a wait between graph nodes. Fixed mode inserts a duration wait; random mode inserts a random wait within the configured min/max range. Explicit `wait` and `random_wait` graph nodes override the global wait at their position and prevent an extra inserted wait next to them.
+- When Browser fingerprint preflight is enabled, settings setup opens the configured allowlisted probe URL after launch/environment setup and before graph actions. The probe must return the JSON verdict contract; failed or malformed verdicts stop the run before workflow actions and store sanitized `fingerprint_preflight` evidence in outputs when available.
 - Execution `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Execution `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
@@ -28,6 +30,7 @@
 - Mode values are `none`, `run_workflow`, and `test_step`.
 - Step progress reports current step id/number and completed step ids.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
+- Captured outputs may include backend evidence keys such as `__action_traces` and `fingerprint_preflight`.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 - Workflow Settings Triggers are persisted planned metadata only. No scheduler service runs trigger modes or policies yet, and the UI presents them as planned rather than active controls.

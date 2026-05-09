@@ -4,7 +4,9 @@ import type {
   VariableAssignment,
   WorkflowBrowserChallengePolicy,
   WorkflowDebugLoggingLevel,
+  WorkflowDirectDomFallback,
   WorkflowFailurePolicy,
+  WorkflowInteractionFidelity,
   WorkflowSettings,
   WorkflowSettingsAdvanced,
   WorkflowSettingsBrowser,
@@ -13,6 +15,7 @@ import type {
   WorkflowSettingsGeneral,
   WorkflowSettingsInputs,
   WorkflowSettingsSectionId,
+  WorkflowTimingProfile,
   WorkflowSettingsTriggers,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
@@ -477,6 +480,61 @@ function ExecutionSettingsSection({
         </Label>
       </div>
       <fieldset className="workflow-settings-fieldset">
+        <legend>Interaction fidelity</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-three">
+          <Label htmlFor="workflow-settings-interaction-fidelity">
+            Fidelity
+            <Select
+              id="workflow-settings-interaction-fidelity"
+              value={value.interaction_fidelity ?? "standard"}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  interaction_fidelity: event.currentTarget.value as WorkflowInteractionFidelity,
+                })
+              }
+            >
+              <option value="standard">Standard</option>
+              <option value="high">High</option>
+            </Select>
+          </Label>
+          <Label htmlFor="workflow-settings-dom-fallback">
+            DOM fallback
+            <Select
+              id="workflow-settings-dom-fallback"
+              value={value.direct_dom_fallback ?? "allowed_with_trace"}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  direct_dom_fallback: event.currentTarget.value as WorkflowDirectDomFallback,
+                })
+              }
+            >
+              <option value="allowed_with_trace">Allowed with trace</option>
+              <option value="explicit">Explicit only</option>
+              <option value="disabled">Disabled</option>
+            </Select>
+          </Label>
+          <Label htmlFor="workflow-settings-timing-profile">
+            Timing profile
+            <Select
+              id="workflow-settings-timing-profile"
+              value={value.timing_profile ?? "balanced"}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  timing_profile: event.currentTarget.value as WorkflowTimingProfile,
+                })
+              }
+            >
+              <option value="balanced">Balanced</option>
+              <option value="slow_realistic">Slow realistic</option>
+              <option value="custom">Custom</option>
+            </Select>
+          </Label>
+        </div>
+      </fieldset>
+      <fieldset className="workflow-settings-fieldset">
         <legend>Wait between nodes</legend>
         <div className="workflow-settings-grid workflow-settings-grid-two">
           <ToggleField
@@ -752,6 +810,85 @@ function BrowserSettingsSection({
           onChange={(checked) => onChange({ ...value, headless: checked })}
         />
       </div>
+      <fieldset className="workflow-settings-fieldset">
+        <legend>Fingerprint preflight</legend>
+        <div className="workflow-settings-grid workflow-settings-grid-two">
+          <ToggleField
+            id="browser-fingerprint-preflight"
+            label="Enable preflight"
+            checked={value.fingerprint_preflight_enabled ?? false}
+            onChange={(checked) =>
+              onChange({ ...value, fingerprint_preflight_enabled: checked })
+            }
+          />
+          <Label htmlFor="browser-fingerprint-profile">
+            Identity profile
+            <Input
+              id="browser-fingerprint-profile"
+              value={value.fingerprint_profile_id ?? ""}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  fingerprint_profile_id: nullableText(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label htmlFor="browser-fingerprint-probe" className="workflow-settings-span-two">
+            Probe URL
+            <Input
+              id="browser-fingerprint-probe"
+              value={value.fingerprint_probe_url ?? ""}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  fingerprint_probe_url: nullableText(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label htmlFor="browser-fingerprint-origins" className="workflow-settings-span-two">
+            Allowed origins
+            <Input
+              id="browser-fingerprint-origins"
+              placeholder="https://prod-owned.example, https://staging-owned.example"
+              value={(value.fingerprint_allowed_origins ?? []).join(", ")}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  fingerprint_allowed_origins: tagsFromInput(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label htmlFor="browser-fingerprint-proxy-label">
+            Proxy label
+            <Input
+              id="browser-fingerprint-proxy-label"
+              value={value.fingerprint_proxy_label ?? ""}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  fingerprint_proxy_label: nullableText(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label htmlFor="browser-fingerprint-proxy-region">
+            Proxy region
+            <Input
+              id="browser-fingerprint-proxy-region"
+              value={value.fingerprint_proxy_region ?? ""}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  fingerprint_proxy_region: nullableText(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+        </div>
+      </fieldset>
     </div>
   );
 }

@@ -554,6 +554,7 @@ pub async fn normalize_recorded_events_impl(
         .into_iter()
         .map(|event| match event {
             RecordedEvent::Click { xpath } => Ok(ActionConfig::Click {
+                target: None,
                 xpath,
                 iframe_xpath: None,
                 mode: None,
@@ -571,6 +572,7 @@ pub async fn normalize_recorded_events_impl(
                 post_click_wait_ms: None,
             }),
             RecordedEvent::InputText { xpath, text } => Ok(ActionConfig::InputText {
+                target: None,
                 xpath,
                 iframe_xpath: None,
                 text,

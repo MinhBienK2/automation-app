@@ -11,9 +11,10 @@ mod workflow_settings;
 pub use action_config::{
     ActionConfig, ActionType, AssertElementState, AssertOutputMatchMode, AssertTextMatchMode,
     CheckboxState, ClearInputMethod, ClickButton, ClickMode, ClickPosition, ClickWaitUntil,
-    HeaderPair, InputTypingMode, NavigateWaitUntil, ScrollBehavior, ScrollBlock, ScrollDirection,
-    ScrollInline, ScrollMode, SelectOptionMatchBy, StopWorkflowStatus, SwitchCase,
-    VariableAssignment, VariableMapping, VariableValueType, WaitCondition, WorkflowCondition,
+    ElementLocator, ElementLocatorKind, ElementTarget, ElementTargetConstraints, HeaderPair,
+    InputTypingMode, NavigateWaitUntil, ScrollBehavior, ScrollBlock, ScrollDirection, ScrollInline,
+    ScrollMode, SelectOptionMatchBy, StopWorkflowStatus, SwitchCase, VariableAssignment,
+    VariableMapping, VariableValueType, WaitCondition, WorkflowCondition,
 };
 pub use browser_config::{WorkflowBrowserChallengePolicy, WorkflowBrowserConfig};
 pub use builder_assist::{ElementSnapshot, GeneratedFixture, RecordedEvent, SelectorCandidate};
@@ -32,11 +33,13 @@ pub use workflow_graph::{
 };
 pub use workflow_settings::{
     RunValidationIssue, RunValidationIssueSource, SettingsValidationIssue,
-    WorkflowBrowserRetention, WorkflowDebugLoggingLevel, WorkflowFailurePolicy,
-    WorkflowInputValueType, WorkflowMissedRunPolicy, WorkflowSettings, WorkflowSettingsAdvanced,
+    WorkflowBrowserRetention, WorkflowDebugLoggingLevel, WorkflowDirectDomFallback,
+    WorkflowFailurePolicy, WorkflowInputValueType, WorkflowInteractionFidelity,
+    WorkflowMissedRunPolicy, WorkflowSettings, WorkflowSettingsAdvanced,
     WorkflowSettingsBatchMapping, WorkflowSettingsBrowser, WorkflowSettingsCookie,
     WorkflowSettingsEnvironment, WorkflowSettingsExecution, WorkflowSettingsGeneral,
     WorkflowSettingsGeolocation, WorkflowSettingsInputRow, WorkflowSettingsInputs,
     WorkflowSettingsIssueLevel, WorkflowSettingsSection, WorkflowSettingsStorageEntry,
-    WorkflowSettingsTriggers, WorkflowTriggerConcurrencyPolicy, WorkflowTriggerMode,
+    WorkflowSettingsTriggers, WorkflowTimingProfile, WorkflowTriggerConcurrencyPolicy,
+    WorkflowTriggerMode,
 };

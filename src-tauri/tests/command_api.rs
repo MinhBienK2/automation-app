@@ -49,6 +49,7 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
         &step.id,
         "",
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
@@ -74,6 +75,7 @@ async fn workflow_and_step_commands_return_json_safe_dtos() {
     assert_eq!(
         detail.steps[0].config,
         ActionConfig::Scroll {
+            target: None,
             mode: None,
             direction: ScrollDirection::Down,
             pixels: 500,
@@ -156,6 +158,7 @@ async fn duplicate_workflow_copies_graph_and_unsanitized_settings() {
         &legacy_step.id,
         "Legacy wait",
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -698,6 +701,7 @@ async fn run_workflow_inserts_global_wait_between_non_wait_nodes() {
     assert!(matches!(runs[0][0], ActionConfig::Navigate { .. }));
     match &runs[0][1] {
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             duration_ms,
             ..
@@ -742,6 +746,7 @@ async fn run_workflow_lets_explicit_wait_nodes_override_global_wait() {
     assert_eq!(runs[0].len(), 3);
     match &runs[0][1] {
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             duration_ms,
             ..
@@ -797,6 +802,7 @@ async fn run_workflow_inserts_global_wait_inside_nested_graph_blocks() {
             assert_eq!(then_steps.len(), 3);
             match &then_steps[1] {
                 ActionConfig::Wait {
+                    target: None,
                     condition: WaitCondition::Duration,
                     duration_ms,
                     ..
@@ -988,6 +994,7 @@ async fn update_step_can_save_custom_step_name() {
         &step.id,
         "Click login button",
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"login\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -1092,6 +1099,7 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
         &input_text.id,
         "Input Text",
         ActionConfig::InputText {
+            target: None,
             xpath: "//*[@name=\"email\"]".to_string(),
             iframe_xpath: None,
             text: "user@example.com".to_string(),
@@ -1112,6 +1120,7 @@ async fn run_workflow_starts_background_run_and_finishes_successfully() {
         &click.id,
         "Click",
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"submit\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -1203,6 +1212,7 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
         &wait.id,
         "Wait",
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1221,6 +1231,7 @@ async fn test_step_runs_only_through_selected_step_and_reports_first_failure() {
         &bad_click.id,
         "Click",
         ActionConfig::Click {
+            target: None,
             xpath: "//*[@id=\"missing\"]".to_string(),
             iframe_xpath: None,
             mode: None,
@@ -1298,6 +1309,7 @@ async fn test_step_exposes_target_current_and_completed_progress() {
         &wait.id,
         "Wait long enough",
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1363,6 +1375,7 @@ async fn stop_run_cancels_active_wait_and_second_run_is_rejected() {
         &wait.id,
         "Wait",
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1440,6 +1453,7 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
         &wait.id,
         "Short wait",
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1482,6 +1496,7 @@ async fn phase_ten_export_and_import_workflow_round_trip_steps() {
     assert_eq!(
         imported.steps[0].config,
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1721,6 +1736,7 @@ async fn phase_ten_batch_runs_account_for_each_input_row() {
         &step.id,
         "Wait",
         ActionConfig::Wait {
+            target: None,
             condition: WaitCondition::Duration,
             xpath: None,
             text: None,
@@ -1933,6 +1949,7 @@ async fn phase_twelve_suggests_selectors_and_normalizes_recorded_events() {
 #[tokio::test]
 async fn phase_twelve_dry_run_validation_and_fixture_generation_work() {
     commands::dry_run_validate_config_impl(ActionConfig::Click {
+        target: None,
         xpath: "//*[@id='save']".to_string(),
         iframe_xpath: None,
         mode: None,
@@ -1953,6 +1970,7 @@ async fn phase_twelve_dry_run_validation_and_fixture_generation_work() {
     .expect("valid config");
 
     let invalid = commands::dry_run_validate_config_impl(ActionConfig::Click {
+        target: None,
         xpath: String::new(),
         iframe_xpath: None,
         mode: None,

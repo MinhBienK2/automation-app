@@ -324,11 +324,26 @@ pub enum StopWorkflowStatus {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum WorkflowCondition {
-    OutputEquals { name: String, value: String },
-    OutputContains { name: String, value: String },
-    TextVisible { text: String },
-    UrlContains { value: String },
-    ElementVisible { xpath: String },
+    OutputEquals {
+        name: String,
+        value: String,
+    },
+    OutputContains {
+        name: String,
+        value: String,
+    },
+    TextVisible {
+        text: String,
+    },
+    UrlContains {
+        value: String,
+    },
+    ElementVisible {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -480,6 +495,105 @@ pub struct HeaderPair {
     pub value: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ElementLocatorKind {
+    TestId,
+    Role,
+    Label,
+    Placeholder,
+    Text,
+    Css,
+    Xpath,
+    Attribute,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ElementLocator {
+    pub kind: ElementLocatorKind,
+    pub value: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attribute: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exact: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ElementTargetConstraints {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contains_text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ElementTarget {
+    #[serde(default)]
+    pub locators: Vec<ElementLocator>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraints: Option<ElementTargetConstraints>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iframe: Option<Box<ElementTarget>>,
+}
+
+impl ElementTarget {
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        if self.locators.is_empty() {
+            return Err(ValidationError::new(
+                "target",
+                "Element target requires at least one locator",
+            ));
+        }
+
+        for locator in &self.locators {
+            if locator.value.trim().is_empty() {
+                return Err(ValidationError::new(
+                    "target",
+                    "Target locator value is required",
+                ));
+            }
+            if locator.kind == ElementLocatorKind::Attribute
+                && locator
+                    .attribute
+                    .as_deref()
+                    .unwrap_or_default()
+                    .trim()
+                    .is_empty()
+            {
+                return Err(ValidationError::new(
+                    "target",
+                    "Attribute locator requires an attribute name",
+                ));
+            }
+        }
+
+        if let Some(constraints) = &self.constraints {
+            if constraints
+                .contains_text
+                .as_deref()
+                .is_some_and(|text| text.trim().is_empty())
+            {
+                return Err(ValidationError::new(
+                    "target",
+                    "Target text constraint cannot be blank",
+                ));
+            }
+        }
+
+        if let Some(iframe) = &self.iframe {
+            iframe.validate()?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VariableValueType {
@@ -514,6 +628,8 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         text: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         url: Option<String>,
@@ -528,6 +644,8 @@ pub enum ActionConfig {
     },
     InputText {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         text: String,
@@ -545,6 +663,8 @@ pub enum ActionConfig {
     ClearInput {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         method: Option<ClearInputMethod>,
@@ -555,6 +675,8 @@ pub enum ActionConfig {
     },
     Click {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -592,6 +714,8 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         behavior: Option<ScrollBehavior>,
@@ -607,6 +731,8 @@ pub enum ActionConfig {
     SelectOption {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         match_by: SelectOptionMatchBy,
         value: String,
@@ -617,6 +743,8 @@ pub enum ActionConfig {
     },
     SetCheckbox {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         state: CheckboxState,
@@ -634,6 +762,8 @@ pub enum ActionConfig {
     Hover {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -642,6 +772,8 @@ pub enum ActionConfig {
     },
     DoubleClick {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -652,6 +784,8 @@ pub enum ActionConfig {
     RightClick {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -660,7 +794,11 @@ pub enum ActionConfig {
     },
     DragAndDrop {
         source_xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        source_target: Option<ElementTarget>,
         target_xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target_target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -671,6 +809,8 @@ pub enum ActionConfig {
     FocusElement {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -680,6 +820,8 @@ pub enum ActionConfig {
     BlurElement {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -688,6 +830,8 @@ pub enum ActionConfig {
     },
     TypeSequence {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         text: String,
@@ -704,6 +848,8 @@ pub enum ActionConfig {
     PasteClipboard {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -712,6 +858,8 @@ pub enum ActionConfig {
     },
     Check {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -722,6 +870,8 @@ pub enum ActionConfig {
     Uncheck {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -730,6 +880,8 @@ pub enum ActionConfig {
     },
     ToggleCheckbox {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -740,6 +892,8 @@ pub enum ActionConfig {
     SelectRadio {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -748,6 +902,8 @@ pub enum ActionConfig {
     },
     UploadFile {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         files: Vec<String>,
@@ -760,6 +916,8 @@ pub enum ActionConfig {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_until: Option<ClickWaitUntil>,
@@ -768,6 +926,8 @@ pub enum ActionConfig {
     },
     SelectCustomOption {
         trigger_xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        trigger_target: Option<ElementTarget>,
         option_text: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
@@ -776,6 +936,8 @@ pub enum ActionConfig {
     },
     SetContenteditable {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         text: String,
@@ -789,6 +951,8 @@ pub enum ActionConfig {
     ExtractText {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         output_name: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -796,6 +960,8 @@ pub enum ActionConfig {
     },
     ExtractAttribute {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         attribute: String,
@@ -806,6 +972,8 @@ pub enum ActionConfig {
     ExtractInputValue {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         output_name: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -814,6 +982,8 @@ pub enum ActionConfig {
     ExtractTable {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         output_name: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -821,6 +991,8 @@ pub enum ActionConfig {
     },
     ExtractList {
         xpath: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         output_name: String,
@@ -851,6 +1023,8 @@ pub enum ActionConfig {
     SwitchFrame {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
     },
     AcceptDialog {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -881,6 +1055,8 @@ pub enum ActionConfig {
     AssertElement {
         xpath: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         state: AssertElementState,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -889,6 +1065,8 @@ pub enum ActionConfig {
     AssertText {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         xpath: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        target: Option<ElementTarget>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         iframe_xpath: Option<String>,
         text: String,
@@ -1223,6 +1401,8 @@ impl ActionConfig {
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {
+        validate_action_targets(self)?;
+
         match self {
             Self::Navigate { url, .. } if url.trim().is_empty() => {
                 Err(ValidationError::new("url", "URL is required"))
@@ -1251,8 +1431,9 @@ impl ActionConfig {
                     | WaitCondition::ElementEnabled
                     | WaitCondition::ElementDisabled,
                 xpath,
+                target,
                 ..
-            } if xpath.as_deref().unwrap_or_default().trim().is_empty() => {
+            } if target.is_none() && xpath.as_deref().unwrap_or_default().trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::Wait {
@@ -1288,7 +1469,9 @@ impl ActionConfig {
                 "max_ms",
                 "Maximum wait must be greater than or equal to minimum",
             )),
-            Self::InputText { xpath, .. } if xpath.trim().is_empty() => {
+            Self::InputText { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::InputText { text, .. } if text.is_empty() => {
@@ -1300,7 +1483,9 @@ impl ActionConfig {
                 "delay_ms",
                 "Delay must be greater than 0",
             )),
-            Self::ClearInput { xpath, .. } if xpath.trim().is_empty() => {
+            Self::ClearInput { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::ClearInput {
@@ -1310,7 +1495,7 @@ impl ActionConfig {
                 "timeout_ms",
                 "Timeout must be greater than 0",
             )),
-            Self::Click { xpath, .. } if xpath.trim().is_empty() => {
+            Self::Click { xpath, target, .. } if target.is_none() && xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::Click {
@@ -1351,13 +1536,15 @@ impl ActionConfig {
             Self::Scroll {
                 mode: Some(ScrollMode::IntoView),
                 xpath,
+                target,
                 ..
             }
             | Self::Scroll {
                 mode: Some(ScrollMode::UntilVisible),
                 xpath,
+                target,
                 ..
-            } if xpath.as_deref().unwrap_or_default().trim().is_empty() => {
+            } if target.is_none() && xpath.as_deref().unwrap_or_default().trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::Scroll {
@@ -1368,7 +1555,9 @@ impl ActionConfig {
                 "max_attempts",
                 "Max attempts must be greater than 0",
             )),
-            Self::SelectOption { xpath, .. } if xpath.trim().is_empty() => {
+            Self::SelectOption { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::SelectOption { value, .. } if value.trim().is_empty() => {
@@ -1381,7 +1570,9 @@ impl ActionConfig {
                 "timeout_ms",
                 "Timeout must be greater than 0",
             )),
-            Self::SetCheckbox { xpath, .. } if xpath.trim().is_empty() => {
+            Self::SetCheckbox { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::SetCheckbox {
@@ -1399,7 +1590,7 @@ impl ActionConfig {
             {
                 Err(ValidationError::new("keys", "At least one key is required"))
             }
-            Self::Hover { xpath, .. } if xpath.trim().is_empty() => {
+            Self::Hover { xpath, target, .. } if target.is_none() && xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::Hover {
@@ -1409,40 +1600,64 @@ impl ActionConfig {
                 "timeout_ms",
                 "Timeout must be greater than 0",
             )),
-            Self::DoubleClick { xpath, .. } if xpath.trim().is_empty() => {
+            Self::DoubleClick { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::RightClick { xpath, .. } if xpath.trim().is_empty() => {
+            Self::RightClick { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::FocusElement { xpath, .. } if xpath.trim().is_empty() => {
+            Self::FocusElement { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::BlurElement { xpath, .. } if xpath.trim().is_empty() => {
+            Self::BlurElement { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::PasteClipboard { xpath, .. } if xpath.trim().is_empty() => {
+            Self::PasteClipboard { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::Check { xpath, .. } if xpath.trim().is_empty() => {
+            Self::Check { xpath, target, .. } if target.is_none() && xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::Uncheck { xpath, .. } if xpath.trim().is_empty() => {
+            Self::Uncheck { xpath, target, .. } if target.is_none() && xpath.trim().is_empty() => {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::ToggleCheckbox { xpath, .. } if xpath.trim().is_empty() => {
+            Self::ToggleCheckbox { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::SelectRadio { xpath, .. } if xpath.trim().is_empty() => {
+            Self::SelectRadio { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
-            Self::DragAndDrop { source_xpath, .. } if source_xpath.trim().is_empty() => Err(
+            Self::DragAndDrop {
+                source_xpath,
+                source_target,
+                ..
+            } if source_target.is_none() && source_xpath.trim().is_empty() => Err(
                 ValidationError::new("source_xpath", "Source XPath is required"),
             ),
-            Self::DragAndDrop { target_xpath, .. } if target_xpath.trim().is_empty() => Err(
+            Self::DragAndDrop {
+                target_xpath,
+                target_target,
+                ..
+            } if target_target.is_none() && target_xpath.trim().is_empty() => Err(
                 ValidationError::new("target_xpath", "Target XPath is required"),
             ),
-            Self::TypeSequence { xpath, .. } if xpath.trim().is_empty() => {
+            Self::TypeSequence { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::TypeSequence { text, .. } if text.is_empty() => {
@@ -1457,7 +1672,9 @@ impl ActionConfig {
             Self::SetClipboard { text } if text.is_empty() => {
                 Err(ValidationError::new("text", "Text is required"))
             }
-            Self::UploadFile { xpath, .. } if xpath.trim().is_empty() => {
+            Self::UploadFile { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::UploadFile { files, .. } if files.is_empty() => Err(ValidationError::new(
@@ -1470,27 +1687,30 @@ impl ActionConfig {
             Self::SubmitForm {
                 xpath: Some(xpath), ..
             } if xpath.trim().is_empty() => Err(ValidationError::new("xpath", "XPath is required")),
-            Self::SelectCustomOption { trigger_xpath, .. } if trigger_xpath.trim().is_empty() => {
-                Err(ValidationError::new(
-                    "trigger_xpath",
-                    "Trigger XPath is required",
-                ))
-            }
+            Self::SelectCustomOption {
+                trigger_xpath,
+                trigger_target,
+                ..
+            } if trigger_target.is_none() && trigger_xpath.trim().is_empty() => Err(
+                ValidationError::new("trigger_xpath", "Trigger XPath is required"),
+            ),
             Self::SelectCustomOption { option_text, .. } if option_text.trim().is_empty() => Err(
                 ValidationError::new("option_text", "Option text is required"),
             ),
-            Self::SetContenteditable { xpath, .. } if xpath.trim().is_empty() => {
+            Self::SetContenteditable { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::SetContenteditable { text, .. } if text.is_empty() => {
                 Err(ValidationError::new("text", "Text is required"))
             }
-            Self::ExtractText { xpath, .. }
-            | Self::ExtractAttribute { xpath, .. }
-            | Self::ExtractInputValue { xpath, .. }
-            | Self::ExtractTable { xpath, .. }
-            | Self::ExtractList { xpath, .. }
-                if xpath.trim().is_empty() =>
+            Self::ExtractText { xpath, target, .. }
+            | Self::ExtractAttribute { xpath, target, .. }
+            | Self::ExtractInputValue { xpath, target, .. }
+            | Self::ExtractTable { xpath, target, .. }
+            | Self::ExtractList { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
             {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
@@ -1522,9 +1742,9 @@ impl ActionConfig {
             Self::OpenNewTab { url: Some(url) } if url.trim().is_empty() => {
                 Err(ValidationError::new("url", "URL is required"))
             }
-            Self::SwitchFrame { xpath: Some(xpath) } if xpath.trim().is_empty() => {
-                Err(ValidationError::new("xpath", "XPath is required"))
-            }
+            Self::SwitchFrame {
+                xpath: Some(xpath), ..
+            } if xpath.trim().is_empty() => Err(ValidationError::new("xpath", "XPath is required")),
             Self::SetDownloadDirectory { path } if path.trim().is_empty() => Err(
                 ValidationError::new("path", "Download directory is required"),
             ),
@@ -1550,7 +1770,9 @@ impl ActionConfig {
                 variables,
             ),
             Self::SetJsonVariables { json } => validate_json_variables(json),
-            Self::AssertElement { xpath, .. } if xpath.trim().is_empty() => {
+            Self::AssertElement { xpath, target, .. }
+                if target.is_none() && xpath.trim().is_empty() =>
+            {
                 Err(ValidationError::new("xpath", "XPath is required"))
             }
             Self::AssertText { text, .. } if text.trim().is_empty() => {
@@ -2006,6 +2228,59 @@ impl ActionConfig {
     }
 }
 
+fn validate_action_targets(config: &ActionConfig) -> Result<(), ValidationError> {
+    match config {
+        ActionConfig::Wait { target, .. }
+        | ActionConfig::InputText { target, .. }
+        | ActionConfig::ClearInput { target, .. }
+        | ActionConfig::Click { target, .. }
+        | ActionConfig::Scroll { target, .. }
+        | ActionConfig::SelectOption { target, .. }
+        | ActionConfig::SetCheckbox { target, .. }
+        | ActionConfig::Hover { target, .. }
+        | ActionConfig::DoubleClick { target, .. }
+        | ActionConfig::RightClick { target, .. }
+        | ActionConfig::FocusElement { target, .. }
+        | ActionConfig::BlurElement { target, .. }
+        | ActionConfig::TypeSequence { target, .. }
+        | ActionConfig::PasteClipboard { target, .. }
+        | ActionConfig::Check { target, .. }
+        | ActionConfig::Uncheck { target, .. }
+        | ActionConfig::ToggleCheckbox { target, .. }
+        | ActionConfig::SelectRadio { target, .. }
+        | ActionConfig::UploadFile { target, .. }
+        | ActionConfig::SubmitForm { target, .. }
+        | ActionConfig::SetContenteditable { target, .. }
+        | ActionConfig::ExtractText { target, .. }
+        | ActionConfig::ExtractAttribute { target, .. }
+        | ActionConfig::ExtractInputValue { target, .. }
+        | ActionConfig::ExtractTable { target, .. }
+        | ActionConfig::ExtractList { target, .. }
+        | ActionConfig::SwitchFrame { target, .. }
+        | ActionConfig::AssertElement { target, .. }
+        | ActionConfig::AssertText { target, .. } => validate_optional_target(target),
+        ActionConfig::DragAndDrop {
+            source_target,
+            target_target,
+            ..
+        } => {
+            validate_optional_target(source_target)?;
+            validate_optional_target(target_target)
+        }
+        ActionConfig::SelectCustomOption { trigger_target, .. } => {
+            validate_optional_target(trigger_target)
+        }
+        _ => Ok(()),
+    }
+}
+
+fn validate_optional_target(target: &Option<ElementTarget>) -> Result<(), ValidationError> {
+    if let Some(target) = target {
+        target.validate()?;
+    }
+    Ok(())
+}
+
 fn validate_condition(condition: &WorkflowCondition) -> Result<(), ValidationError> {
     match condition {
         WorkflowCondition::OutputEquals { name, .. }
@@ -2026,7 +2301,14 @@ fn validate_condition(condition: &WorkflowCondition) -> Result<(), ValidationErr
         WorkflowCondition::UrlContains { value } if value.trim().is_empty() => {
             Err(ValidationError::new("value", "URL condition is required"))
         }
-        WorkflowCondition::ElementVisible { xpath } if xpath.trim().is_empty() => {
+        WorkflowCondition::ElementVisible {
+            target: Some(target),
+            ..
+        } => target.validate(),
+        WorkflowCondition::ElementVisible {
+            xpath,
+            target: None,
+        } if xpath.as_deref().unwrap_or_default().trim().is_empty() => {
             Err(ValidationError::new("xpath", "XPath is required"))
         }
         _ => Ok(()),

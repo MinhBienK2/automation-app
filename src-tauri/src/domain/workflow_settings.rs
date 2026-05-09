@@ -111,6 +111,29 @@ pub enum WorkflowFailurePolicy {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum WorkflowInteractionFidelity {
+    Standard,
+    High,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowDirectDomFallback {
+    Disabled,
+    Explicit,
+    AllowedWithTrace,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowTimingProfile {
+    Balanced,
+    SlowRealistic,
+    Custom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WorkflowInputValueType {
     Text,
     Json,
@@ -184,6 +207,12 @@ pub struct WorkflowSettingsExecution {
     pub browser_retention: WorkflowBrowserRetention,
     #[serde(default = "default_failure_policy")]
     pub failure_policy: WorkflowFailurePolicy,
+    #[serde(default = "default_interaction_fidelity")]
+    pub interaction_fidelity: WorkflowInteractionFidelity,
+    #[serde(default = "default_direct_dom_fallback")]
+    pub direct_dom_fallback: WorkflowDirectDomFallback,
+    #[serde(default = "default_timing_profile")]
+    pub timing_profile: WorkflowTimingProfile,
     #[serde(default)]
     pub wait_between_nodes_enabled: bool,
     #[serde(default)]
@@ -230,6 +259,18 @@ pub struct WorkflowSettingsBrowser {
     pub challenge_policy: WorkflowBrowserChallengePolicy,
     #[serde(default)]
     pub headless: bool,
+    #[serde(default)]
+    pub fingerprint_preflight_enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fingerprint_probe_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fingerprint_profile_id: Option<String>,
+    #[serde(default)]
+    pub fingerprint_allowed_origins: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fingerprint_proxy_label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fingerprint_proxy_region: Option<String>,
 }
 
 impl WorkflowSettingsBrowser {
@@ -248,6 +289,12 @@ impl WorkflowSettingsBrowser {
             touch: config.touch,
             challenge_policy: config.challenge_policy,
             headless: config.headless,
+            fingerprint_preflight_enabled: false,
+            fingerprint_probe_url: None,
+            fingerprint_profile_id: None,
+            fingerprint_allowed_origins: Vec::new(),
+            fingerprint_proxy_label: None,
+            fingerprint_proxy_region: None,
         }
     }
 
@@ -458,6 +505,18 @@ impl WorkflowSettings {
             execution: self.execution.clone(),
             browser: WorkflowSettingsBrowser {
                 headless: self.browser.headless,
+                fingerprint_preflight_enabled: self.browser.fingerprint_preflight_enabled,
+                fingerprint_probe_url: trimmed_option(&self.browser.fingerprint_probe_url),
+                fingerprint_profile_id: trimmed_option(&self.browser.fingerprint_profile_id),
+                fingerprint_allowed_origins: self
+                    .browser
+                    .fingerprint_allowed_origins
+                    .iter()
+                    .map(|origin| origin.trim().to_string())
+                    .filter(|origin| !origin.is_empty())
+                    .collect(),
+                fingerprint_proxy_label: trimmed_option(&self.browser.fingerprint_proxy_label),
+                fingerprint_proxy_region: trimmed_option(&self.browser.fingerprint_proxy_region),
                 ..browser
             },
             environment: WorkflowSettingsEnvironment {
@@ -614,6 +673,60 @@ impl WorkflowSettings {
                 error.field,
                 error.message,
             ));
+        }
+        if settings.browser.fingerprint_preflight_enabled {
+            let probe_url = settings
+                .browser
+                .fingerprint_probe_url
+                .as_deref()
+                .unwrap_or_default()
+                .trim();
+            if probe_url.is_empty() {
+                issues.push(SettingsValidationIssue::error(
+                    WorkflowSettingsSection::Browser,
+                    "fingerprint_probe_url",
+                    "Fingerprint probe URL is required when preflight is enabled",
+                ));
+            } else if !is_http_url(probe_url) {
+                issues.push(SettingsValidationIssue::error(
+                    WorkflowSettingsSection::Browser,
+                    "fingerprint_probe_url",
+                    "Fingerprint probe URL must use http or https",
+                ));
+            } else if !settings.browser.fingerprint_allowed_origins.is_empty() {
+                let probe_origin = origin_from_http_url(probe_url);
+                let allowed = settings
+                    .browser
+                    .fingerprint_allowed_origins
+                    .iter()
+                    .any(|origin| origin.trim() == probe_origin);
+                if !allowed {
+                    issues.push(SettingsValidationIssue::error(
+                        WorkflowSettingsSection::Browser,
+                        "fingerprint_probe_url",
+                        "Fingerprint probe origin must be in the workflow allowlist",
+                    ));
+                }
+            }
+            if settings
+                .browser
+                .fingerprint_profile_id
+                .as_deref()
+                .is_none_or(|value| value.trim().is_empty())
+            {
+                issues.push(SettingsValidationIssue::error(
+                    WorkflowSettingsSection::Browser,
+                    "fingerprint_profile_id",
+                    "Fingerprint identity profile is required when preflight is enabled",
+                ));
+            }
+            if settings.browser.headless {
+                issues.push(SettingsValidationIssue::error(
+                    WorkflowSettingsSection::Browser,
+                    "headless",
+                    "Fingerprint preflight requires headed browser mode",
+                ));
+            }
         }
 
         if let Some(geolocation) = &settings.environment.geolocation {
@@ -821,6 +934,18 @@ fn default_failure_policy() -> WorkflowFailurePolicy {
     WorkflowFailurePolicy::StopOnFirstFailure
 }
 
+fn default_interaction_fidelity() -> WorkflowInteractionFidelity {
+    WorkflowInteractionFidelity::Standard
+}
+
+fn default_direct_dom_fallback() -> WorkflowDirectDomFallback {
+    WorkflowDirectDomFallback::AllowedWithTrace
+}
+
+fn default_timing_profile() -> WorkflowTimingProfile {
+    WorkflowTimingProfile::Balanced
+}
+
 fn default_trigger_mode() -> WorkflowTriggerMode {
     WorkflowTriggerMode::Manual
 }
@@ -845,6 +970,9 @@ fn default_execution() -> WorkflowSettingsExecution {
         max_workflow_duration_ms: None,
         browser_retention: WorkflowBrowserRetention::Retain,
         failure_policy: WorkflowFailurePolicy::StopOnFirstFailure,
+        interaction_fidelity: WorkflowInteractionFidelity::Standard,
+        direct_dom_fallback: WorkflowDirectDomFallback::AllowedWithTrace,
+        timing_profile: WorkflowTimingProfile::Balanced,
         wait_between_nodes_enabled: false,
         wait_between_nodes_random: false,
         wait_between_nodes_ms: None,
@@ -871,6 +999,12 @@ fn default_browser() -> WorkflowSettingsBrowser {
         touch: false,
         challenge_policy: WorkflowBrowserChallengePolicy::None,
         headless: false,
+        fingerprint_preflight_enabled: false,
+        fingerprint_probe_url: None,
+        fingerprint_profile_id: None,
+        fingerprint_allowed_origins: Vec::new(),
+        fingerprint_proxy_label: None,
+        fingerprint_proxy_region: None,
     }
 }
 
@@ -926,4 +1060,16 @@ fn trimmed_option(value: &Option<String>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToString::to_string)
+}
+
+fn is_http_url(value: &str) -> bool {
+    value.starts_with("https://") || value.starts_with("http://")
+}
+
+fn origin_from_http_url(value: &str) -> String {
+    let Some((scheme, rest)) = value.split_once("://") else {
+        return value.to_string();
+    };
+    let host = rest.split('/').next().unwrap_or_default();
+    format!("{scheme}://{host}")
 }

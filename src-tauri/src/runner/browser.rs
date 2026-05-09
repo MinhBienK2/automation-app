@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, HashSet},
     path::{Path, PathBuf},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use chromiumoxide::{
@@ -14,7 +14,7 @@ use futures::StreamExt;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::domain::{ActionConfig, WorkflowBrowserConfig};
+use crate::domain::{ActionConfig, ClickMode, InputTypingMode, WorkflowBrowserConfig};
 
 use super::{
     actions::{execute_action, ActionExecution},
@@ -47,6 +47,20 @@ pub struct RunnerOutcome {
     pub failed_step: Option<FailedStep>,
     pub session: BrowserSession,
     pub close_browser: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct ActionTrace {
+    pub node_id: String,
+    pub action_type: String,
+    pub mode: String,
+    pub target_xpath: Option<String>,
+    pub iframe_xpath: Option<String>,
+    pub fallback_used: bool,
+    pub started_at_ms: u128,
+    pub completed_at_ms: u128,
+    pub failure_reason: Option<String>,
+    pub failure_screenshot_path: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,11 +120,30 @@ impl BrowserRunner {
             }
 
             let step_number = index + 1;
+            let trace_start = unix_time_ms();
+            let trace_action_type = action_type_value(&step);
+            let trace_mode = trace_mode_for_action(&step);
+            let trace_target_xpath = trace_target_xpath(&step);
+            let trace_iframe_xpath = trace_iframe_xpath(&step);
             progress(RunnerProgress::StepStarted { step_number });
             let result = execute_action(&mut session, step, &cancellation).await;
 
             match result {
                 Ok(ActionExecution::Complete) => {
+                    session
+                        .record_action_trace(ActionTrace {
+                            node_id: format!("step-{step_number}"),
+                            action_type: trace_action_type,
+                            mode: trace_mode,
+                            target_xpath: trace_target_xpath,
+                            iframe_xpath: trace_iframe_xpath,
+                            fallback_used: false,
+                            started_at_ms: trace_start,
+                            completed_at_ms: unix_time_ms(),
+                            failure_reason: None,
+                            failure_screenshot_path: None,
+                        })
+                        .await;
                     progress(RunnerProgress::StepCompleted { step_number });
                 }
                 Ok(ActionExecution::Stopped) => {
@@ -157,9 +190,26 @@ impl BrowserRunner {
                     });
                 }
                 Err(RunnerError::ActionFailed(reason)) => {
-                    let reason = session
-                        .capture_failure_screenshot()
-                        .await
+                    let original_reason = reason.clone();
+                    let screenshot_path = session.capture_failure_screenshot().await.ok();
+                    session
+                        .record_action_trace(ActionTrace {
+                            node_id: format!("step-{step_number}"),
+                            action_type: trace_action_type,
+                            mode: trace_mode,
+                            target_xpath: trace_target_xpath,
+                            iframe_xpath: trace_iframe_xpath,
+                            fallback_used: false,
+                            started_at_ms: trace_start,
+                            completed_at_ms: unix_time_ms(),
+                            failure_reason: Some(original_reason),
+                            failure_screenshot_path: screenshot_path
+                                .as_ref()
+                                .map(|path| path.display().to_string()),
+                        })
+                        .await;
+                    let reason = screenshot_path
+                        .as_ref()
                         .map(|path| format!("{reason}\nFailure screenshot: {}", path.display()))
                         .unwrap_or(reason);
                     return Ok(RunnerOutcome {
@@ -185,6 +235,154 @@ impl BrowserRunner {
     }
 }
 
+fn unix_time_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or_default()
+}
+
+fn action_type_value(step: &ActionConfig) -> String {
+    serde_json::to_value(step.action_type())
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_string))
+        .unwrap_or_else(|| format!("{:?}", step.action_type()))
+}
+
+fn trace_mode_for_action(step: &ActionConfig) -> String {
+    match step {
+        ActionConfig::Click {
+            mode: Some(ClickMode::ForceDom),
+            ..
+        }
+        | ActionConfig::InputText {
+            typing_mode: None | Some(InputTypingMode::SetValue),
+            ..
+        }
+        | ActionConfig::PasteClipboard { .. }
+        | ActionConfig::SelectOption { .. }
+        | ActionConfig::SubmitForm { .. }
+        | ActionConfig::SetVariable { .. }
+        | ActionConfig::SetJsonVariables { .. }
+        | ActionConfig::SetCookie { .. }
+        | ActionConfig::ClearCookies { .. }
+        | ActionConfig::SetSecret { .. }
+        | ActionConfig::SetLocalStorage { .. }
+        | ActionConfig::SetSessionStorage { .. }
+        | ActionConfig::ExecuteJs { .. } => "direct_dom",
+        ActionConfig::Click { .. }
+        | ActionConfig::DoubleClick { .. }
+        | ActionConfig::RightClick { .. }
+        | ActionConfig::Hover { .. }
+        | ActionConfig::DragAndDrop { .. }
+        | ActionConfig::InputText {
+            typing_mode: Some(InputTypingMode::Type),
+            ..
+        }
+        | ActionConfig::ClearInput { .. }
+        | ActionConfig::TypeSequence { .. }
+        | ActionConfig::PressKey { .. }
+        | ActionConfig::Hotkey { .. }
+        | ActionConfig::SetContenteditable { .. }
+        | ActionConfig::Scroll { .. }
+        | ActionConfig::Check { .. }
+        | ActionConfig::Uncheck { .. }
+        | ActionConfig::ToggleCheckbox { .. }
+        | ActionConfig::SelectRadio { .. }
+        | ActionConfig::SetCheckbox { .. }
+        | ActionConfig::SelectCustomOption { .. } => "assisted_browser_input",
+        ActionConfig::PauseForHuman { .. } | ActionConfig::ResumeWhenCondition { .. } => "manual",
+        ActionConfig::Wait { .. }
+        | ActionConfig::RandomWait { .. }
+        | ActionConfig::AssertElement { .. }
+        | ActionConfig::AssertText { .. }
+        | ActionConfig::AssertOutput { .. }
+        | ActionConfig::ExtractText { .. }
+        | ActionConfig::ExtractAttribute { .. }
+        | ActionConfig::ExtractInputValue { .. }
+        | ActionConfig::ExtractTable { .. }
+        | ActionConfig::ExtractList { .. }
+        | ActionConfig::TakeScreenshot { .. }
+        | ActionConfig::DetectChallenge { .. }
+        | ActionConfig::WaitForRequest { .. }
+        | ActionConfig::WaitForResponse { .. } => "observer",
+        _ => "browser_input",
+    }
+    .to_string()
+}
+
+fn trace_target_xpath(step: &ActionConfig) -> Option<String> {
+    match step {
+        ActionConfig::Wait { xpath, .. }
+        | ActionConfig::Scroll { xpath, .. }
+        | ActionConfig::SubmitForm { xpath, .. }
+        | ActionConfig::SwitchFrame { xpath, .. }
+        | ActionConfig::AssertText { xpath, .. } => xpath.clone(),
+        ActionConfig::InputText { xpath, .. }
+        | ActionConfig::ClearInput { xpath, .. }
+        | ActionConfig::Click { xpath, .. }
+        | ActionConfig::SelectOption { xpath, .. }
+        | ActionConfig::SetCheckbox { xpath, .. }
+        | ActionConfig::Hover { xpath, .. }
+        | ActionConfig::DoubleClick { xpath, .. }
+        | ActionConfig::RightClick { xpath, .. }
+        | ActionConfig::FocusElement { xpath, .. }
+        | ActionConfig::BlurElement { xpath, .. }
+        | ActionConfig::TypeSequence { xpath, .. }
+        | ActionConfig::PasteClipboard { xpath, .. }
+        | ActionConfig::Check { xpath, .. }
+        | ActionConfig::Uncheck { xpath, .. }
+        | ActionConfig::ToggleCheckbox { xpath, .. }
+        | ActionConfig::SelectRadio { xpath, .. }
+        | ActionConfig::UploadFile { xpath, .. }
+        | ActionConfig::SetContenteditable { xpath, .. }
+        | ActionConfig::ExtractText { xpath, .. }
+        | ActionConfig::ExtractAttribute { xpath, .. }
+        | ActionConfig::ExtractInputValue { xpath, .. }
+        | ActionConfig::ExtractTable { xpath, .. }
+        | ActionConfig::ExtractList { xpath, .. }
+        | ActionConfig::AssertElement { xpath, .. } => Some(xpath.clone()),
+        ActionConfig::DragAndDrop { source_xpath, .. } => Some(source_xpath.clone()),
+        ActionConfig::SelectCustomOption { trigger_xpath, .. } => Some(trigger_xpath.clone()),
+        _ => None,
+    }
+}
+
+fn trace_iframe_xpath(step: &ActionConfig) -> Option<String> {
+    match step {
+        ActionConfig::InputText { iframe_xpath, .. }
+        | ActionConfig::ClearInput { iframe_xpath, .. }
+        | ActionConfig::Click { iframe_xpath, .. }
+        | ActionConfig::Scroll { iframe_xpath, .. }
+        | ActionConfig::SelectOption { iframe_xpath, .. }
+        | ActionConfig::SetCheckbox { iframe_xpath, .. }
+        | ActionConfig::Hover { iframe_xpath, .. }
+        | ActionConfig::DoubleClick { iframe_xpath, .. }
+        | ActionConfig::RightClick { iframe_xpath, .. }
+        | ActionConfig::DragAndDrop { iframe_xpath, .. }
+        | ActionConfig::FocusElement { iframe_xpath, .. }
+        | ActionConfig::BlurElement { iframe_xpath, .. }
+        | ActionConfig::TypeSequence { iframe_xpath, .. }
+        | ActionConfig::PasteClipboard { iframe_xpath, .. }
+        | ActionConfig::Check { iframe_xpath, .. }
+        | ActionConfig::Uncheck { iframe_xpath, .. }
+        | ActionConfig::ToggleCheckbox { iframe_xpath, .. }
+        | ActionConfig::SelectRadio { iframe_xpath, .. }
+        | ActionConfig::UploadFile { iframe_xpath, .. }
+        | ActionConfig::SubmitForm { iframe_xpath, .. }
+        | ActionConfig::SelectCustomOption { iframe_xpath, .. }
+        | ActionConfig::SetContenteditable { iframe_xpath, .. }
+        | ActionConfig::ExtractText { iframe_xpath, .. }
+        | ActionConfig::ExtractAttribute { iframe_xpath, .. }
+        | ActionConfig::ExtractInputValue { iframe_xpath, .. }
+        | ActionConfig::ExtractTable { iframe_xpath, .. }
+        | ActionConfig::ExtractList { iframe_xpath, .. }
+        | ActionConfig::AssertElement { iframe_xpath, .. }
+        | ActionConfig::AssertText { iframe_xpath, .. } => iframe_xpath.clone(),
+        _ => None,
+    }
+}
+
 #[derive(Debug)]
 pub struct BrowserSession {
     browser: Option<Browser>,
@@ -193,6 +391,7 @@ pub struct BrowserSession {
     active_frame_xpath: Option<String>,
     download_directory: Option<PathBuf>,
     known_downloads: HashSet<PathBuf>,
+    action_traces: Vec<ActionTrace>,
     handler: JoinHandle<()>,
     user_data_dir: Option<PathBuf>,
     persistent_user_data_dir: bool,
@@ -209,6 +408,7 @@ impl BrowserSession {
             active_frame_xpath: None,
             download_directory: None,
             known_downloads: HashSet::new(),
+            action_traces: Vec::new(),
             handler: tokio::spawn(async {}),
             user_data_dir: None,
             persistent_user_data_dir: false,
@@ -247,6 +447,7 @@ impl BrowserSession {
             active_frame_xpath: None,
             download_directory: None,
             known_downloads: HashSet::new(),
+            action_traces: Vec::new(),
             handler: handler_task,
             user_data_dir: Some(user_data_dir),
             persistent_user_data_dir,
@@ -264,6 +465,31 @@ impl BrowserSession {
         let page = self.current_page()?;
         let script = r#"(() => window.__wamOutputs || {})()"#;
         Ok(page.evaluate(script).await?.into_value()?)
+    }
+
+    pub fn action_traces(&self) -> &[ActionTrace] {
+        &self.action_traces
+    }
+
+    async fn record_action_trace(&mut self, trace: ActionTrace) {
+        self.action_traces.push(trace.clone());
+        let Ok(page) = self.current_page() else {
+            return;
+        };
+        let Ok(trace_json) = serde_json::to_string(&trace) else {
+            return;
+        };
+        let script = format!(
+            r#"
+            (() => {{
+              window.__wamOutputs = window.__wamOutputs || {{}};
+              window.__wamOutputs.__action_traces = window.__wamOutputs.__action_traces || [];
+              window.__wamOutputs.__action_traces.push({trace_json});
+              return {{ ok: true, reason: "" }};
+            }})()
+            "#
+        );
+        let _ = page.evaluate(script).await;
     }
 
     pub(super) fn current_page(&self) -> Result<Page, RunnerError> {

@@ -30,12 +30,15 @@ The runner executes action configs in a headed Chromium browser and reports prog
 - Browser sessions are retained in `AppState` after terminal outcomes unless Workflow Settings Execution browser retention is `close` or a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
 - Starting a new run closes any retained sessions from previous terminal outcomes before Chromium launches, so persistent profile directories are not reused while an older browser process still owns the profile lock.
 - Browser launch settings come from Workflow Settings Browser. `browser.headless` switches `BrowserRunExecutor` from the default headed Chromium launch to headless mode. Legacy browser config commands map to the Browser section.
+- Fingerprint preflight is compiled as settings setup when enabled. The runner opens the configured probe URL, parses the JSON verdict in-page, stores sanitized `fingerprint_preflight` evidence, and fails before graph actions when the verdict is malformed or not passed.
 - Named browser profiles use persistent Chromium user data directories under the user's app data directory at `workflow-automation-manager/browser-profiles/<profile>`. Runs without a profile continue to use temporary user data directories.
 - Before graph actions run, the command layer prepends supported Environment defaults and Variables seed values from Workflow Settings.
 - Execution settings fill missing action `timeout_ms` fields from the workflow default action timeout before the runner receives steps.
+- Execution interaction fidelity settings are applied before the runner receives steps. `high` currently migrates compatible fill-field defaults to typed keyboard input while preserving explicit direct-value configs.
 - Execution settings can insert fixed or random waits between compiled graph nodes before the runner receives steps. Explicit Wait and Random Wait nodes override the global wait at their position.
 - Execution max duration is enforced in `run_service` with the same cancellation token used by Stop. Timeout finishes the run as failed with a workflow-level timeout error.
 - Batch execution compiles the saved graph, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, closes each row session, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
+- `BrowserRunner` records compact action traces into the browser output store under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
 
 ## Belongs Here
 
@@ -49,14 +52,15 @@ The runner executes action configs in a headed Chromium browser and reports prog
 
 Browser action script builders live under `src-tauri/src/runner/actions/` and are grouped by user behavior:
 
-- `pointer.rs`: click, force DOM click, hover, and drag/drop pointer interactions.
+- `pointer.rs`: click target geometry and explicit force-DOM fallback helpers. Click, hover, double/right click, and drag/drop dispatch browser-level mouse primitives from `actions/mod.rs`.
 - `scroll.rs`: page, container, into-view, and until-visible scrolling.
 - `wait.rs`: wait condition polling scripts.
 - `input.rs`: text input, clearing input, and contenteditable updates. `Fill Field`
   can either set field values directly or, when `typing_mode` is `type`, focus the
   element and emit per-character key/input/change events with a visible default delay.
 - `form.rs`: select, checkbox/radio, custom option, and submit form actions.
-- `keyboard.rs`: key press, hotkey, and typed key sequence actions.
+- `keyboard.rs`: legacy keyboard script-builder tests. Runtime press-key, hotkey, type-sequence, and high-fidelity fill-field paths dispatch browser-level keyboard primitives from `actions/mod.rs`.
+- `target.rs`: structured target resolver that maps ordered locator bundles and iframe targets to runtime XPath/frame context.
 - `clipboard.rs`: in-run clipboard store and paste actions.
 - `element.rs`: focus and blur element actions.
 - `data_capture.rs`: output extraction and storage scripts.

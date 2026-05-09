@@ -146,6 +146,9 @@ export type WorkflowSettingsSectionId =
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowFailurePolicy = "stop_on_first_failure";
+export type WorkflowInteractionFidelity = "standard" | "high";
+export type WorkflowDirectDomFallback = "disabled" | "explicit" | "allowed_with_trace";
+export type WorkflowTimingProfile = "balanced" | "slow_realistic" | "custom";
 export type WorkflowTriggerMode = "manual" | "once" | "interval" | "cron" | "event";
 export type WorkflowMissedRunPolicy = "skip" | "run_next_eligible";
 export type WorkflowTriggerConcurrencyPolicy =
@@ -178,6 +181,9 @@ export type WorkflowSettingsExecution = {
   max_workflow_duration_ms?: number | null;
   browser_retention: WorkflowBrowserRetention;
   failure_policy: WorkflowFailurePolicy;
+  interaction_fidelity?: WorkflowInteractionFidelity;
+  direct_dom_fallback?: WorkflowDirectDomFallback;
+  timing_profile?: WorkflowTimingProfile;
   wait_between_nodes_enabled?: boolean;
   wait_between_nodes_random?: boolean;
   wait_between_nodes_ms?: number | null;
@@ -191,6 +197,12 @@ export type WorkflowSettingsExecution = {
 
 export type WorkflowSettingsBrowser = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
   headless: boolean;
+  fingerprint_preflight_enabled?: boolean;
+  fingerprint_probe_url?: string | null;
+  fingerprint_profile_id?: string | null;
+  fingerprint_allowed_origins?: string[];
+  fingerprint_proxy_label?: string | null;
+  fingerprint_proxy_region?: string | null;
 };
 
 export type WorkflowSettingsGeolocation = {
@@ -320,6 +332,7 @@ export type ActionConfig =
         url?: string | null;
         duration_ms?: number | null;
         timeout_ms?: number | null;
+        target?: ElementTarget | null;
       };
     }
   | {
@@ -333,6 +346,7 @@ export type ActionConfig =
       type: "input_text";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
@@ -346,6 +360,7 @@ export type ActionConfig =
       type: "clear_input";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         method?: "select_all" | "backspace" | "dom" | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -356,6 +371,7 @@ export type ActionConfig =
       type: "click";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         mode?: "real" | "force_dom" | null;
         button?: "left" | "right" | "middle" | null;
@@ -386,6 +402,7 @@ export type ActionConfig =
         direction: "up" | "down" | "left" | "right";
         pixels: number;
         xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         behavior?: "instant" | "smooth" | null;
         block?: "start" | "center" | "end" | "nearest" | null;
@@ -398,6 +415,7 @@ export type ActionConfig =
       type: "select_option";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         match_by: "label" | "value";
         value: string;
@@ -409,6 +427,7 @@ export type ActionConfig =
       type: "set_checkbox";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         state: "checked" | "unchecked";
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -421,6 +440,7 @@ export type ActionConfig =
       type: "hover";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -438,7 +458,9 @@ export type ActionConfig =
       type: "drag_and_drop";
       config: {
         source_xpath: string;
+        source_target?: ElementTarget | null;
         target_xpath: string;
+        target_target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -456,6 +478,7 @@ export type ActionConfig =
       type: "type_sequence";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         delay_ms?: number | null;
@@ -488,6 +511,7 @@ export type ActionConfig =
       type: "upload_file";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         files: string[];
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -498,6 +522,7 @@ export type ActionConfig =
       type: "submit_form";
       config: {
         xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -507,6 +532,7 @@ export type ActionConfig =
       type: "select_custom_option";
       config: {
         trigger_xpath: string;
+        trigger_target?: ElementTarget | null;
         option_text: string;
         iframe_xpath?: string | null;
         timeout_ms?: number | null;
@@ -516,6 +542,7 @@ export type ActionConfig =
       type: "set_contenteditable";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
@@ -559,7 +586,7 @@ export type ActionConfig =
   | { type: "open_new_tab"; config: { url?: string | null } }
   | { type: "switch_tab"; config: { index: number } }
   | { type: "close_tab"; config: { index?: number | null } }
-  | { type: "switch_frame"; config: { xpath?: string | null } }
+  | { type: "switch_frame"; config: { xpath?: string | null; target?: ElementTarget | null } }
   | { type: "accept_dialog"; config: { prompt_text?: string | null } }
   | { type: "dismiss_dialog"; config: Record<string, never> }
   | { type: "set_download_directory"; config: { path: string } }
@@ -581,6 +608,7 @@ export type ActionConfig =
       type: "assert_element";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
         timeout_ms?: number | null;
@@ -590,6 +618,7 @@ export type ActionConfig =
       type: "assert_text";
       config: {
         xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         match_mode: "contains" | "equals";
@@ -784,15 +813,47 @@ export type HeaderPair = {
   value: string;
 };
 
+export type ElementLocatorKind =
+  | "test_id"
+  | "role"
+  | "label"
+  | "placeholder"
+  | "text"
+  | "css"
+  | "xpath"
+  | "attribute";
+
+export type ElementLocator = {
+  kind: ElementLocatorKind;
+  value: string;
+  role?: string | null;
+  attribute?: string | null;
+  exact?: boolean | null;
+};
+
+export type ElementTargetConstraints = {
+  visible?: boolean | null;
+  enabled?: boolean | null;
+  contains_text?: string | null;
+  index?: number | null;
+};
+
+export type ElementTarget = {
+  locators: ElementLocator[];
+  constraints?: ElementTargetConstraints | null;
+  iframe?: ElementTarget | null;
+};
+
 export type WorkflowCondition =
   | { kind: "output_equals"; name: string; value: string }
   | { kind: "output_contains"; name: string; value: string }
   | { kind: "text_visible"; text: string }
   | { kind: "url_contains"; value: string }
-  | { kind: "element_visible"; xpath: string };
+  | { kind: "element_visible"; xpath?: string | null; target?: ElementTarget | null };
 
 type ElementTargetActionConfig = {
   xpath: string;
+  target?: ElementTarget | null;
   iframe_xpath?: string | null;
   wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
   timeout_ms?: number | null;
@@ -800,6 +861,7 @@ type ElementTargetActionConfig = {
 
 type DataCaptureElementConfig = {
   xpath: string;
+  target?: ElementTarget | null;
   iframe_xpath?: string | null;
   output_name: string;
   timeout_ms?: number | null;

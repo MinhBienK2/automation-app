@@ -67,6 +67,9 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
     max_workflow_duration_ms,
     browser_retention,
     failure_policy,
+    interaction_fidelity,
+    direct_dom_fallback,
+    timing_profile,
     wait_between_nodes_enabled,
     wait_between_nodes_random,
     wait_between_nodes_ms,
@@ -77,7 +80,13 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
     batch_stop_on_first_failed_row,
     output_retention_days
   },
-  browser: WorkflowBrowserConfig without workflow_id plus headless,
+  browser: WorkflowBrowserConfig without workflow_id plus headless, plus optional fingerprint preflight fields:
+    fingerprint_preflight_enabled,
+    fingerprint_probe_url,
+    fingerprint_profile_id,
+    fingerprint_allowed_origins,
+    fingerprint_proxy_label,
+    fingerprint_proxy_region,
   environment: {
     geolocation,
     permissions,

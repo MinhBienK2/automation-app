@@ -40,6 +40,14 @@ Variable config rules:
 - Later writes to the same path overwrite earlier writes.
 - `repeat_for_each` can use literal `items` or an `array_variable` source.
 
+Element target config rules:
+
+- Element-facing actions keep legacy `xpath` and `iframe_xpath` fields for compatibility.
+- The same actions may also carry `target`, a structured locator bundle with ordered locators (`test_id`, `role`, `label`, `placeholder`, `text`, `css`, `xpath`, or `attribute`) plus optional constraints (`visible`, `enabled`, `contains_text`, `index`) and optional iframe target.
+- Drag/drop uses `source_target` and `target_target`; custom select uses `trigger_target`.
+- Backend validation accepts either a non-empty legacy XPath or a valid structured target for required element actions.
+- The runner resolves structured targets at runtime and then reuses the existing frame-aware action path.
+
 Recovery config semantics must preserve failure behavior when recovery branches are absent:
 
 - `retry_block` with empty `failed_steps` fails with the last try error after attempts are exhausted.

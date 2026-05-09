@@ -4,6 +4,7 @@ use super::actionability::click_wait_until_value;
 use super::js::{json_string, optional_json_string};
 use crate::domain::ClickWaitUntil;
 
+#[cfg(test)]
 pub(super) fn press_key_script(key: &str) -> Result<String, RunnerError> {
     let key = json_string(key)?;
     Ok(format!(
@@ -19,6 +20,7 @@ pub(super) fn press_key_script(key: &str) -> Result<String, RunnerError> {
     ))
 }
 
+#[cfg(test)]
 pub(super) fn hotkey_script(keys: &[String]) -> Result<String, RunnerError> {
     let key = keys.last().map(String::as_str).unwrap_or_default();
     let key = json_string(key)?;
@@ -46,6 +48,7 @@ pub(super) fn hotkey_script(keys: &[String]) -> Result<String, RunnerError> {
     ))
 }
 
+#[cfg(test)]
 pub(super) fn type_sequence_script(
     xpath: &str,
     iframe_xpath: Option<&str>,

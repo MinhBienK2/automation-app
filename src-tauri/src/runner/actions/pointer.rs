@@ -166,6 +166,7 @@ fn click_position_value(position: Option<ClickPosition>) -> &'static str {
     }
 }
 
+#[cfg(test)]
 pub(super) fn hover_script(
     xpath: &str,
     iframe_xpath: Option<&str>,
@@ -217,6 +218,7 @@ pub(super) fn hover_script(
     ))
 }
 
+#[cfg(test)]
 pub(super) fn drag_and_drop_script(
     source_xpath: &str,
     target_xpath: &str,

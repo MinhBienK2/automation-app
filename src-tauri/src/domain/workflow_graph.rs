@@ -858,6 +858,7 @@ impl WorkflowGraph {
                     config: ActionConfig::Wait {
                         condition: WaitCondition::Duration,
                         xpath: None,
+                        target: None,
                         text: None,
                         url: None,
                         duration_ms: Some(duration_ms),
@@ -1676,9 +1677,16 @@ fn validate_workflow_condition(condition: &WorkflowCondition) -> Result<(), Vali
         WorkflowCondition::TextVisible { text } if text.trim().is_empty() => {
             Err(ValidationError::new("text", "Condition text is required"))
         }
-        WorkflowCondition::ElementVisible { xpath } if xpath.trim().is_empty() => {
+        WorkflowCondition::ElementVisible {
+            xpath,
+            target: None,
+        } if xpath.as_deref().unwrap_or_default().trim().is_empty() => {
             Err(ValidationError::new("xpath", "Condition XPath is required"))
         }
+        WorkflowCondition::ElementVisible {
+            target: Some(target),
+            ..
+        } => target.validate(),
         _ => Ok(()),
     }
 }
