@@ -238,8 +238,23 @@ describe("Electron app API", () => {
             proxy: { label: "owned", password: "[redacted]" },
           },
         }),
+        expect.objectContaining({
+          evidenceType: "operator_action",
+          payload: expect.objectContaining({
+            action: "export",
+            operatorLabel: "local",
+          }),
+        }),
       ],
     });
+    expect(storage.listEvidenceRecords(run.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          evidenceType: "operator_action",
+          sanitizedPayload: expect.objectContaining({ action: "export" }),
+        }),
+      ]),
+    );
   });
 
   test("exposes workspace policy through the app facade", async () => {

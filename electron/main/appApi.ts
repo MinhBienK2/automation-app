@@ -906,6 +906,15 @@ export function createAppApi(options: AppApiOptions) {
       },
 
       async exportRun(input: { runId: string }) {
+        options.storage.createEvidenceRecord({
+          runId: input.runId,
+          evidenceType: "operator_action",
+          payload: {
+            action: "export",
+            operatorLabel: "local",
+            runId: input.runId,
+          },
+        });
         return options.storage.exportRunEvidence(input.runId);
       },
 
