@@ -603,6 +603,7 @@ export function createAppApi(options: AppApiOptions) {
     outputs: {},
     error: null,
   };
+  let activeRunId: string | null = null;
 
   return {
     workflows: {
@@ -827,6 +828,7 @@ export function createAppApi(options: AppApiOptions) {
           environmentSnapshot: { initialVariables: {} },
           operatorLabel: "local",
         });
+        activeRunId = run.id;
         const completedStepIds: string[] = [];
         const payload: StartRunPayload = {
           protocolVersion: 1,
@@ -896,6 +898,9 @@ export function createAppApi(options: AppApiOptions) {
           status: result.status,
           terminalReason: result.reason ?? null,
         });
+        if (activeRunId === run.id) {
+          activeRunId = null;
+        }
 
         lastRunState = {
           run_id: run.id,
@@ -924,6 +929,10 @@ export function createAppApi(options: AppApiOptions) {
       },
 
       async stop() {
+        const runId = activeRunId;
+        if (runId && options.runner?.cancelRun) {
+          await options.runner.cancelRun({ runId });
+        }
         lastRunState = {
           ...lastRunState,
           status: "stopped",

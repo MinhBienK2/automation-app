@@ -460,4 +460,58 @@ describe("Electron app API", () => {
       "run.completed",
     ]);
   });
+
+  test("forwards stop requests to the active supervised runner", async () => {
+    const workflow = await api.workflows.create({ name: "Cancellable run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 60_000 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    let resolveStarted: (payload: StartRunPayload) => void = () => undefined;
+    let resolveRun: (result: RunnerResult) => void = () => undefined;
+    const started = new Promise<StartRunPayload>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const runCompletion = new Promise<RunnerResult>((resolve) => {
+      resolveRun = resolve;
+    });
+    const cancelRequests: Array<{ runId: string }> = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload, onEvent: (event: RunnerEvent) => void) {
+          onEvent({
+            type: "run.started",
+            severity: "info",
+            runId: payload.runId,
+            payload: { workflowId: payload.workflowId },
+            createdAt: "2026-05-09T00:00:00.000Z",
+          });
+          resolveStarted(payload);
+          return runCompletion;
+        },
+        async cancelRun(input: { runId: string }) {
+          cancelRequests.push(input);
+          resolveRun({ runId: input.runId, status: "cancelled", reason: "Operator stopped run." });
+          return { ok: true };
+        },
+      },
+    });
+
+    const startPromise = processApi.runs.start({ workflowId: workflow.id });
+    const payload = await started;
+    const stopped = await processApi.runs.stop();
+    const finalState = await startPromise;
+
+    expect(cancelRequests).toEqual([{ runId: payload.runId }]);
+    expect(stopped.status).toBe("stopped");
+    expect(finalState.status).toBe("stopped");
+    expect(storage.getRun(payload.runId)).toMatchObject({
+      status: "cancelled",
+      terminalReason: "Operator stopped run.",
+    });
+  });
 });
