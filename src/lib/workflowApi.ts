@@ -16,6 +16,8 @@ import type {
   RunEvidenceEvent,
   RunEvidenceExport,
   RunHistoryRecord,
+  RunProfile,
+  RunProfileInput,
   RunValidationIssue,
   RunState,
   SelectorCandidate,
@@ -268,6 +270,36 @@ export function saveWorkspacePolicy(policy: WorkspacePolicy) {
   const api = electronApi();
   if (api?.policy?.save) return api.policy.save(policy);
   return invoke<WorkspacePolicy>("save_workspace_policy", { policy });
+}
+
+export function listRunProfiles(input: { workflowId?: string | null } = {}) {
+  const api = electronApi();
+  if (api?.runProfiles?.list) return api.runProfiles.list(input);
+  return invoke<RunProfile[]>("list_run_profiles", input);
+}
+
+export function getRunProfile(id: string) {
+  const api = electronApi();
+  if (api?.runProfiles?.get) return api.runProfiles.get({ id });
+  return invoke<RunProfile>("get_run_profile", { id });
+}
+
+export function createRunProfile(profile: RunProfileInput) {
+  const api = electronApi();
+  if (api?.runProfiles?.create) return api.runProfiles.create(profile);
+  return invoke<RunProfile>("create_run_profile", { profile });
+}
+
+export function updateRunProfile(id: string, profile: Partial<RunProfileInput>) {
+  const api = electronApi();
+  if (api?.runProfiles?.update) return api.runProfiles.update({ id, profile });
+  return invoke<RunProfile>("update_run_profile", { id, profile });
+}
+
+export function deleteRunProfile(id: string) {
+  const api = electronApi();
+  if (api?.runProfiles?.delete) return api.runProfiles.delete({ id });
+  return invoke("delete_run_profile", { id });
 }
 
 export function validateSchedule(schedule: OrchestrationSchedule) {

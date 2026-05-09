@@ -195,6 +195,33 @@ describe("Electron app API", () => {
     });
   });
 
+  test("exposes run profile CRUD through the app facade", async () => {
+    const workflow = await api.workflows.create({ name: "Run profile facade" });
+    const profile = await api.runProfiles.create({
+      workflowId: workflow.id,
+      name: "Fast retry",
+      timeoutPolicy: { runTimeoutMs: 20_000, actionTimeoutMs: 1_000 },
+      retryPolicy: { attempts: 2, intervalMs: 50 },
+      retentionPolicy: { browserRetention: "close" },
+      concurrencyPolicy: { maxConcurrency: 1 },
+      evidencePolicy: { screenshots: true },
+    });
+
+    await expect(api.runProfiles.list({ workflowId: workflow.id })).resolves.toEqual([
+      expect.objectContaining({ id: profile.id, name: "Fast retry" }),
+    ]);
+    await expect(
+      api.runProfiles.update({
+        id: profile.id,
+        profile: { name: "Fast retry updated" },
+      }),
+    ).resolves.toMatchObject({ name: "Fast retry updated" });
+
+    await api.runProfiles.delete({ id: profile.id });
+
+    await expect(api.runProfiles.list({ workflowId: workflow.id })).resolves.toEqual([]);
+  });
+
   test("starts a configured vertical-slice run and persists events plus artifact metadata", async () => {
     const workflow = await api.workflows.create({ name: "Runnable flow" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });
@@ -564,6 +591,53 @@ describe("Electron app API", () => {
     expect(payloads[0]?.operatorPolicySnapshot).toEqual({
       allowedOrigins: ["https://owned.example.test"],
       maxConcurrency: 1,
+    });
+  });
+
+  test("resolves workflow default run profile into runner policy and plan defaults", async () => {
+    const workflow = await api.workflows.create({ name: "Run-profile-backed run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = {
+      type: "click",
+      config: {
+        target: { strategy: "text", value: "Continue" },
+      },
+    };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const profile = storage.createRunProfile({
+      workflowId: workflow.id,
+      name: "Strict",
+      timeoutPolicy: { runTimeoutMs: 45_000, actionTimeoutMs: 5_000 },
+      retryPolicy: { attempts: 3, intervalMs: 250 },
+      retentionPolicy: { browserRetention: "close" },
+      evidencePolicy: { screenshots: true, strict: true },
+    });
+    storage.updateWorkflowDefaults(workflow.id, { defaultRunProfileId: profile.id });
+    const payloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          payloads.push(payload);
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(payloads[0]?.runProfileSnapshot).toMatchObject({
+      timeoutMs: 45_000,
+      evidencePolicy: { screenshots: true, strict: true },
+      browserRetention: "close",
+    });
+    expect(payloads[0]?.runPlan.steps[0]).toMatchObject({
+      timeoutMs: 5_000,
+      retry: { attempts: 3, intervalMs: 250 },
     });
   });
 });

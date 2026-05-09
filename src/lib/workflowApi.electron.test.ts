@@ -5,6 +5,7 @@ import {
   exportRunEvidence,
   getWorkspacePolicy,
   getWorkflowSettings,
+  listRunProfiles,
   listWorkflows,
   listIdentityProfiles,
   listRuns,
@@ -70,6 +71,9 @@ describe("workflowApi Electron bridge", () => {
           .fn()
           .mockResolvedValue({ allowedOrigins: ["https://owned.example.test"], maxConcurrency: 1 }),
       },
+      runProfiles: {
+        list: vi.fn().mockResolvedValue([{ id: "rp_1", name: "Strict" }]),
+      },
     };
     Object.defineProperty(window, "cloakBrowser", {
       configurable: true,
@@ -107,6 +111,9 @@ describe("workflowApi Electron bridge", () => {
         maxConcurrency: 1,
       }),
     ).resolves.toEqual({ allowedOrigins: ["https://owned.example.test"], maxConcurrency: 1 });
+    await expect(listRunProfiles({ workflowId: "wf_2" })).resolves.toEqual([
+      { id: "rp_1", name: "Strict" },
+    ]);
 
     expect(api.workflows.list).toHaveBeenCalledTimes(1);
     expect(api.workflows.create).toHaveBeenCalledWith({ name: "New" });
@@ -127,6 +134,7 @@ describe("workflowApi Electron bridge", () => {
       allowedOrigins: ["https://owned.example.test"],
       maxConcurrency: 1,
     });
+    expect(api.runProfiles.list).toHaveBeenCalledWith({ workflowId: "wf_2" });
     expect(invokeMock).not.toHaveBeenCalled();
   });
 });

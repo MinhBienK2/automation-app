@@ -58,6 +58,13 @@ const api = {
     get: () => ipcRenderer.invoke("policy.get"),
     save: (input: unknown) => ipcRenderer.invoke("policy.save", input),
   },
+  runProfiles: {
+    list: (input?: { workflowId?: string | null }) => ipcRenderer.invoke("runProfile.list", input ?? {}),
+    get: (input: { id: string }) => ipcRenderer.invoke("runProfile.get", input),
+    create: (input: unknown) => ipcRenderer.invoke("runProfile.create", input),
+    update: (input: unknown) => ipcRenderer.invoke("runProfile.update", input),
+    delete: (input: { id: string }) => ipcRenderer.invoke("runProfile.delete", input),
+  },
 };
 
 contextBridge.exposeInMainWorld("cloakBrowser", api);

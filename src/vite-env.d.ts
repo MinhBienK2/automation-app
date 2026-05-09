@@ -11,6 +11,8 @@ import type {
   RunEvidenceEvent,
   RunEvidenceExport,
   RunHistoryRecord,
+  RunProfile,
+  RunProfileInput,
   RunValidationIssue,
   RunState,
   SettingsValidationIssue,
@@ -89,6 +91,13 @@ type ElectronCloakBrowserApi = {
   policy?: {
     get?: () => Promise<WorkspacePolicy>;
     save?: (policy: WorkspacePolicy) => Promise<WorkspacePolicy>;
+  };
+  runProfiles?: {
+    list?: (input?: { workflowId?: string | null }) => Promise<RunProfile[]>;
+    get?: (input: { id: string }) => Promise<RunProfile>;
+    create?: (profile: RunProfileInput) => Promise<RunProfile>;
+    update?: (input: { id: string; profile: Partial<RunProfileInput> }) => Promise<RunProfile>;
+    delete?: (input: { id: string }) => Promise<void>;
   };
 };
 

@@ -218,6 +218,42 @@ describe("Electron storage service", () => {
     ]);
   });
 
+  test("persists run profiles for workflow execution policy", () => {
+    const workflow = storage.createWorkflow({ name: "Run profile workflow" });
+    const profile = storage.createRunProfile({
+      workflowId: workflow.id,
+      name: "Strict evidence",
+      timeoutPolicy: { runTimeoutMs: 45_000, actionTimeoutMs: 5_000 },
+      retryPolicy: { attempts: 3, intervalMs: 250 },
+      retentionPolicy: { browserRetention: "close" },
+      concurrencyPolicy: { maxConcurrency: 1 },
+      evidencePolicy: { screenshots: true, strict: true },
+    });
+
+    expect(storage.listRunProfiles({ workflowId: workflow.id })).toEqual([
+      expect.objectContaining({ id: profile.id, name: "Strict evidence" }),
+    ]);
+    expect(storage.getRunProfile(profile.id)).toMatchObject({
+      timeoutPolicy: { runTimeoutMs: 45_000, actionTimeoutMs: 5_000 },
+      retryPolicy: { attempts: 3, intervalMs: 250 },
+      evidencePolicy: { screenshots: true, strict: true },
+    });
+
+    const updated = storage.updateRunProfile(profile.id, {
+      name: "Strict evidence v2",
+      retryPolicy: { attempts: 2, intervalMs: 100 },
+    });
+
+    expect(updated).toMatchObject({
+      name: "Strict evidence v2",
+      retryPolicy: { attempts: 2, intervalMs: 100 },
+    });
+
+    storage.deleteRunProfile(profile.id);
+
+    expect(storage.listRunProfiles({ workflowId: workflow.id })).toEqual([]);
+  });
+
   test("persists identity profiles and validates coherence before use", () => {
     const profile = storage.createIdentityProfile({
       name: "Owned mobile profile",

@@ -66,4 +66,14 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
 
   ipcMain.handle("policy.get", () => api.policy.get());
   ipcMain.handle("policy.save", (_event, input) => api.policy.save(input));
+
+  ipcMain.handle("runProfile.list", (_event, input: { workflowId?: string | null } = {}) =>
+    api.runProfiles.list(input),
+  );
+  ipcMain.handle("runProfile.get", (_event, input: { id: string }) => api.runProfiles.get(input));
+  ipcMain.handle("runProfile.create", (_event, input) => api.runProfiles.create(input));
+  ipcMain.handle("runProfile.update", (_event, input) => api.runProfiles.update(input));
+  ipcMain.handle("runProfile.delete", (_event, input: { id: string }) =>
+    api.runProfiles.delete(input),
+  );
 }

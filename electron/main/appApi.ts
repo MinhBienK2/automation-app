@@ -5,7 +5,7 @@ import {
   type ElectronWorkflowGraph,
   type GraphNodeType,
 } from "./graph.js";
-import type { IdentityProfileRecord, StorageService, WorkflowRecord } from "./storage.js";
+import type { IdentityProfileRecord, RunProfileRecord, StorageService, WorkflowRecord } from "./storage.js";
 import { runPlan, type BrowserAutomationAdapter } from "../runner/runnerCore.js";
 import type {
   ClickActionConfig,
@@ -592,6 +592,55 @@ function identitySnapshotFromProfile(profile: IdentityProfileRecord): IdentityPr
   };
 }
 
+function runProfileSnapshotFromProfile(profile: RunProfileRecord): StartRunPayload["runProfileSnapshot"] {
+  const runTimeoutMs = numberField(profile.timeoutPolicy.runTimeoutMs);
+  const browserRetention =
+    profile.retentionPolicy.browserRetention === "retain" ||
+    profile.retentionPolicy.browserRetention === "close"
+      ? profile.retentionPolicy.browserRetention
+      : "close";
+
+  return {
+    timeoutMs: runTimeoutMs ?? 30_000,
+    evidencePolicy: {
+      screenshots: profile.evidencePolicy.screenshots === true,
+      strict: profile.evidencePolicy.strict === true,
+    },
+    browserRetention,
+  };
+}
+
+function defaultRunProfileSnapshot(): StartRunPayload["runProfileSnapshot"] {
+  return {
+    timeoutMs: 30_000,
+    evidencePolicy: { screenshots: true },
+    browserRetention: "close",
+  };
+}
+
+function applyRunProfileDefaults(plan: RunPlan, profile: RunProfileRecord | null): RunPlan {
+  if (!profile) return plan;
+  const actionTimeoutMs = numberField(profile.timeoutPolicy.actionTimeoutMs);
+  const attempts = numberField(profile.retryPolicy.attempts);
+  const intervalMs = numberField(profile.retryPolicy.intervalMs) ?? 0;
+  const retry =
+    attempts && attempts > 1
+      ? {
+          attempts,
+          intervalMs,
+        }
+      : null;
+
+  return {
+    ...plan,
+    steps: plan.steps.map((step) => ({
+      ...step,
+      timeoutMs: step.timeoutMs ?? actionTimeoutMs,
+      retry: step.retry ?? retry,
+    })),
+  };
+}
+
 export function createAppApi(options: AppApiOptions) {
   let lastRunState: RunStateWithId = {
     status: "idle",
@@ -786,6 +835,31 @@ export function createAppApi(options: AppApiOptions) {
       },
     },
 
+    runProfiles: {
+      async list(input: { workflowId?: string | null } = {}) {
+        return options.storage.listRunProfiles(input);
+      },
+
+      async get(input: { id: string }) {
+        return options.storage.getRunProfile(input.id);
+      },
+
+      async create(input: Parameters<typeof options.storage.createRunProfile>[0]) {
+        return options.storage.createRunProfile(input);
+      },
+
+      async update(input: {
+        id: string;
+        profile: Parameters<typeof options.storage.updateRunProfile>[1];
+      }) {
+        return options.storage.updateRunProfile(input.id, input.profile);
+      },
+
+      async delete(input: { id: string }) {
+        options.storage.deleteRunProfile(input.id);
+      },
+    },
+
     graphs: {
       async loadActive(input: { workflowId: string }) {
         const graph = options.storage.loadActiveGraph(input.workflowId);
@@ -822,19 +896,26 @@ export function createAppApi(options: AppApiOptions) {
         if (!graph) throw new Error(`Workflow '${input.workflowId}' has no active graph.`);
         const workflow = options.storage.getWorkflow(input.workflowId);
         const activeVersion = options.storage.getActiveGraphVersion(input.workflowId);
-        const plan = compileGraphToRunPlan({
+        const compiledPlan = compileGraphToRunPlan({
           workflowId: input.workflowId,
           graphVersionId: activeVersion.id,
           graph,
         });
+        const runProfile = workflow.defaultRunProfileId
+          ? options.storage.getRunProfile(workflow.defaultRunProfileId)
+          : null;
+        const plan = applyRunProfileDefaults(compiledPlan, runProfile);
         const identityProfileSnapshot = workflow.defaultIdentityProfileId
           ? identitySnapshotFromProfile(options.storage.getIdentityProfile(workflow.defaultIdentityProfileId))
           : defaultIdentitySnapshot();
+        const runProfileSnapshot = runProfile
+          ? runProfileSnapshotFromProfile(runProfile)
+          : defaultRunProfileSnapshot();
         const operatorPolicySnapshot = options.storage.getWorkspacePolicy();
         const run = options.storage.createRun({
           workflowId: input.workflowId,
           graphVersionId: activeVersion.id,
-          runProfileSnapshot: { timeoutMs: 30_000 },
+          runProfileSnapshot,
           identityProfileSnapshot,
           environmentSnapshot: { initialVariables: {} },
           operatorLabel: "local",
@@ -846,11 +927,7 @@ export function createAppApi(options: AppApiOptions) {
           runId: run.id,
           workflowId: input.workflowId,
           runPlan: plan,
-          runProfileSnapshot: {
-            timeoutMs: 30_000,
-            evidencePolicy: { screenshots: true },
-            browserRetention: "close",
-          },
+          runProfileSnapshot,
           identityProfileSnapshot,
           environmentSnapshot: { initialVariables: {} },
           artifactDirectories: artifactDirectories(options.appDataDir, run.id),

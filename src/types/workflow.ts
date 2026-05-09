@@ -1145,6 +1145,29 @@ export type WorkspacePolicy = {
   maxConcurrency: number;
 };
 
+export type RunProfile = {
+  id: string;
+  workflowId: string | null;
+  name: string;
+  timeoutPolicy: Record<string, unknown>;
+  retryPolicy: Record<string, unknown>;
+  retentionPolicy: Record<string, unknown>;
+  concurrencyPolicy: Record<string, unknown>;
+  evidencePolicy: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RunProfileInput = {
+  workflowId?: string | null;
+  name: string;
+  timeoutPolicy?: Record<string, unknown>;
+  retryPolicy?: Record<string, unknown>;
+  retentionPolicy?: Record<string, unknown>;
+  concurrencyPolicy?: Record<string, unknown>;
+  evidencePolicy?: Record<string, unknown>;
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;

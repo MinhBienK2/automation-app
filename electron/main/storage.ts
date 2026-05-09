@@ -48,6 +48,29 @@ export type WorkspacePolicy = {
   maxConcurrency: number;
 };
 
+export type RunProfileRecord = {
+  id: string;
+  workflowId: string | null;
+  name: string;
+  timeoutPolicy: Record<string, unknown>;
+  retryPolicy: Record<string, unknown>;
+  retentionPolicy: Record<string, unknown>;
+  concurrencyPolicy: Record<string, unknown>;
+  evidencePolicy: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RunProfileInput = {
+  workflowId?: string | null;
+  name: string;
+  timeoutPolicy?: Record<string, unknown>;
+  retryPolicy?: Record<string, unknown>;
+  retentionPolicy?: Record<string, unknown>;
+  concurrencyPolicy?: Record<string, unknown>;
+  evidencePolicy?: Record<string, unknown>;
+};
+
 export type RunEventRecord = {
   id: string;
   runId: string;
@@ -218,6 +241,21 @@ function runFromRow(row: Row): RunRecord {
     endedAt: row.ended_at ? String(row.ended_at) : null,
     terminalReason: row.terminal_reason ? String(row.terminal_reason) : null,
     operatorLabel: String(row.operator_label),
+  };
+}
+
+function runProfileFromRow(row: Row): RunProfileRecord {
+  return {
+    id: String(row.id),
+    workflowId: row.workflow_id ? String(row.workflow_id) : null,
+    name: String(row.name),
+    timeoutPolicy: parseJson<Record<string, unknown>>(row.timeout_policy_json, {}),
+    retryPolicy: parseJson<Record<string, unknown>>(row.retry_policy_json, {}),
+    retentionPolicy: parseJson<Record<string, unknown>>(row.retention_policy_json, {}),
+    concurrencyPolicy: parseJson<Record<string, unknown>>(row.concurrency_policy_json, {}),
+    evidencePolicy: parseJson<Record<string, unknown>>(row.evidence_policy_json, {}),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
   };
 }
 
@@ -879,6 +917,85 @@ export function createStorageService(options: StorageServiceOptions) {
             )
             .all(limit) as Row[]);
       return rows.map(runFromRow);
+    },
+
+    createRunProfile(input: RunProfileInput): RunProfileRecord {
+      const profileId = id("rp");
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `INSERT INTO run_profiles
+            (id, workflow_id, name, timeout_policy_json, retry_policy_json,
+             retention_policy_json, concurrency_policy_json, evidence_policy_json,
+             created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          profileId,
+          input.workflowId ?? null,
+          input.name.trim(),
+          JSON.stringify(input.timeoutPolicy ?? {}),
+          JSON.stringify(input.retryPolicy ?? {}),
+          JSON.stringify(input.retentionPolicy ?? {}),
+          JSON.stringify(input.concurrencyPolicy ?? {}),
+          JSON.stringify(input.evidencePolicy ?? {}),
+          timestamp,
+          timestamp,
+        );
+      return this.getRunProfile(profileId);
+    },
+
+    getRunProfile(profileId: string): RunProfileRecord {
+      const row = database().prepare("SELECT * FROM run_profiles WHERE id = ?").get(profileId) as
+        | Row
+        | undefined;
+      if (!row) throw new Error(`Run profile '${profileId}' not found.`);
+      return runProfileFromRow(row);
+    },
+
+    listRunProfiles(input: { workflowId?: string | null } = {}): RunProfileRecord[] {
+      const rows =
+        input.workflowId === undefined
+          ? (database()
+              .prepare("SELECT * FROM run_profiles ORDER BY updated_at DESC, name ASC")
+              .all() as Row[])
+          : (database()
+              .prepare(
+                `SELECT * FROM run_profiles
+                 WHERE workflow_id IS ?
+                 ORDER BY updated_at DESC, name ASC`,
+              )
+              .all(input.workflowId) as Row[]);
+      return rows.map(runProfileFromRow);
+    },
+
+    updateRunProfile(profileId: string, input: Partial<RunProfileInput>): RunProfileRecord {
+      const current = this.getRunProfile(profileId);
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `UPDATE run_profiles
+           SET workflow_id = ?, name = ?, timeout_policy_json = ?, retry_policy_json = ?,
+               retention_policy_json = ?, concurrency_policy_json = ?, evidence_policy_json = ?,
+               updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(
+          input.workflowId === undefined ? current.workflowId : input.workflowId,
+          input.name?.trim() || current.name,
+          JSON.stringify(input.timeoutPolicy ?? current.timeoutPolicy),
+          JSON.stringify(input.retryPolicy ?? current.retryPolicy),
+          JSON.stringify(input.retentionPolicy ?? current.retentionPolicy),
+          JSON.stringify(input.concurrencyPolicy ?? current.concurrencyPolicy),
+          JSON.stringify(input.evidencePolicy ?? current.evidencePolicy),
+          timestamp,
+          profileId,
+        );
+      return this.getRunProfile(profileId);
+    },
+
+    deleteRunProfile(profileId: string) {
+      database().prepare("DELETE FROM run_profiles WHERE id = ?").run(profileId);
     },
 
     appendRunEvent(
