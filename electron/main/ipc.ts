@@ -63,4 +63,7 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
     api.evidence.exportRun(input),
   );
   ipcMain.handle("evidence.sanitize", (_event, input) => api.evidence.sanitize(input));
+
+  ipcMain.handle("policy.get", () => api.policy.get());
+  ipcMain.handle("policy.save", (_event, input) => api.policy.save(input));
 }

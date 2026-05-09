@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   createWorkflow,
   exportRunEvidence,
+  getWorkspacePolicy,
   getWorkflowSettings,
   listWorkflows,
   listIdentityProfiles,
@@ -10,6 +11,7 @@ import {
   onRunEvent,
   runWorkflow,
   saveWorkflowSettingsSection,
+  saveWorkspacePolicy,
   validateWorkflowRun,
 } from "./workflowApi";
 
@@ -62,6 +64,12 @@ describe("workflowApi Electron bridge", () => {
           evidence: [],
         }),
       },
+      policy: {
+        get: vi.fn().mockResolvedValue({ allowedOrigins: [], maxConcurrency: 1 }),
+        save: vi
+          .fn()
+          .mockResolvedValue({ allowedOrigins: ["https://owned.example.test"], maxConcurrency: 1 }),
+      },
     };
     Object.defineProperty(window, "cloakBrowser", {
       configurable: true,
@@ -92,6 +100,13 @@ describe("workflowApi Electron bridge", () => {
       artifacts: [],
       evidence: [],
     });
+    await expect(getWorkspacePolicy()).resolves.toEqual({ allowedOrigins: [], maxConcurrency: 1 });
+    await expect(
+      saveWorkspacePolicy({
+        allowedOrigins: ["https://owned.example.test"],
+        maxConcurrency: 1,
+      }),
+    ).resolves.toEqual({ allowedOrigins: ["https://owned.example.test"], maxConcurrency: 1 });
 
     expect(api.workflows.list).toHaveBeenCalledTimes(1);
     expect(api.workflows.create).toHaveBeenCalledWith({ name: "New" });
@@ -107,6 +122,11 @@ describe("workflowApi Electron bridge", () => {
     expect(api.runs.onEvent).toHaveBeenCalledTimes(1);
     expect(api.profiles.list).toHaveBeenCalledTimes(1);
     expect(api.evidence.exportRun).toHaveBeenCalledWith({ runId: "run_1" });
+    expect(api.policy.get).toHaveBeenCalledTimes(1);
+    expect(api.policy.save).toHaveBeenCalledWith({
+      allowedOrigins: ["https://owned.example.test"],
+      maxConcurrency: 1,
+    });
     expect(invokeMock).not.toHaveBeenCalled();
   });
 });

@@ -178,6 +178,23 @@ describe("Electron app API", () => {
     });
   });
 
+  test("exposes workspace policy through the app facade", async () => {
+    await expect(api.policy.get()).resolves.toEqual({
+      allowedOrigins: [],
+      maxConcurrency: 1,
+    });
+
+    await expect(
+      api.policy.save({
+        allowedOrigins: ["https://owned.example.test"],
+        maxConcurrency: 1,
+      }),
+    ).resolves.toEqual({
+      allowedOrigins: ["https://owned.example.test"],
+      maxConcurrency: 1,
+    });
+  });
+
   test("starts a configured vertical-slice run and persists events plus artifact metadata", async () => {
     const workflow = await api.workflows.create({ name: "Runnable flow" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });

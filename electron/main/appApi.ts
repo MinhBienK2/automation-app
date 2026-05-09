@@ -776,6 +776,16 @@ export function createAppApi(options: AppApiOptions) {
       },
     },
 
+    policy: {
+      async get() {
+        return options.storage.getWorkspacePolicy();
+      },
+
+      async save(input: Parameters<typeof options.storage.saveWorkspacePolicy>[0]) {
+        return options.storage.saveWorkspacePolicy(input);
+      },
+    },
+
     graphs: {
       async loadActive(input: { workflowId: string }) {
         const graph = options.storage.loadActiveGraph(input.workflowId);

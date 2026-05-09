@@ -54,6 +54,10 @@ const api = {
     exportRun: (input: { runId: string }) => ipcRenderer.invoke("evidence.exportRun", input),
     sanitize: (input: unknown) => ipcRenderer.invoke("evidence.sanitize", input),
   },
+  policy: {
+    get: () => ipcRenderer.invoke("policy.get"),
+    save: (input: unknown) => ipcRenderer.invoke("policy.save", input),
+  },
 };
 
 contextBridge.exposeInMainWorld("cloakBrowser", api);

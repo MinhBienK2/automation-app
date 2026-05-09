@@ -32,6 +32,7 @@ import type {
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
+  WorkspacePolicy,
 } from "../types/workflow";
 
 function electronApi() {
@@ -255,6 +256,18 @@ export function sanitizeEvidencePayload(payload: Record<string, unknown>) {
   const api = electronApi();
   if (api?.evidence?.sanitize) return api.evidence.sanitize({ payload });
   return invoke<Record<string, unknown>>("sanitize_evidence_payload", { payload });
+}
+
+export function getWorkspacePolicy() {
+  const api = electronApi();
+  if (api?.policy?.get) return api.policy.get();
+  return invoke<WorkspacePolicy>("get_workspace_policy");
+}
+
+export function saveWorkspacePolicy(policy: WorkspacePolicy) {
+  const api = electronApi();
+  if (api?.policy?.save) return api.policy.save(policy);
+  return invoke<WorkspacePolicy>("save_workspace_policy", { policy });
 }
 
 export function validateSchedule(schedule: OrchestrationSchedule) {

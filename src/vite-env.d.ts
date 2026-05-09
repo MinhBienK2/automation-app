@@ -21,6 +21,7 @@ import type {
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
+  WorkspacePolicy,
 } from "./types/workflow";
 
 type ElectronCloakBrowserApi = {
@@ -84,6 +85,10 @@ type ElectronCloakBrowserApi = {
     sanitize?: (input: {
       payload: Record<string, unknown>;
     }) => Promise<Record<string, unknown>>;
+  };
+  policy?: {
+    get?: () => Promise<WorkspacePolicy>;
+    save?: (policy: WorkspacePolicy) => Promise<WorkspacePolicy>;
   };
 };
 

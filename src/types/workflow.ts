@@ -1140,6 +1140,11 @@ export type ElectronRunEvent = {
   createdAt: string;
 };
 
+export type WorkspacePolicy = {
+  allowedOrigins: string[];
+  maxConcurrency: number;
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;
