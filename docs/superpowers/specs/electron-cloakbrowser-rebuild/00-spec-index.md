@@ -50,7 +50,7 @@ Child spec implementation summary:
 | 04 Workflow Graph And Builder | PARTIAL |
 | 05 Action Catalog And Locator | PARTIAL |
 | 06 CloakRunner | PARTIAL: supervised `startRun`/`cancelRun`, event streaming, preflight gate, screenshot artifacts, allowlist checks, runtime retries, and action timeouts implemented; real CloakBrowser smoke, downloads, traces, and forceful cleanup remain |
-| 07 Identity Profile And Fingerprint Preflight | PARTIAL: storage CRUD, app/preload API, renderer wrappers, basic coherence validation, workflow default profile run wiring, and runner preflight gate implemented; profile locking, full UI wiring, and real owned probe smoke remain |
+| 07 Identity Profile And Fingerprint Preflight | PARTIAL: storage CRUD, app/preload API, renderer wrappers, basic coherence validation, workflow default profile run wiring, persistent profile locking, and runner preflight gate implemented; full UI wiring and real owned probe smoke remain |
 | 08 Run Evidence And Audit | PARTIAL: run events, terminal run status, run history, safe artifact metadata, evidence records, sanitizer, compact export, API surface, preflight evidence persistence, and Stop audit evidence implemented; evidence viewer, broader operator audit, and strict policy remain |
 | 09 UI/UX Feature Parity | PARTIAL: Electron preload/API foundations exist for workflow, graph, settings, run profiles, environments, run start/state/history/event subscription, identity profiles, workspace policy, and evidence export; user-facing Electron-native editors/viewers and run monitor remain |
 | 10 Packaging And Release | PARTIAL |

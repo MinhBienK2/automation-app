@@ -50,6 +50,7 @@ The Electron rebuild adds a Node runner foundation that executes runner-native p
 - `BrowserRunner` records compact action traces into the browser output store under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
 - Electron runner core consumes compiled `RunPlan` payloads, enforces origin allowlists for navigation, emits deterministic lifecycle/step/issue/artifact events, supports cooperative cancellation between actions, and writes artifacts only under main-allocated run directories.
 - Electron app API resolves workspace allowed-origin policy from storage into the runner operator policy snapshot before each run.
+- Electron app API locks each active persistent identity profile path before creating a run and releases it in run cleanup, so concurrent runs cannot share the same browser profile directory.
 - Electron runner core can execute an identity preflight policy before workflow actions by navigating to an allowlisted owned probe URL, reading a JSON verdict from the page body or configured locator, emitting preflight events, and failing the run before graph steps when the verdict is malformed or blocking.
 - Runner steps honor runtime retry policy for runtime failures, emit `action.retrying` with attempt metadata, and avoid retrying validation or policy failures.
 - Runner-level action timeouts wrap each attempt, emit `action.timeout`, and then use the normal issue/step-failed/run-failed path so a timed-out action creates exactly one terminal run event.

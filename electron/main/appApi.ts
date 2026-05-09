@@ -673,6 +673,7 @@ export function createAppApi(options: AppApiOptions) {
     error: null,
   };
   let activeRunId: string | null = null;
+  const activePersistentProfilePaths = new Set<string>();
 
   return {
     workflows: {
@@ -961,105 +962,121 @@ export function createAppApi(options: AppApiOptions) {
           : null;
         const environmentSnapshot = environmentSnapshotFromEnvironment(environment);
         const operatorPolicySnapshot = options.storage.getWorkspacePolicy();
-        const run = options.storage.createRun({
-          workflowId: input.workflowId,
-          graphVersionId: activeVersion.id,
-          runProfileSnapshot,
-          identityProfileSnapshot,
-          environmentSnapshot,
-          operatorLabel: "local",
-        });
-        activeRunId = run.id;
-        const completedStepIds: string[] = [];
-        const payload: StartRunPayload = {
-          protocolVersion: 1,
-          runId: run.id,
-          workflowId: input.workflowId,
-          runPlan: plan,
-          runProfileSnapshot,
-          identityProfileSnapshot,
-          environmentSnapshot,
-          artifactDirectories: artifactDirectories(options.appDataDir, run.id),
-          operatorPolicySnapshot,
-        };
+        const persistentProfilePath = identityProfileSnapshot.persistentProfilePath?.trim() || null;
+        if (persistentProfilePath) {
+          if (activePersistentProfilePaths.has(persistentProfilePath)) {
+            throw new Error(`Persistent identity profile '${persistentProfilePath}' is already in use.`);
+          }
+          activePersistentProfilePaths.add(persistentProfilePath);
+        }
+        let runIdForCleanup: string | null = null;
 
-        const persistEvent = (event: RunnerEvent) => {
-          const persisted = options.storage.appendRunEvent(run.id, {
-            type: event.type,
-            severity: event.severity,
-            nodeId: event.nodeId ?? null,
-            actionId: event.actionId ?? null,
-            payload: event.payload,
+        try {
+          const run = options.storage.createRun({
+            workflowId: input.workflowId,
+            graphVersionId: activeVersion.id,
+            runProfileSnapshot,
+            identityProfileSnapshot,
+            environmentSnapshot,
+            operatorLabel: "local",
+          });
+          runIdForCleanup = run.id;
+          activeRunId = run.id;
+          const completedStepIds: string[] = [];
+          const payload: StartRunPayload = {
+            protocolVersion: 1,
+            runId: run.id,
+            workflowId: input.workflowId,
+            runPlan: plan,
+            runProfileSnapshot,
+            identityProfileSnapshot,
+            environmentSnapshot,
+            artifactDirectories: artifactDirectories(options.appDataDir, run.id),
+            operatorPolicySnapshot,
+          };
+
+          const persistEvent = (event: RunnerEvent) => {
+            const persisted = options.storage.appendRunEvent(run.id, {
+              type: event.type,
+              severity: event.severity,
+              nodeId: event.nodeId ?? null,
+              actionId: event.actionId ?? null,
+              payload: event.payload,
+            });
+
+            if (event.type === "step.completed" && event.nodeId) {
+              completedStepIds.push(event.nodeId);
+            }
+
+            if (event.type === "artifact.created") {
+              options.storage.registerArtifact({
+                runId: run.id,
+                eventId: persisted.id,
+                type: String(event.payload.type),
+                relativePath: String(event.payload.relativePath),
+                mimeType: String(event.payload.mimeType),
+                sizeBytes: Number(event.payload.sizeBytes),
+                checksum: String(event.payload.checksum),
+                sanitized: event.payload.sanitized === true,
+              });
+            }
+
+            if (event.type === "preflight.verdictReceived") {
+              options.storage.createEvidenceRecord({
+                runId: run.id,
+                evidenceType: "preflight_verdict",
+                payload: {
+                  ...event.payload,
+                  eventId: persisted.id,
+                },
+              });
+            }
+
+            options.onRunEvent?.(event);
+          };
+
+          const result = options.runner
+            ? await options.runner.startRun(payload, persistEvent)
+            : await runPlan(payload, options.createAdapter(), {
+                emit: persistEvent,
+              });
+          options.storage.finishRun(run.id, {
+            status: result.status,
+            terminalReason: result.reason ?? null,
           });
 
-          if (event.type === "step.completed" && event.nodeId) {
-            completedStepIds.push(event.nodeId);
+          lastRunState = {
+            run_id: run.id,
+            status:
+              result.status === "completed"
+                ? "success"
+                : result.status === "cancelled"
+                  ? "stopped"
+                  : "failed",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: completedStepIds,
+            outputs: {},
+            error:
+              result.status === "failed"
+                ? {
+                    step_number: completedStepIds.length + 1,
+                    action_type: "workflow",
+                    reason: result.reason ?? "Run failed.",
+                  }
+                : null,
+          };
+          return lastRunState;
+        } finally {
+          if (activeRunId === runIdForCleanup) {
+            activeRunId = null;
           }
-
-          if (event.type === "artifact.created") {
-            options.storage.registerArtifact({
-              runId: run.id,
-              eventId: persisted.id,
-              type: String(event.payload.type),
-              relativePath: String(event.payload.relativePath),
-              mimeType: String(event.payload.mimeType),
-              sizeBytes: Number(event.payload.sizeBytes),
-              checksum: String(event.payload.checksum),
-              sanitized: event.payload.sanitized === true,
-            });
+          if (persistentProfilePath) {
+            activePersistentProfilePaths.delete(persistentProfilePath);
           }
-
-          if (event.type === "preflight.verdictReceived") {
-            options.storage.createEvidenceRecord({
-              runId: run.id,
-              evidenceType: "preflight_verdict",
-              payload: {
-                ...event.payload,
-                eventId: persisted.id,
-              },
-            });
-          }
-
-          options.onRunEvent?.(event);
-        };
-
-        const result = options.runner
-          ? await options.runner.startRun(payload, persistEvent)
-          : await runPlan(payload, options.createAdapter(), {
-              emit: persistEvent,
-            });
-        options.storage.finishRun(run.id, {
-          status: result.status,
-          terminalReason: result.reason ?? null,
-        });
-        if (activeRunId === run.id) {
-          activeRunId = null;
         }
-
-        lastRunState = {
-          run_id: run.id,
-          status:
-            result.status === "completed"
-              ? "success"
-              : result.status === "cancelled"
-                ? "stopped"
-                : "failed",
-          mode: "run_workflow",
-          target_step_id: null,
-          current_step_id: null,
-          current_step_number: null,
-          completed_step_ids: completedStepIds,
-          outputs: {},
-          error:
-            result.status === "failed"
-              ? {
-                  step_number: completedStepIds.length + 1,
-                  action_type: "workflow",
-                  reason: result.reason ?? "Run failed.",
-                }
-              : null,
-        };
-        return lastRunState;
       },
 
       async stop() {

@@ -481,6 +481,76 @@ describe("Electron app API", () => {
     expect(payloads[0]?.identityProfileSnapshot.proxy).not.toHaveProperty("password");
   });
 
+  test("prevents concurrent runs from sharing a persistent identity profile", async () => {
+    const firstWorkflow = await api.workflows.create({ name: "Persistent profile first" });
+    const secondWorkflow = await api.workflows.create({ name: "Persistent profile second" });
+    for (const workflow of [firstWorkflow, secondWorkflow]) {
+      const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+      const draft = graph.nodes[1];
+      if (!draft) throw new Error("Missing draft graph node.");
+      draft.config = { type: "wait", config: { duration_ms: 1 } };
+      await api.graphs.save({ workflowId: workflow.id, graph });
+    }
+    const profile = storage.createIdentityProfile({
+      name: "Shared persistent profile",
+      persistentProfilePath: "shared-profile",
+      deviceIdentity: {
+        viewport: { width: 1280, height: 720 },
+        mobile: false,
+        touch: false,
+      },
+      locale: { locale: "en-US", timezone: "America/New_York" },
+      headedPolicy: "allow_headless",
+      preflightPolicy: { enabled: false },
+    });
+    storage.updateWorkflowDefaults(firstWorkflow.id, { defaultIdentityProfileId: profile.id });
+    storage.updateWorkflowDefaults(secondWorkflow.id, { defaultIdentityProfileId: profile.id });
+
+    let resolveStarted: (payload: StartRunPayload) => void = () => undefined;
+    let resolveRun: (result: RunnerResult) => void = () => undefined;
+    const started = new Promise<StartRunPayload>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const runCompletion = new Promise<RunnerResult>((resolve) => {
+      resolveRun = resolve;
+    });
+    const payloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          payloads.push(payload);
+          if (payloads.length === 1) {
+            resolveStarted(payload);
+            return runCompletion;
+          }
+          if (payloads.length === 2) {
+            return { runId: payload.runId, status: "completed" };
+          }
+          throw new Error("runner should not start while persistent profile is locked");
+        },
+      },
+    });
+
+    const firstStart = processApi.runs.start({ workflowId: firstWorkflow.id });
+    const firstPayload = await started;
+    try {
+      await expect(processApi.runs.start({ workflowId: secondWorkflow.id })).rejects.toThrow(
+        "Persistent identity profile 'shared-profile' is already in use.",
+      );
+      expect(payloads).toHaveLength(1);
+    } finally {
+      resolveRun({ runId: firstPayload.runId, status: "completed" });
+      await firstStart;
+    }
+
+    await processApi.runs.start({ workflowId: secondWorkflow.id });
+
+    expect(payloads).toHaveLength(2);
+  });
+
   test("exposes workflow run history through the app facade", async () => {
     const workflow = await api.workflows.create({ name: "Run history facade" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });
