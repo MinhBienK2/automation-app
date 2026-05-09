@@ -71,6 +71,31 @@ export type RunProfileInput = {
   evidencePolicy?: Record<string, unknown>;
 };
 
+export type EnvironmentRecord = {
+  id: string;
+  name: string;
+  permissions: string[];
+  headers: Record<string, string>;
+  cookies: unknown[];
+  localStorage: Record<string, unknown>;
+  sessionStorage: Record<string, unknown>;
+  downloadPolicy: Record<string, unknown>;
+  initialVariables: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EnvironmentInput = {
+  name: string;
+  permissions?: string[];
+  headers?: Record<string, string>;
+  cookies?: unknown[];
+  localStorage?: Record<string, unknown>;
+  sessionStorage?: Record<string, unknown>;
+  downloadPolicy?: Record<string, unknown>;
+  initialVariables?: Record<string, unknown>;
+};
+
 export type RunEventRecord = {
   id: string;
   runId: string;
@@ -254,6 +279,22 @@ function runProfileFromRow(row: Row): RunProfileRecord {
     retentionPolicy: parseJson<Record<string, unknown>>(row.retention_policy_json, {}),
     concurrencyPolicy: parseJson<Record<string, unknown>>(row.concurrency_policy_json, {}),
     evidencePolicy: parseJson<Record<string, unknown>>(row.evidence_policy_json, {}),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function environmentFromRow(row: Row): EnvironmentRecord {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    permissions: parseJson<string[]>(row.permissions_json, []),
+    headers: parseJson<Record<string, string>>(row.headers_json, {}),
+    cookies: parseJson<unknown[]>(row.cookies_json, []),
+    localStorage: parseJson<Record<string, unknown>>(row.local_storage_json, {}),
+    sessionStorage: parseJson<Record<string, unknown>>(row.session_storage_json, {}),
+    downloadPolicy: parseJson<Record<string, unknown>>(row.download_policy_json, {}),
+    initialVariables: parseJson<Record<string, unknown>>(row.initial_variables_json, {}),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -996,6 +1037,82 @@ export function createStorageService(options: StorageServiceOptions) {
 
     deleteRunProfile(profileId: string) {
       database().prepare("DELETE FROM run_profiles WHERE id = ?").run(profileId);
+    },
+
+    createEnvironment(input: EnvironmentInput): EnvironmentRecord {
+      const environmentId = id("env");
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `INSERT INTO environments
+            (id, name, permissions_json, headers_json, cookies_json, local_storage_json,
+             session_storage_json, download_policy_json, initial_variables_json,
+             created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          environmentId,
+          input.name.trim(),
+          JSON.stringify(input.permissions ?? []),
+          JSON.stringify(input.headers ?? {}),
+          JSON.stringify(input.cookies ?? []),
+          JSON.stringify(input.localStorage ?? {}),
+          JSON.stringify(input.sessionStorage ?? {}),
+          JSON.stringify(input.downloadPolicy ?? {}),
+          JSON.stringify(input.initialVariables ?? {}),
+          timestamp,
+          timestamp,
+        );
+      return this.getEnvironment(environmentId);
+    },
+
+    getEnvironment(environmentId: string): EnvironmentRecord {
+      const row = database().prepare("SELECT * FROM environments WHERE id = ?").get(environmentId) as
+        | Row
+        | undefined;
+      if (!row) throw new Error(`Environment '${environmentId}' not found.`);
+      return environmentFromRow(row);
+    },
+
+    listEnvironments(): EnvironmentRecord[] {
+      return (
+        database()
+          .prepare("SELECT * FROM environments ORDER BY updated_at DESC, name ASC")
+          .all() as Row[]
+      ).map(environmentFromRow);
+    },
+
+    updateEnvironment(
+      environmentId: string,
+      input: Partial<EnvironmentInput>,
+    ): EnvironmentRecord {
+      const current = this.getEnvironment(environmentId);
+      const timestamp = nowIso();
+      database()
+        .prepare(
+          `UPDATE environments
+           SET name = ?, permissions_json = ?, headers_json = ?, cookies_json = ?,
+               local_storage_json = ?, session_storage_json = ?, download_policy_json = ?,
+               initial_variables_json = ?, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(
+          input.name?.trim() || current.name,
+          JSON.stringify(input.permissions ?? current.permissions),
+          JSON.stringify(input.headers ?? current.headers),
+          JSON.stringify(input.cookies ?? current.cookies),
+          JSON.stringify(input.localStorage ?? current.localStorage),
+          JSON.stringify(input.sessionStorage ?? current.sessionStorage),
+          JSON.stringify(input.downloadPolicy ?? current.downloadPolicy),
+          JSON.stringify(input.initialVariables ?? current.initialVariables),
+          timestamp,
+          environmentId,
+        );
+      return this.getEnvironment(environmentId);
+    },
+
+    deleteEnvironment(environmentId: string) {
+      database().prepare("DELETE FROM environments WHERE id = ?").run(environmentId);
     },
 
     appendRunEvent(

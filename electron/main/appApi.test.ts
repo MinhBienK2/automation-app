@@ -222,6 +222,29 @@ describe("Electron app API", () => {
     await expect(api.runProfiles.list({ workflowId: workflow.id })).resolves.toEqual([]);
   });
 
+  test("exposes environment CRUD through the app facade", async () => {
+    const environment = await api.environments.create({
+      name: "Owned env",
+      permissions: ["geolocation"],
+      headers: { "x-owned-test": "true" },
+      initialVariables: { username: "ada" },
+    });
+
+    await expect(api.environments.list()).resolves.toEqual([
+      expect.objectContaining({ id: environment.id, name: "Owned env" }),
+    ]);
+    await expect(
+      api.environments.update({
+        id: environment.id,
+        environment: { name: "Owned env updated" },
+      }),
+    ).resolves.toMatchObject({ name: "Owned env updated" });
+
+    await api.environments.delete({ id: environment.id });
+
+    await expect(api.environments.list()).resolves.toEqual([]);
+  });
+
   test("starts a configured vertical-slice run and persists events plus artifact metadata", async () => {
     const workflow = await api.workflows.create({ name: "Runnable flow" });
     const graph = await api.graphs.loadActive({ workflowId: workflow.id });
@@ -638,6 +661,42 @@ describe("Electron app API", () => {
     expect(payloads[0]?.runPlan.steps[0]).toMatchObject({
       timeoutMs: 5_000,
       retry: { attempts: 3, intervalMs: 250 },
+    });
+  });
+
+  test("resolves workflow default environment into the runner payload", async () => {
+    const workflow = await api.workflows.create({ name: "Environment-backed run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "wait", config: { duration_ms: 1 } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const environment = storage.createEnvironment({
+      name: "Owned staging env",
+      permissions: ["geolocation"],
+      headers: { "x-owned-test": "true" },
+      initialVariables: { username: "ada" },
+    });
+    storage.updateWorkflowDefaults(workflow.id, { defaultEnvironmentId: environment.id });
+    const payloads: StartRunPayload[] = [];
+    const processApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      runner: {
+        async startRun(payload: StartRunPayload): Promise<RunnerResult> {
+          payloads.push(payload);
+          return { runId: payload.runId, status: "completed" };
+        },
+      },
+    });
+
+    await processApi.runs.start({ workflowId: workflow.id });
+
+    expect(payloads[0]?.environmentSnapshot).toEqual({
+      initialVariables: { username: "ada" },
+      permissions: ["geolocation"],
+      extraHTTPHeaders: { "x-owned-test": "true" },
     });
   });
 });

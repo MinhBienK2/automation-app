@@ -254,6 +254,42 @@ describe("Electron storage service", () => {
     expect(storage.listRunProfiles({ workflowId: workflow.id })).toEqual([]);
   });
 
+  test("persists environments for run setup state", () => {
+    const environment = storage.createEnvironment({
+      name: "Owned staging env",
+      permissions: ["geolocation"],
+      headers: { "x-owned-test": "true" },
+      cookies: [],
+      localStorage: { feature: "enabled" },
+      sessionStorage: {},
+      downloadPolicy: { directory: "downloads" },
+      initialVariables: { username: "ada" },
+    });
+
+    expect(storage.listEnvironments()).toEqual([
+      expect.objectContaining({ id: environment.id, name: "Owned staging env" }),
+    ]);
+    expect(storage.getEnvironment(environment.id)).toMatchObject({
+      permissions: ["geolocation"],
+      headers: { "x-owned-test": "true" },
+      initialVariables: { username: "ada" },
+    });
+
+    const updated = storage.updateEnvironment(environment.id, {
+      name: "Owned staging env v2",
+      initialVariables: { username: "grace" },
+    });
+
+    expect(updated).toMatchObject({
+      name: "Owned staging env v2",
+      initialVariables: { username: "grace" },
+    });
+
+    storage.deleteEnvironment(environment.id);
+
+    expect(storage.listEnvironments()).toEqual([]);
+  });
+
   test("persists identity profiles and validates coherence before use", () => {
     const profile = storage.createIdentityProfile({
       name: "Owned mobile profile",

@@ -5,6 +5,8 @@ import type {
   BatchRunSummary,
   CompiledWorkflowGraph,
   ElectronRunEvent,
+  Environment,
+  EnvironmentInput,
   ElementSnapshot,
   GraphValidationIssue,
   IdentityProfile,
@@ -300,6 +302,36 @@ export function deleteRunProfile(id: string) {
   const api = electronApi();
   if (api?.runProfiles?.delete) return api.runProfiles.delete({ id });
   return invoke("delete_run_profile", { id });
+}
+
+export function listEnvironments() {
+  const api = electronApi();
+  if (api?.environments?.list) return api.environments.list();
+  return invoke<Environment[]>("list_environments");
+}
+
+export function getEnvironment(id: string) {
+  const api = electronApi();
+  if (api?.environments?.get) return api.environments.get({ id });
+  return invoke<Environment>("get_environment", { id });
+}
+
+export function createEnvironment(environment: EnvironmentInput) {
+  const api = electronApi();
+  if (api?.environments?.create) return api.environments.create(environment);
+  return invoke<Environment>("create_environment", { environment });
+}
+
+export function updateEnvironment(id: string, environment: Partial<EnvironmentInput>) {
+  const api = electronApi();
+  if (api?.environments?.update) return api.environments.update({ id, environment });
+  return invoke<Environment>("update_environment", { id, environment });
+}
+
+export function deleteEnvironment(id: string) {
+  const api = electronApi();
+  if (api?.environments?.delete) return api.environments.delete({ id });
+  return invoke("delete_environment", { id });
 }
 
 export function validateSchedule(schedule: OrchestrationSchedule) {

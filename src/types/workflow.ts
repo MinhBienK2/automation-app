@@ -1168,6 +1168,31 @@ export type RunProfileInput = {
   evidencePolicy?: Record<string, unknown>;
 };
 
+export type Environment = {
+  id: string;
+  name: string;
+  permissions: string[];
+  headers: Record<string, string>;
+  cookies: unknown[];
+  localStorage: Record<string, unknown>;
+  sessionStorage: Record<string, unknown>;
+  downloadPolicy: Record<string, unknown>;
+  initialVariables: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EnvironmentInput = {
+  name: string;
+  permissions?: string[];
+  headers?: Record<string, string>;
+  cookies?: unknown[];
+  localStorage?: Record<string, unknown>;
+  sessionStorage?: Record<string, unknown>;
+  downloadPolicy?: Record<string, unknown>;
+  initialVariables?: Record<string, unknown>;
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;

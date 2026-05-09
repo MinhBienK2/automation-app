@@ -76,4 +76,14 @@ export function registerIpcHandlers(ipcMain: IpcMain, api: AppApi) {
   ipcMain.handle("runProfile.delete", (_event, input: { id: string }) =>
     api.runProfiles.delete(input),
   );
+
+  ipcMain.handle("environment.list", () => api.environments.list());
+  ipcMain.handle("environment.get", (_event, input: { id: string }) =>
+    api.environments.get(input),
+  );
+  ipcMain.handle("environment.create", (_event, input) => api.environments.create(input));
+  ipcMain.handle("environment.update", (_event, input) => api.environments.update(input));
+  ipcMain.handle("environment.delete", (_event, input: { id: string }) =>
+    api.environments.delete(input),
+  );
 }

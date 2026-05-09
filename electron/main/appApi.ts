@@ -5,7 +5,13 @@ import {
   type ElectronWorkflowGraph,
   type GraphNodeType,
 } from "./graph.js";
-import type { IdentityProfileRecord, RunProfileRecord, StorageService, WorkflowRecord } from "./storage.js";
+import type {
+  EnvironmentRecord,
+  IdentityProfileRecord,
+  RunProfileRecord,
+  StorageService,
+  WorkflowRecord,
+} from "./storage.js";
 import { runPlan, type BrowserAutomationAdapter } from "../runner/runnerCore.js";
 import type {
   ClickActionConfig,
@@ -641,6 +647,20 @@ function applyRunProfileDefaults(plan: RunPlan, profile: RunProfileRecord | null
   };
 }
 
+function environmentSnapshotFromEnvironment(
+  environment: EnvironmentRecord | null,
+): StartRunPayload["environmentSnapshot"] {
+  if (!environment) {
+    return { initialVariables: {} };
+  }
+
+  return {
+    initialVariables: environment.initialVariables,
+    permissions: environment.permissions,
+    extraHTTPHeaders: environment.headers,
+  };
+}
+
 export function createAppApi(options: AppApiOptions) {
   let lastRunState: RunStateWithId = {
     status: "idle",
@@ -860,6 +880,31 @@ export function createAppApi(options: AppApiOptions) {
       },
     },
 
+    environments: {
+      async list() {
+        return options.storage.listEnvironments();
+      },
+
+      async get(input: { id: string }) {
+        return options.storage.getEnvironment(input.id);
+      },
+
+      async create(input: Parameters<typeof options.storage.createEnvironment>[0]) {
+        return options.storage.createEnvironment(input);
+      },
+
+      async update(input: {
+        id: string;
+        environment: Parameters<typeof options.storage.updateEnvironment>[1];
+      }) {
+        return options.storage.updateEnvironment(input.id, input.environment);
+      },
+
+      async delete(input: { id: string }) {
+        options.storage.deleteEnvironment(input.id);
+      },
+    },
+
     graphs: {
       async loadActive(input: { workflowId: string }) {
         const graph = options.storage.loadActiveGraph(input.workflowId);
@@ -911,13 +956,17 @@ export function createAppApi(options: AppApiOptions) {
         const runProfileSnapshot = runProfile
           ? runProfileSnapshotFromProfile(runProfile)
           : defaultRunProfileSnapshot();
+        const environment = workflow.defaultEnvironmentId
+          ? options.storage.getEnvironment(workflow.defaultEnvironmentId)
+          : null;
+        const environmentSnapshot = environmentSnapshotFromEnvironment(environment);
         const operatorPolicySnapshot = options.storage.getWorkspacePolicy();
         const run = options.storage.createRun({
           workflowId: input.workflowId,
           graphVersionId: activeVersion.id,
           runProfileSnapshot,
           identityProfileSnapshot,
-          environmentSnapshot: { initialVariables: {} },
+          environmentSnapshot,
           operatorLabel: "local",
         });
         activeRunId = run.id;
@@ -929,7 +978,7 @@ export function createAppApi(options: AppApiOptions) {
           runPlan: plan,
           runProfileSnapshot,
           identityProfileSnapshot,
-          environmentSnapshot: { initialVariables: {} },
+          environmentSnapshot,
           artifactDirectories: artifactDirectories(options.appDataDir, run.id),
           operatorPolicySnapshot,
         };

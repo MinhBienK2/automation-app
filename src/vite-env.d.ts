@@ -3,6 +3,8 @@
 import type {
   CompiledWorkflowGraph,
   ElectronRunEvent,
+  Environment,
+  EnvironmentInput,
   GraphValidationIssue,
   IdentityProfile,
   IdentityProfileInput,
@@ -97,6 +99,16 @@ type ElectronCloakBrowserApi = {
     get?: (input: { id: string }) => Promise<RunProfile>;
     create?: (profile: RunProfileInput) => Promise<RunProfile>;
     update?: (input: { id: string; profile: Partial<RunProfileInput> }) => Promise<RunProfile>;
+    delete?: (input: { id: string }) => Promise<void>;
+  };
+  environments?: {
+    list?: () => Promise<Environment[]>;
+    get?: (input: { id: string }) => Promise<Environment>;
+    create?: (environment: EnvironmentInput) => Promise<Environment>;
+    update?: (input: {
+      id: string;
+      environment: Partial<EnvironmentInput>;
+    }) => Promise<Environment>;
     delete?: (input: { id: string }) => Promise<void>;
   };
 };

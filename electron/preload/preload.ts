@@ -65,6 +65,13 @@ const api = {
     update: (input: unknown) => ipcRenderer.invoke("runProfile.update", input),
     delete: (input: { id: string }) => ipcRenderer.invoke("runProfile.delete", input),
   },
+  environments: {
+    list: () => ipcRenderer.invoke("environment.list"),
+    get: (input: { id: string }) => ipcRenderer.invoke("environment.get", input),
+    create: (input: unknown) => ipcRenderer.invoke("environment.create", input),
+    update: (input: unknown) => ipcRenderer.invoke("environment.update", input),
+    delete: (input: { id: string }) => ipcRenderer.invoke("environment.delete", input),
+  },
 };
 
 contextBridge.exposeInMainWorld("cloakBrowser", api);
