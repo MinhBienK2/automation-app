@@ -436,6 +436,21 @@ describe("Electron storage service", () => {
     expect(storage.listEvidenceRecords(run.id)).toEqual([evidence]);
     expect(storage.exportRunEvidence(run.id)).toMatchObject({
       runId: run.id,
+      summary: expect.objectContaining({
+        id: run.id,
+        workflowId: workflow.id,
+        graphVersionId: run.graphVersionId,
+        operatorLabel: "local",
+      }),
+      snapshots: {
+        graph: expect.objectContaining({
+          id: run.graphVersionId,
+          workflowId: workflow.id,
+        }),
+        runProfile: { timeoutMs: 30_000 },
+        identityProfile: { id: "idp_1", name: "Owned profile" },
+        environment: {},
+      },
       events: [expect.objectContaining({ type: "preflight.verdictReceived" })],
       artifacts: [],
       evidence: [
@@ -444,6 +459,10 @@ describe("Electron storage service", () => {
           payload: evidence.sanitizedPayload,
         }),
       ],
+      manifest: {
+        schemaVersion: 1,
+        exportedAt: expect.any(String),
+      },
     });
   });
 });

@@ -167,6 +167,13 @@ export type EvidenceRecord = {
 
 export type RunEvidenceExport = {
   runId: string;
+  summary: RunRecord;
+  snapshots: {
+    graph: GraphVersionRecord;
+    runProfile: Record<string, unknown>;
+    identityProfile: Record<string, unknown>;
+    environment: Record<string, unknown>;
+  };
   events: RunEventRecord[];
   artifacts: ArtifactRecord[];
   evidence: Array<{
@@ -175,6 +182,10 @@ export type RunEvidenceExport = {
     payload: Record<string, unknown>;
     createdAt: string;
   }>;
+  manifest: {
+    schemaVersion: 1;
+    exportedAt: string;
+  };
 };
 
 export type StorageService = ReturnType<typeof createStorageService>;
@@ -1383,8 +1394,31 @@ export function createStorageService(options: StorageServiceOptions) {
     },
 
     exportRunEvidence(runId: string): RunEvidenceExport {
+      const runRow = database().prepare("SELECT * FROM runs WHERE id = ?").get(runId) as
+        | Row
+        | undefined;
+      if (!runRow) throw new Error(`Run '${runId}' not found.`);
+      const run = runFromRow(runRow);
+      const graphRow = database()
+        .prepare("SELECT * FROM workflow_graph_versions WHERE id = ?")
+        .get(run.graphVersionId) as Row | undefined;
+      if (!graphRow) throw new Error(`Graph version '${run.graphVersionId}' not found.`);
+
       return {
         runId,
+        summary: run,
+        snapshots: {
+          graph: graphVersionFromRow(graphRow),
+          runProfile: sanitizeEvidencePayload(
+            parseJson<Record<string, unknown>>(runRow.run_profile_snapshot_json, {}),
+          ),
+          identityProfile: sanitizeEvidencePayload(
+            parseJson<Record<string, unknown>>(runRow.identity_profile_snapshot_json, {}),
+          ),
+          environment: sanitizeEvidencePayload(
+            parseJson<Record<string, unknown>>(runRow.environment_snapshot_json, {}),
+          ),
+        },
         events: this.listRunEvents(runId),
         artifacts: this.listArtifacts(runId).filter((artifact) => artifact.sanitized),
         evidence: this.listEvidenceRecords(runId)
@@ -1395,6 +1429,10 @@ export function createStorageService(options: StorageServiceOptions) {
             payload: record.sanitizedPayload ?? sanitizeEvidencePayload(record.payload),
             createdAt: record.createdAt,
           })),
+        manifest: {
+          schemaVersion: 1,
+          exportedAt: nowIso(),
+        },
       };
     },
 

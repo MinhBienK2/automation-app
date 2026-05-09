@@ -1124,6 +1124,20 @@ export type RunEvidenceArtifact = {
 
 export type RunEvidenceExport = {
   runId: string;
+  summary: RunHistoryRecord;
+  snapshots: {
+    graph: {
+      id: string;
+      workflowId: string;
+      graph: WorkflowGraph;
+      createdAt: string;
+      createdBy: string;
+      active: boolean;
+    };
+    runProfile: Record<string, unknown>;
+    identityProfile: Record<string, unknown>;
+    environment: Record<string, unknown>;
+  };
   events: RunEvidenceEvent[];
   artifacts: RunEvidenceArtifact[];
   evidence: Array<{
@@ -1132,6 +1146,10 @@ export type RunEvidenceExport = {
     payload: Record<string, unknown>;
     createdAt: string;
   }>;
+  manifest: {
+    schemaVersion: 1;
+    exportedAt: string;
+  };
 };
 
 export type RunHistoryRecord = {
