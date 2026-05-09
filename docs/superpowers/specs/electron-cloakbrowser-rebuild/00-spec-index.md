@@ -44,7 +44,7 @@ Child spec implementation summary:
 
 | Spec | Implementation Status |
 | --- | --- |
-| 01 Product Model | PARTIAL: workspace policy, run profiles, environments, identity profiles, run/event/artifact/evidence foundations exist; profile inventory and full UI coverage remain |
+| 01 Product Model | PARTIAL: workspace policy with URL-origin normalization, run profiles, environments, identity profiles, run/event/artifact/evidence foundations exist; profile inventory and full UI coverage remain |
 | 02 Electron App Architecture | IMPLEMENTATION DONE for M1 plus renderer run-event forwarding foundation |
 | 03 Data And Storage | IMPLEMENTATION DONE for M1 plus workspace allowed-origin policy, run profiles, environments, terminal run status, identity profiles, evidence records, and compact evidence export foundations |
 | 04 Workflow Graph And Builder | PARTIAL |

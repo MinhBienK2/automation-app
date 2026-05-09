@@ -50,14 +50,21 @@ describe("Electron storage service", () => {
     });
 
     storage.saveWorkspacePolicy({
-      allowedOrigins: ["https://owned.example.test"],
-      maxConcurrency: 1,
+      allowedOrigins: ["https://owned.example.test/login"],
+      maxConcurrency: 2,
     });
 
     expect(storage.getWorkspacePolicy()).toEqual({
       allowedOrigins: ["https://owned.example.test"],
-      maxConcurrency: 1,
+      maxConcurrency: 2,
     });
+
+    expect(() =>
+      storage.saveWorkspacePolicy({
+        allowedOrigins: ["not-a-url"],
+        maxConcurrency: 1,
+      }),
+    ).toThrow("Workspace allowed origins must be valid URL origins.");
   });
 
   test("creates a workflow with an active draft graph and hides soft-deleted rows", () => {

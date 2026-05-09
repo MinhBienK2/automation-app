@@ -328,12 +328,25 @@ function environmentFromRow(row: Row): EnvironmentRecord {
 function normalizeWorkspacePolicy(value: unknown): WorkspacePolicy {
   const policy = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
-    allowedOrigins: Array.isArray(policy.allowedOrigins) ? policy.allowedOrigins.map(String) : [],
+    allowedOrigins: normalizeAllowedOrigins(policy.allowedOrigins),
     maxConcurrency:
       typeof policy.maxConcurrency === "number" && policy.maxConcurrency > 0
         ? Math.floor(policy.maxConcurrency)
         : 1,
   };
+}
+
+function normalizeAllowedOrigins(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  const origins = new Set<string>();
+  for (const item of value) {
+    try {
+      origins.add(new URL(String(item)).origin);
+    } catch {
+      throw new Error("Workspace allowed origins must be valid URL origins.");
+    }
+  }
+  return [...origins];
 }
 
 function identityProfileFromRow(row: Row): IdentityProfileRecord {
