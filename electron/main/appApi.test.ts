@@ -433,4 +433,31 @@ describe("Electron app API", () => {
       }),
     ]);
   });
+
+  test("streams persisted run events to an app-level subscriber", async () => {
+    const workflow = await api.workflows.create({ name: "Streamed run" });
+    const graph = await api.graphs.loadActive({ workflowId: workflow.id });
+    const draft = graph.nodes[1];
+    if (!draft) throw new Error("Missing draft graph node.");
+    draft.config = { type: "take_screenshot", config: { file_name: "stream.png" } };
+    await api.graphs.save({ workflowId: workflow.id, graph });
+    const streamed: RunnerEvent[] = [];
+    const streamingApi = createAppApi({
+      storage,
+      appDataDir,
+      createAdapter: adapter,
+      onRunEvent: (event) => streamed.push(event),
+    });
+
+    await streamingApi.runs.start({ workflowId: workflow.id });
+
+    expect(streamed.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "step.started",
+      "artifact.created",
+      "step.completed",
+      "run.completed",
+    ]);
+  });
 });

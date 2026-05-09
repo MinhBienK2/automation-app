@@ -4,6 +4,7 @@ import type {
   BatchRunRequest,
   BatchRunSummary,
   CompiledWorkflowGraph,
+  ElectronRunEvent,
   ElementSnapshot,
   GraphValidationIssue,
   IdentityProfile,
@@ -185,6 +186,12 @@ export function getRunState() {
   const api = electronApi();
   if (api?.runs?.getState) return api.runs.getState();
   return invoke<RunState>("get_run_state");
+}
+
+export function onRunEvent(handler: (event: ElectronRunEvent) => void) {
+  const api = electronApi();
+  if (api?.runs?.onEvent) return api.runs.onEvent(handler);
+  return () => undefined;
 }
 
 export function listIdentityProfiles() {

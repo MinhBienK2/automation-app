@@ -31,6 +31,7 @@ export type AppApiOptions = {
   appDataDir: string;
   createAdapter: () => BrowserAutomationAdapter;
   runner?: RunnerProcessClient;
+  onRunEvent?: (event: RunnerEvent) => void;
 };
 
 type LegacyActionConfig = {
@@ -882,6 +883,8 @@ export function createAppApi(options: AppApiOptions) {
               },
             });
           }
+
+          options.onRunEvent?.(event);
         };
 
         const result = options.runner

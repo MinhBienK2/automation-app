@@ -34,6 +34,7 @@ Electron Main
   -> electron/main/appApi.ts preload-shaped product API facade
   -> electron/main/storage.ts new SQLite workspace schema
   -> electron/main/runnerSupervisor.ts local runner process health and startRun supervision
+  -> main-to-preload run event forwarding over the `run.event` channel
 
 Preload
   -> electron/preload/preload.ts contextBridge API

@@ -33,6 +33,11 @@ const api = {
     start: (input: { workflowId: string }) => ipcRenderer.invoke("run.start", input),
     stop: () => ipcRenderer.invoke("run.stop"),
     getState: () => ipcRenderer.invoke("run.getState"),
+    onEvent: (handler: (event: unknown) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, payload: unknown) => handler(payload);
+      ipcRenderer.on("run.event", listener);
+      return () => ipcRenderer.removeListener("run.event", listener);
+    },
   },
   profiles: {
     list: () => ipcRenderer.invoke("profile.list"),

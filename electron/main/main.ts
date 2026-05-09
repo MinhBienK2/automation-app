@@ -64,6 +64,9 @@ function bootstrapServices() {
     appDataDir: app.getPath("userData"),
     createAdapter: createCloakBrowserAdapter,
     runner,
+    onRunEvent: (event) => {
+      mainWindow?.webContents.send("run.event", event);
+    },
   });
   registerIpcHandlers(ipcMain, api);
 

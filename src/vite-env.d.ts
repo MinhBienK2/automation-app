@@ -2,6 +2,7 @@
 
 import type {
   CompiledWorkflowGraph,
+  ElectronRunEvent,
   GraphValidationIssue,
   IdentityProfile,
   IdentityProfileInput,
@@ -61,6 +62,7 @@ type ElectronCloakBrowserApi = {
     start?: (input: { workflowId: string }) => Promise<RunState>;
     stop?: () => Promise<RunState>;
     getState?: () => Promise<RunState>;
+    onEvent?: (handler: (event: ElectronRunEvent) => void) => () => void;
   };
   profiles?: {
     list?: () => Promise<IdentityProfile[]>;

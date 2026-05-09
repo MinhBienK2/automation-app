@@ -1130,6 +1130,16 @@ export type RunHistoryRecord = {
   operatorLabel: string;
 };
 
+export type ElectronRunEvent = {
+  type: string;
+  severity: string;
+  runId: string;
+  nodeId?: string | null;
+  actionId?: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type ElementSnapshot = {
   tag: string;
   id?: string | null;
