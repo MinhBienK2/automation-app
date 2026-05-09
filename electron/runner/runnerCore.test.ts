@@ -120,6 +120,78 @@ describe("CloakRunner core", () => {
     );
   });
 
+  test("continues after screenshot artifact write failure when evidence policy is not strict", async () => {
+    const events: RunnerEvent[] = [];
+    const plan = basePlan([
+      {
+        id: "step_shot",
+        sourceNodeId: "shot",
+        actionType: "take_screenshot",
+        label: "Screenshot",
+        config: { type: "take_screenshot", fileName: "missing/final.png" },
+      },
+    ]);
+    const runPayload = payload(plan);
+    runPayload.runProfileSnapshot.evidencePolicy = { screenshots: true, strict: false };
+
+    const result = await runPlan(runPayload, fakeAdapter(), {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("completed");
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "step.started",
+      "issue.created",
+      "step.completed",
+      "run.completed",
+    ]);
+    expect(events.find((event) => event.type === "issue.created")).toMatchObject({
+      severity: "warning",
+      payload: expect.objectContaining({
+        category: "system",
+        artifactType: "screenshot",
+      }),
+    });
+  });
+
+  test("fails screenshot artifact write failures when evidence policy is strict", async () => {
+    const events: RunnerEvent[] = [];
+    const plan = basePlan([
+      {
+        id: "step_shot",
+        sourceNodeId: "shot",
+        actionType: "take_screenshot",
+        label: "Screenshot",
+        config: { type: "take_screenshot", fileName: "missing/final.png" },
+      },
+    ]);
+    const runPayload = payload(plan);
+    runPayload.runProfileSnapshot.evidencePolicy = { screenshots: true, strict: true };
+
+    const result = await runPlan(runPayload, fakeAdapter(), {
+      emit: (event) => events.push(event),
+    });
+
+    expect(result.status).toBe("failed");
+    expect(events.map((event) => event.type)).toEqual([
+      "run.started",
+      "identity.profileResolved",
+      "step.started",
+      "issue.created",
+      "step.failed",
+      "run.failed",
+    ]);
+    expect(events.find((event) => event.type === "issue.created")).toMatchObject({
+      severity: "error",
+      payload: expect.objectContaining({ category: "system" }),
+    });
+    expect(events.find((event) => event.type === "run.failed")).toMatchObject({
+      payload: expect.objectContaining({ category: "system" }),
+    });
+  });
+
   test("blocks navigation outside the operator allowlist before page action", async () => {
     const events: RunnerEvent[] = [];
     const plan = basePlan([

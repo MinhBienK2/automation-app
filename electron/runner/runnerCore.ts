@@ -70,6 +70,10 @@ function relativeArtifactPath(runId: string, kind: "screenshots" | "downloads" |
   return `runs/${runId}/${kind}/${fileName}`;
 }
 
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
@@ -322,22 +326,42 @@ export async function runPlan(
                     fullPage: (step.config as ScreenshotActionConfig).fullPage,
                   });
                   const buffer = Buffer.isBuffer(screenshot) ? screenshot : Buffer.from(screenshot);
-                  writeFileSync(screenshotPath, buffer);
-                  emit({
-                    type: "artifact.created",
-                    severity: "info",
-                    runId: payload.runId,
-                    nodeId: step.sourceNodeId,
-                    actionId: step.id,
-                    payload: {
-                      type: "screenshot",
-                      relativePath: relativeArtifactPath(payload.runId, "screenshots", fileName),
-                      mimeType: "image/png",
-                      sizeBytes: buffer.byteLength,
-                      checksum: checksum(buffer),
-                      sanitized: true,
-                    },
-                  });
+                  try {
+                    writeFileSync(screenshotPath, buffer);
+                    emit({
+                      type: "artifact.created",
+                      severity: "info",
+                      runId: payload.runId,
+                      nodeId: step.sourceNodeId,
+                      actionId: step.id,
+                      payload: {
+                        type: "screenshot",
+                        relativePath: relativeArtifactPath(payload.runId, "screenshots", fileName),
+                        mimeType: "image/png",
+                        sizeBytes: buffer.byteLength,
+                        checksum: checksum(buffer),
+                        sanitized: true,
+                      },
+                    });
+                  } catch (error) {
+                    const reason = `Failed to write screenshot artifact '${fileName}': ${errorMessage(error)}`;
+                    if (payload.runProfileSnapshot.evidencePolicy?.strict === true) {
+                      throw new RunnerActionError(reason, "system");
+                    }
+                    emit({
+                      type: "issue.created",
+                      severity: "warning",
+                      runId: payload.runId,
+                      nodeId: step.sourceNodeId,
+                      actionId: step.id,
+                      payload: {
+                        category: "system",
+                        artifactType: "screenshot",
+                        fileName,
+                        message: reason,
+                      },
+                    });
+                  }
                   break;
                 }
                 case "extract_text": {
