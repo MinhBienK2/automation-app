@@ -227,6 +227,13 @@ describe("Workflow detail integration", () => {
       name: "Browser help",
     }));
     expect(await screen.findByText("Browser Settings Help")).toBeInTheDocument();
+    expect(screen.getAllByText("Browser Settings Help")).toHaveLength(1);
+    const helpDialog = await screen.findByRole("dialog", {
+      name: "Browser Settings Help",
+    });
+    expect(
+      within(helpDialog).getAllByRole("heading", { name: "Browser Settings Help" }),
+    ).toHaveLength(1);
     expect(screen.getByRole("button", { name: "English" })).toHaveAttribute(
       "aria-pressed",
       "true",

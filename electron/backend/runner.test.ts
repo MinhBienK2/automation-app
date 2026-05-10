@@ -188,6 +188,98 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(true);
   });
 
+  test("waits for element states using Playwright locator wait semantics", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("visible", "Visible", {
+            type: "wait",
+            config: { condition: "element_visible", xpath: "#ready", timeout_ms: 500 },
+          }),
+          step("hidden", "Hidden", {
+            type: "wait",
+            config: { condition: "element_hidden", xpath: "#spinner", timeout_ms: 600 },
+          }),
+          step("attached", "Attached", {
+            type: "wait",
+            config: { condition: "element_attached", xpath: "#panel", timeout_ms: 700 },
+          }),
+          step("text", "Text", {
+            type: "wait",
+            config: { condition: "text_visible", text: "Ready", timeout_ms: 750 },
+          }),
+          step("detached", "Detached", {
+            type: "wait",
+            config: { condition: "element_detached", xpath: "#toast", timeout_ms: 800 },
+          }),
+          step("enabled", "Enabled", {
+            type: "wait",
+            config: { condition: "element_enabled", xpath: "#submit", timeout_ms: 900 },
+          }),
+          step("disabled", "Disabled", {
+            type: "wait",
+            config: { condition: "element_disabled", xpath: "#blocked", timeout_ms: 1000 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "waitFor:#ready:visible:500",
+        "waitFor:#spinner:hidden:600",
+        "waitFor:#panel:attached:700",
+        "waitFor:text=Ready:visible:750",
+        "waitFor:#toast:detached:800",
+        "waitFor:#submit:visible:900",
+        "isEnabled:#submit",
+        "isEnabled:#blocked",
+      ]),
+    );
+  });
+
+  test("writes local and session storage actions into the browser page", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("local", "Local storage", {
+            type: "set_local_storage",
+            config: { key: "token", value: "abc" },
+          }),
+          step("session", "Session storage", {
+            type: "set_session_storage",
+            config: { key: "nonce", value: "123" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "localStorage:token:abc",
+        "sessionStorage:nonce:123",
+      ]),
+    );
+  });
+
   test("flattens JSON variables and exposes object fields inside for-each loops", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -709,6 +801,10 @@ class FakePage implements BrowserDriverPage {
     if (typeof pageFunction === "string" && pageFunction.includes("window.location.href")) {
       return this.urlValue;
     }
+    if (isStorageEvaluationArg(arg)) {
+      this.events.push(`${arg.storage}Storage:${arg.key}:${arg.value}`);
+      return null;
+    }
     if (typeof pageFunction === "function") {
       return pageFunction(arg);
     }
@@ -796,4 +892,27 @@ class FakeLocator {
   async isVisible() {
     return true;
   }
+
+  async isEnabled() {
+    this.events.push(`isEnabled:${this.selector}`);
+    return this.selector !== "#blocked";
+  }
+
+  async waitFor(options?: { state?: string; timeout?: number }) {
+    this.events.push(
+      `waitFor:${this.selector}:${options?.state ?? "visible"}:${options?.timeout ?? "none"}`,
+    );
+  }
+}
+
+function isStorageEvaluationArg(
+  value: unknown,
+): value is { storage: "local" | "session"; key: string; value: string } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "storage" in value &&
+      "key" in value &&
+      "value" in value,
+  );
 }

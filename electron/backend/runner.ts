@@ -92,6 +92,8 @@ export type BrowserDriverLocator = {
   count?(): Promise<number>;
   nth?(index: number): BrowserDriverLocator;
   isVisible?(options?: Record<string, unknown>): Promise<boolean>;
+  isEnabled?(options?: Record<string, unknown>): Promise<boolean>;
+  waitFor?(options?: Record<string, unknown>): Promise<void>;
 };
 
 type BrowserRoute = {
@@ -796,7 +798,11 @@ export class BrowserWorkflowRunner {
         );
         return;
       case "set_local_storage":
+        await setWebStorage(runtime.page, "local", action.config.key, action.config.value);
+        runtime.outputs[action.config.key] = action.config.value;
+        return;
       case "set_session_storage":
+        await setWebStorage(runtime.page, "session", action.config.key, action.config.value);
         runtime.outputs[action.config.key] = action.config.value;
         return;
     }
@@ -839,22 +845,71 @@ export class BrowserWorkflowRunner {
         );
         return;
       case "element_visible":
-      case "element_attached":
-      case "element_enabled":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body").isVisible?.({
-          timeout: action.config.timeout_ms ?? undefined,
-        });
+        await waitForLocatorState(
+          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          "visible",
+          action.config.timeout_ms,
+        );
         return;
+      case "element_attached":
+        await waitForLocatorState(
+          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          "attached",
+          action.config.timeout_ms,
+        );
+        return;
+      case "element_enabled": {
+        const locator = locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body");
+        await waitForLocatorState(locator, "visible", action.config.timeout_ms);
+        await this.waitForLocatorEnabled(locator, true, action.config.timeout_ms, runtime.signal);
+        return;
+      }
       case "text_visible":
-        await runtime.page.locator(`text=${action.config.text ?? ""}`).isVisible?.({
-          timeout: action.config.timeout_ms ?? undefined,
-        });
+        await waitForLocatorState(
+          runtime.page.locator(`text=${action.config.text ?? ""}`),
+          "visible",
+          action.config.timeout_ms,
+        );
         return;
       case "element_hidden":
+        await waitForLocatorState(
+          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          "hidden",
+          action.config.timeout_ms,
+        );
+        return;
       case "element_detached":
+        await waitForLocatorState(
+          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          "detached",
+          action.config.timeout_ms,
+        );
+        return;
       case "element_disabled":
+        await this.waitForLocatorEnabled(
+          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          false,
+          action.config.timeout_ms,
+          runtime.signal,
+        );
         return;
     }
+  }
+
+  private async waitForLocatorEnabled(
+    locator: BrowserDriverLocator,
+    enabled: boolean,
+    timeoutMs: number | null | undefined,
+    signal?: AbortSignal,
+  ) {
+    const deadline = Date.now() + (timeoutMs ?? 30_000);
+    while (Date.now() <= deadline) {
+      this.throwIfCancelled(signal);
+      const current = await locator.isEnabled?.();
+      if (current === enabled) return;
+      await this.sleep(Math.min(100, Math.max(1, deadline - Date.now())), signal);
+    }
+    throw new Error(`Element did not become ${enabled ? "enabled" : "disabled"}`);
   }
 
   private async executeRetry(
@@ -988,6 +1043,42 @@ function buildLaunchOptions(
 
 function locatorFor(page: BrowserDriverPage, target: unknown, xpath: string) {
   return page.locator(selectorFromTarget(target, xpath));
+}
+
+async function waitForLocatorState(
+  locator: BrowserDriverLocator,
+  state: "attached" | "detached" | "visible" | "hidden",
+  timeoutMs: number | null | undefined,
+) {
+  if (locator.waitFor) {
+    await locator.waitFor({ state, timeout: timeoutMs ?? undefined });
+    return;
+  }
+  if (state === "visible") {
+    const visible = await locator.isVisible?.({ timeout: timeoutMs ?? undefined });
+    if (!visible) throw new Error("Element is not visible");
+  }
+}
+
+async function setWebStorage(
+  page: BrowserDriverPage,
+  storage: "local" | "session",
+  key: string,
+  value: string,
+) {
+  await page.evaluate(
+    (entry?: {
+      storage: "local" | "session";
+      key: string;
+      value: string;
+    }) => {
+      if (!entry) return;
+      const target =
+        entry.storage === "local" ? window.localStorage : window.sessionStorage;
+      target.setItem(entry.key, entry.value);
+    },
+    { storage, key, value },
+  );
 }
 
 function selectorFromTarget(target: unknown, xpath: string) {

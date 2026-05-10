@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 const processes = [];
 
@@ -10,6 +10,19 @@ function start(command, args, options = {}) {
   });
   processes.push(child);
   return child;
+}
+
+function runInitialElectronBuild() {
+  const result = spawnSync("npx", ["tsc", "-p", "tsconfig.electron.json"], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`Electron main build failed with exit code ${result.status ?? "unknown"}`);
+  }
 }
 
 function stopAll() {
@@ -42,6 +55,7 @@ process.on("SIGTERM", () => {
 });
 
 const rendererUrl = "http://127.0.0.1:1420";
+await runInitialElectronBuild();
 start("npx", ["tsc", "-p", "tsconfig.electron.json", "--watch", "--preserveWatchOutput"]);
 start("npx", ["vite", "--host", "127.0.0.1"]);
 
