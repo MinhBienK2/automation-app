@@ -16,9 +16,18 @@ import {
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
 
-if (process.platform === "linux") {
-  app.disableHardwareAcceleration();
+function configureLinuxGraphicsWorkarounds() {
+  if (process.platform !== "linux") return;
+
+  app.commandLine.appendSwitch(
+    "disable-features",
+    "VaapiVideoDecoder,VaapiVideoEncoder",
+  );
+  app.commandLine.appendSwitch("disable-accelerated-video-decode");
+  app.commandLine.appendSwitch("disable-accelerated-video-encode");
 }
+
+configureLinuxGraphicsWorkarounds();
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -42,7 +51,9 @@ function createMainWindow() {
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   if (devServerUrl) {
     void mainWindow.loadURL(devServerUrl);
-    mainWindow.webContents.openDevTools({ mode: "detach" });
+    if (process.env.ELECTRON_OPEN_DEVTOOLS === "1") {
+      mainWindow.webContents.openDevTools({ mode: "detach" });
+    }
   } else {
     void mainWindow.loadFile(path.join(currentDir, "../../dist/index.html"));
   }

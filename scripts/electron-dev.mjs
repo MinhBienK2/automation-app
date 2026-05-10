@@ -1,6 +1,11 @@
 import { spawn, spawnSync } from "node:child_process";
+import net from "node:net";
 
 const processes = [];
+let electronProcess = null;
+let restartingElectron = false;
+let electronWatchReady = false;
+let restartTimeout = null;
 
 function start(command, args, options = {}) {
   const child = spawn(command, args, {
@@ -10,6 +15,22 @@ function start(command, args, options = {}) {
   });
   processes.push(child);
   return child;
+}
+
+function pipeOutput(child) {
+  child.stdout?.on("data", (chunk) => {
+    const text = chunk.toString();
+    process.stdout.write(text);
+    if (text.includes("Found 0 errors. Watching for file changes.")) {
+      if (electronWatchReady && electronProcess) {
+        scheduleElectronRestart();
+      }
+      electronWatchReady = true;
+    }
+  });
+  child.stderr?.on("data", (chunk) => {
+    process.stderr.write(chunk);
+  });
 }
 
 function runInitialElectronBuild() {
@@ -26,9 +47,48 @@ function runInitialElectronBuild() {
 }
 
 function stopAll() {
+  if (restartTimeout) {
+    clearTimeout(restartTimeout);
+    restartTimeout = null;
+  }
   for (const child of processes) {
     if (!child.killed) child.kill();
   }
+}
+
+function startElectron(rendererUrl) {
+  electronProcess = start("npx", ["electron", "."], {
+    env: {
+      ...process.env,
+      VITE_DEV_SERVER_URL: rendererUrl,
+    },
+  });
+
+  electronProcess.on("exit", (code) => {
+    if (restartingElectron) {
+      restartingElectron = false;
+      electronProcess = null;
+      startElectron(rendererUrl);
+      return;
+    }
+
+    stopAll();
+    process.exit(code ?? 0);
+  });
+}
+
+function restartElectron() {
+  if (!electronProcess || electronProcess.killed) return;
+  restartingElectron = true;
+  electronProcess.kill();
+}
+
+function scheduleElectronRestart() {
+  if (restartTimeout) clearTimeout(restartTimeout);
+  restartTimeout = setTimeout(() => {
+    restartTimeout = null;
+    restartElectron();
+  }, 150);
 }
 
 async function waitForRenderer(url) {
@@ -45,6 +105,24 @@ async function waitForRenderer(url) {
   throw new Error(`Timed out waiting for renderer at ${url}`);
 }
 
+async function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, "127.0.0.1");
+  });
+}
+
+async function findAvailablePort(startPort) {
+  for (let port = startPort; port < startPort + 50; port += 1) {
+    if (await isPortAvailable(port)) return port;
+  }
+  throw new Error(`No available renderer port found from ${startPort} to ${startPort + 49}`);
+}
+
 process.on("SIGINT", () => {
   stopAll();
   process.exit(130);
@@ -54,21 +132,17 @@ process.on("SIGTERM", () => {
   process.exit(143);
 });
 
-const rendererUrl = "http://127.0.0.1:1420";
+const rendererPort = await findAvailablePort(1420);
+const rendererUrl = `http://127.0.0.1:${rendererPort}`;
 await runInitialElectronBuild();
-start("npx", ["tsc", "-p", "tsconfig.electron.json", "--watch", "--preserveWatchOutput"]);
-start("npx", ["vite", "--host", "127.0.0.1"]);
+const tscWatch = start(
+  "npx",
+  ["tsc", "-p", "tsconfig.electron.json", "--watch", "--preserveWatchOutput"],
+  { stdio: ["inherit", "pipe", "pipe"] },
+);
+pipeOutput(tscWatch);
+start("npx", ["vite", "--host", "127.0.0.1", "--port", String(rendererPort), "--strictPort"]);
 
 await waitForRenderer(rendererUrl);
 
-const electron = start("npx", ["electron", "."], {
-  env: {
-    ...process.env,
-    VITE_DEV_SERVER_URL: rendererUrl,
-  },
-});
-
-electron.on("exit", (code) => {
-  stopAll();
-  process.exit(code ?? 0);
-});
+startElectron(rendererUrl);
