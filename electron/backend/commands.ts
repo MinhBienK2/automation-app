@@ -134,6 +134,37 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return repository.createWorkflow(normalized, createDraftGraph());
   }
 
+  function getWorkflowGraph(workflowId: string): WorkflowGraph {
+    const graph = repository.getWorkflowGraph(workflowId);
+    if (!graph) {
+      requireWorkflow(workflowId);
+      return createDraftGraph();
+    }
+    return graph;
+  }
+
+  function validateWorkflowRun(workflowId: string): RunValidationIssue[] {
+    const graph = getWorkflowGraph(workflowId);
+    return [
+      ...validateGraph(graph).map((issue) => ({
+        source: "graph" as const,
+        field: null,
+        node_id: issue.node_id ?? null,
+        edge_id: issue.edge_id ?? null,
+        message: issue.message,
+        level: issue.level,
+      })),
+      ...validateSettings(getSettings(workflowId)).map((issue) => ({
+        source: "settings" as const,
+        field: issue.field ?? null,
+        node_id: null,
+        edge_id: null,
+        message: issue.message,
+        level: issue.level,
+      })),
+    ];
+  }
+
   return {
     listWorkflows() {
       return repository.listWorkflows();
@@ -180,25 +211,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     validateWorkflowRun(workflowId: string): RunValidationIssue[] {
-      const graph = this.getWorkflowGraph(workflowId);
-      return [
-        ...this.validateWorkflowGraph(graph).map((issue) => ({
-          source: "graph" as const,
-          field: null,
-          node_id: issue.node_id ?? null,
-          edge_id: issue.edge_id ?? null,
-          message: issue.message,
-          level: issue.level,
-        })),
-        ...validateSettings(getSettings(workflowId)).map((issue) => ({
-          source: "settings" as const,
-          field: issue.field ?? null,
-          node_id: null,
-          edge_id: null,
-          message: issue.message,
-          level: issue.level,
-        })),
-      ];
+      return validateWorkflowRun(workflowId);
     },
 
     createWorkflow,
@@ -236,12 +249,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     getWorkflowGraph(workflowId: string): WorkflowGraph {
-      const graph = repository.getWorkflowGraph(workflowId);
-      if (!graph) {
-        requireWorkflow(workflowId);
-        return createDraftGraph();
-      }
-      return graph;
+      return getWorkflowGraph(workflowId);
     },
 
     saveWorkflowGraph(workflowId: string, graph: WorkflowGraph) {
@@ -262,8 +270,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       if (currentRunAbortController) {
         throw commandError("A workflow run is already active", "run");
       }
-      const graph = this.getWorkflowGraph(workflowId);
-      const runIssues = this.validateWorkflowRun(workflowId);
+      const graph = getWorkflowGraph(workflowId);
+      const runIssues = validateWorkflowRun(workflowId);
       const firstError = runIssues.find((issue) => issue.level === "error");
       if (firstError) {
         throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
@@ -427,7 +435,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           ...options.settings_sections.map((section) => `settings.${section}`),
         ],
         omitted_fields: omittedFields,
-        flow: options.include_flow ? this.getWorkflowGraph(workflowId) : null,
+        flow: options.include_flow ? getWorkflowGraph(workflowId) : null,
         settings: packageSettings,
       };
     },
@@ -491,7 +499,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           "concurrency_limit",
         );
       }
-      const graph = this.getWorkflowGraph(workflowId);
+      const graph = getWorkflowGraph(workflowId);
       if (compileGraph(graph).steps.length === 0) {
         throw commandError("Workflow graph has no executable steps", "graph");
       }

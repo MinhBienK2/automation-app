@@ -417,6 +417,31 @@ describe("Electron workflow command handlers", () => {
     ]);
   });
 
+  test("runs when IPC invokes command handlers without object binding", async () => {
+    const runner = {
+      run: vi.fn(async (): Promise<RunState> => ({
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["visit"],
+        outputs: {},
+        error: null,
+      })),
+    };
+    const { handlers } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Runnable through IPC");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const runWorkflow = handlers.runWorkflow;
+
+    await expect(runWorkflow(workflow.id)).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+    });
+    expect(runner.run).toHaveBeenCalledOnce();
+  });
+
   test("rejects graph runs with no executable graph steps before starting the runner", async () => {
     const runner = { run: vi.fn() };
     const { handlers } = await createTestHandlers({ runner });
