@@ -424,24 +424,28 @@ function ExecutionSettingsSection({
         <NumberField
           id="workflow-settings-action-timeout"
           label="Default action timeout ms"
+          min={1}
           value={value.default_action_timeout_ms}
           onChange={(next) => onChange({ ...value, default_action_timeout_ms: next })}
         />
         <NumberField
           id="workflow-settings-max-duration"
           label="Max workflow duration ms"
+          min={1}
           value={value.max_workflow_duration_ms}
           onChange={(next) => onChange({ ...value, max_workflow_duration_ms: next })}
         />
         <NumberField
           id="workflow-settings-retry-attempts"
           label="Default retry attempts"
+          min={1}
           value={value.default_retry_attempts}
           onChange={(next) => onChange({ ...value, default_retry_attempts: next })}
         />
         <NumberField
           id="workflow-settings-retry-interval"
           label="Default retry interval ms"
+          min={1}
           value={value.default_retry_interval_ms}
           onChange={(next) => onChange({ ...value, default_retry_interval_ms: next })}
         />
@@ -502,7 +506,7 @@ function ExecutionSettingsSection({
             DOM fallback
             <Select
               id="workflow-settings-dom-fallback"
-              value={value.direct_dom_fallback ?? "allowed_with_trace"}
+              value={value.direct_dom_fallback ?? "explicit"}
               onChange={(event) =>
                 onChange({
                   ...value,
@@ -557,12 +561,14 @@ function ExecutionSettingsSection({
             <NumberField
               id="workflow-settings-node-wait-min"
               label="Minimum wait ms"
+              min={1}
               value={value.wait_between_nodes_min_ms}
               onChange={(next) => onChange({ ...value, wait_between_nodes_min_ms: next })}
             />
             <NumberField
               id="workflow-settings-node-wait-max"
               label="Maximum wait ms"
+              min={1}
               value={value.wait_between_nodes_max_ms}
               onChange={(next) => onChange({ ...value, wait_between_nodes_max_ms: next })}
             />
@@ -572,6 +578,7 @@ function ExecutionSettingsSection({
             <NumberField
               id="workflow-settings-node-wait-duration"
               label="Wait between nodes ms"
+              min={1}
               value={value.wait_between_nodes_ms}
               onChange={(next) => onChange({ ...value, wait_between_nodes_ms: next })}
             />
@@ -585,6 +592,7 @@ function ExecutionSettingsSection({
         <NumberField
           id="workflow-settings-batch-concurrency"
           label="Batch concurrency limit"
+          min={1}
           value={value.batch_concurrency_limit}
           onChange={(next) => onChange({ ...value, batch_concurrency_limit: next })}
         />
@@ -760,12 +768,14 @@ function BrowserSettingsSection({
           <NumberField
             id="browser-viewport-width"
             label="Viewport width"
+            min={1}
             value={value.viewport_width}
             onChange={(next) => updateDevice({ viewport_width: next })}
           />
           <NumberField
             id="browser-viewport-height"
             label="Viewport height"
+            min={1}
             value={value.viewport_height}
             onChange={(next) => updateDevice({ viewport_height: next })}
           />
@@ -928,6 +938,8 @@ function EnvironmentSettingsSection({
         <NumberField
           id="workflow-settings-latitude"
           label="Latitude"
+          min={-90}
+          max={90}
           value={value.geolocation?.latitude ?? null}
           onChange={(next) =>
             onChange({
@@ -946,6 +958,8 @@ function EnvironmentSettingsSection({
         <NumberField
           id="workflow-settings-longitude"
           label="Longitude"
+          min={-180}
+          max={180}
           value={value.geolocation?.longitude ?? null}
           onChange={(next) =>
             onChange({
@@ -1211,11 +1225,15 @@ function ToggleField({
 function NumberField({
   id,
   label,
+  min,
+  max,
   value,
   onChange,
 }: {
   id: string;
   label: string;
+  min?: number;
+  max?: number;
   value?: number | null;
   onChange: (value: number | null) => void;
 }) {
@@ -1226,7 +1244,8 @@ function NumberField({
         id={id}
         inputMode="numeric"
         type="number"
-        min={0}
+        min={min}
+        max={max}
         value={value == null ? "" : String(value)}
         onChange={(event) => onChange(nullableNumber(event.currentTarget.value))}
       />

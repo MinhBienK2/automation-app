@@ -24,7 +24,7 @@ export function createAppPaths(appDataDir: string): AppPaths {
   };
 }
 
-export function ensureAppPaths(paths: AppPaths) {
+function ensureAppPaths(paths: AppPaths) {
   for (const directory of [
     paths.rootDir,
     paths.browserProfilesDir,

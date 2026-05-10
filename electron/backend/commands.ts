@@ -30,7 +30,9 @@ import type {
 } from "../../src/types/workflow.js";
 import type { AppPaths } from "./database.js";
 import {
+  compileWorkflowRunPlan,
   compileWorkflowGraph as compileGraph,
+  validateActionConfig,
   validateWorkflowGraph as validateGraph,
 } from "./graphCompiler.js";
 import { BrowserWorkflowRunner } from "./runner.js";
@@ -261,14 +263,17 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         throw commandError("A workflow run is already active", "run");
       }
       const graph = this.getWorkflowGraph(workflowId);
-      const compiledGraph = compileGraph(graph);
       const runIssues = this.validateWorkflowRun(workflowId);
       const firstError = runIssues.find((issue) => issue.level === "error");
       if (firstError) {
         throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
       }
+      if (compileGraph(graph).steps.length === 0) {
+        throw commandError("Workflow graph has no executable steps", "graph");
+      }
 
       const settings = getSettings(workflowId);
+      const compiledGraph = compileWorkflowRunPlan(graph, settings);
       currentRunAbortController = new AbortController();
       currentRunId = beginRun(context.database, workflowId, settings, graph);
       currentRunState = {
@@ -277,48 +282,83 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         mode: "run_workflow",
       };
       let timedOut = false;
+      const abortController = currentRunAbortController;
+      const runId = currentRunId;
       const timeoutMs = settings.execution.max_workflow_duration_ms;
       const timeoutHandle = timeoutMs
         ? setTimeout(() => {
             timedOut = true;
-            currentRunAbortController?.abort();
+            abortController.abort();
           }, timeoutMs)
         : null;
-      try {
-        currentRunState = await runner.run({
-          graph: compiledGraph,
-          settings,
-          mode: "run_workflow",
-          signal: currentRunAbortController.signal,
-          onProgress(progress) {
-            currentRunState = {
-              ...currentRunState,
-              ...progress,
-              status: "running",
-              mode: "run_workflow",
+      void (async () => {
+        try {
+          let terminalState = await runner.run({
+            graph: compiledGraph,
+            settings,
+            mode: "run_workflow",
+            signal: abortController.signal,
+            onProgress(progress) {
+              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+                return;
+              }
+              currentRunState = {
+                ...currentRunState,
+                ...progress,
+                status: "running",
+                mode: "run_workflow",
+              };
+            },
+          });
+          if (timedOut && terminalState.status === "stopped") {
+            terminalState = {
+              ...terminalState,
+              status: "failed",
+              error: {
+                step_id: terminalState.error?.step_id ?? null,
+                step_number: terminalState.error?.step_number ?? 0,
+                step_name: terminalState.error?.step_name ?? null,
+                action_type: terminalState.error?.action_type ?? "workflow",
+                reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
+              },
             };
-          },
-        });
-        if (timedOut && currentRunState.status === "stopped") {
+          } else if (
+            abortController.signal.aborted &&
+            currentRunState.status === "stopped"
+          ) {
+            terminalState = {
+              ...terminalState,
+              status: "stopped",
+              error: null,
+            };
+          }
+          currentRunState = terminalState;
+          finishRun(context.database, runId, compiledGraph, currentRunState);
+        } catch (error) {
           currentRunState = {
-            ...currentRunState,
+            ...idleRunState,
             status: "failed",
+            mode: "run_workflow",
             error: {
-              step_id: currentRunState.error?.step_id ?? null,
-              step_number: currentRunState.error?.step_number ?? 0,
-              step_name: currentRunState.error?.step_name ?? null,
-              action_type: currentRunState.error?.action_type ?? "workflow",
-              reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
+              step_id: currentRunState.current_step_id,
+              step_number: currentRunState.current_step_number ?? 0,
+              step_name: null,
+              action_type: "workflow",
+              reason: error instanceof Error ? error.message : String(error),
             },
           };
+          finishRun(context.database, runId, compiledGraph, currentRunState);
+        } finally {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+          if (currentRunAbortController === abortController) {
+            currentRunAbortController = null;
+          }
+          if (currentRunId === runId) {
+            currentRunId = null;
+          }
         }
-        finishRun(context.database, currentRunId, compiledGraph, currentRunState);
-        return currentRunState;
-      } finally {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        currentRunAbortController = null;
-        currentRunId = null;
-      }
+      })();
+      return currentRunState;
     },
 
     async stopRun() {
@@ -452,9 +492,16 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         );
       }
       const graph = this.getWorkflowGraph(workflowId);
-      const compiledGraph = compileGraph(graph);
+      if (compileGraph(graph).steps.length === 0) {
+        throw commandError("Workflow graph has no executable steps", "graph");
+      }
+      const compiledGraph = compileWorkflowRunPlan(graph, settings);
       const batchSettings: WorkflowSettings = {
         ...settings,
+        execution: {
+          ...settings.execution,
+          browser_retention: "close",
+        },
         browser: {
           ...settings.browser,
           headless: request.headless ?? settings.execution.batch_headless,
@@ -530,7 +577,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       ) as ActionConfig[];
     },
 
-    dryRunValidateConfig(_config: ActionConfig) {},
+    dryRunValidateConfig(config: ActionConfig) {
+      const validation = validateActionConfig(config);
+      if (validation) throw commandError(validation.message, validation.field);
+    },
 
     async saveWorkflowPackageFile(packageValue: WorkflowPackage) {
       if (!context.saveWorkflowPackageFile) {
@@ -576,14 +626,124 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       });
     }
   }
+  for (const field of [
+    "default_action_timeout_ms",
+    "default_retry_attempts",
+    "default_retry_interval_ms",
+    "max_workflow_duration_ms",
+    "batch_concurrency_limit",
+    "output_retention_days",
+  ] as const) {
+    const value = settings.execution[field];
+    if (value != null && value <= 0) {
+      issues.push({
+        section: "execution",
+        field,
+        level: "error",
+        message: "Execution numeric settings must be greater than zero when set",
+      });
+    }
+  }
+  if (settings.execution.wait_between_nodes_enabled) {
+    if (settings.execution.wait_between_nodes_random) {
+      const minMs = settings.execution.wait_between_nodes_min_ms;
+      const maxMs = settings.execution.wait_between_nodes_max_ms;
+      if (minMs != null && minMs <= 0) {
+        issues.push({
+          section: "execution",
+          field: "wait_between_nodes_min_ms",
+          level: "error",
+          message: "Minimum wait must be greater than zero",
+        });
+      }
+      if (maxMs != null && maxMs <= 0) {
+        issues.push({
+          section: "execution",
+          field: "wait_between_nodes_max_ms",
+          level: "error",
+          message: "Maximum wait must be greater than zero",
+        });
+      }
+      if (minMs != null && maxMs != null && maxMs < minMs) {
+        issues.push({
+          section: "execution",
+          field: "wait_between_nodes_max_ms",
+          level: "error",
+          message: "Maximum wait must be greater than or equal to minimum wait",
+        });
+      }
+    } else if (
+      settings.execution.wait_between_nodes_ms != null &&
+      settings.execution.wait_between_nodes_ms <= 0
+    ) {
+      issues.push({
+        section: "execution",
+        field: "wait_between_nodes_ms",
+        level: "error",
+        message: "Wait between nodes must be greater than zero",
+      });
+    }
+  }
+  if (settings.environment.geolocation) {
+    const { latitude, longitude, accuracy } = settings.environment.geolocation;
+    if (latitude < -90 || latitude > 90) {
+      issues.push({
+        section: "environment",
+        field: "geolocation.latitude",
+        level: "error",
+        message: "Latitude must be between -90 and 90",
+      });
+    }
+    if (longitude < -180 || longitude > 180) {
+      issues.push({
+        section: "environment",
+        field: "geolocation.longitude",
+        level: "error",
+        message: "Longitude must be between -180 and 180",
+      });
+    }
+    if (accuracy != null && accuracy <= 0) {
+      issues.push({
+        section: "environment",
+        field: "geolocation.accuracy",
+        level: "error",
+        message: "Geolocation accuracy must be greater than zero",
+      });
+    }
+  }
   if (settings.browser.fingerprint_preflight_enabled) {
     const probeUrl = settings.browser.fingerprint_probe_url?.trim();
+    let probeOrigin: string | null = null;
     if (!probeUrl || !/^https?:\/\//i.test(probeUrl)) {
       issues.push({
         section: "browser",
         field: "fingerprint_probe_url",
         level: "error",
         message: "Fingerprint probe URL must be allowlisted HTTP(S)",
+      });
+    } else {
+      try {
+        probeOrigin = new URL(probeUrl).origin;
+      } catch {
+        issues.push({
+          section: "browser",
+          field: "fingerprint_probe_url",
+          level: "error",
+          message: "Fingerprint probe URL must be valid HTTP(S)",
+        });
+      }
+    }
+    const allowedOrigins = settings.browser.fingerprint_allowed_origins ?? [];
+    if (
+      probeOrigin &&
+      (allowedOrigins.length === 0 ||
+        !allowedOrigins.map(normalizeOrigin).includes(probeOrigin))
+    ) {
+      issues.push({
+        section: "browser",
+        field: "fingerprint_allowed_origins",
+        level: "error",
+        message: "Fingerprint probe origin must be in the allowed origins list",
       });
     }
     if (!settings.browser.fingerprint_profile_id?.trim()) {
@@ -1012,4 +1172,12 @@ function isWorkflowSettingsSection(
 function nullableText(value: string | null | undefined) {
   const normalized = value?.trim() ?? "";
   return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeOrigin(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value.trim().replace(/\/+$/, "");
+  }
 }

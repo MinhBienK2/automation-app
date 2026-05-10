@@ -83,7 +83,7 @@ type BrowserDevicePreset = {
   config: BrowserDeviceConfig;
 };
 
-export const browserDeviceProfilePresets: BrowserDevicePreset[] = [
+const browserDeviceProfilePresets: BrowserDevicePreset[] = [
   {
     id: "default",
     label: "Default browser",
@@ -315,14 +315,14 @@ export function defaultWorkflowSettings({
       browser_retention: "retain",
       failure_policy: "stop_on_first_failure",
       interaction_fidelity: "standard",
-      direct_dom_fallback: "allowed_with_trace",
+      direct_dom_fallback: "explicit",
       timing_profile: "balanced",
       wait_between_nodes_enabled: false,
       wait_between_nodes_random: false,
       wait_between_nodes_ms: null,
       wait_between_nodes_min_ms: null,
       wait_between_nodes_max_ms: null,
-      batch_concurrency_limit: null,
+      batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
       output_retention_days: null,
@@ -383,23 +383,6 @@ export function defaultWorkflowSettings({
     },
     created_at: createdAt,
     updated_at: updatedAt,
-  };
-}
-
-export function workflowBrowserConfigFromSettings(settings: WorkflowSettings) {
-  return {
-    workflow_id: settings.workflow_id,
-    profile_name: settings.browser.profile_name,
-    proxy_enabled: settings.browser.proxy_enabled,
-    proxy_server: settings.browser.proxy_server,
-    proxy_username: settings.browser.proxy_username,
-    proxy_password: settings.browser.proxy_password,
-    user_agent: settings.browser.user_agent,
-    viewport_width: settings.browser.viewport_width,
-    viewport_height: settings.browser.viewport_height,
-    mobile: settings.browser.mobile,
-    touch: settings.browser.touch,
-    challenge_policy: settings.browser.challenge_policy,
   };
 }
 

@@ -161,6 +161,90 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("validates execution numeric ranges and fingerprint allowlist settings", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Settings validation");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...settings,
+        execution: {
+          ...settings.execution,
+          default_action_timeout_ms: 0,
+          wait_between_nodes_enabled: true,
+          wait_between_nodes_random: true,
+          wait_between_nodes_min_ms: 500,
+          wait_between_nodes_max_ms: 250,
+          batch_concurrency_limit: 0,
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          section: "execution",
+          field: "default_action_timeout_ms",
+          level: "error",
+        }),
+        expect.objectContaining({
+          section: "execution",
+          field: "wait_between_nodes_max_ms",
+          level: "error",
+        }),
+        expect.objectContaining({
+          section: "execution",
+          field: "batch_concurrency_limit",
+          level: "error",
+        }),
+      ]),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...settings,
+        browser: {
+          ...settings.browser,
+          headless: false,
+          fingerprint_preflight_enabled: true,
+          fingerprint_probe_url: "https://probe.owned.test/verdict",
+          fingerprint_profile_id: "owned-profile",
+          fingerprint_allowed_origins: ["https://other.owned.test"],
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          section: "browser",
+          field: "fingerprint_allowed_origins",
+          level: "error",
+        }),
+      ]),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...settings,
+        environment: {
+          ...settings.environment,
+          geolocation: { latitude: 100, longitude: -200, accuracy: 1 },
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          section: "environment",
+          field: "geolocation.latitude",
+          level: "error",
+        }),
+        expect.objectContaining({
+          section: "environment",
+          field: "geolocation.longitude",
+          level: "error",
+        }),
+      ]),
+    );
+  });
+
   test("exports sanitized packages and imports selected flow/settings as a new workflow", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Export me");
@@ -234,6 +318,24 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("dry-run validates action configs through backend validation", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(() =>
+      handlers.dryRunValidateConfig({
+        type: "navigate",
+        config: { url: " " },
+      }),
+    ).toThrow("URL is required");
+
+    expect(() =>
+      handlers.dryRunValidateConfig({
+        type: "set_json_variables",
+        config: { json: "[1,2,3]" },
+      }),
+    ).toThrow("JSON variables must be an object");
+  });
+
   test("runs saved workflow graph through the Electron browser runner", async () => {
     const runnerCalls: Array<{
       graph: CompiledWorkflowGraph;
@@ -263,23 +365,69 @@ describe("Electron workflow command handlers", () => {
     });
     const workflow = handlers.createWorkflow("Runnable");
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      execution: {
+        ...settings.execution,
+        default_action_timeout_ms: 12_000,
+      },
+      inputs: {
+        ...settings.inputs,
+        initial_variables: [
+          { name: "baseUrl", value_type: "text", value: "https://owned.test" },
+        ],
+      },
+    });
 
     const result = await handlers.runWorkflow(workflow.id);
 
     expect(result).toMatchObject({
-      status: "success",
-      completed_step_ids: ["visit"],
-      outputs: { title: "Fixture" },
+      status: "running",
+      mode: "run_workflow",
     });
     expect(runnerCalls).toHaveLength(1);
     expect(runnerCalls[0]?.mode).toBe("run_workflow");
     expect(runnerCalls[0]?.settings.workflow_id).toBe(workflow.id);
     expect(runnerCalls[0]?.graph.steps).toEqual([
       expect.objectContaining({
+        node_id: "__settings:inputs:variables",
+        config: {
+          type: "set_variable",
+          config: {
+            name: null,
+            value: null,
+            value_type: null,
+            variables: [
+              { name: "baseUrl", value_type: "text", value: "https://owned.test" },
+            ],
+          },
+        },
+      }),
+      expect.objectContaining({
         node_id: "visit",
-        config: { type: "navigate", config: { url: "https://owned.test" } },
+        config: {
+          type: "navigate",
+          config: {
+            url: "https://owned.test",
+            timeout_ms: 12_000,
+          },
+        },
       }),
     ]);
+  });
+
+  test("rejects graph runs with no executable graph steps before starting the runner", async () => {
+    const runner = { run: vi.fn() };
+    const { handlers } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Draft");
+    handlers.saveWorkflowGraph(workflow.id, startOnlyGraph());
+
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
+      message: "Workflow graph has no executable steps",
+      field: "graph",
+    });
+    expect(runner.run).not.toHaveBeenCalled();
   });
 
   test("keeps one active run, exposes running state, and persists terminal evidence", async () => {
@@ -296,7 +444,10 @@ describe("Electron workflow command handlers", () => {
     const workflow = handlers.createWorkflow("Lifecycle");
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
-    const runPromise = handlers.runWorkflow(workflow.id);
+    await expect(handlers.runWorkflow(workflow.id)).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+    });
     expect(handlers.getRunState()).toMatchObject({
       status: "running",
       mode: "run_workflow",
@@ -327,12 +478,12 @@ describe("Electron workflow command handlers", () => {
       error: null,
     });
 
-    await expect(runPromise).resolves.toMatchObject({
+    await waitForRunStatus(handlers, "success");
+    expect(handlers.getRunState()).toMatchObject({
       status: "success",
       completed_step_ids: ["visit"],
       outputs: { title: "Fixture" },
     });
-    expect(handlers.getRunState()).toMatchObject({ status: "success" });
 
     const runRows = database
       .prepare("SELECT workflow_id, status, outputs_json, error_json FROM runs")
@@ -385,7 +536,7 @@ describe("Electron workflow command handlers", () => {
     const workflow = handlers.createWorkflow("Progress");
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
-    const runPromise = handlers.runWorkflow(workflow.id);
+    await handlers.runWorkflow(workflow.id);
 
     expect(handlers.getRunState()).toMatchObject({
       status: "running",
@@ -404,7 +555,7 @@ describe("Electron workflow command handlers", () => {
       outputs: {},
       error: null,
     });
-    await runPromise;
+    await waitForRunStatus(handlers, "success");
   });
 
   test("fails an overlong run through max workflow duration timeout", async () => {
@@ -438,7 +589,11 @@ describe("Electron workflow command handlers", () => {
       },
     });
 
-    const result = await handlers.runWorkflow(workflow.id);
+    await expect(handlers.runWorkflow(workflow.id)).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+    });
+    const result = await waitForRunStatus(handlers, "failed");
 
     expect(result).toMatchObject({
       status: "failed",
@@ -450,10 +605,15 @@ describe("Electron workflow command handlers", () => {
 
   test("runs batch rows sequentially with row variables and stop-on-first-failed-row", async () => {
     const runnerCalls: CompiledWorkflowGraph[] = [];
+    const runnerSettings: WorkflowSettings[] = [];
     const { handlers } = await createTestHandlers({
       runner: {
-        async run(request: { graph: CompiledWorkflowGraph }): Promise<RunState> {
+        async run(request: {
+          graph: CompiledWorkflowGraph;
+          settings: WorkflowSettings;
+        }): Promise<RunState> {
           runnerCalls.push(request.graph);
+          runnerSettings.push(request.settings);
           const rowIndex = runnerCalls.length - 1;
           return {
             status: rowIndex === 0 ? "success" : "failed",
@@ -483,7 +643,14 @@ describe("Electron workflow command handlers", () => {
       ...settings,
       execution: {
         ...settings.execution,
+        default_action_timeout_ms: 7_500,
         batch_stop_on_first_failed_row: true,
+      },
+      inputs: {
+        ...settings.inputs,
+        initial_variables: [
+          { name: "fixture", value_type: "text", value: "batch" },
+        ],
       },
     });
 
@@ -510,6 +677,8 @@ describe("Electron workflow command handlers", () => {
       ],
     });
     expect(runnerCalls).toHaveLength(2);
+    expect(runnerSettings[0]?.execution.browser_retention).toBe("close");
+    expect(runnerSettings[1]?.execution.browser_retention).toBe("close");
     expect(runnerCalls[0]?.steps[0]).toMatchObject({
       node_id: "batch-row-0",
       config: {
@@ -517,6 +686,22 @@ describe("Electron workflow command handlers", () => {
         config: {
           variables: [{ name: "name", value_type: "text", value: "A" }],
         },
+      },
+    });
+    expect(runnerCalls[0]?.steps[1]).toMatchObject({
+      node_id: "__settings:inputs:variables",
+      config: {
+        type: "set_variable",
+        config: {
+          variables: [{ name: "fixture", value_type: "text", value: "batch" }],
+        },
+      },
+    });
+    expect(runnerCalls[0]?.steps[2]).toMatchObject({
+      node_id: "visit",
+      config: {
+        type: "navigate",
+        config: { timeout_ms: 7_500 },
       },
     });
     expect(runnerCalls[1]?.steps[0]).toMatchObject({
@@ -568,6 +753,24 @@ function runnableGraph(): WorkflowGraph {
   };
 }
 
+function startOnlyGraph(): WorkflowGraph {
+  return {
+    version: 1,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+    ],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
 async function createTestHandlers(
   overrides: Partial<Parameters<typeof createWorkflowCommandHandlers>[0]> = {},
 ) {
@@ -577,4 +780,16 @@ async function createTestHandlers(
   const database = initializeDatabase(appPaths);
   const handlers = createWorkflowCommandHandlers({ appPaths, database, ...overrides });
   return { appPaths, database, handlers };
+}
+
+async function waitForRunStatus(
+  handlers: { getRunState(): RunState },
+  status: RunState["status"],
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const state = handlers.getRunState();
+    if (state.status === status) return state;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error(`Timed out waiting for run status ${status}`);
 }

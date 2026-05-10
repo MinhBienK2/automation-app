@@ -3,8 +3,6 @@ import type {
   CommandError,
   GraphValidationIssue,
   RunState,
-  WorkflowBrowserConfig,
-  WorkflowStep,
 } from "../types/workflow";
 
 export const actionLabels: Record<ActionType, string> = {
@@ -217,7 +215,7 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
 
 export const actionOptions: ActionType[] = actionGroups.flatMap((group) => group.actions);
 
-export const hiddenActionTypes: ActionType[] = [
+const hiddenActionTypes: ActionType[] = [
   "set_checkbox",
   "if_condition",
   "repeat_times",
@@ -258,210 +256,6 @@ export const initialRunState: RunState = {
   outputs: {},
   error: null,
 };
-
-export function defaultWorkflowBrowserConfig(
-  workflowId: string,
-): WorkflowBrowserConfig {
-  return {
-    workflow_id: workflowId,
-    profile_name: null,
-    proxy_enabled: false,
-    proxy_server: null,
-    proxy_username: null,
-    proxy_password: null,
-    user_agent: null,
-    viewport_width: null,
-    viewport_height: null,
-    mobile: false,
-    touch: false,
-    challenge_policy: "none",
-    headless: false,
-  };
-}
-
-export function stepSummary(step: WorkflowStep) {
-  switch (step.config.type) {
-    case "navigate":
-      return step.config.config.url || "No URL";
-    case "wait":
-      if (step.config.config.condition === "duration") {
-        return `${step.config.config.duration_ms ?? 0}ms`;
-      }
-      return step.config.config.condition;
-    case "random_wait":
-      return `${step.config.config.min_ms}-${step.config.config.max_ms}ms`;
-    case "input_text":
-      return step.config.config.xpath || "No XPath";
-    case "clear_input":
-      return step.config.config.xpath || "No XPath";
-    case "click":
-      return step.config.config.xpath || "No XPath";
-    case "scroll": {
-      const mode = step.config.config.mode ?? "page";
-      if (mode === "into_view") return step.config.config.xpath || "No XPath";
-      if (mode === "until_visible") {
-        return `until visible ${step.config.config.xpath || "No XPath"}`;
-      }
-      return `${mode} ${step.config.config.direction} ${step.config.config.pixels}px`;
-    }
-    case "select_option":
-      return `${step.config.config.match_by}: ${step.config.config.value || "No value"}`;
-    case "set_checkbox":
-      return `${step.config.config.state} ${step.config.config.xpath || "No XPath"}`;
-    case "press_key":
-      return step.config.config.key || "No key";
-    case "hotkey":
-      return step.config.config.keys.join("+") || "No keys";
-    case "hover":
-      return step.config.config.xpath || "No XPath";
-    case "double_click":
-      return step.config.config.xpath || "No XPath";
-    case "right_click":
-      return step.config.config.xpath || "No XPath";
-    case "drag_and_drop":
-      return `${step.config.config.source_xpath || "No source"} -> ${
-        step.config.config.target_xpath || "No target"
-      }`;
-    case "focus_element":
-      return step.config.config.xpath || "No XPath";
-    case "blur_element":
-      return step.config.config.xpath || "No XPath";
-    case "type_sequence":
-      return step.config.config.xpath || "No XPath";
-    case "set_clipboard":
-      return step.config.config.text || "No text";
-    case "paste_clipboard":
-      return step.config.config.xpath || "No XPath";
-    case "check":
-      return step.config.config.xpath || "No XPath";
-    case "uncheck":
-      return step.config.config.xpath || "No XPath";
-    case "toggle_checkbox":
-      return step.config.config.xpath || "No XPath";
-    case "select_radio":
-      return step.config.config.xpath || "No XPath";
-    case "upload_file":
-      return `${step.config.config.files.length} file(s)`;
-    case "submit_form":
-      return step.config.config.xpath || "Nearest form";
-    case "select_custom_option":
-      return step.config.config.option_text || "No option";
-    case "set_contenteditable":
-      return step.config.config.xpath || "No XPath";
-    case "extract_text":
-      return `${step.config.config.output_name || "No output"} <- ${
-        step.config.config.xpath || "No XPath"
-      }`;
-    case "extract_attribute":
-      return `${step.config.config.output_name || "No output"} <- ${
-        step.config.config.attribute || "No attribute"
-      }`;
-    case "extract_input_value":
-      return `${step.config.config.output_name || "No output"} <- ${
-        step.config.config.xpath || "No XPath"
-      }`;
-    case "extract_table":
-      return `${step.config.config.output_name || "No output"} table`;
-    case "extract_list":
-      return `${step.config.config.output_name || "No output"} list`;
-    case "take_screenshot":
-      return step.config.config.path || "No path";
-    case "go_back":
-      return "Browser back";
-    case "go_forward":
-      return "Browser forward";
-    case "reload":
-      return "Reload current tab";
-    case "open_new_tab":
-      return step.config.config.url || "Blank tab";
-    case "switch_tab":
-      return `tab ${step.config.config.index}`;
-    case "close_tab":
-      return step.config.config.index == null
-        ? "Current tab"
-        : `tab ${step.config.config.index}`;
-    case "switch_frame":
-      return step.config.config.xpath || "Top frame";
-    case "accept_dialog":
-      return step.config.config.prompt_text || "Accept dialog";
-    case "dismiss_dialog":
-      return "Dismiss dialog";
-    case "set_download_directory":
-      return step.config.config.path || "No directory";
-    case "wait_for_download":
-      return step.config.config.output_name || "No output";
-    case "set_variable": {
-      const variables = step.config.config.variables;
-      if (variables?.length) return `${variables.length} variable(s)`;
-      return `${step.config.config.name ?? "name"} = ${step.config.config.value || "empty"}`;
-    }
-    case "set_json_variables":
-      return "JSON variables";
-    case "assert_element":
-      return `${step.config.config.state} ${step.config.config.xpath || "No XPath"}`;
-    case "assert_text":
-      return `${step.config.config.match_mode} ${step.config.config.text || "No text"}`;
-    case "if_condition":
-      return step.config.config.condition.kind;
-    case "repeat_times":
-      return `${step.config.config.times} time(s)`;
-    case "repeat_for_each":
-      return step.config.config.array_variable
-        ? `${step.config.config.item_name} over ${step.config.config.array_variable}`
-        : `${step.config.config.item_name} over ${step.config.config.items.length} item(s)`;
-    case "retry_block":
-      return `${step.config.config.max_attempts} attempt(s)`;
-    case "stop_workflow":
-      return step.config.config.status;
-    case "use_profile":
-      return step.config.config.name || "No profile";
-    case "save_session":
-    case "load_session":
-      return step.config.config.path || "No path";
-    case "set_cookie":
-      return `${step.config.config.name || "No cookie"} = ${step.config.config.value ? "[redacted]" : "empty"}`;
-    case "clear_cookies":
-      return step.config.config.domain || "All visible cookies";
-    case "set_secret":
-      return `${step.config.config.name || "No secret"} = [redacted]`;
-    case "use_proxy":
-      return step.config.config.server || "No proxy";
-    case "set_user_agent":
-      return step.config.config.user_agent || "No user agent";
-    case "set_viewport":
-      return `${step.config.config.width}x${step.config.config.height}`;
-    case "set_geolocation":
-      return `${step.config.config.latitude}, ${step.config.config.longitude}`;
-    case "set_extra_headers":
-      return `${step.config.config.headers.length} header(s)`;
-    case "grant_permission":
-      return step.config.config.permissions.join(", ") || "No permissions";
-    case "detect_challenge":
-      return `${step.config.config.output_name} from ${step.config.config.patterns.length} pattern(s)`;
-    case "pause_for_human":
-      return step.config.config.reason || "No reason";
-    case "resume_when_condition":
-      return step.config.config.condition.kind;
-    case "fallback_selector":
-      return `${step.config.config.output_name} from ${step.config.config.xpaths.length} selector(s)`;
-    case "retry_step":
-      return `${step.config.config.max_attempts} attempt(s)`;
-    case "checkpoint":
-      return step.config.config.name || "No checkpoint";
-    case "execute_js":
-      return step.config.config.output_name || "No output";
-    case "wait_for_request":
-    case "wait_for_response":
-      return step.config.config.url_contains || "No URL matcher";
-    case "block_request":
-      return `${step.config.config.url_patterns.length} pattern(s)`;
-    case "mock_response":
-      return `${step.config.config.status} ${step.config.config.url_contains || "No URL matcher"}`;
-    case "set_local_storage":
-    case "set_session_storage":
-      return step.config.config.key || "No key";
-  }
-}
 
 export function commandMessage(error: unknown) {
   if (typeof error === "object" && error && "message" in error) {
@@ -596,14 +390,7 @@ function issueMessageContext(issue: GraphValidationIssue) {
   return "Fix this graph issue before running.";
 }
 
-export function monitorStepStatus(step: WorkflowStep, state: RunState) {
-  if (state.error?.step_id === step.id) return "failed";
-  if (state.current_step_id === step.id) return "running";
-  if (state.completed_step_ids.includes(step.id)) return "passed";
-  return "pending";
-}
-
-export function suggestionsFor(reason: string, actionType: string) {
+function suggestionsFor(reason: string, actionType: string) {
   if (reason.includes("XPath not found")) {
     return [
       "Check the XPath in the Chromium window that remains open.",

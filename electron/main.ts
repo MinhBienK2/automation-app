@@ -16,6 +16,10 @@ import {
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
 
+if (process.platform === "linux") {
+  app.disableHardwareAcceleration();
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,

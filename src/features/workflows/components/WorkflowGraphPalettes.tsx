@@ -586,7 +586,7 @@ type ActionNodePaletteProps = {
   onSelectAction: (actionType: ActionType) => void;
 };
 
-export const hiddenActionPickerTypes = new Set<ActionType>([
+const hiddenActionPickerTypes = new Set<ActionType>([
   "if_condition",
   "repeat_times",
   "repeat_for_each",

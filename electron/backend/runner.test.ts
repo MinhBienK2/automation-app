@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type {
   ActionConfig,
@@ -186,6 +187,373 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.status).toBe("stopped");
     expect(context.closed).toBe(true);
   });
+
+  test("flattens JSON variables and exposes object fields inside for-each loops", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("set-user", "Set user", {
+            type: "set_variable",
+            config: {
+              variables: [
+                {
+                  name: "user",
+                  value_type: "json",
+                  value: "{\"name\":\"Ada\",\"roles\":[\"qa\"]}",
+                },
+              ],
+            },
+          }),
+          step("set-json", "Set JSON", {
+            type: "set_json_variables",
+            config: {
+              json: "{\"feature\":{\"enabled\":true},\"items\":[{\"name\":\"A\"},{\"name\":\"B\"}]}",
+            },
+          }),
+          step("loop", "Loop items", {
+            type: "repeat_for_each",
+            config: {
+              item_name: "item",
+              array_variable: "items",
+              items: [],
+              steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "last_item", value_type: "text", value: "{{item.name}}" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      "user.name": "Ada",
+      "user.roles": ["qa"],
+      "feature.enabled": true,
+      items: [{ name: "A" }, { name: "B" }],
+      item: { name: "B" },
+      "item.name": "B",
+      last_item: "B",
+    });
+  });
+
+  test("keeps break and continue scoped to the current loop", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("loop", "Loop", {
+            type: "repeat_for_each",
+            config: {
+              item_name: "item",
+              items: ["skip", "stop", "later"],
+              steps: [
+                {
+                  type: "if_condition",
+                  config: {
+                    condition: { kind: "output_equals", name: "item", value: "skip" },
+                    then_steps: [{ type: "continue_loop", config: {} }],
+                    else_steps: [],
+                  },
+                },
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "visited", value_type: "text", value: "{{item}}" },
+                    ],
+                  },
+                },
+                {
+                  type: "if_condition",
+                  config: {
+                    condition: { kind: "output_equals", name: "item", value: "stop" },
+                    then_steps: [{ type: "break_loop", config: {} }],
+                    else_steps: [],
+                  },
+                },
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "after_break", value_type: "text", value: "bad" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+          step("after", "After loop", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "after_loop", value_type: "text", value: "done" }],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.completed_step_ids).toEqual(["loop", "after"]);
+    expect(result.outputs?.visited).toBe("stop");
+    expect(result.outputs?.after_break).toBeUndefined();
+    expect(result.outputs?.after_loop).toBe("done");
+  });
+
+  test("evaluates browser-backed conditions and runs repeat-until timeout steps", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://owned.test/ready" },
+          }),
+          step("branch", "Branch", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "url_contains", value: "/ready" },
+              then_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "url_branch", value_type: "text", value: "matched" },
+                    ],
+                  },
+                },
+              ],
+              else_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "url_branch", value_type: "text", value: "missed" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+          step("until", "Until", {
+            type: "repeat_until",
+            config: {
+              condition: { kind: "output_equals", name: "ready", value: "yes" },
+              max_attempts: 1,
+              steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "ready", value_type: "text", value: "not-yet" },
+                    ],
+                  },
+                },
+              ],
+              timeout_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "until_timeout", value_type: "text", value: "ran" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      url_branch: "matched",
+      ready: "not-yet",
+      until_timeout: "ran",
+    });
+  });
+
+  test("fails set-json variables when the rendered JSON root is not an object", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("json", "JSON", {
+            type: "set_json_variables",
+            config: { json: "[1,2,3]" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.reason).toBe("JSON variables must be an object");
+  });
+
+  test("enforces domain allowlist against the current page hostname", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const allowed = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://sub.owned.test/path" },
+          }),
+          step("allow", "Allow", {
+            type: "domain_allowlist",
+            config: { domains: ["owned.test"] },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(allowed.status).toBe("success");
+
+    const blocked = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://unowned.test/path" },
+          }),
+          step("allow", "Allow", {
+            type: "domain_allowlist",
+            config: { domains: ["owned.test"] },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(blocked.status).toBe("failed");
+    expect(blocked.error).toMatchObject({
+      step_id: "allow",
+      reason: "Current domain unowned.test is not in the allowlist",
+    });
+  });
+
+  test("writes screenshot evidence to file URLs", async () => {
+    const appPaths = await createTempAppPaths();
+    const screenshotPath = path.join(appPaths.evidenceDir, "shot.png");
+    const runner = new BrowserWorkflowRunner({
+      appPaths,
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("shot", "Shot", {
+            type: "take_screenshot",
+            config: {
+              path: pathToFileURL(screenshotPath).href,
+              output_name: "shot",
+              full_page: true,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.shot).toBe(screenshotPath);
+    await expect(fs.stat(screenshotPath)).resolves.toMatchObject({ size: 3 });
+  });
+
+  test("applies runtime browser context actions through driver APIs", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("headers", "Headers", {
+            type: "set_extra_headers",
+            config: { headers: [{ name: "X-Owned", value: "yes" }] },
+          }),
+          step("permission", "Permission", {
+            type: "grant_permission",
+            config: { origin: "https://owned.test", permissions: ["geolocation"] },
+          }),
+          step("cookie", "Cookie", {
+            type: "set_cookie",
+            config: { name: "sid", value: "123", domain: "owned.test", path: "/" },
+          }),
+          step("geo", "Geolocation", {
+            type: "set_geolocation",
+            config: { latitude: 10.5, longitude: 20.5, accuracy: 9 },
+          }),
+          step("viewport", "Viewport", {
+            type: "set_viewport",
+            config: {
+              width: 390,
+              height: 844,
+              device_scale_factor: 2,
+              mobile: true,
+              touch: true,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(context.events).toEqual([
+      "headers:{\"X-Owned\":\"yes\"}",
+      "permissions:https://owned.test:geolocation",
+      "cookies:sid=123",
+      "geolocation:10.5:20.5:9",
+    ]);
+    expect(page.events).toContain("viewport:390:844");
+  });
 });
 
 test("createCloakBrowserDriver launches through cloakbrowser with humanize enabled", async () => {
@@ -255,6 +623,7 @@ function createFakeDriver(context: FakeContext) {
 
 class FakeContext implements BrowserDriverContext {
   closed = false;
+  events: string[] = [];
   readonly page: FakePage;
 
   constructor(page = new FakePage()) {
@@ -273,11 +642,25 @@ class FakeContext implements BrowserDriverContext {
     this.closed = true;
   }
 
-  async addCookies() {}
+  async addCookies(cookies: Array<Record<string, unknown>>) {
+    this.events.push(
+      `cookies:${cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(",")}`,
+    );
+  }
 
-  async grantPermissions() {}
+  async grantPermissions(permissions: string[], options?: { origin?: string }) {
+    this.events.push(`permissions:${options?.origin ?? "any"}:${permissions.join(",")}`);
+  }
 
-  async setExtraHTTPHeaders() {}
+  async setExtraHTTPHeaders(headers: Record<string, string>) {
+    this.events.push(`headers:${JSON.stringify(headers)}`);
+  }
+
+  async setGeolocation(geolocation: Record<string, unknown>) {
+    this.events.push(
+      `geolocation:${geolocation.latitude}:${geolocation.longitude}:${geolocation.accuracy}`,
+    );
+  }
 
   async route() {}
 }
@@ -337,6 +720,10 @@ class FakePage implements BrowserDriverPage {
   }
 
   async addInitScript() {}
+
+  async setViewportSize(viewport: { width: number; height: number }) {
+    this.events.push(`viewport:${viewport.width}:${viewport.height}`);
+  }
 
   keyboard = {
     press: async (key: string) => {

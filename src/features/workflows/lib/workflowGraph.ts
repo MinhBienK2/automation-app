@@ -13,7 +13,7 @@ export { defaultActionConfig } from "./workflowActionDefaults";
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 
-export const graphIssueKey = "__graph__";
+const graphIssueKey = "__graph__";
 
 export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed";
 
@@ -232,7 +232,7 @@ export function toReactFlowGraph(
   };
 }
 
-export function graphEdgeOrders(graph: WorkflowGraph) {
+function graphEdgeOrders(graph: WorkflowGraph) {
   const orders = new Map<string, number>();
   const edgesBySource = new Map<string, typeof graph.edges>();
   graph.edges.forEach((edge) => {

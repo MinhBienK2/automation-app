@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import type {
   ActionConfig,
   CompiledGraphStep,
@@ -32,7 +32,13 @@ export type BrowserDriverContext = {
   newPage(): Promise<BrowserDriverPage>;
   close(): Promise<void>;
   addCookies?(cookies: Array<Record<string, unknown>>): Promise<void>;
+  clearCookies?(options?: Record<string, unknown>): Promise<void>;
   grantPermissions?(permissions: string[], options?: { origin?: string }): Promise<void>;
+  setGeolocation?(geolocation: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number | null;
+  }): Promise<void>;
   setExtraHTTPHeaders?(headers: Record<string, string>): Promise<void>;
   route?(
     url: string | RegExp,
@@ -59,6 +65,7 @@ export type BrowserDriverPage = {
   ): Promise<R>;
   evaluateHandle?(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown): Promise<unknown>;
   addInitScript?(script: string): Promise<unknown>;
+  setViewportSize?(viewport: { width: number; height: number }): Promise<void>;
   keyboard?: {
     press(key: string, options?: Record<string, unknown>): Promise<void>;
     type(text: string, options?: Record<string, unknown>): Promise<void>;
@@ -146,6 +153,15 @@ class RunnerStop extends Error {
     super(message);
     this.status = status;
     this.closeBrowser = closeBrowser;
+  }
+}
+
+class LoopControl extends Error {
+  kind: "break" | "continue";
+
+  constructor(kind: "break" | "continue") {
+    super(`${kind}_loop`);
+    this.kind = kind;
   }
 }
 
@@ -531,9 +547,12 @@ export class BrowserWorkflowRunner {
       case "set_variable":
         setVariables(runtime.outputs, action.config);
         return;
-      case "set_json_variables":
-        flattenObject(runtime.outputs, "", JSON.parse(renderTemplate(action.config.json, runtime.outputs)));
+      case "set_json_variables": {
+        const parsed = JSON.parse(renderTemplate(action.config.json, runtime.outputs));
+        if (!isPlainRecord(parsed)) throw new Error("JSON variables must be an object");
+        flattenObject(runtime.outputs, "", parsed);
         return;
+      }
       case "assert_element": {
         const visible = await locatorFor(runtime.page, action.config.target, action.config.xpath).isVisible?.();
         if (action.config.state === "visible" && !visible) throw new Error("Element is not visible");
@@ -552,11 +571,17 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "if_condition":
-        await this.executeActions(runtime, conditionMatches(runtime, action.config.condition) ? action.config.then_steps : action.config.else_steps);
+        await this.executeActions(
+          runtime,
+          await conditionMatches(runtime, action.config.condition)
+            ? action.config.then_steps
+            : action.config.else_steps,
+        );
         return;
       case "repeat_times":
         for (let index = 0; index < action.config.times; index += 1) {
-          await this.executeActions(runtime, action.config.steps);
+          const control = await this.executeLoopBody(runtime, action.config.steps);
+          if (control === "break") break;
         }
         return;
       case "repeat_for_each": {
@@ -565,8 +590,9 @@ export class BrowserWorkflowRunner {
           : action.config.items;
         if (!Array.isArray(items)) throw new Error("repeat_for_each source is not an array");
         for (const item of items) {
-          runtime.outputs[action.config.item_name] = item;
-          await this.executeActions(runtime, action.config.steps);
+          writeVariableValue(runtime.outputs, action.config.item_name, item);
+          const control = await this.executeLoopBody(runtime, action.config.steps);
+          if (control === "break") break;
         }
         return;
       }
@@ -580,11 +606,28 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "while_loop":
-        await this.executeLoop(runtime, action.config.steps, action.config.max_attempts ?? 100, () => conditionMatches(runtime, action.config.condition));
+        await this.executeLoop(
+          runtime,
+          action.config.steps,
+          action.config.max_attempts ?? 100,
+          () => conditionMatches(runtime, action.config.condition),
+        );
         return;
-      case "repeat_until":
-        await this.executeLoop(runtime, action.config.steps, action.config.max_attempts ?? 100, () => !conditionMatches(runtime, action.config.condition));
+      case "repeat_until": {
+        const result = await this.executeLoop(
+          runtime,
+          action.config.steps,
+          action.config.max_attempts ?? 100,
+          async () => !(await conditionMatches(runtime, action.config.condition)),
+        );
+        if (
+          result === "max_attempts" &&
+          !(await conditionMatches(runtime, action.config.condition))
+        ) {
+          await this.executeActions(runtime, action.config.timeout_steps);
+        }
         return;
+      }
       case "try_catch":
         try {
           await this.executeActions(runtime, action.config.try_steps);
@@ -605,9 +648,9 @@ export class BrowserWorkflowRunner {
         }
         return;
       case "break_loop":
-        throw new RunnerStop("success", "break_loop");
+        throw new LoopControl("break");
       case "continue_loop":
-        return;
+        throw new LoopControl("continue");
       case "stop_workflow":
         throw new RunnerStop(
           action.config.status === "success" ? "success" : "failure",
@@ -630,8 +673,58 @@ export class BrowserWorkflowRunner {
       case "run_subworkflow":
         runtime.outputs.last_subworkflow_id = action.config.workflow_id;
         return;
-      case "domain_allowlist":
+      case "domain_allowlist": {
+        const hostname = await currentPageHostname(runtime);
+        if (!hostname || !hostnameAllowed(hostname, action.config.domains)) {
+          throw new Error(
+            `Current domain ${hostname ?? "unknown"} is not in the allowlist`,
+          );
+        }
         runtime.outputs.domain_allowlist = action.config.domains;
+        return;
+      }
+      case "set_viewport":
+        await runtime.page.setViewportSize?.({
+          width: action.config.width,
+          height: action.config.height,
+        });
+        runtime.outputs.last_set_viewport = action.config;
+        return;
+      case "set_geolocation":
+        await runtime.context.setGeolocation?.(action.config);
+        runtime.outputs.last_set_geolocation = action.config;
+        return;
+      case "set_extra_headers":
+        await runtime.context.setExtraHTTPHeaders?.(
+          Object.fromEntries(
+            action.config.headers.map((header) => [header.name, header.value]),
+          ),
+        );
+        runtime.outputs.last_set_extra_headers = action.config;
+        return;
+      case "grant_permission":
+        await runtime.context.grantPermissions?.(
+          action.config.permissions,
+          action.config.origin ? { origin: action.config.origin } : undefined,
+        );
+        runtime.outputs.last_grant_permission = action.config;
+        return;
+      case "set_cookie":
+        await runtime.context.addCookies?.([
+          {
+            name: action.config.name,
+            value: action.config.value,
+            domain: action.config.domain ?? undefined,
+            path: action.config.path ?? "/",
+          },
+        ]);
+        runtime.outputs.last_set_cookie = action.config;
+        return;
+      case "clear_cookies":
+        await runtime.context.clearCookies?.(
+          action.config.domain ? { domain: action.config.domain } : undefined,
+        );
+        runtime.outputs.last_clear_cookies = action.config;
         return;
       case "use_profile":
       case "save_session":
@@ -639,12 +732,6 @@ export class BrowserWorkflowRunner {
       case "set_secret":
       case "use_proxy":
       case "set_user_agent":
-      case "set_viewport":
-      case "set_geolocation":
-      case "set_extra_headers":
-      case "grant_permission":
-      case "set_cookie":
-      case "clear_cookies":
         runtime.outputs[`last_${action.type}`] = action.config;
         return;
       case "detect_challenge":
@@ -654,7 +741,12 @@ export class BrowserWorkflowRunner {
       case "checkpoint":
         return;
       case "resume_when_condition":
-        await this.executeLoop(runtime, [], 1, () => !conditionMatches(runtime, action.config.condition));
+        await this.executeLoop(
+          runtime,
+          [],
+          1,
+          async () => !(await conditionMatches(runtime, action.config.condition)),
+        );
         return;
       case "fallback_selector":
         runtime.outputs[action.config.output_name] = action.config.xpaths[0] ?? null;
@@ -714,6 +806,19 @@ export class BrowserWorkflowRunner {
     for (const action of actions) {
       this.throwIfCancelled(runtime.signal);
       await this.executeAction(runtime, action);
+    }
+  }
+
+  private async executeLoopBody(
+    runtime: Runtime,
+    steps: ActionConfig[],
+  ): Promise<"completed" | "break" | "continue"> {
+    try {
+      await this.executeActions(runtime, steps);
+      return "completed";
+    } catch (error) {
+      if (error instanceof LoopControl) return error.kind;
+      throw error;
     }
   }
 
@@ -782,13 +887,16 @@ export class BrowserWorkflowRunner {
     runtime: Runtime,
     steps: ActionConfig[],
     maxAttempts: number,
-    predicate: () => boolean,
-  ) {
+    predicate: () => Promise<boolean>,
+  ): Promise<"predicate_false" | "max_attempts" | "break"> {
     let attempts = 0;
-    while (predicate() && attempts < maxAttempts) {
+    while (await predicate()) {
+      if (attempts >= maxAttempts) return "max_attempts";
       attempts += 1;
-      await this.executeActions(runtime, steps);
+      const control = await this.executeLoopBody(runtime, steps);
+      if (control === "break") return "break";
     }
+    return "predicate_false";
   }
 
   private async collectOutputs(runtime: Runtime) {
@@ -838,7 +946,7 @@ export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): B
   };
 }
 
-export function buildLaunchOptions(
+function buildLaunchOptions(
   settings: WorkflowSettings,
   appPaths: AppPaths,
 ): BrowserLaunchOptions {
@@ -949,7 +1057,11 @@ function setVariables(
   ];
   for (const variable of variables) {
     if (!variable.name.trim()) continue;
-    outputs[variable.name] = parseVariableValue(variable.value_type, variable.value, outputs);
+    writeVariableValue(
+      outputs,
+      variable.name,
+      parseVariableValue(variable.value_type, variable.value, outputs),
+    );
   }
 }
 
@@ -966,7 +1078,7 @@ function parseVariableValue(
 }
 
 function flattenObject(outputs: Record<string, unknown>, prefix: string, value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isPlainRecord(value)) {
     if (prefix) outputs[prefix] = value;
     return;
   }
@@ -975,17 +1087,72 @@ function flattenObject(outputs: Record<string, unknown>, prefix: string, value: 
   }
 }
 
-function conditionMatches(runtime: Runtime, condition: unknown) {
+function writeVariableValue(
+  outputs: Record<string, unknown>,
+  name: string,
+  value: unknown,
+) {
+  outputs[name] = value;
+  if (isPlainRecord(value)) {
+    flattenObject(outputs, name, value);
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function conditionMatches(runtime: Runtime, condition: unknown) {
   if (!condition || typeof condition !== "object" || !("kind" in condition)) return false;
-  const typed = condition as { kind: string; name?: string; value?: string; text?: string };
+  const typed = condition as {
+    kind: string;
+    name?: string;
+    value?: string;
+    text?: string;
+    target?: unknown;
+    xpath?: string | null;
+  };
   if (typed.kind === "output_equals") return String(runtime.outputs[typed.name ?? ""]) === typed.value;
   if (typed.kind === "output_contains") {
     return String(runtime.outputs[typed.name ?? ""]).includes(typed.value ?? "");
   }
-  if (typed.kind === "url_contains") return false;
-  if (typed.kind === "text_visible") return true;
-  if (typed.kind === "element_visible") return true;
+  if (typed.kind === "url_contains") {
+    const href = await runtime.page.evaluate<string>("() => window.location.href");
+    return href.includes(typed.value ?? "");
+  }
+  if (typed.kind === "text_visible") {
+    return Boolean(await runtime.page.locator(`text=${typed.text ?? ""}`).isVisible?.());
+  }
+  if (typed.kind === "element_visible") {
+    return Boolean(
+      await locatorFor(runtime.page, typed.target, typed.xpath ?? "body").isVisible?.(),
+    );
+  }
   return false;
+}
+
+async function currentPageHostname(runtime: Runtime) {
+  const href = await runtime.page.evaluate<string>("() => window.location.href");
+  try {
+    return new URL(href).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function hostnameAllowed(hostname: string, domains: string[]) {
+  return domains.some((domain) => {
+    const normalized = normalizeDomain(domain);
+    return hostname === normalized || hostname.endsWith(`.${normalized}`);
+  });
+}
+
+function normalizeDomain(domain: string) {
+  try {
+    return new URL(domain).hostname.toLowerCase();
+  } catch {
+    return domain.trim().toLowerCase().replace(/^\.+|\.+$/g, "");
+  }
 }
 
 function renderTemplate(value: string, outputs: Record<string, unknown>) {
@@ -1005,7 +1172,7 @@ async function extractListLike(locator: BrowserDriverLocator) {
 
 function resolveEvidencePath(root: string, requestedPath: string) {
   if (path.isAbsolute(requestedPath)) return requestedPath;
-  if (requestedPath.startsWith("file:")) return pathToFileURL(requestedPath).pathname;
+  if (requestedPath.startsWith("file:")) return fileURLToPath(requestedPath);
   return path.join(root, requestedPath);
 }
 

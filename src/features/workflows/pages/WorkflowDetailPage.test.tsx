@@ -208,6 +208,12 @@ describe("Workflow detail integration", () => {
       .toHaveAttribute("aria-checked", "true");
     expect(within(settingsDialog).getByLabelText("Device profile")).toHaveValue("custom");
     expect(within(settingsDialog).getByLabelText("User agent")).toHaveValue("WorkflowBot/1.0");
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Environment" }));
+    expect(within(settingsDialog).getByLabelText("Latitude")).toHaveAttribute("min", "-90");
+    expect(within(settingsDialog).getByLabelText("Latitude")).toHaveAttribute("max", "90");
+    expect(within(settingsDialog).getByLabelText("Longitude")).toHaveAttribute("min", "-180");
+    expect(within(settingsDialog).getByLabelText("Longitude")).toHaveAttribute("max", "180");
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser" }));
     await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
     await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
     await userEvent.clear(within(settingsDialog).getByLabelText("Viewport width"));

@@ -20,7 +20,7 @@ Every user-addable action type must have:
 - TypeScript action type and config shape.
 - Default config in frontend defaults or graph compiler settings prelude when applicable.
 - UI label/group in `workflowUi.ts`.
-- UI summary in `stepSummary`.
+- UI label/help text in `workflowUi.ts` and `stepHelpContent.ts`.
 - Form support in workflow step form logic/components when user editable.
 - Domain validation when fields have constraints.
 - Runner execution or intentional no-op/unsupported behavior.

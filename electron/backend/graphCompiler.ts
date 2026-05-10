@@ -593,7 +593,7 @@ function step(node: GraphNode, config: ActionConfig): CompiledGraphStep {
   };
 }
 
-function validateActionConfig(config: ActionConfig): ValidationError | null {
+export function validateActionConfig(config: ActionConfig): ValidationError | null {
   switch (config.type) {
     case "navigate":
       return config.config.url.trim() ? null : validationError("url", "URL is required");
