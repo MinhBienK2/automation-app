@@ -8,7 +8,6 @@ import type {
   WorkflowGraph,
   WorkflowStep,
 } from "../../../types/workflow";
-import { defaultActionConfig } from "./workflowActionDefaults";
 export { defaultActionConfig } from "./workflowActionDefaults";
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
@@ -477,7 +476,7 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
 function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
   switch (nodeType) {
     case "action":
-      return defaultActionConfig("wait");
+      return null;
     case "if":
       return { condition: { kind: "output_equals", name: "name", value: "" } };
     case "repeat_until":

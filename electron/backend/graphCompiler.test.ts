@@ -159,6 +159,39 @@ describe("TypeScript graph compiler parity", () => {
     ]);
   });
 
+  test("accepts repeat-for-each manual lists when array variable is null", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("loop", "repeat_for_each", {
+          config: { item_name: "row", array_variable: null, items: ["a", "b"] },
+        }),
+        graphNode("wait", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "loop", "in"),
+        edge("loop", "loop", "wait", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph)).not.toContainEqual(
+      expect.objectContaining({ message: "Array variable name is required" }),
+    );
+    expect(handlers.compileWorkflowGraph(graph).steps).toContainEqual(
+      expect.objectContaining({
+        node_id: "loop",
+        config: expect.objectContaining({
+          type: "repeat_for_each",
+          config: expect.objectContaining({
+            array_variable: null,
+            items: ["a", "b"],
+          }),
+        }),
+      }),
+    );
+  });
+
   test("compiles settings prelude, execution defaults, and wait-between-nodes", () => {
     const input = inputTextAction("//input", "hello");
     const click = clickAction("//button");

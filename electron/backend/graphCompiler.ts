@@ -488,11 +488,7 @@ function pushNodeSemanticIssues(
       if (!stringField(node.config, "item_name")) {
         issues.push(error(node.id, null, "Item name is required"));
       }
-      if (Object.prototype.hasOwnProperty.call(asRecord(node.config), "array_variable")) {
-        if (!stringField(node.config, "array_variable")) {
-          issues.push(error(node.id, null, "Array variable name is required"));
-        }
-      } else if (stringArrayOrNull(node.config, "items") == null) {
+      if (!stringField(node.config, "array_variable") && stringArrayOrNull(node.config, "items") == null) {
         issues.push(error(node.id, null, "Items are required"));
       }
       requireBodyPort(graph, node, "loop", "Repeat loop branch is required", issues);
