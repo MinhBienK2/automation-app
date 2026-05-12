@@ -491,6 +491,60 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("treats a missing current URL as a non-match for login-style URL conditions", async () => {
+    class MissingHrefPage extends FakePage {
+      override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+        if (typeof pageFunction === "string" && pageFunction.includes("window.location.href")) {
+          return undefined;
+        }
+        return super.evaluate(pageFunction, arg);
+      }
+    }
+
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(new MissingHrefPage())),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("login-branch", "Login detected", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "url_contains", value: "/login" },
+              then_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "login_branch", value_type: "text", value: "matched" },
+                    ],
+                  },
+                },
+              ],
+              else_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "login_branch", value_type: "text", value: "missed" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.login_branch).toBe("missed");
+  });
+
   test("honors loop timeout and resume condition polling semantics", async () => {
     let sleepCalls = 0;
     const runner = new BrowserWorkflowRunner({

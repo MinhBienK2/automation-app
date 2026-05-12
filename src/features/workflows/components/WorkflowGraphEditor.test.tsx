@@ -1215,6 +1215,7 @@ describe("Workflow graph editor integration", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
 
     await userEvent.keyboard("{Control>}d{/Control}");
     expect(within(editor).getByRole("button", { name: "Graph canvas node new-node-copy" }))
@@ -1236,5 +1237,36 @@ describe("Workflow graph editor integration", () => {
 
     expect(within(editor).queryByRole("button", { name: "Graph canvas node new-node-copy-2" }))
       .not.toBeInTheDocument();
+  });
+
+  test("keeps clipboard shortcuts scoped to an active graph editor", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    const pageCopy = new KeyboardEvent("keydown", {
+      key: "c",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(pageCopy);
+    expect(pageCopy.defaultPrevented).toBe(false);
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
+    const graphCopy = new KeyboardEvent("keydown", {
+      key: "c",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(graphCopy);
+    expect(graphCopy.defaultPrevented).toBe(true);
   });
 });

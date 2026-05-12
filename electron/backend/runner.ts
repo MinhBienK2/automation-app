@@ -1684,7 +1684,9 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
     return String(runtime.outputs[typed.name ?? ""]).includes(typed.value ?? "");
   }
   if (typed.kind === "url_contains") {
-    const href = await runtime.page.evaluate<string>("() => window.location.href");
+    const href = String(
+      (await runtime.page.evaluate<string | null | undefined>("() => window.location.href")) ?? "",
+    );
     return href.includes(typed.value ?? "");
   }
   if (typed.kind === "text_visible") {
