@@ -4,6 +4,7 @@ import type {
   GraphValidationIssue,
   RunState,
 } from "../types/workflow";
+import { allActionTypes, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
 
 export const actionLabels: Record<ActionType, string> = {
   navigate: "Navigate",
@@ -98,7 +99,7 @@ export const actionLabels: Record<ActionType, string> = {
   set_session_storage: "Set Session Storage",
 };
 
-export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
+const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Navigation",
     actions: [
@@ -213,38 +214,16 @@ export const actionGroups: Array<{ label: string; actions: ActionType[] }> = [
   },
 ];
 
+export const actionGroups: Array<{ label: string; actions: ActionType[] }> =
+  actionGroupCatalog
+    .map((group) => ({
+      ...group,
+      actions: group.actions.filter(isActionVisibleInPrimaryPalette),
+    }))
+    .filter((group) => group.actions.length > 0);
+
 export const actionOptions: ActionType[] = actionGroups.flatMap((group) => group.actions);
-
-const hiddenActionTypes: ActionType[] = [
-  "set_checkbox",
-  "if_condition",
-  "repeat_times",
-  "repeat_for_each",
-  "retry_block",
-  "switch_condition",
-  "while_loop",
-  "repeat_until",
-  "try_catch",
-  "fallback_block",
-  "break_loop",
-  "continue_loop",
-  "stop_workflow",
-  "transform_variable",
-  "assert_output",
-  "run_subworkflow",
-  "domain_allowlist",
-  "fallback_selector",
-  "retry_step",
-  "checkpoint",
-  "detect_challenge",
-  "pause_for_human",
-  "resume_when_condition",
-];
-
-export const allActionOptions: ActionType[] = [
-  ...actionOptions,
-  ...hiddenActionTypes,
-];
+export const allActionOptions: ActionType[] = allActionTypes;
 
 export const initialRunState: RunState = {
   status: "idle",

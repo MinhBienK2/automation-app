@@ -20,14 +20,14 @@ Focused commands:
 - Command API and persistence: `electron/backend/commands.test.ts`
 - Graph validation/compiler: `electron/backend/graphCompiler.test.ts`
 - Runner unit coverage: `electron/backend/runner.test.ts`
-- CloakBrowser launch smoke: `electron/backend/runner.smoke.test.ts`
+- CloakBrowser launch smoke: `electron/backend/runner.smoke.test.ts`, gated by `RUN_CLOAKBROWSER_SMOKE=1`
 
 Focused commands:
 
 - `npm test -- electron/backend/commands.test.ts`
 - `npm test -- electron/backend/graphCompiler.test.ts`
 - `npm test -- electron/backend/runner.test.ts`
-- `npm test -- electron/backend/runner.smoke.test.ts`
+- `npm run test:smoke`
 - `npm run build:electron`
 
 ## Policy

@@ -309,6 +309,71 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("rejects invalid workflow package imports without creating orphan workflows", async () => {
+    const { handlers } = await createTestHandlers();
+    const existing = handlers.createWorkflow("Existing");
+    const baseSettings = handlers.getWorkflowSettings(existing.id);
+    const initialCount = handlers.listWorkflows().length;
+    const invalidSettingsPackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Bad Settings" },
+      included_sections: ["settings.browser"],
+      omitted_fields: [],
+      flow: null,
+      settings: {
+        browser: {
+          ...baseSettings.browser,
+          proxy_enabled: true,
+          proxy_server: null,
+        },
+      },
+    };
+
+    let settingsError: unknown;
+    try {
+      handlers.importWorkflowPackage(invalidSettingsPackage, {
+        include_flow: false,
+        settings_sections: ["browser"],
+      });
+    } catch (error) {
+      settingsError = error;
+    }
+    expect(settingsError).toMatchObject({
+      field: "browser.proxy_server",
+    });
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+
+    const invalidFlowPackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Bad Flow" },
+      included_sections: ["flow"],
+      omitted_fields: [],
+      flow: {
+        version: 99,
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
+      settings: null,
+    };
+
+    let flowError: unknown;
+    try {
+      handlers.importWorkflowPackage(invalidFlowPackage, {
+        include_flow: true,
+        settings_sections: [],
+      });
+    } catch (error) {
+      flowError = error;
+    }
+    expect(flowError).toMatchObject({
+      field: "package.flow",
+    });
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+  });
+
   test("serializes command errors with message and optional field", () => {
     expect(
       serializeCommandError({ message: "Name required", field: "name" }),
@@ -457,9 +522,11 @@ describe("Electron workflow command handlers", () => {
 
   test("keeps one active run, exposes running state, and persists terminal evidence", async () => {
     let finishRun: ((state: RunState) => void) | null = null;
+    let observedRunId: string | null | undefined = null;
     const { handlers, database } = await createTestHandlers({
       runner: {
-        async run(): Promise<RunState> {
+        async run(request: { runId?: string | null }): Promise<RunState> {
+          observedRunId = request.runId;
           return new Promise((resolve) => {
             finishRun = resolve;
           });
@@ -491,6 +558,16 @@ describe("Electron workflow command handlers", () => {
       completed_step_ids: ["visit"],
       outputs: {
         title: "Fixture",
+        __evidence: [
+          {
+            run_id: observedRunId,
+            node_id: "visit",
+            step_number: 1,
+            action_type: "navigate",
+            artifact_kind: "screenshot",
+            path: `runs/${observedRunId}/screenshots/001-visit-failure.png`,
+          },
+        ],
         __action_traces: [
           {
             node_id: "visit",
@@ -511,16 +588,24 @@ describe("Electron workflow command handlers", () => {
     });
 
     const runRows = database
-      .prepare("SELECT workflow_id, status, outputs_json, error_json FROM runs")
+      .prepare("SELECT id, workflow_id, status, outputs_json, error_json FROM runs")
       .all() as Array<Record<string, string | null>>;
     expect(runRows).toHaveLength(1);
     expect(runRows[0]).toMatchObject({
+      id: observedRunId,
       workflow_id: workflow.id,
       status: "success",
       error_json: null,
     });
     expect(JSON.parse(runRows[0]?.outputs_json ?? "{}")).toMatchObject({
       title: "Fixture",
+      __evidence: [
+        expect.objectContaining({
+          run_id: runRows[0]?.id,
+          node_id: "visit",
+          path: `runs/${runRows[0]?.id}/screenshots/001-visit-failure.png`,
+        }),
+      ],
     });
 
     const stepRows = database
@@ -739,6 +824,69 @@ describe("Electron workflow command handlers", () => {
       },
     });
   });
+
+  test("keeps batch runs under the active run lifecycle and stops before the next row", async () => {
+    let activeRunSignal: AbortSignal | null = null;
+    const runnerCalls: CompiledWorkflowGraph[] = [];
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: {
+          graph: CompiledWorkflowGraph;
+          signal?: AbortSignal;
+        }): Promise<RunState> {
+          runnerCalls.push(request.graph);
+          activeRunSignal = request.signal ?? null;
+          await new Promise<void>((resolve) => {
+            request.signal?.addEventListener("abort", resolve, { once: true });
+          });
+          return {
+            status: "stopped",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: [],
+            outputs: {},
+            error: null,
+          };
+        },
+        async closeRetainedContext() {},
+      },
+    });
+    const workflow = handlers.createWorkflow("Batch lifecycle");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    const batchPromise = handlers.runBatchWorkflow(workflow.id, {
+      rows: [{ name: "A" }, { name: "B" }],
+    });
+    await waitFor(() => activeRunSignal !== null);
+
+    expect(handlers.getRunState()).toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+      outputs: expect.objectContaining({
+        batch_total: 2,
+        batch_current_row_index: 0,
+      }),
+    });
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
+      message: "A workflow run is already active",
+      field: "run",
+    });
+
+    await expect(handlers.stopRun()).resolves.toMatchObject({
+      status: "stopped",
+      mode: "run_workflow",
+    });
+    expect(activeRunSignal?.aborted).toBe(true);
+    await expect(batchPromise).resolves.toEqual({
+      total: 2,
+      succeeded: 0,
+      failed: 0,
+      results: [{ row_index: 0, status: "stopped", error: null }],
+    });
+    expect(runnerCalls).toHaveLength(1);
+  });
 });
 
 function runnableGraph(): WorkflowGraph {
@@ -817,4 +965,12 @@ async function waitForRunStatus(
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   throw new Error(`Timed out waiting for run status ${status}`);
+}
+
+async function waitFor(predicate: () => boolean) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error("Timed out waiting for predicate");
 }

@@ -9,6 +9,7 @@ import { createAppPaths } from "./database";
 import { BrowserWorkflowRunner } from "./runner";
 
 const tempRoots: string[] = [];
+const describeSmoke = process.env.RUN_CLOAKBROWSER_SMOKE === "1" ? describe : describe.skip;
 
 afterEach(async () => {
   for (const root of tempRoots.splice(0)) {
@@ -16,7 +17,7 @@ afterEach(async () => {
   }
 });
 
-describe("CloakBrowser smoke", () => {
+describeSmoke("CloakBrowser smoke", () => {
   test(
     "launches headless and executes a local fixture workflow",
     async () => {

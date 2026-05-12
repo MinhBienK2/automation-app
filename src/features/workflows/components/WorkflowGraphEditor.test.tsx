@@ -182,6 +182,63 @@ describe("Workflow graph editor integration", () => {
     expect(within(palette).getByRole("button", { name: /Set JSON Variables/ })).toBeInTheDocument();
   });
 
+  test("shows compatibility details for legacy graph-internal action configs", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: {
+        version: 1,
+        nodes: [
+          {
+            id: "start",
+            node_type: "start",
+            label: "Start",
+            position: { x: 0, y: 0 },
+            config: null,
+            ports: nodePorts("start"),
+          },
+          {
+            id: "legacy-loop",
+            node_type: "action",
+            label: "Legacy While",
+            position: { x: 240, y: 0 },
+            config: {
+              type: "while_loop",
+              config: {
+                condition: { kind: "output_equals", name: "ready", value: "yes" },
+                max_attempts: 2,
+                steps: [],
+              },
+            },
+            ports: nodePorts("action"),
+          },
+        ],
+        edges: [
+          {
+            id: "start-legacy",
+            source_node_id: "start",
+            source_port: "out",
+            target_node_id: "legacy-loop",
+            target_port: "in",
+          },
+        ],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node legacy-loop" }));
+
+    expect(within(editor).getByText("Compatibility action")).toBeInTheDocument();
+    expect(within(editor).getByText("While Loop")).toBeInTheDocument();
+    expect(within(editor).getByText(/Convert this saved action into a graph-native node/))
+      .toBeInTheDocument();
+    expect(within(editor).getByText(/\"type\": \"while_loop\"/)).toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "Delete Node" })).toBeInTheDocument();
+  });
+
   test("connects nodes through the app-level port fallback when native drag is unavailable", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),

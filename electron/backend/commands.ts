@@ -302,6 +302,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       void (async () => {
         try {
           let terminalState = await runner.run({
+            runId,
             graph: compiledGraph,
             settings,
             mode: "run_workflow",
@@ -455,34 +456,60 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       options: WorkflowPackageImportOptions,
     ): WorkflowDetail {
       validateWorkflowPackage(packageValue);
-      const workflow = createWorkflow(`${packageValue.workflow.name} (imported)`);
       if (options.include_flow && packageValue.flow) {
-        repository.saveWorkflowGraph(workflow.id, packageValue.flow);
-      }
-
-      if (packageValue.settings && options.settings_sections.length > 0) {
-        const settings = getSettings(workflow.id);
-        let nextSettings = structuredClone(settings);
-        for (const section of options.settings_sections) {
-          const sectionValue = packageValue.settings[section];
-          if (sectionValue) {
-            nextSettings = {
-              ...nextSettings,
-              [section]: structuredClone(sectionValue),
-            };
-          }
+        const flowError = validateGraph(packageValue.flow).find(
+          (issue) => issue.level === "error" && !isImportableDraftFlowIssue(issue.message),
+        );
+        if (flowError) {
+          throw commandError(flowError.message, "package.flow");
         }
-        saveSettings(workflow.id, {
-          ...nextSettings,
-          workflow_id: workflow.id,
-          general: {
-            ...nextSettings.general,
-            name: workflow.name,
-          },
-        });
       }
 
-      return { workflow, steps: [] };
+      const importedName = `${packageValue.workflow.name} (imported)`;
+      const timestamp = new Date().toISOString();
+      const candidateSettings = packageValue.settings && options.settings_sections.length > 0
+        ? buildImportedSettingsCandidate(
+            importedName,
+            timestamp,
+            packageValue.settings,
+            options.settings_sections,
+          )
+        : null;
+      if (candidateSettings) {
+        const settingsError = validateSettings(candidateSettings).find((issue) => issue.level === "error");
+        if (settingsError) {
+          throw commandError(
+            settingsError.message,
+            settingsError.field
+              ? `${settingsError.section}.${settingsError.field}`
+              : settingsError.section,
+          );
+        }
+      }
+
+      context.database.exec("BEGIN IMMEDIATE");
+      try {
+        const workflow = createWorkflow(importedName);
+        if (options.include_flow && packageValue.flow) {
+          repository.saveWorkflowGraph(workflow.id, packageValue.flow);
+        }
+
+        if (candidateSettings) {
+          saveSettings(workflow.id, {
+            ...candidateSettings,
+            workflow_id: workflow.id,
+            general: {
+              ...candidateSettings.general,
+              name: workflow.name,
+            },
+          });
+        }
+        context.database.exec("COMMIT");
+        return { workflow, steps: [] };
+      } catch (error) {
+        context.database.exec("ROLLBACK");
+        throw error;
+      }
     },
 
     async runBatchWorkflow(
@@ -490,6 +517,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       request: BatchRunRequest,
     ) {
       requireWorkflow(workflowId);
+      if (currentRunAbortController) {
+        throw commandError("A workflow run is already active", "run");
+      }
       const settings = getSettings(workflowId);
       const concurrencyLimit =
         request.concurrency_limit ?? settings.execution.batch_concurrency_limit ?? 1;
@@ -518,28 +548,118 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const results = [];
       let succeeded = 0;
       let failed = 0;
-      for (const [rowIndex, row] of request.rows.entries()) {
-        const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
-        const runId = beginRun(context.database, workflowId, batchSettings, graph);
-        const result = await runner.run({
-          graph: rowGraph,
-          settings: batchSettings,
-          mode: "run_workflow",
-        });
-        finishRun(context.database, runId, rowGraph, result);
-        if (result.status === "success") {
-          succeeded += 1;
-        } else {
-          failed += 1;
+      currentRunAbortController = new AbortController();
+      const abortController = currentRunAbortController;
+      currentRunState = {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+        outputs: {
+          batch_total: request.rows.length,
+          batch_current_row_index: 0,
+          batch_succeeded: 0,
+          batch_failed: 0,
+        },
+      };
+      try {
+        for (const [rowIndex, row] of request.rows.entries()) {
+          if (abortController.signal.aborted) break;
+          currentRunState = {
+            ...currentRunState,
+            status: "running",
+            outputs: {
+              ...(currentRunState.outputs ?? {}),
+              batch_total: request.rows.length,
+              batch_current_row_index: rowIndex,
+              batch_succeeded: succeeded,
+              batch_failed: failed,
+            },
+          };
+          const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
+          const runId = beginRun(context.database, workflowId, batchSettings, graph);
+          currentRunId = runId;
+          let result = await runner.run({
+            runId,
+            graph: rowGraph,
+            settings: batchSettings,
+            mode: "run_workflow",
+            signal: abortController.signal,
+            onProgress(progress) {
+              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+                return;
+              }
+              currentRunState = {
+                ...currentRunState,
+                ...progress,
+                status: "running",
+                mode: "run_workflow",
+                outputs: {
+                  ...(currentRunState.outputs ?? {}),
+                  batch_total: request.rows.length,
+                  batch_current_row_index: rowIndex,
+                  batch_succeeded: succeeded,
+                  batch_failed: failed,
+                },
+              };
+            },
+          });
+          if (abortController.signal.aborted && currentRunState.status === "stopped") {
+            result = {
+              ...result,
+              status: "stopped",
+              error: null,
+            };
+          }
+          finishRun(context.database, runId, rowGraph, result);
+          currentRunId = null;
+          if (result.status === "success") {
+            succeeded += 1;
+          } else if (result.status === "failed") {
+            failed += 1;
+          }
+          results.push({
+            row_index: rowIndex,
+            status: result.status,
+            error: result.error?.reason ?? null,
+          });
+          currentRunState = {
+            ...currentRunState,
+            status: result.status === "stopped" ? "stopped" : "running",
+            current_step_id: null,
+            current_step_number: null,
+            outputs: {
+              ...(currentRunState.outputs ?? {}),
+              batch_total: request.rows.length,
+              batch_current_row_index: rowIndex,
+              batch_succeeded: succeeded,
+              batch_failed: failed,
+            },
+            error: result.status === "failed" ? result.error : null,
+          };
+          if (result.status === "stopped") break;
+          if (result.status !== "success" && settings.execution.batch_stop_on_first_failed_row) {
+            break;
+          }
         }
-        results.push({
-          row_index: rowIndex,
-          status: result.status,
-          error: result.error?.reason ?? null,
-        });
-        if (result.status !== "success" && settings.execution.batch_stop_on_first_failed_row) {
-          break;
+        if (currentRunState.status !== "stopped") {
+          currentRunState = {
+            ...currentRunState,
+            status: failed > 0 ? "failed" : "success",
+            current_step_id: null,
+            current_step_number: null,
+            outputs: {
+              ...(currentRunState.outputs ?? {}),
+              batch_total: request.rows.length,
+              batch_succeeded: succeeded,
+              batch_failed: failed,
+            },
+          };
         }
+      } finally {
+        if (currentRunAbortController === abortController) {
+          currentRunAbortController = null;
+        }
+        currentRunId = null;
       }
       return {
         total: request.rows.length,
@@ -853,6 +973,42 @@ function packageSettingsSections(
     .filter((section) => section.startsWith("settings."))
     .map((section) => section.replace("settings.", ""))
     .filter(isWorkflowSettingsSection);
+}
+
+function buildImportedSettingsCandidate(
+  workflowName: string,
+  timestamp: string,
+  packageSettings: WorkflowPackageSettings,
+  sections: WorkflowSettingsSectionId[],
+): WorkflowSettings {
+  let nextSettings = defaultWorkflowSettings({
+    id: "__import_preview__",
+    name: workflowName,
+    step_count: 0,
+    created_at: timestamp,
+    updated_at: timestamp,
+  });
+  for (const section of sections) {
+    const sectionValue = packageSettings[section];
+    if (sectionValue) {
+      nextSettings = {
+        ...nextSettings,
+        [section]: structuredClone(sectionValue),
+      };
+    }
+  }
+  return {
+    ...nextSettings,
+    workflow_id: "__import_preview__",
+    general: {
+      ...nextSettings.general,
+      name: workflowName,
+    },
+  };
+}
+
+function isImportableDraftFlowIssue(message: string) {
+  return message === "Choose an action type before running this node";
 }
 
 function commandError(message: string, field?: string): CommandError {

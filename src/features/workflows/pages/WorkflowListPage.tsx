@@ -85,6 +85,11 @@ export function WorkflowListPage({
             Create Workflow
           </Button>
         </div>
+        {appError ? (
+          <p className="field-error" role="alert">
+            {appError}
+          </p>
+        ) : null}
       </header>
 
       <section className="workflow-library" aria-label="Workflow list">

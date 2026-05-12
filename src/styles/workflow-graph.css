@@ -432,6 +432,39 @@
   line-height: 1.45;
 }
 
+.graph-compatibility-action {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #363636;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.graph-compatibility-action .eyebrow {
+  margin-bottom: 0;
+}
+
+.graph-compatibility-action h3 {
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.graph-compatibility-action pre {
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #242424;
+  border-radius: 6px;
+  background: #0f0f0f;
+  color: #b4b4b4;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .template-field {
   position: relative;
   display: grid;

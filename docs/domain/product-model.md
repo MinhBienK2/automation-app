@@ -13,7 +13,7 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - Test-step mode remains a legacy/internal run-state mode and is not currently registered as a product command.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
-- A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and expands subworkflow nodes before runner start.
+- A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy. Subworkflow nodes remain compatibility placeholders and fail explicitly until nested lifecycle semantics are implemented.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Graph autosave is an app-level editing preference controlled from Settings.
 - Workflow Settings is the per-workflow configuration aggregate for workflow identity, execution defaults, browser launch profile, environment defaults, initial variables, planned trigger metadata, and advanced compatibility diagnostics.

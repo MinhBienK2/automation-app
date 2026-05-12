@@ -23,6 +23,8 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.
+- Workflow package import validates selected flow/settings before creating a workflow and writes workflow, graph, and settings inside one SQLite transaction. Failed validation or save errors roll back the whole import.
+- Run evidence outputs store app-local artifact paths under run-scoped evidence directories; run rows persist the resulting output JSON and step error/trace JSON for audit.
 - Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here

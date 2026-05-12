@@ -570,13 +570,18 @@ export function NodeConfigFields({
       );
     case "action": {
       const actionConfig = isActionConfig(node.config) ? node.config : null;
+      const isCompatibilityAction = actionConfig
+        ? !actionPickerOptions.includes(actionConfig.type as ActionType)
+        : false;
       return (
         <div className="graph-config-fields">
           <ActionTypeDropdown
             value={actionTypeFromConfig(actionConfig)}
             onChange={updateActionType}
           />
-          {actionConfig ? (
+          {actionConfig && isCompatibilityAction ? (
+            <CompatibilityActionConfigPanel config={actionConfig} />
+          ) : actionConfig ? (
             <ActionConfigEditor
               config={actionConfig}
               onChange={(config) => updateConfig(config)}
@@ -695,6 +700,24 @@ function ActionTypeDropdown({
           {visibleActions.length === 0 ? <p className="muted">No matching actions</p> : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function CompatibilityActionConfigPanel({ config }: { config: ActionConfig }) {
+  const actionLabel = actionLabels[config.type] ?? config.type;
+
+  return (
+    <div className="graph-compatibility-action">
+      <p className="eyebrow">Compatibility action</p>
+      <h3>{actionLabel}</h3>
+      <p className="muted">
+        Convert this saved action into a graph-native node or replace it with a
+        currently supported action type.
+      </p>
+      <pre aria-label="Compatibility action JSON">
+        {JSON.stringify(config, null, 2)}
+      </pre>
     </div>
   );
 }

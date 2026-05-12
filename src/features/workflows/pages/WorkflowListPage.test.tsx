@@ -354,6 +354,28 @@ describe("Workflow list integration", () => {
       .toBeInTheDocument();
   });
 
+  test("rejects oversized workflow packages before reading JSON", async () => {
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
+    renderApp();
+
+    const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "huge.workflow.json", {
+      type: "application/json",
+    });
+    const textSpy = vi.fn(async () => "{}");
+    Object.defineProperty(file, "text", { value: textSpy });
+
+    await userEvent.upload(
+      await screen.findByLabelText("Workflow package file"),
+      file,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Workflow package file must be 5 MB or smaller",
+    );
+    expect(textSpy).not.toHaveBeenCalled();
+    expect(workflowBridgeMock.previewWorkflowPackage).not.toHaveBeenCalled();
+  });
+
   test("opens workflow settings General from the list edit action", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),

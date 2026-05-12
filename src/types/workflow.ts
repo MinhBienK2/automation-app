@@ -971,6 +971,9 @@ export type CompiledGraphStep = {
 
 export type CompiledWorkflowGraph = {
   steps: CompiledGraphStep[];
+  domain_policy?: {
+    allowed_domains: string[];
+  } | null;
 };
 
 export type ScheduleKind =

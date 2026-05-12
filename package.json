@@ -12,6 +12,7 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:pack": "npm run build && electron-builder --linux dir",
     "test": "vitest run",
+    "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runner.smoke.test.ts",
     "preview": "vite preview"
   },
   "build": {

@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { createWorkflowCommandHandlers } from "./commands";
 import { createAppPaths, initializeDatabase } from "./database";
-import { compileWorkflowRunPlan } from "./graphCompiler";
+import { compileWorkflowRunPlan, validateActionConfig } from "./graphCompiler";
 import type {
   ActionConfig,
   GraphNode,
@@ -192,6 +192,111 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
+  test("rejects branch paths that also reach an explicit continuation path", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("branch-step", "action", { config: waitAction(100) }),
+        graphNode("after-if", "action", { config: clickAction("//after") }),
+      ],
+      [
+        edge("start", "out", "if-node", "in"),
+        edge("if-node", "true", "branch-step", "in"),
+        edge("branch-step", "out", "after-if", "in"),
+        edge("if-node", "done", "after-if", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph)).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        node_id: "after-if",
+        message: "Node After If is reachable from both a branch path and an explicit continuation path",
+      }),
+    );
+    expect(() => handlers.compileWorkflowGraph(graph)).toThrow(
+      "Node After If is reachable from both a branch path and an explicit continuation path",
+    );
+  });
+
+  test("compiles a branch body followed by an explicit done continuation", async () => {
+    const { handlers } = await createTestHandlers();
+    const branchAction = clickAction("//branch");
+    const continuationAction = clickAction("//after");
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("branch-step", "action", { config: branchAction }),
+        graphNode("after-if", "action", { config: continuationAction }),
+      ],
+      [
+        edge("start", "out", "if-node", "in"),
+        edge("if-node", "true", "branch-step", "in"),
+        edge("if-node", "done", "after-if", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph).filter((issue) => issue.level === "error")).toEqual([]);
+    expect(handlers.compileWorkflowGraph(graph).steps).toEqual([
+      {
+        node_id: "if-node",
+        label: "If Node",
+        config: {
+          type: "if_condition",
+          config: {
+            condition: outputEqualsCondition(),
+            then_steps: [branchAction],
+            else_steps: [],
+          },
+        },
+      },
+      {
+        node_id: "after-if",
+        label: "After If",
+        config: continuationAction,
+      },
+    ]);
+  });
+
+  test("rejects switch edges from stale case ports beyond the configured cases", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("switch-node", "switch", {
+          config: { expression: "{{status}}", cases: ["ready"] },
+          ports: [
+            inputPort("in", "In"),
+            outputPort("case_1", "Ready"),
+            outputPort("case_2", "Removed"),
+            outputPort("default", "Default"),
+            outputPort("done", "Done"),
+          ],
+        }),
+        graphNode("stale-case", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "switch-node", "in"),
+        edge("switch-node", "case_2", "stale-case", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph)).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        node_id: "switch-node",
+        edge_id: "edge-switch-node-case_2-stale-case-in",
+        message: "Switch case_2 no longer matches a configured case",
+      }),
+    );
+    expect(() => handlers.compileWorkflowGraph(graph)).toThrow(
+      "Switch case_2 no longer matches a configured case",
+    );
+  });
+
   test("compiles settings prelude, execution defaults, and wait-between-nodes", () => {
     const input = inputTextAction("//input", "hello");
     const click = clickAction("//button");
@@ -240,7 +345,6 @@ describe("TypeScript graph compiler parity", () => {
         "__settings:environment:geolocation",
         "__settings:environment:permissions",
         "__settings:environment:headers",
-        "__settings:environment:downloads",
         "__settings:environment:cookie:0",
         "__settings:environment:local-storage:0",
         "__settings:environment:session-storage:0",
@@ -249,6 +353,9 @@ describe("TypeScript graph compiler parity", () => {
         "__settings:inputs:variables",
         "__settings:execution:wait-between-nodes:1",
       ]),
+    );
+    expect(plan.steps.map((step) => step.node_id)).not.toContain(
+      "__settings:environment:downloads",
     );
     expect(plan.steps).toContainEqual(
       expect.objectContaining({
@@ -294,6 +401,177 @@ describe("TypeScript graph compiler parity", () => {
         },
       }),
     );
+  });
+
+  test("promotes domain allowlist graph nodes into run domain policy", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("allow", "domain_allowlist", {
+          config: { domains: ["owned.test", "staging.test"] },
+        }),
+        graphNode("visit", "action", {
+          config: { type: "navigate", config: { url: "https://owned.test" } },
+        }),
+      ],
+      [
+        edge("start", "out", "allow", "in"),
+        edge("allow", "out", "visit", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowRunPlan(graph, workflowSettings());
+
+    expect(plan.domain_policy).toEqual({
+      allowed_domains: ["owned.test", "staging.test"],
+    });
+    expect(plan.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          node_id: "allow",
+          config: { type: "domain_allowlist", config: { domains: ["owned.test", "staging.test"] } },
+        }),
+      ]),
+    );
+  });
+
+  test("validates invalid configs across visible action groups", () => {
+    const target = elementTarget();
+    const invalidCases: Array<{
+      config: ActionConfig;
+      field: string;
+      message: string;
+    }> = [
+      {
+        config: { type: "hover", config: { xpath: "", target: null, iframe_xpath: null } },
+        field: "xpath",
+        message: "Element target is required",
+      },
+      {
+        config: {
+          type: "drag_and_drop",
+          config: {
+            source_xpath: "",
+            source_target: null,
+            target_xpath: "//drop",
+            target_target: null,
+          },
+        },
+        field: "source_xpath",
+        message: "Source element target is required",
+      },
+      {
+        config: {
+          type: "select_option",
+          config: { xpath: "//select", target, iframe_xpath: null, match_by: "label", value: "" },
+        },
+        field: "value",
+        message: "Option value is required",
+      },
+      {
+        config: {
+          type: "upload_file",
+          config: { xpath: "//input", target, iframe_xpath: null, files: [] },
+        },
+        field: "files",
+        message: "Upload files are required",
+      },
+      {
+        config: {
+          type: "extract_attribute",
+          config: {
+            xpath: "//a",
+            target,
+            iframe_xpath: null,
+            attribute: "",
+            output_name: "href",
+          },
+        },
+        field: "attribute",
+        message: "Attribute is required",
+      },
+      {
+        config: { type: "take_screenshot", config: { path: "../secret.png", full_page: true } },
+        field: "path",
+        message: "Screenshot path must be a safe artifact name",
+      },
+      {
+        config: { type: "wait_for_download", config: { output_name: "", timeout_ms: 1000 } },
+        field: "output_name",
+        message: "Download output name is required",
+      },
+      {
+        config: {
+          type: "assert_text",
+          config: { xpath: "//body", target, iframe_xpath: null, text: "", match_mode: "contains" },
+        },
+        field: "text",
+        message: "Assertion text is required",
+      },
+      {
+        config: { type: "set_viewport", config: { width: 0, height: 720, mobile: false, touch: false } },
+        field: "width",
+        message: "Viewport width must be greater than 0",
+      },
+      {
+        config: { type: "set_geolocation", config: { latitude: 91, longitude: 0, accuracy: 10 } },
+        field: "latitude",
+        message: "Latitude must be between -90 and 90",
+      },
+      {
+        config: { type: "set_extra_headers", config: { headers: [{ name: "", value: "1" }] } },
+        field: "headers",
+        message: "Header name is required",
+      },
+      {
+        config: { type: "grant_permission", config: { origin: null, permissions: [] } },
+        field: "permissions",
+        message: "Permissions are required",
+      },
+      {
+        config: { type: "execute_js", config: { script: "", output_name: "result", timeout_ms: 1000 } },
+        field: "script",
+        message: "Script is required",
+      },
+      {
+        config: { type: "wait_for_response", config: { url_contains: "/api", status: 700 } },
+        field: "status",
+        message: "Response status must be between 100 and 599",
+      },
+      {
+        config: { type: "block_request", config: { url_patterns: [] } },
+        field: "url_patterns",
+        message: "URL pattern is required",
+      },
+      {
+        config: { type: "set_local_storage", config: { key: "", value: "value" } },
+        field: "key",
+        message: "Storage key is required",
+      },
+    ];
+
+    for (const invalidCase of invalidCases) {
+      expect(validateActionConfig(invalidCase.config)).toMatchObject({
+        field: invalidCase.field,
+        message: invalidCase.message,
+      });
+    }
+  });
+
+  test("validates nested action configs recursively", () => {
+    const validation = validateActionConfig({
+      type: "if_condition",
+      config: {
+        condition: outputEqualsCondition(),
+        then_steps: [{ type: "navigate", config: { url: "" } }],
+        else_steps: [],
+      },
+    });
+
+    expect(validation).toEqual({
+      field: "then_steps[0].url",
+      message: "URL is required",
+    });
   });
 });
 
@@ -439,6 +717,22 @@ function waitAction(duration_ms: number): ActionConfig {
       condition: "duration",
       duration_ms,
     },
+  };
+}
+
+function outputEqualsCondition(): WorkflowCondition {
+  return {
+    kind: "output_equals",
+    name: "status",
+    value: "ready",
+  };
+}
+
+function elementTarget() {
+  return {
+    locators: [{ kind: "test_id" as const, value: "target" }],
+    constraints: null,
+    iframe: null,
   };
 }
 

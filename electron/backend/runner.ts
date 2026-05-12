@@ -1,14 +1,17 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 import type {
   ActionConfig,
   CompiledGraphStep,
   CompiledWorkflowGraph,
+  ElementLocator,
+  ElementTarget,
   RunMode,
   RunState,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
+import { unsupportedInRunReason } from "../../src/lib/actionCapabilities.js";
 import type { AppPaths } from "./database.js";
 
 type CloakBrowserModule = {
@@ -53,6 +56,14 @@ export type BrowserDriverPage = {
   waitForURL?(url: string | RegExp | ((url: URL) => boolean), options?: Record<string, unknown>): Promise<unknown>;
   waitForRequest?(predicate: string | RegExp | ((request: BrowserRequest) => boolean), options?: Record<string, unknown>): Promise<BrowserRequest>;
   waitForResponse?(predicate: string | RegExp | ((response: BrowserResponse) => boolean), options?: Record<string, unknown>): Promise<BrowserResponse>;
+  waitForEvent?(eventName: "download", options?: Record<string, unknown>): Promise<BrowserDownload>;
+  once?(eventName: "dialog", handler: (dialog: BrowserDialog) => void | Promise<void>): void;
+  getByTestId?(testId: string): BrowserDriverLocator;
+  getByRole?(role: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByLabel?(label: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByPlaceholder?(placeholder: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByText?(text: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  frameLocator?(selector: string): BrowserDriverFrameLocator;
   goBack?(): Promise<unknown>;
   goForward?(): Promise<unknown>;
   reload?(): Promise<unknown>;
@@ -75,6 +86,16 @@ export type BrowserDriverPage = {
   };
 };
 
+export type BrowserDriverFrameLocator = {
+  locator(selector: string): BrowserDriverLocator;
+  getByTestId?(testId: string): BrowserDriverLocator;
+  getByRole?(role: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByLabel?(label: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByPlaceholder?(placeholder: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByText?(text: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  frameLocator?(selector: string): BrowserDriverFrameLocator;
+};
+
 export type BrowserDriverLocator = {
   fill(value: string, options?: Record<string, unknown>): Promise<void>;
   type?(value: string, options?: Record<string, unknown>): Promise<void>;
@@ -94,6 +115,18 @@ export type BrowserDriverLocator = {
   isVisible?(options?: Record<string, unknown>): Promise<boolean>;
   isEnabled?(options?: Record<string, unknown>): Promise<boolean>;
   waitFor?(options?: Record<string, unknown>): Promise<void>;
+  dragTo?(target: BrowserDriverLocator, options?: Record<string, unknown>): Promise<void>;
+};
+
+type BrowserDialog = {
+  accept(promptText?: string): Promise<void>;
+  dismiss(): Promise<void>;
+};
+
+type BrowserDownload = {
+  suggestedFilename?(): string;
+  saveAs?(filePath: string): Promise<void>;
+  path?(): Promise<string | null>;
 };
 
 type BrowserRoute = {
@@ -119,6 +152,7 @@ type RunnerOptions = {
 };
 
 export type RunnerRunRequest = {
+  runId?: string | null;
   graph: CompiledWorkflowGraph;
   settings: WorkflowSettings;
   mode: RunMode;
@@ -128,11 +162,17 @@ export type RunnerRunRequest = {
 };
 
 type Runtime = {
+  runId: string;
   context: BrowserDriverContext;
   page: BrowserDriverPage;
+  domainPolicy: { allowed_domains: string[] } | null;
   outputs: Record<string, unknown>;
   traces: ActionTrace[];
+  evidence: EvidenceArtifact[];
   clipboard: string;
+  currentStepId: string | null;
+  currentStepNumber: number | null;
+  currentActionType: string | null;
   signal?: AbortSignal;
 };
 
@@ -145,6 +185,16 @@ type ActionTrace = {
   started_at: string;
   finished_at: string;
   reason?: string;
+};
+
+type EvidenceArtifact = {
+  run_id: string;
+  node_id: string | null;
+  step_number: number | null;
+  action_type: string;
+  artifact_kind: "screenshot" | "download" | "checkpoint";
+  path: string;
+  created_at: string;
 };
 
 class RunnerStop extends Error {
@@ -185,11 +235,17 @@ export class BrowserWorkflowRunner {
     await this.closeRetainedContext();
     const launch = await this.launch(request.settings);
     const runtime: Runtime = {
+      runId: request.runId ?? randomUUID(),
       context: launch.context,
       page: launch.page,
+      domainPolicy: request.graph.domain_policy ?? null,
       outputs: {},
       traces: [],
+      evidence: [],
       clipboard: "",
+      currentStepId: null,
+      currentStepNumber: null,
+      currentActionType: null,
       signal: request.signal,
     };
 
@@ -212,6 +268,9 @@ export class BrowserWorkflowRunner {
       for (const step of request.graph.steps) {
         stepNumber += 1;
         this.throwIfCancelled(runtime.signal);
+        runtime.currentStepId = step.node_id;
+        runtime.currentStepNumber = stepNumber;
+        runtime.currentActionType = step.config.type;
         state.current_step_id = step.node_id;
         state.current_step_number = stepNumber;
         request.onProgress?.({
@@ -255,13 +314,16 @@ export class BrowserWorkflowRunner {
           step_id: state.current_step_id,
           step_number: state.current_step_number ?? 0,
           step_name: null,
-          action_type: "unknown",
+          action_type: runtime.currentActionType ?? "unknown",
           reason: error instanceof Error ? error.message : String(error),
         };
-        await this.captureFailureScreenshot(runtime, state.current_step_id);
+        await this.captureFailureScreenshot(runtime);
       }
     } finally {
       runtime.outputs.__action_traces = runtime.traces;
+      if (runtime.evidence.length > 0) {
+        runtime.outputs.__evidence = runtime.evidence;
+      }
       state.outputs = await this.collectOutputs(runtime);
       state.current_step_id = null;
       state.current_step_number = null;
@@ -347,13 +409,22 @@ export class BrowserWorkflowRunner {
 
   private async executeAction(runtime: Runtime, action: ActionConfig): Promise<void> {
     this.throwIfCancelled(runtime.signal);
+    const unsupportedReason = unsupportedInRunReason(action.type);
+    if (unsupportedReason) {
+      throw new Error(
+        `${action.type} is not supported as an in-run action: ${unsupportedReason}`,
+      );
+    }
     switch (action.type) {
-      case "navigate":
-        await runtime.page.goto(renderTemplate(action.config.url, runtime.outputs), {
+      case "navigate": {
+        const url = renderTemplate(action.config.url, runtime.outputs);
+        await this.enforceNavigationPolicy(runtime, url);
+        await runtime.page.goto(url, {
           waitUntil: waitUntil(action.config.wait_until),
           timeout: action.config.timeout_ms ?? undefined,
         });
         return;
+      }
       case "wait":
         await this.executeWait(runtime, action);
         return;
@@ -365,7 +436,7 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "input_text": {
-        const locator = locatorFor(runtime.page, action.config.target, action.config.xpath);
+        const locator = await this.locatorForAction(runtime, action.config);
         if (action.config.clear_before_input) await locator.fill("");
         if (action.config.typing_mode === "type" && locator.type) {
           await locator.type(renderTemplate(action.config.text, runtime.outputs), {
@@ -377,10 +448,10 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "clear_input":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).fill("");
+        await (await this.locatorForAction(runtime, action.config)).fill("");
         return;
       case "click":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).click({
+        await (await this.locatorForAction(runtime, action.config)).click({
           button: action.config.button ?? undefined,
           clickCount: action.config.click_count ?? undefined,
         });
@@ -389,19 +460,26 @@ export class BrowserWorkflowRunner {
         }
         return;
       case "hover":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).hover?.();
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "hover",
+          action.type,
+        )();
         return;
       case "double_click":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).dblclick?.();
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "dblclick",
+          action.type,
+        )();
         return;
       case "right_click":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).click({
+        await (await this.locatorForAction(runtime, action.config)).click({
           button: "right",
         });
         return;
       case "drag_and_drop":
-        await locatorFor(runtime.page, action.config.source_target, action.config.source_xpath).hover?.();
-        await locatorFor(runtime.page, action.config.target_target, action.config.target_xpath).hover?.();
+        await this.executeDragAndDrop(runtime, action);
         return;
       case "scroll":
         await runtime.page.mouse?.wheel(
@@ -410,7 +488,11 @@ export class BrowserWorkflowRunner {
         );
         return;
       case "select_option":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).selectOption?.(
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "selectOption",
+          action.type,
+        )(
           action.config.match_by === "label"
             ? { label: action.config.value }
             : { value: action.config.value },
@@ -418,20 +500,36 @@ export class BrowserWorkflowRunner {
         return;
       case "set_checkbox":
         if (action.config.state === "checked") {
-          await locatorFor(runtime.page, action.config.target, action.config.xpath).check?.();
+          await requireLocatorMethod(
+            await this.locatorForAction(runtime, action.config),
+            "check",
+            action.type,
+          )();
         } else {
-          await locatorFor(runtime.page, action.config.target, action.config.xpath).uncheck?.();
+          await requireLocatorMethod(
+            await this.locatorForAction(runtime, action.config),
+            "uncheck",
+            action.type,
+          )();
         }
         return;
       case "check":
       case "select_radio":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).check?.();
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "check",
+          action.type,
+        )();
         return;
       case "uncheck":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).uncheck?.();
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "uncheck",
+          action.type,
+        )();
         return;
       case "toggle_checkbox":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).click();
+        await (await this.locatorForAction(runtime, action.config)).click();
         return;
       case "press_key":
         await runtime.page.keyboard?.press(action.config.key);
@@ -440,7 +538,11 @@ export class BrowserWorkflowRunner {
         await runtime.page.keyboard?.press(action.config.keys.join("+"));
         return;
       case "type_sequence":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).type?.(
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "type",
+          action.type,
+        )(
           renderTemplate(action.config.text, runtime.outputs),
           { delay: action.config.delay_ms ?? 0 },
         );
@@ -449,22 +551,30 @@ export class BrowserWorkflowRunner {
         runtime.clipboard = action.config.text;
         return;
       case "paste_clipboard":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).fill(runtime.clipboard);
+        await (await this.locatorForAction(runtime, action.config)).fill(runtime.clipboard);
         return;
       case "focus_element":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).click();
+        await (await this.locatorForAction(runtime, action.config)).click();
         return;
       case "blur_element":
         await runtime.page.keyboard?.press("Tab");
         return;
       case "upload_file":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).setInputFiles?.(
+        await requireLocatorMethod(
+          await this.locatorForAction(runtime, action.config),
+          "setInputFiles",
+          action.type,
+        )(
           action.config.files,
         );
         return;
       case "submit_form":
         if (action.config.xpath || action.config.target) {
-          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "form").press?.(
+          await requireLocatorMethod(
+            await this.locatorForAction(runtime, action.config, "form"),
+            "press",
+            action.type,
+          )(
             "Enter",
           );
         } else {
@@ -472,40 +582,66 @@ export class BrowserWorkflowRunner {
         }
         return;
       case "select_custom_option":
-        await locatorFor(runtime.page, action.config.trigger_target, action.config.trigger_xpath).click();
+        await (await locatorFor(runtime.page, action.config.trigger_target, action.config.trigger_xpath)).click();
         await runtime.page.locator(`text=${action.config.option_text}`).click();
         return;
       case "set_contenteditable":
-        await locatorFor(runtime.page, action.config.target, action.config.xpath).fill(
+        await (await this.locatorForAction(runtime, action.config)).fill(
           renderTemplate(action.config.text, runtime.outputs),
         );
         return;
       case "extract_text":
         runtime.outputs[action.config.output_name] =
-          (await locatorFor(runtime.page, action.config.target, action.config.xpath).textContent?.()) ?? "";
+          (await requireLocatorMethod(
+            await locatorFor(runtime.page, action.config.target, action.config.xpath),
+            "textContent",
+            action.type,
+          )()) ?? "";
         return;
       case "extract_attribute":
         runtime.outputs[action.config.output_name] =
-          (await locatorFor(runtime.page, action.config.target, action.config.xpath).getAttribute?.(
+          (await requireLocatorMethod(
+            await locatorFor(runtime.page, action.config.target, action.config.xpath),
+            "getAttribute",
+            action.type,
+          )(
             action.config.attribute,
           )) ?? "";
         return;
       case "extract_input_value":
         runtime.outputs[action.config.output_name] =
-          (await locatorFor(runtime.page, action.config.target, action.config.xpath).inputValue?.()) ?? "";
+          (await requireLocatorMethod(
+            await locatorFor(runtime.page, action.config.target, action.config.xpath),
+            "inputValue",
+            action.type,
+          )()) ?? "";
         return;
       case "extract_table":
       case "extract_list":
         runtime.outputs[action.config.output_name] = await extractListLike(
-          locatorFor(runtime.page, action.config.target, action.config.xpath),
+          await locatorFor(runtime.page, action.config.target, action.config.xpath),
         );
         return;
       case "take_screenshot": {
-        const screenshotPath = resolveEvidencePath(this.appPaths.screenshotsDir, action.config.path);
-        await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
+        const artifact = resolveEvidenceArtifact({
+          evidenceDir: this.appPaths.evidenceDir,
+          runId: runtime.runId,
+          kind: "screenshots",
+          stepNumber: runtime.currentStepNumber,
+          nodeId: runtime.currentStepId,
+          requestedName: action.config.path,
+          fallbackName: "screenshot",
+          extension: ".png",
+        });
+        await fs.mkdir(path.dirname(artifact.absolutePath), { recursive: true });
         const buffer = await runtime.page.screenshot?.({ fullPage: action.config.full_page });
-        if (buffer) await fs.writeFile(screenshotPath, buffer);
-        if (action.config.output_name) runtime.outputs[action.config.output_name] = screenshotPath;
+        if (buffer) await fs.writeFile(artifact.absolutePath, buffer);
+        this.recordEvidence(runtime, {
+          actionType: action.type,
+          artifactKind: "screenshot",
+          relativePath: artifact.relativePath,
+        });
+        if (action.config.output_name) runtime.outputs[action.config.output_name] = artifact.relativePath;
         return;
       }
       case "go_back":
@@ -519,7 +655,11 @@ export class BrowserWorkflowRunner {
         return;
       case "open_new_tab":
         runtime.page = await runtime.context.newPage();
-        if (action.config.url) await runtime.page.goto(renderTemplate(action.config.url, runtime.outputs));
+        if (action.config.url) {
+          const url = renderTemplate(action.config.url, runtime.outputs);
+          await this.enforceNavigationPolicy(runtime, url);
+          await runtime.page.goto(url);
+        }
         return;
       case "switch_tab": {
         const page = runtime.context.pages()[action.config.index];
@@ -536,16 +676,22 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "switch_frame":
-        return;
+        throw new Error("switch_frame is not supported as an in-run action: use per-target iframe locators");
       case "accept_dialog":
+        this.registerDialogHandler(runtime, "accept", action.config.prompt_text ?? undefined);
+        return;
       case "dismiss_dialog":
+        this.registerDialogHandler(runtime, "dismiss");
         return;
       case "set_download_directory":
-        runtime.outputs.download_directory = action.config.path;
+        throw new Error(
+          "set_download_directory is not supported as an in-run action: configure downloads in Workflow Settings before launch",
+        );
+      case "wait_for_download": {
+        const artifactPath = await this.waitForDownload(runtime, action.config.output_name, action.config.timeout_ms);
+        runtime.outputs[action.config.output_name] = artifactPath;
         return;
-      case "wait_for_download":
-        runtime.outputs[action.config.output_name] = this.appPaths.downloadsDir;
-        return;
+      }
       case "set_variable":
         setVariables(runtime.outputs, action.config);
         return;
@@ -556,13 +702,13 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "assert_element": {
-        const visible = await locatorFor(runtime.page, action.config.target, action.config.xpath).isVisible?.();
+        const visible = await (await locatorFor(runtime.page, action.config.target, action.config.xpath)).isVisible?.();
         if (action.config.state === "visible" && !visible) throw new Error("Element is not visible");
         return;
       }
       case "assert_text": {
         const text = action.config.xpath || action.config.target
-          ? await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body").textContent?.()
+          ? await (await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body")).textContent?.()
           : "";
         if (action.config.match_mode === "equals" && text !== action.config.text) {
           throw new Error(`Text did not equal ${action.config.text}`);
@@ -613,6 +759,7 @@ export class BrowserWorkflowRunner {
           action.config.steps,
           action.config.max_attempts ?? 100,
           () => conditionMatches(runtime, action.config.condition),
+          action.config.timeout_ms ?? null,
         );
         return;
       case "repeat_until": {
@@ -621,9 +768,10 @@ export class BrowserWorkflowRunner {
           action.config.steps,
           action.config.max_attempts ?? 100,
           async () => !(await conditionMatches(runtime, action.config.condition)),
+          action.config.timeout_ms ?? null,
         );
         if (
-          result === "max_attempts" &&
+          (result === "max_attempts" || result === "timeout") &&
           !(await conditionMatches(runtime, action.config.condition))
         ) {
           await this.executeActions(runtime, action.config.timeout_steps);
@@ -743,12 +891,7 @@ export class BrowserWorkflowRunner {
       case "checkpoint":
         return;
       case "resume_when_condition":
-        await this.executeLoop(
-          runtime,
-          [],
-          1,
-          async () => !(await conditionMatches(runtime, action.config.condition)),
-        );
+        await this.executeResumeWhenCondition(runtime, action);
         return;
       case "fallback_selector":
         runtime.outputs[action.config.output_name] = action.config.xpaths[0] ?? null;
@@ -846,20 +989,20 @@ export class BrowserWorkflowRunner {
         return;
       case "element_visible":
         await waitForLocatorState(
-          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
           "visible",
           action.config.timeout_ms,
         );
         return;
       case "element_attached":
         await waitForLocatorState(
-          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
           "attached",
           action.config.timeout_ms,
         );
         return;
       case "element_enabled": {
-        const locator = locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body");
+        const locator = await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body");
         await waitForLocatorState(locator, "visible", action.config.timeout_ms);
         await this.waitForLocatorEnabled(locator, true, action.config.timeout_ms, runtime.signal);
         return;
@@ -873,21 +1016,21 @@ export class BrowserWorkflowRunner {
         return;
       case "element_hidden":
         await waitForLocatorState(
-          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
           "hidden",
           action.config.timeout_ms,
         );
         return;
       case "element_detached":
         await waitForLocatorState(
-          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
           "detached",
           action.config.timeout_ms,
         );
         return;
       case "element_disabled":
         await this.waitForLocatorEnabled(
-          locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
           false,
           action.config.timeout_ms,
           runtime.signal,
@@ -901,15 +1044,166 @@ export class BrowserWorkflowRunner {
     enabled: boolean,
     timeoutMs: number | null | undefined,
     signal?: AbortSignal,
+    retryIntervalMs = 100,
   ) {
     const deadline = Date.now() + (timeoutMs ?? 30_000);
     while (Date.now() <= deadline) {
       this.throwIfCancelled(signal);
       const current = await locator.isEnabled?.();
       if (current === enabled) return;
-      await this.sleep(Math.min(100, Math.max(1, deadline - Date.now())), signal);
+      await this.sleep(
+        Math.min(retryIntervalMs, Math.max(1, deadline - Date.now())),
+        signal,
+      );
     }
     throw new Error(`Element did not become ${enabled ? "enabled" : "disabled"}`);
+  }
+
+  private async enforceNavigationPolicy(runtime: Runtime, url: string) {
+    const allowedDomains = runtime.domainPolicy?.allowed_domains ?? [];
+    if (allowedDomains.length === 0) return;
+
+    let hostname: string;
+    try {
+      hostname = new URL(url).hostname.toLowerCase();
+    } catch {
+      throw new Error(`Navigation URL is invalid for domain allowlist: ${url}`);
+    }
+
+    if (hostnameAllowed(hostname, allowedDomains)) return;
+    throw new Error(
+      `Navigation to ${hostname} is not in the allowlist (${allowedDomains.join(", ")})`,
+    );
+  }
+
+  private async executeDragAndDrop(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "drag_and_drop" }>,
+  ) {
+    const source = await locatorFor(runtime.page, action.config.source_target, action.config.source_xpath);
+    const target = await locatorFor(runtime.page, action.config.target_target, action.config.target_xpath);
+    await this.waitForElementReadiness(
+      source,
+      action.config.wait_until ?? null,
+      action.config.timeout_ms,
+      runtime.signal,
+      undefined,
+    );
+    await this.waitForElementReadiness(
+      target,
+      action.config.wait_until ?? null,
+      action.config.timeout_ms,
+      runtime.signal,
+      undefined,
+    );
+    if (!source.dragTo) {
+      throw new Error("drag_and_drop requires driver dragTo support");
+    }
+    await source.dragTo(target, { timeout: action.config.timeout_ms ?? undefined });
+  }
+
+  private registerDialogHandler(
+    runtime: Runtime,
+    behavior: "accept" | "dismiss",
+    promptText?: string,
+  ) {
+    if (!runtime.page.once) {
+      throw new Error(`${behavior}_dialog requires driver dialog event support`);
+    }
+    runtime.page.once("dialog", async (dialog) => {
+      if (behavior === "accept") {
+        await dialog.accept(promptText);
+      } else {
+        await dialog.dismiss();
+      }
+    });
+  }
+
+  private async waitForDownload(
+    runtime: Runtime,
+    outputName: string,
+    timeoutMs: number | null | undefined,
+  ) {
+    if (!runtime.page.waitForEvent) {
+      throw new Error("wait_for_download requires driver download event support");
+    }
+    const download = await runtime.page.waitForEvent("download", {
+      timeout: timeoutMs ?? undefined,
+    });
+    if (!download.saveAs) {
+      throw new Error("wait_for_download requires driver download save support");
+    }
+    const suggestedName = download.suggestedFilename?.() ?? "download";
+    const artifact = resolveEvidenceArtifact({
+      evidenceDir: this.appPaths.evidenceDir,
+      runId: runtime.runId,
+      kind: "downloads",
+      stepNumber: runtime.currentStepNumber,
+      nodeId: runtime.currentStepId,
+      requestedName: suggestedName,
+      fallbackName: outputName || "download",
+      extension: path.extname(suggestedName) || ".download",
+    });
+    await fs.mkdir(path.dirname(artifact.absolutePath), { recursive: true });
+    await download.saveAs(artifact.absolutePath);
+    this.recordEvidence(runtime, {
+      actionType: "wait_for_download",
+      artifactKind: "download",
+      relativePath: artifact.relativePath,
+    });
+    return artifact.relativePath;
+  }
+
+  private async locatorForAction(
+    runtime: Runtime,
+    config: {
+      target?: ElementTarget | null;
+      xpath?: string | null;
+      wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+      timeout_ms?: number | null;
+      retry_interval_ms?: number | null;
+    },
+    fallbackXpath = "body",
+  ) {
+    const locator = await locatorFor(runtime.page, config.target, config.xpath ?? fallbackXpath);
+    await this.waitForElementReadiness(
+      locator,
+      config.wait_until ?? null,
+      config.timeout_ms,
+      runtime.signal,
+      config.retry_interval_ms ?? undefined,
+    );
+    return locator;
+  }
+
+  private async waitForElementReadiness(
+    locator: BrowserDriverLocator,
+    waitUntil: "attached" | "visible" | "enabled" | "clickable" | null,
+    timeoutMs: number | null | undefined,
+    signal?: AbortSignal,
+    retryIntervalMs?: number | null,
+  ) {
+    switch (waitUntil) {
+      case "attached":
+        await waitForLocatorState(locator, "attached", timeoutMs);
+        return;
+      case "visible":
+        await waitForLocatorState(locator, "visible", timeoutMs);
+        return;
+      case "enabled":
+      case "clickable":
+        await waitForLocatorState(locator, "visible", timeoutMs);
+        await this.waitForLocatorEnabled(
+          locator,
+          true,
+          timeoutMs,
+          signal,
+          retryIntervalMs ?? undefined,
+        );
+        return;
+      case null:
+        return;
+    }
   }
 
   private async executeRetry(
@@ -943,15 +1237,35 @@ export class BrowserWorkflowRunner {
     steps: ActionConfig[],
     maxAttempts: number,
     predicate: () => Promise<boolean>,
-  ): Promise<"predicate_false" | "max_attempts" | "break"> {
+    timeoutMs?: number | null,
+  ): Promise<"predicate_false" | "max_attempts" | "timeout" | "break"> {
     let attempts = 0;
+    const startedAt = Date.now();
     while (await predicate()) {
+      if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
       if (attempts >= maxAttempts) return "max_attempts";
       attempts += 1;
       const control = await this.executeLoopBody(runtime, steps);
       if (control === "break") return "break";
+      if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
     }
     return "predicate_false";
+  }
+
+  private async executeResumeWhenCondition(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "resume_when_condition" }>,
+  ) {
+    const timeoutMs = action.config.timeout_ms ?? 30_000;
+    const startedAt = Date.now();
+    while (!(await conditionMatches(runtime, action.config.condition))) {
+      this.throwIfCancelled(runtime.signal);
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= timeoutMs || timeoutMs <= 1) {
+        throw new Error(`Resume condition timed out after ${timeoutMs} ms`);
+      }
+      await this.sleep(Math.min(100, Math.max(1, timeoutMs - elapsed)), runtime.signal);
+    }
   }
 
   private async collectOutputs(runtime: Runtime) {
@@ -965,16 +1279,46 @@ export class BrowserWorkflowRunner {
     }
   }
 
-  private async captureFailureScreenshot(runtime: Runtime, stepId: string | null) {
+  private async captureFailureScreenshot(runtime: Runtime) {
     if (!runtime.page.screenshot) return;
-    const screenshotPath = path.join(
-      this.appPaths.screenshotsDir,
-      `${stepId ?? "workflow"}-failure.png`,
-    );
-    await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
+    const artifact = resolveEvidenceArtifact({
+      evidenceDir: this.appPaths.evidenceDir,
+      runId: runtime.runId,
+      kind: "screenshots",
+      stepNumber: runtime.currentStepNumber,
+      nodeId: runtime.currentStepId,
+      requestedName: "failure.png",
+      fallbackName: "failure",
+      extension: ".png",
+    });
+    await fs.mkdir(path.dirname(artifact.absolutePath), { recursive: true });
     const buffer = await runtime.page.screenshot({ fullPage: true });
-    await fs.writeFile(screenshotPath, buffer);
-    runtime.outputs.failure_screenshot = screenshotPath;
+    await fs.writeFile(artifact.absolutePath, buffer);
+    this.recordEvidence(runtime, {
+      actionType: runtime.currentActionType ?? "workflow",
+      artifactKind: "screenshot",
+      relativePath: artifact.relativePath,
+    });
+    runtime.outputs.failure_screenshot = artifact.relativePath;
+  }
+
+  private recordEvidence(
+    runtime: Runtime,
+    artifact: {
+      actionType: string;
+      artifactKind: EvidenceArtifact["artifact_kind"];
+      relativePath: string;
+    },
+  ) {
+    runtime.evidence.push({
+      run_id: runtime.runId,
+      node_id: runtime.currentStepId,
+      step_number: runtime.currentStepNumber,
+      action_type: artifact.actionType,
+      artifact_kind: artifact.artifactKind,
+      path: artifact.relativePath,
+      created_at: new Date().toISOString(),
+    });
   }
 
   private throwIfCancelled(signal?: AbortSignal) {
@@ -1041,8 +1385,140 @@ function buildLaunchOptions(
   };
 }
 
-function locatorFor(page: BrowserDriverPage, target: unknown, xpath: string) {
-  return page.locator(selectorFromTarget(target, xpath));
+async function locatorFor(
+  page: BrowserDriverPage,
+  target: unknown,
+  xpath: string,
+): Promise<BrowserDriverLocator> {
+  const typedTarget = isElementTarget(target) ? target : null;
+  const root = typedTarget?.iframe
+    ? frameRootForTarget(page, typedTarget.iframe)
+    : page;
+  const locators = typedTarget?.locators?.length
+    ? typedTarget.locators
+    : [{ kind: "xpath", value: xpath } satisfies ElementLocator];
+  const constraints = typedTarget?.constraints ?? null;
+
+  let lastLocator: BrowserDriverLocator | null = null;
+  for (const locatorConfig of locators) {
+    const candidate = applyIndexConstraint(
+      locatorFromConfig(root, locatorConfig),
+      constraints?.index,
+    );
+    lastLocator = candidate;
+    if (await locatorSatisfiesConstraints(candidate, constraints)) {
+      return candidate;
+    }
+  }
+
+  if (lastLocator) {
+    throw new Error("No element locator satisfied target constraints");
+  }
+  throw new Error("Element target is required");
+}
+
+function frameRootForTarget(page: BrowserDriverPage, iframeTarget: ElementTarget) {
+  if (!page.frameLocator) {
+    throw new Error("iframe targets require driver support for frameLocator");
+  }
+  const iframeLocator = iframeTarget.locators[0];
+  if (!iframeLocator) {
+    throw new Error("iframe target requires a locator");
+  }
+  return page.frameLocator(selectorFromLocatorConfig(iframeLocator));
+}
+
+function locatorFromConfig(
+  root: BrowserDriverPage | BrowserDriverFrameLocator,
+  locator: ElementLocator,
+) {
+  switch (locator.kind) {
+    case "test_id":
+      if (!root.getByTestId) throw new Error("Locator kind test_id requires driver support for getByTestId");
+      return root.getByTestId(locator.value);
+    case "role":
+      if (!root.getByRole) throw new Error("Locator kind role requires driver support for getByRole");
+      return root.getByRole(locator.role ?? locator.value, {
+        name: locator.role ? locator.value : undefined,
+        exact: locator.exact ?? undefined,
+      });
+    case "label":
+      if (!root.getByLabel) throw new Error("Locator kind label requires driver support for getByLabel");
+      return root.getByLabel(locator.value, { exact: locator.exact ?? undefined });
+    case "placeholder":
+      if (!root.getByPlaceholder) {
+        throw new Error("Locator kind placeholder requires driver support for getByPlaceholder");
+      }
+      return root.getByPlaceholder(locator.value, { exact: locator.exact ?? undefined });
+    case "text":
+      if (!root.getByText) throw new Error("Locator kind text requires driver support for getByText");
+      return root.getByText(locator.value, { exact: locator.exact ?? undefined });
+    case "attribute":
+      return root.locator(`[${locator.attribute ?? "data-testid"}="${cssAttributeValue(locator.value)}"]`);
+    case "css":
+    case "xpath":
+      return root.locator(locator.value);
+  }
+}
+
+function selectorFromLocatorConfig(locator: ElementLocator) {
+  switch (locator.kind) {
+    case "test_id":
+      return `[data-testid="${cssAttributeValue(locator.value)}"]`;
+    case "text":
+      return `text=${locator.value}`;
+    case "attribute":
+      return `[${locator.attribute ?? "data-testid"}="${cssAttributeValue(locator.value)}"]`;
+    case "role":
+    case "label":
+    case "placeholder":
+      return locator.value;
+    case "css":
+    case "xpath":
+      return locator.value;
+  }
+}
+
+function applyIndexConstraint(
+  locator: BrowserDriverLocator,
+  index: number | null | undefined,
+) {
+  if (index == null) return locator;
+  if (!locator.nth) throw new Error("Target index constraint requires driver support for locator.nth");
+  return locator.nth(index);
+}
+
+async function locatorSatisfiesConstraints(
+  locator: BrowserDriverLocator,
+  constraints: ElementTarget["constraints"] | null,
+) {
+  if (!constraints) return true;
+  if (constraints.visible != null) {
+    const visible = await locator.isVisible?.();
+    if (visible !== constraints.visible) return false;
+  }
+  if (constraints.enabled != null) {
+    const enabled = await locator.isEnabled?.();
+    if (enabled !== constraints.enabled) return false;
+  }
+  if (constraints.contains_text) {
+    const text = await locator.textContent?.();
+    if (!String(text ?? "").includes(constraints.contains_text)) return false;
+  }
+  return true;
+}
+
+function isElementTarget(value: unknown): value is ElementTarget {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "locators" in value &&
+      Array.isArray((value as { locators?: unknown }).locators),
+  );
+}
+
+function cssAttributeValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
 async function waitForLocatorState(
@@ -1058,6 +1534,18 @@ async function waitForLocatorState(
     const visible = await locator.isVisible?.({ timeout: timeoutMs ?? undefined });
     if (!visible) throw new Error("Element is not visible");
   }
+}
+
+function requireLocatorMethod(
+  locator: BrowserDriverLocator,
+  method: keyof BrowserDriverLocator,
+  actionType: string,
+): (...args: unknown[]) => Promise<unknown> {
+  const methodValue = locator[method];
+  if (typeof methodValue !== "function") {
+    throw new Error(`${actionType} requires driver support for locator.${String(method)}`);
+  }
+  return methodValue.bind(locator) as (...args: unknown[]) => Promise<unknown>;
 }
 
 async function setWebStorage(
@@ -1079,18 +1567,6 @@ async function setWebStorage(
     },
     { storage, key, value },
   );
-}
-
-function selectorFromTarget(target: unknown, xpath: string) {
-  if (target && typeof target === "object" && "locators" in target) {
-    const locators = (target as { locators?: Array<{ kind: string; value: string }> }).locators;
-    const locator = locators?.[0];
-    if (locator?.kind === "css") return locator.value;
-    if (locator?.kind === "text") return `text=${locator.value}`;
-    if (locator?.kind === "test_id") return `[data-testid="${locator.value}"]`;
-    if (locator?.kind === "xpath") return locator.value;
-  }
-  return xpath.startsWith("xpath=") ? xpath : xpath;
 }
 
 function waitUntil(value: string | null | undefined) {
@@ -1216,7 +1692,7 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
   }
   if (typed.kind === "element_visible") {
     return Boolean(
-      await locatorFor(runtime.page, typed.target, typed.xpath ?? "body").isVisible?.(),
+      await (await locatorFor(runtime.page, typed.target, typed.xpath ?? "body")).isVisible?.(),
     );
   }
   return false;
@@ -1261,12 +1737,68 @@ async function extractListLike(locator: BrowserDriverLocator) {
   return values;
 }
 
-function resolveEvidencePath(root: string, requestedPath: string) {
-  if (path.isAbsolute(requestedPath)) return requestedPath;
-  if (requestedPath.startsWith("file:")) return fileURLToPath(requestedPath);
-  return path.join(root, requestedPath);
-}
-
 function sanitizePathSegment(value: string) {
   return value.trim().replace(/[^a-zA-Z0-9._-]+/g, "-") || "default";
+}
+
+function resolveEvidenceArtifact(input: {
+  evidenceDir: string;
+  runId: string;
+  kind: "screenshots" | "downloads" | "checkpoints";
+  stepNumber: number | null;
+  nodeId: string | null;
+  requestedName: string | null | undefined;
+  fallbackName: string;
+  extension: string;
+}) {
+  const artifactName = safeArtifactName(input.requestedName, input.fallbackName);
+  const stepPart = String(input.stepNumber ?? 0).padStart(3, "0");
+  const nodePart = slugifyArtifactPart(input.nodeId ?? "workflow");
+  const fileName = `${stepPart}-${nodePart}-${artifactName}${safeArtifactExtension(input.extension)}`;
+  const runPart = sanitizePathSegment(input.runId);
+  const relativePath = path.posix.join("runs", runPart, input.kind, fileName);
+  const absolutePath = path.join(input.evidenceDir, relativePath);
+  const relativeToEvidence = path.relative(input.evidenceDir, absolutePath);
+  if (
+    relativeToEvidence.startsWith("..") ||
+    path.isAbsolute(relativeToEvidence)
+  ) {
+    throw new Error("Evidence path resolved outside the app evidence directory");
+  }
+  return { relativePath, absolutePath };
+}
+
+function safeArtifactExtension(extension: string) {
+  const normalized = extension.trim().toLowerCase();
+  return /^\.[a-z0-9]{1,12}$/.test(normalized) ? normalized : ".artifact";
+}
+
+function safeArtifactName(value: string | null | undefined, fallbackName: string) {
+  const raw = value?.trim() || fallbackName;
+  if (
+    !raw ||
+    /^file:/i.test(raw) ||
+    path.isAbsolute(raw) ||
+    raw.includes("/") ||
+    raw.includes("\\") ||
+    raw.split(/[\\/]+/).includes("..")
+  ) {
+    throw new Error("Screenshot path must be a safe artifact name");
+  }
+  const parsed = path.parse(raw);
+  if (parsed.dir || parsed.base === ".." || parsed.name === "..") {
+    throw new Error("Screenshot path must be a safe artifact name");
+  }
+  const slug = slugifyArtifactPart(parsed.name || fallbackName);
+  if (!slug) throw new Error("Screenshot path must be a safe artifact name");
+  return slug.endsWith(".png") ? slug.slice(0, -4) : slug;
+}
+
+function slugifyArtifactPart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\.[a-z0-9]{1,8}$/i, "")
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "artifact";
 }

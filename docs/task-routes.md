@@ -25,9 +25,9 @@ Update docs: task routes, product model, overview, or invariants only if the tas
 
 Read: `domain/action-taxonomy.md`, `domain/cross-feature-impact-map.md`, `architecture/frontend.md`, `architecture/domain.md`, `architecture/runner.md`, `contracts/action-configs.md`, `contracts/workflow-types.md`
 
-Verify: `src/types/workflow.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/ActionConfigEditor.tsx`, `src/features/workflows/components/ActionConfig*Fields.tsx`, `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, `electron/backend/commands.ts`, `README.md`
+Verify: `src/types/workflow.ts`, `src/lib/actionCapabilities.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/ActionConfigEditor.tsx`, `src/features/workflows/components/ActionConfig*Fields.tsx`, `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, `electron/backend/commands.ts`, `README.md`
 
-Checks: `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/graphCompiler.test.ts`, `npm test -- electron/backend/commands.test.ts`; add runner tests when execution changes.
+Checks: `npm test -- src/lib/actionCapabilities.test.ts`, `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/graphCompiler.test.ts`, `npm test -- electron/backend/commands.test.ts`; add runner tests when execution changes.
 
 Update docs: action taxonomy, action config contract, workflow types, runner docs, smoke checklist if user-visible behavior changes.
 
@@ -87,7 +87,7 @@ Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `ar
 
 Verify: `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, Electron runner tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
 
-Checks: focused Electron runner/compiler tests, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`
+Checks: focused Electron runner/compiler tests, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
 
 Update docs: execution semantics, runner architecture, run-state contract, impact map.
 

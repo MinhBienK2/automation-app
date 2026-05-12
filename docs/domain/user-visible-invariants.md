@@ -9,7 +9,7 @@ Preserve these unless the task explicitly changes them.
 - New workflows have a `Start -> New node` draft graph.
 - Workflow list `Edit` opens Workflow Settings at General.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and full copied settings without package-export sanitization.
-- Workflow list exposes Import Workflow. Import reads a workflow package, shows a preview, and always creates a new workflow; it never overwrites an existing workflow.
+- Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
 - Workflow Settings contains General, Execution, Browser, Environment, Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
@@ -40,6 +40,7 @@ Preserve these unless the task explicitly changes them.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
+- Planned, launch-time, and graph-internal compatibility actions are hidden from primary Add Action authoring. Existing saved configs remain loadable, and legacy graph-internal action configs inside action nodes show a compatibility panel with a read-only JSON preview instead of an empty editor.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.
@@ -84,13 +85,16 @@ Preserve these unless the task explicitly changes them.
 - Full runs execute the compiled saved graph.
 - Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
 - Full runs use persisted Workflow Settings as the run baseline. Browser settings, including headless mode, are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset; Execution max duration cancels and fails overlong runs with a timeout reason.
+- Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
 - Fingerprint preflight, when enabled, runs after browser/environment setup and before graph actions; a blocked or malformed verdict stops execution before user workflow actions.
 - Execution wait-between-nodes settings are applied after graph compile and before runner start, excluding setup steps and explicit Wait/Random Wait override nodes.
 - Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
 - Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
+- Batch runs share active-run ownership with normal runs, can be stopped through Stop, and expose progress/summary in run outputs.
 - Browser sessions remain open after success, failure, and stop by default. Workflow Settings Execution browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
+- Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 
 ## Persistence

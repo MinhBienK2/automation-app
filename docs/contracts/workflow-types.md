@@ -22,7 +22,7 @@ Frontend and backend must agree on:
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`.
-- `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`.
+- `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 
 ## Browser Config Shape
@@ -146,7 +146,7 @@ Workflow Package v2 is the current user-facing import/export format. It is graph
 
 Package export options serialize as `{ include_flow, settings_sections }`, where `settings_sections` contains Workflow Settings section ids. Package import uses the same option shape, always creates a new workflow, and remaps selected settings to the new workflow id.
 
-Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import.
+Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
 
 Export sanitizes machine-local or sensitive fields by default: `settings.browser.proxy_password`, `settings.environment.download_directory`, `settings.environment.cookies`, `settings.environment.local_storage`, `settings.environment.session_storage`, and `settings.environment.session_restore_ref`.
 
@@ -191,9 +191,9 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
-The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for runner-side expansion/execution. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for compatibility but fails explicitly at runtime until nested lifecycle semantics are implemented. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 
-Settings prelude compilation is represented in TypeScript. It can prepend setup actions for geolocation, permissions, headers, downloads, cookies, storage, fingerprint preflight, persisted variables, default action timeouts, interaction fidelity defaults, and global waits between graph nodes.
+Settings prelude compilation is represented in TypeScript. It can prepend setup actions for geolocation, permissions, headers, cookies, storage, fingerprint preflight, persisted variables, default action timeouts, interaction fidelity defaults, and global waits between graph nodes. Download directory remains a launch/runtime context setting rather than an emitted in-run action.
 
 Executable frontend/backend ports must agree:
 

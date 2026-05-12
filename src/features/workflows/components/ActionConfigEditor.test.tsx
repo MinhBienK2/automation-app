@@ -87,6 +87,31 @@ describe("ActionConfigEditor", () => {
     });
   });
 
+  test("shows graph variable options in template fields", async () => {
+    const config: ActionConfig = {
+      type: "input_text",
+      config: {
+        xpath: "//*[@name='account']",
+        text: "",
+        clear_before_input: true,
+      },
+    };
+
+    render(
+      <ActionConfigEditor
+        config={config}
+        onChange={vi.fn()}
+        variableOptions={[{ name: "session.account_id", source: "Set Variables" }]}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Insert variable for Text" }));
+
+    expect(
+      screen.getByRole("option", { name: "session.account_id Set Variables" }),
+    ).toBeInTheDocument();
+  });
+
   test("shows the visible default delay for Fill Field type keys mode", () => {
     const config: ActionConfig = {
       type: "input_text",

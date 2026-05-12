@@ -3,7 +3,6 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type {
   ActionConfig,
@@ -492,6 +491,77 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
+  test("honors loop timeout and resume condition polling semantics", async () => {
+    let sleepCalls = 0;
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+      sleep: async () => {
+        sleepCalls += 1;
+      },
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("repeat-timeout", "Repeat timeout", {
+            type: "repeat_until",
+            config: {
+              condition: { kind: "output_equals", name: "done", value: "yes" },
+              max_attempts: 100,
+              timeout_ms: 1,
+              steps: [
+                { type: "wait", config: { condition: "duration", duration_ms: 2 } },
+              ],
+              timeout_steps: [
+                {
+                  type: "set_variable",
+                  config: { name: "timed_out", value_type: "text", value: "yes" },
+                },
+              ],
+            },
+          }),
+          step("resume", "Resume", {
+            type: "resume_when_condition",
+            config: {
+              condition: { kind: "output_equals", name: "timed_out", value: "yes" },
+              timeout_ms: 50,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({ timed_out: "yes" });
+    expect(sleepCalls).toBeGreaterThan(0);
+
+    const timeoutResult = await runner.run({
+      graph: {
+        steps: [
+          step("resume-timeout", "Resume timeout", {
+            type: "resume_when_condition",
+            config: {
+              condition: { kind: "output_equals", name: "missing", value: "yes" },
+              timeout_ms: 1,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(timeoutResult.status).toBe("failed");
+    expect(timeoutResult.error).toMatchObject({
+      step_id: "resume-timeout",
+      action_type: "resume_when_condition",
+      reason: "Resume condition timed out after 1 ms",
+    });
+  });
+
   test("fails set-json variables when the rendered JSON root is not an object", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -564,21 +634,110 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
-  test("writes screenshot evidence to file URLs", async () => {
+  test("enforces run domain policy before navigation side effects", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const blocked = await runner.run({
+      graph: {
+        domain_policy: { allowed_domains: ["owned.test"] },
+        steps: [
+          step("seed", "Seed", {
+            type: "set_variable",
+            config: { name: "host", value_type: "text", value: "evil.test" },
+          }),
+          step("blocked", "Blocked", {
+            type: "navigate",
+            config: { url: "https://{{host}}/login" },
+          }),
+        ],
+      } as CompiledWorkflowGraph & { domain_policy: { allowed_domains: string[] } },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(blocked.status).toBe("failed");
+    expect(blocked.error).toMatchObject({
+      step_id: "blocked",
+      action_type: "navigate",
+      reason: expect.stringContaining("Navigation to evil.test is not in the allowlist"),
+    });
+    expect(page.events).not.toContain("goto:https://evil.test/login");
+
+    const allowed = await runner.run({
+      graph: {
+        domain_policy: { allowed_domains: ["owned.test"] },
+        steps: [
+          step("open-tab", "Open tab", {
+            type: "open_new_tab",
+            config: { url: "https://app.owned.test/dashboard" },
+          }),
+        ],
+      } as CompiledWorkflowGraph & { domain_policy: { allowed_domains: string[] } },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(allowed.status).toBe("success");
+    expect(page.events).toContain("goto:https://app.owned.test/dashboard");
+  });
+
+  test("rejects screenshot paths outside run evidence", async () => {
     const appPaths = await createTempAppPaths();
-    const screenshotPath = path.join(appPaths.evidenceDir, "shot.png");
+    const runner = new BrowserWorkflowRunner({
+      appPaths,
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    for (const unsafePath of [
+      path.join(appPaths.rootDir, "outside.png"),
+      `file://${path.join(appPaths.rootDir, "outside.png")}`,
+      "../outside.png",
+    ]) {
+      const result = await runner.run({
+        runId: `run-${unsafePath.length}`,
+        graph: {
+          steps: [
+            step("shot", "Shot", {
+              type: "take_screenshot",
+              config: {
+                path: unsafePath,
+                output_name: "shot",
+                full_page: true,
+              },
+            }),
+          ],
+        },
+        settings: makeSettings(),
+        mode: "run_workflow",
+      });
+
+      expect(result.status).toBe("failed");
+      expect(result.error).toMatchObject({
+        step_id: "shot",
+        reason: expect.stringContaining("Screenshot path must be a safe artifact name"),
+      });
+    }
+  });
+
+  test("writes screenshots to run-scoped evidence and records metadata", async () => {
+    const appPaths = await createTempAppPaths();
     const runner = new BrowserWorkflowRunner({
       appPaths,
       driver: createFakeDriver(new FakeContext()),
     });
 
     const result = await runner.run({
+      runId: "run-evidence-1",
       graph: {
         steps: [
           step("shot", "Shot", {
             type: "take_screenshot",
             config: {
-              path: pathToFileURL(screenshotPath).href,
+              path: "checkout receipt.png",
               output_name: "shot",
               full_page: true,
             },
@@ -590,8 +749,67 @@ describe("BrowserWorkflowRunner", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(result.outputs?.shot).toBe(screenshotPath);
-    await expect(fs.stat(screenshotPath)).resolves.toMatchObject({ size: 3 });
+    expect(result.outputs?.shot).toBe(
+      "runs/run-evidence-1/screenshots/001-shot-checkout-receipt.png",
+    );
+    expect(result.outputs?.__evidence).toEqual([
+      expect.objectContaining({
+        run_id: "run-evidence-1",
+        node_id: "shot",
+        step_number: 1,
+        action_type: "take_screenshot",
+        artifact_kind: "screenshot",
+        path: "runs/run-evidence-1/screenshots/001-shot-checkout-receipt.png",
+      }),
+    ]);
+    await expect(
+      fs.stat(path.join(appPaths.evidenceDir, String(result.outputs?.shot))),
+    ).resolves.toMatchObject({ size: 3 });
+  });
+
+  test("failure screenshots use distinct run-scoped evidence paths", async () => {
+    const appPaths = await createTempAppPaths();
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths,
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+    const failingGraph = {
+      steps: [
+        step("blocked", "Blocked", {
+          type: "assert_text",
+          config: { text: "Missing", match_mode: "contains" },
+        }),
+      ],
+    };
+
+    const first = await runner.run({
+      runId: "failed-run-1",
+      graph: failingGraph,
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+    const second = await runner.run({
+      runId: "failed-run-2",
+      graph: failingGraph,
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(first.status).toBe("failed");
+    expect(second.status).toBe("failed");
+    expect(first.outputs?.failure_screenshot).toBe(
+      "runs/failed-run-1/screenshots/001-blocked-failure.png",
+    );
+    expect(second.outputs?.failure_screenshot).toBe(
+      "runs/failed-run-2/screenshots/001-blocked-failure.png",
+    );
+    await expect(
+      fs.stat(path.join(appPaths.evidenceDir, String(first.outputs?.failure_screenshot))),
+    ).resolves.toMatchObject({ size: 3 });
+    await expect(
+      fs.stat(path.join(appPaths.evidenceDir, String(second.outputs?.failure_screenshot))),
+    ).resolves.toMatchObject({ size: 3 });
   });
 
   test("applies runtime browser context actions through driver APIs", async () => {
@@ -645,6 +863,334 @@ describe("BrowserWorkflowRunner", () => {
       "geolocation:10.5:20.5:9",
     ]);
     expect(page.events).toContain("viewport:390:844");
+  });
+
+  test("fails stubbed or launch-time actions with explicit unsupported errors", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    for (const config of [
+      { type: "use_proxy", config: { server: "http://proxy.test:8080" } },
+      { type: "set_user_agent", config: { user_agent: "Agent/1.0" } },
+      { type: "run_subworkflow", config: { workflow_id: "child", input_mapping: [], output_mapping: [] } },
+      { type: "detect_challenge", config: { output_name: "challenge", patterns: [] } },
+      { type: "pause_for_human", config: { reason: "manual checkpoint" } },
+      { type: "checkpoint", config: { name: "checkpoint", screenshot_path: null } },
+      { type: "set_download_directory", config: { path: "/tmp/downloads" } },
+    ] as ActionConfig[]) {
+      const result = await runner.run({
+        graph: { steps: [step(config.type, config.type, config)] },
+        settings: makeSettings(),
+        mode: "run_workflow",
+      });
+
+      expect(result.status).toBe("failed");
+      expect(result.error).toMatchObject({
+        step_id: config.type,
+        action_type: config.type,
+        reason: expect.stringContaining("is not supported as an in-run action"),
+      });
+    }
+  });
+
+  test("executes drag and drop through the driver instead of hover-only success", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("drag", "Drag", {
+            type: "drag_and_drop",
+            config: {
+              source_xpath: "#source",
+              target_xpath: "#target",
+              wait_until: null,
+              timeout_ms: null,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining(["dragTo:#source:#target"]),
+    );
+  });
+
+  test("registers dialog actions through one-shot page handlers", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("accept", "Accept", {
+            type: "accept_dialog",
+            config: { prompt_text: "approved" },
+          }),
+          step("dismiss", "Dismiss", { type: "dismiss_dialog", config: {} }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual([
+      "dialog-once",
+      "dialog-accept:approved",
+      "dialog-once",
+      "dialog-dismiss",
+    ]);
+  });
+
+  test("waits for downloads and stores them under run evidence", async () => {
+    const appPaths = await createTempAppPaths();
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths,
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      runId: "download-run",
+      graph: {
+        steps: [
+          step("download", "Download", {
+            type: "wait_for_download",
+            config: { output_name: "download_path", timeout_ms: 500 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.download_path).toBe(
+      "runs/download-run/downloads/001-download-owned-report.csv",
+    );
+    expect(result.outputs?.__evidence).toEqual([
+      expect.objectContaining({
+        run_id: "download-run",
+        node_id: "download",
+        artifact_kind: "download",
+        path: "runs/download-run/downloads/001-download-owned-report.csv",
+      }),
+    ]);
+    await expect(
+      fs.readFile(path.join(appPaths.evidenceDir, String(result.outputs?.download_path)), "utf8"),
+    ).resolves.toBe("download");
+  });
+
+  test("fails when a selected action requires an unsupported driver method", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(new MinimalMethodPage())),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("type", "Type", {
+            type: "type_sequence",
+            config: { xpath: "#field", text: "abc" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "type",
+      action_type: "type_sequence",
+      reason: "type_sequence requires driver support for locator.type",
+    });
+  });
+
+  test("resolves structured element targets with ordered locators and constraints", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("click", "Click", {
+            type: "click",
+            config: {
+              xpath: "#legacy",
+              target: {
+                locators: [
+                  { kind: "css", value: "#hidden" },
+                  { kind: "text", value: "Continue" },
+                ],
+                constraints: { visible: true, enabled: true },
+              },
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "locator:#hidden",
+        "isVisible:#hidden",
+        "getByText:Continue",
+        "isVisible:text=Continue",
+        "isEnabled:text=Continue",
+        "click:text=Continue",
+      ]),
+    );
+  });
+
+  test("supports target locator kinds and iframe targets", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("test-id", "Test id", {
+            type: "click",
+            config: {
+              xpath: "#legacy",
+              target: { locators: [{ kind: "test_id", value: "submit" }] },
+            },
+          }),
+          step("role", "Role", {
+            type: "click",
+            config: {
+              xpath: "#legacy",
+              target: { locators: [{ kind: "role", role: "button", value: "Pay" }] },
+            },
+          }),
+          step("label", "Label", {
+            type: "input_text",
+            config: {
+              xpath: "#legacy",
+              text: "ada@example.test",
+              clear_before_input: false,
+              target: { locators: [{ kind: "label", value: "Email" }] },
+            },
+          }),
+          step("placeholder", "Placeholder", {
+            type: "input_text",
+            config: {
+              xpath: "#legacy",
+              text: "Ada",
+              clear_before_input: false,
+              target: { locators: [{ kind: "placeholder", value: "Full name" }] },
+            },
+          }),
+          step("attribute", "Attribute", {
+            type: "click",
+            config: {
+              xpath: "#legacy",
+              target: {
+                locators: [{ kind: "attribute", attribute: "data-owned", value: "yes" }],
+              },
+            },
+          }),
+          step("iframe", "Iframe", {
+            type: "click",
+            config: {
+              xpath: "#legacy",
+              target: {
+                iframe: { locators: [{ kind: "css", value: "iframe#checkout" }] },
+                locators: [{ kind: "css", value: "#pay" }],
+              },
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "getByTestId:submit",
+        "getByRole:button:Pay",
+        "getByLabel:Email",
+        "getByPlaceholder:Full name",
+        "locator:[data-owned=\"yes\"]",
+        "frameLocator:iframe#checkout",
+        "frameLocator.locator:#pay",
+      ]),
+    );
+  });
+
+  test("honors element action readiness waits before performing actions", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("click", "Click", {
+            type: "click",
+            config: {
+              xpath: "#submit",
+              wait_until: "clickable",
+              timeout_ms: 1200,
+              retry_interval_ms: 25,
+            },
+          }),
+          step("input", "Input", {
+            type: "input_text",
+            config: {
+              xpath: "#email",
+              text: "ada@example.test",
+              clear_before_input: false,
+              wait_until: "enabled",
+              timeout_ms: 1300,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "waitFor:#submit:visible:1200",
+        "isEnabled:#submit",
+        "click:#submit",
+        "waitFor:#email:visible:1300",
+        "isEnabled:#email",
+        "fill:#email:ada@example.test",
+      ]),
+    );
   });
 });
 
@@ -771,6 +1317,36 @@ class FakePage implements BrowserDriverPage {
     return new FakeLocator(selector, this.events);
   }
 
+  getByTestId(testId: string) {
+    this.events.push(`getByTestId:${testId}`);
+    return new FakeLocator(`testid=${testId}`, this.events);
+  }
+
+  getByRole(role: string, options?: { name?: string }) {
+    this.events.push(`getByRole:${role}:${options?.name ?? ""}`);
+    return new FakeLocator(`role=${role}:${options?.name ?? ""}`, this.events);
+  }
+
+  getByLabel(label: string) {
+    this.events.push(`getByLabel:${label}`);
+    return new FakeLocator(`label=${label}`, this.events);
+  }
+
+  getByPlaceholder(placeholder: string) {
+    this.events.push(`getByPlaceholder:${placeholder}`);
+    return new FakeLocator(`placeholder=${placeholder}`, this.events);
+  }
+
+  getByText(text: string) {
+    this.events.push(`getByText:${text}`);
+    return new FakeLocator(`text=${text}`, this.events);
+  }
+
+  frameLocator(selector: string) {
+    this.events.push(`frameLocator:${selector}`);
+    return new FakeFrameLocator(this.events);
+  }
+
   async waitForLoadState() {}
 
   async waitForURL() {}
@@ -781,6 +1357,16 @@ class FakePage implements BrowserDriverPage {
 
   async waitForResponse() {
     return { url: () => this.urlValue, status: () => 200 };
+  }
+
+  once(_eventName: "dialog", handler: (dialog: FakeDialog) => void) {
+    this.events.push("dialog-once");
+    handler(new FakeDialog(this.events));
+  }
+
+  async waitForEvent(eventName: "download") {
+    this.events.push(`waitForEvent:${eventName}`);
+    return new FakeDownload(this.events);
   }
 
   async goBack() {}
@@ -890,7 +1476,8 @@ class FakeLocator {
   }
 
   async isVisible() {
-    return true;
+    this.events.push(`isVisible:${this.selector}`);
+    return this.selector !== "#hidden";
   }
 
   async isEnabled() {
@@ -902,6 +1489,67 @@ class FakeLocator {
     this.events.push(
       `waitFor:${this.selector}:${options?.state ?? "visible"}:${options?.timeout ?? "none"}`,
     );
+  }
+
+  async dragTo(target: FakeLocator) {
+    this.events.push(`dragTo:${this.selector}:${target.selector}`);
+  }
+}
+
+class FakeFrameLocator {
+  constructor(private readonly events: string[]) {}
+
+  locator(selector: string) {
+    this.events.push(`frameLocator.locator:${selector}`);
+    return new FakeLocator(selector, this.events);
+  }
+}
+
+class MinimalMethodPage extends FakePage {
+  override locator(selector: string) {
+    this.events.push(`locator:${selector}`);
+    return new MinimalMethodLocator(selector, this.events);
+  }
+}
+
+class MinimalMethodLocator {
+  constructor(
+    private readonly selector: string,
+    private readonly events: string[],
+  ) {}
+
+  async fill(value: string) {
+    this.events.push(`fill:${this.selector}:${value}`);
+  }
+
+  async click() {
+    this.events.push(`click:${this.selector}`);
+  }
+}
+
+class FakeDialog {
+  constructor(private readonly events: string[]) {}
+
+  async accept(promptText?: string) {
+    this.events.push(`dialog-accept:${promptText ?? ""}`);
+  }
+
+  async dismiss() {
+    this.events.push("dialog-dismiss");
+  }
+}
+
+class FakeDownload {
+  constructor(private readonly events: string[]) {}
+
+  suggestedFilename() {
+    return "owned report.csv";
+  }
+
+  async saveAs(filePath: string) {
+    this.events.push(`download-save:${filePath}`);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, "download");
   }
 }
 

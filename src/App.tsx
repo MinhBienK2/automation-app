@@ -71,6 +71,7 @@ const workflowPackageSections: WorkflowSettingsSectionId[] = [
   "triggers",
   "advanced",
 ];
+const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
 
 function readGraphAutosaveEnabled() {
   try {
@@ -420,6 +421,10 @@ function App() {
   async function importWorkflowPackageFile(file: File | null) {
     if (!file) return;
     setAppError("");
+    if (file.size > workflowPackageFileSizeLimitBytes) {
+      setAppError("Workflow package file must be 5 MB or smaller");
+      return;
+    }
 
     try {
       const packageValue = JSON.parse(await file.text()) as WorkflowPackage;
