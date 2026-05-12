@@ -37,7 +37,7 @@ persistence, run orchestration, and CloakBrowser execution.
 
 - Frontend owns interaction state and rendering.
 - `workflowApi.ts` owns renderer-facing command wrapper names.
-- `electron/preload.ts` exposes the narrow bridge and unwraps serializable command errors.
+- `electron/preload.cts` exposes the narrow sandbox-compatible bridge and unwraps serializable command errors.
 - Electron main owns app lifecycle, app data paths, native dialogs, and IPC registration.
 - Node backend commands own validation before persistence or execution.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.

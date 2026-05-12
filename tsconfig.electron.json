@@ -13,6 +13,6 @@
     "outDir": "dist-electron",
     "types": ["node", "electron"]
   },
-  "include": ["electron/**/*.ts"],
+  "include": ["electron/**/*.ts", "electron/**/*.cts"],
   "exclude": ["electron/**/*.test.ts"]
 }

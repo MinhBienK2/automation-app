@@ -55,7 +55,7 @@ Update docs: frontend architecture or invariants when layout ownership/behavior 
 
 Read: `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
 
-Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src/types/electron.ts`, `electron/preload.ts`, `electron/ipc.ts`, `electron/main.ts`, focused modules under `electron/backend/`
+Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src/types/electron.ts`, `electron/preload.cts`, `electron/ipc.ts`, `electron/main.ts`, focused modules under `electron/backend/`
 
 Checks: `npm test -- src/lib/workflowApi.test.ts`, focused Electron backend command tests, `npx tsc --noEmit`, `npm run build:electron`
 

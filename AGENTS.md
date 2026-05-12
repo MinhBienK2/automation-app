@@ -39,7 +39,7 @@ Preserve the existing Supabase-inspired dark theme unless the user explicitly re
 
 ## Project Structure
 - Frontend UI lives in `src/App.tsx`, `src/App.css`, `src/layouts/`, and `src/features/workflows/`; tests use Vitest and Testing Library next to feature, layout, lib, and CSS files.
-- Electron IPC lives in `electron/ipc.ts`, `electron/preload.ts`, `electron/main.ts`, and typed wrappers in `src/lib/workflowApi.ts`.
+- Electron IPC lives in `electron/ipc.ts`, `electron/preload.cts`, `electron/main.ts`, and typed wrappers in `src/lib/workflowApi.ts`.
 - Electron backend commands, SQLite persistence, graph compiler, and CloakBrowser runner live under `electron/backend/`.
 - Agent source-of-truth docs live under `docs/`; historical plans/specs live under `docs/superpowers/`; smoke checklist lives in `README.md`.
 

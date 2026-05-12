@@ -47,7 +47,7 @@ Users can:
 - UI orchestration: `src/App.tsx`
 - Electron bridge wrappers: `src/lib/workflowApi.ts`
 - Electron bridge type: `src/types/electron.ts`
-- Electron main/preload: `electron/main.ts`, `electron/preload.ts`
+- Electron main/preload: `electron/main.ts`, `electron/preload.cts`
 - Node command handlers: `electron/backend/commands.ts`
 - Graph compiler: `electron/backend/graphCompiler.ts`
 - CloakBrowser runner: `electron/backend/runner.ts`

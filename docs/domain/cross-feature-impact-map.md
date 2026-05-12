@@ -32,7 +32,7 @@ Check:
 
 - `src/lib/workflowApi.ts`
 - `src/lib/workflowApi.test.ts`
-- `electron/preload.ts`
+- `electron/preload.cts`
 - `electron/ipc.ts`
 - `electron/backend/commands.ts`
 - `electron/backend/commands.test.ts`

@@ -1,10 +1,45 @@
-import { contextBridge, ipcRenderer } from "electron";
-import { workflowIpcChannels } from "./ipc.js";
 import type { WorkflowElectronBridge } from "../src/types/electron.js";
+import type { workflowIpcChannels as mainWorkflowIpcChannels } from "./ipc.js";
+
+const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
 type IpcResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: { message: string; field?: string | null } };
+
+const workflowIpcChannels = {
+  listWorkflows: "workflow:listWorkflows",
+  getWorkflow: "workflow:getWorkflow",
+  getWorkflowBrowserConfig: "workflow:getWorkflowBrowserConfig",
+  saveWorkflowBrowserConfig: "workflow:saveWorkflowBrowserConfig",
+  getWorkflowSettings: "workflow:getWorkflowSettings",
+  saveWorkflowSettings: "workflow:saveWorkflowSettings",
+  saveWorkflowSettingsSection: "workflow:saveWorkflowSettingsSection",
+  validateWorkflowSettings: "workflow:validateWorkflowSettings",
+  validateWorkflowRun: "workflow:validateWorkflowRun",
+  createWorkflow: "workflow:createWorkflow",
+  renameWorkflow: "workflow:renameWorkflow",
+  deleteWorkflow: "workflow:deleteWorkflow",
+  duplicateWorkflow: "workflow:duplicateWorkflow",
+  getWorkflowGraph: "workflow:getWorkflowGraph",
+  saveWorkflowGraph: "workflow:saveWorkflowGraph",
+  validateWorkflowGraph: "workflow:validateWorkflowGraph",
+  compileWorkflowGraph: "workflow:compileWorkflowGraph",
+  runWorkflow: "workflow:runWorkflow",
+  stopRun: "workflow:stopRun",
+  getRunState: "workflow:getRunState",
+  validateSchedule: "workflow:validateSchedule",
+  exportWorkflow: "workflow:exportWorkflow",
+  importWorkflow: "workflow:importWorkflow",
+  exportWorkflowPackage: "workflow:exportWorkflowPackage",
+  previewWorkflowPackage: "workflow:previewWorkflowPackage",
+  importWorkflowPackage: "workflow:importWorkflowPackage",
+  runBatchWorkflow: "workflow:runBatchWorkflow",
+  suggestSelectors: "workflow:suggestSelectors",
+  normalizeRecordedEvents: "workflow:normalizeRecordedEvents",
+  dryRunValidateConfig: "workflow:dryRunValidateConfig",
+  saveWorkflowPackageFile: "workflow:saveWorkflowPackageFile",
+} as const satisfies typeof mainWorkflowIpcChannels;
 
 async function invokeWorkflow<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;

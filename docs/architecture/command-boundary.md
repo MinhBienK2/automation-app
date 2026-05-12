@@ -10,7 +10,7 @@ Node/Electron backend.
 - Frontend wrappers: `src/lib/workflowApi.ts`
 - Wrapper tests: `src/lib/workflowApi.test.ts`
 - Bridge types: `src/types/electron.ts`
-- Electron preload: `electron/preload.ts`
+- Electron preload: `electron/preload.cts`
 - Electron IPC channels: `electron/ipc.ts`
 - Electron main registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
@@ -49,7 +49,7 @@ Node/Electron backend.
 
 ## Change Checklist
 
-- Update `workflowApi.ts`, `src/types/electron.ts`, `electron/preload.ts`, and `electron/ipc.ts` for bridge contract changes.
+- Update `workflowApi.ts`, `src/types/electron.ts`, `electron/preload.cts`, and `electron/ipc.ts` for bridge contract changes.
 - Update `workflowApi.test.ts` and focused command handler tests.
 - Keep `CommandError` serializable as `{ message, field? }`.
 - Keep the preload unwrap compatible with the IPC result envelope.

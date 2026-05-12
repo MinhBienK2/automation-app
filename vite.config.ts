@@ -9,6 +9,7 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
+  base: "./",
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

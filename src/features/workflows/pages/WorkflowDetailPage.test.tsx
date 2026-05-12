@@ -187,6 +187,9 @@ describe("Workflow detail integration", () => {
       name: "Workflow Settings",
     });
 
+    expect(
+      within(settingsDialog).getByText("Configure workflow settings before running this workflow."),
+    ).toBeInTheDocument();
     expect(within(settingsDialog).getByRole("tab", { name: "Variables" }))
       .toBeInTheDocument();
     expect(within(settingsDialog).queryByRole("tab", { name: "Inputs & Variables" }))

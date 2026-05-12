@@ -118,6 +118,9 @@ export function WorkflowSettingsDialog({
                 <div>
                   <p className="eyebrow">Workflow</p>
                   <DialogTitle>Workflow Settings</DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Configure workflow settings before running this workflow.
+                  </DialogDescription>
                 </div>
               </div>
               <Button

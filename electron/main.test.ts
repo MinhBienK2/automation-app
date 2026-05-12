@@ -29,6 +29,7 @@ describe("Electron main process", () => {
     expect(source).toContain("contextIsolation: true");
     expect(source).toContain("nodeIntegration: false");
     expect(source).toContain("sandbox: true");
+    expect(source).toContain('path.join(currentDir, "preload.cjs")');
   });
 });
 

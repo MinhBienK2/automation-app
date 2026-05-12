@@ -5,7 +5,7 @@
 - Renderer wrappers: `src/lib/workflowApi.ts`
 - Renderer wrapper tests: `src/lib/workflowApi.test.ts`
 - Bridge types: `src/types/electron.ts`
-- Preload bridge: `electron/preload.ts`
+- Preload bridge: `electron/preload.cts`
 - IPC channels: `electron/ipc.ts`
 - Main process registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
@@ -87,7 +87,7 @@ Electron backend.
 ## Change Checklist
 
 - Update `src/lib/workflowApi.ts`, `src/types/electron.ts`, and
-  `electron/preload.ts` together when the bridge surface changes.
+  `electron/preload.cts` together when the bridge surface changes.
 - Add or update focused wrapper tests in `src/lib/workflowApi.test.ts`.
 - Keep Electron main handlers returning the result envelope so preload can
   preserve serializable command errors.
