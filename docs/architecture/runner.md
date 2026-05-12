@@ -17,7 +17,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - `BrowserWorkflowRunner` runs action configs through CloakBrowser and Playwright-compatible page/context APIs.
 - CloakBrowser `humanize` is enabled by default for both temporary and persistent contexts.
 - `BrowserWorkflowRunner` maps Workflow Settings Browser and Environment values to CloakBrowser launch/context options before the first page action.
-- Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC.
+- Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC. Nested compiled graph actions retain their source graph node ids so runner progress can light up branch/body nodes before the outer control block continues.
 - Command handlers own run orchestration around the runner: one active run at a time, begin/finish state transitions, max-duration timeout, SQLite run persistence, and batch row sequencing.
 - Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
 - Compiled run plans may include `domain_policy`; the runner enforces it before navigation-like actions call Playwright.

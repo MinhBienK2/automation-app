@@ -101,7 +101,13 @@ describe("TypeScript graph compiler parity", () => {
           type: "if_condition",
           config: {
             condition,
-            then_steps: [click],
+            then_steps: [
+              {
+                ...click,
+                graph_node_id: "click",
+                graph_label: "Click",
+              },
+            ],
             else_steps: [],
           },
         },
@@ -118,6 +124,8 @@ describe("TypeScript graph compiler parity", () => {
             steps: [
               {
                 type: "set_variable",
+                graph_node_id: "set-var",
+                graph_label: "Set Var",
                 config: {
                   name: null,
                   value: null,
@@ -139,7 +147,13 @@ describe("TypeScript graph compiler parity", () => {
           config: {
             max_attempts: 3,
             delay_ms: 50,
-            steps: [clickAction("//retry")],
+            steps: [
+              {
+                ...clickAction("//retry"),
+                graph_node_id: "retry-click",
+                graph_label: "Retry Click",
+              },
+            ],
             failed_steps: [],
           },
         },
@@ -157,6 +171,40 @@ describe("TypeScript graph compiler parity", () => {
         },
       },
     ]);
+  });
+
+  test("preserves graph node identity for nested If branch actions", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("if-node", "if", {
+          config: {
+            condition: { kind: "url_contains", value: "/dashboard" },
+          },
+        }),
+        graphNode("true-node", "action", { config: clickAction("//button[@id='continue']") }),
+      ],
+      [
+        edge("start", "out", "if-node", "in"),
+        edge("if-node", "true", "true-node", "in"),
+      ],
+    );
+
+    const branch = handlers.compileWorkflowGraph(graph).steps[0]?.config;
+
+    expect(branch).toMatchObject({
+      type: "if_condition",
+      config: {
+        then_steps: [
+          expect.objectContaining({
+            graph_node_id: "true-node",
+            graph_label: "True Node",
+            type: "click",
+          }),
+        ],
+      },
+    });
   });
 
   test("accepts repeat-for-each manual lists when array variable is null", async () => {
@@ -248,7 +296,13 @@ describe("TypeScript graph compiler parity", () => {
           type: "if_condition",
           config: {
             condition: outputEqualsCondition(),
-            then_steps: [branchAction],
+            then_steps: [
+              {
+                ...branchAction,
+                graph_node_id: "branch-step",
+                graph_label: "Branch Step",
+              },
+            ],
             else_steps: [],
           },
         },

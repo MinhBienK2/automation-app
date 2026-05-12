@@ -35,7 +35,7 @@ Run errors include:
 ## Lifecycle
 
 - `run_workflow` closes retained browser sessions from previous terminal runs, then sets status to `running`, mode, target step id, and clears progress/error.
-- Progress events set current step and completed step ids.
+- Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes.
 - Only one active workflow run is allowed at a time. A second `run_workflow` request fails with a command error while another run owns the cancellation token.
 - `run_batch_workflow` uses the same active-run ownership. A batch blocks other runs while active, reports progress through the same state shape, and can be stopped through `stop_run`.
 - `stop_run` sets status to `stopped` and clears error for the active normal or batch run.
@@ -51,7 +51,7 @@ Run errors include:
 - `App.tsx` polls `get_run_state` while status is `running`.
 - Run status bar displays terminal and error states.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
-- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids.
+- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation.
 
 ## Change Checklist
 

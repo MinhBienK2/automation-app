@@ -629,18 +629,18 @@ export type ActionConfig =
       type: "if_condition";
       config: {
         condition: WorkflowCondition;
-        then_steps: ActionConfig[];
-        else_steps: ActionConfig[];
+        then_steps: CompiledNestedAction[];
+        else_steps: CompiledNestedAction[];
       };
     }
-  | { type: "repeat_times"; config: { times: number; steps: ActionConfig[] } }
+  | { type: "repeat_times"; config: { times: number; steps: CompiledNestedAction[] } }
   | {
       type: "repeat_for_each";
       config: {
         item_name: string;
         array_variable?: string | null;
         items: string[];
-        steps: ActionConfig[];
+        steps: CompiledNestedAction[];
       };
     }
   | {
@@ -648,16 +648,16 @@ export type ActionConfig =
       config: {
         max_attempts: number;
         delay_ms?: number | null;
-        steps: ActionConfig[];
-        failed_steps?: ActionConfig[];
+        steps: CompiledNestedAction[];
+        failed_steps?: CompiledNestedAction[];
       };
     }
   | {
       type: "switch_condition";
       config: {
         expression: string;
-        cases: Array<{ value: string; steps: ActionConfig[] }>;
-        default_steps: ActionConfig[];
+        cases: Array<{ value: string; steps: CompiledNestedAction[] }>;
+        default_steps: CompiledNestedAction[];
       };
     }
   | {
@@ -666,7 +666,7 @@ export type ActionConfig =
         condition: WorkflowCondition;
         max_attempts?: number | null;
         timeout_ms?: number | null;
-        steps: ActionConfig[];
+        steps: CompiledNestedAction[];
       };
     }
   | {
@@ -675,24 +675,24 @@ export type ActionConfig =
         condition: WorkflowCondition;
         max_attempts?: number | null;
         timeout_ms?: number | null;
-        steps: ActionConfig[];
-        timeout_steps: ActionConfig[];
+        steps: CompiledNestedAction[];
+        timeout_steps: CompiledNestedAction[];
       };
     }
   | {
       type: "try_catch";
       config: {
-        try_steps: ActionConfig[];
-        success_steps: ActionConfig[];
-        error_steps: ActionConfig[];
-        finally_steps: ActionConfig[];
+        try_steps: CompiledNestedAction[];
+        success_steps: CompiledNestedAction[];
+        error_steps: CompiledNestedAction[];
+        finally_steps: CompiledNestedAction[];
       };
     }
   | {
       type: "fallback_block";
       config: {
-        primary_steps: ActionConfig[];
-        fallback_steps: ActionConfig[];
+        primary_steps: CompiledNestedAction[];
+        fallback_steps: CompiledNestedAction[];
       };
     }
   | { type: "break_loop"; config: Record<string, never> }
@@ -967,6 +967,11 @@ export type CompiledGraphStep = {
   node_id: string;
   label: string;
   config: ActionConfig;
+};
+
+export type CompiledNestedAction = ActionConfig & {
+  graph_node_id?: string;
+  graph_label?: string;
 };
 
 export type CompiledWorkflowGraph = {

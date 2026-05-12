@@ -545,6 +545,116 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.outputs?.login_branch).toBe("missed");
   });
 
+  test("matches login-style URL conditions against the live browser href expression", async () => {
+    class BrowserExpressionPage extends FakePage {
+      override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+        if (pageFunction === "() => window.location.href") {
+          return undefined;
+        }
+        if (pageFunction === "window.location.href") {
+          return this.urlValue;
+        }
+        return super.evaluate(pageFunction, arg);
+      }
+    }
+
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(new BrowserExpressionPage())),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "http://localhost:8327/management.html#/login" },
+          }),
+          step("login-branch", "Login detected", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "url_contains", value: "/management.html#/login" },
+              then_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "login_branch", value_type: "text", value: "matched" },
+                    ],
+                  },
+                },
+              ],
+              else_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "login_branch", value_type: "text", value: "missed" },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.outputs?.login_branch).toBe("matched");
+  });
+
+  test("reports nested If branch graph nodes before continuing the top-level run", async () => {
+    const progress: string[] = [];
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    await runner.run({
+      graph: {
+        steps: [
+          step("branch", "Branch", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "url_contains", value: "about:blank" },
+              then_steps: [
+                {
+                  graph_node_id: "true-node",
+                  graph_label: "True Node",
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "branch_state", value_type: "text", value: "true" },
+                    ],
+                  },
+                },
+              ],
+              else_steps: [],
+            },
+          }),
+          step("done", "Done", {
+            type: "set_variable",
+            config: {
+              variables: [
+                { name: "done_state", value_type: "text", value: "continued" },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+      onProgress(state) {
+        if (state.current_step_id) progress.push(state.current_step_id);
+      },
+    });
+
+    expect(progress).toContain("true-node");
+    expect(progress.indexOf("true-node")).toBeLessThan(progress.lastIndexOf("done"));
+  });
+
   test("honors loop timeout and resume condition polling semantics", async () => {
     let sleepCalls = 0;
     const runner = new BrowserWorkflowRunner({

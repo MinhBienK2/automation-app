@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type {
   ActionConfig,
   CompiledGraphStep,
+  CompiledNestedAction,
   CompiledWorkflowGraph,
   ElementLocator,
   ElementTarget,
@@ -173,6 +174,8 @@ type Runtime = {
   currentStepId: string | null;
   currentStepNumber: number | null;
   currentActionType: string | null;
+  liveState: RunState;
+  onProgress?: (state: Partial<RunState>) => void;
   signal?: AbortSignal;
 };
 
@@ -234,6 +237,16 @@ export class BrowserWorkflowRunner {
   async run(request: RunnerRunRequest): Promise<RunState> {
     await this.closeRetainedContext();
     const launch = await this.launch(request.settings);
+    const state: RunState = {
+      status: "running",
+      mode: request.mode,
+      target_step_id: request.targetStepId ?? null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: [],
+      outputs: {},
+      error: null,
+    };
     const runtime: Runtime = {
       runId: request.runId ?? randomUUID(),
       context: launch.context,
@@ -246,18 +259,9 @@ export class BrowserWorkflowRunner {
       currentStepId: null,
       currentStepNumber: null,
       currentActionType: null,
+      liveState: state,
+      onProgress: request.onProgress,
       signal: request.signal,
-    };
-
-    const state: RunState = {
-      status: "running",
-      mode: request.mode,
-      target_step_id: request.targetStepId ?? null,
-      current_step_id: null,
-      current_step_number: null,
-      completed_step_ids: [],
-      outputs: {},
-      error: null,
     };
 
     let closeBrowser = request.settings.execution.browser_retention === "close" || launch.temporary;
@@ -273,18 +277,10 @@ export class BrowserWorkflowRunner {
         runtime.currentActionType = step.config.type;
         state.current_step_id = step.node_id;
         state.current_step_number = stepNumber;
-        request.onProgress?.({
-          current_step_id: step.node_id,
-          current_step_number: stepNumber,
-          completed_step_ids: [...state.completed_step_ids],
-        });
+        this.reportProgress(runtime);
         await this.executeStep(runtime, step);
         state.completed_step_ids.push(step.node_id);
-        request.onProgress?.({
-          current_step_id: step.node_id,
-          current_step_number: stepNumber,
-          completed_step_ids: [...state.completed_step_ids],
-        });
+        this.reportProgress(runtime);
         if (request.targetStepId === step.node_id) break;
       }
       state.status = "success";
@@ -405,6 +401,14 @@ export class BrowserWorkflowRunner {
       });
       throw error;
     }
+  }
+
+  private reportProgress(runtime: Runtime) {
+    runtime.onProgress?.({
+      current_step_id: runtime.liveState.current_step_id,
+      current_step_number: runtime.liveState.current_step_number,
+      completed_step_ids: [...runtime.liveState.completed_step_ids],
+    });
   }
 
   private async executeAction(runtime: Runtime, action: ActionConfig): Promise<void> {
@@ -951,16 +955,36 @@ export class BrowserWorkflowRunner {
     }
   }
 
-  private async executeActions(runtime: Runtime, actions: ActionConfig[]) {
+  private async executeActions(runtime: Runtime, actions: CompiledNestedAction[]) {
     for (const action of actions) {
       this.throwIfCancelled(runtime.signal);
+      if (!action.graph_node_id) {
+        await this.executeAction(runtime, action);
+        continue;
+      }
+      const previous = {
+        runtimeStepId: runtime.currentStepId,
+        runtimeActionType: runtime.currentActionType,
+        stateStepId: runtime.liveState.current_step_id,
+      };
+      runtime.currentStepId = action.graph_node_id;
+      runtime.currentActionType = action.type;
+      runtime.liveState.current_step_id = action.graph_node_id;
+      this.reportProgress(runtime);
       await this.executeAction(runtime, action);
+      if (!runtime.liveState.completed_step_ids.includes(action.graph_node_id)) {
+        runtime.liveState.completed_step_ids.push(action.graph_node_id);
+      }
+      this.reportProgress(runtime);
+      runtime.currentStepId = previous.runtimeStepId;
+      runtime.currentActionType = previous.runtimeActionType;
+      runtime.liveState.current_step_id = previous.stateStepId;
     }
   }
 
   private async executeLoopBody(
     runtime: Runtime,
-    steps: ActionConfig[],
+    steps: CompiledNestedAction[],
   ): Promise<"completed" | "break" | "continue"> {
     try {
       await this.executeActions(runtime, steps);
@@ -1210,8 +1234,8 @@ export class BrowserWorkflowRunner {
     runtime: Runtime,
     attempts: number,
     delayMs: number,
-    steps: ActionConfig[],
-    failedSteps: ActionConfig[],
+    steps: CompiledNestedAction[],
+    failedSteps: CompiledNestedAction[],
   ) {
     let lastError: unknown;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -1234,7 +1258,7 @@ export class BrowserWorkflowRunner {
 
   private async executeLoop(
     runtime: Runtime,
-    steps: ActionConfig[],
+    steps: CompiledNestedAction[],
     maxAttempts: number,
     predicate: () => Promise<boolean>,
     timeoutMs?: number | null,
@@ -1685,7 +1709,7 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
   }
   if (typed.kind === "url_contains") {
     const href = String(
-      (await runtime.page.evaluate<string | null | undefined>("() => window.location.href")) ?? "",
+      (await runtime.page.evaluate<string | null | undefined>("window.location.href")) ?? "",
     );
     return href.includes(typed.value ?? "");
   }
@@ -1701,7 +1725,7 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
 }
 
 async function currentPageHostname(runtime: Runtime) {
-  const href = await runtime.page.evaluate<string>("() => window.location.href");
+  const href = await runtime.page.evaluate<string>("window.location.href");
   try {
     return new URL(href).hostname.toLowerCase();
   } catch {

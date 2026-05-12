@@ -2,6 +2,7 @@ import path from "node:path";
 import type {
   ActionConfig,
   CompiledGraphStep,
+  CompiledNestedAction,
   CompiledWorkflowGraph,
   GraphNode,
   GraphNodeType,
@@ -439,10 +440,14 @@ function compileNestedConfigs(
   sourceNodeId: string,
   sourcePort: string,
   visited: Set<string>,
-): ActionConfig[] {
+): CompiledNestedAction[] {
   const nestedSteps: CompiledGraphStep[] = [];
   compilePath(graph, nextTarget(graph, sourceNodeId, sourcePort), new Set(visited), nestedSteps);
-  return nestedSteps.map((compiledStep) => compiledStep.config);
+  return nestedSteps.map((compiledStep) => ({
+    ...compiledStep.config,
+    graph_node_id: compiledStep.node_id,
+    graph_label: compiledStep.label,
+  }));
 }
 
 function pushNodeSemanticIssues(
