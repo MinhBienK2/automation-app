@@ -14,6 +14,12 @@ This design is intentionally **not** a broad "test every app screen" proposal.
 The target is workflow execution truth for the nodes users can add from the
 main authoring UI.
 
+This spec is sequenced **after**
+`2026-05-12-cloakbrowser-action-settings-simplification-design.md`.
+Its execution matrix must bind to the **post-simplification visible node
+catalog**, not blindly preserve today's serialized action names or today's
+primary palettes.
+
 ## Current Gap
 
 The repo already has:
@@ -41,6 +47,8 @@ Playwright's Electron automation API supports this shape:
 ### In Scope
 
 - visible node/action types that users can add from the primary UI
+- the visible node/action catalog that exists **after** the simplification
+  spec has landed
 - real desktop workflow execution through:
   - Electron
   - renderer
@@ -148,6 +156,10 @@ Every scenario still runs the workflow through the real app and real runner.
 
 ## Execution Coverage Matrix
 
+The node names below are product-intent labels unless the simplification spec
+has already finalized a specific serialized DTO name. Implementation must map
+this matrix onto the final post-simplification public action catalog.
+
 ### 1. Navigation
 
 Required E2E cases:
@@ -186,8 +198,8 @@ Observable proofs:
 
 Required E2E cases:
 
-- `input_text`: field value updated
-- `clear_input`: populated field cleared
+- fill-field behavior: field value updated
+- clear-field behavior: populated field cleared
 - `select_option`: expected option selected
 - `check`
 - `uncheck`
@@ -259,8 +271,8 @@ Observable proofs:
 
 Required E2E cases:
 
-- `set_variable`: value interpolates into a later node
-- `set_json_variables`: nested data flattens and is reusable
+- set-variable behavior: value interpolates into a later node
+- set-JSON-variables behavior: nested data flattens and is reusable
 - `if`: expected branch runs
 - `switch`: selected branch runs
 - `repeat_times`: body runs exact count
@@ -290,19 +302,27 @@ Observable proofs:
 
 ### 9. Browser Context And Storage Visible Actions
 
-Required E2E cases:
+This group is **conditional** on the post-simplification visible action catalog.
+The simplification spec removes many browser-context and storage fields from
+Workflow Settings, but does not by itself finalize whether every comparable
+in-run browser-context/storage action remains visible, is hidden, or is
+replaced by a higher-level intent action.
 
-- `set_viewport`: fixture observes new viewport dimensions/responsive state
-- `set_geolocation`: fixture receives configured coordinates where the browser
-  path is stable enough
-- `set_extra_headers`: local server sees expected header
-- `grant_permission`: page flow requiring the granted permission succeeds where
-  stable
-- `set_cookie` / `clear_cookies`
-- `set_local_storage`
-- `set_session_storage`
+If the simplification work keeps any of these behaviors as visible authorable
+nodes, the E2E suite should cover them:
 
-Observable proofs:
+- viewport mutation behavior
+- geolocation behavior where the browser path is stable enough
+- extra-header behavior proven by the fixture server
+- permission-grant behavior where stable
+- cookie set/clear behavior
+- local/session storage mutation behavior
+
+If simplification removes or hides any of these behaviors from the visible
+authoring surface, they should be removed from the desktop visible-node E2E
+matrix and covered only at lower layers or in compatibility-specific suites.
+
+Observable proofs, when applicable:
 
 - page-side inspection text
 - server request logs
@@ -352,7 +372,7 @@ Should include the highest-value visible runtime behaviors:
 
 - navigate
 - click
-- input/clear/select
+- fill/clear/select field behavior
 - extract text/value/attribute
 - wait condition basics
 - assert pass/fail
@@ -380,7 +400,7 @@ Should include:
 - tab actions
 - dialogs
 - switch/repeat_for_each/while/repeat_until
-- viewport/geolocation/headers/permissions/storage/cookies
+- any browser-context/storage behaviors that remain visible after simplification
 
 ### Tier 3: Slow Or Environment-Sensitive
 
@@ -403,6 +423,11 @@ Every visible user-authorable node must be in one of these states:
 3. is explicitly documented as lower-level-only coverage with justification
 
 No visible node should remain uncategorized.
+
+The source of truth for "visible user-authorable node" is the public catalog
+after the simplification design is implemented. The E2E suite must not retain
+coverage obligations for nodes or action forms intentionally removed from that
+catalog.
 
 Every desktop E2E scenario must declare:
 
