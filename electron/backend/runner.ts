@@ -886,10 +886,10 @@ export class BrowserWorkflowRunner {
       case "execute_js":
         if (action.config.output_name) {
           runtime.outputs[action.config.output_name] = await runtime.page.evaluate(
-            action.config.script,
+            executableJavaScript(action.config.script),
           );
         } else {
-          await runtime.page.evaluate(action.config.script);
+          await runtime.page.evaluate(executableJavaScript(action.config.script));
         }
         return;
       case "wait_for_request":
@@ -1770,6 +1770,10 @@ function renderTemplate(value: string, outputs: Record<string, unknown>) {
   return value.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, name: string) =>
     String(outputs[name] ?? ""),
   );
+}
+
+function executableJavaScript(script: string) {
+  return `(() => {\n${script}\n})()`;
 }
 
 async function extractListLike(locator: BrowserDriverLocator) {

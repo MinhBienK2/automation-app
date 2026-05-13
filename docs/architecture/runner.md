@@ -58,7 +58,7 @@ Browser action dispatch lives in `electron/backend/runner.ts` and is grouped by 
   element and emit per-character key/input/change events with a visible default delay.
 - Forms/keyboard/clipboard: select, checkbox/radio, submit, key presses, hotkeys, in-run clipboard, and paste actions. Select Radio sets the radio target through locator-side DOM evaluation with a click fallback for minimal drivers. Targeted Submit Form resolves the target and submits the owning form through locator-side DOM evaluation, with a click fallback for minimal drivers; no-target Submit Form presses Enter on the page.
 - Target resolution: structured target bundles map to Playwright locators, including ordered locator fallback, role/label/placeholder/text/CSS/XPath/attribute kinds, constraints, and iframe targeting; XPath strings remain supported.
-- Data capture: text, attribute, input value, list/table, screenshot, download, and JavaScript outputs. Screenshot and download artifacts are run-scoped.
+- Data capture: text, attribute, input value, list/table, screenshot, download, and JavaScript outputs. Execute JavaScript treats the script text as a browser-side function body, so `return ...` scripts can store values through `output_name`. Screenshot and download artifacts are run-scoped.
 - Variables/control flow: variable mutation, loops, branches, retries, try/catch, fallback, stop, output assertions, and domain allowlists.
 
 ## Does Not Belong Here

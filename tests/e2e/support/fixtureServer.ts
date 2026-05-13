@@ -17,6 +17,22 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, basicPage());
       return;
     }
+    if (url.pathname === "/capture") {
+      respondHtml(response, capturePage());
+      return;
+    }
+    if (url.pathname === "/network") {
+      respondHtml(response, networkPage());
+      return;
+    }
+    if (url.pathname === "/download/report.csv") {
+      response.writeHead(200, {
+        "content-disposition": 'attachment; filename="owned-report.csv"',
+        "content-type": "text/csv",
+      });
+      response.end("name,status\nfixture,ready\n");
+      return;
+    }
     if (url.pathname === "/api/echo") {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({ ok: true, query: url.searchParams.get("q") ?? "" }));
@@ -103,6 +119,34 @@ function formPage() {
       });
       renderSummary('idle');
     </script>
+  </body>
+</html>`;
+}
+
+function capturePage() {
+  return `<!doctype html>
+<html>
+  <head><title>Capture fixture</title></head>
+  <body>
+    <h1 data-testid="capture-title" data-status="ready">Capture Fixture</h1>
+    <input data-testid="capture-input" value="field-value">
+    <ul>
+      <li data-testid="capture-item">Alpha</li>
+      <li data-testid="capture-item">Beta</li>
+      <li data-testid="capture-item">Gamma</li>
+    </ul>
+    <a data-testid="download-report" href="/download/report.csv" download>Download report</a>
+  </body>
+</html>`;
+}
+
+function networkPage() {
+  return `<!doctype html>
+<html>
+  <head><title>Network Fixture</title></head>
+  <body>
+    <h1 data-testid="network-title">Network Fixture</h1>
+    <div data-testid="network-status">idle</div>
   </body>
 </html>`;
 }
