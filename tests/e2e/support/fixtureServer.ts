@@ -69,6 +69,14 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, waitAssertionPage());
       return;
     }
+    if (url.pathname === "/context-storage") {
+      respondHtml(response, contextStoragePage());
+      return;
+    }
+    if (url.pathname === "/headers") {
+      respondHtml(response, headersPage(request.headers["x-e2e-context"]));
+      return;
+    }
     if (url.pathname === "/download/report.csv") {
       response.writeHead(200, {
         "content-disposition": 'attachment; filename="owned-report.csv"',
@@ -416,6 +424,27 @@ function waitAssertionPage() {
   <body>
     <h1>Wait Assertion Fixture</h1>
     <div data-testid="async-status">idle</div>
+  </body>
+</html>`;
+}
+
+function contextStoragePage() {
+  return `<!doctype html>
+<html>
+  <head><title>Context Storage Fixture</title></head>
+  <body>
+    <h1 data-testid="context-marker">context-storage</h1>
+  </body>
+</html>`;
+}
+
+function headersPage(headerValue: string | string[] | undefined) {
+  const value = Array.isArray(headerValue) ? headerValue.join(",") : (headerValue ?? "missing");
+  return `<!doctype html>
+<html>
+  <head><title>Headers Fixture</title></head>
+  <body>
+    <h1 data-testid="header-marker">header:${value}</h1>
   </body>
 </html>`;
 }
