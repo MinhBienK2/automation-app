@@ -7,6 +7,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 ## Key Files
 
 - `electron/backend/runner.ts`
+- `electron/backend/evidenceArtifacts.ts`
 - `electron/backend/runner.test.ts`
 - `electron/backend/runner.smoke.test.ts`
 - `electron/backend/commands.ts`
@@ -36,6 +37,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Batch execution compiles the saved graph, prepends row variables, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, persists one run per executed row, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
 - `BrowserWorkflowRunner` records compact action traces into outputs under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
 - Generated screenshots and downloads are written under `evidence/runs/<run_id>/...` and mirrored in outputs under both compact output keys and structured `__evidence` metadata.
+- Run-scoped screenshot, download, checkpoint artifact names and path containment checks live in `electron/backend/evidenceArtifacts.ts`; the runner calls those helpers before writing browser-produced files.
 - `run_steps.trace_json` stores action trace entries when the runner emits them, and failed step rows carry serialized run errors for later evidence/history views.
 
 ## Belongs Here

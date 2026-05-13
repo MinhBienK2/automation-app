@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -28,6 +29,20 @@ afterEach(async () => {
 });
 
 describe("BrowserWorkflowRunner", () => {
+  test("keeps evidence artifact path helpers outside the runner module", () => {
+    const runnerSource = readFileSync(
+      path.join(process.cwd(), "electron/backend/runner.ts"),
+      "utf8",
+    );
+
+    expect(existsSync(path.join(process.cwd(), "electron/backend/evidenceArtifacts.ts"))).toBe(
+      true,
+    );
+    expect(runnerSource).toContain("./evidenceArtifacts.js");
+    expect(runnerSource).not.toContain("function resolveEvidenceArtifact");
+    expect(runnerSource).not.toContain("function safeArtifactName");
+  });
+
   test("maps workflow browser and environment settings to CloakBrowser launch options", async () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);
