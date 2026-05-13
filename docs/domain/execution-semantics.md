@@ -28,6 +28,8 @@
 - Launch-time-only actions such as profile/proxy/user-agent/download-directory settings are hidden from active action authoring and fail explicitly if loaded as in-run actions.
 - Select Radio sets the resolved radio target in the browser DOM and dispatches input/change events so radio workflows do not depend on click heuristics.
 - Submit Form with a target submits the resolved element's owning form through the browser DOM so button and form targets do not hang on Playwright click/navigation heuristics; Submit Form without a target presses Enter on the current page.
+- Right Click dispatches a right-button context-menu event sequence at the resolved target, avoiding driver adapters that ignore right-click button options.
+- Scroll updates page position through browser-side `window.scrollBy` and emits a scroll event before the next action runs.
 - Dialog actions register one-shot browser dialog handlers. `wait_for_download` waits for a real download event and saves the artifact under the current run evidence directory.
 - `execute_js` runs script text as a browser-side function body. Scripts may use `return ...`; when `output_name` is set, the returned value is stored in run outputs.
 

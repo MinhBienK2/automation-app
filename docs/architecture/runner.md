@@ -50,8 +50,8 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 Browser action dispatch lives in `electron/backend/runner.ts` and is grouped by user behavior:
 
-- Pointer: click, hover, double/right click, and drag/drop dispatch browser-level primitives where possible.
-- Scroll: page scrolling is implemented; unsupported scroll modes are rejected by backend validation until runner support lands.
+- Pointer: click, hover, double click, and drag/drop dispatch browser-level primitives where possible. Right Click dispatches a browser-side right-button context-menu event sequence through the resolved locator, with a native right-click fallback for minimal drivers.
+- Scroll: page scrolling runs through browser-side `window.scrollBy` and dispatches a scroll event so the next node can observe page-side scroll listeners deterministically; unsupported scroll modes are rejected by backend validation until runner support lands.
 - Wait: duration, page, URL, text, and element waits with cancellation support.
 - Input: text input, clearing input, and contenteditable updates. `Fill Field`
   can either set field values directly or, when `typing_mode` is `type`, focus the

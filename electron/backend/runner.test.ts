@@ -197,6 +197,60 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("click:testid=role-admin");
   });
 
+  test("scrolls pages through browser-side DOM evaluation", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: { direction: "down", pixels: 900 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("scrollBy:0:900");
+  });
+
+  test("dispatches right-click targets through locator DOM evaluation", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("right", "Right Click", {
+            type: "right_click",
+            config: { target: { locators: [{ kind: "test_id", value: "menu-target" }] } },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "getByTestId:menu-target",
+        "evaluate:testid=menu-target",
+      ]),
+    );
+    expect(page.events).not.toContain("click:testid=menu-target");
+  });
+
   test("checks cancellation during waits and closes temporary contexts on stop", async () => {
     const context = new FakeContext();
     const cancellation = new AbortController();
@@ -1591,6 +1645,10 @@ class FakePage implements BrowserDriverPage {
     if (typeof pageFunction === "string" && pageFunction.includes("window.location.href")) {
       return this.urlValue;
     }
+    if (isScrollEvaluationArg(arg)) {
+      this.events.push(`scrollBy:${arg.deltaX}:${arg.deltaY}`);
+      return null;
+    }
     if (isStorageEvaluationArg(arg)) {
       this.events.push(`${arg.storage}Storage:${arg.key}:${arg.value}`);
       return null;
@@ -1771,5 +1829,14 @@ function isStorageEvaluationArg(
       "storage" in value &&
       "key" in value &&
       "value" in value,
+  );
+}
+
+function isScrollEvaluationArg(value: unknown): value is { deltaX: number; deltaY: number } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "deltaX" in value &&
+      "deltaY" in value,
   );
 }

@@ -462,17 +462,32 @@ export class BrowserWorkflowRunner {
         )();
         return;
       case "right_click":
-        await (await this.locatorForAction(runtime, action.config)).click({
-          button: "right",
-        });
+        await rightClickTarget(await this.locatorForAction(runtime, action.config));
         return;
       case "drag_and_drop":
         await this.executeDragAndDrop(runtime, action);
         return;
       case "scroll":
-        await runtime.page.mouse?.wheel(
-          action.config.direction === "left" ? -action.config.pixels : action.config.direction === "right" ? action.config.pixels : 0,
-          action.config.direction === "up" ? -action.config.pixels : action.config.direction === "down" ? action.config.pixels : 0,
+        await runtime.page.evaluate(
+          (payload?: { deltaX: number; deltaY: number }) => {
+            const { deltaX, deltaY } = payload ?? { deltaX: 0, deltaY: 0 };
+            window.scrollBy({ left: deltaX, top: deltaY, behavior: "instant" });
+            window.dispatchEvent(new Event("scroll"));
+          },
+          {
+            deltaX:
+              action.config.direction === "left"
+                ? -action.config.pixels
+                : action.config.direction === "right"
+                  ? action.config.pixels
+                  : 0,
+            deltaY:
+              action.config.direction === "up"
+                ? -action.config.pixels
+                : action.config.direction === "down"
+                  ? action.config.pixels
+                  : 0,
+          },
         );
         return;
       case "select_option":
@@ -1401,6 +1416,33 @@ async function selectRadioTarget(locator: BrowserDriverLocator) {
   }
 
   await locator.click();
+}
+
+async function rightClickTarget(locator: BrowserDriverLocator) {
+  if (locator.evaluate) {
+    await locator.evaluate((element) => {
+      const target = element instanceof HTMLElement ? element : element.parentElement;
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const clientX = rect.left + rect.width / 2;
+      const clientY = rect.top + rect.height / 2;
+      const eventInit = {
+        bubbles: true,
+        button: 2,
+        buttons: 2,
+        cancelable: true,
+        clientX,
+        clientY,
+        view: window,
+      };
+      target.dispatchEvent(new MouseEvent("mousedown", eventInit));
+      target.dispatchEvent(new MouseEvent("mouseup", { ...eventInit, buttons: 0 }));
+      target.dispatchEvent(new MouseEvent("contextmenu", eventInit));
+    });
+    return;
+  }
+
+  await locator.click({ button: "right" });
 }
 
 function buildLaunchOptions(

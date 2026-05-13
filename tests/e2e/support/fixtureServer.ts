@@ -33,6 +33,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, dialogPage());
       return;
     }
+    if (url.pathname === "/pointer") {
+      respondHtml(response, pointerPage());
+      return;
+    }
     if (url.pathname === "/download/report.csv") {
       response.writeHead(200, {
         "content-disposition": 'attachment; filename="owned-report.csv"',
@@ -204,6 +208,87 @@ function dialogPage() {
       });
       document.querySelector('[data-testid="confirm-button"]').addEventListener('click', () => {
         status.textContent = 'confirm:' + window.confirm('Proceed');
+      });
+    </script>
+</body>
+</html>`;
+}
+
+function pointerPage() {
+  return `<!doctype html>
+<html>
+  <head>
+    <title>Pointer Fixture</title>
+    <style>
+      body { min-height: 1800px; font-family: sans-serif; }
+      button, [draggable] { margin: 8px; padding: 8px 12px; }
+      #drop-zone { align-items: center; border: 2px dashed #667085; display: flex; height: 96px; margin: 8px; width: 240px; }
+      [data-testid="pointer-summary"] { background: white; border: 1px solid #d0d5dd; padding: 8px; position: sticky; top: 0; z-index: 1; }
+    </style>
+  </head>
+  <body>
+    <div data-testid="pointer-summary">click:0|double:0|right:0|hover:0|drop:none|scroll:idle</div>
+    <button data-testid="click-target">Click target</button>
+    <button data-testid="double-click-target">Double click target</button>
+    <button data-testid="right-click-target">Right click target</button>
+    <button data-testid="hover-target">Hover target</button>
+    <div data-testid="drag-source" draggable="true">drag-source</div>
+    <div data-testid="drop-zone" id="drop-zone">Drop here</div>
+    <script>
+      const summary = document.querySelector('[data-testid="pointer-summary"]');
+      const state = { click: 0, double: 0, right: 0, hover: 0, drop: 'none', scroll: 'idle' };
+      function render() {
+        summary.textContent = [
+          'click:' + state.click,
+          'double:' + state.double,
+          'right:' + state.right,
+          'hover:' + state.hover,
+          'drop:' + state.drop,
+          'scroll:' + state.scroll,
+        ].join('|');
+      }
+      document.querySelector('[data-testid="click-target"]').addEventListener('click', () => {
+        state.click += 1;
+        render();
+      });
+      document.querySelector('[data-testid="double-click-target"]').addEventListener('dblclick', () => {
+        state.double += 1;
+        render();
+      });
+      const rightClickTarget = document.querySelector('[data-testid="right-click-target"]');
+      function markRightClick(event) {
+        event.preventDefault();
+        if ((event.button === 2 || event.buttons === 2 || event.type === 'contextmenu') && state.right === 0) {
+          state.right += 1;
+          render();
+        }
+      }
+      rightClickTarget.addEventListener('pointerdown', markRightClick);
+      rightClickTarget.addEventListener('pointerup', markRightClick);
+      rightClickTarget.addEventListener('mousedown', markRightClick);
+      rightClickTarget.addEventListener('mouseup', markRightClick);
+      rightClickTarget.addEventListener('auxclick', markRightClick);
+      rightClickTarget.addEventListener('contextmenu', markRightClick);
+      document.querySelector('[data-testid="hover-target"]').addEventListener('mouseenter', () => {
+        state.hover = 1;
+        render();
+      });
+      document.querySelector('[data-testid="drag-source"]').addEventListener('dragstart', (event) => {
+        event.dataTransfer.setData('text/plain', 'drag-source');
+      });
+      document.querySelector('[data-testid="drop-zone"]').addEventListener('dragover', (event) => {
+        event.preventDefault();
+      });
+      document.querySelector('[data-testid="drop-zone"]').addEventListener('drop', (event) => {
+        event.preventDefault();
+        state.drop = event.dataTransfer.getData('text/plain');
+        render();
+      });
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 500) {
+          state.scroll = 'scrolled';
+          render();
+        }
       });
     </script>
   </body>
