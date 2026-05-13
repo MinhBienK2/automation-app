@@ -57,7 +57,6 @@ const workflowSettingsSections: WorkflowSettingsSectionId[] = [
   "run_policy",
   "browser_launch",
   "environment",
-  "owned_test_gates",
 ];
 
 const idleRunState: RunState = {
@@ -93,7 +92,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
-    const issues = validateSettings(settings);
+    const activeSettings = stripRemovedWorkflowSettingsSections(settings);
+    const issues = validateSettings(activeSettings);
     const firstError = issues.find((issue) => issue.level === "error");
     if (firstError) {
       throw commandError(
@@ -107,19 +107,19 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const workflow = requireWorkflow(workflowId);
     const timestamp = new Date().toISOString();
     const normalized: WorkflowSettings = {
-      ...settings,
+      ...activeSettings,
       workflow_id: workflowId,
       version: 2,
       general: {
-        ...settings.general,
-        name: settings.general.name.trim(),
+        ...activeSettings.general,
+        name: activeSettings.general.name.trim(),
         updated_at: timestamp,
-        created_at: settings.general.created_at ?? workflow.created_at,
+        created_at: activeSettings.general.created_at ?? workflow.created_at,
       },
-      browser_launch: normalizeSettingsBrowserLaunch(settings.browser_launch),
-      migration_notes: settings.migration_notes ?? [],
+      browser_launch: normalizeSettingsBrowserLaunch(activeSettings.browser_launch),
+      migration_notes: activeSettings.migration_notes ?? [],
       updated_at: timestamp,
-      created_at: settings.created_at ?? workflow.created_at,
+      created_at: activeSettings.created_at ?? workflow.created_at,
     };
     repository.saveWorkflowSettings(workflowId, normalized);
     return normalized;
@@ -761,59 +761,27 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       });
     }
   }
-  if (settings.owned_test_gates.fingerprint_preflight_enabled) {
-    const probeUrl = settings.owned_test_gates.fingerprint_probe_url?.trim();
-    let probeOrigin: string | null = null;
-    if (!probeUrl || !/^https?:\/\//i.test(probeUrl)) {
-      issues.push({
-        section: "owned_test_gates",
-        field: "fingerprint_probe_url",
-        level: "error",
-        message: "Fingerprint probe URL must be allowlisted HTTP(S)",
-      });
-    } else {
-      try {
-        probeOrigin = new URL(probeUrl).origin;
-      } catch {
-        issues.push({
-          section: "owned_test_gates",
-          field: "fingerprint_probe_url",
-          level: "error",
-          message: "Fingerprint probe URL must be valid HTTP(S)",
-        });
-      }
-    }
-    const allowedOrigins = settings.owned_test_gates.fingerprint_allowed_origins ?? [];
-    if (
-      probeOrigin &&
-      (allowedOrigins.length === 0 ||
-        !allowedOrigins.map(normalizeOrigin).includes(probeOrigin))
-    ) {
-      issues.push({
-        section: "owned_test_gates",
-        field: "fingerprint_allowed_origins",
-        level: "error",
-        message: "Fingerprint probe origin must be in the allowed origins list",
-      });
-    }
-    if (!settings.owned_test_gates.fingerprint_profile_id?.trim()) {
-      issues.push({
-        section: "owned_test_gates",
-        field: "fingerprint_profile_id",
-        level: "error",
-        message: "Fingerprint identity profile is required",
-      });
-    }
-    if (settings.browser_launch.headless) {
-      issues.push({
-        section: "browser_launch",
-        field: "headless",
-        level: "error",
-        message: "Fingerprint preflight requires headed browser mode",
-      });
-    }
-  }
   return issues;
+}
+
+function stripRemovedWorkflowSettingsSections(settings: WorkflowSettings): WorkflowSettings {
+  const legacySettings = settings as WorkflowSettings & { owned_test_gates?: unknown };
+  const { owned_test_gates: removedOwnedTestGates, ...activeSettings } = legacySettings;
+  const migrationNotes = [...(activeSettings.migration_notes ?? [])];
+  if (
+    removedOwnedTestGates !== undefined &&
+    !migrationNotes.some((note) => note.path === "owned_test_gates")
+  ) {
+    migrationNotes.push({
+      path: "owned_test_gates",
+      action: "dropped",
+      message: "Dropped removed Owned Test Gates settings section.",
+    });
+  }
+  return {
+    ...activeSettings,
+    migration_notes: migrationNotes,
+  };
 }
 
 function buildPackageSettings(
@@ -921,10 +889,11 @@ function migrateWorkflowSettings(
   workflow: WorkflowSummary,
 ): WorkflowSettings {
   if (settings.version === 2 && "run_policy" in settings) {
+    const activeSettings = stripRemovedWorkflowSettingsSections(settings);
     return {
-      ...settings,
-      browser_launch: normalizeSettingsBrowserLaunch(settings.browser_launch),
-      migration_notes: settings.migration_notes ?? [],
+      ...activeSettings,
+      browser_launch: normalizeSettingsBrowserLaunch(activeSettings.browser_launch),
+      migration_notes: activeSettings.migration_notes ?? [],
     };
   }
 
@@ -968,6 +937,16 @@ function migrateWorkflowSettings(
   }
   for (const field of ["user_agent", "viewport_width", "viewport_height", "mobile", "touch", "challenge_policy"]) {
     if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped browser emulation or challenge setting.");
+  }
+  for (const field of [
+    "fingerprint_preflight_enabled",
+    "fingerprint_probe_url",
+    "fingerprint_profile_id",
+    "fingerprint_allowed_origins",
+    "fingerprint_proxy_label",
+    "fingerprint_proxy_region",
+  ]) {
+    if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped removed fingerprint preflight setting.");
   }
   for (const field of [
     "geolocation",
@@ -1018,16 +997,6 @@ function migrateWorkflowSettings(
       initial_variables: Array.isArray(legacyInputs.initial_variables)
         ? legacyInputs.initial_variables
         : [],
-    },
-    owned_test_gates: {
-      fingerprint_preflight_enabled: Boolean(legacyBrowser.fingerprint_preflight_enabled),
-      fingerprint_probe_url: nullableText(legacyBrowser.fingerprint_probe_url),
-      fingerprint_profile_id: nullableText(legacyBrowser.fingerprint_profile_id),
-      fingerprint_allowed_origins: Array.isArray(legacyBrowser.fingerprint_allowed_origins)
-        ? legacyBrowser.fingerprint_allowed_origins.filter((origin: unknown) => typeof origin === "string")
-        : [],
-      fingerprint_proxy_label: nullableText(legacyBrowser.fingerprint_proxy_label),
-      fingerprint_proxy_region: nullableText(legacyBrowser.fingerprint_proxy_region),
     },
     migration_notes: notes,
   };
@@ -1158,14 +1127,6 @@ export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSett
     browser_launch: browserLaunch,
     environment: {
       initial_variables: [],
-    },
-    owned_test_gates: {
-      fingerprint_preflight_enabled: false,
-      fingerprint_probe_url: null,
-      fingerprint_profile_id: null,
-      fingerprint_allowed_origins: [],
-      fingerprint_proxy_label: null,
-      fingerprint_proxy_region: null,
     },
     migration_notes: [],
     created_at: workflow.created_at,
@@ -1305,12 +1266,4 @@ function objectRecord(value: unknown): Record<string, any> {
 
 function numericOrNull(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function normalizeOrigin(value: string) {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return value.trim().replace(/\/+$/, "");
-  }
 }

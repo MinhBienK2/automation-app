@@ -126,14 +126,6 @@ describe("Workflow detail integration", () => {
         environment: {
           initial_variables: [],
         },
-        owned_test_gates: {
-          fingerprint_preflight_enabled: false,
-          fingerprint_probe_url: null,
-          fingerprint_profile_id: null,
-          fingerprint_allowed_origins: [],
-          fingerprint_proxy_label: null,
-          fingerprint_proxy_region: null,
-        },
         migration_notes: [],
         created_at: "1",
         updated_at: "1",
@@ -249,7 +241,7 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
-  test("omits legacy trigger settings from the simplified settings dialog", async () => {
+  test("omits legacy trigger and owned test gate settings from the simplified settings dialog", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
@@ -265,9 +257,10 @@ describe("Workflow detail integration", () => {
 
     expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
       .not.toBeInTheDocument();
-    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Owned Test Gates" }));
-    expect(within(settingsDialog).getByRole("switch", { name: "Fingerprint preflight" }))
-      .toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("tab", { name: "Owned Test Gates" }))
+      .not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("switch", { name: "Fingerprint preflight" }))
+      .not.toBeInTheDocument();
     expect(
       within(settingsDialog).queryByRole("checkbox", { name: "Enable trigger" }),
     ).not.toBeInTheDocument();

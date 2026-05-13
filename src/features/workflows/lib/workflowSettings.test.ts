@@ -28,7 +28,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.environment.initial_variables).toEqual([]);
-    expect(settings.owned_test_gates.fingerprint_preflight_enabled).toBe(false);
+    expect(settings).not.toHaveProperty("owned_test_gates");
     expect(settings.migration_notes).toEqual([]);
     expect(settings).not.toHaveProperty("execution");
     expect(settings).not.toHaveProperty("browser");
@@ -43,7 +43,6 @@ describe("workflow settings model", () => {
       "run_policy",
       "browser_launch",
       "environment",
-      "owned_test_gates",
     ];
     expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
     expect(Object.keys(workflowSettingsHelp).sort()).toEqual([...visibleSectionIds].sort());
@@ -107,7 +106,8 @@ describe("workflow settings model", () => {
       "Headless browser",
     ]);
     expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
-    expect(workflowSettingsHelp.owned_test_gates.en.title).toBe("Owned Test Gates Help");
+    expect(helpText).not.toContain("Owned Test Gates");
+    expect(helpText).not.toContain("Fingerprint preflight");
   });
 
   test("creates readable generated browser profile names", () => {

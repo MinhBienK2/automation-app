@@ -12,12 +12,11 @@ Preserve these unless the task explicitly changes them.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser Launch.
-- Workflow Settings contains General, Run Policy, Browser Launch, Environment, and Owned Test Gates sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
+- Workflow Settings contains General, Run Policy, Browser Launch, and Environment sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
 - Workflow Settings Run Policy exposes maximum workflow duration and browser retention as editable fields. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
 - Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
 - Workflow Settings Browser Launch exposes proxy and headless launch controls.
-- Workflow Settings Owned Test Gates exposes fingerprint preflight controls for enablement, probe URL, identity profile, allowed origins, and proxy metadata. Enabling preflight requires an allowlisted HTTP(S) probe URL, an identity profile, and headed browser mode.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
@@ -84,7 +83,6 @@ Preserve these unless the task explicitly changes them.
 - Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
 - Full runs use persisted Workflow Settings as the run baseline. Browser Launch settings, including headless mode, are resolved before browser launch; Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
-- Fingerprint preflight, when enabled, runs after browser/environment setup and before graph actions; a blocked or malformed verdict stops execution before user workflow actions.
 - Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
 - Missing Workflow Settings rows return lazy v2 defaults. Legacy browser config commands map to `settings.browser_launch`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.

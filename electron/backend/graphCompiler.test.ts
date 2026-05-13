@@ -351,7 +351,7 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("compiles owned test gates and environment variables without legacy engine defaults", () => {
+  test("compiles environment variables without legacy owned test gate preflight", () => {
     const input = inputTextAction("//input", "hello");
     const click = clickAction("//button");
     const graph = graphOf(
@@ -365,40 +365,30 @@ describe("TypeScript graph compiler parity", () => {
         edge("input", "out", "click", "in"),
       ],
     );
-    const settings = workflowSettings({
+    const settings = {
+      ...workflowSettings({
+        environment: {
+          initial_variables: [{ name: "user.name", value_type: "text", value: "Ada" }],
+        },
+      }),
       owned_test_gates: {
         fingerprint_preflight_enabled: true,
         fingerprint_probe_url: "https://owned.example.test/fingerprint",
         fingerprint_profile_id: "owned-profile",
         fingerprint_allowed_origins: ["https://owned.example.test"],
       },
-      environment: {
-        initial_variables: [{ name: "user.name", value_type: "text", value: "Ada" }],
-      },
-    });
+    } as WorkflowSettings;
 
     const plan = compileWorkflowRunPlan(graph, settings);
 
-    expect(plan.steps.map((step) => step.node_id)).toEqual(
-      expect.arrayContaining([
-        "__settings:browser:fingerprint-preflight:navigate",
-        "__settings:browser:fingerprint-preflight:verdict",
-        "__settings:inputs:variables",
-      ]),
-    );
+    expect(plan.steps.map((step) => step.node_id)).toContain("__settings:inputs:variables");
+    expect(plan.steps.map((step) => step.node_id))
+      .not.toContain("__settings:browser:fingerprint-preflight:navigate");
+    expect(plan.steps.map((step) => step.node_id))
+      .not.toContain("__settings:browser:fingerprint-preflight:verdict");
     expect(plan.steps.map((step) => step.node_id)).not.toContain("__settings:execution:wait-between-nodes:1");
     expect(plan.steps.map((step) => step.node_id)).not.toContain("__settings:environment:headers");
-    expect(plan.steps).toContainEqual(
-      expect.objectContaining({
-        node_id: "__settings:browser:fingerprint-preflight:verdict",
-        config: expect.objectContaining({
-          type: "execute_js",
-          config: expect.objectContaining({
-            script: expect.stringContaining("window.__wamOutputs.fingerprint_preflight = evidence"),
-          }),
-        }),
-      }),
-    );
+    expect(JSON.stringify(plan.steps)).not.toContain("fingerprint_preflight");
     expect(plan.steps).toContainEqual(
       expect.objectContaining({
         node_id: "input",
@@ -760,7 +750,6 @@ function workflowSettings(
     run_policy?: Partial<WorkflowSettings["run_policy"]>;
     browser_launch?: Partial<WorkflowSettings["browser_launch"]>;
     environment?: Partial<WorkflowSettings["environment"]>;
-    owned_test_gates?: Partial<WorkflowSettings["owned_test_gates"]>;
   } = {},
 ): WorkflowSettings {
   return {
@@ -795,15 +784,6 @@ function workflowSettings(
     environment: {
       initial_variables: [],
       ...overrides.environment,
-    },
-    owned_test_gates: {
-      fingerprint_preflight_enabled: false,
-      fingerprint_probe_url: null,
-      fingerprint_profile_id: null,
-      fingerprint_allowed_origins: [],
-      fingerprint_proxy_label: null,
-      fingerprint_proxy_region: null,
-      ...overrides.owned_test_gates,
     },
     migration_notes: [],
     created_at: "1",

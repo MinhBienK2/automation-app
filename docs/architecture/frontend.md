@@ -11,7 +11,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
-- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Run Policy, Browser Launch, Environment, Owned Test Gates, and section help. Run Policy shows batch defaults as paused, disabled controls until Batch Run UI is ready.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Run Policy, Browser Launch, Environment, and section help. Run Policy shows batch defaults as paused, disabled controls until Batch Run UI is ready.
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
@@ -40,7 +40,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Visual graph editing state before persistence.
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
-- Workflow Settings editing through list Edit and detail Settings, simplified Run Policy with paused read-only batch defaults, Browser Launch, Environment initial variables, Owned Test Gates, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
+- Workflow Settings editing through list Edit and detail Settings, simplified Run Policy with paused read-only batch defaults, Browser Launch, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
 - Workflow list duplicate and Workflow Package import/export interaction. Duplicate calls `duplicateWorkflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
 - Run polling consumes `get_run_state` while a workflow is running. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.

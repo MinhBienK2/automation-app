@@ -128,8 +128,7 @@ export type WorkflowSettingsSectionId =
   | "general"
   | "run_policy"
   | "browser_launch"
-  | "environment"
-  | "owned_test_gates";
+  | "environment";
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
@@ -160,15 +159,6 @@ export type WorkflowSettingsEnvironment = {
   initial_variables: VariableAssignment[];
 };
 
-export type WorkflowSettingsOwnedTestGates = {
-  fingerprint_preflight_enabled: boolean;
-  fingerprint_probe_url?: string | null;
-  fingerprint_profile_id?: string | null;
-  fingerprint_allowed_origins: string[];
-  fingerprint_proxy_label?: string | null;
-  fingerprint_proxy_region?: string | null;
-};
-
 export type WorkflowSettingsMigrationNote = {
   path: string;
   action: "converted" | "dropped" | "review";
@@ -188,7 +178,6 @@ export type WorkflowSettings = {
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
   environment: WorkflowSettingsEnvironment;
-  owned_test_gates: WorkflowSettingsOwnedTestGates;
   migration_notes: WorkflowSettingsMigrationNote[];
   created_at?: string | null;
   updated_at?: string | null;
@@ -939,7 +928,6 @@ export type WorkflowPackageSettings = Partial<{
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
   environment: WorkflowSettingsEnvironment;
-  owned_test_gates: WorkflowSettingsOwnedTestGates;
 }>;
 
 export type WorkflowPackage = {

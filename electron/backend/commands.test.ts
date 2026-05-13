@@ -235,10 +235,12 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
-  test("validates run policy numeric ranges and owned fingerprint gate settings", async () => {
+  test("validates run policy numeric ranges and ignores legacy fingerprint gate settings", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Settings validation");
     const settings = handlers.getWorkflowSettings(workflow.id);
+
+    expect(settings).not.toHaveProperty("owned_test_gates");
 
     expect(
       handlers.validateWorkflowSettings({
@@ -262,21 +264,35 @@ describe("Electron workflow command handlers", () => {
       handlers.validateWorkflowSettings({
         ...settings,
         owned_test_gates: {
-          ...settings.owned_test_gates,
           fingerprint_preflight_enabled: true,
           fingerprint_probe_url: "https://probe.owned.test/verdict",
-          fingerprint_profile_id: "owned-profile",
+          fingerprint_profile_id: "",
           fingerprint_allowed_origins: ["https://other.owned.test"],
         },
-      }),
-    ).toEqual(
+      } as WorkflowSettings),
+    ).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           section: "owned_test_gates",
-          field: "fingerprint_allowed_origins",
-          level: "error",
         }),
       ]),
+    );
+
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      owned_test_gates: {
+        fingerprint_preflight_enabled: true,
+        fingerprint_probe_url: "https://probe.owned.test/verdict",
+        fingerprint_profile_id: "owned-profile",
+        fingerprint_allowed_origins: ["https://probe.owned.test"],
+      },
+    } as WorkflowSettings);
+    expect(handlers.getWorkflowSettings(workflow.id)).not.toHaveProperty("owned_test_gates");
+    expect(handlers.getWorkflowSettings(workflow.id).migration_notes).toContainEqual(
+      expect.objectContaining({
+        path: "owned_test_gates",
+        action: "dropped",
+      }),
     );
   });
 
@@ -301,6 +317,23 @@ describe("Electron workflow command handlers", () => {
     expect(packageValue.omitted_fields).toEqual(
       expect.arrayContaining(["settings.browser_launch.proxy_password"]),
     );
+    expect(
+      handlers.previewWorkflowPackage({
+        ...packageValue,
+        included_sections: ["settings.general", "settings.owned_test_gates"],
+        settings: {
+          ...packageValue.settings,
+          owned_test_gates: {
+            fingerprint_preflight_enabled: true,
+            fingerprint_probe_url: "https://legacy.example.test/probe",
+            fingerprint_profile_id: "legacy",
+            fingerprint_allowed_origins: ["https://legacy.example.test"],
+          },
+        } as WorkflowPackage["settings"],
+      }),
+    ).toMatchObject({
+      settings_sections: ["general"],
+    });
 
     const importedPackage: WorkflowPackage = {
       ...packageValue,

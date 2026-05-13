@@ -62,14 +62,6 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
       environment: {
         initial_variables: [],
       },
-      owned_test_gates: {
-        fingerprint_preflight_enabled: false,
-        fingerprint_probe_url: null,
-        fingerprint_profile_id: null,
-        fingerprint_allowed_origins: [],
-        fingerprint_proxy_label: null,
-        fingerprint_proxy_region: null,
-      },
       migration_notes: [],
       created_at: workflow.created_at,
       updated_at: workflow.updated_at,

@@ -5,7 +5,6 @@ import type {
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsEnvironment,
   WorkflowSettingsGeneral,
-  WorkflowSettingsOwnedTestGates,
   WorkflowSettingsRunPolicy,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
@@ -176,13 +175,6 @@ export function WorkflowSettingsDialog({
                   <EnvironmentSettingsSection
                     value={settings.environment}
                     onChange={(value) => updateSection("environment", value)}
-                  />
-                ) : null}
-                {activeSection === "owned_test_gates" ? (
-                  <OwnedTestGatesSettingsSection
-                    browserLaunch={settings.browser_launch}
-                    value={settings.owned_test_gates}
-                    onChange={(value) => updateSection("owned_test_gates", value)}
                   />
                 ) : null}
               </section>
@@ -449,74 +441,6 @@ function EnvironmentSettingsSection({
         config={{ variables: value.initial_variables }}
         onChange={(next) => onChange({ ...value, initial_variables: next.variables ?? [] })}
       />
-    </div>
-  );
-}
-
-function OwnedTestGatesSettingsSection({
-  browserLaunch,
-  value,
-  onChange,
-}: {
-  browserLaunch: WorkflowSettingsBrowserLaunch;
-  value: WorkflowSettingsOwnedTestGates;
-  onChange: (value: WorkflowSettingsOwnedTestGates) => void;
-}) {
-  return (
-    <div className="settings-form-grid">
-      <SwitchField
-        checked={value.fingerprint_preflight_enabled}
-        label="Fingerprint preflight"
-        onCheckedChange={(checked) =>
-          onChange({ ...value, fingerprint_preflight_enabled: checked })
-        }
-      />
-      <label className="field">
-        <span>Probe URL</span>
-        <Input
-          value={value.fingerprint_probe_url ?? ""}
-          onChange={(event) => onChange({ ...value, fingerprint_probe_url: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      <label className="field">
-        <span>Identity profile</span>
-        <Input
-          value={value.fingerprint_profile_id ?? ""}
-          onChange={(event) => onChange({ ...value, fingerprint_profile_id: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      <label className="field">
-        <span>Allowed origins</span>
-        <Textarea
-          value={value.fingerprint_allowed_origins.join("\n")}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              fingerprint_allowed_origins: event.currentTarget.value
-                .split(/\r?\n/)
-                .map((origin) => origin.trim())
-                .filter(Boolean),
-            })
-          }
-        />
-      </label>
-      <label className="field">
-        <span>Proxy label</span>
-        <Input
-          value={value.fingerprint_proxy_label ?? ""}
-          onChange={(event) => onChange({ ...value, fingerprint_proxy_label: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      <label className="field">
-        <span>Proxy region</span>
-        <Input
-          value={value.fingerprint_proxy_region ?? ""}
-          onChange={(event) => onChange({ ...value, fingerprint_proxy_region: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      {browserLaunch.headless && value.fingerprint_preflight_enabled ? (
-        <p className="field-error">Fingerprint preflight requires headed browser mode.</p>
-      ) : null}
     </div>
   );
 }

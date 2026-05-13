@@ -212,7 +212,6 @@ describe("Workflow list integration", () => {
             "run_policy",
             "browser_launch",
             "environment",
-            "owned_test_gates",
           ],
         },
       );

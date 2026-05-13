@@ -71,7 +71,5 @@ export function sectionLabel(section: WorkflowSettingsSectionId) {
       return "Browser Launch";
     case "environment":
       return "Environment";
-    case "owned_test_gates":
-      return "Owned Test Gates";
   }
 }

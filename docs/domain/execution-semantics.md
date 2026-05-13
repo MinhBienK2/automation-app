@@ -17,7 +17,6 @@
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup actions before graph actions.
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
-- Owned Test Gates fingerprint preflight opens the configured allowlisted probe URL before graph actions. The probe must return the JSON verdict contract; failed or malformed verdicts stop the run before workflow actions and store sanitized `fingerprint_preflight` evidence in outputs when available.
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
@@ -40,7 +39,7 @@
 - Mode values are `none`, `run_workflow`, and `test_step`.
 - Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
-- Captured outputs may include backend evidence keys such as `__action_traces`, `__evidence`, and `fingerprint_preflight`.
+- Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 

@@ -71,7 +71,6 @@ const workflowPackageSections: WorkflowSettingsSectionId[] = [
   "run_policy",
   "browser_launch",
   "environment",
-  "owned_test_gates",
 ];
 const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
 
@@ -961,7 +960,6 @@ function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     run_policy: status,
     browser_launch: status,
     environment: status,
-    owned_test_gates: status,
   };
 }
 

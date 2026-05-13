@@ -59,7 +59,6 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "run_policy", label: "Run Policy" },
   { id: "browser_launch", label: "Browser Launch" },
   { id: "environment", label: "Environment" },
-  { id: "owned_test_gates", label: "Owned Test Gates" },
 ];
 
 export function createDefaultBrowserProfileName(seed = randomProfileSeed()) {
@@ -224,14 +223,6 @@ export function defaultWorkflowSettings({
     environment: {
       initial_variables: [],
     },
-    owned_test_gates: {
-      fingerprint_preflight_enabled: false,
-      fingerprint_probe_url: null,
-      fingerprint_profile_id: null,
-      fingerprint_allowed_origins: [],
-      fingerprint_proxy_label: null,
-      fingerprint_proxy_region: null,
-    },
     migration_notes: [],
     created_at: createdAt,
     updated_at: updatedAt,
@@ -286,7 +277,7 @@ export const workflowSettingsHelp: Record<
         "Giving the workflow a name and description that make its owned target and purpose recognizable.",
         "Adding tags and notes that help operators review, group, and maintain the workflow.",
       ],
-      notFor: ["Runtime values, browser launch state, proxy routing, run limits, or owned test gates."],
+      notFor: ["Runtime values, browser launch state, proxy routing, or run limits."],
       precedence: [
         "General metadata is saved with the workflow, while run behavior comes from the graph and the other Workflow Settings sections.",
       ],
@@ -342,7 +333,7 @@ export const workflowSettingsHelp: Record<
         "Đặt tên và mô tả giúp nhận ra mục tiêu thuộc sở hữu và mục đích kiểm thử của workflow.",
         "Thêm tag và ghi chú để người vận hành review, gom nhóm, và bảo trì dễ hơn.",
       ],
-      notFor: ["Không dùng cho giá trị runtime, trạng thái launch browser, proxy, giới hạn run, hoặc owned test gates."],
+      notFor: ["Không dùng cho giá trị runtime, trạng thái launch browser, proxy, hoặc giới hạn run."],
       precedence: [
         "Metadata ở General được lưu cùng workflow; hành vi chạy đến từ graph và các section Workflow Settings khác.",
       ],
@@ -585,7 +576,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled.",
           whenToUse:
-            "Use headed mode for debugging, review, and fingerprint preflight gates; use headless only for routine runs that do not need visual inspection.",
+            "Use headed mode for debugging and review; use headless only for routine runs that do not need visual inspection.",
         },
       ],
       workflowExamples: [
@@ -666,7 +657,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt.",
           whenToUse:
-            "Dùng headed khi debug, review, hoặc chạy fingerprint preflight gate; chỉ dùng headless cho run thường lệ không cần quan sát.",
+            "Dùng headed khi debug hoặc review; chỉ dùng headless cho run thường lệ không cần quan sát.",
         },
       ],
       workflowExamples: [
@@ -784,156 +775,6 @@ export const workflowSettingsHelp: Record<
         {
           mistake: "Dùng Environment cho giá trị cần đổi sau một bước extraction.",
           fix: "Dùng node Set Variables trong graph sau extraction để thứ tự execution rõ ràng.",
-        },
-      ],
-    },
-  },
-  owned_test_gates: {
-    en: {
-      title: "Owned Test Gates Help",
-      summary:
-        "Owned Test Gates define pre-run controls for authorized environments, currently the fingerprint preflight probe that must pass before graph actions execute when enabled.",
-      uiLabels: enLabels,
-      bestFor: [
-        "Blocking a workflow before actions run when the owned probe says the browser identity is not acceptable for the test.",
-        "Recording compact verdict evidence that security and trust teams can review with run outputs.",
-      ],
-      notFor: ["Bypassing CAPTCHA, solving challenges, expanding target scope, or running against unapproved origins."],
-      precedence: [
-        "Fingerprint preflight runs after browser launch and Environment variables, but before user graph actions.",
-        "When enabled, the probe URL, identity profile, allowed origins, and headed browser mode must validate before run start.",
-      ],
-      fieldGuide: [
-        {
-          name: "Fingerprint preflight",
-          description:
-            "Switch that enables an owned JSON probe before graph actions. A malformed, blocked, or failed verdict stops execution before user actions run.",
-          whenToUse:
-            "Use it when a workflow must prove the test browser identity is inside an approved posture before touching the target flow.",
-        },
-        {
-          name: "Probe URL",
-          description:
-            "HTTP or HTTPS endpoint under an allowed origin that returns the preflight verdict JSON consumed by the runner before graph actions start.",
-          whenToUse:
-            "Use an owned staging or production diagnostics endpoint that is explicitly approved for this workflow.",
-        },
-        {
-          name: "Identity profile",
-          description:
-            "Operator-supplied profile identifier expected by the probe verdict, used to tie evidence to a named browser identity configuration.",
-          whenToUse:
-            "Use a stable id that reviewers can map back to the approved test profile and account state.",
-        },
-        {
-          name: "Allowed origins",
-          description:
-            "Newline-separated origins that constrain which probe URLs are acceptable when fingerprint preflight is enabled.",
-          whenToUse:
-            "List only owned or explicitly authorized origins that should be valid for this workflow's probe.",
-        },
-        {
-          name: "Proxy label",
-          description:
-            "Optional human-readable proxy metadata stored with the preflight configuration so evidence can describe the intended network route without exposing secrets.",
-          whenToUse:
-            "Use it when review needs to distinguish corporate, staging, regional, or isolated proxy routes.",
-        },
-        {
-          name: "Proxy region",
-          description:
-            "Optional region or locality metadata for the proxy route, stored for evidence context and operator review rather than browser launch behavior.",
-          whenToUse:
-            "Use it when preflight evidence should show which approved region the workflow expected.",
-        },
-      ],
-      workflowExamples: [
-        {
-          title: "Gate a production-owned test",
-          steps: ["Enable preflight", "Use an allowlisted probe URL", "Run headed so the gate can inspect browser identity"],
-        },
-      ],
-      safetyNotes: [
-        "Owned Test Gates are audit controls for approved systems, not challenge bypass or third-party account controls.",
-      ],
-      commonMistakes: [
-        {
-          mistake: "Enabling preflight while Browser Launch is headless.",
-          fix: "Use headed browser mode because current validation requires headed mode for fingerprint preflight.",
-        },
-      ],
-    },
-    vi: {
-      title: "Trợ giúp Owned Test Gates",
-      summary:
-        "Owned Test Gates định nghĩa control trước run cho môi trường được ủy quyền, hiện là fingerprint preflight probe phải pass trước khi graph actions chạy nếu được bật.",
-      uiLabels: viLabels,
-      bestFor: [
-        "Chặn workflow trước khi action chạy khi owned probe báo browser identity không đạt posture kiểm thử.",
-        "Ghi compact verdict evidence để đội security và trust review cùng run outputs.",
-      ],
-      notFor: ["Không dùng để bypass CAPTCHA, giải challenge, mở rộng scope target, hoặc chạy origin chưa được duyệt."],
-      precedence: [
-        "Fingerprint preflight chạy sau browser launch và Environment variables, nhưng trước user graph actions.",
-        "Khi bật, probe URL, identity profile, allowed origins, và headed browser mode phải validate trước khi run start.",
-      ],
-      fieldGuide: [
-        {
-          name: "Fingerprint preflight",
-          description:
-            "Switch bật owned JSON probe trước graph actions. Verdict lỗi, malformed, hoặc không pass sẽ dừng execution trước khi user actions chạy.",
-          whenToUse:
-            "Dùng khi workflow phải chứng minh test browser identity ở posture được duyệt trước khi chạm target flow.",
-        },
-        {
-          name: "Probe URL",
-          description:
-            "Endpoint HTTP hoặc HTTPS thuộc allowed origin, trả JSON verdict để runner đọc trước khi graph actions bắt đầu.",
-          whenToUse:
-            "Dùng endpoint diagnostics thuộc staging hoặc production owned đã được duyệt rõ cho workflow này.",
-        },
-        {
-          name: "Identity profile",
-          description:
-            "Định danh profile do operator nhập và probe verdict kỳ vọng, giúp evidence gắn với cấu hình browser identity cụ thể.",
-          whenToUse:
-            "Dùng id ổn định để reviewer map về test profile và account state đã được phê duyệt.",
-        },
-        {
-          name: "Allowed origins",
-          description:
-            "Danh sách origin mỗi dòng một giá trị, giới hạn probe URL nào được chấp nhận khi fingerprint preflight bật.",
-          whenToUse:
-            "Chỉ liệt kê origin thuộc sở hữu hoặc được ủy quyền rõ ràng hợp lệ cho probe của workflow này.",
-        },
-        {
-          name: "Proxy label",
-          description:
-            "Metadata proxy dạng người đọc được lưu cùng preflight config để evidence mô tả network route dự kiến mà không lộ secret.",
-          whenToUse:
-            "Dùng khi review cần phân biệt tuyến proxy corporate, staging, regional, hoặc isolated.",
-        },
-        {
-          name: "Proxy region",
-          description:
-            "Metadata region hoặc locality tùy chọn cho tuyến proxy, dùng cho evidence context và operator review thay vì điều khiển browser launch.",
-          whenToUse:
-            "Dùng khi preflight evidence nên thể hiện region được phê duyệt mà workflow kỳ vọng.",
-        },
-      ],
-      workflowExamples: [
-        {
-          title: "Gate kiểm thử production owned",
-          steps: ["Bật preflight", "Dùng probe URL allowlisted", "Chạy headed để gate kiểm tra browser identity"],
-        },
-      ],
-      safetyNotes: [
-        "Owned Test Gates là audit control cho hệ thống đã duyệt, không phải challenge bypass hay third-party account control.",
-      ],
-      commonMistakes: [
-        {
-          mistake: "Bật preflight trong khi Browser Launch đang headless.",
-          fix: "Dùng headed browser mode vì validation hiện yêu cầu headed mode cho fingerprint preflight.",
         },
       ],
     },

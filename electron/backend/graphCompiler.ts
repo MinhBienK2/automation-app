@@ -1207,25 +1207,6 @@ function safeArtifactNameValidation(
 
 function settingsPreludeSteps(settings: WorkflowSettings): CompiledGraphStep[] {
   const steps: CompiledGraphStep[] = [];
-  if (
-    settings.owned_test_gates.fingerprint_preflight_enabled &&
-    settings.owned_test_gates.fingerprint_probe_url
-  ) {
-    steps.push(settingsStep("browser:fingerprint-preflight:navigate", "Open fingerprint preflight probe", {
-      type: "navigate",
-      config: {
-        url: settings.owned_test_gates.fingerprint_probe_url,
-      },
-    }));
-    steps.push(settingsStep("browser:fingerprint-preflight:verdict", "Validate fingerprint preflight verdict", {
-      type: "execute_js",
-      config: {
-        script: fingerprintPreflightScript(settings),
-        output_name: null,
-      },
-    }));
-  }
-
   const variables: VariableAssignment[] = settings.environment.initial_variables;
   if (variables.length > 0) {
     steps.push(settingsStep("inputs:variables", "Seed settings inputs and variables", {
@@ -1299,41 +1280,6 @@ function forEachNestedActionArray(
   }
   const stepValue = record.step;
   if (isActionConfig(stepValue)) visit([stepValue]);
-}
-
-function fingerprintPreflightScript(settings: WorkflowSettings) {
-  const profileId = JSON.stringify(settings.owned_test_gates.fingerprint_profile_id ?? "unassigned");
-  const workflowId = JSON.stringify(settings.workflow_id);
-  const proxyLabel = JSON.stringify(settings.owned_test_gates.fingerprint_proxy_label ?? null);
-  const proxyRegion = JSON.stringify(settings.owned_test_gates.fingerprint_proxy_region ?? null);
-  return `const expectedProfileId = ${profileId};
-const workflowId = ${workflowId};
-const proxyLabel = ${proxyLabel};
-const proxyRegion = ${proxyRegion};
-const raw = document.body ? document.body.innerText.trim() : "";
-if (!raw) throw new Error("Fingerprint probe returned an empty verdict");
-const verdict = JSON.parse(raw);
-const required = ["passed", "verdict", "risk_score", "run_id", "profile_id", "mismatches", "evidence"];
-for (const field of required) if (!(field in verdict)) throw new Error("Fingerprint verdict missing required field: " + field);
-const evidence = {
-  workflow_id: workflowId,
-  timestamp_ms: Date.now(),
-  probe_origin: window.location.origin,
-  run_id: String(verdict.run_id || ""),
-  profile_id: String(verdict.profile_id || expectedProfileId),
-  expected_profile_id: expectedProfileId,
-  proxy_label: proxyLabel,
-  proxy_region: proxyRegion,
-  verdict: String(verdict.verdict || ""),
-  risk_score: verdict.risk_score ?? null,
-  passed: Boolean(verdict.passed),
-  mismatches: Array.isArray(verdict.mismatches) ? verdict.mismatches : [],
-  coverage: verdict.evidence || {}
-};
-window.__wamOutputs = window.__wamOutputs || {};
-window.__wamOutputs.fingerprint_preflight = evidence;
-if (!verdict.passed) throw new Error("Fingerprint preflight blocked run " + evidence.run_id);
-return evidence;`;
 }
 
 function expectedPorts(node: GraphNode): GraphPort[] {

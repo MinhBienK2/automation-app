@@ -36,6 +36,38 @@ describe("WorkflowSettingsDialog", () => {
     ).toBeInTheDocument();
   });
 
+  test("does not render Owned Test Gates or fingerprint preflight controls", () => {
+    render(
+      <WorkflowSettingsDialog
+        activeSection="general"
+        hasUnsavedChanges={false}
+        open
+        settings={defaultWorkflowSettings({
+          workflowId: "workflow-1",
+          workflowName: "Checkout QA",
+        })}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    expect(within(dialog).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "General",
+      "Run Policy",
+      "Browser Launch",
+      "Environment",
+    ]);
+    expect(within(dialog).queryByRole("tab", { name: "Owned Test Gates" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Fingerprint preflight" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/fingerprint preflight/i)).not.toBeInTheDocument();
+  });
+
   test("does not save disabled batch switch changes but still edits active run policy fields", async () => {
     const user = userEvent.setup();
     const onSettingsChange = vi.fn();
