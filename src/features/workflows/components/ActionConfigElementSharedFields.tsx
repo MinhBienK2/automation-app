@@ -146,7 +146,7 @@ export function StructuredTargetFields({
   const target = (rawConfig[targetField] as ElementTarget | null | undefined) ?? null;
   const locator = target?.locators[0] ?? null;
   const constraints = target?.constraints ?? null;
-  const kind = locator?.kind ?? "test_id";
+  const kind = locator?.kind ?? "xpath";
   const value = locator?.value ?? "";
 
   const updateTarget = (nextTarget: ElementTarget | null) => {

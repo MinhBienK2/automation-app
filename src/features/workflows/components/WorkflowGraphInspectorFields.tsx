@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
+import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { actionLabels } from "../../../lib/workflowUi";
 import { defaultActionConfig } from "../lib/workflowGraph";
@@ -773,13 +774,10 @@ function CloseBrowserField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <Label className="graph-checkbox-field">
-      <Input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-      />
-      Close browser after workflow ends
-    </Label>
+    <SwitchField
+      checked={checked}
+      label="Close browser after workflow ends"
+      onCheckedChange={onChange}
+    />
   );
 }

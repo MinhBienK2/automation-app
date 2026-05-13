@@ -1298,8 +1298,8 @@ function fieldValueGuidance(
   if (fieldName === "No fields") return undefined;
   if (isLocatorTypeField(fieldName)) {
     return vi
-      ? "Chọn loại locator ổn định nhất mà trang cung cấp; Test ID, Role, Label, và Placeholder thường dễ bảo trì hơn selector cấu trúc."
-      : "Choose the most stable locator kind the page provides; Test ID, Role, Label, and Placeholder are usually easier to maintain than structural selectors.";
+      ? "Mặc định là XPath để tương thích; đổi sang Test ID, Role, Label, hoặc Placeholder khi trang có selector ổn định hơn."
+      : "Defaults to XPath for compatibility; switch to Test ID, Role, Label, or Placeholder when the page exposes a more stable selector.";
   }
   if (isLocatorValueField(fieldName)) {
     return vi
@@ -1357,8 +1357,8 @@ function fieldExample(
   fieldName: string,
 ) {
   const vi = language === "vi";
-  if (isLocatorTypeField(fieldName)) return "Test ID";
-  if (isLocatorValueField(fieldName)) return "submit-button";
+  if (isLocatorTypeField(fieldName)) return "XPath";
+  if (isLocatorValueField(fieldName)) return "//*[@id='submit']";
   if (fieldName.endsWith("visibility")) return "Visible";
   if (fieldName.endsWith("enabled")) return "Enabled";
   if (fieldName.endsWith("contains text")) return vi ? "Đăng nhập" : "Sign in";

@@ -130,7 +130,7 @@ const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOpt
       option("Placeholder", "Tìm input qua placeholder.", "Dùng khi field không có label nhưng placeholder ổn định.", "Tránh nếu placeholder chỉ là hint tạm.", undefined, "placeholder"),
       option("Text", "Tìm element theo text hiển thị.", "Dùng cho link, button, hoặc nội dung có chữ ổn định.", "Tránh text động hoặc dịch theo locale.", undefined, "text"),
       option("CSS", "Tìm bằng CSS selector.", "Dùng khi có class/id/attribute ổn định.", "Tránh selector phụ thuộc layout sâu.", undefined, "css"),
-      option("XPath", "Tìm bằng XPath tương thích.", "Dùng cho workflow cũ hoặc khi selector khác không đủ.", "Tránh coi XPath tuyệt đối là lựa chọn mặc định.", undefined, "xpath"),
+      option("XPath", "Tìm bằng XPath tương thích.", "Dùng làm mặc định tương thích hoặc khi selector khác không đủ.", "Tránh XPath tuyệt đối dài khi layout trang thay đổi thường xuyên.", undefined, "xpath"),
       option("Attribute", "Tìm bằng một attribute cụ thể.", "Dùng khi trang có data attribute ổn định.", "Tránh attribute thay đổi theo session.", undefined, "attribute"),
     ],
     "Target visibility": [
@@ -248,7 +248,7 @@ const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOpt
       option("Placeholder", "Finds an input by placeholder.", "Use when a field has no label but a stable placeholder.", "Avoid placeholders that are only temporary hints.", undefined, "placeholder"),
       option("Text", "Finds an element by visible text.", "Use for links, buttons, or stable content.", "Avoid dynamic or localized text.", undefined, "text"),
       option("CSS", "Finds by CSS selector.", "Use for stable ids, classes, or attributes.", "Avoid selectors tied to deep layout structure.", undefined, "css"),
-      option("XPath", "Finds by compatibility XPath.", "Use for older workflows or when other selectors are insufficient.", "Avoid treating absolute XPath as the default.", undefined, "xpath"),
+      option("XPath", "Finds by compatibility XPath.", "Use as the compatibility default or when other selectors are insufficient.", "Avoid long absolute XPath when the page layout changes often.", undefined, "xpath"),
       option("Attribute", "Finds by a specific attribute.", "Use when the page exposes a stable data attribute.", "Avoid attributes that change by session.", undefined, "attribute"),
     ],
     "Target visibility": [

@@ -36,6 +36,7 @@ Preserve these unless the task explicitly changes them.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
+- Targetable action editors default Target locator type to XPath for compatibility, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
 - Planned, launch-time, and graph-internal compatibility actions are hidden from primary Add Action authoring. Existing saved configs remain loadable, and legacy graph-internal action configs inside action nodes show a compatibility panel with a read-only JSON preview instead of an empty editor.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.

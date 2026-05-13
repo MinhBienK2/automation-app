@@ -777,7 +777,9 @@ describe("Workflow graph editor integration", () => {
       (await screen.findByRole("dialog", { name: "Choose an end node" }))
         .querySelector('[data-value="end_failure"]') as HTMLElement,
     );
-    await userEvent.click(within(editor).getByLabelText("Close browser after workflow ends"));
+    await userEvent.click(
+      within(editor).getByRole("switch", { name: "Close browser after workflow ends" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -799,6 +801,29 @@ describe("Workflow graph editor integration", () => {
         }),
       );
     });
+  });
+
+  test("defaults structured target locators to XPath", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="click"]') as HTMLElement,
+    );
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }),
+    );
+
+    expect(within(editor).getByLabelText("Target locator type")).toHaveValue("xpath");
   });
 
   test("inserts variables discovered from graph variable nodes into template fields", async () => {

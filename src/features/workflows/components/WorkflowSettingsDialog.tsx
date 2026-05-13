@@ -221,36 +221,46 @@ function WorkflowSettingsHelpButton({ section }: { section: WorkflowSettingsSect
           Help
         </Button>
       </DialogTrigger>
-      <DialogContent className="settings-help-dialog">
-        <DialogHeader>
-          <DialogTitle>{help.title}</DialogTitle>
-          <DialogDescription>{help.summary}</DialogDescription>
+      <DialogContent className="workflow-settings-help-dialog">
+        <DialogHeader
+          className="workflow-settings-help-header"
+          data-testid="workflow-settings-help-header"
+        >
+          <div>
+            <DialogTitle>{help.title}</DialogTitle>
+            <DialogDescription>{help.summary}</DialogDescription>
+          </div>
+          <div className="workflow-settings-help-language">
+            <Button
+              type="button"
+              variant={language === "en" ? "default" : "ghost"}
+              onClick={() => setLanguage("en")}
+            >
+              EN
+            </Button>
+            <Button
+              type="button"
+              variant={language === "vi" ? "default" : "ghost"}
+              onClick={() => setLanguage("vi")}
+            >
+              VI
+            </Button>
+          </div>
         </DialogHeader>
-        <div className="settings-help-language">
-          <Button
-            type="button"
-            variant={language === "en" ? "default" : "ghost"}
-            onClick={() => setLanguage("en")}
-          >
-            EN
-          </Button>
-          <Button
-            type="button"
-            variant={language === "vi" ? "default" : "ghost"}
-            onClick={() => setLanguage("vi")}
-          >
-            VI
-          </Button>
-        </div>
-        <div className="settings-help-content">
-          <h3>{help.uiLabels.fieldGuide}</h3>
-          {help.fieldGuide.map((field) => (
-            <section key={field.name}>
-              <h4>{field.name}</h4>
-              <p>{field.description}</p>
-              {field.whenToUse ? <p>{field.whenToUse}</p> : null}
-            </section>
-          ))}
+        <div
+          className="workflow-settings-help-body"
+          data-testid="workflow-settings-help-body"
+        >
+          <section className="workflow-settings-help-list workflow-settings-help-fields">
+            <h3>{help.uiLabels.fieldGuide}</h3>
+            {help.fieldGuide.map((field) => (
+              <div key={field.name}>
+                <strong>{field.name}</strong>
+                <p>{field.description}</p>
+                {field.whenToUse ? <span>{field.whenToUse}</span> : null}
+              </div>
+            ))}
+          </section>
         </div>
       </DialogContent>
     </Dialog>
