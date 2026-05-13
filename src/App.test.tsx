@@ -1,9 +1,15 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridge } from "./tests/mocks/electron";
+import {
+  workflowBridgeMock,
+  workflowCommandCallMock,
+  mockWorkflowBridgeCommands,
+  resetWorkflowBridge,
+} from "./tests/mocks/electron";
 import { workflow } from "./tests/mocks/workflowFixtures";
 import {
+  idleRunState,
   listWorkflowScenario,
   workflowDetailScenario,
 } from "./tests/mocks/workflowScenarios";
@@ -158,5 +164,39 @@ describe("App settings and graph autosave", () => {
     expect(within(editor).queryByRole("button", { name: "Run" })).not.toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Save Graph" }))
       .not.toBeInTheDocument();
+  });
+
+  test("polls run state for a workflow started from the list", async () => {
+    let runStateCalls = 0;
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_run_state: () => {
+        runStateCalls += 1;
+        return runStateCalls === 1
+          ? idleRunState
+          : {
+              ...idleRunState,
+              status: "success",
+              mode: "run_workflow",
+            };
+      },
+      run_workflow: {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Run Login flow" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.runWorkflow).toHaveBeenCalledWith("workflow-1");
+    });
+    expect(await screen.findByText("Running: Login flow")).toBeInTheDocument();
+
+    expect(await screen.findByText("Run succeeded: Login flow")).toBeInTheDocument();
+    expect(runStateCalls).toBeGreaterThan(1);
   });
 });

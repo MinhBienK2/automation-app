@@ -1,5 +1,5 @@
-import { Copy, Download, Eye, Pencil, Trash2, Upload } from "lucide-react";
-import type { WorkflowSummary } from "../../../types/workflow";
+import { Copy, Download, Eye, Pencil, Play, Trash2, Upload } from "lucide-react";
+import type { RunState, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -13,17 +13,21 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { runStatusLabel } from "../../../lib/workflowUi";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
   workflowDialogMode: "create" | "edit" | null;
   workflowNameDraft: string;
   appError: string;
+  runState: RunState;
+  activeRunWorkflowName?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
   onDuplicateWorkflow: (workflow: WorkflowSummary) => void;
+  onRunWorkflow: (workflow: WorkflowSummary) => void;
   onOpenExportWorkflow: (workflow: WorkflowSummary) => void;
   onImportWorkflowPackageFile: (file: File | null) => void;
   onCloseWorkflowDialog: () => void;
@@ -36,11 +40,14 @@ export function WorkflowListPage({
   workflowDialogMode,
   workflowNameDraft,
   appError,
+  runState,
+  activeRunWorkflowName,
   onWorkflowNameDraftChange,
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
   onDuplicateWorkflow,
+  onRunWorkflow,
   onOpenExportWorkflow,
   onImportWorkflowPackageFile,
   onCloseWorkflowDialog,
@@ -55,6 +62,11 @@ export function WorkflowListPage({
       : "Rename the workflow without changing its graph.";
   const workflowNameLabel =
     workflowDialogMode === "create" ? "New workflow name" : "Workflow name";
+  const isRunning = runState.status === "running";
+  const runStatusText =
+    runState.status === "idle"
+      ? null
+      : `${runStatusLabel(runState)}${activeRunWorkflowName ? `: ${activeRunWorkflowName}` : ""}`;
 
   return (
     <section className="app-screen workflow-list-screen">
@@ -90,6 +102,11 @@ export function WorkflowListPage({
             {appError}
           </p>
         ) : null}
+        {runStatusText ? (
+          <p className="muted" role="status">
+            {runStatusText}
+          </p>
+        ) : null}
       </header>
 
       <section className="workflow-library" aria-label="Workflow list">
@@ -113,6 +130,15 @@ export function WorkflowListPage({
                   onClick={() => onOpenWorkflow(workflow.id)}
                 >
                   <Eye aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={`Run ${workflow.name}`}
+                  type="button"
+                  variant="secondary"
+                  disabled={isRunning}
+                  onClick={() => onRunWorkflow(workflow)}
+                >
+                  <Play aria-hidden="true" />
                 </IconButton>
                 <IconButton
                   variant="secondary"

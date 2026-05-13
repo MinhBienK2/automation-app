@@ -6,7 +6,7 @@
 - Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, then creates a `Start -> New node` draft graph. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
-- The workflow list exposes icon-only row actions for view, edit settings, duplicate, export, and delete. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, remaps full Workflow Settings to the new workflow id without package-export sanitization, preserves legacy step rows for compatibility, and refreshes the list.
+- The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, remaps full Workflow Settings to the new workflow id without package-export sanitization, preserves legacy step rows for compatibility, and refreshes the list.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
 
 ## Open Detail
@@ -59,7 +59,7 @@
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is still a valid saved legacy draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
-- UI polls `get_run_state` while status is `running`.
+- UI polls `get_run_state` while status is `running`, regardless of whether the run was started from the workflow detail workspace or directly from the workflow list.
 - Invalid advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
 - Graph runs share the same run-state lifecycle as full workflow runs.
 - Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`.

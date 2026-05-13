@@ -141,6 +141,8 @@ function App() {
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
   const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
   const [runState, setRunState] = useState<RunState>(initialRunState);
+  const [activeRunWorkflowName, setActiveRunWorkflowName] =
+    useState<string | null>(null);
   const [workflowDialogMode, setWorkflowDialogMode] =
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
@@ -560,6 +562,7 @@ function App() {
       if (!saved) return;
       const settingsSaved = await persistDirtyWorkflowSettings();
       if (!settingsSaved) return;
+      setActiveRunWorkflowName(detail.workflow.name);
       const state = await runWorkflowCommand(detail.workflow.id);
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
@@ -574,6 +577,18 @@ function App() {
           // Keep the command error as the primary system issue when validation cannot run.
         }
       }
+    }
+  }
+
+  async function runSavedWorkflow(workflow: WorkflowSummary) {
+    setAppError("");
+    setActiveRunWorkflowName(workflow.name);
+
+    try {
+      const state = await runWorkflowCommand(workflow.id);
+      setRunState(normalizeRunState(state));
+    } catch (error) {
+      setAppError(commandMessage(error));
     }
   }
 
@@ -766,11 +781,14 @@ function App() {
           workflowDialogMode={workflowDialogMode}
           workflowNameDraft={workflowNameDraft}
           appError={appError}
+          runState={runState}
+          activeRunWorkflowName={activeRunWorkflowName}
           onWorkflowNameDraftChange={setWorkflowNameDraft}
           onSubmitWorkflowDialog={submitWorkflowDialog}
           onOpenCreateWorkflow={openCreateWorkflowDialog}
           onOpenEditWorkflow={openEditWorkflowDialog}
           onDuplicateWorkflow={duplicateWorkflow}
+          onRunWorkflow={runSavedWorkflow}
           onOpenExportWorkflow={openExportPackageDialog}
           onImportWorkflowPackageFile={importWorkflowPackageFile}
           onCloseWorkflowDialog={closeWorkflowDialog}

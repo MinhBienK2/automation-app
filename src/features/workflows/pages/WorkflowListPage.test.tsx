@@ -86,6 +86,9 @@ describe("Workflow list integration", () => {
       name: "View Details",
     })).toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Run Login flow",
+    })).toBeInTheDocument();
+    expect(within(workflowCard as HTMLElement).getByRole("button", {
       name: "Edit Login flow",
     })).toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).getByRole("button", {
@@ -97,7 +100,12 @@ describe("Workflow list integration", () => {
     expect(within(workflowCard as HTMLElement).getByRole("button", {
       name: "Delete Login flow",
     })).toHaveAttribute("data-tooltip", "Delete Login flow");
+    expect(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Run Login flow",
+    })).toHaveAttribute("data-tooltip", "Run Login flow");
     expect(within(workflowCard as HTMLElement).queryByText("View Details"))
+      .not.toBeInTheDocument();
+    expect(within(workflowCard as HTMLElement).queryByText("Run"))
       .not.toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).queryByText("Edit"))
       .not.toBeInTheDocument();
@@ -105,6 +113,53 @@ describe("Workflow list integration", () => {
       .not.toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).queryByText("Delete"))
       .not.toBeInTheDocument();
+  });
+
+  test("runs a saved workflow from the list without opening the detail page", async () => {
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      run_workflow: {
+        status: "running",
+        mode: "run_workflow",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: [],
+        outputs: {},
+        error: null,
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Run Login flow",
+    }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.runWorkflow).toHaveBeenCalledWith("workflow-1");
+    });
+    expect(workflowBridgeMock.getWorkflow).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Back to Workflows" }))
+      .not.toBeInTheDocument();
+    expect(await screen.findByText("Running: Login flow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Login flow" })).toBeDisabled();
+  });
+
+  test("disables list run buttons while a run is already active", async () => {
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_run_state: {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+      },
+    });
+
+    renderApp();
+
+    expect(await screen.findByRole("button", { name: "Run Login flow" }))
+      .toBeDisabled();
   });
 
   test("confirms deletion in an app dialog instead of using the browser confirm", async () => {
