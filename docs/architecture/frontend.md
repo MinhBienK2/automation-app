@@ -23,6 +23,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector.
 - `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. These catalogs own detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
 - `src/features/workflows/lib/stepHelpTypes.ts`: shared action-help field/reference types consumed by help catalogs, palettes, and modal rendering so the generated action catalog does not own cross-component type contracts.
+- `src/features/workflows/lib/stepHelpFieldGuidance.ts`: shared action-help field details, option references, and locator-field helpers used by action help generation.
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.

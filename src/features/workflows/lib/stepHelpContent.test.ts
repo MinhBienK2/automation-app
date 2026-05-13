@@ -27,6 +27,12 @@ describe("step help content", () => {
     expect(workflowGraphPalettesSource).toContain('../lib/stepHelpTypes');
   });
 
+  test("keeps field guidance data outside the generated action catalog", () => {
+    expect(stepHelpContentSource).not.toContain("const specificFieldOptions");
+    expect(stepHelpContentSource).not.toContain("const specificFieldDetails");
+    expect(stepHelpContentSource).toContain("./stepHelpFieldGuidance");
+  });
+
   test("covers every action type in Vietnamese and English", () => {
     for (const actionType of allActionOptions) {
       expect(stepHelpContent[actionType].vi.summary).not.toHaveLength(0);
