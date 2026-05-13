@@ -35,6 +35,7 @@ import {
   validateWorkflowGraph as validateGraph,
 } from "./graphCompiler.js";
 import { BrowserWorkflowRunner } from "./runner.js";
+import { elementTargetFromXpath, migrateWorkflowGraph } from "./workflowGraphMigration.js";
 import { WorkflowRepository } from "./workflowRepository.js";
 
 export type CommandError = {
@@ -138,7 +139,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       requireWorkflow(workflowId);
       return createDraftGraph();
     }
-    return graph;
+    const migrated = migrateWorkflowGraph(graph);
+    if (JSON.stringify(migrated) !== JSON.stringify(graph)) {
+      repository.saveWorkflowGraph(workflowId, migrated);
+    }
+    return migrated;
   }
 
   function validateWorkflowRun(workflowId: string): RunValidationIssue[] {
@@ -252,15 +257,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     saveWorkflowGraph(workflowId: string, graph: WorkflowGraph) {
       requireWorkflow(workflowId);
-      repository.saveWorkflowGraph(workflowId, graph);
+      repository.saveWorkflowGraph(workflowId, migrateWorkflowGraph(graph));
     },
 
     validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssue[] {
-      return validateGraph(graph);
+      return validateGraph(migrateWorkflowGraph(graph));
     },
 
     compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGraph {
-      return compileGraph(graph);
+      return compileGraph(migrateWorkflowGraph(graph));
     },
 
     async runWorkflow(workflowId: string): Promise<RunState> {
@@ -454,8 +459,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       options: WorkflowPackageImportOptions,
     ): WorkflowDetail {
       validateWorkflowPackage(packageValue);
-      if (options.include_flow && packageValue.flow) {
-        const flowError = validateGraph(packageValue.flow).find(
+      const packageFlow = packageValue.flow ? migrateWorkflowGraph(packageValue.flow) : null;
+      if (options.include_flow && packageFlow) {
+        const flowError = validateGraph(packageFlow).find(
           (issue) => issue.level === "error" && !isImportableDraftFlowIssue(issue.message),
         );
         if (flowError) {
@@ -488,8 +494,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       context.database.exec("BEGIN IMMEDIATE");
       try {
         const workflow = createWorkflow(importedName);
-        if (options.include_flow && packageValue.flow) {
-          repository.saveWorkflowGraph(workflow.id, packageValue.flow);
+        if (options.include_flow && packageFlow) {
+          repository.saveWorkflowGraph(workflow.id, packageFlow);
         }
 
         if (candidateSettings) {
@@ -689,13 +695,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           ? {
               type: "click",
               config: {
-                xpath: event.xpath,
+                target: elementTargetFromXpath(event.xpath),
               },
             }
           : {
               type: "input_text",
               config: {
-                xpath: event.xpath,
+                target: elementTargetFromXpath(event.xpath),
                 text: event.text,
                 clear_before_input: true,
               },
@@ -1038,7 +1044,7 @@ function summaryToWorkflow(summary: WorkflowSummary): Workflow {
 
 function createDraftGraph(): WorkflowGraph {
   return {
-    version: 1,
+    version: 2,
     nodes: [
       {
         id: "start",
@@ -1070,6 +1076,7 @@ function createDraftGraph(): WorkflowGraph {
       },
     ],
     viewport: { x: 0, y: 0, zoom: 1 },
+    migration_notes: [],
   };
 }
 

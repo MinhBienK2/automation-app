@@ -175,6 +175,12 @@ export type WorkflowSettingsMigrationNote = {
   message: string;
 };
 
+export type WorkflowGraphMigrationNote = {
+  path: string;
+  action: "converted" | "dropped" | "review";
+  message: string;
+};
+
 export type WorkflowSettings = {
   workflow_id: string;
   version: number;
@@ -854,6 +860,7 @@ export type WorkflowGraph = {
   nodes: GraphNode[];
   edges: GraphEdge[];
   viewport: GraphViewport;
+  migration_notes?: WorkflowGraphMigrationNote[];
 };
 
 export type GraphValidationIssue = {

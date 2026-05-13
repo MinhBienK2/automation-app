@@ -129,4 +129,10 @@ describe("ActionConfigEditor", () => {
     expect(screen.queryByLabelText("Timeout ms")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Wait until")).not.toBeInTheDocument();
   });
+
+  test("Clear Field editor omits low-level clearing method controls", () => {
+    render(<ActionConfigEditor config={{ type: "clear_input", config: { target: null } }} onChange={vi.fn()} />);
+
+    expect(screen.queryByLabelText("Method")).not.toBeInTheDocument();
+  });
 });

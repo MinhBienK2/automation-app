@@ -31,7 +31,6 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: {
           target: null,
-          method: "select_all",
         },
       };
     case "click":

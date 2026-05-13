@@ -76,7 +76,7 @@ Additional hidden or compatibility actions include launch-time and planned actio
 - `checkpoint`
 - `resume_when_condition`
 
-Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, and legacy XPath fields.
+Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, clear-method, and legacy XPath fields. Legacy selector fields are converted into structured targets by graph v2 migration.
 
 Removed legacy actions: `open_url`, `sleep`, and `type_text` are migrated or normalized to `navigate`, duration `wait`, and `input_text`.
 

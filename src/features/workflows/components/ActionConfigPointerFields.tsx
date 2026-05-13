@@ -17,24 +17,7 @@ export function PointerActionFields({
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
     case "clear_input":
-      return (
-        <>
-          <ElementTargetFields config={config} onChange={onChange} />
-          <Label>
-            Method
-            <Select
-              value={config.config.method ?? "select_all"}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "method", event.currentTarget.value))
-              }
-            >
-              <option value="select_all">Select all</option>
-              <option value="backspace">Backspace</option>
-              <option value="dom">DOM value</option>
-            </Select>
-          </Label>
-        </>
-      );
+      return <ElementTargetFields config={config} onChange={onChange} />;
     case "click":
       return <ElementTargetFields config={config} onChange={onChange} />;
     case "scroll":

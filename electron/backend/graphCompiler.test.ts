@@ -405,7 +405,9 @@ describe("TypeScript graph compiler parity", () => {
         config: {
           type: "input_text",
           config: expect.objectContaining({
-            xpath: "//input",
+            target: {
+              locators: [{ kind: "xpath", value: "//input" }],
+            },
             text: "hello",
           }),
         },
@@ -416,7 +418,11 @@ describe("TypeScript graph compiler parity", () => {
         node_id: "click",
         config: {
           type: "click",
-          config: expect.objectContaining({ xpath: "//button" }),
+          config: {
+            target: {
+              locators: [{ kind: "xpath", value: "//button" }],
+            },
+          },
         },
       }),
     );
@@ -692,22 +698,9 @@ function clickAction(xpath: string): ActionConfig {
   return {
     type: "click",
     config: {
-      xpath,
-      target: null,
-      iframe_xpath: null,
-      mode: null,
-      button: null,
-      click_count: null,
-      scroll_into_view: null,
-      block: null,
-      inline: null,
-      position: null,
-      offset_x: null,
-      offset_y: null,
-      wait_until: null,
-      timeout_ms: null,
-      retry_interval_ms: null,
-      post_click_wait_ms: null,
+      target: {
+        locators: [{ kind: "xpath", value: xpath }],
+      },
     },
   };
 }

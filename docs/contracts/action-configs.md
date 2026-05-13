@@ -45,9 +45,10 @@ Element target config rules:
 - User-authored element-facing actions use `target`, a structured locator bundle with ordered locators (`test_id`, `role`, `label`, `placeholder`, `text`, `css`, `xpath`, or `attribute`) plus optional constraints (`visible`, `enabled`, `contains_text`, `index`) and optional iframe target.
 - Legacy `xpath` and `iframe_xpath` fields remain accepted for saved workflow compatibility and migration paths, but visible action defaults and editor fields no longer create them.
 - Drag/drop uses `source_target` and `target_target`; custom select uses `trigger_target`.
+- Graph v1 migration rewrites legacy XPath selector fields into those target fields and records converted/dropped field notes on `WorkflowGraph.migration_notes`.
 - Backend validation accepts either a non-empty legacy XPath or a valid structured target for required element actions.
 - The runner resolves structured targets at runtime through ordered locators, supports role/label/placeholder/text/CSS/XPath/attribute locator kinds, applies supported constraints, and reuses the frame-aware action path.
-- Visible action defaults no longer include action-level `wait_until`, `timeout_ms`, typing fidelity, retry interval, post-click wait, click positioning, or scroll tuning fields. Those fields may still appear in compatibility-loaded configs until the migration layer rewrites or drops them.
+- Visible action defaults no longer include action-level `wait_until`, `timeout_ms`, typing fidelity, retry interval, post-click wait, click positioning, clear-field method, or scroll tuning fields. Those fields may still appear in compatibility-loaded configs until the migration layer rewrites or drops them.
 
 Evidence config rules:
 

@@ -14,6 +14,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
+import { migrateWorkflowGraph } from "./workflowGraphMigration.js";
 
 type ValidationError = {
   field: string;
@@ -36,20 +37,22 @@ const nestedStepKeys = [
 ] as const;
 
 export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssue[] {
+  const normalizedGraph = migrateWorkflowGraph(graph);
   const issues: GraphValidationIssue[] = [];
-  if (graph.version !== 1) {
+  if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2) {
     issues.push(error(null, null, "Unsupported graph version"));
   }
 
-  const startCount = graph.nodes.filter((node) => node.node_type === "start").length;
+  const graphToValidate = normalizedGraph.version > 2 ? graph : normalizedGraph;
+  const startCount = graphToValidate.nodes.filter((node) => node.node_type === "start").length;
   if (startCount !== 1) {
     issues.push(error(null, null, "Graph must contain exactly one start node"));
   }
 
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const nodeById = new Map(graphToValidate.nodes.map((node) => [node.id, node]));
   const seenNodeIds = new Set<string>();
   const duplicateNodeIds = new Set<string>();
-  for (const node of graph.nodes) {
+  for (const node of graphToValidate.nodes) {
     if (!node.id.trim()) {
       issues.push(error(null, null, "Graph node id is required"));
     }
@@ -62,13 +65,13 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
     issues.push(error(nodeId, null, "Graph node id must be unique"));
   }
 
-  pushBranchContinuationIssues(graph, nodeById, issues);
+  pushBranchContinuationIssues(graphToValidate, nodeById, issues);
 
   const seenEdgeIds = new Set<string>();
   const seenExactEdges = new Set<string>();
   const usedOutputPorts = new Set<string>();
   const usedInputPorts = new Set<string>();
-  for (const edge of graph.edges) {
+  for (const edge of graphToValidate.edges) {
     if (edge.source_node_id === edge.target_node_id) {
       issues.push(error(edge.source_node_id, edge.id, "Self-links are not allowed"));
     }
@@ -118,21 +121,21 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
     usedInputPorts.add(inputPortKey);
   }
 
-  for (const node of graph.nodes) {
-    pushNodeSemanticIssues(graph, node, issues);
+  for (const node of graphToValidate.nodes) {
+    pushNodeSemanticIssues(graphToValidate, node, issues);
   }
 
   if (startCount === 1) {
-    const reachable = reachableNodeIds(graph);
-    for (const node of graph.nodes) {
+    const reachable = reachableNodeIds(graphToValidate);
+    for (const node of graphToValidate.nodes) {
       if (node.node_type !== "start" && !reachable.has(node.id)) {
         issues.push(error(node.id, null, `Node ${node.label} is unreachable`));
       }
     }
-    for (const nodeId of unsupportedCycleNodeIds(graph)) {
+    for (const nodeId of unsupportedCycleNodeIds(graphToValidate)) {
       issues.push(error(nodeId, null, `Graph contains an unsupported cycle at node ${nodeId}`));
     }
-    for (const nodeId of loopControlOutsideLoopNodeIds(graph)) {
+    for (const nodeId of loopControlOutsideLoopNodeIds(graphToValidate)) {
       const node = nodeById.get(nodeId);
       if (!node) continue;
       const label =
@@ -149,18 +152,19 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
 }
 
 export function compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGraph {
-  const blocking = validateWorkflowGraph(graph).find((issue) => issue.level === "error");
+  const normalizedGraph = migrateWorkflowGraph(graph);
+  const blocking = validateWorkflowGraph(normalizedGraph).find((issue) => issue.level === "error");
   if (blocking) {
     throw validationError("graph", blocking.message);
   }
 
-  const start = graph.nodes.find((node) => node.node_type === "start");
+  const start = normalizedGraph.nodes.find((node) => node.node_type === "start");
   if (!start) {
     throw validationError("graph", "Graph must contain exactly one start node");
   }
 
   const steps: CompiledGraphStep[] = [];
-  compilePath(graph, nextTarget(graph, start.id, "out"), new Set(), steps);
+  compilePath(normalizedGraph, nextTarget(normalizedGraph, start.id, "out"), new Set(), steps);
   return { steps };
 }
 
@@ -168,7 +172,7 @@ export function compileWorkflowRunPlan(
   graph: WorkflowGraph,
   settings: WorkflowSettings,
 ): CompiledWorkflowGraph {
-  const compiled = compileWorkflowGraph(graph).steps.map((step) => ({
+  const compiled = compileWorkflowGraph(migrateWorkflowGraph(graph)).steps.map((step) => ({
     ...step,
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(step.config)),
   }));

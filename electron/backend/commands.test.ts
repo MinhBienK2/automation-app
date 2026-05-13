@@ -56,6 +56,7 @@ describe("Electron workflow command handlers", () => {
       name: "Login flow",
     });
     expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
+      version: 2,
       nodes: expect.arrayContaining([
         expect.objectContaining({ id: "start", node_type: "start" }),
         expect.objectContaining({ id: "new-node", node_type: "action" }),
@@ -69,7 +70,10 @@ describe("Electron workflow command handlers", () => {
       viewport: { x: 10, y: 20, zoom: 1.5 },
     };
     handlers.saveWorkflowGraph(created.id, graph);
-    expect(handlers.getWorkflowGraph(created.id)).toEqual(graph);
+    expect(handlers.getWorkflowGraph(created.id)).toMatchObject({
+      ...graph,
+      version: 2,
+    });
 
     const settings = handlers.getWorkflowSettings(created.id);
     const saved = handlers.saveWorkflowSettings(created.id, {
@@ -97,6 +101,82 @@ describe("Electron workflow command handlers", () => {
 
     handlers.deleteWorkflow(created.id);
     expect(handlers.getWorkflow(created.id)).toBeNull();
+  });
+
+  test("migrates legacy workflow graphs on load and persists the upgraded action contract", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Legacy graph");
+    const legacyGraph: WorkflowGraph = {
+      version: 1,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: null,
+          ports: [{ id: "out", label: "Out", direction: "output" }],
+        },
+        {
+          id: "click-submit",
+          node_type: "action",
+          label: "Click Submit",
+          position: { x: 200, y: 0 },
+          config: {
+            type: "click",
+            config: {
+              xpath: "//*[@id='submit']",
+              timeout_ms: 5000,
+              wait_until: "clickable",
+            },
+          },
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+        },
+      ],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+    database
+      .prepare("UPDATE workflows SET graph_json = ? WHERE id = ?")
+      .run(JSON.stringify(legacyGraph), workflow.id);
+
+    const migrated = handlers.getWorkflowGraph(workflow.id);
+
+    expect(migrated).toMatchObject({
+      version: 2,
+      nodes: [
+        expect.any(Object),
+        expect.objectContaining({
+          config: {
+            type: "click",
+            config: {
+              target: {
+                locators: [{ kind: "xpath", value: "//*[@id='submit']" }],
+              },
+            },
+          },
+        }),
+      ],
+      migration_notes: expect.arrayContaining([
+        expect.objectContaining({ path: "nodes.click-submit.config.xpath", action: "converted" }),
+        expect.objectContaining({ path: "nodes.click-submit.config.timeout_ms", action: "dropped" }),
+      ]),
+    });
+    const persisted = JSON.parse(
+      String(
+        (
+          database
+            .prepare("SELECT graph_json FROM workflows WHERE id = ?")
+            .get(workflow.id) as { graph_json: string }
+        ).graph_json,
+      ),
+    );
+    expect(persisted.version).toBe(2);
+    expect(persisted.nodes[1].config.config).not.toHaveProperty("xpath");
+    expect(persisted.nodes[1].config.config).not.toHaveProperty("timeout_ms");
   });
 
   test("validates settings and maps browser config through simplified launch section", async () => {
@@ -337,6 +417,36 @@ describe("Electron workflow command handlers", () => {
         config: { json: "[1,2,3]" },
       }),
     ).toThrow("JSON variables must be an object");
+  });
+
+  test("normalizes recorded events into structured target action configs", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(
+      handlers.normalizeRecordedEvents([
+        { type: "click", xpath: "//*[@data-testid='save']" },
+        { type: "input", xpath: "//*[@name='email']", text: "qa@example.test" },
+      ]),
+    ).toEqual([
+      {
+        type: "click",
+        config: {
+          target: {
+            locators: [{ kind: "xpath", value: "//*[@data-testid='save']" }],
+          },
+        },
+      },
+      {
+        type: "input_text",
+        config: {
+          target: {
+            locators: [{ kind: "xpath", value: "//*[@name='email']" }],
+          },
+          text: "qa@example.test",
+          clear_before_input: true,
+        },
+      },
+    ]);
   });
 
   test("runs saved workflow graph through the Electron browser runner", async () => {

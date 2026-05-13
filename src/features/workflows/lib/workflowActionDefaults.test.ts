@@ -23,6 +23,7 @@ describe("workflow action defaults", () => {
     "offset_x",
     "offset_y",
     "wait_ms",
+    "method",
   ];
 
   test("visible action defaults use simplified public config fields", () => {
@@ -41,6 +42,10 @@ describe("workflow action defaults", () => {
     expect(defaultActionConfig("input_text")).toEqual({
       type: "input_text",
       config: { target: null, text: "", clear_before_input: true },
+    });
+    expect(defaultActionConfig("clear_input")).toEqual({
+      type: "clear_input",
+      config: { target: null },
     });
     expect(defaultActionConfig("drag_and_drop")).toEqual({
       type: "drag_and_drop",

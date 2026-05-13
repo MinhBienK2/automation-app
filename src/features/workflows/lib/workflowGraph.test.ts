@@ -49,7 +49,7 @@ describe("workflow graph helpers", () => {
   test("builds a linear graph from existing workflow steps", () => {
     const graph = linearGraphFromSteps([waitStep]);
 
-    expect(graph.version).toBe(1);
+    expect(graph.version).toBe(2);
     expect(graph.nodes.map((node) => node.id)).toEqual([
       "start",
       "step-wait",

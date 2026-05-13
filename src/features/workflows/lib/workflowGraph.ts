@@ -87,7 +87,7 @@ export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
     };
 
     return {
-      version: 1,
+      version: 2,
       nodes: [startNode, newNode],
       edges: [
         {
@@ -147,7 +147,7 @@ export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
   }));
 
   return {
-    version: 1,
+    version: 2,
     nodes,
     edges,
     viewport: { x: 0, y: 0, zoom: 1 },

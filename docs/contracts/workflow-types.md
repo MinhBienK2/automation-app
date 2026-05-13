@@ -87,6 +87,8 @@ Workflow exports include optional `settings`; imports without settings remain va
 
 Legacy v1 settings are migrated on load into v2. Obsolete browser emulation, timing, retry, challenge, context-seeding, storage, and trigger fields are dropped with migration notes instead of being preserved in the public contract.
 
+Legacy v1 workflow graphs are migrated on load/save/import into graph contract v2. Action configs convert legacy XPath selector fields into structured targets (`xpath` -> `target`, `source_xpath` -> `source_target`, `target_xpath` -> `target_target`, `trigger_xpath` -> `trigger_target`) and fold `iframe_xpath` into nested target iframe selectors. Obsolete per-action engine knobs such as action timeouts, wait readiness, typing delays, click retry/post-click settings, click positioning, and clear-field method settings are dropped with `migration_notes` on the graph.
+
 ## Workflow Package Shape
 
 Workflow Package v2 is the current user-facing import/export format. It is graph-first and does not use legacy ordered step rows:
@@ -133,7 +135,7 @@ When `concurrency_limit` or `headless` is omitted, the backend uses Workflow Set
 
 ## Graph Shape
 
-Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a `Start -> New node` draft graph, where `New node` is an action node with `config: null`. Existing Start-only saved graphs remain valid drafts, and existing linear step rows can still be represented as a generated graph with action nodes and a success end node for compatibility paths.
+Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a v2 `Start -> New node` draft graph, where `New node` is an action node with `config: null`. Existing Start-only saved graphs remain valid drafts, and existing linear step rows can still be represented as a generated v2 graph with action nodes and a success end node for compatibility paths.
 
 Graph validation issues serialize as `{ level, node_id, edge_id, message }`, where `level` is `error` or `warning`.
 
