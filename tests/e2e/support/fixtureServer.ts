@@ -25,6 +25,14 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, networkPage());
       return;
     }
+    if (url.pathname === "/keyboard") {
+      respondHtml(response, keyboardPage());
+      return;
+    }
+    if (url.pathname === "/dialog") {
+      respondHtml(response, dialogPage());
+      return;
+    }
     if (url.pathname === "/download/report.csv") {
       response.writeHead(200, {
         "content-disposition": 'attachment; filename="owned-report.csv"',
@@ -147,6 +155,57 @@ function networkPage() {
   <body>
     <h1 data-testid="network-title">Network Fixture</h1>
     <div data-testid="network-status">idle</div>
+  </body>
+</html>`;
+}
+
+function keyboardPage() {
+  return `<!doctype html>
+<html>
+  <head><title>Keyboard Fixture</title></head>
+  <body>
+    <label>Focus <input data-testid="focus-input"></label>
+    <label>Paste <input data-testid="paste-input"></label>
+    <label>Sequence <input data-testid="sequence-input"></label>
+    <div data-testid="keyboard-status">idle</div>
+    <script>
+      const status = document.querySelector('[data-testid="keyboard-status"]');
+      document.querySelector('[data-testid="focus-input"]').addEventListener('focus', () => {
+        status.textContent = 'focused';
+      });
+      document.querySelector('[data-testid="focus-input"]').addEventListener('blur', () => {
+        status.textContent = 'blurred';
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          status.textContent = 'hotkey';
+        } else if (event.key === 'Enter') {
+          status.textContent = 'enter';
+        }
+      });
+    </script>
+  </body>
+</html>`;
+}
+
+function dialogPage() {
+  return `<!doctype html>
+<html>
+  <head><title>Dialog Fixture</title></head>
+  <body>
+    <button data-testid="prompt-button">Prompt</button>
+    <button data-testid="confirm-button">Confirm</button>
+    <div data-testid="dialog-status">idle</div>
+    <script>
+      const status = document.querySelector('[data-testid="dialog-status"]');
+      document.querySelector('[data-testid="prompt-button"]').addEventListener('click', () => {
+        status.textContent = 'prompt:' + window.prompt('Name');
+      });
+      document.querySelector('[data-testid="confirm-button"]').addEventListener('click', () => {
+        status.textContent = 'confirm:' + window.confirm('Proceed');
+      });
+    </script>
   </body>
 </html>`;
 }

@@ -44,6 +44,7 @@ Focused commands:
 - `npm run test:e2e -- tests/e2e/electron-isolation.e2e.ts`
 - `npm run test:e2e -- tests/e2e/core-execution.e2e.ts`
 - `npm run test:e2e -- tests/e2e/capture-network.e2e.ts`
+- `npm run test:e2e -- tests/e2e/keyboard-dialog.e2e.ts`
 
 ## Policy
 
