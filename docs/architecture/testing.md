@@ -46,6 +46,7 @@ Focused commands:
 - `npm run test:e2e -- tests/e2e/capture-network.e2e.ts`
 - `npm run test:e2e -- tests/e2e/keyboard-dialog.e2e.ts`
 - `npm run test:e2e -- tests/e2e/pointer-actions.e2e.ts`
+- `npm run test:e2e -- tests/e2e/navigation-actions.e2e.ts`
 
 ## Policy
 

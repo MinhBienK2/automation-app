@@ -37,6 +37,30 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, pointerPage());
       return;
     }
+    if (url.pathname === "/history-a") {
+      respondHtml(response, historyPage("a"));
+      return;
+    }
+    if (url.pathname === "/history-b") {
+      respondHtml(response, historyPage("b"));
+      return;
+    }
+    if (url.pathname === "/reload") {
+      respondHtml(response, reloadPage());
+      return;
+    }
+    if (url.pathname === "/tab-home") {
+      respondHtml(response, tabPage("home"));
+      return;
+    }
+    if (url.pathname === "/tab-a") {
+      respondHtml(response, tabPage("a"));
+      return;
+    }
+    if (url.pathname === "/tab-b") {
+      respondHtml(response, tabPage("b"));
+      return;
+    }
     if (url.pathname === "/download/report.csv") {
       response.writeHead(200, {
         "content-disposition": 'attachment; filename="owned-report.csv"',
@@ -291,6 +315,41 @@ function pointerPage() {
         }
       });
     </script>
+</body>
+</html>`;
+}
+
+function historyPage(marker: "a" | "b") {
+  return `<!doctype html>
+<html>
+  <head><title>History ${marker}</title></head>
+  <body>
+    <h1 data-testid="history-marker">history:${marker}</h1>
+  </body>
+</html>`;
+}
+
+function reloadPage() {
+  return `<!doctype html>
+<html>
+  <head><title>Reload fixture</title></head>
+  <body>
+    <h1 data-testid="reload-marker">reload:pending</h1>
+    <script>
+      const nextCount = Number(window.sessionStorage.getItem('reload-count') || '0') + 1;
+      window.sessionStorage.setItem('reload-count', String(nextCount));
+      document.querySelector('[data-testid="reload-marker"]').textContent = 'reload:' + nextCount;
+    </script>
+  </body>
+</html>`;
+}
+
+function tabPage(marker: "home" | "a" | "b") {
+  return `<!doctype html>
+<html>
+  <head><title>Tab ${marker}</title></head>
+  <body>
+    <h1 data-testid="tab-marker">tab:${marker}</h1>
   </body>
 </html>`;
 }
