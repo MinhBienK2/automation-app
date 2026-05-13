@@ -228,7 +228,7 @@ describe("Workflow list integration", () => {
       version: 2,
       workflow: { name: "Imported package" },
       included_sections: ["flow", "settings.general"],
-      omitted_fields: ["settings.browser.proxy_password"],
+      omitted_fields: ["settings.browser_launch.proxy_password"],
       flow: linearGraphFromSteps([sleepStep]),
       settings: {
         general: {
@@ -259,7 +259,7 @@ describe("Workflow list integration", () => {
         workflow_name: "Imported package",
         includes_flow: true,
         settings_sections: ["general"],
-        omitted_fields: ["settings.browser.proxy_password"],
+        omitted_fields: ["settings.browser_launch.proxy_password"],
       },
       import_workflow_package: {
         workflow: importedWorkflow,
