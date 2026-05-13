@@ -19,4 +19,20 @@ describe("app shell static assets", () => {
     expect(existsSync(join(process.cwd(), "src/components/ui/tabs.tsx"))).toBe(false);
     expect(packageJson.dependencies).not.toHaveProperty("@radix-ui/react-tabs");
   });
+
+  test("keeps workflow package option controls out of App orchestration", () => {
+    const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
+
+    expect(
+      existsSync(
+        join(
+          process.cwd(),
+          "src/features/workflows/components/WorkflowPackageOptions.tsx",
+        ),
+      ),
+    ).toBe(true);
+    expect(appSource).toContain("WorkflowPackageOptions");
+    expect(appSource).not.toContain("function PackageFlowCheckbox");
+    expect(appSource).not.toContain("function PackageSectionPicker");
+  });
 });
