@@ -394,7 +394,7 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Run Policy Settings Help",
       summary:
-        "Run Policy settings define workflow-level limits and batch defaults: maximum run duration, browser retention after terminal outcomes, row concurrency, batch headless mode, and stop-on-first-failure behavior.",
+        "Run Policy settings define workflow-level limits and terminal browser retention. Batch controls are paused until Batch Run UI is ready.",
       uiLabels: enLabels,
       bestFor: [
         "Setting guardrails that apply to the whole workflow run rather than one graph node.",
@@ -404,6 +404,7 @@ export const workflowSettingsHelp: Record<
       precedence: [
         "Run Policy is read when a run starts; save settings before running to apply changes.",
         "Terminal graph nodes can still request browser closure at the point where they end execution.",
+        "Batch controls are paused until Batch Run UI is ready; saved batch defaults remain visible but are not editable here.",
       ],
       fieldGuide: [
         {
@@ -458,7 +459,7 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Run Policy",
       summary:
-        "Run Policy định nghĩa giới hạn và mặc định batch cấp workflow: thời lượng tối đa, giữ hay đóng browser sau kết thúc, concurrency theo dòng, headless cho batch, và dừng batch khi dòng đầu tiên fail.",
+        "Run Policy định nghĩa giới hạn cấp workflow và chính sách giữ browser sau kết thúc. Batch controls are paused until Batch Run UI is ready.",
       uiLabels: viLabels,
       bestFor: [
         "Đặt guardrail áp dụng cho cả lần chạy workflow thay vì một node graph riêng lẻ.",
@@ -468,6 +469,7 @@ export const workflowSettingsHelp: Record<
       precedence: [
         "Run Policy được đọc khi run bắt đầu; hãy save settings trước khi chạy để áp dụng thay đổi.",
         "Terminal node trong graph vẫn có thể yêu cầu đóng browser tại điểm kết thúc của nó.",
+        "Batch controls are paused until Batch Run UI is ready; các mặc định batch đã lưu vẫn hiển thị nhưng không chỉnh ở đây.",
       ],
       fieldGuide: [
         {

@@ -13,6 +13,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords.
 - Workflow detail exposes a header Settings action that opens Workflow Settings at Browser Launch.
 - Workflow Settings contains General, Run Policy, Browser Launch, Environment, and Owned Test Gates sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
+- Workflow Settings Run Policy exposes maximum workflow duration and browser retention as editable fields. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
 - Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
 - Workflow Settings Browser Launch exposes proxy and headless launch controls.

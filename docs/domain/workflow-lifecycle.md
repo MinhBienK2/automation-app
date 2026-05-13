@@ -37,6 +37,7 @@
 - Missing optional branch ports are allowed and compile as no-op paths. Missing continuation ports end the current path successfully. Required body ports such as loop body, retry try, try/catch try, and fallback primary block validation/run.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
 - `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header and saves dirty sections through that section command. General updates workflow summary metadata; legacy browser config commands map to `settings.browser_launch`.
+- Workflow Settings Run Policy keeps batch defaults visible for compatibility, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
@@ -69,6 +70,7 @@
 - `run_batch_workflow` uses the same active-run lifecycle lock as normal runs, compiles the saved graph, prepends each row's values as runtime variables after settings setup actions, applies Browser Launch settings and Run Policy batch headless defaults, runs rows sequentially, persists each executed row as a run with step evidence, closes each row browser session, and returns per-row status.
 - `batch_concurrency_limit` values above 1 are rejected until isolated browser sessions support safe parallel rows.
 - `batch_stop_on_first_failed_row` stops scheduling additional rows after the first failed row.
+- Backend batch compatibility remains active even though the Workflow Settings UI currently shows the batch defaults as paused, read-only controls.
 - `stop_run` can stop an active batch before the next row.
 
 ## Stop

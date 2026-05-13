@@ -340,20 +340,26 @@ function RunPolicySettingsSection({
       <NumberField
         label="Batch concurrency limit"
         value={value.batch_concurrency_limit}
+        disabled
         onChange={(next) => onChange({ ...value, batch_concurrency_limit: next })}
       />
       <SwitchField
         checked={value.batch_headless}
+        disabled
         label="Batch runs are headless"
         onCheckedChange={(checked) => onChange({ ...value, batch_headless: checked })}
       />
       <SwitchField
         checked={value.batch_stop_on_first_failed_row}
+        disabled
         label="Stop batch on first failed row"
         onCheckedChange={(checked) =>
           onChange({ ...value, batch_stop_on_first_failed_row: checked })
         }
       />
+      <p className="workflow-settings-hint">
+        Batch controls are paused until Batch Run UI is ready.
+      </p>
     </div>
   );
 }
@@ -516,10 +522,12 @@ function OwnedTestGatesSettingsSection({
 }
 
 function NumberField({
+  disabled,
   label,
   value,
   onChange,
 }: {
+  disabled?: boolean;
   label: string;
   value?: number | null;
   onChange: (value: number | null) => void;
@@ -531,6 +539,7 @@ function NumberField({
         min={1}
         type="number"
         value={value ?? ""}
+        disabled={disabled}
         onChange={(event) => onChange(numberOrNull(event.currentTarget.value))}
       />
     </label>
