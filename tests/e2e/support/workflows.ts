@@ -19,7 +19,10 @@ export async function createAndRunWorkflow(
   name: string,
   steps: Array<{ id: string; label: string; config: ActionConfig }>,
 ) {
-  const graph = linearGraph(steps);
+  return createAndRunGraph(page, name, linearGraph(steps));
+}
+
+export async function createAndRunGraph(page: Page, name: string, graph: WorkflowGraph) {
   const workflowId = await createWorkflow(page, name, graph);
 
   try {

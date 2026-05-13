@@ -49,6 +49,7 @@ Focused commands:
 - `npm run test:e2e -- tests/e2e/navigation-actions.e2e.ts`
 - `npm run test:e2e -- tests/e2e/extended-form-actions.e2e.ts`
 - `npm run test:e2e -- tests/e2e/wait-assertion-actions.e2e.ts`
+- `npm run test:e2e -- tests/e2e/control-flow.e2e.ts`
 
 ## Policy
 
