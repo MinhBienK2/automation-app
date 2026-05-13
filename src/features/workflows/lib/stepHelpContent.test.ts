@@ -1,10 +1,32 @@
 import { describe, expect, test } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { allActionOptions } from "../../../lib/workflowUi";
 import type { GraphNodeType } from "../../../types/workflow";
 import { graphNodeHelpContent } from "./graphNodeHelpContent";
 import { stepHelpContent } from "./stepHelpContent";
 
+const stepHelpContentSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/lib/stepHelpContent.ts"),
+  "utf8",
+);
+const stepHelpModalSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/StepHelpModal.tsx"),
+  "utf8",
+);
+const workflowGraphPalettesSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/WorkflowGraphPalettes.tsx"),
+  "utf8",
+);
+
 describe("step help content", () => {
+  test("keeps shared help contracts outside the generated action catalog", () => {
+    expect(stepHelpContentSource).not.toContain("export type StepHelpLanguage");
+    expect(stepHelpContentSource).not.toContain("export type StepHelpContent");
+    expect(stepHelpModalSource).toContain('../lib/stepHelpTypes');
+    expect(workflowGraphPalettesSource).toContain('../lib/stepHelpTypes');
+  });
+
   test("covers every action type in Vietnamese and English", () => {
     for (const actionType of allActionOptions) {
       expect(stepHelpContent[actionType].vi.summary).not.toHaveLength(0);

@@ -28,7 +28,7 @@ import {
   type GraphNodeFieldReference,
   type GraphNodeHelpLanguage,
 } from "../lib/graphNodeHelpContent";
-import type { HelpFieldCategory } from "../lib/stepHelpContent";
+import type { HelpFieldCategory } from "../lib/stepHelpTypes";
 import { StepHelpModal } from "./StepHelpModal";
 
 export const logicNodeGroups: Array<{

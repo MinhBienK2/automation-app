@@ -10,12 +10,12 @@ import {
 } from "../../../components/ui/dialog";
 import { ScrollArea } from "../../../components/ui/scroll-area";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
-import {
-  stepHelpContent,
-  type ActionFieldReference,
-  type HelpFieldCategory,
-  type StepHelpLanguage,
-} from "../lib/stepHelpContent";
+import { stepHelpContent } from "../lib/stepHelpContent";
+import type {
+  ActionFieldReference,
+  HelpFieldCategory,
+  StepHelpLanguage,
+} from "../lib/stepHelpTypes";
 
 type StepHelpModalProps = {
   actionType: ActionType;

@@ -2,7 +2,7 @@ import type { GraphNodeType } from "../../../types/workflow";
 import type {
   ActionFieldOptionReference,
   HelpFieldCategory,
-} from "./stepHelpContent";
+} from "./stepHelpTypes";
 
 export type GraphNodeHelpLanguage = "vi" | "en";
 
