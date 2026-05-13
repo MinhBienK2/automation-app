@@ -61,6 +61,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, tabPage("b"));
       return;
     }
+    if (url.pathname === "/extended-form") {
+      respondHtml(response, extendedFormPage());
+      return;
+    }
     if (url.pathname === "/download/report.csv") {
       response.writeHead(200, {
         "content-disposition": 'attachment; filename="owned-report.csv"',
@@ -350,6 +354,45 @@ function tabPage(marker: "home" | "a" | "b") {
   <head><title>Tab ${marker}</title></head>
   <body>
     <h1 data-testid="tab-marker">tab:${marker}</h1>
+  </body>
+</html>`;
+}
+
+function extendedFormPage() {
+  return `<!doctype html>
+<html>
+  <head>
+    <title>Extended Form Fixture</title>
+    <style>
+      [hidden] { display: none; }
+      [data-testid="rich-editor"] { border: 1px solid #98a2b3; min-height: 48px; padding: 8px; width: 320px; }
+    </style>
+  </head>
+  <body>
+    <label>Upload <input data-testid="upload-input" type="file"></label>
+    <div data-testid="upload-status">upload:none</div>
+    <button data-testid="custom-trigger" type="button">Choose custom option</button>
+    <div data-testid="custom-options" hidden>
+      <button type="button">Alpha</button>
+      <button type="button">Delta</button>
+    </div>
+    <div data-testid="custom-status">custom:none</div>
+    <div data-testid="rich-editor" contenteditable="true"></div>
+    <script>
+      document.querySelector('[data-testid="upload-input"]').addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        document.querySelector('[data-testid="upload-status"]').textContent = 'upload:' + (file ? file.name : 'none');
+      });
+      const options = document.querySelector('[data-testid="custom-options"]');
+      document.querySelector('[data-testid="custom-trigger"]').addEventListener('click', () => {
+        options.hidden = false;
+      });
+      options.addEventListener('click', (event) => {
+        if (!(event.target instanceof HTMLButtonElement)) return;
+        document.querySelector('[data-testid="custom-status"]').textContent = 'custom:' + event.target.textContent;
+        options.hidden = true;
+      });
+    </script>
   </body>
 </html>`;
 }
