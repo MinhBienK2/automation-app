@@ -272,7 +272,7 @@ export class BrowserWorkflowRunner {
       signal: request.signal,
     };
 
-    let closeBrowser = request.settings.run_policy.browser_retention === "close" || launch.temporary;
+    let closeBrowser = request.settings.run_policy.browser_retention === "close";
 
     try {
       await this.applyEnvironment(runtime, request.settings);

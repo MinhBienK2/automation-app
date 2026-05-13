@@ -324,6 +324,30 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(true);
   });
 
+  test("retains temporary browser sessions when run policy and terminal node do not request closure", async () => {
+    const context = new FakeContext();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("end", "End Success", {
+            type: "stop_workflow",
+            config: { status: "success", reason: null, close_browser: false },
+          }),
+        ],
+      },
+      settings: makeSettings({ run_policy: { browser_retention: "retain" } }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(context.closed).toBe(false);
+  });
+
   test("waits for element states using Playwright locator wait semantics", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
