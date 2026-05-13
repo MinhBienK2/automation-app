@@ -9,7 +9,7 @@ use the desktop app:
   workflow bridge exposure.
 - Workflow list, workflow creation, graph canvas rendering, action type editing,
   and app-level Settings navigation.
-- Workflow Settings dialog navigation, Execution and Browser field editing, and
+- Workflow Settings dialog navigation, Run Policy and Browser Launch field editing, and
   settings save through Electron IPC.
 - Electron backend command, persistence, graph compiler, and runner test suites.
 - Linux unpacked packaging smoke for the production binary.
@@ -26,7 +26,7 @@ use the desktop app:
 - Workflow creation opens the graph workspace and renders the default
   `Start -> New node` graph.
 - Action type selection updates the selected graph node editor.
-- Workflow Settings can edit and persist Execution and Browser values.
+- Workflow Settings can edit and persist Run Policy and Browser Launch values.
 - Desktop runtime smoke must report no page errors and no console errors for
   preload loading, bridge availability, missing renderer assets, syntax errors,
   or missing dialog descriptions.

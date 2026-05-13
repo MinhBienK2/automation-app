@@ -16,9 +16,11 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy. Subworkflow nodes remain compatibility placeholders and fail explicitly until nested lifecycle semantics are implemented.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Graph autosave is an app-level editing preference controlled from Settings.
-- Workflow Settings is the per-workflow configuration aggregate for workflow identity, execution defaults, browser launch profile, environment defaults, initial variables, planned trigger metadata, and advanced compatibility diagnostics.
-- The Browser section of Workflow Settings owns the reuse-login-session control, launch profile, proxy, device profile presets, user agent, viewport, mobile/touch flags, headed/headless default, challenge handling policy, and fingerprint preflight gate. Enabling reuse generates or uses a named persistent browser profile; disabling reuse clears the profile name so runs use temporary browser state. Device profile presets keep user agent, viewport, mobile, and touch settings coherent; legacy browser config commands map to this section for compatibility.
-- The Execution section owns interaction fidelity, direct DOM fallback policy, and timing profile controls in addition to timeout, retention, wait-between-nodes, and batch defaults. Existing workflows default to standard fidelity.
+- Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, initial environment variables, and owned test gates.
+- The Browser Launch section owns the reuse-login-session control, launch profile, proxy, and headed/headless default. Enabling reuse generates or uses a named persistent browser profile; disabling reuse clears the profile name so runs use temporary browser state. Legacy browser config commands map to this section for compatibility.
+- The Run Policy section owns maximum workflow duration, terminal browser retention, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
+- The Environment section owns initial variable rows that are available before graph actions run.
+- The Owned Test Gates section owns fingerprint preflight configuration for allowed probe URLs, identity profiles, origins, proxy labels, and proxy regions.
 
 ## User Workflows
 
