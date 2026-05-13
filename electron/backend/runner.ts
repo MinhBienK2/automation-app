@@ -615,9 +615,13 @@ export class BrowserWorkflowRunner {
             action.type,
           )()) ?? "";
         return;
-      case "extract_table":
       case "extract_list":
         runtime.outputs[action.config.output_name] = await extractListLike(
+          await locatorFor(runtime.page, action.config.target, action.config.xpath),
+        );
+        return;
+      case "extract_table":
+        runtime.outputs[action.config.output_name] = await extractTable(
           await locatorFor(runtime.page, action.config.target, action.config.xpath),
         );
         return;
@@ -1825,6 +1829,22 @@ async function extractListLike(locator: BrowserDriverLocator) {
     values.push((await locator.nth?.(index).textContent?.()) ?? "");
   }
   return values;
+}
+
+async function extractTable(locator: BrowserDriverLocator) {
+  if (locator.evaluate) {
+    return locator.evaluate((element) => {
+      const table = element instanceof HTMLTableElement ? element : element.closest("table");
+      const root = table ?? element;
+      return Array.from(root.querySelectorAll("tr")).map((row) =>
+        Array.from(row.querySelectorAll("th,td")).map((cell) =>
+          cell.textContent?.trim() ?? "",
+        ),
+      );
+    });
+  }
+
+  return extractListLike(locator);
 }
 
 function sanitizePathSegment(value: string) {

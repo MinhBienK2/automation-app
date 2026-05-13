@@ -31,6 +31,7 @@
 - Right Click dispatches a right-button context-menu event sequence at the resolved target, avoiding driver adapters that ignore right-click button options.
 - Scroll updates page position through browser-side `window.scrollBy` and emits a scroll event before the next action runs.
 - Dialog actions register one-shot browser dialog handlers. `wait_for_download` waits for a real download event and saves the artifact under the current run evidence directory.
+- `extract_table` resolves the target table or nearest owning table and stores rows as arrays of trimmed `th`/`td` cell text.
 - `execute_js` runs script text as a browser-side function body. Scripts may use `return ...`; when `output_name` is set, the returned value is stored in run outputs.
 
 ## Run State

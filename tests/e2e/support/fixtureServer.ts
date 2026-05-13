@@ -179,6 +179,14 @@ function capturePage() {
       <li data-testid="capture-item">Beta</li>
       <li data-testid="capture-item">Gamma</li>
     </ul>
+    <table data-testid="capture-table">
+      <thead>
+        <tr><th>Name</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Fixture</td><td>Ready</td></tr>
+      </tbody>
+    </table>
     <a data-testid="download-report" href="/download/report.csv" download>Download report</a>
   </body>
 </html>`;

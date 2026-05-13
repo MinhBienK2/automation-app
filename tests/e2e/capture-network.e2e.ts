@@ -14,7 +14,7 @@ test.describe("desktop capture and network node execution", () => {
       {
         type: "nodes",
         description:
-          "navigate, extract_text, extract_attribute, extract_input_value, extract_list, take_screenshot, execute_js, wait_for_download",
+          "navigate, extract_text, extract_attribute, extract_input_value, extract_list, extract_table, take_screenshot, execute_js, wait_for_download",
       },
       {
         type: "desktop depth",
@@ -65,6 +65,14 @@ test.describe("desktop capture and network node execution", () => {
         },
       },
       {
+        id: "extract-table",
+        label: "Extract Table",
+        config: {
+          type: "extract_table",
+          config: { target: target("capture-table"), output_name: "capture_table" },
+        },
+      },
+      {
         id: "take-shot",
         label: "Take Screenshot",
         config: {
@@ -95,6 +103,10 @@ test.describe("desktop capture and network node execution", () => {
     expect(state.outputs.capture_status).toBe("ready");
     expect(state.outputs.capture_input).toBe("field-value");
     expect(state.outputs.capture_items).toEqual(["Alpha", "Beta", "Gamma"]);
+    expect(state.outputs.capture_table).toEqual([
+      ["Name", "Status"],
+      ["Fixture", "Ready"],
+    ]);
     expect(state.outputs.download_trigger).toBe("scheduled");
     expect(String(state.outputs.capture_screenshot)).toMatch(
       /^runs\/.+\/screenshots\/\d+-take-shot-capture-page\.png$/,

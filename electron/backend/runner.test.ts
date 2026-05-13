@@ -251,6 +251,34 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("click:testid=menu-target");
   });
 
+  test("extracts table outputs through locator DOM evaluation", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("table", "Extract Table", {
+            type: "extract_table",
+            config: { xpath: "//table[@id='summary']", output_name: "rows" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs.rows).toEqual([
+      ["Name", "Status"],
+      ["Fixture", "Ready"],
+    ]);
+    expect(page.events).toContain("evaluate://table[@id='summary']");
+  });
+
   test("checks cancellation during waits and closes temporary contexts on stop", async () => {
     const context = new FakeContext();
     const cancellation = new AbortController();
@@ -1705,6 +1733,12 @@ class FakeLocator {
 
   async evaluate() {
     this.events.push(`evaluate:${this.selector}`);
+    if (this.selector.includes("table")) {
+      return [
+        ["Name", "Status"],
+        ["Fixture", "Ready"],
+      ];
+    }
     return null;
   }
 
