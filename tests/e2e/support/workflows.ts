@@ -44,7 +44,14 @@ export async function createAndRunWorkflowExpectingFailure(
   name: string,
   steps: Array<{ id: string; label: string; config: ActionConfig }>,
 ) {
-  const graph = linearGraph(steps);
+  return createAndRunGraphExpectingFailure(page, name, linearGraph(steps));
+}
+
+export async function createAndRunGraphExpectingFailure(
+  page: Page,
+  name: string,
+  graph: WorkflowGraph,
+) {
   const workflowId = await createWorkflow(page, name, graph);
 
   await expect

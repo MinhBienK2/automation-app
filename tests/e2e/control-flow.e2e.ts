@@ -1,5 +1,5 @@
 import { test, expect } from "./support/electronFixture";
-import { createAndRunGraph } from "./support/workflows";
+import { createAndRunGraph, createAndRunGraphExpectingFailure } from "./support/workflows";
 import type {
   ActionConfig,
   GraphNode,
@@ -58,6 +58,77 @@ test.describe("desktop graph variable and control-flow node execution", () => {
         "until-body",
         "retry-node",
         "retry-attempt",
+      ]),
+    );
+  });
+
+  test("runs loop-control nodes inside visible loop branches", async ({ appWindow }, testInfo) => {
+    testInfo.annotations.push(
+      { type: "fixture route", description: "none" },
+      {
+        type: "nodes",
+        description: "repeat_times, break_loop, continue_loop, set_variable, end_success",
+      },
+      {
+        type: "desktop depth",
+        description: "Verifies visible loop-control nodes are valid and executable inside loop branches.",
+      },
+    );
+
+    const { state } = await createAndRunGraph(
+      appWindow,
+      "E2E loop controls",
+      loopControlGraph(),
+    );
+
+    expect(state.outputs.break_count).toBe(1);
+    expect(state.outputs.break_result).toBe("after-break");
+    expect(state.outputs.continue_count).toBe(2);
+    expect(state.outputs.continue_result).toBe("after-continue");
+    expect(state.completed_step_ids).toEqual(
+      expect.arrayContaining([
+        "break-repeat",
+        "break-counter",
+        "after-break",
+        "continue-repeat",
+        "continue-counter",
+        "after-continue",
+      ]),
+    );
+  });
+
+  test("surfaces visible end failure and stop workflow terminal outcomes", async ({
+    appWindow,
+  }, testInfo) => {
+    testInfo.annotations.push(
+      { type: "fixture route", description: "none" },
+      {
+        type: "nodes",
+        description: "end_failure, stop_workflow",
+      },
+      {
+        type: "desktop depth",
+        description: "Verifies visible terminal graph nodes set final desktop run outcomes.",
+      },
+    );
+
+    const failure = await createAndRunGraphExpectingFailure(
+      appWindow,
+      "E2E terminal failure",
+      terminalFailureGraph(),
+    );
+
+    expect(failure.state.error).toMatchObject({
+      step_id: "end-failure",
+      action_type: "stop_workflow",
+      reason: "terminal failure",
+    });
+
+    const stopped = await createAndRunGraph(appWindow, "E2E terminal stop success", stopSuccessGraph());
+    expect(stopped.state.status).toBe("success");
+    expect(stopped.state.outputs.__action_traces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ node_id: "stop-success", action_type: "stop_workflow" }),
       ]),
     );
   });
@@ -170,6 +241,89 @@ function controlFlowGraph(): WorkflowGraph {
   };
 }
 
+function loopControlGraph(): WorkflowGraph {
+  const nodes = [
+    node("start", "start", "Start", null),
+    node("break-repeat", "repeat_times", "Repeat Break", { times: 3 }),
+    actionNode("break-counter", "Count Before Break", {
+      type: "execute_js",
+      config: {
+        script: "window.__breakCount = (window.__breakCount || 0) + 1; return window.__breakCount;",
+        output_name: "break_count",
+      },
+    }),
+    node("break-loop", "break_loop", "Break Loop", null),
+    node("after-break", "set_variable", "After Break", {
+      variables: [{ name: "break_result", value_type: "text", value: "after-break" }],
+    }),
+    node("continue-repeat", "repeat_times", "Repeat Continue", { times: 2 }),
+    actionNode("continue-counter", "Count Before Continue", {
+      type: "execute_js",
+      config: {
+        script:
+          "window.__continueCount = (window.__continueCount || 0) + 1; return window.__continueCount;",
+        output_name: "continue_count",
+      },
+    }),
+    node("continue-loop", "continue_loop", "Continue Loop", null),
+    node("after-continue", "set_variable", "After Continue", {
+      variables: [{ name: "continue_result", value_type: "text", value: "after-continue" }],
+    }),
+    node("end-success", "end_success", "End Success", { close_browser: false }),
+  ];
+
+  return {
+    version: 2,
+    nodes,
+    edges: [
+      edge("start", "out", "break-repeat"),
+      edge("break-repeat", "loop", "break-counter"),
+      edge("break-counter", "out", "break-loop"),
+      edge("break-repeat", "done", "after-break"),
+      edge("after-break", "out", "continue-repeat"),
+      edge("continue-repeat", "loop", "continue-counter"),
+      edge("continue-counter", "out", "continue-loop"),
+      edge("continue-repeat", "done", "after-continue"),
+      edge("after-continue", "out", "end-success"),
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+    migration_notes: [],
+  };
+}
+
+function terminalFailureGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      node("start", "start", "Start", null),
+      node("end-failure", "end_failure", "End Failure", {
+        reason: "terminal failure",
+        close_browser: false,
+      }),
+    ],
+    edges: [edge("start", "out", "end-failure")],
+    viewport: { x: 0, y: 0, zoom: 1 },
+    migration_notes: [],
+  };
+}
+
+function stopSuccessGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      node("start", "start", "Start", null),
+      node("stop-success", "stop_workflow", "Stop Success", {
+        status: "success",
+        reason: "operator stop",
+        close_browser: false,
+      }),
+    ],
+    edges: [edge("start", "out", "stop-success")],
+    viewport: { x: 0, y: 0, zoom: 1 },
+    migration_notes: [],
+  };
+}
+
 function actionNode(id: string, label: string, config: ActionConfig): GraphNode {
   return node(id, "action", label, config);
 }
@@ -200,6 +354,10 @@ function ports(nodeType: GraphNodeType): GraphPort[] {
     case "start":
       return [{ id: "out", label: "Out", direction: "output" }];
     case "end_success":
+    case "end_failure":
+    case "break_loop":
+    case "continue_loop":
+    case "stop_workflow":
       return [{ id: "in", label: "In", direction: "input" }];
     case "if":
       return [
