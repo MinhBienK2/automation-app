@@ -38,13 +38,15 @@ describe("workflow settings model", () => {
   });
 
   test("defines sidebar sections and decision-guide help for each section", () => {
-    expect(workflowSettingsSections.map((section) => section.id)).toEqual([
+    const visibleSectionIds = [
       "general",
       "run_policy",
       "browser_launch",
       "environment",
       "owned_test_gates",
-    ]);
+    ];
+    expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
+    expect(Object.keys(workflowSettingsHelp).sort()).toEqual([...visibleSectionIds].sort());
 
     for (const section of workflowSettingsSections) {
       const helpByLanguage = workflowSettingsHelp[section.id];
@@ -64,6 +66,48 @@ describe("workflow settings model", () => {
         }
       }
     }
+  });
+
+  test("keeps settings help aligned with the visible Workflow Settings dialog", () => {
+    const helpText = JSON.stringify(workflowSettingsHelp);
+
+    for (const staleTerm of [
+      "Default action timeout",
+      "Default retry attempts",
+      "Default retry interval",
+      "Wait between nodes",
+      "Device profile",
+      "User agent",
+      "Mobile viewport",
+      "Touch input",
+      "Challenge policy",
+      "Triggers Settings Help",
+      "Advanced Settings Help",
+      "Variables Settings Help",
+    ]) {
+      expect(helpText).not.toContain(staleTerm);
+    }
+
+    expect(workflowSettingsHelp.run_policy.en.title).toBe("Run Policy Settings Help");
+    expect(workflowSettingsHelp.run_policy.en.fieldGuide.map((field) => field.name)).toEqual([
+      "Max workflow duration ms",
+      "Browser retention",
+      "Batch concurrency limit",
+      "Batch runs are headless",
+      "Stop batch on first failed row",
+    ]);
+    expect(workflowSettingsHelp.browser_launch.en.title).toBe("Browser Launch Settings Help");
+    expect(workflowSettingsHelp.browser_launch.en.fieldGuide.map((field) => field.name)).toEqual([
+      "Reuse login session",
+      "Profile name",
+      "Use proxy",
+      "Proxy server",
+      "Proxy username",
+      "Proxy password",
+      "Headless browser",
+    ]);
+    expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
+    expect(workflowSettingsHelp.owned_test_gates.en.title).toBe("Owned Test Gates Help");
   });
 
   test("creates readable generated browser profile names", () => {

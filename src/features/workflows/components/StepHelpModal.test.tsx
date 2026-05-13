@@ -25,14 +25,14 @@ describe("StepHelpModal", () => {
   test("groups field references by category and keeps mistakes inside field cards", async () => {
     render(
       <StepHelpModal
-        actionType="click"
+        actionType="assert_text"
         language="en"
         onClose={vi.fn()}
         onLanguageChange={vi.fn()}
       />,
     );
 
-    const help = await screen.findByRole("dialog", { name: "Click Help" });
+    const help = await screen.findByRole("dialog", { name: "Assert Text Help" });
     const fieldsSection = within(help)
       .getByRole("heading", { name: "All fields and options" })
       .closest("section")!;

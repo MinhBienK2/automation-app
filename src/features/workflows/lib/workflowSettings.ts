@@ -78,7 +78,6 @@ function randomProfileSeed() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-
 export function variableRowsFromJsonText(
   text: string,
 ): { rows: VariableAssignment[]; error: string | null } {
@@ -273,1095 +272,666 @@ const viLabels = {
   safetyNotes: "Lưu ý an toàn",
 };
 
-export const workflowSettingsHelp: Record<string, WorkflowSettingsLocalizedHelp> = {
+export const workflowSettingsHelp: Record<
+  WorkflowSettingsSectionId,
+  WorkflowSettingsLocalizedHelp
+> = {
   general: {
     en: {
       title: "General Settings Help",
       summary:
-        "General settings describe what this workflow is, who should recognize it, and how it appears in lists, headers, exports, duplicates, and future shared workspaces without changing how the graph runs.",
+        "General settings identify the workflow for operators, reviews, exports, duplicates, and handoffs without changing graph execution, browser launch, environment variables, or run policy.",
       uiLabels: enLabels,
       bestFor: [
-        "Creating a readable name that operators can recognize without opening the graph.",
-        "Adding description, tags, and notes that make search, handoff, and review easier.",
+        "Giving the workflow a name and description that make its owned target and purpose recognizable.",
+        "Adding tags and notes that help operators review, group, and maintain the workflow.",
       ],
-      notFor: [
-        "Changing browser launch behavior, proxy routing, retries, schedules, or graph execution order.",
-      ],
+      notFor: ["Runtime values, browser launch state, proxy routing, run limits, or owned test gates."],
       precedence: [
-        "General metadata travels with the workflow, but runner decisions come from Execution, Browser, Environment, Variables, Triggers, and graph nodes.",
+        "General metadata is saved with the workflow, while run behavior comes from the graph and the other Workflow Settings sections.",
       ],
       fieldGuide: [
         {
           name: "Workflow name",
           description:
-            "Required display name used by the workflow list, breadcrumb, detail header, save feedback, export labels, duplicate flows, and any future shared workspace references.",
+            "Required display name shown in the workflow list, detail header, Settings dialog, duplicate flow, and package metadata so users can identify the workflow without opening the graph.",
           whenToUse:
-            "Use a business-flow name such as Checkout smoke test instead of a technical note, so another user can pick the right workflow quickly.",
+            "Use a concise business-flow name such as Checkout smoke test or Login owned-account audit.",
         },
         {
           name: "Description",
           description:
-            "Short human explanation of what the workflow proves, which system it touches, and what a successful run means. It is for orientation, not validation.",
+            "Human-readable summary of what the workflow validates, which owned system it touches, and what a successful run proves for reviewers or operators.",
           whenToUse:
-            "Use it when the workflow name alone is not enough to explain scope, environment, expected user journey, or ownership.",
+            "Use it when the name alone does not capture scope, environment, expected journey, or ownership.",
         },
         {
           name: "Tags",
           description:
-            "Comma-separated search labels normalized to lowercase and deduplicated, useful for grouping workflows by team, environment, feature area, or smoke-suite purpose.",
+            "Comma-separated labels normalized to lowercase and deduplicated, useful for grouping workflows by team, environment, feature area, or review purpose.",
           whenToUse:
-            "Use tags for filtering and scanning, not for values that the runner needs at execution time.",
+            "Use tags for scanning and grouping; keep values needed by the runner in Environment instead.",
         },
         {
           name: "Notes",
           description:
-            "Free-form operator context for maintenance reminders, assumptions, external ticket links, or review notes that should stay with the workflow draft.",
+            "Free-form operator context for assumptions, maintenance reminders, external ticket references, or review notes that should stay with the workflow draft.",
           whenToUse:
-            "Use notes for human handoff details; move stable runtime values into Variables instead.",
+            "Use notes for human handoff context, not for secrets or values that graph templates must read.",
         },
       ],
       workflowExamples: [
         {
-          title: "QA login workflow",
-          steps: ["Name it after the business flow", "Add tags such as qa, login, and smoke"],
+          title: "Owned login audit",
+          steps: ["Name the business flow", "Add environment and owner tags", "Record review assumptions in notes"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Putting required email, password, or environment values only in notes.",
-          fix: "Define stable values under Variables so graph templates can reference them consistently.",
+          mistake: "Putting runtime values only in Notes.",
+          fix: "Store values that actions must read under Environment initial variables or graph Set Variables nodes.",
         },
       ],
     },
     vi: {
       title: "Trợ giúp Cài đặt Chung",
       summary:
-        "Cài đặt Chung mô tả workflow này là gì, người dùng nên nhận ra nó ra sao, và nó xuất hiện thế nào trong danh sách, tiêu đề, export, bản sao, hoặc workspace dùng chung sau này mà không làm thay đổi cách graph chạy.",
+        "Cài đặt Chung định danh workflow cho người vận hành, review, export, nhân bản, và bàn giao mà không đổi cách graph chạy, mở browser, nạp biến, hay áp dụng run policy.",
       uiLabels: viLabels,
       bestFor: [
-        "Đặt tên rõ để người vận hành nhận ra workflow mà không cần mở graph.",
-        "Thêm mô tả, tag, và ghi chú để tìm kiếm, bàn giao, và review dễ hơn.",
+        "Đặt tên và mô tả giúp nhận ra mục tiêu thuộc sở hữu và mục đích kiểm thử của workflow.",
+        "Thêm tag và ghi chú để người vận hành review, gom nhóm, và bảo trì dễ hơn.",
       ],
-      notFor: [
-        "Không dùng mục này để đổi cách mở browser, proxy, retry, lịch chạy, hoặc thứ tự chạy của graph.",
-      ],
+      notFor: ["Không dùng cho giá trị runtime, trạng thái launch browser, proxy, giới hạn run, hoặc owned test gates."],
       precedence: [
-        "Metadata ở General đi cùng workflow, còn quyết định runtime nằm ở Execution, Browser, Environment, Variables, Triggers, và các node trong graph.",
+        "Metadata ở General được lưu cùng workflow; hành vi chạy đến từ graph và các section Workflow Settings khác.",
       ],
       fieldGuide: [
         {
           name: "Tên workflow",
           description:
-            "Tên hiển thị bắt buộc, được dùng ở danh sách workflow, breadcrumb, header chi tiết, trạng thái save, export, duplicate, và các tham chiếu workspace sau này.",
+            "Tên hiển thị bắt buộc trong danh sách workflow, header chi tiết, Settings dialog, duplicate flow, và package metadata để người dùng nhận diện workflow mà không cần mở graph.",
           whenToUse:
-            "Đặt theo luồng nghiệp vụ như Checkout smoke test thay vì ghi chú kỹ thuật, để người khác chọn đúng workflow nhanh hơn.",
+            "Đặt tên ngắn theo luồng nghiệp vụ như Checkout smoke test hoặc Login owned-account audit.",
         },
         {
           name: "Mô tả",
           description:
-            "Phần giải thích ngắn về workflow kiểm tra điều gì, chạm tới hệ thống nào, và một lần chạy thành công có ý nghĩa gì. Đây là định hướng cho người đọc, không phải rule validate.",
+            "Tóm tắt cho người đọc biết workflow xác minh điều gì, chạm hệ thống thuộc sở hữu nào, và một lần chạy thành công chứng minh điều gì.",
           whenToUse:
-            "Dùng khi tên workflow chưa đủ để nói rõ phạm vi, môi trường, hành trình người dùng, hoặc người chịu trách nhiệm.",
+            "Dùng khi tên workflow chưa đủ để nói rõ phạm vi, môi trường, hành trình kỳ vọng, hoặc chủ sở hữu.",
         },
         {
           name: "Tags",
           description:
-            "Danh sách nhãn phân tách bằng dấu phẩy, được chuẩn hóa chữ thường và loại trùng, giúp gom workflow theo team, môi trường, tính năng, hoặc bộ smoke test.",
+            "Các nhãn phân tách bằng dấu phẩy, được chuẩn hóa chữ thường và bỏ trùng, giúp gom workflow theo team, môi trường, tính năng, hoặc mục đích review.",
           whenToUse:
-            "Dùng tag để lọc và scan danh sách; đừng dùng tag cho giá trị mà runner cần khi chạy.",
+            "Dùng tag để scan và gom nhóm; giá trị runner cần đọc nên đặt trong Environment.",
         },
         {
           name: "Ghi chú",
           description:
-            "Vùng ghi tự do cho nhắc nhở bảo trì, giả định, link ticket bên ngoài, hoặc ghi chú review cần đi kèm bản nháp workflow.",
+            "Ngữ cảnh tự do cho giả định, nhắc nhở bảo trì, link ticket, hoặc ghi chú review cần đi cùng bản nháp workflow.",
           whenToUse:
-            "Dùng cho thông tin bàn giao giữa người với người; giá trị runtime ổn định nên đưa vào Variables.",
+            "Dùng cho bàn giao giữa người với người, không dùng cho secret hoặc giá trị template trong graph.",
         },
       ],
       workflowExamples: [
         {
-          title: "Workflow đăng nhập QA",
-          steps: ["Đặt tên theo luồng nghiệp vụ", "Thêm tag như qa, login, và smoke"],
+          title: "Audit đăng nhập owned",
+          steps: ["Đặt tên theo business flow", "Thêm tag environment và owner", "Ghi giả định review trong notes"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Chỉ ghi email, password, hoặc environment bắt buộc trong ghi chú.",
-          fix: "Đưa giá trị ổn định vào Variables để graph template tham chiếu nhất quán.",
+          mistake: "Chỉ để giá trị runtime trong Ghi chú.",
+          fix: "Đưa giá trị action cần đọc vào Environment initial variables hoặc node Set Variables trong graph.",
         },
       ],
     },
   },
   run_policy: {
     en: {
-      title: "Execution Settings Help",
+      title: "Run Policy Settings Help",
       summary:
-        "Execution settings define the workflow-level run policy used when graph actions, batch requests, or terminal nodes do not provide a more specific timeout, retry, browser-retention, or failure behavior.",
+        "Run Policy settings define workflow-level limits and batch defaults: maximum run duration, browser retention after terminal outcomes, row concurrency, batch headless mode, and stop-on-first-failure behavior.",
       uiLabels: enLabels,
       bestFor: [
-        "Setting baseline action limits for workflows where most steps have similar tolerance.",
-        "Controlling batch defaults and what happens to the browser after a terminal outcome.",
+        "Setting guardrails that apply to the whole workflow run rather than one graph node.",
+        "Choosing default batch behavior when a batch request omits row-level execution options.",
       ],
-      notFor: ["Per-selector waits, browser launch identity, scheduled dispatch, or app editor preferences."],
+      notFor: ["Per-action waits, selector recovery, browser identity, proxy details, or initial template variables."],
       precedence: [
-        "Workflow settings apply before per-run overrides.",
-        "Action-level timeout and retry fields override these defaults for that one action.",
+        "Run Policy is read when a run starts; save settings before running to apply changes.",
+        "Terminal graph nodes can still request browser closure at the point where they end execution.",
       ],
       fieldGuide: [
         {
-          name: "Default action timeout ms",
-          description:
-            "Maximum time a normal action should wait before it is considered failed when that action has no explicit timeout of its own.",
-          whenToUse:
-            "Use it to give the whole workflow a sane baseline for pages that are consistently fast, slow, or unstable.",
-        },
-        {
-          name: "Default retry attempts",
-          description:
-            "Number of extra tries an action can receive by default after a recoverable failure, before the workflow applies the failure policy.",
-          whenToUse:
-            "Use it for transient staging flakiness, and keep it low when failures should reveal product regressions quickly.",
-        },
-        {
-          name: "Default retry interval ms",
-          description:
-            "Delay between default retry attempts, measured in milliseconds, so repeated actions do not immediately hit the same temporary failure.",
-          whenToUse:
-            "Use it with retry attempts when backend queues, slow UI transitions, or short network hiccups need breathing room.",
-        },
-        {
           name: "Max workflow duration ms",
           description:
-            "Upper bound for the whole run, covering all graph steps, retries, waits, and terminal handling, regardless of individual action limits.",
+            "Optional upper bound for the full run, covering graph actions, waits, loops, cancellation, terminal handling, and evidence capture before the run is failed as overlong.",
           whenToUse:
-            "Use it as a guardrail so a workflow cannot run forever when a loop, slow page, or hidden failure keeps it alive.",
+            "Use it to stop accidental infinite loops, stuck pages, or test-environment hangs from running indefinitely.",
         },
         {
           name: "Browser retention",
           description:
-            "Default decision for whether the browser session remains available after success, failure, or stop when terminal nodes do not choose otherwise.",
+            "Default terminal policy deciding whether the Chromium session remains open for inspection or closes after success, failure, or stop when no terminal node overrides it.",
           whenToUse:
-            "Choose retain for debugging or manual inspection, and close for unattended runs where cleanup matters more.",
-        },
-        {
-          name: "Failure policy",
-          description:
-            "Workflow-level rule for what happens after an unrecovered action failure. The current policy stops on the first failure to keep diagnostics clear.",
-          whenToUse:
-            "Use it to understand why later branches did not run; broader continue policies should only be added when reporting can stay explicit.",
-        },
-        {
-          name: "Wait between nodes",
-          description:
-            "Optional pause inserted between graph nodes when neither side is an explicit Wait or Random Wait node. Fixed mode uses one duration; random mode picks a duration inside the configured min/max range.",
-          whenToUse:
-            "Use it when most node transitions need the same pacing, and add explicit Wait or Random Wait nodes where one transition needs a different delay.",
+            "Choose retain for debugging and evidence review; choose close for unattended runs where cleanup matters more.",
         },
         {
           name: "Batch concurrency limit",
           description:
-            "Maximum number of batch rows that may run at the same time when a workflow is executed over multiple input rows.",
+            "Maximum number of input rows the batch runner may execute at the same time. Current backend validation rejects values above one until row isolation is implemented.",
           whenToUse:
-            "Use it to protect test environments, third-party services, local CPU, and account limits from too many simultaneous browser sessions.",
+            "Keep it at one for current runs so browser profiles, outputs, and owned test accounts stay isolated.",
         },
         {
-          name: "Batch headless default",
+          name: "Batch runs are headless",
           description:
-            "Default browser visibility for batch rows. Headless runs without visible windows, while non-headless keeps browser windows available.",
+            "Default browser visibility for batch rows. Headless rows run without visible windows, while non-headless rows can be observed during debugging.",
           whenToUse:
-            "Use headless for routine unattended batches, and visible mode when you need to observe or debug the row behavior.",
+            "Enable it for routine unattended batches; leave it off when investigating row behavior or collecting visual evidence.",
         },
         {
           name: "Stop batch on first failed row",
           description:
-            "Batch control that stops launching or continuing further rows after one row fails, instead of collecting failures across the batch.",
+            "Batch policy that stops scheduling later rows after the first row fails instead of continuing through every row and collecting all failures.",
           whenToUse:
-            "Use it when one failure likely means shared setup is broken and continuing would waste time or create noisy side effects.",
+            "Use it when one row failure likely means shared setup is broken and further rows would create noisy side effects.",
         },
       ],
       workflowExamples: [
         {
-          title: "Slow staging site",
-          steps: ["Set a higher default action timeout", "Use action overrides for one known slow step"],
+          title: "Bound a smoke run",
+          steps: ["Set a max duration", "Retain browser for inspection", "Stop batch after the first failed row"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Using max workflow duration as a replacement for action timeouts.",
-          fix: "Use max duration for the whole run, and action timeouts for individual waits and selectors.",
+          mistake: "Expecting Run Policy to add pacing between graph nodes.",
+          fix: "Use explicit Wait or Random Wait nodes where business flow needs a pause.",
         },
       ],
     },
     vi: {
-      title: "Trợ giúp Cài đặt Thực thi",
+      title: "Trợ giúp Run Policy",
       summary:
-        "Cài đặt Thực thi định nghĩa chính sách chạy cấp workflow, được dùng khi action trong graph, batch request, hoặc terminal node chưa đặt timeout, retry, giữ browser, hoặc cách xử lý lỗi cụ thể hơn.",
+        "Run Policy định nghĩa giới hạn và mặc định batch cấp workflow: thời lượng tối đa, giữ hay đóng browser sau kết thúc, concurrency theo dòng, headless cho batch, và dừng batch khi dòng đầu tiên fail.",
       uiLabels: viLabels,
       bestFor: [
-        "Đặt giới hạn mặc định cho workflow có phần lớn step chịu timeout và retry giống nhau.",
-        "Điều khiển mặc định của batch và việc browser còn mở hay đóng sau khi kết thúc.",
+        "Đặt guardrail áp dụng cho cả lần chạy workflow thay vì một node graph riêng lẻ.",
+        "Chọn mặc định batch khi request batch không truyền option cụ thể cho từng lần chạy.",
       ],
-      notFor: ["Không dùng cho wait từng selector, danh tính browser khi launch, lịch trigger, hoặc preference của editor."],
+      notFor: ["Không dùng cho wait từng action, selector recovery, danh tính browser, proxy, hoặc biến template ban đầu."],
       precedence: [
-        "Workflow Settings áp dụng trước override của từng lần chạy.",
-        "Timeout và retry đặt trực tiếp trong action sẽ ghi đè default này cho action đó.",
+        "Run Policy được đọc khi run bắt đầu; hãy save settings trước khi chạy để áp dụng thay đổi.",
+        "Terminal node trong graph vẫn có thể yêu cầu đóng browser tại điểm kết thúc của nó.",
       ],
       fieldGuide: [
         {
-          name: "Default action timeout ms",
-          description:
-            "Thời gian tối đa một action thông thường được chờ trước khi bị tính là failed, nếu action đó không có timeout riêng.",
-          whenToUse:
-            "Dùng để đặt nền chung cho workflow chạy trên trang luôn nhanh, luôn chậm, hoặc hay dao động.",
-        },
-        {
-          name: "Default retry attempts",
-          description:
-            "Số lần thử lại mặc định sau một lỗi có thể phục hồi, trước khi workflow áp dụng failure policy.",
-          whenToUse:
-            "Dùng cho môi trường staging hay lỗi tạm thời; giữ thấp nếu bạn muốn lỗi sản phẩm lộ ra nhanh.",
-        },
-        {
-          name: "Default retry interval ms",
-          description:
-            "Khoảng nghỉ giữa các lần retry mặc định, tính bằng mili giây, để action không đập lại ngay vào cùng một lỗi tạm thời.",
-          whenToUse:
-            "Dùng cùng retry attempts khi backend queue, chuyển trạng thái UI chậm, hoặc mạng chập chờn cần thêm thời gian.",
-        },
-        {
           name: "Max workflow duration ms",
           description:
-            "Giới hạn tổng cho cả lần chạy, bao gồm mọi graph step, retry, wait, và xử lý terminal, bất kể từng action đặt timeout thế nào.",
+            "Giới hạn tùy chọn cho toàn bộ run, bao gồm graph actions, waits, loops, cancellation, terminal handling, và evidence capture trước khi run bị đánh dấu quá thời gian.",
           whenToUse:
-            "Dùng như hàng rào an toàn để workflow không chạy mãi khi loop, trang chậm, hoặc lỗi ẩn giữ run còn sống.",
+            "Dùng để chặn vòng lặp vô hạn, trang bị kẹt, hoặc môi trường test treo khiến workflow chạy mãi.",
         },
         {
           name: "Browser retention",
           description:
-            "Quyết định mặc định browser còn được giữ sau success, failure, hoặc stop hay không, khi terminal node chưa đặt lựa chọn riêng.",
+            "Chính sách terminal mặc định quyết định Chromium còn mở để kiểm tra hay đóng sau success, failure, hoặc stop khi terminal node không ghi đè.",
           whenToUse:
-            "Chọn retain khi cần debug hoặc xem lại màn hình; chọn close cho run tự động cần dọn session.",
-        },
-        {
-          name: "Failure policy",
-          description:
-            "Luật cấp workflow cho việc xử lý một action fail sau khi đã hết retry. Hiện tại chính sách dừng ở lỗi đầu tiên để diagnostic rõ ràng.",
-          whenToUse:
-            "Dùng để hiểu vì sao các nhánh sau không chạy; chỉ thêm continue policy khi báo cáo lỗi vẫn đủ rõ.",
-        },
-        {
-          name: "Wait between nodes",
-          description:
-            "Khoảng nghỉ tùy chọn được chèn giữa các node trong graph khi hai bên không phải node Wait hoặc Random Wait rõ ràng. Chế độ cố định dùng một thời lượng; chế độ random chọn thời lượng trong ngưỡng min/max.",
-          whenToUse:
-            "Dùng khi hầu hết chuyển tiếp giữa node cần cùng nhịp chờ, và thêm node Wait hoặc Random Wait riêng ở vị trí cần delay khác.",
+            "Chọn retain khi cần debug và review evidence; chọn close cho run tự động cần dọn dẹp.",
         },
         {
           name: "Batch concurrency limit",
           description:
-            "Số dòng batch tối đa được chạy đồng thời khi workflow chạy trên nhiều dòng input, trực tiếp ảnh hưởng tới số browser session mở cùng lúc.",
+            "Số dòng input tối đa batch runner được chạy cùng lúc. Backend hiện reject giá trị lớn hơn một cho tới khi có cô lập từng dòng.",
           whenToUse:
-            "Dùng để bảo vệ môi trường test, dịch vụ bên thứ ba, CPU local, và giới hạn tài khoản khỏi quá nhiều browser cùng lúc.",
+            "Giữ ở một trong trạng thái hiện tại để browser profile, output, và test account thuộc sở hữu không bị lẫn nhau.",
         },
         {
-          name: "Batch headless default",
+          name: "Batch runs are headless",
           description:
-            "Mặc định browser có hiển thị cửa sổ hay chạy ẩn khi chạy batch. Headless không mở cửa sổ, non-headless cho phép quan sát.",
+            "Mặc định browser có hiện cửa sổ khi chạy batch hay không. Headless không mở cửa sổ; non-headless cho phép quan sát khi debug.",
           whenToUse:
-            "Dùng headless cho batch tự động thường lệ; dùng hiện cửa sổ khi cần quan sát hoặc debug hành vi từng dòng.",
+            "Bật cho batch tự động thường lệ; tắt khi cần điều tra hành vi từng dòng hoặc thu evidence trực quan.",
         },
         {
           name: "Stop batch on first failed row",
           description:
-            "Điều khiển batch dừng chạy các dòng tiếp theo sau khi một dòng fail, thay vì tiếp tục gom lỗi của cả batch.",
+            "Chính sách batch dừng lên lịch các dòng sau khi dòng đầu tiên fail, thay vì tiếp tục chạy toàn bộ và gom mọi lỗi.",
           whenToUse:
-            "Dùng khi một lỗi thường nghĩa là setup chung đã hỏng và chạy tiếp chỉ tốn thời gian hoặc tạo side effect nhiễu.",
+            "Dùng khi một dòng fail thường nghĩa là setup chung đã hỏng và chạy tiếp chỉ tạo side effect nhiễu.",
         },
       ],
       workflowExamples: [
         {
-          title: "Site staging chậm",
-          steps: ["Tăng default action timeout", "Đặt override riêng cho một step chậm đã biết"],
+          title: "Giới hạn một smoke run",
+          steps: ["Đặt max duration", "Giữ browser để kiểm tra", "Dừng batch sau dòng fail đầu tiên"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Dùng max workflow duration thay cho timeout của từng action.",
-          fix: "Dùng max duration cho toàn run, và dùng action timeout cho từng wait hoặc selector cụ thể.",
+          mistake: "Nghĩ Run Policy tự thêm delay giữa các node graph.",
+          fix: "Dùng node Wait hoặc Random Wait rõ ràng tại vị trí business flow cần pause.",
         },
       ],
     },
   },
   browser_launch: {
     en: {
-      title: "Browser Settings Help",
+      title: "Browser Launch Settings Help",
       summary:
-        "Browser settings are launch-level defaults for Chromium: profile identity, authorized proxy routing, coherent device profile, user agent, viewport, touch behavior, headless mode, and safe handling of human challenge checkpoints.",
+        "Browser Launch settings control values that must be known before Chromium opens: temporary versus persistent profile, authorized proxy route, proxy credentials, and headed or headless launch mode.",
       uiLabels: enLabels,
       bestFor: [
-        "Making browser launch behavior repeatable across manual, batch, and triggered runs.",
-        "Keeping profile, proxy, device, and checkpoint behavior in one audited place.",
+        "Making session and network posture repeatable from the first browser request.",
+        "Keeping launch-level profile and proxy controls in one auditable settings section.",
       ],
-      notFor: [
-        "Bypassing challenges, evading site protections, or changing proxy and profile halfway through a run.",
-      ],
+      notFor: ["Changing browser identity halfway through a run, editing page viewport later, or solving human challenge flows."],
       precedence: [
-        "Browser settings are resolved before Chromium launches, so profile and proxy changes need a new run.",
-        "Graph actions such as Set Viewport may override context later when that action explicitly runs.",
+        "Browser Launch values are resolved before Chromium starts, so changes require saving settings and starting a new run.",
+        "In-run graph actions can still change runtime browser context only after the browser has launched.",
       ],
       fieldGuide: [
         {
           name: "Reuse login session",
           description:
-            "Checkbox that decides whether the run opens a persistent named browser profile or a clean temporary profile. Turning it on generates a stable profile name when the field is empty.",
+            "Switch that chooses a persistent named browser profile instead of a temporary clean profile. Turning it on generates a profile name when none is saved.",
           whenToUse:
-            "Use it for approved accounts that should stay signed in between runs; turn it off when every run should start from a fresh browser state.",
+            "Use it for named approved test accounts that should keep login state between runs.",
         },
         {
           name: "Profile name",
           description:
-            "Named browser profile to launch with saved cookies, storage, and identity state where supported. The app can generate this value when Reuse login session is enabled.",
+            "Persistent browser profile identifier used to store Chromium user data under the app data directory when Reuse login session is enabled.",
           whenToUse:
-            "Keep one stable profile name per account and device profile, such as tiktok-main-desktop, so login state and device identity do not drift across runs.",
+            "Use one stable profile name per authorized account or test identity to avoid mixing session state.",
         },
         {
-          name: "Proxy enabled",
+          name: "Use proxy",
           description:
-            "Master switch for proxy routing. When off, proxy server, username, and password are ignored even if values remain saved.",
+            "Switch that enables or disables the saved proxy route. When off, saved server and credential values remain stored but are ignored at launch.",
           whenToUse:
-            "Use it to temporarily disable authorized proxy routing without deleting the server and credential fields.",
+            "Use it to temporarily disable an authorized proxy without deleting the configured endpoint.",
         },
         {
           name: "Proxy server",
           description:
-            "Full proxy endpoint used at browser launch, such as http://proxy.local:8080. It should point to infrastructure you are allowed to use.",
+            "Full proxy endpoint used when Chromium launches, such as http://proxy.local:8080, pointing to infrastructure the operator is allowed to use.",
           whenToUse:
-            "Use it for corporate, QA, geo, or network-isolated test routes that must be consistent from the first request.",
+            "Use it when tests must start from a specific corporate, staging, regional, or isolated network route.",
         },
         {
           name: "Proxy username",
           description:
-            "Optional account name sent to the configured proxy when that proxy requires authentication separate from the server URL.",
+            "Optional username sent to the configured proxy when that proxy requires authentication separate from the proxy server URL.",
           whenToUse:
-            "Use it when your proxy provider issues credentials separately; leave blank for unauthenticated proxies.",
+            "Use it only for authorized proxy accounts that issue separate credentials; leave it blank otherwise.",
         },
         {
           name: "Proxy password",
           description:
-            "Optional secret for proxy authentication. Treat it as sensitive run configuration and avoid placing this value in notes or screenshots.",
+            "Optional secret paired with Proxy username for proxy authentication. It is saved as sensitive workflow configuration and omitted from sanitized package exports.",
           whenToUse:
-            "Use it only for authorized proxy accounts, and rotate it according to the same policy as other shared test secrets.",
+            "Use it only when the authorized proxy requires a password and avoid placing the value in notes or screenshots.",
         },
         {
-          name: "Device profile",
+          name: "Headless browser",
           description:
-            "Preset that keeps user agent, viewport size, mobile emulation, and touch capability aligned as one launch identity instead of asking operators to paste a raw user-agent string.",
+            "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled.",
           whenToUse:
-            "Use Default for normal desktop Chromium, Desktop Chrome for stable desktop testing, Android Chrome or iPhone Safari for mobile-layout runs, and Custom only when you know the exact client identity required.",
-        },
-        {
-          name: "User agent",
-          description:
-            "Browser user-agent string presented to pages at launch. Presets fill this automatically; direct editing is reserved for Custom so the string does not drift away from viewport and touch settings.",
-          whenToUse:
-            "Use Custom only when the target app has a documented desktop, mobile, bot, or legacy-browser code path that must be tested explicitly.",
-        },
-        {
-          name: "Viewport width and height",
-          description:
-            "Initial browser viewport size in pixels. Width and height together control responsive layouts before any graph viewport action runs.",
-          whenToUse:
-            "Use fixed dimensions when selectors, screenshots, or responsive UI branches must start from a predictable canvas size.",
-        },
-        {
-          name: "Mobile viewport",
-          description:
-            "Flag that asks the browser context to emulate mobile viewport behavior in addition to the numeric width and height.",
-          whenToUse:
-            "Use it when validating mobile-specific layout or browser behavior, not just a narrow desktop window.",
-        },
-        {
-          name: "Touch input",
-          description:
-            "Flag that enables touch-capable input behavior for pages that distinguish touch interaction from mouse interaction.",
-          whenToUse:
-            "Use it for mobile menus, drag handles, or components that only expose behavior when touch support exists.",
-        },
-        {
-          name: "Challenge policy",
-          description:
-            "Controls safe handling of authorized human checkpoints: ignore, detect only, or pause for a human. It does not solve or bypass protections.",
-          whenToUse:
-            "Use detect only for reporting checkpoints and pause for human when an approved operator must continue the test manually.",
-        },
-        {
-          name: "Headless default",
-          description:
-            "Default launch visibility for this workflow. Headless runs without a visible browser window; non-headless opens a visible browser.",
-          whenToUse:
-            "Use headless for routine automation and visible mode when debugging, reviewing, or handling manual checkpoints.",
+            "Use headed mode for debugging, review, and fingerprint preflight gates; use headless only for routine runs that do not need visual inspection.",
         },
       ],
       workflowExamples: [
         {
-          title: "Mobile viewport run",
-          steps: ["Set viewport dimensions", "Enable mobile", "Enable touch when testing touch-only UI"],
-        },
-      ],
-      relatedGraphActions: [
-        {
-          action: "Set Viewport",
-          relationship: "runtime_override",
-          explanation: "Changes viewport later in the workflow after the browser has launched.",
+          title: "Persistent owned account run",
+          steps: ["Enable Reuse login session", "Choose a stable profile name", "Keep headed mode for review"],
         },
       ],
       safetyNotes: [
-        "Proxy and challenge controls are for authorized testing and repeatable environments.",
+        "Proxy and profile settings must stay scoped to owned or explicitly authorized test environments.",
       ],
       commonMistakes: [
         {
-          mistake: "Expecting proxy changes to apply after the run starts.",
-          fix: "Save Browser settings and start a new run because launch-level values are resolved before Chromium opens.",
-        },
-        {
-          mistake: "Randomizing user agents on a profile that stores a signed-in session.",
-          fix: "Keep one stable device profile per browser profile, for example tiktok-main-desktop and tiktok-main-mobile as separate profiles.",
+          mistake: "Changing proxy settings while a browser is already running.",
+          fix: "Save Browser Launch settings and start a new run because launch-level values are applied before Chromium opens.",
         },
       ],
     },
     vi: {
-      title: "Trợ giúp Cài đặt Trình duyệt",
+      title: "Trợ giúp Browser Launch",
       summary:
-        "Cài đặt Trình duyệt là default ở thời điểm mở Chromium: hồ sơ đăng nhập, proxy được phép dùng, device profile nhất quán, user agent, viewport, touch, headless, và cách xử lý an toàn các checkpoint cần con người.",
+        "Browser Launch điều khiển các giá trị phải biết trước khi Chromium mở: dùng profile tạm hay persistent, tuyến proxy được phép, credential proxy, và chế độ headed/headless.",
       uiLabels: viLabels,
       bestFor: [
-        "Giữ hành vi mở browser lặp lại giống nhau cho manual, batch, và triggered runs.",
-        "Gom profile, proxy, thiết bị, và checkpoint vào một nơi dễ kiểm tra.",
+        "Giữ session và network posture lặp lại được ngay từ request đầu tiên của browser.",
+        "Gom profile và proxy ở cấp launch vào một section dễ audit.",
       ],
-      notFor: [
-        "Không dùng mục này để vượt qua CAPTCHA, né cơ chế bảo vệ website, hoặc đổi proxy/profile giữa chừng trong một run.",
-      ],
+      notFor: ["Không dùng để đổi danh tính browser giữa run, chỉnh viewport sau launch, hoặc giải human challenge."],
       precedence: [
-        "Browser settings được resolve trước khi Chromium mở, nên thay profile hoặc proxy cần bắt đầu run mới.",
-        "Graph action như Set Viewport có thể ghi đè context sau đó, nếu action đó thực sự chạy.",
+        "Browser Launch được resolve trước khi Chromium start, nên thay đổi cần save settings và bắt đầu run mới.",
+        "Graph action trong run chỉ có thể đổi runtime browser context sau khi browser đã mở.",
       ],
       fieldGuide: [
         {
-          name: "Lưu lại phiên đăng nhập",
+          name: "Reuse login session",
           description:
-            "Checkbox quyết định run sẽ mở browser profile có tên để lưu state lâu dài hay dùng profile tạm sạch. Khi bật mà tên profile đang trống, app sẽ tự sinh một tên ổn định.",
+            "Switch chọn browser profile persistent có tên thay cho profile tạm sạch. Khi bật mà chưa có tên profile, app sẽ tự sinh tên.",
           whenToUse:
-            "Dùng cho tài khoản được phép cần giữ đăng nhập giữa các lần chạy; tắt khi mỗi run cần bắt đầu từ browser state sạch.",
+            "Dùng cho test account được phê duyệt cần giữ login state giữa các lần chạy.",
         },
         {
-          name: "Tên hồ sơ",
+          name: "Profile name",
           description:
-            "Tên profile browser dùng khi launch, có thể mang theo cookie, storage, và trạng thái đăng nhập đã lưu nếu backend hỗ trợ. App có thể tự sinh giá trị này khi bật Lưu lại phiên đăng nhập.",
+            "Định danh browser profile persistent dùng để lưu Chromium user data dưới app data directory khi Reuse login session được bật.",
           whenToUse:
-            "Giữ một tên profile ổn định cho mỗi tài khoản và device profile, ví dụ tiktok-main-desktop, để state đăng nhập và danh tính thiết bị không đổi qua lại giữa các run.",
+            "Dùng một tên profile ổn định cho mỗi account hoặc test identity được phép để tránh trộn session state.",
         },
         {
-          name: "Bật proxy",
+          name: "Use proxy",
           description:
-            "Công tắc tổng cho routing qua proxy. Khi tắt, máy chủ proxy, username, và password sẽ bị bỏ qua dù giá trị vẫn còn lưu.",
+            "Switch bật hoặc tắt tuyến proxy đã lưu. Khi tắt, server và credential vẫn được lưu nhưng bị bỏ qua lúc launch.",
           whenToUse:
-            "Dùng để tạm ngưng proxy được phép dùng mà không phải xóa server và credential đã nhập.",
+            "Dùng để tạm tắt proxy được phép mà không xóa endpoint đã cấu hình.",
         },
         {
-          name: "Máy chủ proxy",
+          name: "Proxy server",
           description:
-            "Endpoint proxy đầy đủ dùng ngay lúc browser mở, ví dụ http://proxy.local:8080. Giá trị này phải trỏ tới hạ tầng bạn có quyền sử dụng.",
+            "Endpoint proxy đầy đủ dùng khi Chromium launch, ví dụ http://proxy.local:8080, trỏ tới hạ tầng operator có quyền sử dụng.",
           whenToUse:
-            "Dùng cho mạng công ty, QA, geo test, hoặc tuyến mạng cô lập cần nhất quán từ request đầu tiên.",
+            "Dùng khi test phải bắt đầu từ mạng công ty, staging, regional, hoặc tuyến mạng cô lập cụ thể.",
         },
         {
-          name: "Tên đăng nhập proxy",
+          name: "Proxy username",
           description:
-            "Tên tài khoản tùy chọn gửi tới proxy khi proxy yêu cầu xác thực tách riêng khỏi URL máy chủ.",
+            "Username tùy chọn gửi tới proxy khi proxy yêu cầu xác thực tách riêng khỏi URL proxy server.",
           whenToUse:
-            "Dùng khi nhà cung cấp proxy cấp credential riêng; để trống nếu proxy không cần xác thực.",
+            "Chỉ dùng cho proxy account được phép có credential riêng; nếu không thì để trống.",
         },
         {
-          name: "Mật khẩu proxy",
+          name: "Proxy password",
           description:
-            "Secret tùy chọn cho xác thực proxy. Hãy coi đây là cấu hình nhạy cảm và tránh đưa giá trị này vào notes hoặc ảnh chụp màn hình.",
+            "Secret tùy chọn đi cùng Proxy username để xác thực proxy. Đây là cấu hình workflow nhạy cảm và bị bỏ khỏi package export đã sanitize.",
           whenToUse:
-            "Chỉ dùng cho tài khoản proxy được phép, và xoay vòng secret theo chính sách giống các secret test dùng chung.",
+            "Chỉ dùng khi proxy được phép yêu cầu password và tránh đưa giá trị này vào notes hoặc screenshot.",
         },
         {
-          name: "Device profile",
+          name: "Headless browser",
           description:
-            "Preset giữ user agent, kích thước viewport, mô phỏng mobile, và khả năng touch đi cùng nhau như một danh tính launch thống nhất thay vì bắt operator tự paste chuỗi user-agent thô.",
+            "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt.",
           whenToUse:
-            "Dùng Default cho Chromium desktop bình thường, Desktop Chrome cho test desktop ổn định, Android Chrome hoặc iPhone Safari cho layout mobile, và Custom chỉ khi biết chính xác client identity cần dùng.",
-        },
-        {
-          name: "User agent",
-          description:
-            "Chuỗi user-agent browser gửi cho trang ngay từ lúc launch. Preset sẽ tự điền field này; chỉ edit trực tiếp khi chọn Custom để chuỗi không lệch khỏi viewport và touch settings.",
-          whenToUse:
-            "Chỉ dùng Custom khi app đích có nhánh desktop, mobile, bot, hoặc browser cũ được tài liệu hóa và cần test rõ ràng.",
-        },
-        {
-          name: "Chiều rộng và chiều cao viewport",
-          description:
-            "Kích thước viewport ban đầu theo pixel. Width và height cùng quyết định layout responsive trước khi graph chạy bất kỳ action đổi viewport nào.",
-          whenToUse:
-            "Dùng kích thước cố định khi selector, screenshot, hoặc nhánh responsive phải bắt đầu từ một canvas dự đoán được.",
-        },
-        {
-          name: "Viewport mobile",
-          description:
-            "Cờ yêu cầu browser context mô phỏng hành vi viewport mobile, ngoài việc đặt width và height bằng số.",
-          whenToUse:
-            "Dùng khi kiểm tra layout hoặc hành vi mobile thật sự, không chỉ là cửa sổ desktop hẹp.",
-        },
-        {
-          name: "Touch input",
-          description:
-            "Cờ bật hành vi input có touch cho những trang phân biệt tương tác chạm với tương tác chuột.",
-          whenToUse:
-            "Dùng cho menu mobile, drag handle, hoặc component chỉ mở hành vi khi browser báo có touch support.",
-        },
-        {
-          name: "Chính sách thử thách",
-          description:
-            "Điều khiển cách xử lý checkpoint cần con người: bỏ qua, chỉ phát hiện, hoặc pause để người thật thao tác. Nó không giải hay bypass bảo vệ của website.",
-          whenToUse:
-            "Dùng detect only để ghi nhận checkpoint; dùng pause for human khi operator được phê duyệt cần tiếp tục test thủ công.",
-        },
-        {
-          name: "Mặc định headless",
-          description:
-            "Mặc định browser có hiển thị cửa sổ hay chạy ẩn cho workflow này. Headless không mở cửa sổ; non-headless mở browser nhìn thấy được.",
-          whenToUse:
-            "Dùng headless cho automation thường lệ; dùng hiện cửa sổ khi debug, review, hoặc xử lý checkpoint thủ công.",
+            "Dùng headed khi debug, review, hoặc chạy fingerprint preflight gate; chỉ dùng headless cho run thường lệ không cần quan sát.",
         },
       ],
       workflowExamples: [
         {
-          title: "Run viewport mobile",
-          steps: ["Đặt width và height", "Bật mobile", "Bật touch khi UI cần tương tác chạm"],
-        },
-      ],
-      relatedGraphActions: [
-        {
-          action: "Set Viewport",
-          relationship: "runtime_override",
-          explanation: "Có thể đổi viewport sau khi browser đã mở, đúng tại vị trí node đó chạy trong graph.",
+          title: "Run bằng owned account persistent",
+          steps: ["Bật Reuse login session", "Chọn profile name ổn định", "Giữ headed mode để review"],
         },
       ],
       safetyNotes: [
-        "Proxy và challenge control chỉ dành cho kiểm thử được phép và môi trường lặp lại được.",
+        "Profile và proxy phải giới hạn trong môi trường test thuộc sở hữu hoặc được ủy quyền rõ ràng.",
       ],
       commonMistakes: [
         {
-          mistake: "Nghĩ rằng đổi proxy sẽ áp dụng ngay khi run đang chạy.",
-          fix: "Hãy save Browser settings và bắt đầu run mới, vì giá trị launch-level được resolve trước khi Chromium mở.",
-        },
-        {
-          mistake: "Random user agent trên một profile đang lưu session đăng nhập.",
-          fix: "Giữ một device profile ổn định cho mỗi browser profile, ví dụ tiktok-main-desktop và tiktok-main-mobile là hai profile riêng.",
-        },
-      ],
-    },
-  },
-  legacy_environment: {
-    en: {
-      title: "Environment Settings Help",
-      summary:
-        "Environment settings apply browser-context defaults after launch and before the first graph step, shaping location, permissions, headers, downloads, cookies, and storage without changing browser launch identity.",
-      uiLabels: enLabels,
-      bestFor: ["Setting stable locale, timezone, geolocation, permissions, headers, and seeded browser state."],
-      notFor: ["Proxy, profile, user-agent launch identity, or values that change many times during the graph."],
-      precedence: [
-        "Environment defaults apply before graph execution.",
-        "Graph environment actions may override these values later by execution order.",
-      ],
-      fieldGuide: [
-        {
-          name: "Locale and timezone",
-          description:
-            "Locale controls language and regional formatting; timezone controls date and time behavior exposed to the page context.",
-          whenToUse:
-            "Use them when pages render prices, dates, language, or regional content differently across markets.",
-        },
-        {
-          name: "Latitude and longitude",
-          description:
-            "Geolocation coordinates seeded before the graph starts, usually paired with a geolocation permission grant.",
-          whenToUse:
-            "Use them for maps, store locators, delivery coverage, or flows whose UI changes by physical location.",
-        },
-        {
-          name: "Permissions",
-          description:
-            "Comma-separated browser permissions granted before the first graph step, such as geolocation or notifications where supported.",
-          whenToUse:
-            "Use stable permissions here when every run needs them; use graph actions only when permission timing is part of the test.",
-        },
-        {
-          name: "Download directory",
-          description:
-            "Default local folder where downloaded files should be written for this workflow, when the runtime supports controlled downloads.",
-          whenToUse:
-            "Use it when the workflow validates generated reports, invoices, exports, or other downloaded artifacts.",
-        },
-        {
-          name: "Extra HTTP headers",
-          description:
-            "Additional request headers injected before graph execution, written one header per line as Name: Value.",
-          whenToUse:
-            "Use them for test routing, feature flags, correlation ids, or approved environment selectors that must exist from the first request.",
-        },
-        {
-          name: "Cookies and storage",
-          description:
-            "Seeded browser state for cookies, local storage, session storage, and restore references before the graph starts.",
-          whenToUse:
-            "Use it when a workflow needs known context but should not spend graph steps recreating the same state every run.",
-        },
-      ],
-      workflowExamples: [
-        {
-          title: "Regional smoke run",
-          steps: ["Set locale", "Set timezone", "Grant required permissions"],
-        },
-      ],
-      commonMistakes: [
-        {
-          mistake: "Adding setup nodes for values that never change.",
-          fix: "Move stable defaults into Environment settings and keep graph nodes for values that change by execution order.",
-        },
-      ],
-    },
-    vi: {
-      title: "Trợ giúp Cài đặt Môi trường",
-      summary:
-        "Cài đặt Môi trường áp dụng default cho browser context sau khi launch và trước graph step đầu tiên, gồm vị trí, permission, header, download, cookie, và storage mà không đổi danh tính launch của browser.",
-      uiLabels: viLabels,
-      bestFor: ["Đặt locale, timezone, geolocation, permission, header, và state browser ổn định."],
-      notFor: ["Không dùng cho proxy, profile, user-agent lúc launch, hoặc giá trị thay đổi nhiều lần trong graph."],
-      precedence: [
-        "Environment defaults áp dụng trước khi graph chạy.",
-        "Graph action về environment có thể ghi đè các giá trị này sau đó theo đúng thứ tự execution.",
-      ],
-      fieldGuide: [
-        {
-          name: "Locale và timezone",
-          description:
-            "Locale điều khiển ngôn ngữ và định dạng vùng; timezone điều khiển hành vi ngày giờ mà page context nhìn thấy.",
-          whenToUse:
-            "Dùng khi trang hiển thị giá, ngày tháng, ngôn ngữ, hoặc nội dung vùng khác nhau theo thị trường.",
-        },
-        {
-          name: "Latitude và longitude",
-          description:
-            "Tọa độ geolocation được seed trước khi graph bắt đầu, thường đi kèm permission geolocation.",
-          whenToUse:
-            "Dùng cho bản đồ, tìm cửa hàng, vùng giao hàng, hoặc flow có UI thay đổi theo vị trí thực.",
-        },
-        {
-          name: "Permissions",
-          description:
-            "Danh sách permission browser phân tách bằng dấu phẩy, được cấp trước graph step đầu tiên, ví dụ geolocation hoặc notifications nếu runtime hỗ trợ.",
-          whenToUse:
-            "Dùng permission ổn định ở đây khi mọi run đều cần; chỉ dùng graph action nếu thời điểm xin quyền là một phần của test.",
-        },
-        {
-          name: "Download directory",
-          description:
-            "Thư mục local mặc định để ghi file download cho workflow này, khi runtime hỗ trợ điều khiển download.",
-          whenToUse:
-            "Dùng khi workflow cần validate report, invoice, export, hoặc artifact tải xuống.",
-        },
-        {
-          name: "Extra HTTP headers",
-          description:
-            "Header request bổ sung được inject trước khi graph chạy, nhập mỗi dòng theo dạng Name: Value.",
-          whenToUse:
-            "Dùng cho test routing, feature flag, correlation id, hoặc selector môi trường đã được phê duyệt cần có từ request đầu tiên.",
-        },
-        {
-          name: "Cookies và storage",
-          description:
-            "State browser được seed cho cookies, local storage, session storage, và session restore reference trước khi graph bắt đầu.",
-          whenToUse:
-            "Dùng khi workflow cần context đã biết nhưng không nên tốn graph step để dựng lại cùng một state mỗi lần chạy.",
-        },
-      ],
-      workflowExamples: [
-        {
-          title: "Smoke test theo vùng",
-          steps: ["Đặt locale", "Đặt timezone", "Cấp permission cần thiết"],
-        },
-      ],
-      commonMistakes: [
-        {
-          mistake: "Thêm setup node cho giá trị không bao giờ thay đổi.",
-          fix: "Chuyển default ổn định vào Environment settings và giữ graph node cho giá trị thay đổi theo thứ tự chạy.",
+          mistake: "Đổi proxy khi browser đang chạy.",
+          fix: "Save Browser Launch settings và bắt đầu run mới vì launch-level values được áp dụng trước khi Chromium mở.",
         },
       ],
     },
   },
   environment: {
     en: {
-      title: "Variables Settings Help",
+      title: "Environment Settings Help",
       summary:
-        "Variables define initial typed values loaded before execution, so graph actions can reference stable workflow context without adding setup nodes at the start of every graph.",
+        "Environment settings seed initial typed variables before graph execution, giving templates, conditions, loops, and later actions stable values without adding setup nodes to every workflow.",
       uiLabels: enLabels,
-      bestFor: ["Seeding stable text, JSON, number, and boolean values before the first graph step."],
-      notFor: ["Changing values after graph execution has already begun; use Set Variables nodes for that."],
+      bestFor: [
+        "Providing stable text, JSON, number, and boolean values before the first graph action runs.",
+        "Keeping reusable workflow context close to settings while allowing graph nodes to mutate values later.",
+      ],
+      notFor: ["Browser launch identity, proxy routing, cookies, storage rows, or values that should change midway through the graph."],
       precedence: [
-        "Saved Variables load before graph execution.",
-        "Graph Set Variables writes override prior values by execution order.",
-        "Rows and JSON mode edit the same saved initial variables.",
+        "Environment initial variables are applied before graph actions.",
+        "Graph Set Variables and Set JSON Variables nodes overwrite earlier values by execution order.",
       ],
       fieldGuide: [
         {
-          name: "Rows mode",
+          name: "Variable name",
           description:
-            "Table editor for adding one variable per row with an explicit name, type, and value, matching the Set Variables node editing model.",
+            "Dot-path variable key such as user.email or base_url that templates and graph conditions can reference after settings setup runs.",
           whenToUse:
-            "Use it for normal editing when operators should add, remove, or scan individual variable values without writing JSON by hand.",
-        },
-        {
-          name: "JSON mode",
-          description:
-            "Structured JSON textarea for editing the same variables as an object. Nested object keys become dot-path variables and arrays or objects are stored as JSON values.",
-          whenToUse:
-            "Use it when pasting a prepared variable object or when nested values are easier to review as JSON than as rows.",
+            "Use stable names that match how graph fields will reference values inside {{variable}} templates.",
         },
         {
           name: "Variable type",
           description:
-            "Type controls how the runner parses the stored value before graph execution: text stays a string, JSON parses arrays or objects, number parses numeric values, and boolean parses true or false.",
+            "Type selector controlling how the runner parses the saved value: text remains a string, JSON parses arrays or objects, number parses finite values, and boolean parses true or false.",
           whenToUse:
-            "Use JSON for arrays or objects, number for numeric comparisons, boolean for flags, and text for template strings or ordinary scalar values.",
+            "Use JSON for arrays and objects, number for numeric comparisons, boolean for flags, and text for ordinary strings.",
         },
         {
-          name: "Dot paths",
+          name: "Variable value",
           description:
-            "Nested JSON fields convert to dot-path variable names such as user.email, and dot-path rows convert back into nested JSON when switching modes.",
+            "Saved initial value loaded into the run output store before the graph begins, then available to templates, conditions, and loop inputs.",
           whenToUse:
-            "Use dot paths to keep related variables grouped while still letting action templates reference a precise value.",
+            "Use it for stable environment context such as base URLs, approved test account labels, feature flags, or fixture ids.",
         },
       ],
       workflowExamples: [
         {
-          title: "Seed login constants",
-          steps: ["Add base_url as text", "Add retry_count as number", "Add feature flags as JSON"],
+          title: "Seed reusable context",
+          steps: ["Add base_url as text", "Add flags as JSON", "Reference {{base_url}} in Navigate"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Using Variables for values that should change halfway through a graph.",
-          fix: "Use Variables for initial context and Set Variables nodes for runtime changes that depend on earlier steps.",
+          mistake: "Using Environment for a value that should change after an extraction step.",
+          fix: "Use a graph Set Variables node after the extraction so execution order is explicit.",
         },
       ],
     },
     vi: {
-      title: "Trợ giúp Variables",
+      title: "Trợ giúp Environment",
       summary:
-        "Variables định nghĩa các giá trị typed được load trước khi chạy, để graph action tham chiếu context ổn định mà không cần thêm setup node ở đầu mỗi graph.",
+        "Environment seed các biến typed ban đầu trước khi graph chạy, để template, condition, loop, và action sau có giá trị ổn định mà không cần thêm setup node vào mọi workflow.",
       uiLabels: viLabels,
-      bestFor: ["Seed giá trị text, JSON, number, và boolean ổn định trước graph step đầu tiên."],
-      notFor: ["Không dùng để đổi giá trị sau khi graph đã bắt đầu; hãy dùng Set Variables node cho việc đó."],
+      bestFor: [
+        "Cung cấp giá trị text, JSON, number, và boolean ổn định trước action graph đầu tiên.",
+        "Giữ context dùng lại của workflow trong settings nhưng vẫn cho graph node ghi đè về sau.",
+      ],
+      notFor: ["Không dùng cho danh tính browser launch, proxy, cookie, storage row, hoặc giá trị cần đổi giữa graph."],
       precedence: [
-        "Variables đã lưu được load trước khi graph chạy.",
-        "Graph Set Variables ghi đè giá trị trước đó theo đúng thứ tự execution.",
-        "Rows mode và JSON mode cùng sửa một danh sách initial variables.",
+        "Environment initial variables được áp dụng trước graph actions.",
+        "Node Set Variables và Set JSON Variables trong graph ghi đè giá trị trước đó theo thứ tự chạy.",
       ],
       fieldGuide: [
         {
-          name: "Rows mode",
+          name: "Tên biến",
           description:
-            "Bảng nhập mỗi biến một dòng với name, type, và value rõ ràng, cùng model với editor của node Set Variables.",
+            "Key biến dạng dot-path như user.email hoặc base_url để template và condition trong graph tham chiếu sau khi settings setup chạy.",
           whenToUse:
-            "Dùng cho chỉnh sửa thông thường khi operator cần thêm, xóa, hoặc scan từng biến mà không phải tự viết JSON.",
-        },
-        {
-          name: "JSON mode",
-          description:
-            "Textarea JSON có cấu trúc để sửa cùng danh sách biến dưới dạng object. Object lồng nhau thành dot-path variables, còn array/object được lưu như JSON values.",
-          whenToUse:
-            "Dùng khi paste một object variables đã chuẩn bị sẵn hoặc khi nested values dễ review bằng JSON hơn bằng bảng.",
+            "Dùng tên ổn định khớp với cách field trong graph sẽ gọi qua template {{variable}}.",
         },
         {
           name: "Loại biến",
           description:
-            "Type quyết định runner parse value thế nào trước khi graph chạy: text giữ nguyên string, JSON parse array/object, number parse số, boolean parse true hoặc false.",
+            "Selector type quyết định runner parse giá trị đã lưu ra sao: text giữ string, JSON parse array/object, number parse số hữu hạn, boolean parse true hoặc false.",
           whenToUse:
-            "Dùng JSON cho array/object, number cho so sánh số, boolean cho flag, và text cho template string hoặc scalar thông thường.",
+            "Dùng JSON cho array/object, number cho so sánh số, boolean cho flag, và text cho chuỗi thông thường.",
         },
         {
-          name: "Dot paths",
+          name: "Giá trị biến",
           description:
-            "Field JSON lồng nhau convert thành tên biến dot-path như user.email, và row dot-path convert ngược lại thành JSON lồng nhau khi đổi mode.",
+            "Giá trị initial được nạp vào output store của run trước khi graph bắt đầu, rồi template, condition, và loop input có thể dùng.",
           whenToUse:
-            "Dùng dot path để nhóm biến liên quan nhưng vẫn cho action template tham chiếu đúng một giá trị cụ thể.",
+            "Dùng cho context môi trường ổn định như base URL, nhãn test account được phép, feature flag, hoặc fixture id.",
         },
       ],
       workflowExamples: [
         {
-          title: "Seed constant cho login",
-          steps: ["Thêm base_url dạng text", "Thêm retry_count dạng number", "Thêm feature flags dạng JSON"],
+          title: "Seed context dùng lại",
+          steps: ["Thêm base_url dạng text", "Thêm flags dạng JSON", "Tham chiếu {{base_url}} trong Navigate"],
         },
       ],
       commonMistakes: [
         {
-          mistake: "Dùng Variables cho giá trị cần đổi giữa chừng trong graph.",
-          fix: "Dùng Variables cho context ban đầu và dùng node Set Variables cho runtime changes phụ thuộc step trước đó.",
+          mistake: "Dùng Environment cho giá trị cần đổi sau một bước extraction.",
+          fix: "Dùng node Set Variables trong graph sau extraction để thứ tự execution rõ ràng.",
         },
       ],
     },
   },
   owned_test_gates: {
     en: {
-      title: "Triggers Settings Help",
+      title: "Owned Test Gates Help",
       summary:
-        "Triggers store orchestration intent for manual-only, one-time, interval, and future scheduled runs, using the saved graph and saved Workflow Settings at dispatch time.",
+        "Owned Test Gates define pre-run controls for authorized environments, currently the fingerprint preflight probe that must pass before graph actions execute when enabled.",
       uiLabels: enLabels,
-      bestFor: ["Saving schedule intent, missed-run behavior, trigger input source, and already-running behavior."],
-      notFor: ["Running unsaved graph drafts, replacing manual runs, or changing graph validation rules."],
-      precedence: ["Triggered runs use the saved graph and saved settings, not unsaved editor state."],
+      bestFor: [
+        "Blocking a workflow before actions run when the owned probe says the browser identity is not acceptable for the test.",
+        "Recording compact verdict evidence that security and trust teams can review with run outputs.",
+      ],
+      notFor: ["Bypassing CAPTCHA, solving challenges, expanding target scope, or running against unapproved origins."],
+      precedence: [
+        "Fingerprint preflight runs after browser launch and Environment variables, but before user graph actions.",
+        "When enabled, the probe URL, identity profile, allowed origins, and headed browser mode must validate before run start.",
+      ],
       fieldGuide: [
         {
-          name: "Trigger enabled",
+          name: "Fingerprint preflight",
           description:
-            "Master switch for automatic dispatch. When disabled, trigger details can remain saved but should not start runs.",
+            "Switch that enables an owned JSON probe before graph actions. A malformed, blocked, or failed verdict stops execution before user actions run.",
           whenToUse:
-            "Use it to pause a schedule without deleting interval, input source, or concurrency policy choices.",
+            "Use it when a workflow must prove the test browser identity is inside an approved posture before touching the target flow.",
         },
         {
-          name: "Mode",
+          name: "Probe URL",
           description:
-            "Dispatch style for the trigger: manual keeps automation off, once stores a one-time time, and interval stores repeated cadence.",
+            "HTTP or HTTPS endpoint under an allowed origin that returns the preflight verdict JSON consumed by the runner before graph actions start.",
           whenToUse:
-            "Use manual for drafts, once for a planned single run, and interval for recurring health checks.",
+            "Use an owned staging or production diagnostics endpoint that is explicitly approved for this workflow.",
         },
         {
-          name: "Interval seconds",
+          name: "Identity profile",
           description:
-            "Cadence for interval mode, measured in seconds, controlling how often the scheduler should attempt a run.",
+            "Operator-supplied profile identifier expected by the probe verdict, used to tie evidence to a named browser identity configuration.",
           whenToUse:
-            "Use it for recurring checks, and keep the interval longer than typical workflow duration unless concurrency policy is intentional.",
+            "Use a stable id that reviewers can map back to the approved test profile and account state.",
         },
         {
-          name: "Once at",
+          name: "Allowed origins",
           description:
-            "Target timestamp for one-time mode, representing when the scheduler should attempt the saved workflow run.",
+            "Newline-separated origins that constrain which probe URLs are acceptable when fingerprint preflight is enabled.",
           whenToUse:
-            "Use it for planned validation windows, release checks, or delayed tests where manual clicking is not desired.",
+            "List only owned or explicitly authorized origins that should be valid for this workflow's probe.",
         },
         {
-          name: "Input source and batch source",
+          name: "Proxy label",
           description:
-            "Saved references describing where trigger-supplied input values or batch rows should come from when dispatch happens.",
+            "Optional human-readable proxy metadata stored with the preflight configuration so evidence can describe the intended network route without exposing secrets.",
           whenToUse:
-            "Use them when the scheduled run should pull a known input set instead of relying only on defaults.",
+            "Use it when review needs to distinguish corporate, staging, regional, or isolated proxy routes.",
         },
         {
-          name: "Missed-run policy",
+          name: "Proxy region",
           description:
-            "Rule for what the scheduler should do if a planned run time was missed while the app or scheduler was unavailable.",
+            "Optional region or locality metadata for the proxy route, stored for evidence context and operator review rather than browser launch behavior.",
           whenToUse:
-            "Use skip when stale runs are not useful; use catch-up only when late execution still has business value.",
-        },
-        {
-          name: "Concurrency policy",
-          description:
-            "Rule for what a trigger should do when the workflow is already running at the next dispatch time.",
-          whenToUse:
-            "Use skip if overlapping browser sessions would corrupt data, overload services, or confuse run results.",
+            "Use it when preflight evidence should show which approved region the workflow expected.",
         },
       ],
       workflowExamples: [
         {
-          title: "Hourly availability check",
-          steps: ["Enable triggers", "Choose interval", "Set interval seconds"],
+          title: "Gate a production-owned test",
+          steps: ["Enable preflight", "Use an allowlisted probe URL", "Run headed so the gate can inspect browser identity"],
         },
+      ],
+      safetyNotes: [
+        "Owned Test Gates are audit controls for approved systems, not challenge bypass or third-party account controls.",
       ],
       commonMistakes: [
         {
-          mistake: "Expecting triggers to run unsaved graph edits.",
-          fix: "Save the graph and settings before relying on trigger dispatch.",
+          mistake: "Enabling preflight while Browser Launch is headless.",
+          fix: "Use headed browser mode because current validation requires headed mode for fingerprint preflight.",
         },
       ],
     },
     vi: {
-      title: "Trợ giúp Triggers",
+      title: "Trợ giúp Owned Test Gates",
       summary:
-        "Triggers lưu ý định điều phối cho run manual-only, one-time, interval, và các kiểu schedule sau này, dùng graph đã save và Workflow Settings đã save tại thời điểm dispatch.",
+        "Owned Test Gates định nghĩa control trước run cho môi trường được ủy quyền, hiện là fingerprint preflight probe phải pass trước khi graph actions chạy nếu được bật.",
       uiLabels: viLabels,
-      bestFor: ["Lưu lịch chạy, cách xử lý missed run, nguồn input của trigger, và hành vi khi workflow đang chạy."],
-      notFor: ["Không dùng để chạy draft graph chưa save, thay thế manual run, hoặc đổi rule validate graph."],
-      precedence: ["Triggered run dùng graph và settings đã save, không dùng state editor chưa lưu."],
+      bestFor: [
+        "Chặn workflow trước khi action chạy khi owned probe báo browser identity không đạt posture kiểm thử.",
+        "Ghi compact verdict evidence để đội security và trust review cùng run outputs.",
+      ],
+      notFor: ["Không dùng để bypass CAPTCHA, giải challenge, mở rộng scope target, hoặc chạy origin chưa được duyệt."],
+      precedence: [
+        "Fingerprint preflight chạy sau browser launch và Environment variables, nhưng trước user graph actions.",
+        "Khi bật, probe URL, identity profile, allowed origins, và headed browser mode phải validate trước khi run start.",
+      ],
       fieldGuide: [
         {
-          name: "Bật trigger",
+          name: "Fingerprint preflight",
           description:
-            "Công tắc tổng cho dispatch tự động. Khi tắt, chi tiết trigger vẫn có thể được lưu nhưng không nên khởi chạy run.",
+            "Switch bật owned JSON probe trước graph actions. Verdict lỗi, malformed, hoặc không pass sẽ dừng execution trước khi user actions chạy.",
           whenToUse:
-            "Dùng để tạm dừng schedule mà không xóa interval, nguồn input, hoặc concurrency policy đã chọn.",
+            "Dùng khi workflow phải chứng minh test browser identity ở posture được duyệt trước khi chạm target flow.",
         },
         {
-          name: "Mode",
+          name: "Probe URL",
           description:
-            "Kiểu dispatch của trigger: manual tắt tự động, once lưu một thời điểm chạy một lần, interval lưu chu kỳ lặp.",
+            "Endpoint HTTP hoặc HTTPS thuộc allowed origin, trả JSON verdict để runner đọc trước khi graph actions bắt đầu.",
           whenToUse:
-            "Dùng manual cho draft, once cho một run đã lên kế hoạch, và interval cho health check định kỳ.",
+            "Dùng endpoint diagnostics thuộc staging hoặc production owned đã được duyệt rõ cho workflow này.",
         },
         {
-          name: "Interval seconds",
+          name: "Identity profile",
           description:
-            "Chu kỳ của interval mode, tính bằng giây, quyết định scheduler thử chạy workflow thường xuyên thế nào.",
+            "Định danh profile do operator nhập và probe verdict kỳ vọng, giúp evidence gắn với cấu hình browser identity cụ thể.",
           whenToUse:
-            "Dùng cho check lặp lại; nên để interval dài hơn thời gian workflow thường chạy trừ khi concurrency policy đã được cân nhắc.",
+            "Dùng id ổn định để reviewer map về test profile và account state đã được phê duyệt.",
         },
         {
-          name: "Once at",
+          name: "Allowed origins",
           description:
-            "Timestamp mục tiêu cho once mode, biểu thị lúc scheduler nên thử chạy workflow đã save và dùng settings đã persist tại thời điểm đó.",
+            "Danh sách origin mỗi dòng một giá trị, giới hạn probe URL nào được chấp nhận khi fingerprint preflight bật.",
           whenToUse:
-            "Dùng cho khung validation đã hẹn, release check, hoặc test trì hoãn khi không muốn bấm thủ công.",
+            "Chỉ liệt kê origin thuộc sở hữu hoặc được ủy quyền rõ ràng hợp lệ cho probe của workflow này.",
         },
         {
-          name: "Input source và batch source",
+          name: "Proxy label",
           description:
-            "Tham chiếu đã lưu mô tả trigger lấy input value hoặc batch row từ đâu khi dispatch xảy ra, thay vì nhập tay trước mỗi run.",
+            "Metadata proxy dạng người đọc được lưu cùng preflight config để evidence mô tả network route dự kiến mà không lộ secret.",
           whenToUse:
-            "Dùng khi scheduled run cần kéo một bộ input đã biết thay vì chỉ dựa vào default.",
+            "Dùng khi review cần phân biệt tuyến proxy corporate, staging, regional, hoặc isolated.",
         },
         {
-          name: "Missed-run policy",
+          name: "Proxy region",
           description:
-            "Luật cho scheduler khi bỏ lỡ một thời điểm chạy vì app hoặc scheduler không khả dụng, ví dụ bỏ qua hoặc xử lý bù tùy giá trị nghiệp vụ.",
+            "Metadata region hoặc locality tùy chọn cho tuyến proxy, dùng cho evidence context và operator review thay vì điều khiển browser launch.",
           whenToUse:
-            "Dùng skip khi run muộn không còn hữu ích; chỉ dùng catch-up khi chạy trễ vẫn có giá trị nghiệp vụ.",
-        },
-        {
-          name: "Concurrency policy",
-          description:
-            "Luật cho trigger khi workflow vẫn đang chạy tại thời điểm dispatch tiếp theo, giúp tránh nhiều run chồng lấn cùng sửa một hệ thống.",
-          whenToUse:
-            "Dùng skip nếu nhiều browser session chồng nhau có thể làm hỏng dữ liệu, quá tải dịch vụ, hoặc gây nhiễu kết quả.",
+            "Dùng khi preflight evidence nên thể hiện region được phê duyệt mà workflow kỳ vọng.",
         },
       ],
       workflowExamples: [
         {
-          title: "Check availability mỗi giờ",
-          steps: ["Bật triggers", "Chọn interval", "Đặt interval seconds"],
+          title: "Gate kiểm thử production owned",
+          steps: ["Bật preflight", "Dùng probe URL allowlisted", "Chạy headed để gate kiểm tra browser identity"],
         },
+      ],
+      safetyNotes: [
+        "Owned Test Gates là audit control cho hệ thống đã duyệt, không phải challenge bypass hay third-party account control.",
       ],
       commonMistakes: [
         {
-          mistake: "Nghĩ trigger sẽ chạy graph edit chưa save.",
-          fix: "Hãy save graph và settings trước khi dựa vào trigger dispatch.",
-        },
-      ],
-    },
-  },
-  advanced: {
-    en: {
-      title: "Advanced Settings Help",
-      summary:
-        "Advanced settings collect compatibility warnings, diagnostics, debug logging, experimental flags, and future migration helpers for rare troubleshooting rather than normal workflow configuration.",
-      uiLabels: enLabels,
-      bestFor: ["Reviewing compatibility warnings, enabling targeted diagnostics, and understanding migration hints."],
-      notFor: ["Everyday browser, input, environment, schedule, or execution configuration."],
-      precedence: ["Advanced warnings explain conflicts but do not replace the section that owns the actual setting."],
-      fieldGuide: [
-        {
-          name: "Compatibility warnings",
-          description:
-            "Read-only warnings that highlight legacy setup nodes or saved data that overlap with modern Workflow Settings sections.",
-          whenToUse:
-            "Use them when a workflow behaves unexpectedly after import, migration, or loading an older graph.",
-        },
-        {
-          name: "Debug logging level",
-          description:
-            "Diagnostic verbosity intended for troubleshooting runner, settings, and integration behavior while keeping secret values redacted.",
-          whenToUse:
-            "Use it briefly while investigating a concrete issue, then return it to off to reduce noise and sensitive context exposure.",
-        },
-        {
-          name: "Experimental flags",
-          description:
-            "Feature gates for unfinished or compatibility-sensitive behavior that should not be required for normal workflow authoring.",
-          whenToUse:
-            "Use only when a migration note, developer instruction, or controlled test explicitly asks for a flag.",
-        },
-        {
-          name: "Settings diagnostics",
-          description:
-            "Troubleshooting context such as JSON previews, migration hints, or exportable state that helps compare saved settings with UI expectations.",
-          whenToUse:
-            "Use it to verify what is persisted when the form, saved graph, and runtime behavior appear out of sync.",
-        },
-      ],
-      workflowExamples: [
-        {
-          title: "Legacy setup cleanup",
-          steps: ["Review warnings", "Move stable launch values into Browser settings"],
-        },
-      ],
-      commonMistakes: [
-        {
-          mistake: "Treating Advanced as the default settings page.",
-          fix: "Use the owning section for normal configuration and keep Advanced for diagnostics or compatibility review.",
-        },
-      ],
-    },
-    vi: {
-      title: "Trợ giúp Cài đặt Nâng cao",
-      summary:
-        "Cài đặt Nâng cao gom compatibility warning, diagnostics, debug logging, experimental flags, và helper migration sau này cho các tình huống troubleshooting hiếm, không phải cấu hình thường ngày.",
-      uiLabels: viLabels,
-      bestFor: ["Review compatibility warning, bật diagnostic có mục tiêu, và hiểu gợi ý migration."],
-      notFor: ["Không dùng cho cấu hình browser, input, environment, schedule, hoặc execution thường ngày."],
-      precedence: ["Warning ở Advanced giải thích xung đột nhưng không thay thế section sở hữu setting thật."],
-      fieldGuide: [
-        {
-          name: "Compatibility warnings",
-          description:
-            "Các cảnh báo chỉ đọc, chỉ ra setup node legacy hoặc dữ liệu đã lưu bị trùng trách nhiệm với Workflow Settings hiện đại.",
-          whenToUse:
-            "Dùng khi workflow hành xử lạ sau import, migration, hoặc khi mở một graph cũ.",
-        },
-        {
-          name: "Debug logging level",
-          description:
-            "Mức độ chi tiết log để troubleshoot runner, settings, và integration, đồng thời vẫn phải redact secret value.",
-          whenToUse:
-            "Chỉ bật tạm thời khi điều tra một lỗi cụ thể, rồi trả về off để giảm nhiễu và giảm lộ ngữ cảnh nhạy cảm.",
-        },
-        {
-          name: "Experimental flags",
-          description:
-            "Feature gate cho hành vi chưa hoàn thiện hoặc nhạy cảm về compatibility, không nên bắt buộc trong authoring workflow bình thường.",
-          whenToUse:
-            "Chỉ dùng khi migration note, developer instruction, hoặc controlled test yêu cầu rõ một flag.",
-        },
-        {
-          name: "Settings diagnostics",
-          description:
-            "Ngữ cảnh troubleshooting như JSON preview, migration hint, hoặc state có thể export để so saved settings với kỳ vọng UI.",
-          whenToUse:
-            "Dùng để xác minh dữ liệu đã persist khi form, graph đã save, và hành vi runtime có vẻ không khớp nhau.",
-        },
-      ],
-      workflowExamples: [
-        {
-          title: "Dọn setup legacy",
-          steps: ["Review warnings", "Chuyển launch value ổn định vào Browser settings"],
-        },
-      ],
-      commonMistakes: [
-        {
-          mistake: "Xem Advanced là trang settings mặc định.",
-          fix: "Dùng đúng section sở hữu cấu hình thường ngày và giữ Advanced cho diagnostics hoặc compatibility review.",
+          mistake: "Bật preflight trong khi Browser Launch đang headless.",
+          fix: "Dùng headed browser mode vì validation hiện yêu cầu headed mode cho fingerprint preflight.",
         },
       ],
     },

@@ -337,8 +337,6 @@ const baseStepHelpContent: Record<
         { name: "Offset X / Offset Y", description: "Tọa độ click tính từ góc trên trái element khi Position là Offset." },
         { name: "Wait until", description: waitUntilField.vi },
         { name: "Timeout ms", description: timeoutField.vi },
-        { name: "Retry interval ms", description: "Khoảng nghỉ giữa các lần thử lại khi element chưa click được." },
-        { name: "Post-click wait ms", description: "Chờ thêm sau khi click, hữu ích khi click mở animation hoặc chuyển trạng thái." },
       ],
       examples: ["XPath: //*[@type='submit']", "Iframe XPath: //*[@id='frame'], XPath: //*[@id='buy']"],
       commonMistakes: ["XPath trỏ vào text bên trong button thay vì button có thể click.", "Element bị che sẽ làm Real click thất bại; thử scroll hoặc kiểm tra overlay."],
@@ -359,8 +357,6 @@ const baseStepHelpContent: Record<
         { name: "Offset X / Offset Y", description: "Click coordinates from the element's top-left corner when Position is Offset." },
         { name: "Wait until", description: waitUntilField.en },
         { name: "Timeout ms", description: timeoutField.en },
-        { name: "Retry interval ms", description: "Delay between retries while the element is not clickable yet." },
-        { name: "Post-click wait ms", description: "Extra wait after clicking, useful for animations or state changes." },
       ],
       examples: ["XPath: //*[@type='submit']", "Iframe XPath: //*[@id='frame'], XPath: //*[@id='buy']"],
       commonMistakes: ["XPath points to text inside a button instead of the clickable button.", "Covered elements can fail Real click; check overlays or scrolling."],
@@ -795,11 +791,18 @@ function addLanguageFieldDetails(
   language: StepHelpLanguage,
   content: StepHelpContent,
 ): StepHelpContent {
+  const contentFields = new Map(content.fields.map((field) => [field.name, field]));
+
   return {
     ...content,
-    fields: content.fields.map((field) => ({
-      ...field,
-      details: field.details ?? fieldDetails(actionType, language, field.name),
+    fields: actualFieldNames(actionType).map((fieldName) => ({
+      name: fieldName,
+      description:
+        contentFields.get(fieldName)?.description ??
+        fieldDescription(actionType, language, fieldName),
+      details:
+        contentFields.get(fieldName)?.details ??
+        fieldDetails(actionType, language, fieldName),
     })),
   };
 }
@@ -825,11 +828,15 @@ function addLanguageDecisionGuidance(
   content: StepHelpContent,
 ): StepHelpContent {
   const label = actionLabels[actionType];
-  const minimalConfig = content.fields.slice(0, 3).map((field) => ({
-    name: field.name,
-    description: field.description,
-  }));
-  const advancedConfig = content.fields.slice(3).map((field) => ({
+  const minimumNames = minimumFieldNames(content.fields);
+  const minimalConfig = minimumNames.map((fieldName) => {
+    const field = content.fields.find((item) => item.name === fieldName);
+    return {
+      name: fieldName,
+      description: field?.description ?? fieldDescription(actionType, language, fieldName),
+    };
+  });
+  const advancedConfig = content.fields.filter((field) => !minimumNames.includes(field.name)).map((field) => ({
     name: field.name,
     description: field.description,
     whenToUse:
@@ -852,6 +859,13 @@ function addLanguageDecisionGuidance(
     outputs: outputGuidance(actionType, language),
     safetyNotes: safetyNotes(actionType, language),
   };
+}
+
+function minimumFieldNames(fields: StepHelpContent["fields"]) {
+  const nonConditionalFields = fields.filter(
+    (field) => !field.name.endsWith("role") && !field.name.endsWith("attribute"),
+  );
+  return nonConditionalFields.slice(0, 3).map((field) => field.name);
 }
 
 function addFieldReference(
@@ -894,26 +908,59 @@ function addLanguageFieldReference(
 }
 
 function actualFieldNames(actionType: ActionType): string[] {
-  const elementTargetFields = ["XPath", "Iframe XPath", "Wait until", "Timeout ms"];
+  const targetFields = [
+    "Target locator type",
+    "Target locator",
+    "Target role",
+    "Target attribute",
+    "Target visibility",
+    "Target enabled",
+    "Target contains text",
+    "Target index",
+  ];
+  const sourceTargetFields = [
+    "Source locator type",
+    "Source locator",
+    "Source visibility",
+    "Source enabled",
+    "Source contains text",
+    "Source index",
+  ];
+  const destinationTargetFields = [
+    "Destination locator type",
+    "Destination locator",
+    "Destination visibility",
+    "Destination enabled",
+    "Destination contains text",
+    "Destination index",
+  ];
+  const triggerTargetFields = [
+    "Trigger locator type",
+    "Trigger locator",
+    "Trigger visibility",
+    "Trigger enabled",
+    "Trigger contains text",
+    "Trigger index",
+  ];
   switch (actionType) {
     case "navigate":
-      return ["URL", "Wait until", "Timeout ms"];
+      return ["URL"];
     case "wait":
-      return ["Condition", "Duration ms", "XPath", "Text", "URL contains", "Timeout ms"];
+      return ["Condition", "Duration ms", ...targetFields, "Text", "URL contains"];
     case "random_wait":
       return ["Minimum wait ms", "Maximum wait ms"];
     case "input_text":
-      return ["XPath", "Text", "Clear before input", "Typing mode", "Iframe XPath", "Delay ms", "Wait until", "Timeout ms"];
+      return [...targetFields, "Text"];
     case "clear_input":
-      return [...elementTargetFields, "Method"];
+      return targetFields;
     case "click":
-      return ["XPath", "Mode", "Click count", "Button", "Iframe XPath", "Scroll into view", "Block", "Inline", "Position", "Offset X / Offset Y", "Wait until", "Timeout ms", "Retry interval ms", "Post-click wait ms"];
+      return targetFields;
     case "scroll":
-      return ["Mode", "Direction", "Pixels", "XPath", "Max attempts", "Wait ms", "Iframe XPath", "Behavior", "Block", "Inline"];
+      return ["Mode", "Direction", "Pixels", ...targetFields, "Behavior"];
     case "select_option":
-      return ["XPath", "Match by", "Value", "Iframe XPath", "Wait until", "Timeout ms"];
+      return [...targetFields, "Match by", "Value"];
     case "set_checkbox":
-      return [...elementTargetFields, "State"];
+      return [...targetFields, "State"];
     case "press_key":
       return ["Key"];
     case "hotkey":
@@ -928,28 +975,28 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "uncheck":
     case "toggle_checkbox":
     case "select_radio":
-      return elementTargetFields;
+      return targetFields;
     case "drag_and_drop":
-      return ["Source XPath", "Target XPath", "Iframe XPath", "Wait until", "Timeout ms"];
+      return [...sourceTargetFields, ...destinationTargetFields];
     case "type_sequence":
-      return ["XPath", "Text", "Delay ms", "Iframe XPath", "Wait until", "Timeout ms"];
+      return [...targetFields, "Text"];
     case "set_clipboard":
       return ["Text"];
     case "upload_file":
-      return ["XPath", "Files", "Iframe XPath", "Wait until", "Timeout ms"];
+      return [...targetFields, "Files"];
     case "submit_form":
-      return ["XPath", "Iframe XPath", "Wait until", "Timeout ms"];
+      return targetFields;
     case "select_custom_option":
-      return ["Trigger XPath", "Option text", "Iframe XPath", "Timeout ms"];
+      return [...triggerTargetFields, "Option text"];
     case "set_contenteditable":
-      return ["XPath", "Text", "Clear before input", "Iframe XPath", "Wait until", "Timeout ms"];
+      return [...targetFields, "Text", "Clear before input"];
     case "extract_text":
     case "extract_input_value":
     case "extract_table":
     case "extract_list":
-      return ["XPath", "Output name", "Iframe XPath", "Timeout ms"];
+      return [...targetFields, "Output name"];
     case "extract_attribute":
-      return ["XPath", "Output name", "Iframe XPath", "Timeout ms", "Attribute"];
+      return [...targetFields, "Output name", "Attribute"];
     case "take_screenshot":
       return ["Path", "Output name", "Full page"];
     case "go_back":
@@ -975,9 +1022,9 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "set_json_variables":
       return ["JSON variables"];
     case "assert_element":
-      return ["XPath", "State", "Iframe XPath", "Timeout ms"];
+      return [...targetFields, "State"];
     case "assert_text":
-      return ["XPath", "Text", "Match mode", "Timeout ms"];
+      return [...targetFields, "Text", "Match mode", "Timeout ms"];
     case "if_condition":
       return ["No fields"];
     case "repeat_times":
@@ -1140,6 +1187,16 @@ function fieldRequiredWhen(
       };
 
   if (specific[key]) return specific[key];
+  if (isLocatorTypeField(fieldName) || isLocatorValueField(fieldName)) {
+    return vi
+      ? "Bắt buộc khi action cần tìm một element trên trang; để trống chỉ khi action hoặc mode không cần target."
+      : "Required when the action needs to find a page element; leave blank only when the action or mode does not need a target.";
+  }
+  if (isLocatorConstraintField(fieldName)) {
+    return vi
+      ? "Tùy chọn; dùng khi cần lọc locator theo trạng thái, text, hoặc vị trí khớp."
+      : "Optional; use when the locator must be constrained by state, text, or match position.";
+  }
   if (fieldName.includes("XPath") && fieldName !== "Iframe XPath") {
     return vi
       ? "Bắt buộc khi action cần chọn element cụ thể."
@@ -1186,6 +1243,46 @@ function fieldDescription(
       ? "Text sẽ nhập vào prompt dialog trước khi accept."
       : "Text entered into a prompt dialog before accepting it.";
   }
+  if (isLocatorTypeField(fieldName)) {
+    return vi
+      ? "Loại locator dùng để tìm element, ví dụ Test ID, Role, Label, Placeholder, Text, CSS, XPath, hoặc Attribute."
+      : "Locator kind used to find the element, such as Test ID, Role, Label, Placeholder, Text, CSS, XPath, or Attribute.";
+  }
+  if (isLocatorValueField(fieldName)) {
+    return vi
+      ? "Giá trị locator tương ứng với loại đã chọn, ví dụ test id, label hiển thị, CSS selector, hoặc XPath tương thích."
+      : "Locator value matching the selected kind, such as a test id, visible label, CSS selector, or compatibility XPath.";
+  }
+  if (fieldName.endsWith("role")) {
+    return vi
+      ? "Role ARIA dùng khi Locator type là Role, ví dụ button, textbox, link, hoặc checkbox."
+      : "ARIA role used when Locator type is Role, for example button, textbox, link, or checkbox.";
+  }
+  if (fieldName.endsWith("attribute")) {
+    return vi
+      ? "Tên attribute dùng khi Locator type là Attribute, ví dụ data-state hoặc aria-label."
+      : "Attribute name used when Locator type is Attribute, for example data-state or aria-label.";
+  }
+  if (fieldName.endsWith("visibility")) {
+    return vi
+      ? "Ràng buộc element phải visible, hidden, hoặc bỏ qua trạng thái visibility."
+      : "Constraint for whether the element must be visible, hidden, or accepted in any visibility state.";
+  }
+  if (fieldName.endsWith("enabled")) {
+    return vi
+      ? "Ràng buộc element phải enabled, disabled, hoặc bỏ qua trạng thái enabled."
+      : "Constraint for whether the element must be enabled, disabled, or accepted in either state.";
+  }
+  if (fieldName.endsWith("contains text")) {
+    return vi
+      ? "Text con mà element khớp locator phải chứa thêm, dùng để lọc các kết quả tương tự nhau."
+      : "Additional text the matched element must contain, useful when several locator matches look similar.";
+  }
+  if (fieldName.endsWith("index")) {
+    return vi
+      ? "Vị trí match theo số bắt đầu từ 0 khi locator có nhiều kết quả hợp lệ."
+      : "Zero-based match position when the locator returns multiple valid elements.";
+  }
   return vi
     ? `${fieldName} điều khiển cách ${actionLabels[actionType]} chạy trong browser. Đọc quy tắc bắt buộc và ví dụ để nhập đúng kiểu giá trị.`
     : `${fieldName} controls how ${actionLabels[actionType]} runs in the browser. Use the requirement rule and example to enter the right value.`;
@@ -1193,6 +1290,10 @@ function fieldDescription(
 
 function fieldCategory(actionType: ActionType, fieldName: string): HelpFieldCategory {
   if (fieldName === "No fields") return "optional";
+  if (isLocatorTypeField(fieldName) || isLocatorValueField(fieldName)) return "required";
+  if (fieldName.endsWith("role") || fieldName.endsWith("attribute") || isLocatorConstraintField(fieldName)) {
+    return "optional";
+  }
   if (
     fieldName.includes("Timeout") ||
     fieldName.includes("Delay") ||
@@ -1204,9 +1305,7 @@ function fieldCategory(actionType: ActionType, fieldName: string): HelpFieldCate
     fieldName === "Device scale factor" ||
     fieldName === "Block" ||
     fieldName === "Inline" ||
-    fieldName === "Offset X / Offset Y" ||
-    fieldName === "Post-click wait ms" ||
-    fieldName === "Retry interval ms"
+    fieldName === "Offset X / Offset Y"
   ) {
     return "advanced";
   }
@@ -1245,6 +1344,31 @@ function fieldValueGuidance(
   const vi = language === "vi";
   const details = fieldDetails(actionType, language, fieldName);
   if (fieldName === "No fields") return undefined;
+  if (isLocatorTypeField(fieldName)) {
+    return vi
+      ? "Chọn loại locator ổn định nhất mà trang cung cấp; Test ID, Role, Label, và Placeholder thường dễ bảo trì hơn selector cấu trúc."
+      : "Choose the most stable locator kind the page provides; Test ID, Role, Label, and Placeholder are usually easier to maintain than structural selectors.";
+  }
+  if (isLocatorValueField(fieldName)) {
+    return vi
+      ? "Nhập đúng giá trị cho locator type đã chọn; để trống sẽ xóa structured target hiện tại."
+      : "Enter the value for the selected locator kind; leaving it blank clears the current structured target.";
+  }
+  if (fieldName.endsWith("visibility") || fieldName.endsWith("enabled")) {
+    return vi
+      ? "Giữ Any nếu không cần lọc; chọn trạng thái cụ thể khi có nhiều element giống nhau."
+      : "Keep Any unless the state matters; choose a specific state when several similar elements match.";
+  }
+  if (fieldName.endsWith("contains text")) {
+    return vi
+      ? "Nhập đoạn text ngắn ổn định bên trong element cần phân biệt."
+      : "Enter a short stable text fragment inside the element you need to distinguish.";
+  }
+  if (fieldName.endsWith("index")) {
+    return vi
+      ? "Nhập số bắt đầu từ 0, chỉ dùng khi locator cố ý khớp nhiều element."
+      : "Enter a zero-based number, only when the locator intentionally matches multiple elements.";
+  }
   if (fieldName.includes("XPath")) {
     return vi
       ? "Copy XPath ổn định của element thật; nếu ở iframe, dùng thêm Iframe XPath."
@@ -1281,6 +1405,12 @@ function fieldExample(
   fieldName: string,
 ) {
   const vi = language === "vi";
+  if (isLocatorTypeField(fieldName)) return "Test ID";
+  if (isLocatorValueField(fieldName)) return "submit-button";
+  if (fieldName.endsWith("visibility")) return "Visible";
+  if (fieldName.endsWith("enabled")) return "Enabled";
+  if (fieldName.endsWith("contains text")) return vi ? "Đăng nhập" : "Sign in";
+  if (fieldName.endsWith("index")) return "0";
   if (fieldName.includes("XPath")) return "//*[@data-testid='submit']";
   if (fieldName.includes("Timeout")) return vi ? "5000 nghĩa là 5 giây." : "5000 means 5 seconds.";
   if (fieldName.includes("Delay") || fieldName.includes("Wait")) return "100";
@@ -1300,6 +1430,14 @@ function fieldMistakes(
 ) {
   const vi = language === "vi";
   const mistakes = fieldDetails(actionType, language, fieldName).slice(0, 2);
+  if (isLocatorValueField(fieldName)) {
+    return [
+      vi
+        ? "Nhập giá trị không khớp với locator type, ví dụ dán CSS selector khi đang chọn Test ID."
+        : "Entering a value that does not match the locator type, such as a CSS selector while Test ID is selected.",
+      ...mistakes,
+    ];
+  }
   if (fieldName.includes("XPath")) {
     return [
       vi
@@ -1325,7 +1463,27 @@ function fieldOptions(
   fieldName: string,
 ) {
   const key = `${actionType}:${fieldName}`;
+  if (isLocatorTypeField(fieldName)) return commonFieldOptions[language]["Locator type"];
+  if (fieldName.endsWith("visibility")) return commonFieldOptions[language]["Target visibility"];
+  if (fieldName.endsWith("enabled")) return commonFieldOptions[language]["Target enabled"];
   return specificFieldOptions[language][key] ?? commonFieldOptions[language][fieldName];
+}
+
+function isLocatorTypeField(fieldName: string) {
+  return fieldName.endsWith("locator type");
+}
+
+function isLocatorValueField(fieldName: string) {
+  return fieldName.endsWith("locator");
+}
+
+function isLocatorConstraintField(fieldName: string) {
+  return (
+    fieldName.endsWith("visibility") ||
+    fieldName.endsWith("enabled") ||
+    fieldName.endsWith("contains text") ||
+    fieldName.endsWith("index")
+  );
 }
 
 function option(
@@ -1416,6 +1574,26 @@ const specificFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldO
 
 const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOptionReference[]>> = {
   vi: {
+    "Locator type": [
+      option("Test ID", "Tìm bằng data-testid hoặc test id tương đương.", "Dùng khi app có selector test ổn định.", "Tránh nếu trang không có test id.", undefined, "test_id"),
+      option("Role", "Tìm bằng role ARIA và tên accessible.", "Dùng cho button, link, textbox, checkbox có accessibility tốt.", "Tránh nếu role không rõ hoặc tên thay đổi.", undefined, "role"),
+      option("Label", "Tìm control qua label hiển thị.", "Dùng cho input form có label ổn định.", "Tránh nếu label đổi theo locale.", undefined, "label"),
+      option("Placeholder", "Tìm input qua placeholder.", "Dùng khi field không có label nhưng placeholder ổn định.", "Tránh nếu placeholder chỉ là hint tạm.", undefined, "placeholder"),
+      option("Text", "Tìm element theo text hiển thị.", "Dùng cho link, button, hoặc nội dung có chữ ổn định.", "Tránh text động hoặc dịch theo locale.", undefined, "text"),
+      option("CSS", "Tìm bằng CSS selector.", "Dùng khi có class/id/attribute ổn định.", "Tránh selector phụ thuộc layout sâu.", undefined, "css"),
+      option("XPath", "Tìm bằng XPath tương thích.", "Dùng cho workflow cũ hoặc khi selector khác không đủ.", "Tránh coi XPath tuyệt đối là lựa chọn mặc định.", undefined, "xpath"),
+      option("Attribute", "Tìm bằng một attribute cụ thể.", "Dùng khi trang có data attribute ổn định.", "Tránh attribute thay đổi theo session.", undefined, "attribute"),
+    ],
+    "Target visibility": [
+      option("Any", "Không lọc visibility.", "Dùng mặc định khi locator đã đủ chính xác.", "Tránh nếu có cả bản hidden và visible.", undefined, "any"),
+      option("Visible", "Chỉ khớp element đang hiển thị.", "Dùng trước thao tác người dùng như click hoặc nhập.", "Tránh nếu cần kiểm tra element hidden.", undefined, "true"),
+      option("Hidden", "Chỉ khớp element đang ẩn.", "Dùng cho assertion hoặc wait hidden.", "Tránh cho click/input.", undefined, "false"),
+    ],
+    "Target enabled": [
+      option("Any", "Không lọc trạng thái enabled.", "Dùng khi enabled không quan trọng.", "Tránh nếu control có thể disabled.", undefined, "any"),
+      option("Enabled", "Chỉ khớp control sẵn sàng thao tác.", "Dùng trước click/input quan trọng.", "Tránh nếu cần xác nhận disabled.", undefined, "true"),
+      option("Disabled", "Chỉ khớp control đang bị disabled.", "Dùng cho assertion trạng thái khóa.", "Tránh cho thao tác nhập/click.", undefined, "false"),
+    ],
     "Wait until": [
       option("Clickable", "Element visible, enabled, và có thể nhận thao tác.", "Dùng trước click hoặc nhập liệu quan trọng.", "Tránh chỉ khi website có UI đặc biệt cần fallback.", undefined, "clickable"),
       option("Visible", "Element hiển thị trên trang.", "Dùng khi cần đọc hoặc nhìn thấy element.", "Tránh khi cần đảm bảo click được.", undefined, "visible"),
@@ -1514,6 +1692,26 @@ const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOpt
     ],
   },
   en: {
+    "Locator type": [
+      option("Test ID", "Finds by data-testid or an equivalent test id.", "Use when the app exposes stable test selectors.", "Avoid when the page has no test id.", undefined, "test_id"),
+      option("Role", "Finds by ARIA role and accessible name.", "Use for accessible buttons, links, textboxes, and checkboxes.", "Avoid when the role or name is unclear.", undefined, "role"),
+      option("Label", "Finds a control by its visible label.", "Use for form inputs with stable labels.", "Avoid labels that change by locale.", undefined, "label"),
+      option("Placeholder", "Finds an input by placeholder.", "Use when a field has no label but a stable placeholder.", "Avoid placeholders that are only temporary hints.", undefined, "placeholder"),
+      option("Text", "Finds an element by visible text.", "Use for links, buttons, or stable content.", "Avoid dynamic or localized text.", undefined, "text"),
+      option("CSS", "Finds by CSS selector.", "Use for stable ids, classes, or attributes.", "Avoid selectors tied to deep layout structure.", undefined, "css"),
+      option("XPath", "Finds by compatibility XPath.", "Use for older workflows or when other selectors are insufficient.", "Avoid treating absolute XPath as the default.", undefined, "xpath"),
+      option("Attribute", "Finds by a specific attribute.", "Use when the page exposes a stable data attribute.", "Avoid attributes that change by session.", undefined, "attribute"),
+    ],
+    "Target visibility": [
+      option("Any", "Does not constrain visibility.", "Use by default when the locator is already precise.", "Avoid when both hidden and visible copies exist.", undefined, "any"),
+      option("Visible", "Matches only visible elements.", "Use before user-like actions such as click or input.", "Avoid when checking hidden state.", undefined, "true"),
+      option("Hidden", "Matches only hidden elements.", "Use for assertions or hidden waits.", "Avoid for click or input.", undefined, "false"),
+    ],
+    "Target enabled": [
+      option("Any", "Does not constrain enabled state.", "Use when enabled state does not matter.", "Avoid when a control may be disabled.", undefined, "any"),
+      option("Enabled", "Matches only controls ready for interaction.", "Use before important click or input work.", "Avoid when verifying disabled state.", undefined, "true"),
+      option("Disabled", "Matches only disabled controls.", "Use for locked-state assertions.", "Avoid for typing or clicking.", undefined, "false"),
+    ],
     "Wait until": [
       option("Clickable", "Element is visible, enabled, and can receive the action.", "Use before important click or input work.", "Avoid only when a special UI requires fallback behavior.", undefined, "clickable"),
       option("Visible", "Element is visible on the page.", "Use when you need to read or see the element.", "Avoid when you must guarantee clickability.", undefined, "visible"),
@@ -1941,14 +2139,6 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
       "X/Y tính từ góc trên bên trái của element.",
       "Dùng khi cần click chính xác vào một điểm bên trong canvas, map, hoặc control phức tạp.",
     ],
-    "Retry interval ms": [
-      "Khoảng nghỉ giữa các lần thử lại khi element chưa sẵn sàng.",
-      "Giá trị nhỏ phản ứng nhanh hơn; giá trị lớn giảm tải cho trang.",
-    ],
-    "Post-click wait ms": [
-      "Chờ thêm sau click trước khi step tiếp theo chạy.",
-      "Hữu ích khi click mở modal, dropdown, animation, hoặc trigger request ngắn.",
-    ],
     Mode: [
       "Mode quyết định ý nghĩa của các field còn lại.",
       "Khi đổi Mode, hãy đọc lại mô tả XPath vì mỗi mode có thể hiểu XPath khác nhau.",
@@ -2084,14 +2274,6 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
       "Only used when Position is Offset.",
       "X/Y are measured from the element's top-left corner.",
       "Use for canvas, maps, or complex controls that need precise clicks.",
-    ],
-    "Retry interval ms": [
-      "Delay between retries while the element is not ready.",
-      "Smaller values react faster; larger values reduce pressure on the page.",
-    ],
-    "Post-click wait ms": [
-      "Extra wait after click before the next step runs.",
-      "Useful when click opens a modal, dropdown, animation, or short request.",
     ],
     Mode: [
       "Mode decides how the other fields are interpreted.",
