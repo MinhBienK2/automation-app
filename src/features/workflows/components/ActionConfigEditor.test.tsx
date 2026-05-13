@@ -116,16 +116,17 @@ describe("ActionConfigEditor", () => {
     const config: ActionConfig = {
       type: "input_text",
       config: {
-        xpath: "//*[@name='email']",
+        target: null,
         text: "user@example.com",
         clear_before_input: true,
-        typing_mode: "type",
-        delay_ms: null,
       },
     };
 
     render(<ActionConfigEditor config={config} onChange={vi.fn()} />);
 
-    expect(screen.getByLabelText("Delay ms")).toHaveValue(80);
+    expect(screen.queryByLabelText("Delay ms")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Typing mode")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Timeout ms")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Wait until")).not.toBeInTheDocument();
   });
 });

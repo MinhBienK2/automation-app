@@ -6,7 +6,6 @@ import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import {
-  ElementOptionalFields,
   ElementTargetFields,
   StructuredTargetFields,
 } from "./ActionConfigElementSharedFields";
@@ -106,47 +105,16 @@ export function FormActionFields({
     case "drag_and_drop":
       return (
         <>
-          <Label>
-            Source XPath
-            <Input
-              value={config.config.source_xpath}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "source_xpath",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            />
-          </Label>
           <StructuredTargetFields
             config={config}
             onChange={onChange}
             targetField="source_target"
           />
-          <Label>
-            Target XPath
-            <Input
-              value={config.config.target_xpath}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "target_xpath",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            />
-          </Label>
           <StructuredTargetFields
             config={config}
             onChange={onChange}
             targetField="target_target"
           />
-          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "type_sequence":
@@ -159,17 +127,6 @@ export function FormActionFields({
               value={config.config.text}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Delay ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.delay_ms ?? 1}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
               }
             />
           </Label>
@@ -211,21 +168,6 @@ export function FormActionFields({
     case "select_custom_option":
       return (
         <>
-          <Label>
-            Trigger XPath
-            <Input
-              value={config.config.trigger_xpath}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "trigger_xpath",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            />
-          </Label>
           <StructuredTargetFields
             config={config}
             onChange={onChange}
@@ -242,7 +184,6 @@ export function FormActionFields({
               }
             />
           </Label>
-          <ElementOptionalFields config={config} onChange={onChange} />
         </>
       );
     case "set_contenteditable":

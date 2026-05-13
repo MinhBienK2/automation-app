@@ -9,6 +9,7 @@ type TargetableElementConfig = Extract<
   {
     type:
       | "input_text"
+      | "wait"
       | "clear_input"
       | "click"
       | "scroll"
@@ -45,21 +46,7 @@ export function ElementTargetFields({
   config: TargetableElementConfig;
   onChange: (config: ActionConfig) => void;
 }) {
-  return (
-    <>
-      <Label>
-        XPath
-        <Input
-          value={config.config.xpath ?? ""}
-          onChange={(event) =>
-            onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-          }
-        />
-      </Label>
-      <StructuredTargetFields config={config} onChange={onChange} />
-      <ElementOptionalFields config={config} onChange={onChange} />
-    </>
-  );
+  return <StructuredTargetFields config={config} onChange={onChange} />;
 }
 
 export function ElementOptionalFields({

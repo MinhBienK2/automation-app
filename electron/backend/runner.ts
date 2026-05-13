@@ -1374,7 +1374,7 @@ function buildLaunchOptions(
 async function locatorFor(
   page: BrowserDriverPage,
   target: unknown,
-  xpath: string,
+  xpath?: string | null,
 ): Promise<BrowserDriverLocator> {
   const typedTarget = isElementTarget(target) ? target : null;
   const root = typedTarget?.iframe
@@ -1382,7 +1382,9 @@ async function locatorFor(
     : page;
   const locators = typedTarget?.locators?.length
     ? typedTarget.locators
-    : [{ kind: "xpath", value: xpath } satisfies ElementLocator];
+    : xpath?.trim()
+      ? [{ kind: "xpath", value: xpath } satisfies ElementLocator]
+      : [];
   const constraints = typedTarget?.constraints ?? null;
 
   let lastLocator: BrowserDriverLocator | null = null;

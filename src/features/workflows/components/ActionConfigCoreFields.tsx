@@ -4,7 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { ElementTargetFields, StructuredTargetFields } from "./ActionConfigElementSharedFields";
+import { ElementTargetFields } from "./ActionConfigElementSharedFields";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
@@ -12,10 +12,6 @@ type ActionFieldsProps = {
   onChange: (config: ActionConfig) => void;
   variableOptions?: VariableOption[];
 };
-
-function inputTextDelayValue(config: Extract<ActionConfig, { type: "input_text" }>): number {
-  return config.config.delay_ms ?? (config.config.typing_mode === "type" ? 80 : 1);
-}
 
 export function CoreActionFields({
   config,
@@ -32,34 +28,6 @@ export function CoreActionFields({
               value={config.config.url}
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "url", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Wait until
-            <Select
-              value={config.config.wait_until ?? "load"}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "wait_until", event.currentTarget.value),
-                )
-              }
-            >
-              <option value="load">Load</option>
-              <option value="dom_content_loaded">DOMContentLoaded</option>
-              <option value="network_idle">Network idle</option>
-            </Select>
-          </Label>
-          <Label>
-            Timeout ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.timeout_ms ?? 30000}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                )
               }
             />
           </Label>
@@ -104,18 +72,7 @@ export function CoreActionFields({
             </Label>
           ) : null}
           {config.config.condition.startsWith("element_") ? (
-            <>
-              <Label>
-                XPath
-                <Input
-                  value={config.config.xpath ?? ""}
-                  onChange={(event) =>
-                    onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-                  }
-                />
-              </Label>
-              <StructuredTargetFields config={config} onChange={onChange} />
-            </>
+            <ElementTargetFields config={config} onChange={onChange} />
           ) : null}
           {config.config.condition === "text_visible" ? (
             <Label>
@@ -139,19 +96,6 @@ export function CoreActionFields({
               />
             </Label>
           ) : null}
-          <Label>
-            Timeout ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.timeout_ms ?? 5000}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
         </>
       );
     case "random_wait":
@@ -191,78 +135,6 @@ export function CoreActionFields({
             onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
             variableOptions={variableOptions}
           />
-          <Label>
-            Clear before input
-            <Select
-              value={String(config.config.clear_before_input)}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "clear_before_input",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </Select>
-          </Label>
-          <Label>
-            Typing mode
-            <Select
-              value={config.config.typing_mode ?? "set_value"}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "typing_mode", event.currentTarget.value),
-                )
-              }
-            >
-              <option value="set_value">Set value</option>
-              <option value="type">Type keys</option>
-            </Select>
-          </Label>
-          <Label>
-            Delay ms
-            <Input
-              min="1"
-              type="number"
-              value={inputTextDelayValue(config)}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "delay_ms", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Wait until
-            <Select
-              value={config.config.wait_until ?? "clickable"}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "wait_until", event.currentTarget.value),
-                )
-              }
-            >
-              <option value="clickable">Clickable</option>
-              <option value="visible">Visible</option>
-              <option value="enabled">Enabled</option>
-              <option value="attached">Attached</option>
-            </Select>
-          </Label>
-          <Label>
-            Timeout ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.timeout_ms ?? 5000}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
         </>
       );
 

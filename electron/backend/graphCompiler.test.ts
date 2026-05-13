@@ -351,7 +351,7 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("compiles settings prelude, execution defaults, and wait-between-nodes", () => {
+  test("compiles owned test gates and environment variables without legacy engine defaults", () => {
     const input = inputTextAction("//input", "hello");
     const click = clickAction("//button");
     const graph = graphOf(
@@ -366,28 +366,13 @@ describe("TypeScript graph compiler parity", () => {
       ],
     );
     const settings = workflowSettings({
-      execution: {
-        default_action_timeout_ms: 5000,
-        interaction_fidelity: "high",
-        timing_profile: "slow_realistic",
-        wait_between_nodes_enabled: true,
-        wait_between_nodes_ms: 250,
-      },
-      browser: {
+      owned_test_gates: {
         fingerprint_preflight_enabled: true,
         fingerprint_probe_url: "https://owned.example.test/fingerprint",
         fingerprint_profile_id: "owned-profile",
+        fingerprint_allowed_origins: ["https://owned.example.test"],
       },
       environment: {
-        geolocation: { latitude: 10, longitude: 20, accuracy: 5 },
-        permissions: ["geolocation"],
-        extra_http_headers: [{ name: "X-Test", value: "1" }],
-        download_directory: "/tmp/downloads",
-        cookies: [{ name: "sid", value: "123", domain: "owned.example.test" }],
-        local_storage: [{ key: "token", value: "abc" }],
-        session_storage: [{ key: "state", value: "xyz" }],
-      },
-      inputs: {
         initial_variables: [{ name: "user.name", value_type: "text", value: "Ada" }],
       },
     });
@@ -396,21 +381,13 @@ describe("TypeScript graph compiler parity", () => {
 
     expect(plan.steps.map((step) => step.node_id)).toEqual(
       expect.arrayContaining([
-        "__settings:environment:geolocation",
-        "__settings:environment:permissions",
-        "__settings:environment:headers",
-        "__settings:environment:cookie:0",
-        "__settings:environment:local-storage:0",
-        "__settings:environment:session-storage:0",
         "__settings:browser:fingerprint-preflight:navigate",
         "__settings:browser:fingerprint-preflight:verdict",
         "__settings:inputs:variables",
-        "__settings:execution:wait-between-nodes:1",
       ]),
     );
-    expect(plan.steps.map((step) => step.node_id)).not.toContain(
-      "__settings:environment:downloads",
-    );
+    expect(plan.steps.map((step) => step.node_id)).not.toContain("__settings:execution:wait-between-nodes:1");
+    expect(plan.steps.map((step) => step.node_id)).not.toContain("__settings:environment:headers");
     expect(plan.steps).toContainEqual(
       expect.objectContaining({
         node_id: "__settings:browser:fingerprint-preflight:verdict",
@@ -430,19 +407,7 @@ describe("TypeScript graph compiler parity", () => {
           config: expect.objectContaining({
             xpath: "//input",
             text: "hello",
-            timeout_ms: 5000,
-            typing_mode: "type",
-            delay_ms: 90,
           }),
-        },
-      }),
-    );
-    expect(plan.steps).toContainEqual(
-      expect.objectContaining({
-        node_id: "__settings:execution:wait-between-nodes:1",
-        config: {
-          type: "wait",
-          config: { condition: "duration", duration_ms: 250 },
         },
       }),
     );
@@ -451,7 +416,7 @@ describe("TypeScript graph compiler parity", () => {
         node_id: "click",
         config: {
           type: "click",
-          config: expect.objectContaining({ xpath: "//button", timeout_ms: 5000 }),
+          config: expect.objectContaining({ xpath: "//button" }),
         },
       }),
     );
@@ -799,15 +764,15 @@ function title(value: string) {
 
 function workflowSettings(
   overrides: {
-    execution?: Partial<WorkflowSettings["execution"]>;
-    browser?: Partial<WorkflowSettings["browser"]>;
+    run_policy?: Partial<WorkflowSettings["run_policy"]>;
+    browser_launch?: Partial<WorkflowSettings["browser_launch"]>;
     environment?: Partial<WorkflowSettings["environment"]>;
-    inputs?: Partial<WorkflowSettings["inputs"]>;
+    owned_test_gates?: Partial<WorkflowSettings["owned_test_gates"]>;
   } = {},
 ): WorkflowSettings {
   return {
     workflow_id: "workflow-1",
-    version: 1,
+    version: 2,
     general: {
       name: "Run plan",
       description: "",
@@ -816,84 +781,38 @@ function workflowSettings(
       created_at: "1",
       updated_at: "1",
     },
-    execution: {
-      default_action_timeout_ms: null,
-      default_retry_attempts: null,
-      default_retry_interval_ms: null,
+    run_policy: {
       max_workflow_duration_ms: null,
       browser_retention: "retain",
-      failure_policy: "stop_on_first_failure",
-      interaction_fidelity: "standard",
-      direct_dom_fallback: "explicit",
-      timing_profile: "balanced",
-      wait_between_nodes_enabled: false,
-      wait_between_nodes_random: false,
-      wait_between_nodes_ms: null,
-      wait_between_nodes_min_ms: null,
-      wait_between_nodes_max_ms: null,
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
-      output_retention_days: null,
-      ...overrides.execution,
+      ...overrides.run_policy,
     },
-    browser: {
+    browser_launch: {
+      session_mode: "temporary",
       profile_name: null,
       proxy_enabled: false,
       proxy_server: null,
       proxy_username: null,
       proxy_password: null,
-      user_agent: null,
-      viewport_width: null,
-      viewport_height: null,
-      mobile: false,
-      touch: false,
-      challenge_policy: "none",
       headless: false,
+      ...overrides.browser_launch,
+    },
+    environment: {
+      initial_variables: [],
+      ...overrides.environment,
+    },
+    owned_test_gates: {
       fingerprint_preflight_enabled: false,
       fingerprint_probe_url: null,
       fingerprint_profile_id: null,
       fingerprint_allowed_origins: [],
       fingerprint_proxy_label: null,
       fingerprint_proxy_region: null,
-      ...overrides.browser,
+      ...overrides.owned_test_gates,
     },
-    environment: {
-      geolocation: null,
-      permissions: [],
-      extra_http_headers: [],
-      locale: null,
-      timezone: null,
-      download_directory: null,
-      cookies: [],
-      local_storage: [],
-      session_storage: [],
-      session_restore_ref: null,
-      ...overrides.environment,
-    },
-    inputs: {
-      input_schema: [],
-      initial_variables: [],
-      batch_mapping: [],
-      ...overrides.inputs,
-    },
-    triggers: {
-      enabled: false,
-      mode: "manual",
-      interval_seconds: null,
-      once_at: null,
-      input_source: null,
-      batch_source_ref: null,
-      missed_run_policy: "skip",
-      concurrency_policy: "skip_if_running",
-      last_run_at: null,
-      next_run_at: null,
-    },
-    advanced: {
-      compatibility_warnings: [],
-      debug_logging_level: "off",
-      experimental_flags: [],
-    },
+    migration_notes: [],
     created_at: "1",
     updated_at: "1",
   };

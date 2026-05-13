@@ -245,7 +245,7 @@ export type ActionConfig =
   | {
       type: "input_text";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
@@ -259,7 +259,7 @@ export type ActionConfig =
   | {
       type: "clear_input";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         method?: "select_all" | "backspace" | "dom" | null;
@@ -270,7 +270,7 @@ export type ActionConfig =
   | {
       type: "click";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         mode?: "real" | "force_dom" | null;
@@ -314,7 +314,7 @@ export type ActionConfig =
   | {
       type: "select_option";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         match_by: "label" | "value";
@@ -326,7 +326,7 @@ export type ActionConfig =
   | {
       type: "set_checkbox";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         state: "checked" | "unchecked";
@@ -357,9 +357,9 @@ export type ActionConfig =
   | {
       type: "drag_and_drop";
       config: {
-        source_xpath: string;
+        source_xpath?: string | null;
         source_target?: ElementTarget | null;
-        target_xpath: string;
+        target_xpath?: string | null;
         target_target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -377,7 +377,7 @@ export type ActionConfig =
   | {
       type: "type_sequence";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
@@ -410,7 +410,7 @@ export type ActionConfig =
   | {
       type: "upload_file";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         files: string[];
@@ -431,7 +431,7 @@ export type ActionConfig =
   | {
       type: "select_custom_option";
       config: {
-        trigger_xpath: string;
+        trigger_xpath?: string | null;
         trigger_target?: ElementTarget | null;
         option_text: string;
         iframe_xpath?: string | null;
@@ -441,7 +441,7 @@ export type ActionConfig =
   | {
       type: "set_contenteditable";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
@@ -507,7 +507,7 @@ export type ActionConfig =
   | {
       type: "assert_element";
       config: {
-        xpath: string;
+        xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
         state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
@@ -752,7 +752,7 @@ export type WorkflowCondition =
   | { kind: "element_visible"; xpath?: string | null; target?: ElementTarget | null };
 
 type ElementTargetActionConfig = {
-  xpath: string;
+  xpath?: string | null;
   target?: ElementTarget | null;
   iframe_xpath?: string | null;
   wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -760,7 +760,7 @@ type ElementTargetActionConfig = {
 };
 
 type DataCaptureElementConfig = {
-  xpath: string;
+  xpath?: string | null;
   target?: ElementTarget | null;
   iframe_xpath?: string | null;
   output_name: string;

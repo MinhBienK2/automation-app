@@ -1049,7 +1049,7 @@ function validateElementActionTiming(config: unknown) {
 }
 
 function validateDataCaptureConfig(config: {
-  xpath: string;
+  xpath?: string | null;
   target?: unknown;
   output_name: string;
   timeout_ms?: number | null;

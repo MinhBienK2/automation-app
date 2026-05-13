@@ -3,18 +3,16 @@ import type { ActionConfig, ActionType } from "../../../types/workflow";
 export function defaultActionConfig(actionType: ActionType): ActionConfig {
   switch (actionType) {
     case "navigate":
-      return { type: actionType, config: { url: "", wait_until: null, timeout_ms: null } };
+      return { type: actionType, config: { url: "" } };
     case "wait":
       return {
         type: actionType,
         config: {
           condition: "duration",
-          xpath: null,
           target: null,
           text: null,
           url: null,
           duration_ms: 1000,
-          timeout_ms: null,
         },
       };
     case "random_wait":
@@ -23,49 +21,24 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           text: "",
           clear_before_input: true,
-          typing_mode: "set_value",
-          delay_ms: null,
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "clear_input":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           method: "select_all",
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "click":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
-          mode: null,
-          button: null,
-          click_count: null,
-          scroll_into_view: null,
-          block: null,
-          inline: null,
-          position: null,
-          offset_x: null,
-          offset_y: null,
-          wait_until: null,
-          timeout_ms: null,
-          retry_interval_ms: null,
-          post_click_wait_ms: null,
         },
       };
     case "scroll":
@@ -75,39 +48,25 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           mode: undefined,
           direction: "down",
           pixels: 500,
-          xpath: null,
           target: null,
-          iframe_xpath: null,
           behavior: null,
-          block: null,
-          inline: null,
-          max_attempts: null,
-          wait_ms: null,
         },
       };
     case "select_option":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           match_by: "label",
           value: "",
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "set_checkbox":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           state: "checked",
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "press_key":
@@ -126,32 +85,22 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "select_radio":
       return {
         type: actionType,
-        config: { xpath: "", target: null, iframe_xpath: null, wait_until: null, timeout_ms: null },
+        config: { target: null },
       } as ActionConfig;
     case "drag_and_drop":
       return {
         type: actionType,
         config: {
-          source_xpath: "",
           source_target: null,
-          target_xpath: "",
           target_target: null,
-          iframe_xpath: null,
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "type_sequence":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           text: "",
-          delay_ms: null,
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "set_clipboard":
@@ -159,29 +108,25 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "upload_file":
       return {
         type: actionType,
-        config: { xpath: "", target: null, iframe_xpath: null, files: [], wait_until: null, timeout_ms: null },
+        config: { target: null, files: [] },
       };
     case "submit_form":
       return {
         type: actionType,
-        config: { xpath: null, target: null, iframe_xpath: null, wait_until: null, timeout_ms: null },
+        config: { target: null },
       };
     case "select_custom_option":
       return {
         type: actionType,
-        config: { trigger_xpath: "", trigger_target: null, option_text: "", iframe_xpath: null, timeout_ms: null },
+        config: { trigger_target: null, option_text: "" },
       };
     case "set_contenteditable":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           text: "",
           clear_before_input: true,
-          wait_until: null,
-          timeout_ms: null,
         },
       };
     case "extract_text":
@@ -190,18 +135,15 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "extract_list":
       return {
         type: actionType,
-        config: { xpath: "", target: null, iframe_xpath: null, output_name: actionType.replace("extract_", ""), timeout_ms: null },
+        config: { target: null, output_name: actionType.replace("extract_", "") },
       } as ActionConfig;
     case "extract_attribute":
       return {
         type: actionType,
         config: {
-          xpath: "",
           target: null,
-          iframe_xpath: null,
           attribute: "",
           output_name: "attribute",
-          timeout_ms: null,
         },
       };
     case "take_screenshot":
@@ -227,7 +169,7 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "set_download_directory":
       return { type: actionType, config: { path: "" } };
     case "wait_for_download":
-      return { type: actionType, config: { output_name: "download_path", timeout_ms: null } };
+      return { type: actionType, config: { output_name: "download_path" } };
     case "set_variable":
       return {
         type: actionType,
@@ -238,12 +180,12 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "assert_element":
       return {
         type: actionType,
-        config: { xpath: "", target: null, iframe_xpath: null, state: "visible", timeout_ms: null },
+        config: { target: null, state: "visible" },
       };
     case "assert_text":
       return {
         type: actionType,
-        config: { xpath: null, target: null, iframe_xpath: null, text: "", match_mode: "contains", timeout_ms: null },
+        config: { target: null, text: "", match_mode: "contains" },
       };
     case "if_condition":
       return {
@@ -388,14 +330,14 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
     case "execute_js":
       return {
         type: actionType,
-        config: { script: "return document.title;", output_name: "js_result", timeout_ms: 1000 },
+        config: { script: "return document.title;", output_name: "js_result" },
       };
     case "wait_for_request":
-      return { type: actionType, config: { url_contains: "/api/", timeout_ms: 5000 } };
+      return { type: actionType, config: { url_contains: "/api/" } };
     case "wait_for_response":
       return {
         type: actionType,
-        config: { url_contains: "/api/", status: 200, timeout_ms: 5000 },
+        config: { url_contains: "/api/", status: 200 },
       };
     case "block_request":
       return { type: actionType, config: { url_patterns: ["analytics"] } };
