@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import {
-  applyBrowserDeviceProfile,
   createDefaultBrowserProfileName,
   defaultWorkflowSettings,
   variableRowsFromJsonText,
@@ -19,34 +18,32 @@ describe("workflow settings model", () => {
     });
 
     expect(settings.workflow_id).toBe("workflow-1");
-    expect(settings.version).toBe(1);
+    expect(settings.version).toBe(2);
     expect(settings.general.name).toBe("Login flow");
     expect(settings.general.tags).toEqual([]);
-    expect(settings.execution.browser_retention).toBe("retain");
-    expect(settings.execution.direct_dom_fallback).toBe("explicit");
-    expect(settings.execution.wait_between_nodes_enabled).toBe(false);
-    expect(settings.execution.wait_between_nodes_random).toBe(false);
-    expect(settings.execution.wait_between_nodes_ms).toBeNull();
-    expect(settings.execution.wait_between_nodes_min_ms).toBeNull();
-    expect(settings.execution.wait_between_nodes_max_ms).toBeNull();
-    expect(settings.execution.batch_concurrency_limit).toBe(1);
-    expect(settings.browser.challenge_policy).toBe("none");
-    expect(settings.environment.permissions).toEqual([]);
-    expect(settings.inputs.input_schema).toEqual([]);
-    expect(settings.triggers.enabled).toBe(false);
-    expect(settings.triggers.mode).toBe("manual");
-    expect(settings.advanced.compatibility_warnings).toEqual([]);
+    expect(settings.run_policy.browser_retention).toBe("retain");
+    expect(settings.run_policy.batch_concurrency_limit).toBe(1);
+    expect(settings.browser_launch.session_mode).toBe("temporary");
+    expect(settings.browser_launch.profile_name).toBeNull();
+    expect(settings.browser_launch.proxy_enabled).toBe(false);
+    expect(settings.browser_launch.headless).toBe(false);
+    expect(settings.environment.initial_variables).toEqual([]);
+    expect(settings.owned_test_gates.fingerprint_preflight_enabled).toBe(false);
+    expect(settings.migration_notes).toEqual([]);
+    expect(settings).not.toHaveProperty("execution");
+    expect(settings).not.toHaveProperty("browser");
+    expect(settings).not.toHaveProperty("inputs");
+    expect(settings).not.toHaveProperty("triggers");
+    expect(settings).not.toHaveProperty("advanced");
   });
 
   test("defines sidebar sections and decision-guide help for each section", () => {
     expect(workflowSettingsSections.map((section) => section.id)).toEqual([
       "general",
-      "execution",
-      "browser",
+      "run_policy",
+      "browser_launch",
       "environment",
-      "inputs",
-      "triggers",
-      "advanced",
+      "owned_test_gates",
     ]);
 
     for (const section of workflowSettingsSections) {
@@ -67,26 +64,6 @@ describe("workflow settings model", () => {
         }
       }
     }
-  });
-
-  test("applies browser device profile presets as coherent launch settings", () => {
-    const settings = defaultWorkflowSettings({
-      workflowId: "workflow-1",
-      workflowName: "Login flow",
-    });
-
-    const android = applyBrowserDeviceProfile(settings.browser, "android_chrome");
-
-    expect(android.user_agent).toContain("Android");
-    expect(android.user_agent).toContain("Chrome/");
-    expect(android.viewport_width).toBe(390);
-    expect(android.viewport_height).toBe(844);
-    expect(android.mobile).toBe(true);
-    expect(android.touch).toBe(true);
-
-    const custom = applyBrowserDeviceProfile(android, "custom");
-
-    expect(custom).toEqual(android);
   });
 
   test("creates readable generated browser profile names", () => {

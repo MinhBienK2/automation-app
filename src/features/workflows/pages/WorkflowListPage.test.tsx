@@ -209,12 +209,10 @@ describe("Workflow list integration", () => {
           include_flow: true,
           settings_sections: [
             "general",
-            "execution",
-            "browser",
+            "run_policy",
+            "browser_launch",
             "environment",
-            "inputs",
-            "triggers",
-            "advanced",
+            "owned_test_gates",
           ],
         },
       );

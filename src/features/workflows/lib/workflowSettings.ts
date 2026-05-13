@@ -1,7 +1,6 @@
 import type {
   VariableAssignment,
   VariableValueType,
-  WorkflowBrowserConfig,
   WorkflowSettings,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
@@ -57,85 +56,10 @@ export type WorkflowSettingsLocalizedHelp = Record<
 
 export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
-  { id: "execution", label: "Execution" },
-  { id: "browser", label: "Browser" },
+  { id: "run_policy", label: "Run Policy" },
+  { id: "browser_launch", label: "Browser Launch" },
   { id: "environment", label: "Environment" },
-  { id: "inputs", label: "Variables" },
-  { id: "triggers", label: "Triggers" },
-  { id: "advanced", label: "Advanced" },
-];
-
-export type BrowserDeviceProfileId =
-  | "default"
-  | "desktop_chrome"
-  | "android_chrome"
-  | "iphone_safari"
-  | "custom";
-
-type BrowserDeviceConfig = Pick<
-  WorkflowBrowserConfig,
-  "user_agent" | "viewport_width" | "viewport_height" | "mobile" | "touch"
->;
-
-type BrowserDevicePreset = {
-  id: Exclude<BrowserDeviceProfileId, "custom">;
-  label: string;
-  config: BrowserDeviceConfig;
-};
-
-const browserDeviceProfilePresets: BrowserDevicePreset[] = [
-  {
-    id: "default",
-    label: "Default browser",
-    config: {
-      user_agent: null,
-      viewport_width: null,
-      viewport_height: null,
-      mobile: false,
-      touch: false,
-    },
-  },
-  {
-    id: "desktop_chrome",
-    label: "Desktop Chrome",
-    config: {
-      user_agent:
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      viewport_width: 1365,
-      viewport_height: 768,
-      mobile: false,
-      touch: false,
-    },
-  },
-  {
-    id: "android_chrome",
-    label: "Android Chrome",
-    config: {
-      user_agent:
-        "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-      viewport_width: 390,
-      viewport_height: 844,
-      mobile: true,
-      touch: true,
-    },
-  },
-  {
-    id: "iphone_safari",
-    label: "iPhone Safari",
-    config: {
-      user_agent:
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-      viewport_width: 390,
-      viewport_height: 844,
-      mobile: true,
-      touch: true,
-    },
-  },
-];
-
-export const browserDeviceProfileOptions = [
-  ...browserDeviceProfilePresets.map(({ id, label }) => ({ id, label })),
-  { id: "custom" as const, label: "Custom user agent" },
+  { id: "owned_test_gates", label: "Owned Test Gates" },
 ];
 
 export function createDefaultBrowserProfileName(seed = randomProfileSeed()) {
@@ -154,31 +78,6 @@ function randomProfileSeed() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function applyBrowserDeviceProfile<T extends BrowserDeviceConfig>(
-  config: T,
-  profileId: BrowserDeviceProfileId,
-): T {
-  const preset = browserDeviceProfilePresets.find((candidate) => candidate.id === profileId);
-  if (!preset) return config;
-  return { ...config, ...preset.config };
-}
-
-export function detectBrowserDeviceProfile(config: BrowserDeviceConfig): BrowserDeviceProfileId {
-  const preset = browserDeviceProfilePresets.find((candidate) =>
-    browserDeviceConfigMatches(config, candidate.config),
-  );
-  return preset?.id ?? "custom";
-}
-
-function browserDeviceConfigMatches(config: BrowserDeviceConfig, preset: BrowserDeviceConfig) {
-  return (
-    (config.user_agent ?? null) === preset.user_agent &&
-    (config.viewport_width ?? null) === preset.viewport_width &&
-    (config.viewport_height ?? null) === preset.viewport_height &&
-    config.mobile === preset.mobile &&
-    config.touch === preset.touch
-  );
-}
 
 export function variableRowsFromJsonText(
   text: string,
@@ -298,7 +197,7 @@ export function defaultWorkflowSettings({
 }): WorkflowSettings {
   return {
     workflow_id: workflowId,
-    version: 1,
+    version: 2,
     general: {
       name: workflowName,
       description: "",
@@ -307,39 +206,26 @@ export function defaultWorkflowSettings({
       created_at: createdAt,
       updated_at: updatedAt,
     },
-    execution: {
-      default_action_timeout_ms: null,
-      default_retry_attempts: null,
-      default_retry_interval_ms: null,
+    run_policy: {
       max_workflow_duration_ms: null,
       browser_retention: "retain",
-      failure_policy: "stop_on_first_failure",
-      interaction_fidelity: "standard",
-      direct_dom_fallback: "explicit",
-      timing_profile: "balanced",
-      wait_between_nodes_enabled: false,
-      wait_between_nodes_random: false,
-      wait_between_nodes_ms: null,
-      wait_between_nodes_min_ms: null,
-      wait_between_nodes_max_ms: null,
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
-      output_retention_days: null,
     },
-    browser: {
+    browser_launch: {
+      session_mode: "temporary",
       profile_name: null,
       proxy_enabled: false,
       proxy_server: null,
       proxy_username: null,
       proxy_password: null,
-      user_agent: null,
-      viewport_width: null,
-      viewport_height: null,
-      mobile: false,
-      touch: false,
-      challenge_policy: "none",
       headless: false,
+    },
+    environment: {
+      initial_variables: [],
+    },
+    owned_test_gates: {
       fingerprint_preflight_enabled: false,
       fingerprint_probe_url: null,
       fingerprint_profile_id: null,
@@ -347,40 +233,7 @@ export function defaultWorkflowSettings({
       fingerprint_proxy_label: null,
       fingerprint_proxy_region: null,
     },
-    environment: {
-      geolocation: null,
-      permissions: [],
-      extra_http_headers: [],
-      locale: null,
-      timezone: null,
-      download_directory: null,
-      cookies: [],
-      local_storage: [],
-      session_storage: [],
-      session_restore_ref: null,
-    },
-    inputs: {
-      input_schema: [],
-      initial_variables: [],
-      batch_mapping: [],
-    },
-    triggers: {
-      enabled: false,
-      mode: "manual",
-      interval_seconds: null,
-      once_at: null,
-      input_source: null,
-      batch_source_ref: null,
-      missed_run_policy: "skip",
-      concurrency_policy: "skip_if_running",
-      last_run_at: null,
-      next_run_at: null,
-    },
-    advanced: {
-      compatibility_warnings: [],
-      debug_logging_level: "off",
-      experimental_flags: [],
-    },
+    migration_notes: [],
     created_at: createdAt,
     updated_at: updatedAt,
   };
@@ -420,10 +273,7 @@ const viLabels = {
   safetyNotes: "Lưu ý an toàn",
 };
 
-export const workflowSettingsHelp: Record<
-  WorkflowSettingsSectionId,
-  WorkflowSettingsLocalizedHelp
-> = {
+export const workflowSettingsHelp: Record<string, WorkflowSettingsLocalizedHelp> = {
   general: {
     en: {
       title: "General Settings Help",
@@ -542,7 +392,7 @@ export const workflowSettingsHelp: Record<
       ],
     },
   },
-  execution: {
+  run_policy: {
     en: {
       title: "Execution Settings Help",
       summary:
@@ -742,7 +592,7 @@ export const workflowSettingsHelp: Record<
       ],
     },
   },
-  browser: {
+  browser_launch: {
     en: {
       title: "Browser Settings Help",
       summary:
@@ -1016,7 +866,7 @@ export const workflowSettingsHelp: Record<
       ],
     },
   },
-  environment: {
+  legacy_environment: {
     en: {
       title: "Environment Settings Help",
       summary:
@@ -1154,7 +1004,7 @@ export const workflowSettingsHelp: Record<
       ],
     },
   },
-  inputs: {
+  environment: {
     en: {
       title: "Variables Settings Help",
       summary:
@@ -1266,7 +1116,7 @@ export const workflowSettingsHelp: Record<
       ],
     },
   },
-  triggers: {
+  owned_test_gates: {
     en: {
       title: "Triggers Settings Help",
       summary:

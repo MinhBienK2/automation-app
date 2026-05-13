@@ -23,8 +23,7 @@ import type {
   WorkflowPackagePreview,
   WorkflowPackageSettings,
   WorkflowSettings,
-  WorkflowSettingsBrowser,
-  WorkflowSettingsEnvironment,
+  WorkflowSettingsBrowserLaunch,
   WorkflowSettingsSectionId,
   WorkflowSummary,
 } from "../../src/types/workflow.js";
@@ -54,12 +53,10 @@ type CommandContext = {
 
 const workflowSettingsSections: WorkflowSettingsSectionId[] = [
   "general",
-  "execution",
-  "browser",
+  "run_policy",
+  "browser_launch",
   "environment",
-  "inputs",
-  "triggers",
-  "advanced",
+  "owned_test_gates",
 ];
 
 const idleRunState: RunState = {
@@ -90,7 +87,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   function getSettings(workflowId: string): WorkflowSettings {
     const persisted = repository.getWorkflowSettings(workflowId);
-    if (persisted) return persisted;
+    if (persisted) return migrateWorkflowSettings(persisted, requireWorkflow(workflowId));
     return defaultWorkflowSettings(requireWorkflow(workflowId));
   }
 
@@ -111,14 +108,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const normalized: WorkflowSettings = {
       ...settings,
       workflow_id: workflowId,
-      version: 1,
+      version: 2,
       general: {
         ...settings.general,
         name: settings.general.name.trim(),
         updated_at: timestamp,
         created_at: settings.general.created_at ?? workflow.created_at,
       },
-      browser: normalizeSettingsBrowser(settings.browser),
+      browser_launch: normalizeSettingsBrowserLaunch(settings.browser_launch),
+      migration_notes: settings.migration_notes ?? [],
       updated_at: timestamp,
       created_at: settings.created_at ?? workflow.created_at,
     };
@@ -175,7 +173,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     getWorkflowBrowserConfig(workflowId: string): WorkflowBrowserConfig {
-      return settingsBrowserToConfig(workflowId, getSettings(workflowId).browser);
+      return settingsBrowserToConfig(workflowId, getSettings(workflowId).browser_launch);
     },
 
     saveWorkflowBrowserConfig(
@@ -185,7 +183,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const settings = getSettings(workflowId);
       saveSettings(workflowId, {
         ...settings,
-        browser: configToSettingsBrowser(config),
+        browser_launch: configToSettingsBrowserLaunch(config),
       });
     },
 
@@ -292,7 +290,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       let timedOut = false;
       const abortController = currentRunAbortController;
       const runId = currentRunId;
-      const timeoutMs = settings.execution.max_workflow_duration_ms;
+      const timeoutMs = settings.run_policy.max_workflow_duration_ms;
       const timeoutHandle = timeoutMs
         ? setTimeout(() => {
             timedOut = true;
@@ -522,7 +520,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       }
       const settings = getSettings(workflowId);
       const concurrencyLimit =
-        request.concurrency_limit ?? settings.execution.batch_concurrency_limit ?? 1;
+        request.concurrency_limit ?? settings.run_policy.batch_concurrency_limit ?? 1;
       if (concurrencyLimit > 1) {
         throw commandError(
           "Batch concurrency above 1 is not supported until row isolation is implemented",
@@ -536,13 +534,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const compiledGraph = compileWorkflowRunPlan(graph, settings);
       const batchSettings: WorkflowSettings = {
         ...settings,
-        execution: {
-          ...settings.execution,
+        run_policy: {
+          ...settings.run_policy,
           browser_retention: "close",
         },
-        browser: {
-          ...settings.browser,
-          headless: request.headless ?? settings.execution.batch_headless,
+        browser_launch: {
+          ...settings.browser_launch,
+          headless: request.headless ?? settings.run_policy.batch_headless,
         },
       };
       const results = [];
@@ -637,7 +635,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             error: result.status === "failed" ? result.error : null,
           };
           if (result.status === "stopped") break;
-          if (result.status !== "success" && settings.execution.batch_stop_on_first_failed_row) {
+          if (result.status !== "success" && settings.run_policy.batch_stop_on_first_failed_row) {
             break;
           }
         }
@@ -735,116 +733,34 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Workflow name is required",
     });
   }
-  if (settings.browser.proxy_enabled && !settings.browser.proxy_server?.trim()) {
+  if (settings.browser_launch.proxy_enabled && !settings.browser_launch.proxy_server?.trim()) {
     issues.push({
-      section: "browser",
+      section: "browser_launch",
       field: "proxy_server",
       level: "error",
       message: "Proxy server is required when proxy is enabled",
     });
   }
-  for (const field of ["viewport_width", "viewport_height"] as const) {
-    const value = settings.browser[field];
-    if (value != null && value <= 0) {
-      issues.push({
-        section: "browser",
-        field,
-        level: "error",
-        message: "Viewport dimensions must be greater than zero",
-      });
-    }
-  }
   for (const field of [
-    "default_action_timeout_ms",
-    "default_retry_attempts",
-    "default_retry_interval_ms",
     "max_workflow_duration_ms",
     "batch_concurrency_limit",
-    "output_retention_days",
   ] as const) {
-    const value = settings.execution[field];
+    const value = settings.run_policy[field];
     if (value != null && value <= 0) {
       issues.push({
-        section: "execution",
+        section: "run_policy",
         field,
         level: "error",
-        message: "Execution numeric settings must be greater than zero when set",
+        message: "Run policy numeric settings must be greater than zero when set",
       });
     }
   }
-  if (settings.execution.wait_between_nodes_enabled) {
-    if (settings.execution.wait_between_nodes_random) {
-      const minMs = settings.execution.wait_between_nodes_min_ms;
-      const maxMs = settings.execution.wait_between_nodes_max_ms;
-      if (minMs != null && minMs <= 0) {
-        issues.push({
-          section: "execution",
-          field: "wait_between_nodes_min_ms",
-          level: "error",
-          message: "Minimum wait must be greater than zero",
-        });
-      }
-      if (maxMs != null && maxMs <= 0) {
-        issues.push({
-          section: "execution",
-          field: "wait_between_nodes_max_ms",
-          level: "error",
-          message: "Maximum wait must be greater than zero",
-        });
-      }
-      if (minMs != null && maxMs != null && maxMs < minMs) {
-        issues.push({
-          section: "execution",
-          field: "wait_between_nodes_max_ms",
-          level: "error",
-          message: "Maximum wait must be greater than or equal to minimum wait",
-        });
-      }
-    } else if (
-      settings.execution.wait_between_nodes_ms != null &&
-      settings.execution.wait_between_nodes_ms <= 0
-    ) {
-      issues.push({
-        section: "execution",
-        field: "wait_between_nodes_ms",
-        level: "error",
-        message: "Wait between nodes must be greater than zero",
-      });
-    }
-  }
-  if (settings.environment.geolocation) {
-    const { latitude, longitude, accuracy } = settings.environment.geolocation;
-    if (latitude < -90 || latitude > 90) {
-      issues.push({
-        section: "environment",
-        field: "geolocation.latitude",
-        level: "error",
-        message: "Latitude must be between -90 and 90",
-      });
-    }
-    if (longitude < -180 || longitude > 180) {
-      issues.push({
-        section: "environment",
-        field: "geolocation.longitude",
-        level: "error",
-        message: "Longitude must be between -180 and 180",
-      });
-    }
-    if (accuracy != null && accuracy <= 0) {
-      issues.push({
-        section: "environment",
-        field: "geolocation.accuracy",
-        level: "error",
-        message: "Geolocation accuracy must be greater than zero",
-      });
-    }
-  }
-  if (settings.browser.fingerprint_preflight_enabled) {
-    const probeUrl = settings.browser.fingerprint_probe_url?.trim();
+  if (settings.owned_test_gates.fingerprint_preflight_enabled) {
+    const probeUrl = settings.owned_test_gates.fingerprint_probe_url?.trim();
     let probeOrigin: string | null = null;
     if (!probeUrl || !/^https?:\/\//i.test(probeUrl)) {
       issues.push({
-        section: "browser",
+        section: "owned_test_gates",
         field: "fingerprint_probe_url",
         level: "error",
         message: "Fingerprint probe URL must be allowlisted HTTP(S)",
@@ -854,37 +770,37 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
         probeOrigin = new URL(probeUrl).origin;
       } catch {
         issues.push({
-          section: "browser",
+          section: "owned_test_gates",
           field: "fingerprint_probe_url",
           level: "error",
           message: "Fingerprint probe URL must be valid HTTP(S)",
         });
       }
     }
-    const allowedOrigins = settings.browser.fingerprint_allowed_origins ?? [];
+    const allowedOrigins = settings.owned_test_gates.fingerprint_allowed_origins ?? [];
     if (
       probeOrigin &&
       (allowedOrigins.length === 0 ||
         !allowedOrigins.map(normalizeOrigin).includes(probeOrigin))
     ) {
       issues.push({
-        section: "browser",
+        section: "owned_test_gates",
         field: "fingerprint_allowed_origins",
         level: "error",
         message: "Fingerprint probe origin must be in the allowed origins list",
       });
     }
-    if (!settings.browser.fingerprint_profile_id?.trim()) {
+    if (!settings.owned_test_gates.fingerprint_profile_id?.trim()) {
       issues.push({
-        section: "browser",
+        section: "owned_test_gates",
         field: "fingerprint_profile_id",
         level: "error",
         message: "Fingerprint identity profile is required",
       });
     }
-    if (settings.browser.headless) {
+    if (settings.browser_launch.headless) {
       issues.push({
-        section: "browser",
+        section: "browser_launch",
         field: "headless",
         level: "error",
         message: "Fingerprint preflight requires headed browser mode",
@@ -902,11 +818,9 @@ function buildPackageSettings(
   const omittedFields: string[] = [];
 
   for (const section of sections) {
-    if (section === "browser") {
-      packageSettings.browser = sanitizeBrowserSettings(settings.browser, omittedFields);
-    } else if (section === "environment") {
-      packageSettings.environment = sanitizeEnvironmentSettings(
-        settings.environment,
+    if (section === "browser_launch") {
+      packageSettings.browser_launch = sanitizeBrowserLaunchSettings(
+        settings.browser_launch,
         omittedFields,
       );
     } else {
@@ -917,43 +831,15 @@ function buildPackageSettings(
   return { packageSettings, omittedFields };
 }
 
-function sanitizeBrowserSettings(
-  browser: WorkflowSettingsBrowser,
+function sanitizeBrowserLaunchSettings(
+  browser: WorkflowSettingsBrowserLaunch,
   omittedFields: string[],
-): WorkflowSettingsBrowser {
+): WorkflowSettingsBrowserLaunch {
   const sanitized = structuredClone(browser);
   if (sanitized.proxy_password) {
-    omittedFields.push("settings.browser.proxy_password");
+    omittedFields.push("settings.browser_launch.proxy_password");
   }
   sanitized.proxy_password = null;
-  return sanitized;
-}
-
-function sanitizeEnvironmentSettings(
-  environment: WorkflowSettingsEnvironment,
-  omittedFields: string[],
-): WorkflowSettingsEnvironment {
-  const sanitized = structuredClone(environment);
-  if (sanitized.download_directory) {
-    omittedFields.push("settings.environment.download_directory");
-  }
-  if (sanitized.cookies.length > 0) {
-    omittedFields.push("settings.environment.cookies");
-  }
-  if (sanitized.local_storage.length > 0) {
-    omittedFields.push("settings.environment.local_storage");
-  }
-  if (sanitized.session_storage.length > 0) {
-    omittedFields.push("settings.environment.session_storage");
-  }
-  if (sanitized.session_restore_ref) {
-    omittedFields.push("settings.environment.session_restore_ref");
-  }
-  sanitized.download_directory = null;
-  sanitized.cookies = [];
-  sanitized.local_storage = [];
-  sanitized.session_storage = [];
-  sanitized.session_restore_ref = null;
   return sanitized;
 }
 
@@ -1024,6 +910,123 @@ function isCommandError(error: unknown): error is CommandError {
   );
 }
 
+function migrateWorkflowSettings(
+  settings: WorkflowSettings,
+  workflow: WorkflowSummary,
+): WorkflowSettings {
+  if (settings.version === 2 && "run_policy" in settings) {
+    return {
+      ...settings,
+      browser_launch: normalizeSettingsBrowserLaunch(settings.browser_launch),
+      migration_notes: settings.migration_notes ?? [],
+    };
+  }
+
+  const legacy = settings as unknown as Record<string, any>;
+  const base = defaultWorkflowSettings(workflow);
+  const notes = [...base.migration_notes];
+  const converted = (pathValue: string, message: string) => {
+    notes.push({ path: pathValue, action: "converted", message });
+  };
+  const dropped = (pathValue: string, message: string) => {
+    notes.push({ path: pathValue, action: "dropped", message });
+  };
+
+  const legacyExecution = objectRecord(legacy.execution);
+  const legacyBrowser = objectRecord(legacy.browser);
+  const legacyEnvironment = objectRecord(legacy.environment);
+  const legacyInputs = objectRecord(legacy.inputs);
+
+  const profileName = nullableText(legacyBrowser.profile_name);
+  if (profileName) converted("browser.profile_name", "Converted persistent profile into browser_launch.");
+  for (const field of ["proxy_enabled", "proxy_server", "proxy_username", "proxy_password", "headless"]) {
+    if (field in legacyBrowser) converted(`browser.${field}`, "Converted browser launch field.");
+  }
+
+  for (const field of [
+    "default_action_timeout_ms",
+    "default_retry_attempts",
+    "default_retry_interval_ms",
+    "failure_policy",
+    "interaction_fidelity",
+    "direct_dom_fallback",
+    "timing_profile",
+    "wait_between_nodes_enabled",
+    "wait_between_nodes_random",
+    "wait_between_nodes_ms",
+    "wait_between_nodes_min_ms",
+    "wait_between_nodes_max_ms",
+    "output_retention_days",
+  ]) {
+    if (field in legacyExecution) dropped(`execution.${field}`, "Dropped obsolete engine-level run setting.");
+  }
+  for (const field of ["user_agent", "viewport_width", "viewport_height", "mobile", "touch", "challenge_policy"]) {
+    if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped browser emulation or challenge setting.");
+  }
+  for (const field of [
+    "geolocation",
+    "permissions",
+    "extra_http_headers",
+    "locale",
+    "timezone",
+    "download_directory",
+    "cookies",
+    "local_storage",
+    "session_storage",
+    "session_restore_ref",
+  ]) {
+    if (field in legacyEnvironment) dropped(`environment.${field}`, "Dropped browser context seeding from Workflow Settings.");
+  }
+  if (Array.isArray(legacyInputs.initial_variables)) {
+    converted("inputs.initial_variables", "Converted initial variables into environment.");
+  }
+
+  return {
+    ...base,
+    workflow_id: typeof legacy.workflow_id === "string" ? legacy.workflow_id : workflow.id,
+    version: 2,
+    general: {
+      ...base.general,
+      ...objectRecord(legacy.general),
+      name: String(objectRecord(legacy.general).name ?? workflow.name),
+    },
+    run_policy: {
+      ...base.run_policy,
+      max_workflow_duration_ms: numericOrNull(legacyExecution.max_workflow_duration_ms),
+      browser_retention: legacyExecution.browser_retention === "close" ? "close" : "retain",
+      batch_concurrency_limit: numericOrNull(legacyExecution.batch_concurrency_limit) ?? 1,
+      batch_headless: Boolean(legacyExecution.batch_headless),
+      batch_stop_on_first_failed_row: Boolean(legacyExecution.batch_stop_on_first_failed_row),
+    },
+    browser_launch: normalizeSettingsBrowserLaunch({
+      ...base.browser_launch,
+      session_mode: profileName ? "persistent_profile" : "temporary",
+      profile_name: profileName,
+      proxy_enabled: Boolean(legacyBrowser.proxy_enabled),
+      proxy_server: nullableText(legacyBrowser.proxy_server),
+      proxy_username: nullableText(legacyBrowser.proxy_username),
+      proxy_password: nullableText(legacyBrowser.proxy_password),
+      headless: Boolean(legacyBrowser.headless),
+    }),
+    environment: {
+      initial_variables: Array.isArray(legacyInputs.initial_variables)
+        ? legacyInputs.initial_variables
+        : [],
+    },
+    owned_test_gates: {
+      fingerprint_preflight_enabled: Boolean(legacyBrowser.fingerprint_preflight_enabled),
+      fingerprint_probe_url: nullableText(legacyBrowser.fingerprint_probe_url),
+      fingerprint_profile_id: nullableText(legacyBrowser.fingerprint_profile_id),
+      fingerprint_allowed_origins: Array.isArray(legacyBrowser.fingerprint_allowed_origins)
+        ? legacyBrowser.fingerprint_allowed_origins.filter((origin: unknown) => typeof origin === "string")
+        : [],
+      fingerprint_proxy_label: nullableText(legacyBrowser.fingerprint_proxy_label),
+      fingerprint_proxy_region: nullableText(legacyBrowser.fingerprint_proxy_region),
+    },
+    migration_notes: notes,
+  };
+}
+
 function summaryToWorkflow(summary: WorkflowSummary): Workflow {
   return {
     id: summary.id,
@@ -1078,36 +1081,25 @@ function defaultBrowserConfig(workflowId: string): WorkflowBrowserConfig {
     proxy_server: null,
     proxy_username: null,
     proxy_password: null,
-    user_agent: null,
-    viewport_width: null,
-    viewport_height: null,
-    mobile: false,
-    touch: false,
-    challenge_policy: "none",
     headless: false,
   };
 }
 
-function configToSettingsBrowser(config: WorkflowBrowserConfig): WorkflowSettingsBrowser {
-  return normalizeSettingsBrowser({
+function configToSettingsBrowserLaunch(config: WorkflowBrowserConfig): WorkflowSettingsBrowserLaunch {
+  return normalizeSettingsBrowserLaunch({
+    session_mode: config.profile_name ? "persistent_profile" : "temporary",
     profile_name: nullableText(config.profile_name),
     proxy_enabled: config.proxy_enabled,
     proxy_server: nullableText(config.proxy_server),
     proxy_username: nullableText(config.proxy_username),
     proxy_password: nullableText(config.proxy_password),
-    user_agent: nullableText(config.user_agent),
-    viewport_width: config.viewport_width ?? null,
-    viewport_height: config.viewport_height ?? null,
-    mobile: config.mobile,
-    touch: config.touch,
-    challenge_policy: config.challenge_policy,
     headless: config.headless ?? false,
   });
 }
 
 function settingsBrowserToConfig(
   workflowId: string,
-  browser: WorkflowSettingsBrowser,
+  browser: WorkflowSettingsBrowserLaunch,
 ): WorkflowBrowserConfig {
   return {
     workflow_id: workflowId,
@@ -1116,36 +1108,31 @@ function settingsBrowserToConfig(
     proxy_server: browser.proxy_server ?? null,
     proxy_username: browser.proxy_username ?? null,
     proxy_password: browser.proxy_password ?? null,
-    user_agent: browser.user_agent ?? null,
-    viewport_width: browser.viewport_width ?? null,
-    viewport_height: browser.viewport_height ?? null,
-    mobile: browser.mobile,
-    touch: browser.touch,
-    challenge_policy: browser.challenge_policy,
     headless: browser.headless,
   };
 }
 
-function normalizeSettingsBrowser(
-  browser: WorkflowSettingsBrowser,
-): WorkflowSettingsBrowser {
+function normalizeSettingsBrowserLaunch(
+  browser: WorkflowSettingsBrowserLaunch,
+): WorkflowSettingsBrowserLaunch {
+  const profileName = nullableText(browser.profile_name);
   return {
     ...browser,
-    profile_name: nullableText(browser.profile_name),
+    session_mode: browser.session_mode === "persistent_profile" && profileName
+      ? "persistent_profile"
+      : "temporary",
+    profile_name: browser.session_mode === "persistent_profile" ? profileName : null,
     proxy_server: nullableText(browser.proxy_server),
     proxy_username: nullableText(browser.proxy_username),
     proxy_password: nullableText(browser.proxy_password),
-    user_agent: nullableText(browser.user_agent),
-    viewport_width: browser.viewport_width ?? null,
-    viewport_height: browser.viewport_height ?? null,
   };
 }
 
 export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSettings {
-  const browser = configToSettingsBrowser(defaultBrowserConfig(workflow.id));
+  const browserLaunch = configToSettingsBrowserLaunch(defaultBrowserConfig(workflow.id));
   return {
     workflow_id: workflow.id,
-    version: 1,
+    version: 2,
     general: {
       name: workflow.name,
       description: "",
@@ -1154,61 +1141,26 @@ export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSett
       created_at: workflow.created_at,
       updated_at: workflow.updated_at,
     },
-    execution: {
-      default_action_timeout_ms: null,
-      default_retry_attempts: null,
-      default_retry_interval_ms: null,
+    run_policy: {
       max_workflow_duration_ms: null,
       browser_retention: "retain",
-      failure_policy: "stop_on_first_failure",
-      interaction_fidelity: "standard",
-      direct_dom_fallback: "explicit",
-      timing_profile: "balanced",
-      wait_between_nodes_enabled: false,
-      wait_between_nodes_random: false,
-      wait_between_nodes_ms: null,
-      wait_between_nodes_min_ms: null,
-      wait_between_nodes_max_ms: null,
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
-      output_retention_days: null,
     },
-    browser,
+    browser_launch: browserLaunch,
     environment: {
-      geolocation: null,
-      permissions: [],
-      extra_http_headers: [],
-      locale: null,
-      timezone: null,
-      download_directory: null,
-      cookies: [],
-      local_storage: [],
-      session_storage: [],
-      session_restore_ref: null,
-    },
-    inputs: {
-      input_schema: [],
       initial_variables: [],
-      batch_mapping: [],
     },
-    triggers: {
-      enabled: false,
-      mode: "manual",
-      interval_seconds: null,
-      once_at: null,
-      input_source: null,
-      batch_source_ref: null,
-      missed_run_policy: "skip",
-      concurrency_policy: "skip_if_running",
-      last_run_at: null,
-      next_run_at: null,
+    owned_test_gates: {
+      fingerprint_preflight_enabled: false,
+      fingerprint_probe_url: null,
+      fingerprint_profile_id: null,
+      fingerprint_allowed_origins: [],
+      fingerprint_proxy_label: null,
+      fingerprint_proxy_region: null,
     },
-    advanced: {
-      compatibility_warnings: [],
-      debug_logging_level: "off",
-      experimental_flags: [],
-    },
+    migration_notes: [],
     created_at: workflow.created_at,
     updated_at: workflow.updated_at,
   };
@@ -1336,6 +1288,16 @@ function isWorkflowSettingsSection(
 function nullableText(value: string | null | undefined) {
   const normalized = value?.trim() ?? "";
   return normalized.length > 0 ? normalized : null;
+}
+
+function objectRecord(value: unknown): Record<string, any> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, any>)
+    : {};
+}
+
+function numericOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function normalizeOrigin(value: string) {

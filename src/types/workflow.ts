@@ -93,11 +93,6 @@ export type ActionType =
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
 export type VariableValueType = "text" | "json" | "number" | "boolean";
-export type WorkflowBrowserChallengePolicy =
-  | "none"
-  | "detect_only"
-  | "pause_for_human";
-
 export type VariableAssignment = {
   name: string;
   value_type: VariableValueType;
@@ -126,44 +121,18 @@ export type WorkflowBrowserConfig = {
   proxy_server?: string | null;
   proxy_username?: string | null;
   proxy_password?: string | null;
-  user_agent?: string | null;
-  viewport_width?: number | null;
-  viewport_height?: number | null;
-  mobile: boolean;
-  touch: boolean;
-  challenge_policy: WorkflowBrowserChallengePolicy;
   headless?: boolean | null;
 };
 
 export type WorkflowSettingsSectionId =
   | "general"
-  | "execution"
-  | "browser"
+  | "run_policy"
+  | "browser_launch"
   | "environment"
-  | "inputs"
-  | "triggers"
-  | "advanced";
+  | "owned_test_gates";
 
 export type WorkflowBrowserRetention = "retain" | "close";
-export type WorkflowFailurePolicy = "stop_on_first_failure";
-export type WorkflowInteractionFidelity = "standard" | "high";
-export type WorkflowDirectDomFallback = "disabled" | "explicit" | "allowed_with_trace";
-export type WorkflowTimingProfile = "balanced" | "slow_realistic" | "custom";
-export type WorkflowTriggerMode = "manual" | "once" | "interval" | "cron" | "event";
-export type WorkflowMissedRunPolicy = "skip" | "run_next_eligible";
-export type WorkflowTriggerConcurrencyPolicy =
-  | "skip_if_running"
-  | "queue_one"
-  | "reject";
-export type WorkflowInputValueType =
-  | "text"
-  | "json"
-  | "number"
-  | "boolean"
-  | "array"
-  | "object"
-  | "secret_ref";
-export type WorkflowDebugLoggingLevel = "off" | "error" | "info" | "debug";
+export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
 
 export type WorkflowSettingsGeneral = {
   name: string;
@@ -174,116 +143,47 @@ export type WorkflowSettingsGeneral = {
   updated_at?: string | null;
 };
 
-export type WorkflowSettingsExecution = {
-  default_action_timeout_ms?: number | null;
-  default_retry_attempts?: number | null;
-  default_retry_interval_ms?: number | null;
+export type WorkflowSettingsRunPolicy = {
   max_workflow_duration_ms?: number | null;
   browser_retention: WorkflowBrowserRetention;
-  failure_policy: WorkflowFailurePolicy;
-  interaction_fidelity?: WorkflowInteractionFidelity;
-  direct_dom_fallback?: WorkflowDirectDomFallback;
-  timing_profile?: WorkflowTimingProfile;
-  wait_between_nodes_enabled?: boolean;
-  wait_between_nodes_random?: boolean;
-  wait_between_nodes_ms?: number | null;
-  wait_between_nodes_min_ms?: number | null;
-  wait_between_nodes_max_ms?: number | null;
   batch_concurrency_limit?: number | null;
   batch_headless: boolean;
   batch_stop_on_first_failed_row: boolean;
-  output_retention_days?: number | null;
 };
 
-export type WorkflowSettingsBrowser = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
+export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
+  session_mode: WorkflowBrowserSessionMode;
   headless: boolean;
-  fingerprint_preflight_enabled?: boolean;
+};
+
+export type WorkflowSettingsEnvironment = {
+  initial_variables: VariableAssignment[];
+};
+
+export type WorkflowSettingsOwnedTestGates = {
+  fingerprint_preflight_enabled: boolean;
   fingerprint_probe_url?: string | null;
   fingerprint_profile_id?: string | null;
-  fingerprint_allowed_origins?: string[];
+  fingerprint_allowed_origins: string[];
   fingerprint_proxy_label?: string | null;
   fingerprint_proxy_region?: string | null;
 };
 
-export type WorkflowSettingsGeolocation = {
-  latitude: number;
-  longitude: number;
-  accuracy?: number | null;
-};
-
-export type WorkflowSettingsCookie = {
-  name: string;
-  value: string;
-  domain?: string | null;
-  path?: string | null;
-};
-
-export type WorkflowSettingsStorageEntry = {
-  key: string;
-  value: string;
-};
-
-export type WorkflowSettingsEnvironment = {
-  geolocation?: WorkflowSettingsGeolocation | null;
-  permissions: string[];
-  extra_http_headers: HeaderPair[];
-  locale?: string | null;
-  timezone?: string | null;
-  download_directory?: string | null;
-  cookies: WorkflowSettingsCookie[];
-  local_storage: WorkflowSettingsStorageEntry[];
-  session_storage: WorkflowSettingsStorageEntry[];
-  session_restore_ref?: string | null;
-};
-
-export type WorkflowSettingsInputRow = {
-  name: string;
-  value_type: WorkflowInputValueType;
-  required: boolean;
-  default_value?: string | null;
-  description?: string | null;
-};
-
-export type WorkflowSettingsBatchMapping = {
-  column: string;
-  input: string;
-};
-
-export type WorkflowSettingsInputs = {
-  input_schema: WorkflowSettingsInputRow[];
-  initial_variables: VariableAssignment[];
-  batch_mapping: WorkflowSettingsBatchMapping[];
-};
-
-export type WorkflowSettingsTriggers = {
-  enabled: boolean;
-  mode: WorkflowTriggerMode;
-  interval_seconds?: number | null;
-  once_at?: string | null;
-  input_source?: string | null;
-  batch_source_ref?: string | null;
-  missed_run_policy: WorkflowMissedRunPolicy;
-  concurrency_policy: WorkflowTriggerConcurrencyPolicy;
-  last_run_at?: string | null;
-  next_run_at?: string | null;
-};
-
-export type WorkflowSettingsAdvanced = {
-  compatibility_warnings: string[];
-  debug_logging_level: WorkflowDebugLoggingLevel;
-  experimental_flags: string[];
+export type WorkflowSettingsMigrationNote = {
+  path: string;
+  action: "converted" | "dropped" | "review";
+  message: string;
 };
 
 export type WorkflowSettings = {
   workflow_id: string;
   version: number;
   general: WorkflowSettingsGeneral;
-  execution: WorkflowSettingsExecution;
-  browser: WorkflowSettingsBrowser;
+  run_policy: WorkflowSettingsRunPolicy;
+  browser_launch: WorkflowSettingsBrowserLaunch;
   environment: WorkflowSettingsEnvironment;
-  inputs: WorkflowSettingsInputs;
-  triggers: WorkflowSettingsTriggers;
-  advanced: WorkflowSettingsAdvanced;
+  owned_test_gates: WorkflowSettingsOwnedTestGates;
+  migration_notes: WorkflowSettingsMigrationNote[];
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -1029,12 +929,10 @@ export type WorkflowPackageImportOptions = {
 
 export type WorkflowPackageSettings = Partial<{
   general: WorkflowSettingsGeneral;
-  execution: WorkflowSettingsExecution;
-  browser: WorkflowSettingsBrowser;
+  run_policy: WorkflowSettingsRunPolicy;
+  browser_launch: WorkflowSettingsBrowserLaunch;
   environment: WorkflowSettingsEnvironment;
-  inputs: WorkflowSettingsInputs;
-  triggers: WorkflowSettingsTriggers;
-  advanced: WorkflowSettingsAdvanced;
+  owned_test_gates: WorkflowSettingsOwnedTestGates;
 }>;
 
 export type WorkflowPackage = {

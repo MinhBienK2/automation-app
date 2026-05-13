@@ -15,15 +15,11 @@
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
 - Command handlers reject a second active run, persist begin/finish records to SQLite `runs`, persist compiled step evidence to `run_steps`, and update live run state from runner progress callbacks.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
-- Environment defaults from Workflow Settings compile into setup actions before graph actions: geolocation, permission grants, extra headers, cookies, localStorage, and sessionStorage. Download directory remains a launch/runtime context option and is not emitted as an in-run action.
-- Variables settings seed the runtime variable store before graph actions. Legacy input schema data remains persisted for compatibility but is not exposed by the current Variables UI.
+- Environment initial variables from Workflow Settings compile into setup actions before graph actions.
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
-- Execution settings fill missing action `timeout_ms` fields from `default_action_timeout_ms`; action-level timeouts remain more specific.
-- Execution settings include interaction fidelity controls. Existing workflows default to `standard`; `high` switches compatible text input defaults to browser-key typing with the selected timing profile.
-- Execution settings can insert a wait between graph nodes. Fixed mode inserts a duration wait; random mode inserts a random wait within the configured min/max range. Explicit `wait` and `random_wait` graph nodes override the global wait at their position and prevent an extra inserted wait next to them.
-- When Browser fingerprint preflight is enabled, settings prelude compilation opens the configured allowlisted probe URL after launch/environment setup and before graph actions. The probe must return the JSON verdict contract; failed or malformed verdicts stop the run before workflow actions and store sanitized `fingerprint_preflight` evidence in outputs when available.
-- Execution `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
-- Execution `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
+- Owned Test Gates fingerprint preflight opens the configured allowlisted probe URL before graph actions. The probe must return the JSON verdict contract; failed or malformed verdicts stop the run before workflow actions and store sanitized `fingerprint_preflight` evidence in outputs when available.
+- Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
+- Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
@@ -41,7 +37,6 @@
 - Captured outputs may include backend evidence keys such as `__action_traces`, `__evidence`, and `fingerprint_preflight`.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
-- Workflow Settings Triggers are persisted planned metadata only. No scheduler service runs trigger modes or policies yet, and the UI presents them as planned rather than active controls.
 
 ## Batch Execution
 
@@ -49,7 +44,7 @@
 - Batch execution shares the active-run lifecycle lock with normal runs. Starting a normal run while a batch is active, or a batch while another run is active, fails with a command error.
 - `stop_run` aborts an active batch before the next row and terminal state reports the stopped batch summary.
 - Each row is inserted as a `set_variable` setup action after persisted settings setup actions and before graph actions.
-- Request `headless` overrides `execution.batch_headless`; omitted request values use settings defaults.
+- Request `headless` overrides `run_policy.batch_headless`; omitted request values use settings defaults.
 - Concurrency above 1 is rejected until parallel row isolation is implemented.
 - Rows execute sequentially and each executed row is persisted as a run record with its own step evidence.
 - When `batch_stop_on_first_failed_row` is true, row execution stops after the first failed row and the summary reports only executed rows in `results`.
@@ -61,9 +56,9 @@
 - Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
 - Starting a new run closes retained sessions from previous terminal runs before a new CloakBrowser context launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
-- Workflow Settings Browser can set the launch profile, proxy, user agent, viewport, mobile flag, touch flag, and challenge policy before the browser starts. The frontend exposes coherent device profile presets that write those existing user agent, viewport, mobile, and touch fields together.
-- Legacy browser config commands are compatibility wrappers over Workflow Settings Browser.
-- Temporary CloakBrowser contexts are used unless Workflow Settings Browser selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile>`, not under the OS temp directory.
+- Workflow Settings Browser Launch can set temporary versus persistent profile mode, profile name, proxy, and headless mode before the browser starts.
+- Legacy browser config commands are compatibility wrappers over Workflow Settings Browser Launch.
+- Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile>`, not under the OS temp directory.
 
 ## Cancellation
 

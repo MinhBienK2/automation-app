@@ -93,12 +93,12 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
-  test("opens workflow settings on the Browser section from the detail header", async () => {
+  test("opens workflow settings on the Browser Launch section from the detail header", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       get_workflow_settings: {
         workflow_id: "workflow-1",
-        version: 1,
+        version: 2,
         general: {
           name: "Login flow",
           description: "",
@@ -107,66 +107,34 @@ describe("Workflow detail integration", () => {
           created_at: "1",
           updated_at: "1",
         },
-        execution: {
-          default_action_timeout_ms: null,
-          default_retry_attempts: null,
-          default_retry_interval_ms: null,
+        run_policy: {
           max_workflow_duration_ms: null,
           browser_retention: "retain",
-          failure_policy: "stop_on_first_failure",
-          batch_concurrency_limit: null,
+          batch_concurrency_limit: 1,
           batch_headless: false,
           batch_stop_on_first_failed_row: false,
-          output_retention_days: null,
         },
-        browser: {
+        browser_launch: {
+          session_mode: "persistent_profile",
           profile_name: "qa-profile",
           proxy_enabled: true,
           proxy_server: "http://proxy.local:8080",
           proxy_username: "agent",
           proxy_password: "secret",
-          user_agent: "WorkflowBot/1.0",
-          viewport_width: 1280,
-          viewport_height: 720,
-          mobile: false,
-          touch: false,
-          challenge_policy: "pause_for_human",
           headless: false,
         },
         environment: {
-          geolocation: null,
-          permissions: [],
-          extra_http_headers: [],
-          locale: null,
-          timezone: null,
-          download_directory: null,
-          cookies: [],
-          local_storage: [],
-          session_storage: [],
-          session_restore_ref: null,
-        },
-        inputs: {
-          input_schema: [],
           initial_variables: [],
-          batch_mapping: [],
         },
-        triggers: {
-          enabled: false,
-          mode: "manual",
-          interval_seconds: null,
-          once_at: null,
-          input_source: null,
-          batch_source_ref: null,
-          missed_run_policy: "skip",
-          concurrency_policy: "skip_if_running",
-          last_run_at: null,
-          next_run_at: null,
+        owned_test_gates: {
+          fingerprint_preflight_enabled: false,
+          fingerprint_probe_url: null,
+          fingerprint_profile_id: null,
+          fingerprint_allowed_origins: [],
+          fingerprint_proxy_label: null,
+          fingerprint_proxy_region: null,
         },
-        advanced: {
-          compatibility_warnings: [],
-          debug_logging_level: "off",
-          experimental_flags: [],
-        },
+        migration_notes: [],
         created_at: "1",
         updated_at: "1",
       },
@@ -190,64 +158,31 @@ describe("Workflow detail integration", () => {
     expect(
       within(settingsDialog).getByText("Configure workflow settings before running this workflow."),
     ).toBeInTheDocument();
-    expect(within(settingsDialog).getByRole("tab", { name: "Variables" }))
+    expect(within(settingsDialog).getByRole("tab", { name: "Environment" }))
       .toBeInTheDocument();
-    expect(within(settingsDialog).queryByRole("tab", { name: "Inputs & Variables" }))
+    expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
       .not.toBeInTheDocument();
-    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Variables" }));
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Environment" }));
     await userEvent.click(within(settingsDialog).getByRole("button", {
       name: "Add variable row",
     }));
     expect(within(settingsDialog).getByLabelText("Variable 2 name")).toBeInTheDocument();
-    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser" }));
-    expect(within(settingsDialog).getByRole("tab", { name: "Browser" }))
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }));
+    expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
       .toHaveAttribute("aria-selected", "true");
     expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(
       "qa-profile",
     );
     expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
       .toHaveAttribute("aria-checked", "true");
-    expect(within(settingsDialog).getByRole("switch", { name: "Proxy enabled" }))
+    expect(within(settingsDialog).getByRole("switch", { name: "Use proxy" }))
       .toHaveAttribute("aria-checked", "true");
-    expect(within(settingsDialog).getByLabelText("Device profile")).toHaveValue("custom");
-    expect(within(settingsDialog).getByLabelText("User agent")).toHaveValue("WorkflowBot/1.0");
-    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Environment" }));
-    expect(within(settingsDialog).getByLabelText("Latitude")).toHaveAttribute("min", "-90");
-    expect(within(settingsDialog).getByLabelText("Latitude")).toHaveAttribute("max", "90");
-    expect(within(settingsDialog).getByLabelText("Longitude")).toHaveAttribute("min", "-180");
-    expect(within(settingsDialog).getByLabelText("Longitude")).toHaveAttribute("max", "180");
-    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser" }));
     await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
     await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
-    await userEvent.clear(within(settingsDialog).getByLabelText("Viewport width"));
-    await userEvent.type(within(settingsDialog).getByLabelText("Viewport width"), "1440");
-    await userEvent.click(within(settingsDialog).getByRole("switch", { name: "Touch input" }));
-    await userEvent.selectOptions(
-      within(settingsDialog).getByLabelText("Challenge policy"),
-      "detect_only",
-    );
     await userEvent.click(within(settingsDialog).getByRole("button", {
-      name: "Browser help",
+      name: "Browser Settings Help",
     }));
     expect(await screen.findByText("Browser Settings Help")).toBeInTheDocument();
-    expect(screen.getAllByText("Browser Settings Help")).toHaveLength(1);
-    const helpDialog = await screen.findByRole("dialog", {
-      name: "Browser Settings Help",
-    });
-    expect(
-      within(helpDialog).getAllByRole("heading", { name: "Browser Settings Help" }),
-    ).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "English" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Tiếng Việt" }));
-    expect(await screen.findByText("Trợ giúp Cài đặt Trình duyệt")).toBeInTheDocument();
-    expect(screen.getByText("profile_name")).toBeInTheDocument();
-    expect(screen.getByText("proxy_server")).toBeInTheDocument();
-    expect(screen.getByText("challenge_policy")).toBeInTheDocument();
-    expect(screen.getByText(/Không dùng mục này để vượt qua CAPTCHA/i))
-      .toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(within(settingsDialog).getByRole("button", {
@@ -256,15 +191,12 @@ describe("Workflow detail integration", () => {
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("save_workflow_settings_section", {
       workflowId: "workflow-1",
-      section: "browser",
+      section: "browser_launch",
       sectionValue: expect.objectContaining({
+        session_mode: "persistent_profile",
         profile_name: "release",
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
-        viewport_width: 1440,
-        viewport_height: 720,
-        touch: true,
-        challenge_policy: "detect_only",
       }),
     });
     expect(await screen.findByRole("status")).toHaveTextContent(
@@ -317,7 +249,7 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
-  test("shows trigger settings as planned instead of active scheduler controls", async () => {
+  test("omits legacy trigger settings from the simplified settings dialog", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
@@ -331,11 +263,11 @@ describe("Workflow detail integration", () => {
       name: "Workflow Settings",
     });
 
-    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Triggers" }));
-
-    expect(
-      within(settingsDialog).getByText(/Triggers are saved for compatibility/i),
-    ).toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
+      .not.toBeInTheDocument();
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Owned Test Gates" }));
+    expect(within(settingsDialog).getByRole("switch", { name: "Fingerprint preflight" }))
+      .toBeInTheDocument();
     expect(
       within(settingsDialog).queryByRole("checkbox", { name: "Enable trigger" }),
     ).not.toBeInTheDocument();

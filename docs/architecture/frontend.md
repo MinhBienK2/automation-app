@@ -11,10 +11,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
-- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Execution, Browser, Environment, Variables, Triggers, Advanced, and section help.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Run Policy, Browser Launch, Environment, Owned Test Gates, and section help.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
-- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, Browser device profile presets, tag parsing, Browser compatibility mapping, and bilingual settings help content.
+- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
 - `src/features/workflows/components/RunIssuePanel.tsx`: blocking validation, runtime failure, and system/startup issue presentation.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
@@ -37,7 +37,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Visual graph editing state before persistence.
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
-- Workflow Settings editing through list Edit and detail Settings, Execution wait-between-nodes controls, Browser device profile presets that coherently fill user agent, viewport, mobile, and touch settings, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
+- Workflow Settings editing through list Edit and detail Settings, simplified Run Policy, Browser Launch, Environment initial variables, Owned Test Gates, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
 - Workflow list duplicate and Workflow Package import/export interaction. Duplicate calls `duplicateWorkflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
 - Run polling consumes `get_run_state` while a workflow is running. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
@@ -49,7 +49,6 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Variable picker catalogs known graph variables from Set Variables rows, Set JSON Variables keys, and output-producing action nodes when available.
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and graph-scoped keyboard shortcuts without changing persisted `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside the active graph workspace.
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
-- Workflow Settings Triggers is currently a planned/compatibility section. The UI shows saved trigger intent and scheduling policy values without active scheduler controls until a scheduler service exists.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.

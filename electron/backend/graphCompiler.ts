@@ -10,10 +10,8 @@ import type {
   GraphPortDirection,
   GraphValidationIssue,
   VariableAssignment,
-  VariableValueType,
   WorkflowCondition,
   WorkflowGraph,
-  WorkflowInputValueType,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
 
@@ -172,12 +170,9 @@ export function compileWorkflowRunPlan(
 ): CompiledWorkflowGraph {
   const compiled = compileWorkflowGraph(graph).steps.map((step) => ({
     ...step,
-    config: applyNestedWaitBetweenNodes(
-      applyExecutionDefaults(step.config, settings),
-      settings,
-    ),
+    config: applyNestedWaitBetweenNodes(applyExecutionDefaults(step.config)),
   }));
-  const withWaits = insertWaitBetweenGraphNodes(compiled, settings);
+  const withWaits = insertWaitBetweenGraphNodes(compiled);
   const domainPolicy = domainPolicyFromSteps(withWaits);
   return {
     steps: [...settingsPreludeSteps(settings), ...withWaits],
@@ -1208,49 +1203,14 @@ function safeArtifactNameValidation(
 
 function settingsPreludeSteps(settings: WorkflowSettings): CompiledGraphStep[] {
   const steps: CompiledGraphStep[] = [];
-  if (settings.environment.geolocation) {
-    steps.push(settingsStep("environment:geolocation", "Apply settings geolocation", {
-      type: "set_geolocation",
-      config: settings.environment.geolocation,
-    }));
-  }
-  if (settings.environment.permissions.length > 0) {
-    steps.push(settingsStep("environment:permissions", "Apply settings permissions", {
-      type: "grant_permission",
-      config: { origin: null, permissions: settings.environment.permissions },
-    }));
-  }
-  if (settings.environment.extra_http_headers.length > 0) {
-    steps.push(settingsStep("environment:headers", "Apply settings headers", {
-      type: "set_extra_headers",
-      config: { headers: settings.environment.extra_http_headers },
-    }));
-  }
-  settings.environment.cookies.forEach((cookie, index) => {
-    steps.push(settingsStep(`environment:cookie:${index}`, "Apply settings cookie", {
-      type: "set_cookie",
-      config: cookie,
-    }));
-  });
-  settings.environment.local_storage.forEach((entry, index) => {
-    steps.push(settingsStep(`environment:local-storage:${index}`, "Apply settings localStorage", {
-      type: "set_local_storage",
-      config: entry,
-    }));
-  });
-  settings.environment.session_storage.forEach((entry, index) => {
-    steps.push(settingsStep(`environment:session-storage:${index}`, "Apply settings sessionStorage", {
-      type: "set_session_storage",
-      config: entry,
-    }));
-  });
-  if (settings.browser.fingerprint_preflight_enabled && settings.browser.fingerprint_probe_url) {
+  if (
+    settings.owned_test_gates.fingerprint_preflight_enabled &&
+    settings.owned_test_gates.fingerprint_probe_url
+  ) {
     steps.push(settingsStep("browser:fingerprint-preflight:navigate", "Open fingerprint preflight probe", {
       type: "navigate",
       config: {
-        url: settings.browser.fingerprint_probe_url,
-        wait_until: null,
-        timeout_ms: settings.execution.default_action_timeout_ms ?? null,
+        url: settings.owned_test_gates.fingerprint_probe_url,
       },
     }));
     steps.push(settingsStep("browser:fingerprint-preflight:verdict", "Validate fingerprint preflight verdict", {
@@ -1258,23 +1218,11 @@ function settingsPreludeSteps(settings: WorkflowSettings): CompiledGraphStep[] {
       config: {
         script: fingerprintPreflightScript(settings),
         output_name: null,
-        timeout_ms: settings.execution.default_action_timeout_ms ?? null,
       },
     }));
   }
 
-  const variables: VariableAssignment[] = [
-    ...settings.inputs.input_schema.flatMap((input) =>
-      input.default_value == null
-        ? []
-        : [{
-            name: input.name,
-            value_type: inputValueTypeToVariableType(input.value_type),
-            value: input.default_value,
-          }],
-    ),
-    ...settings.inputs.initial_variables,
-  ];
+  const variables: VariableAssignment[] = settings.environment.initial_variables;
   if (variables.length > 0) {
     steps.push(settingsStep("inputs:variables", "Seed settings inputs and variables", {
       type: "set_variable",
@@ -1313,101 +1261,20 @@ function collectDomainAllowlist(config: ActionConfig, domains: Set<string>) {
   });
 }
 
-function applyExecutionDefaults(config: ActionConfig, settings: WorkflowSettings): ActionConfig {
-  const cloned = structuredClone(config) as ActionConfig;
-  if (settings.execution.default_action_timeout_ms != null) {
-    applyDefaultTimeout(cloned, settings.execution.default_action_timeout_ms);
-  }
-  if (settings.execution.interaction_fidelity === "high") {
-    applyHighFidelityDefaults(cloned, settings.execution.timing_profile ?? "balanced");
-  }
-  return cloned;
-}
-
-function applyDefaultTimeout(config: ActionConfig, timeoutMs: number) {
-  const configRecord = asMutableRecord(config.config);
-  if (
-    !Object.prototype.hasOwnProperty.call(configRecord, "timeout_ms") ||
-    configRecord.timeout_ms == null
-  ) {
-    configRecord.timeout_ms = timeoutMs;
-  }
-  forEachNestedActionArray(config, (steps) => {
-    for (const stepValue of steps) applyDefaultTimeout(stepValue, timeoutMs);
-  });
-}
-
-function applyHighFidelityDefaults(config: ActionConfig, timingProfile: string) {
-  if (config.type === "input_text") {
-    config.config.typing_mode = "type";
-    config.config.delay_ms ??= timingProfile === "slow_realistic" || timingProfile === "custom" ? 90 : 40;
-  }
-  forEachNestedActionArray(config, (steps) => {
-    for (const stepValue of steps) applyHighFidelityDefaults(stepValue, timingProfile);
-  });
+function applyExecutionDefaults(config: ActionConfig): ActionConfig {
+  return structuredClone(config) as ActionConfig;
 }
 
 function applyNestedWaitBetweenNodes(
   config: ActionConfig,
-  settings: WorkflowSettings,
 ): ActionConfig {
-  if (!settings.execution.wait_between_nodes_enabled) return config;
-  const cloned = structuredClone(config) as ActionConfig;
-  forEachNestedActionArray(cloned, (steps) => insertWaitBetweenActionValues(steps, settings));
-  return cloned;
+  return config;
 }
 
 function insertWaitBetweenGraphNodes(
   steps: CompiledGraphStep[],
-  settings: WorkflowSettings,
 ): CompiledGraphStep[] {
-  if (!settings.execution.wait_between_nodes_enabled || steps.length < 2) return steps;
-  const withWaits: CompiledGraphStep[] = [];
-  for (let index = 0; index < steps.length; index += 1) {
-    const stepValue = steps[index];
-    const next = steps[index + 1];
-    withWaits.push(stepValue);
-    if (next && !isWaitOverride(stepValue.config) && !isWaitOverride(next.config)) {
-      withWaits.push(globalWaitStep(settings, withWaits.length));
-    }
-  }
-  return withWaits;
-}
-
-function insertWaitBetweenActionValues(steps: ActionConfig[], settings: WorkflowSettings) {
-  for (const stepValue of steps) {
-    forEachNestedActionArray(stepValue, (nested) => insertWaitBetweenActionValues(nested, settings));
-  }
-  if (steps.length < 2) return;
-
-  let index = 1;
-  while (index < steps.length) {
-    if (!isWaitOverride(steps[index - 1]) && !isWaitOverride(steps[index])) {
-      steps.splice(index, 0, globalWaitAction(settings));
-      index += 1;
-    }
-    index += 1;
-  }
-}
-
-function globalWaitStep(settings: WorkflowSettings, index: number): CompiledGraphStep {
-  return {
-    node_id: `__settings:execution:wait-between-nodes:${index}`,
-    label: "Wait between nodes",
-    config: globalWaitAction(settings),
-  };
-}
-
-function globalWaitAction(settings: WorkflowSettings): ActionConfig {
-  return settings.execution.wait_between_nodes_random
-    ? {
-        type: "random_wait",
-        config: {
-          min_ms: settings.execution.wait_between_nodes_min_ms ?? 1000,
-          max_ms: settings.execution.wait_between_nodes_max_ms ?? 1000,
-        },
-      }
-    : durationWaitAction(settings.execution.wait_between_nodes_ms ?? 1000);
+  return steps;
 }
 
 function forEachNestedActionArray(
@@ -1431,10 +1298,10 @@ function forEachNestedActionArray(
 }
 
 function fingerprintPreflightScript(settings: WorkflowSettings) {
-  const profileId = JSON.stringify(settings.browser.fingerprint_profile_id ?? "unassigned");
+  const profileId = JSON.stringify(settings.owned_test_gates.fingerprint_profile_id ?? "unassigned");
   const workflowId = JSON.stringify(settings.workflow_id);
-  const proxyLabel = JSON.stringify(settings.browser.fingerprint_proxy_label ?? null);
-  const proxyRegion = JSON.stringify(settings.browser.fingerprint_proxy_region ?? null);
+  const proxyLabel = JSON.stringify(settings.owned_test_gates.fingerprint_proxy_label ?? null);
+  const proxyRegion = JSON.stringify(settings.owned_test_gates.fingerprint_proxy_region ?? null);
   return `const expectedProfileId = ${profileId};
 const workflowId = ${workflowId};
 const proxyLabel = ${proxyLabel};
@@ -1894,26 +1761,6 @@ function durationWaitAction(duration_ms: number): ActionConfig {
     type: "wait",
     config: { condition: "duration", duration_ms },
   };
-}
-
-function inputValueTypeToVariableType(valueType: WorkflowInputValueType): VariableValueType {
-  switch (valueType) {
-    case "json":
-    case "array":
-    case "object":
-      return "json";
-    case "number":
-      return "number";
-    case "boolean":
-      return "boolean";
-    case "text":
-    case "secret_ref":
-      return "text";
-  }
-}
-
-function isWaitOverride(config: ActionConfig) {
-  return config.type === "wait" || config.type === "random_wait";
 }
 
 function positive(value: number | null | undefined) {

@@ -127,7 +127,7 @@ describe("workflow API phase ten commands", () => {
       kind: "workflow_package",
       version: 2,
       workflow: { name: "Login flow" },
-      included_sections: ["flow", "settings.general", "settings.browser"],
+      included_sections: ["flow", "settings.general", "settings.browser_launch"],
       omitted_fields: [],
       flow: {
         version: 1,
@@ -142,11 +142,13 @@ describe("workflow API phase ten commands", () => {
           tags: [],
           notes: "",
         },
-        browser: {
+        browser_launch: {
+          session_mode: "temporary",
+          profile_name: null,
           proxy_enabled: false,
-          mobile: false,
-          touch: false,
-          challenge_policy: "none",
+          proxy_server: null,
+          proxy_username: null,
+          proxy_password: null,
           headless: false,
         },
       },
@@ -158,19 +160,19 @@ describe("workflow API phase ten commands", () => {
 
     await exportWorkflowPackage("workflow-1", {
       include_flow: true,
-      settings_sections: ["general", "browser"],
+      settings_sections: ["general", "browser_launch"],
     });
     await previewWorkflowPackage(workflowPackage);
     await importWorkflowPackage(workflowPackage, {
       include_flow: true,
-      settings_sections: ["general", "browser"],
+      settings_sections: ["general", "browser_launch"],
     });
 
     expect(workflowBridgeMock.exportWorkflowPackage).toHaveBeenCalledWith(
       "workflow-1",
       {
         include_flow: true,
-        settings_sections: ["general", "browser"],
+        settings_sections: ["general", "browser_launch"],
       },
     );
     expect(workflowBridgeMock.previewWorkflowPackage).toHaveBeenCalledWith(
@@ -180,7 +182,7 @@ describe("workflow API phase ten commands", () => {
       workflowPackage,
       {
         include_flow: true,
-        settings_sections: ["general", "browser"],
+        settings_sections: ["general", "browser_launch"],
       },
     );
   });
@@ -190,7 +192,7 @@ describe("workflow API graph commands", () => {
   test("invokes graph commands with frontend-safe payloads", async () => {
     resetWorkflowBridge();
     const graph: WorkflowGraph = {
-      version: 1,
+      version: 2,
       nodes: [],
       edges: [],
       viewport: { x: 0, y: 0, zoom: 1 },
@@ -267,66 +269,34 @@ describe("workflow API settings commands", () => {
         created_at: "1",
         updated_at: "1",
       },
-      execution: {
-        default_action_timeout_ms: null,
-        default_retry_attempts: null,
-        default_retry_interval_ms: null,
+      run_policy: {
         max_workflow_duration_ms: null,
         browser_retention: "retain",
-        failure_policy: "stop_on_first_failure",
         batch_concurrency_limit: null,
         batch_headless: false,
         batch_stop_on_first_failed_row: false,
-        output_retention_days: null,
       },
-      browser: {
+      browser_launch: {
+        session_mode: "temporary",
         profile_name: null,
         proxy_enabled: false,
         proxy_server: null,
         proxy_username: null,
         proxy_password: null,
-        user_agent: null,
-        viewport_width: null,
-        viewport_height: null,
-        mobile: false,
-        touch: false,
-        challenge_policy: "none",
         headless: false,
       },
       environment: {
-        geolocation: null,
-        permissions: [],
-        extra_http_headers: [],
-        locale: null,
-        timezone: null,
-        download_directory: null,
-        cookies: [],
-        local_storage: [],
-        session_storage: [],
-        session_restore_ref: null,
-      },
-      inputs: {
-        input_schema: [],
         initial_variables: [],
-        batch_mapping: [],
       },
-      triggers: {
-        enabled: false,
-        mode: "manual",
-        interval_seconds: null,
-        once_at: null,
-        input_source: null,
-        batch_source_ref: null,
-        missed_run_policy: "skip",
-        concurrency_policy: "skip_if_running",
-        last_run_at: null,
-        next_run_at: null,
+      owned_test_gates: {
+        fingerprint_preflight_enabled: false,
+        fingerprint_probe_url: null,
+        fingerprint_profile_id: null,
+        fingerprint_allowed_origins: [],
+        fingerprint_proxy_label: null,
+        fingerprint_proxy_region: null,
       },
-      advanced: {
-        compatibility_warnings: [],
-        debug_logging_level: "off",
-        experimental_flags: [],
-      },
+      migration_notes: [],
       created_at: "1",
       updated_at: "1",
     };
@@ -339,7 +309,7 @@ describe("workflow API settings commands", () => {
 
     await getWorkflowSettings("workflow-1");
     await saveWorkflowSettings("workflow-1", settings);
-    await saveWorkflowSettingsSection("workflow-1", "browser", settings.browser);
+    await saveWorkflowSettingsSection("workflow-1", "browser_launch", settings.browser_launch);
     await validateWorkflowSettings(settings);
     await validateWorkflowRun("workflow-1");
 
@@ -352,8 +322,8 @@ describe("workflow API settings commands", () => {
     );
     expect(workflowBridgeMock.saveWorkflowSettingsSection).toHaveBeenCalledWith(
       "workflow-1",
-      "browser",
-      settings.browser,
+      "browser_launch",
+      settings.browser_launch,
     );
     expect(workflowBridgeMock.validateWorkflowSettings).toHaveBeenCalledWith(
       settings,

@@ -64,12 +64,10 @@ type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 const appSettingsStorageKey = "workflow-manager:settings:v1";
 const workflowPackageSections: WorkflowSettingsSectionId[] = [
   "general",
-  "execution",
-  "browser",
+  "run_policy",
+  "browser_launch",
   "environment",
-  "inputs",
-  "triggers",
-  "advanced",
+  "owned_test_gates",
 ];
 const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
 
@@ -751,7 +749,7 @@ function App() {
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
             onBack={backToList}
-            onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser")}
+            onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={stopRun}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
@@ -956,12 +954,10 @@ function App() {
 function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
   return {
     general: status,
-    execution: status,
-    browser: status,
+    run_policy: status,
+    browser_launch: status,
     environment: status,
-    inputs: status,
-    triggers: status,
-    advanced: status,
+    owned_test_gates: status,
   };
 }
 
@@ -1033,18 +1029,14 @@ function sectionLabel(section: WorkflowSettingsSectionId) {
   switch (section) {
     case "general":
       return "General";
-    case "execution":
-      return "Execution";
-    case "browser":
-      return "Browser";
+    case "run_policy":
+      return "Run Policy";
+    case "browser_launch":
+      return "Browser Launch";
     case "environment":
       return "Environment";
-    case "inputs":
-      return "Inputs & Variables";
-    case "triggers":
-      return "Triggers";
-    case "advanced":
-      return "Advanced";
+    case "owned_test_gates":
+      return "Owned Test Gates";
   }
 }
 
@@ -1054,7 +1046,7 @@ function isWorkflowSettings(value: unknown): value is WorkflowSettings {
       typeof value === "object" &&
       "workflow_id" in value &&
       "general" in value &&
-      "browser" in value,
+      "browser_launch" in value,
   );
 }
 

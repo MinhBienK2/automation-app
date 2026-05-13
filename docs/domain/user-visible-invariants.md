@@ -10,18 +10,14 @@ Preserve these unless the task explicitly changes them.
 - Workflow list `Edit` opens Workflow Settings at General.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and full copied settings without package-export sanitization.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
-- Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, download directories, cookies, storage rows, and session restore refs.
-- Workflow detail exposes a header Settings action that opens Workflow Settings at Browser.
-- Workflow Settings contains General, Execution, Browser, Environment, Variables, Triggers, and Advanced sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
-- Workflow Settings Variables only exposes initial variable values. It hides the legacy input schema and batch mapping fields from the UI, while preserving those persisted fields for compatibility.
-- Variables can be edited as typed rows or as a JSON object. Switching modes keeps both views synchronized: nested JSON becomes dot-path rows, and dot-path rows become nested JSON.
-- Workflow Settings Browser exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
-- Workflow Settings Browser exposes a Device profile selector for Default browser, Desktop Chrome, Android Chrome, iPhone Safari, and Custom user agent. Presets update user agent, viewport width/height, mobile, and touch settings together; raw user-agent editing is reserved for Custom.
-- Workflow Settings Execution exposes wait-between-nodes controls. Users can enable a fixed wait or random wait range between graph nodes. Explicit Wait and Random Wait nodes override the global setting at their position.
-- Workflow Settings Execution exposes interaction fidelity, DOM fallback, and timing profile controls. Existing workflows retain standard fidelity until changed.
-- Workflow Settings Browser exposes fingerprint preflight controls for enablement, probe URL, identity profile, allowed origins, and proxy metadata. Enabling preflight requires an allowlisted HTTP(S) probe URL, an identity profile, and headed browser mode.
-- Workflow Settings Triggers is a planned/compatibility section until a scheduler service exists. It must not present trigger modes or policies as active scheduling controls.
-- Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls, when to use it, and what overrides it. Browser help keeps persisted field keys such as `profile_name`, `proxy_server`, and `challenge_policy` visible even in Vietnamese.
+- Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords.
+- Workflow detail exposes a header Settings action that opens Workflow Settings at Browser Launch.
+- Workflow Settings contains General, Run Policy, Browser Launch, Environment, and Owned Test Gates sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
+- Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
+- Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
+- Workflow Settings Browser Launch exposes proxy and headless launch controls.
+- Workflow Settings Owned Test Gates exposes fingerprint preflight controls for enablement, probe URL, identity profile, allowed origins, and proxy metadata. Enabling preflight requires an allowlisted HTTP(S) probe URL, an identity profile, and headed browser mode.
+- Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
@@ -84,15 +80,14 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute the compiled saved graph.
 - Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
-- Full runs use persisted Workflow Settings as the run baseline. Browser settings, including headless mode, are resolved before browser launch; Environment defaults and Variables are applied before the first graph step; Execution default timeouts fill action timeout fields when unset; Execution max duration cancels and fails overlong runs with a timeout reason.
+- Full runs use persisted Workflow Settings as the run baseline. Browser Launch settings, including headless mode, are resolved before browser launch; Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
 - Fingerprint preflight, when enabled, runs after browser/environment setup and before graph actions; a blocked or malformed verdict stops execution before user workflow actions.
-- Execution wait-between-nodes settings are applied after graph compile and before runner start, excluding setup steps and explicit Wait/Random Wait override nodes.
 - Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
-- Missing Workflow Settings rows return lazy defaults. Legacy browser config commands map to `settings.browser`.
+- Missing Workflow Settings rows return lazy v2 defaults. Legacy browser config commands map to `settings.browser_launch`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Batch runs share active-run ownership with normal runs, can be stopped through Stop, and expose progress/summary in run outputs.
-- Browser sessions remain open after success, failure, and stop by default. Workflow Settings Execution browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
+- Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.

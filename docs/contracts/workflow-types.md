@@ -17,7 +17,7 @@ Frontend and backend must agree on:
 - `Workflow`: `id`, `name`, `created_at`, `updated_at`.
 - `WorkflowStep`: legacy/internal step row shape used by import/export compatibility and compiled graph runner adapters.
 - `WorkflowDetail`: currently `workflow`, `steps` for compatibility, while the product UI loads graph authoring data through `get_workflow_graph`.
-- `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `execution`, `browser`, `environment`, `inputs`, `triggers`, and `advanced` sections.
+- `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `run_policy`, `browser_launch`, `environment`, and `owned_test_gates` sections.
 - `WorkflowBrowserConfig`: legacy compatibility shape loaded through `get_workflow_browser_config`; command handlers map it to `WorkflowSettings.browser`.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
@@ -37,17 +37,11 @@ Workflow browser config remains as a legacy compatibility command shape:
   proxy_server: string | null,
   proxy_username: string | null,
   proxy_password: string | null,
-  user_agent: string | null,
-  viewport_width: number | null,
-  viewport_height: number | null,
-  mobile: boolean,
-  touch: boolean,
-  challenge_policy: "none" | "detect_only" | "pause_for_human",
   headless: boolean
 }
 ```
 
-Blank optional text fields normalize to `null`. A proxy server is required when `proxy_enabled` is true, and viewport dimensions must be greater than zero when present.
+Blank optional text fields normalize to `null`. A proxy server is required when `proxy_enabled` is true. This compatibility shape maps into `settings.browser_launch`.
 
 ## Workflow Settings Shape
 
@@ -56,61 +50,34 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
 ```text
 {
   workflow_id: string,
-  version: number,
+  version: 2,
   general: { name, description, tags, notes, created_at, updated_at },
-  execution: {
-    default_action_timeout_ms,
-    default_retry_attempts,
-    default_retry_interval_ms,
+  run_policy: {
     max_workflow_duration_ms,
     browser_retention,
-    failure_policy,
-    interaction_fidelity,
-    direct_dom_fallback,
-    timing_profile,
-    wait_between_nodes_enabled,
-    wait_between_nodes_random,
-    wait_between_nodes_ms,
-    wait_between_nodes_min_ms,
-    wait_between_nodes_max_ms,
     batch_concurrency_limit,
     batch_headless,
-    batch_stop_on_first_failed_row,
-    output_retention_days
+    batch_stop_on_first_failed_row
   },
-  browser: WorkflowBrowserConfig without workflow_id plus headless, plus optional fingerprint preflight fields:
+  browser_launch: {
+    session_mode,
+    profile_name,
+    proxy_enabled,
+    proxy_server,
+    proxy_username,
+    proxy_password,
+    headless
+  },
+  environment: { initial_variables },
+  owned_test_gates: {
     fingerprint_preflight_enabled,
     fingerprint_probe_url,
     fingerprint_profile_id,
     fingerprint_allowed_origins,
     fingerprint_proxy_label,
-    fingerprint_proxy_region,
-  environment: {
-    geolocation,
-    permissions,
-    extra_http_headers,
-    locale,
-    timezone,
-    download_directory,
-    cookies,
-    local_storage,
-    session_storage,
-    session_restore_ref
+    fingerprint_proxy_region
   },
-  inputs: { input_schema, initial_variables, batch_mapping },
-  triggers: {
-    enabled,
-    mode,
-    interval_seconds,
-    once_at,
-    input_source,
-    batch_source_ref,
-    missed_run_policy,
-    concurrency_policy,
-    last_run_at,
-    next_run_at
-  },
-  advanced: { compatibility_warnings, debug_logging_level, experimental_flags }
+  migration_notes: [{ path, action, message }]
 }
 ```
 
@@ -118,7 +85,7 @@ Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
 
-The UI labels the persisted `inputs` section as Variables and currently edits only `initial_variables`. `input_schema` and `batch_mapping` remain in the contract for saved-data compatibility.
+Legacy v1 settings are migrated on load into v2. Obsolete browser emulation, timing, retry, challenge, context-seeding, storage, and trigger fields are dropped with migration notes instead of being preserved in the public contract.
 
 ## Workflow Package Shape
 
@@ -130,16 +97,14 @@ Workflow Package v2 is the current user-facing import/export format. It is graph
   version: 2,
   workflow: { name },
   included_sections: ["flow", "settings.general"],
-  omitted_fields: ["settings.browser.proxy_password"],
+  omitted_fields: ["settings.browser_launch.proxy_password"],
   flow: WorkflowGraph | null,
   settings: {
     general,
-    execution,
-    browser,
+    run_policy,
+    browser_launch,
     environment,
-    inputs,
-    triggers,
-    advanced
+    owned_test_gates
   } // every section optional
 }
 ```
@@ -148,7 +113,7 @@ Package export options serialize as `{ include_flow, settings_sections }`, where
 
 Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
 
-Export sanitizes machine-local or sensitive fields by default: `settings.browser.proxy_password`, `settings.environment.download_directory`, `settings.environment.cookies`, `settings.environment.local_storage`, `settings.environment.session_storage`, and `settings.environment.session_restore_ref`.
+Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`.
 
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and full Workflow Settings to a new workflow id, including fields that package export sanitizes for external sharing.
 
@@ -164,7 +129,7 @@ Local workflow duplication is not a workflow package export. The `duplicate_work
 }
 ```
 
-When `concurrency_limit` or `headless` is omitted, the backend uses Workflow Settings Execution defaults. Concurrency values above 1 are rejected until rows can run in isolated browser/session contexts.
+When `concurrency_limit` or `headless` is omitted, the backend uses Workflow Settings Run Policy defaults. Concurrency values above 1 are rejected until rows can run in isolated browser/session contexts.
 
 ## Graph Shape
 
@@ -193,7 +158,7 @@ The main graph toolbar only exposes beginner-facing authoring groups: New node, 
 
 The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for compatibility but fails explicitly at runtime until nested lifecycle semantics are implemented. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 
-Settings prelude compilation is represented in TypeScript. It can prepend setup actions for geolocation, permissions, headers, cookies, storage, fingerprint preflight, persisted variables, default action timeouts, interaction fidelity defaults, and global waits between graph nodes. Download directory remains a launch/runtime context setting rather than an emitted in-run action.
+Settings prelude compilation is represented in TypeScript. It can prepend owned-test-gate fingerprint preflight steps and Environment initial variables. Browser context seeding, default action timeouts, interaction fidelity defaults, and global waits between nodes are legacy v1 settings and are removed from the v2 public contract.
 
 Executable frontend/backend ports must agree:
 
@@ -251,7 +216,7 @@ New variable authoring stores multiple rows:
 
 Terminal End Success, End Failure, and Stop Workflow graph nodes can carry `close_browser: true` in their node config. The compiler maps that to executable `stop_workflow` configs so the runner closes the browser after outputs are captured. Missing or false keeps the browser session retained.
 
-Execution settings can insert a global wait between compiled graph nodes. Fixed mode inserts a duration `wait` using `wait_between_nodes_ms`; random mode inserts `random_wait` using `wait_between_nodes_min_ms` and `wait_between_nodes_max_ms`. Explicit `wait` and `random_wait` nodes override the global setting at their position, so the compiler does not add an extra global wait immediately before or after them.
+Workflow-level wait-between-nodes settings are not part of the v2 public settings contract. Authors use explicit `wait` and `random_wait` graph nodes when a workflow needs a business-semantic pause.
 
 ## Change Checklist
 

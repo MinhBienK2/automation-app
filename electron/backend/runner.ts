@@ -264,7 +264,7 @@ export class BrowserWorkflowRunner {
       signal: request.signal,
     };
 
-    let closeBrowser = request.settings.execution.browser_retention === "close" || launch.temporary;
+    let closeBrowser = request.settings.run_policy.browser_retention === "close" || launch.temporary;
 
     try {
       await this.applyEnvironment(runtime, request.settings);
@@ -342,7 +342,7 @@ export class BrowserWorkflowRunner {
 
   private async launch(settings: WorkflowSettings) {
     const options = buildLaunchOptions(settings, this.appPaths);
-    const profileName = settings.browser.profile_name?.trim();
+    const profileName = settings.browser_launch.profile_name?.trim();
     const context = profileName
       ? await this.driver.launchPersistent({
           ...options,
@@ -353,27 +353,7 @@ export class BrowserWorkflowRunner {
     return { context, page, temporary: !profileName };
   }
 
-  private async applyEnvironment(runtime: Runtime, settings: WorkflowSettings) {
-    if (settings.environment.extra_http_headers.length > 0) {
-      const headers = Object.fromEntries(
-        settings.environment.extra_http_headers.map((header) => [header.name, header.value]),
-      );
-      await runtime.context.setExtraHTTPHeaders?.(headers);
-    }
-    if (settings.environment.permissions.length > 0) {
-      await runtime.context.grantPermissions?.(settings.environment.permissions);
-    }
-    if (settings.environment.cookies.length > 0) {
-      await runtime.context.addCookies?.(
-        settings.environment.cookies.map((cookie) => ({
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.domain ?? undefined,
-          path: cookie.path ?? "/",
-        })),
-      );
-    }
-  }
+  private async applyEnvironment(_runtime: Runtime, _settings: WorkflowSettings) {}
 
   private async executeStep(runtime: Runtime, step: CompiledGraphStep) {
     const startedAt = new Date().toISOString();
@@ -1373,38 +1353,20 @@ function buildLaunchOptions(
   settings: WorkflowSettings,
   appPaths: AppPaths,
 ): BrowserLaunchOptions {
-  const proxy = settings.browser.proxy_enabled && settings.browser.proxy_server
+  const proxy = settings.browser_launch.proxy_enabled && settings.browser_launch.proxy_server
     ? {
-        server: settings.browser.proxy_server,
-        username: settings.browser.proxy_username ?? undefined,
-        password: settings.browser.proxy_password ?? undefined,
+        server: settings.browser_launch.proxy_server,
+        username: settings.browser_launch.proxy_username ?? undefined,
+        password: settings.browser_launch.proxy_password ?? undefined,
       }
     : undefined;
-  const headers = Object.fromEntries(
-    settings.environment.extra_http_headers.map((header) => [header.name, header.value]),
-  );
   return {
-    headless: settings.browser.headless,
+    headless: settings.browser_launch.headless,
     humanize: true,
     proxy,
-    userAgent: settings.browser.user_agent ?? undefined,
-    viewport:
-      settings.browser.viewport_width && settings.browser.viewport_height
-        ? {
-            width: settings.browser.viewport_width,
-            height: settings.browser.viewport_height,
-          }
-        : undefined,
-    locale: settings.environment.locale ?? undefined,
-    timezone: settings.environment.timezone ?? undefined,
     contextOptions: {
-      isMobile: settings.browser.mobile,
-      hasTouch: settings.browser.touch,
-      geolocation: settings.environment.geolocation ?? undefined,
-      permissions: settings.environment.permissions,
-      extraHTTPHeaders: headers,
       acceptDownloads: true,
-      downloadsPath: settings.environment.download_directory ?? appPaths.downloadsDir,
+      downloadsPath: appPaths.downloadsDir,
     },
   };
 }

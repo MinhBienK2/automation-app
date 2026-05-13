@@ -99,7 +99,7 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
-  test("validates settings and maps browser config through settings browser section", async () => {
+  test("validates settings and maps browser config through simplified launch section", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Browser flow");
 
@@ -122,15 +122,15 @@ describe("Electron workflow command handlers", () => {
     expect(
       handlers.validateWorkflowSettings({
         ...handlers.getWorkflowSettings(workflow.id),
-        browser: {
-          ...handlers.getWorkflowSettings(workflow.id).browser,
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           proxy_enabled: true,
           proxy_server: null,
         },
       }),
     ).toContainEqual(
       expect.objectContaining({
-        section: "browser",
+        section: "browser_launch",
         field: "proxy_server",
         level: "error",
       }),
@@ -143,25 +143,19 @@ describe("Electron workflow command handlers", () => {
       proxy_server: "http://proxy.local:8080",
       proxy_username: "agent",
       proxy_password: "secret",
-      user_agent: "WorkflowBot/1.0",
-      viewport_width: 1280,
-      viewport_height: 720,
-      mobile: false,
-      touch: false,
-      challenge_policy: "pause_for_human",
       headless: false,
     });
 
-    expect(handlers.getWorkflowSettings(workflow.id).browser).toMatchObject({
+    expect(handlers.getWorkflowSettings(workflow.id).browser_launch).toMatchObject({
+      session_mode: "persistent_profile",
       profile_name: "qa-profile",
       proxy_enabled: true,
       proxy_server: "http://proxy.local:8080",
       proxy_password: "secret",
-      challenge_policy: "pause_for_human",
     });
   });
 
-  test("validates execution numeric ranges and fingerprint allowlist settings", async () => {
+  test("validates run policy numeric ranges and owned fingerprint gate settings", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Settings validation");
     const settings = handlers.getWorkflowSettings(workflow.id);
@@ -169,30 +163,15 @@ describe("Electron workflow command handlers", () => {
     expect(
       handlers.validateWorkflowSettings({
         ...settings,
-        execution: {
-          ...settings.execution,
-          default_action_timeout_ms: 0,
-          wait_between_nodes_enabled: true,
-          wait_between_nodes_random: true,
-          wait_between_nodes_min_ms: 500,
-          wait_between_nodes_max_ms: 250,
+        run_policy: {
+          ...settings.run_policy,
           batch_concurrency_limit: 0,
         },
       }),
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          section: "execution",
-          field: "default_action_timeout_ms",
-          level: "error",
-        }),
-        expect.objectContaining({
-          section: "execution",
-          field: "wait_between_nodes_max_ms",
-          level: "error",
-        }),
-        expect.objectContaining({
-          section: "execution",
+          section: "run_policy",
           field: "batch_concurrency_limit",
           level: "error",
         }),
@@ -202,9 +181,8 @@ describe("Electron workflow command handlers", () => {
     expect(
       handlers.validateWorkflowSettings({
         ...settings,
-        browser: {
-          ...settings.browser,
-          headless: false,
+        owned_test_gates: {
+          ...settings.owned_test_gates,
           fingerprint_preflight_enabled: true,
           fingerprint_probe_url: "https://probe.owned.test/verdict",
           fingerprint_profile_id: "owned-profile",
@@ -214,31 +192,8 @@ describe("Electron workflow command handlers", () => {
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          section: "browser",
+          section: "owned_test_gates",
           field: "fingerprint_allowed_origins",
-          level: "error",
-        }),
-      ]),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...settings,
-        environment: {
-          ...settings.environment,
-          geolocation: { latitude: 100, longitude: -200, accuracy: 1 },
-        },
-      }),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          section: "environment",
-          field: "geolocation.latitude",
-          level: "error",
-        }),
-        expect.objectContaining({
-          section: "environment",
-          field: "geolocation.longitude",
           level: "error",
         }),
       ]),
@@ -251,37 +206,20 @@ describe("Electron workflow command handlers", () => {
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
-      browser: {
-        ...settings.browser,
+      browser_launch: {
+        ...settings.browser_launch,
         proxy_password: "secret",
-      },
-      environment: {
-        ...settings.environment,
-        download_directory: "/tmp/downloads",
-        cookies: [{ name: "sid", value: "123", domain: "owned.test" }],
-        local_storage: [{ key: "token", value: "abc" }],
-        session_storage: [{ key: "state", value: "xyz" }],
-        session_restore_ref: "session.json",
       },
     });
 
     const packageValue = handlers.exportWorkflowPackage(workflow.id, {
       include_flow: true,
-      settings_sections: ["general", "browser", "environment"],
+      settings_sections: ["general", "browser_launch", "environment"],
     });
 
-    expect(packageValue.settings?.browser?.proxy_password).toBeNull();
-    expect(packageValue.settings?.environment?.download_directory).toBeNull();
-    expect(packageValue.settings?.environment?.cookies).toEqual([]);
+    expect(packageValue.settings?.browser_launch?.proxy_password).toBeNull();
     expect(packageValue.omitted_fields).toEqual(
-      expect.arrayContaining([
-        "settings.browser.proxy_password",
-        "settings.environment.download_directory",
-        "settings.environment.cookies",
-        "settings.environment.local_storage",
-        "settings.environment.session_storage",
-        "settings.environment.session_restore_ref",
-      ]),
+      expect.arrayContaining(["settings.browser_launch.proxy_password"]),
     );
 
     const importedPackage: WorkflowPackage = {
@@ -318,12 +256,12 @@ describe("Electron workflow command handlers", () => {
       kind: "workflow_package",
       version: 2,
       workflow: { name: "Bad Settings" },
-      included_sections: ["settings.browser"],
+      included_sections: ["settings.browser_launch"],
       omitted_fields: [],
       flow: null,
       settings: {
-        browser: {
-          ...baseSettings.browser,
+        browser_launch: {
+          ...baseSettings.browser_launch,
           proxy_enabled: true,
           proxy_server: null,
         },
@@ -334,13 +272,13 @@ describe("Electron workflow command handlers", () => {
     try {
       handlers.importWorkflowPackage(invalidSettingsPackage, {
         include_flow: false,
-        settings_sections: ["browser"],
+        settings_sections: ["browser_launch"],
       });
     } catch (error) {
       settingsError = error;
     }
     expect(settingsError).toMatchObject({
-      field: "browser.proxy_server",
+      field: "browser_launch.proxy_server",
     });
     expect(handlers.listWorkflows()).toHaveLength(initialCount);
 
@@ -433,12 +371,8 @@ describe("Electron workflow command handlers", () => {
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
-      execution: {
-        ...settings.execution,
-        default_action_timeout_ms: 12_000,
-      },
-      inputs: {
-        ...settings.inputs,
+      environment: {
+        ...settings.environment,
         initial_variables: [
           { name: "baseUrl", value_type: "text", value: "https://owned.test" },
         ],
@@ -475,7 +409,6 @@ describe("Electron workflow command handlers", () => {
           type: "navigate",
           config: {
             url: "https://owned.test",
-            timeout_ms: 12_000,
           },
         },
       }),
@@ -693,8 +626,8 @@ describe("Electron workflow command handlers", () => {
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
-      execution: {
-        ...settings.execution,
+      run_policy: {
+        ...settings.run_policy,
         max_workflow_duration_ms: 1,
       },
     });
@@ -751,13 +684,12 @@ describe("Electron workflow command handlers", () => {
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
-      execution: {
-        ...settings.execution,
-        default_action_timeout_ms: 7_500,
+      run_policy: {
+        ...settings.run_policy,
         batch_stop_on_first_failed_row: true,
       },
-      inputs: {
-        ...settings.inputs,
+      environment: {
+        ...settings.environment,
         initial_variables: [
           { name: "fixture", value_type: "text", value: "batch" },
         ],
@@ -787,8 +719,8 @@ describe("Electron workflow command handlers", () => {
       ],
     });
     expect(runnerCalls).toHaveLength(2);
-    expect(runnerSettings[0]?.execution.browser_retention).toBe("close");
-    expect(runnerSettings[1]?.execution.browser_retention).toBe("close");
+    expect(runnerSettings[0]?.run_policy.browser_retention).toBe("close");
+    expect(runnerSettings[1]?.run_policy.browser_retention).toBe("close");
     expect(runnerCalls[0]?.steps[0]).toMatchObject({
       node_id: "batch-row-0",
       config: {
@@ -811,7 +743,7 @@ describe("Electron workflow command handlers", () => {
       node_id: "visit",
       config: {
         type: "navigate",
-        config: { timeout_ms: 7_500 },
+        config: { url: "https://owned.test" },
       },
     });
     expect(runnerCalls[1]?.steps[0]).toMatchObject({
