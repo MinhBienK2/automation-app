@@ -18,7 +18,6 @@ import { ScrollArea } from "./scroll-area";
 import { Select } from "./select";
 import { SegmentedControl } from "./segmented-control";
 import { Switch, SwitchField } from "./switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
 import { Textarea } from "./textarea";
 import {
   Tooltip,
@@ -73,7 +72,6 @@ describe("shadcn UI components", () => {
   });
 
   test("renders the remaining shared primitives", async () => {
-    const user = userEvent.setup();
     render(
       <TooltipProvider>
         <Card>
@@ -104,14 +102,6 @@ describe("shadcn UI components", () => {
               ]}
               onValueChange={() => {}}
             />
-            <Tabs defaultValue="vi">
-              <TabsList>
-                <TabsTrigger value="vi">Tiếng Việt</TabsTrigger>
-                <TabsTrigger value="en">English</TabsTrigger>
-              </TabsList>
-              <TabsContent value="vi">Nội dung</TabsContent>
-              <TabsContent value="en">Content</TabsContent>
-            </Tabs>
             <ScrollArea>
               <p>Scrollable help</p>
             </ScrollArea>
@@ -139,9 +129,6 @@ describe("shadcn UI components", () => {
       "aria-pressed",
       "true",
     );
-
-    await user.click(screen.getByRole("tab", { name: "English" }));
-
-    expect(screen.getByText("Content")).toBeInTheDocument();
+    expect(screen.getByText("Scrollable help")).toBeInTheDocument();
   });
 });

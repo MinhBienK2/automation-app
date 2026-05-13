@@ -10,4 +10,13 @@ describe("app shell static assets", () => {
     expect(existsSync(join(process.cwd(), "public/vite.svg"))).toBe(false);
     expect(existsSync(join(process.cwd(), "src/assets/react.svg"))).toBe(false);
   });
+
+  test("does not keep unused Radix tabs primitive or dependency", () => {
+    const packageJson = JSON.parse(
+      readFileSync(join(process.cwd(), "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+
+    expect(existsSync(join(process.cwd(), "src/components/ui/tabs.tsx"))).toBe(false);
+    expect(packageJson.dependencies).not.toHaveProperty("@radix-ui/react-tabs");
+  });
 });
