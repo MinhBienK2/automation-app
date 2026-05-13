@@ -65,6 +65,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, extendedFormPage());
       return;
     }
+    if (url.pathname === "/wait-assertion" || url.pathname === "/wait-assertion-ready") {
+      respondHtml(response, waitAssertionPage());
+      return;
+    }
     if (url.pathname === "/download/report.csv") {
       response.writeHead(200, {
         "content-disposition": 'attachment; filename="owned-report.csv"',
@@ -393,6 +397,17 @@ function extendedFormPage() {
         options.hidden = true;
       });
     </script>
+  </body>
+</html>`;
+}
+
+function waitAssertionPage() {
+  return `<!doctype html>
+<html>
+  <head><title>Wait Assertion Fixture</title></head>
+  <body>
+    <h1>Wait Assertion Fixture</h1>
+    <div data-testid="async-status">idle</div>
   </body>
 </html>`;
 }

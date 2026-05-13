@@ -20,7 +20,47 @@ export async function createAndRunWorkflow(
   steps: Array<{ id: string; label: string; config: ActionConfig }>,
 ) {
   const graph = linearGraph(steps);
-  const workflowId = await page.evaluate(
+  const workflowId = await createWorkflow(page, name, graph);
+
+  try {
+    await expect
+      .poll(() => runState(page), { timeout: 45_000 })
+      .toMatchObject({ status: "success" });
+  } catch (error) {
+    const state = await runState(page);
+    throw new Error(
+      `Workflow did not finish successfully. Last run state: ${JSON.stringify(state)}`,
+      { cause: error },
+    );
+  }
+  return { workflowId, state: await runState(page) };
+}
+
+export async function createAndRunWorkflowExpectingFailure(
+  page: Page,
+  name: string,
+  steps: Array<{ id: string; label: string; config: ActionConfig }>,
+) {
+  const graph = linearGraph(steps);
+  const workflowId = await createWorkflow(page, name, graph);
+
+  await expect
+    .poll(() => runState(page), { timeout: 45_000 })
+    .toMatchObject({ status: "failed" });
+
+  return { workflowId, state: await runState(page) };
+}
+
+async function runState(page: Page): Promise<RunState> {
+  return page.evaluate(async () => {
+    const api = window.workflowApi;
+    if (!api) throw new Error("Workflow API bridge is unavailable");
+    return api.getRunState();
+  });
+}
+
+async function createWorkflow(page: Page, name: string, graph: WorkflowGraph) {
+  return page.evaluate(
     async ({ workflowName, workflowGraph }) => {
       const api = window.workflowApi;
       if (!api) throw new Error("Workflow API bridge is unavailable");
@@ -43,27 +83,6 @@ export async function createAndRunWorkflow(
     },
     { workflowName: name, workflowGraph: graph },
   );
-
-  try {
-    await expect
-      .poll(() => runState(page), { timeout: 45_000 })
-      .toMatchObject({ status: "success" });
-  } catch (error) {
-    const state = await runState(page);
-    throw new Error(
-      `Workflow did not finish successfully. Last run state: ${JSON.stringify(state)}`,
-      { cause: error },
-    );
-  }
-  return { workflowId, state: await runState(page) };
-}
-
-async function runState(page: Page): Promise<RunState> {
-  return page.evaluate(async () => {
-    const api = window.workflowApi;
-    if (!api) throw new Error("Workflow API bridge is unavailable");
-    return api.getRunState();
-  });
 }
 
 function linearGraph(
