@@ -33,26 +33,14 @@ describe("BrowserWorkflowRunner", () => {
     const driver = createFakeDriver(context);
     const paths = await createTempAppPaths();
     const settings = makeSettings({
-      browser: {
+      browser_launch: {
+        session_mode: "persistent_profile",
         profile_name: "qa-profile",
         headless: false,
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
         proxy_username: "agent",
         proxy_password: "secret",
-        user_agent: "WorkflowBot/1.0",
-        viewport_width: 1366,
-        viewport_height: 768,
-        mobile: true,
-        touch: true,
-      },
-      environment: {
-        geolocation: { latitude: 10.8, longitude: 106.7, accuracy: 15 },
-        permissions: ["geolocation", "clipboard-read"],
-        extra_http_headers: [{ name: "X-Lab", value: "owned" }],
-        locale: "vi-VN",
-        timezone: "Asia/Ho_Chi_Minh",
-        download_directory: paths.downloadsDir,
       },
     });
 
@@ -75,17 +63,9 @@ describe("BrowserWorkflowRunner", () => {
             username: "agent",
             password: "secret",
           },
-          userAgent: "WorkflowBot/1.0",
-          viewport: { width: 1366, height: 768 },
-          locale: "vi-VN",
-          timezone: "Asia/Ho_Chi_Minh",
           contextOptions: expect.objectContaining({
-            isMobile: true,
-            hasTouch: true,
-            geolocation: { latitude: 10.8, longitude: 106.7, accuracy: 15 },
-            permissions: ["geolocation", "clipboard-read"],
-            extraHTTPHeaders: { "X-Lab": "owned" },
             acceptDownloads: true,
+            downloadsPath: paths.downloadsDir,
           }),
         }),
       },
@@ -157,6 +137,66 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("submits targeted forms through locator DOM evaluation", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("submit", "Submit", {
+            type: "submit_form",
+            config: { xpath: "//button[@type='submit']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "locator://button[@type='submit']",
+        "evaluate://button[@type='submit']",
+      ]),
+    );
+    expect(page.events).not.toContain("click://button[@type='submit']");
+  });
+
+  test("selects radio targets through locator DOM evaluation", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("radio", "Radio", {
+            type: "select_radio",
+            config: { target: { locators: [{ kind: "test_id", value: "role-admin" }] } },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "getByTestId:role-admin",
+        "evaluate:testid=role-admin",
+      ]),
+    );
+    expect(page.events).not.toContain("click:testid=role-admin");
+  });
+
   test("checks cancellation during waits and closes temporary contexts on stop", async () => {
     const context = new FakeContext();
     const cancellation = new AbortController();
@@ -178,7 +218,7 @@ describe("BrowserWorkflowRunner", () => {
           }),
         ],
       },
-      settings: makeSettings({ execution: { browser_retention: "close" } }),
+      settings: makeSettings({ run_policy: { browser_retention: "close" } }),
       mode: "run_workflow",
       signal: cancellation.signal,
     });
@@ -1380,9 +1420,9 @@ function step(nodeId: string, label: string, config: ActionConfig) {
 
 function makeSettings(
   overrides: {
-    browser?: Partial<WorkflowSettings["browser"]>;
+    browser_launch?: Partial<WorkflowSettings["browser_launch"]>;
     environment?: Partial<WorkflowSettings["environment"]>;
-    execution?: Partial<WorkflowSettings["execution"]>;
+    run_policy?: Partial<WorkflowSettings["run_policy"]>;
   } = {},
 ): WorkflowSettings {
   const base = defaultWorkflowSettings({
@@ -1394,9 +1434,9 @@ function makeSettings(
   });
   return {
     ...base,
-    browser: { ...base.browser, ...overrides.browser },
+    browser_launch: { ...base.browser_launch, ...overrides.browser_launch },
     environment: { ...base.environment, ...overrides.environment },
-    execution: { ...base.execution, ...overrides.execution },
+    run_policy: { ...base.run_policy, ...overrides.run_policy },
   };
 }
 
@@ -1603,6 +1643,11 @@ class FakeLocator {
 
   async click() {
     this.events.push(`click:${this.selector}`);
+  }
+
+  async evaluate() {
+    this.events.push(`evaluate:${this.selector}`);
+    return null;
   }
 
   async hover() {}

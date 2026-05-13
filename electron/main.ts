@@ -29,6 +29,11 @@ function configureLinuxGraphicsWorkarounds() {
 
 configureLinuxGraphicsWorkarounds();
 
+const appDataOverride = process.env.AUTOMATION_APP_DATA_DIR;
+if (appDataOverride) {
+  app.setPath("appData", appDataOverride);
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,

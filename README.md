@@ -36,6 +36,12 @@ Run frontend tests:
 npm test
 ```
 
+Run desktop Electron E2E tests against deterministic local fixtures:
+
+```bash
+npm run test:e2e
+```
+
 Run the real CloakBrowser smoke test separately. First run may download the
 browser runtime:
 

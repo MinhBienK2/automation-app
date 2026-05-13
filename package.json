@@ -12,6 +12,7 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:pack": "npm run build && electron-builder --linux dir",
     "test": "vitest run",
+    "test:e2e": "npm run build:electron && playwright test",
     "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runner.smoke.test.ts",
     "preview": "vite preview"
   },
@@ -51,6 +52,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

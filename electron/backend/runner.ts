@@ -101,6 +101,10 @@ export type BrowserDriverLocator = {
   fill(value: string, options?: Record<string, unknown>): Promise<void>;
   type?(value: string, options?: Record<string, unknown>): Promise<void>;
   click(options?: Record<string, unknown>): Promise<void>;
+  evaluate?<Result>(
+    pageFunction: (element: Element) => Result | Promise<Result>,
+    arg?: unknown,
+  ): Promise<Result>;
   hover?(options?: Record<string, unknown>): Promise<void>;
   dblclick?(options?: Record<string, unknown>): Promise<void>;
   check?(options?: Record<string, unknown>): Promise<void>;
@@ -498,12 +502,14 @@ export class BrowserWorkflowRunner {
         }
         return;
       case "check":
-      case "select_radio":
         await requireLocatorMethod(
           await this.locatorForAction(runtime, action.config),
           "check",
           action.type,
         )();
+        return;
+      case "select_radio":
+        await selectRadioTarget(await this.locatorForAction(runtime, action.config));
         return;
       case "uncheck":
         await requireLocatorMethod(
@@ -554,13 +560,7 @@ export class BrowserWorkflowRunner {
         return;
       case "submit_form":
         if (action.config.xpath || action.config.target) {
-          await requireLocatorMethod(
-            await this.locatorForAction(runtime, action.config, "form"),
-            "press",
-            action.type,
-          )(
-            "Enter",
-          );
+          await submitFormTarget(await this.locatorForAction(runtime, action.config, "form"));
         } else {
           await runtime.page.keyboard?.press("Enter");
         }
@@ -1347,6 +1347,60 @@ export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): B
       return cloakbrowser.launchPersistentContext(options);
     },
   };
+}
+
+async function submitFormTarget(locator: BrowserDriverLocator) {
+  if (locator.evaluate) {
+    await locator.evaluate((element) => {
+      const form = element instanceof HTMLFormElement ? element : element.closest("form");
+      if (!form) {
+        if (element instanceof HTMLElement) element.click();
+        return;
+      }
+
+      const submitter =
+        element instanceof HTMLButtonElement ||
+        (element instanceof HTMLInputElement &&
+          (element.type === "submit" || element.type === "image"))
+          ? element
+          : undefined;
+
+      if (form.requestSubmit) {
+        form.requestSubmit(submitter);
+        return;
+      }
+
+      const event = new Event("submit", { bubbles: true, cancelable: true });
+      if (form.dispatchEvent(event)) form.submit();
+    });
+    return;
+  }
+
+  await locator.click();
+}
+
+async function selectRadioTarget(locator: BrowserDriverLocator) {
+  if (locator.evaluate) {
+    await locator.evaluate((element) => {
+      const radio =
+        element instanceof HTMLInputElement && element.type === "radio"
+          ? element
+          : element.querySelector<HTMLInputElement>("input[type='radio']");
+
+      if (!radio) {
+        if (element instanceof HTMLElement) element.click();
+        return;
+      }
+
+      if (radio.checked) return;
+      radio.checked = true;
+      radio.dispatchEvent(new Event("input", { bubbles: true }));
+      radio.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    return;
+  }
+
+  await locator.click();
 }
 
 function buildLaunchOptions(
