@@ -96,7 +96,7 @@ describe("Workflow graph editor integration", () => {
         expect.objectContaining({
           workflowId: "workflow-1",
           graph: expect.objectContaining({
-            version: 1,
+            version: 2,
           }),
         }),
       );
@@ -532,7 +532,7 @@ describe("Workflow graph editor integration", () => {
     expect(within(help).getByText("Cấu hình tối thiểu")).toBeInTheDocument();
     expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
     expect(within(help).getAllByText("Condition").length).toBeGreaterThan(0);
-    expect(within(help).getAllByText("Timeout ms").length).toBeGreaterThan(0);
+    expect(within(help).getAllByText("Duration ms").length).toBeGreaterThan(0);
   });
 
   test("opens detailed logic node help from the graph inspector and context menu", async () => {
@@ -705,13 +705,15 @@ describe("Workflow graph editor integration", () => {
     await userEvent.type(within(editor).getByLabelText("Search action types"), "click");
     await userEvent.click(within(editor).getByRole("option", { name: "Click" }));
     expect(within(editor).getByRole("heading", { name: "Click" })).toBeInTheDocument();
-    await userEvent.type(within(editor).getByLabelText("XPath"), "//button");
+    await userEvent.type(within(editor).getByLabelText("Target locator"), "//button");
+    await userEvent.selectOptions(within(editor).getByLabelText("Target locator type"), "xpath");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
-      const saveCall = workflowCommandCallMock.mock.calls.find(
+      const saveCalls = workflowCommandCallMock.mock.calls.filter(
         ([command]) => command === "save_workflow_graph",
       );
+      const saveCall = saveCalls[saveCalls.length - 1];
       expect(saveCall?.[1]).toEqual(
         expect.objectContaining({
           graph: expect.objectContaining({
@@ -722,21 +724,14 @@ describe("Workflow graph editor integration", () => {
                 config: expect.objectContaining({
                   type: "click",
                   config: expect.objectContaining({
-                    xpath: "//button",
-                    iframe_xpath: null,
-                    mode: null,
-                    button: null,
-                    click_count: null,
-                    scroll_into_view: null,
-                    block: null,
-                    inline: null,
-                    position: null,
-                    offset_x: null,
-                    offset_y: null,
-                    wait_until: null,
-                    timeout_ms: null,
-                    retry_interval_ms: null,
-                    post_click_wait_ms: null,
+                    target: expect.objectContaining({
+                      locators: [
+                        expect.objectContaining({
+                          kind: "xpath",
+                          value: "//button",
+                        }),
+                      ],
+                    }),
                   }),
                 }),
               }),

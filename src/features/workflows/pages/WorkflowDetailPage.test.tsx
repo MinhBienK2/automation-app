@@ -180,9 +180,9 @@ describe("Workflow detail integration", () => {
     await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
     await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
     await userEvent.click(within(settingsDialog).getByRole("button", {
-      name: "Browser Settings Help",
+      name: "Browser Launch Settings Help",
     }));
-    expect(await screen.findByText("Browser Settings Help")).toBeInTheDocument();
+    expect(await screen.findByText("Browser Launch Settings Help")).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(within(settingsDialog).getByRole("button", {
