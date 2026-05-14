@@ -16,6 +16,7 @@ import {
   importWorkflowPackage,
   normalizeRecordedEvents,
   runWorkflow,
+  runWorkflowFromNode,
   saveWorkflowSettings,
   saveWorkflowSettingsSection,
   saveWorkflowBrowserConfig,
@@ -150,6 +151,7 @@ describe("workflow API phase ten commands", () => {
           proxy_username: null,
           proxy_password: null,
           headless: false,
+          run_from_selected_enabled: false,
         },
       },
     };
@@ -203,12 +205,14 @@ describe("workflow API graph commands", () => {
     workflowBridgeMock.validateWorkflowGraph.mockResolvedValue(undefined);
     workflowBridgeMock.compileWorkflowGraph.mockResolvedValue(undefined);
     workflowBridgeMock.runWorkflow.mockResolvedValue(undefined);
+    workflowBridgeMock.runWorkflowFromNode.mockResolvedValue(undefined);
 
     await getWorkflowGraph("workflow-1");
     await saveWorkflowGraph("workflow-1", graph);
     await validateWorkflowGraph(graph);
     await compileWorkflowGraph(graph);
     await runWorkflow("workflow-1");
+    await runWorkflowFromNode("workflow-1", "step-1");
 
     expect(workflowBridgeMock.getWorkflowGraph).toHaveBeenCalledWith("workflow-1");
     expect(workflowBridgeMock.saveWorkflowGraph).toHaveBeenCalledWith(
@@ -218,6 +222,10 @@ describe("workflow API graph commands", () => {
     expect(workflowBridgeMock.validateWorkflowGraph).toHaveBeenCalledWith(graph);
     expect(workflowBridgeMock.compileWorkflowGraph).toHaveBeenCalledWith(graph);
     expect(workflowBridgeMock.runWorkflow).toHaveBeenCalledWith("workflow-1");
+    expect(workflowBridgeMock.runWorkflowFromNode).toHaveBeenCalledWith(
+      "workflow-1",
+      "step-1",
+    );
   });
 });
 
@@ -284,6 +292,7 @@ describe("workflow API settings commands", () => {
         proxy_username: null,
         proxy_password: null,
         headless: false,
+        run_from_selected_enabled: false,
       },
       environment: {
         initial_variables: [],

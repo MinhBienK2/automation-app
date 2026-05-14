@@ -167,6 +167,7 @@ export function WorkflowSettingsDialog({
                 ) : null}
                 {activeSection === "browser_launch" ? (
                   <BrowserLaunchSettingsSection
+                    runPolicy={settings.run_policy}
                     value={settings.browser_launch}
                     onChange={(value) => updateSection("browser_launch", value)}
                   />
@@ -357,13 +358,17 @@ function RunPolicySettingsSection({
 }
 
 function BrowserLaunchSettingsSection({
+  runPolicy,
   value,
   onChange,
 }: {
+  runPolicy: WorkflowSettingsRunPolicy;
   value: WorkflowSettingsBrowserLaunch;
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
 }) {
   const persistent = value.session_mode === "persistent_profile";
+  const canEnableRunFromSelected =
+    persistent && runPolicy.browser_retention === "retain";
   return (
     <div className="settings-form-grid">
       <SwitchField
@@ -376,6 +381,9 @@ function BrowserLaunchSettingsSection({
             profile_name: checked
               ? value.profile_name ?? createDefaultBrowserProfileName()
               : null,
+            run_from_selected_enabled: checked
+              ? value.run_from_selected_enabled
+              : false,
           })
         }
       />
@@ -388,6 +396,22 @@ function BrowserLaunchSettingsSection({
           />
         </label>
       ) : null}
+      <SwitchField
+        checked={Boolean(value.run_from_selected_enabled)}
+        disabled={!canEnableRunFromSelected}
+        label="Enable Run from selected"
+        description={
+          canEnableRunFromSelected
+            ? "Show the Run from selected action when a matching browser session is retained."
+            : "Requires Reuse login session and Run Policy browser retention set to retain."
+        }
+        onCheckedChange={(checked) =>
+          onChange({
+            ...value,
+            run_from_selected_enabled: canEnableRunFromSelected ? checked : false,
+          })
+        }
+      />
       <SwitchField
         checked={value.proxy_enabled}
         label="Use proxy"

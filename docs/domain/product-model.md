@@ -17,7 +17,7 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Graph autosave is an app-level editing preference controlled from Settings.
 - Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, and initial environment variables.
-- The Browser Launch section owns the reuse-login-session control, launch profile, proxy, and headed/headless default. Enabling reuse generates or uses a named persistent browser profile; disabling reuse clears the profile name so runs use temporary browser state. Legacy browser config commands map to this section for compatibility.
+- The Browser Launch section owns the reuse-login-session control, Run from selected enablement, launch profile, proxy, and headed/headless default. Enabling reuse generates or uses a named persistent browser profile; disabling reuse clears the profile name and disables Run from selected so runs use temporary browser state. Legacy browser config commands map to this section for compatibility.
 - The Run Policy section owns maximum workflow duration, terminal browser retention, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
 - The Environment section owns initial variable rows that are available before graph actions run.
 

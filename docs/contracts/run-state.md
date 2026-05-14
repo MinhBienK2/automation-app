@@ -22,6 +22,7 @@ Run state includes:
 - `current_step_number`
 - `completed_step_ids`
 - `outputs`: captured runtime outputs/variables available after the runner has a browser session to inspect
+- `retained_session`: whether a reusable retained browser session is available, plus workflow/profile ownership and a reason when unavailable
 - `error`
 
 Run errors include:
@@ -35,11 +36,13 @@ Run errors include:
 ## Lifecycle
 
 - `run_workflow` closes retained browser sessions from previous terminal runs, then sets status to `running`, mode, target step id, and clears progress/error.
+- `run_workflow_from_node` reuses an existing retained session and runs from a selected main-path graph node to the end. It requires the Workflow Settings Run from selected toggle, Reuse login session, browser retention `retain`, and a retained session matching the workflow/profile.
 - Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes.
 - Only one active workflow run is allowed at a time. A second `run_workflow` request fails with a command error while another run owns the cancellation token.
 - `run_batch_workflow` uses the same active-run ownership. A batch blocks other runs while active, reports progress through the same state shape, and can be stopped through `stop_run`.
 - `stop_run` sets status to `stopped` and clears error for the active normal or batch run.
 - Runner completion clears active run, clears current step, captures `window.__wamOutputs` from the browser session when present, sets terminal status, and either retains or closes the CloakBrowser context according to the resolved terminal/browser-retention policy.
+- If the operator manually closes the retained browser, the next retained-session check marks `retained_session.available` false and run-from-selected fails with a readable error instead of relaunching from the selected node.
 - Terminal runs are persisted to SQLite `runs`; compiled graph steps are persisted to `run_steps` with action type, status, trace JSON, and error JSON when available.
 - Infrastructure failure sets status to `failed` without retained session.
 - When Workflow Settings `execution.max_workflow_duration_ms` is set, the background run cancels through the normal cancellation token at that limit. The terminal state is `failed` with a workflow-level timeout reason such as `Workflow exceeded maximum duration of <ms> ms`.
@@ -50,6 +53,7 @@ Run errors include:
 
 - `App.tsx` polls `get_run_state` while status is `running`, including runs started from the workflow list where the detail graph workspace is not open.
 - Run status bar displays terminal and error states.
+- Workflow detail renders `Run from selected` only when the Workflow Settings toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
 - Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation.
 

@@ -56,6 +56,7 @@ export type WorkflowElectronBridge = {
   validateWorkflowGraph(graph: WorkflowGraph): Promise<GraphValidationIssue[]>;
   compileWorkflowGraph(graph: WorkflowGraph): Promise<CompiledWorkflowGraph>;
   runWorkflow(workflowId: string): Promise<RunState>;
+  runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState>;
   stopRun(): Promise<RunState>;
   getRunState(): Promise<RunState>;
   validateSchedule(

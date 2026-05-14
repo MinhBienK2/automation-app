@@ -78,6 +78,7 @@ type WorkflowGraphEditorProps = {
   selectionRequest?: GraphSelectionRequest | null;
   onChange: (graph: WorkflowGraph) => void;
   onRunGraph?: () => void;
+  onSelectedNodeChange?: (nodeId: string | null) => void;
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
 };
@@ -147,6 +148,7 @@ export function WorkflowGraphEditor({
   selectionRequest,
   onChange,
   onRunGraph,
+  onSelectedNodeChange,
   onSaveGraph,
   onValidateGraph,
 }: WorkflowGraphEditorProps) {
@@ -217,6 +219,10 @@ export function WorkflowGraphEditor({
   const selectedNode = selectedNodeId
     ? graph.nodes.find((node) => node.id === selectedNodeId) ?? null
     : null;
+
+  useEffect(() => {
+    onSelectedNodeChange?.(selectedNodeId);
+  }, [onSelectedNodeChange, selectedNodeId]);
   const selectedEdge = selectedEdgeId
     ? graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null
     : null;

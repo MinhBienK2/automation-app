@@ -153,6 +153,7 @@ export type WorkflowSettingsRunPolicy = {
 export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
   session_mode: WorkflowBrowserSessionMode;
   headless: boolean;
+  run_from_selected_enabled: boolean;
 };
 
 export type WorkflowSettingsEnvironment = {
@@ -977,6 +978,12 @@ export type RunState = {
   current_step_number: number | null;
   completed_step_ids: string[];
   outputs?: Record<string, unknown>;
+  retained_session?: {
+    available: boolean;
+    workflow_id?: string | null;
+    profile_name?: string | null;
+    reason?: string | null;
+  } | null;
   error: null | {
     step_id?: string | null;
     step_number: number;

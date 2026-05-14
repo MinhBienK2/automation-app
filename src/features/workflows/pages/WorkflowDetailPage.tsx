@@ -30,6 +30,11 @@ type WorkflowDetailPageProps = {
   onStopRun: () => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
+  onRunGraphFromSelected: () => void;
+  onSelectedGraphNodeChange: (nodeId: string | null) => void;
+  showRunGraphFromSelected: boolean;
+  canRunGraphFromSelected: boolean;
+  runGraphFromSelectedReason: string;
   onSaveGraph: () => void;
   onValidateGraph: () => void;
 };
@@ -48,6 +53,11 @@ export function WorkflowDetailPage({
   onStopRun,
   onGraphChange,
   onRunGraph,
+  onRunGraphFromSelected,
+  onSelectedGraphNodeChange,
+  showRunGraphFromSelected,
+  canRunGraphFromSelected,
+  runGraphFromSelectedReason,
   onSaveGraph,
   onValidateGraph,
 }: WorkflowDetailPageProps) {
@@ -120,6 +130,17 @@ export function WorkflowDetailPage({
             >
               Run
             </Button>
+            {showRunGraphFromSelected ? (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={onRunGraphFromSelected}
+                disabled={!canRunGraphFromSelected}
+                title={runGraphFromSelectedReason}
+              >
+                Run from selected
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               type="button"
@@ -155,6 +176,7 @@ export function WorkflowDetailPage({
           selectionRequest={selectionRequest}
           onChange={onGraphChange}
           onRunGraph={onRunGraph}
+          onSelectedNodeChange={onSelectedGraphNodeChange}
           onSaveGraph={onSaveGraph}
           onValidateGraph={onValidateGraph}
         />

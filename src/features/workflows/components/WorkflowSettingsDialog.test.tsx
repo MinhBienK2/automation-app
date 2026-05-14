@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
+import type { WorkflowSettings } from "../../../types/workflow";
 import { defaultWorkflowSettings } from "../lib/workflowSettings";
 import { WorkflowSettingsDialog } from "./WorkflowSettingsDialog";
 
@@ -100,6 +102,54 @@ describe("WorkflowSettingsDialog", () => {
     expect(onSettingsChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         run_policy: expect.objectContaining({ browser_retention: "close" }),
+      }),
+    );
+  });
+
+  test("only allows enabling Run from selected after reuse session and retained browser are configured", async () => {
+    const user = userEvent.setup();
+    const onSettingsChange = vi.fn();
+    const initialSettings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+
+    function Harness() {
+      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
+      return (
+        <WorkflowSettingsDialog
+          activeSection="browser_launch"
+          hasUnsavedChanges={false}
+          open
+          settings={settings}
+          onActiveSectionChange={vi.fn()}
+          onDiscardChanges={vi.fn()}
+          onOpenChange={vi.fn()}
+          onSaveSettings={vi.fn()}
+          onSettingsChange={(nextSettings) => {
+            onSettingsChange(nextSettings);
+            setSettings(nextSettings);
+          }}
+        />
+      );
+    }
+
+    render(
+      <Harness />,
+    );
+
+    expect(screen.getByRole("switch", { name: "Enable Run from selected" }))
+      .toBeDisabled();
+
+    await user.click(screen.getByRole("switch", { name: "Reuse login session" }));
+    await user.click(screen.getByRole("switch", { name: "Enable Run from selected" }));
+
+    expect(onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        browser_launch: expect.objectContaining({
+          session_mode: "persistent_profile",
+          run_from_selected_enabled: true,
+        }),
       }),
     );
   });

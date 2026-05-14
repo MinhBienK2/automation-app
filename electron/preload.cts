@@ -26,6 +26,7 @@ const workflowIpcChannels = {
   validateWorkflowGraph: "workflow:validateWorkflowGraph",
   compileWorkflowGraph: "workflow:compileWorkflowGraph",
   runWorkflow: "workflow:runWorkflow",
+  runWorkflowFromNode: "workflow:runWorkflowFromNode",
   stopRun: "workflow:stopRun",
   getRunState: "workflow:getRunState",
   validateSchedule: "workflow:validateSchedule",
@@ -93,6 +94,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow(workflowIpcChannels.compileWorkflowGraph, graph),
   runWorkflow: (workflowId) =>
     invokeWorkflow(workflowIpcChannels.runWorkflow, workflowId),
+  runWorkflowFromNode: (workflowId, startNodeId) =>
+    invokeWorkflow(workflowIpcChannels.runWorkflowFromNode, workflowId, startNodeId),
   stopRun: () => invokeWorkflow(workflowIpcChannels.stopRun),
   getRunState: () => invokeWorkflow(workflowIpcChannels.getRunState),
   validateSchedule: (schedule) =>

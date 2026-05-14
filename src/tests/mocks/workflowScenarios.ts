@@ -58,6 +58,7 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
         proxy_username: null,
         proxy_password: null,
         headless: false,
+        run_from_selected_enabled: false,
       },
       environment: {
         initial_variables: [],

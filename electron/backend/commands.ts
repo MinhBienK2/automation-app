@@ -29,6 +29,7 @@ import type {
 } from "../../src/types/workflow.js";
 import type { AppPaths } from "./database.js";
 import {
+  compileWorkflowGraphFromNode,
   compileWorkflowRunPlan,
   compileWorkflowGraph as compileGraph,
   validateActionConfig,
@@ -45,10 +46,17 @@ export type CommandError = {
 
 export type WorkflowCommandHandlers = ReturnType<typeof createWorkflowCommandHandlers>;
 
+type RunnerCommandPort = {
+  run: BrowserWorkflowRunner["run"];
+  closeRetainedContext?: BrowserWorkflowRunner["closeRetainedContext"];
+  hasReusableRetainedSession?: BrowserWorkflowRunner["hasReusableRetainedSession"];
+  getRetainedSessionState?: BrowserWorkflowRunner["getRetainedSessionState"];
+};
+
 type CommandContext = {
   appPaths: AppPaths;
   database: DatabaseSync;
-  runner?: Pick<BrowserWorkflowRunner, "run" | "closeRetainedContext">;
+  runner?: RunnerCommandPort;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
 };
 
@@ -67,6 +75,12 @@ const idleRunState: RunState = {
   current_step_number: null,
   completed_step_ids: [],
   outputs: {},
+  retained_session: {
+    available: false,
+    workflow_id: null,
+    profile_name: null,
+    reason: "No retained browser session",
+  },
   error: null,
 };
 
@@ -309,6 +323,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             graph: compiledGraph,
             settings,
             mode: "run_workflow",
+            retainedSessionWorkflowId: workflowId,
             signal: abortController.signal,
             onProgress(progress) {
               if (abortController.signal.aborted && currentRunState.status === "stopped") {
@@ -373,6 +388,148 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return currentRunState;
     },
 
+    async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState> {
+      requireWorkflow(workflowId);
+      if (currentRunAbortController) {
+        throw commandError("A workflow run is already active", "run");
+      }
+      const settings = getSettings(workflowId);
+      if (settings.browser_launch.session_mode !== "persistent_profile" || !settings.browser_launch.profile_name) {
+        throw commandError(
+          "Run from selected requires Reuse login session to be enabled",
+          "browser_launch.session_mode",
+        );
+      }
+      if (settings.run_policy.browser_retention !== "retain") {
+        throw commandError(
+          "Run from selected requires browser retention to be set to retain",
+          "run_policy.browser_retention",
+        );
+      }
+      if (!settings.browser_launch.run_from_selected_enabled) {
+        throw commandError(
+          "Run from selected must be enabled in Workflow Settings",
+          "browser_launch.run_from_selected_enabled",
+        );
+      }
+      if (!runner.hasReusableRetainedSession?.(workflowId, settings.browser_launch.profile_name)) {
+        currentRunState = {
+          ...currentRunState,
+          retained_session: runner.getRetainedSessionState?.() ?? {
+            available: false,
+            workflow_id: null,
+            profile_name: null,
+            reason: "No retained browser session",
+          },
+        };
+        throw commandError(
+          "No reusable browser session is available. Run the workflow again to create one.",
+          "run",
+        );
+      }
+
+      const graph = getWorkflowGraph(workflowId);
+      const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId);
+      if (compiledGraph.steps.length === 0) {
+        throw commandError("Selected graph node has no executable steps", "startNodeId");
+      }
+
+      currentRunAbortController = new AbortController();
+      currentRunId = beginRun(context.database, workflowId, settings, graph);
+      currentRunState = {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+        target_step_id: startNodeId,
+        retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
+      };
+      let timedOut = false;
+      const abortController = currentRunAbortController;
+      const runId = currentRunId;
+      const timeoutMs = settings.run_policy.max_workflow_duration_ms;
+      const timeoutHandle = timeoutMs
+        ? setTimeout(() => {
+            timedOut = true;
+            abortController.abort();
+          }, timeoutMs)
+        : null;
+      void (async () => {
+        try {
+          let terminalState = await runner.run({
+            runId,
+            graph: compiledGraph,
+            settings,
+            mode: "run_workflow",
+            targetStepId: startNodeId,
+            reuseRetainedSession: true,
+            retainedSessionWorkflowId: workflowId,
+            signal: abortController.signal,
+            onProgress(progress) {
+              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+                return;
+              }
+              currentRunState = {
+                ...currentRunState,
+                ...progress,
+                status: "running",
+                mode: "run_workflow",
+                target_step_id: startNodeId,
+              };
+            },
+          });
+          if (timedOut && terminalState.status === "stopped") {
+            terminalState = {
+              ...terminalState,
+              status: "failed",
+              error: {
+                step_id: terminalState.error?.step_id ?? null,
+                step_number: terminalState.error?.step_number ?? 0,
+                step_name: terminalState.error?.step_name ?? null,
+                action_type: terminalState.error?.action_type ?? "workflow",
+                reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
+              },
+            };
+          } else if (
+            abortController.signal.aborted &&
+            currentRunState.status === "stopped"
+          ) {
+            terminalState = {
+              ...terminalState,
+              status: "stopped",
+              error: null,
+            };
+          }
+          currentRunState = terminalState;
+          finishRun(context.database, runId, compiledGraph, currentRunState);
+        } catch (error) {
+          currentRunState = {
+            ...idleRunState,
+            status: "failed",
+            mode: "run_workflow",
+            target_step_id: startNodeId,
+            retained_session: runner.getRetainedSessionState?.() ?? null,
+            error: {
+              step_id: currentRunState.current_step_id,
+              step_number: currentRunState.current_step_number ?? 0,
+              step_name: null,
+              action_type: "workflow",
+              reason: error instanceof Error ? error.message : String(error),
+            },
+          };
+          finishRun(context.database, runId, compiledGraph, currentRunState);
+        } finally {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+          if (currentRunAbortController === abortController) {
+            currentRunAbortController = null;
+          }
+          if (currentRunId === runId) {
+            currentRunId = null;
+          }
+        }
+      })();
+      return currentRunState;
+    },
+
     async stopRun() {
       currentRunAbortController?.abort();
       if (!currentRunAbortController) {
@@ -387,6 +544,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     getRunState() {
+      if (currentRunState.status !== "running") {
+        currentRunState = {
+          ...currentRunState,
+          retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
+        };
+      }
       return currentRunState;
     },
 
@@ -1070,6 +1233,7 @@ function configToSettingsBrowserLaunch(config: WorkflowBrowserConfig): WorkflowS
     proxy_username: nullableText(config.proxy_username),
     proxy_password: nullableText(config.proxy_password),
     headless: config.headless ?? false,
+    run_from_selected_enabled: false,
   });
 }
 
@@ -1098,6 +1262,10 @@ function normalizeSettingsBrowserLaunch(
       ? "persistent_profile"
       : "temporary",
     profile_name: browser.session_mode === "persistent_profile" ? profileName : null,
+    run_from_selected_enabled:
+      browser.session_mode === "persistent_profile" && profileName
+        ? Boolean(browser.run_from_selected_enabled)
+        : false,
     proxy_server: nullableText(browser.proxy_server),
     proxy_username: nullableText(browser.proxy_username),
     proxy_password: nullableText(browser.proxy_password),

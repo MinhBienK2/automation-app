@@ -348,6 +348,99 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(false);
   });
 
+  test("reuses a retained persistent browser session for run-from-selected without relaunching", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+      },
+      run_policy: { browser_retention: "retain" },
+    });
+
+    await runner.run({
+      graph: {
+        steps: [
+          step("first", "First", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-1",
+    });
+    expect(runner.hasReusableRetainedSession("workflow-1", "qa-profile")).toBe(true);
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("second", "Second", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      targetStepId: "second",
+      reuseRetainedSession: true,
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    expect(result.status).toBe("success");
+    expect(driver.launches).toHaveLength(1);
+    expect(result.completed_step_ids).toEqual(["second"]);
+    expect(context.closed).toBe(false);
+  });
+
+  test("clears stale retained session state when the retained browser was closed manually", async () => {
+    const context = new FakeContext();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+      },
+      run_policy: { browser_retention: "retain" },
+    });
+
+    await runner.run({
+      graph: {
+        steps: [
+          step("first", "First", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-1",
+    });
+    context.closed = true;
+
+    expect(runner.hasReusableRetainedSession("workflow-1", "qa-profile")).toBe(false);
+    await expect(
+      runner.run({
+        graph: { steps: [] },
+        settings,
+        mode: "run_workflow",
+        reuseRetainedSession: true,
+        retainedSessionWorkflowId: "workflow-1",
+      }),
+    ).rejects.toThrow("No reusable browser session is available");
+  });
+
   test("waits for element states using Playwright locator wait semantics", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({

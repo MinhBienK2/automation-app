@@ -93,6 +93,92 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
+  test("runs from the selected node when a retained persistent session is available", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      get_run_state: {
+        ...idleRunState,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      },
+      get_workflow_settings: {
+        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        run_policy: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
+          browser_retention: "retain",
+        },
+        browser_launch: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
+          session_mode: "persistent_profile",
+          profile_name: "qa-profile",
+          run_from_selected_enabled: true,
+        },
+      },
+      save_workflow_graph: undefined,
+      run_workflow_from_node: {
+        status: "running",
+        mode: "run_workflow",
+        target_step_id: "step-1",
+        current_step_id: "step-1",
+        current_step_number: 1,
+        completed_step_ids: [],
+        outputs: {},
+        error: null,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Run from selected" }));
+
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
+      workflowId: "workflow-1",
+      startNodeId: "step-1",
+    });
+  });
+
+  test("does not show Run from selected until the workflow setting is enabled", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      get_run_state: {
+        ...idleRunState,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      },
+      get_workflow_settings: {
+        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        browser_launch: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
+          session_mode: "persistent_profile",
+          profile_name: "qa-profile",
+          run_from_selected_enabled: false,
+        },
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    expect(screen.queryByRole("button", { name: "Run from selected" }))
+      .not.toBeInTheDocument();
+  });
+
   test("opens workflow settings on the Browser Launch section from the detail header", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),

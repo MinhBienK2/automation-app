@@ -27,6 +27,7 @@ const methodNames: BridgeMethodName[] = [
   "validateWorkflowGraph",
   "compileWorkflowGraph",
   "runWorkflow",
+  "runWorkflowFromNode",
   "stopRun",
   "getRunState",
   "validateSchedule",
@@ -138,6 +139,10 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.runWorkflow.mockImplementation((workflowId: string) =>
     resolveCommand(commands, "run_workflow", { workflowId }),
+  );
+  workflowBridgeMock.runWorkflowFromNode.mockImplementation(
+    (workflowId: string, startNodeId: string) =>
+      resolveCommand(commands, "run_workflow_from_node", { workflowId, startNodeId }),
   );
   workflowBridgeMock.stopRun.mockImplementation(() =>
     resolveCommand(commands, "stop_run", undefined),

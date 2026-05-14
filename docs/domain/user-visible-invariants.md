@@ -17,6 +17,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings Run Policy exposes maximum workflow duration and browser retention as editable fields. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
 - Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
+- Workflow Settings Browser Launch exposes an Enable Run from selected checkbox. It can only be enabled when Reuse login session is on and browser retention is `retain`; turning Reuse login session off also disables Run from selected.
 - Workflow Settings Browser Launch exposes proxy and headless launch controls.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
@@ -24,6 +25,8 @@ Preserve these unless the task explicitly changes them.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
+- Run from selected is a workflow-detail action. It is hidden unless enabled in Workflow Settings, runs from exactly one selected main-path node to the end using the retained browser session, saves visible graph/settings first, and is disabled unless Reuse login session is enabled, browser retention is `retain`, and the retained session matches the workflow/profile.
+- If the retained browser was closed manually, Run from selected remains unavailable or fails with a readable stale-session message; it must not silently launch a new browser from the selected node.
 - If saving the visible graph fails before a run, the run does not start.
 - If saving dirty Workflow Settings fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.

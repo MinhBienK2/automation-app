@@ -233,6 +233,12 @@ export const initialRunState: RunState = {
   current_step_number: null,
   completed_step_ids: [],
   outputs: {},
+  retained_session: {
+    available: false,
+    workflow_id: null,
+    profile_name: null,
+    reason: "No retained browser session",
+  },
   error: null,
 };
 
@@ -257,6 +263,7 @@ export function normalizeRunState(state: RunState): RunState {
     current_step_number: state.current_step_number ?? null,
     completed_step_ids: state.completed_step_ids ?? [],
     outputs: state.outputs ?? {},
+    retained_session: state.retained_session ?? null,
     error: state.error ?? null,
   };
 }

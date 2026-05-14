@@ -17,6 +17,7 @@ import {
   previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
+  runWorkflowFromNode as runWorkflowFromNodeCommand,
   saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
@@ -49,6 +50,7 @@ import {
 } from "./features/workflows/components/WorkflowPackageOptions";
 import type {
   GraphValidationIssue,
+  GraphNodeType,
   RunState,
   WorkflowGraph,
   WorkflowDetail,
@@ -92,6 +94,132 @@ function writeGraphAutosaveEnabled(enabled: boolean) {
     appSettingsStorageKey,
     JSON.stringify({ graphAutosaveEnabled: enabled }),
   );
+}
+
+function runFromSelectedState({
+  graph,
+  selectedNodeId,
+  settings,
+  runState,
+  isRunning,
+}: {
+  graph: WorkflowGraph;
+  selectedNodeId: string | null;
+  settings: WorkflowSettings | null;
+  runState: RunState;
+  isRunning: boolean;
+}) {
+  if (!settings) {
+    return {
+      enabled: false,
+      reason: "Workflow settings are not loaded.",
+      visible: false,
+    };
+  }
+  if (!settings.browser_launch?.run_from_selected_enabled) {
+    return {
+      enabled: false,
+      reason: "Enable Run from selected in Workflow Settings first.",
+      visible: false,
+    };
+  }
+  if (isRunning) return { enabled: false, reason: "A workflow run is already active.", visible: true };
+  if (!selectedNodeId) return { enabled: false, reason: "Select one main-path node to run from.", visible: true };
+  const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId);
+  if (!selectedNode || selectedNode.node_type === "start") {
+    return { enabled: false, reason: "Select an executable graph node.", visible: true };
+  }
+  if (!mainPathNodeIds(graph).has(selectedNodeId)) {
+    return {
+      enabled: false,
+      reason: "Run from selected only supports main-path nodes in this version.",
+      visible: true,
+    };
+  }
+  if (
+    settings.browser_launch?.session_mode !== "persistent_profile" ||
+    !settings.browser_launch.profile_name
+  ) {
+    return {
+      enabled: false,
+      reason: "Enable Reuse login session in Workflow Settings first.",
+      visible: true,
+    };
+  }
+  if (settings.run_policy?.browser_retention !== "retain") {
+    return {
+      enabled: false,
+      reason: "Set Browser retention to retain before using Run from selected.",
+      visible: true,
+    };
+  }
+  if (
+    !runState.retained_session?.available ||
+    runState.retained_session.workflow_id !== settings.workflow_id ||
+    runState.retained_session.profile_name !== settings.browser_launch.profile_name
+  ) {
+    return {
+      enabled: false,
+      reason: "Browser session was closed. Run the workflow again to create a reusable session.",
+      visible: true,
+    };
+  }
+  return {
+    enabled: true,
+    reason: "Run from the selected node using the retained browser session.",
+    visible: true,
+  };
+}
+
+function mainPathNodeIds(graph: WorkflowGraph) {
+  const ids = new Set<string>();
+  let node = graph.nodes.find((candidate) => candidate.node_type === "start") ?? null;
+  const visited = new Set<string>();
+
+  while (node && !visited.has(node.id)) {
+    ids.add(node.id);
+    visited.add(node.id);
+    const nextPort = mainContinuationPort(node.node_type);
+    if (!nextPort) break;
+    const currentNodeId = node.id;
+    const nextId = graph.edges
+      .filter((edge) => edge.source_node_id === currentNodeId && edge.source_port === nextPort)
+      .sort((left, right) => left.id.localeCompare(right.id))[0]?.target_node_id;
+    node = nextId
+      ? graph.nodes.find((candidate) => candidate.id === nextId) ?? null
+      : null;
+  }
+
+  return ids;
+}
+
+function mainContinuationPort(nodeType: GraphNodeType) {
+  switch (nodeType) {
+    case "start":
+    case "action":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "assert_output":
+    case "run_subworkflow":
+    case "domain_allowlist":
+    case "manual_approval":
+    case "rate_limit":
+      return "out";
+    case "if":
+    case "switch":
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+    case "repeat_until":
+    case "try_catch":
+    case "fallback":
+      return "done";
+    case "retry":
+      return "success";
+    default:
+      return null;
+  }
 }
 
 function graphSaveStatusLabel(status: GraphSaveStatus) {
@@ -140,6 +268,7 @@ function App() {
   const [savedGraphRevision, setSavedGraphRevision] = useState(0);
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
   const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
+  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
   const [runState, setRunState] = useState<RunState>(initialRunState);
   const [activeRunWorkflowName, setActiveRunWorkflowName] =
     useState<string | null>(null);
@@ -251,6 +380,7 @@ function App() {
         setDetail(null);
         setWorkflowGraph(null);
         setWorkflowSettings(null);
+        setSelectedGraphNodeId(null);
         setGraphIssues([]);
         setGraphIssuesNeedRecheck(false);
         setAppError("Workflow not found");
@@ -287,8 +417,11 @@ function App() {
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
       setRunState((current) =>
-        current.status === "running" ? current : initialRunState,
+        current.status === "running"
+          ? current
+          : { ...initialRunState, retained_session: current.retained_session },
       );
+      setSelectedGraphNodeId(null);
       setScreen("detail");
     } catch (error) {
       setAppError(commandMessage(error));
@@ -592,6 +725,36 @@ function App() {
     }
   }
 
+  async function runGraphFromSelectedNode() {
+    if (!detail || !workflowGraph || !selectedGraphNodeId) return;
+    setAppError("");
+
+    try {
+      const saved = await persistCurrentGraph();
+      if (!saved) return;
+      const settingsSaved = await persistDirtyWorkflowSettings();
+      if (!settingsSaved) return;
+      setActiveRunWorkflowName(detail.workflow.name);
+      const state = await runWorkflowFromNodeCommand(
+        detail.workflow.id,
+        selectedGraphNodeId,
+      );
+      setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
+      setRunState(normalizeRunState(state));
+    } catch (error) {
+      setAppError(commandMessage(error));
+      if (workflowGraph) {
+        try {
+          setGraphIssues(await validateWorkflowGraph(workflowGraph));
+          setGraphIssuesNeedRecheck(false);
+        } catch {
+          // Keep the command error as the primary system issue when validation cannot run.
+        }
+      }
+    }
+  }
+
   async function validateGraph() {
     if (!workflowGraph) return;
     setAppError("");
@@ -741,6 +904,15 @@ function App() {
   }
 
   const isRunning = runState.status === "running";
+  const runFromSelectedAvailability = workflowGraph
+    ? runFromSelectedState({
+        graph: workflowGraph,
+        selectedNodeId: selectedGraphNodeId,
+        settings: workflowSettings,
+        runState,
+        isRunning,
+      })
+    : { enabled: false, reason: "No workflow graph is loaded.", visible: false };
 
   return (
     <AppShell
@@ -771,6 +943,11 @@ function App() {
             onStopRun={stopRun}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
+            onRunGraphFromSelected={runGraphFromSelectedNode}
+            onSelectedGraphNodeChange={setSelectedGraphNodeId}
+            showRunGraphFromSelected={runFromSelectedAvailability.visible ?? true}
+            canRunGraphFromSelected={runFromSelectedAvailability.enabled}
+            runGraphFromSelectedReason={runFromSelectedAvailability.reason}
             onSaveGraph={saveGraph}
             onValidateGraph={validateGraph}
           />
