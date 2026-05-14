@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type {
   ActionConfig,
   CompiledGraphStep,
@@ -284,11 +284,16 @@ export class BrowserWorkflowRunner {
       onProgress: request.onProgress,
       signal: request.signal,
     };
+    runtime.outputs.browser_identity = browserIdentityEvidence(
+      request.settings,
+      runtime.runId,
+    );
 
     let closeBrowser = request.settings.run_policy.browser_retention === "close";
 
     try {
       await this.applyEnvironment(runtime, request.settings);
+      await this.runFingerprintPreflight(runtime, request.settings);
       let stepNumber = 0;
       for (const step of request.graph.steps) {
         stepNumber += 1;
@@ -355,7 +360,7 @@ export class BrowserWorkflowRunner {
           runtime.context,
           runtime.page,
           request.retainedSessionWorkflowId ?? null,
-          request.settings.browser_launch.profile_name ?? null,
+          retainedProfileKey(request.settings),
         );
       }
       state.retained_session = this.retainedSessionState();
@@ -391,7 +396,7 @@ export class BrowserWorkflowRunner {
   }
 
   private async reuseRetainedSession(request: RunnerRunRequest) {
-    const profileName = request.settings.browser_launch.profile_name ?? null;
+    const profileName = retainedProfileKey(request.settings);
     const workflowId = request.retainedSessionWorkflowId ?? null;
     if (!workflowId || !this.hasReusableRetainedSession(workflowId, profileName)) {
       throw new Error("No reusable browser session is available. Run the workflow again to create one.");
@@ -452,18 +457,47 @@ export class BrowserWorkflowRunner {
 
   private async launch(settings: WorkflowSettings) {
     const options = buildLaunchOptions(settings, this.appPaths);
-    const profileName = settings.browser_launch.profile_name?.trim();
-    const context = profileName
+    const profileDir = retainedProfileKey(settings);
+    const context = profileDir
       ? await this.driver.launchPersistent({
           ...options,
-          userDataDir: path.join(this.appPaths.browserProfilesDir, sanitizePathSegment(profileName)),
+          userDataDir: path.join(this.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)),
         })
       : await this.driver.launch(options);
     const page = context.pages()[0] ?? (await context.newPage());
-    return { context, page, temporary: !profileName };
+    return { context, page, temporary: !profileDir };
   }
 
   private async applyEnvironment(_runtime: Runtime, _settings: WorkflowSettings) {}
+
+  private async runFingerprintPreflight(runtime: Runtime, settings: WorkflowSettings) {
+    const browser = settings.browser_launch;
+    if (!browser.preflight_enabled) return;
+    const probeUrl = browser.preflight_probe_url?.trim();
+    if (!probeUrl) {
+      throw new Error("Fingerprint preflight probe URL is required");
+    }
+    const probeOrigin = originForUrl(probeUrl);
+    if (!probeOrigin || !browser.preflight_allowed_origins.includes(probeOrigin)) {
+      throw new Error("Fingerprint preflight probe origin must be allowlisted");
+    }
+
+    runtime.currentActionType = "fingerprint_preflight";
+    await runtime.page.goto(probeUrl);
+    const rawVerdict = await runtime.page.evaluate(() => {
+      return document.body?.innerText ?? document.documentElement?.textContent ?? "";
+    });
+    const verdict = parseFingerprintPreflightVerdict(rawVerdict);
+    runtime.outputs.fingerprint_preflight = sanitizeFingerprintPreflightVerdict(verdict);
+    if (!verdict.passed) {
+      const mismatchSummary = verdict.mismatches
+        .map((mismatch) => `${mismatch.field}: ${mismatch.reason}`)
+        .join("; ");
+      throw new Error(
+        `Fingerprint preflight blocked${mismatchSummary ? `: ${mismatchSummary}` : ""}`,
+      );
+    }
+  }
 
   private async executeStep(runtime: Runtime, step: CompiledGraphStep) {
     const startedAt = new Date().toISOString();
@@ -1559,6 +1593,7 @@ function buildLaunchOptions(
   settings: WorkflowSettings,
   appPaths: AppPaths,
 ): BrowserLaunchOptions {
+  const browser = settings.browser_launch;
   const proxy = settings.browser_launch.proxy_enabled && settings.browser_launch.proxy_server
     ? {
         server: settings.browser_launch.proxy_server,
@@ -1566,15 +1601,173 @@ function buildLaunchOptions(
         password: settings.browser_launch.proxy_password ?? undefined,
       }
     : undefined;
+  const args = [
+    browser.fingerprint_seed?.trim()
+      ? `--fingerprint=${browser.fingerprint_seed.trim()}`
+      : null,
+    browser.storage_quota_mb
+      ? `--fingerprint-storage-quota=${browser.storage_quota_mb}`
+      : null,
+    browser.webrtc_policy === "auto_proxy_exit_ip"
+      ? "--fingerprint-webrtc-ip=auto"
+      : browser.webrtc_policy === "explicit_ip" && browser.webrtc_ip?.trim()
+        ? `--fingerprint-webrtc-ip=${browser.webrtc_ip.trim()}`
+        : null,
+  ].filter((arg): arg is string => Boolean(arg));
   return {
-    headless: settings.browser_launch.headless,
-    humanize: true,
+    headless: browser.headless,
+    humanize: browser.humanize !== false,
+    humanPreset: browser.human_preset ?? "default",
+    userAgent: browser.user_agent?.trim() || undefined,
+    viewport: {
+      width: browser.viewport_width || 1920,
+      height: browser.viewport_height || 947,
+    },
+    timezone: browser.timezone?.trim() || undefined,
+    locale: browser.locale?.trim() || undefined,
+    geoip: Boolean(browser.geoip),
+    args,
     proxy,
     contextOptions: {
       acceptDownloads: true,
       downloadsPath: appPaths.downloadsDir,
+      deviceScaleFactor: browser.device_scale_factor || 1,
+      isMobile: Boolean(browser.mobile),
+      hasTouch: Boolean(browser.touch),
     },
   };
+}
+
+function retainedProfileKey(settings: WorkflowSettings) {
+  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
+  return (
+    settings.browser_launch.profile_dir?.trim() ||
+    settings.browser_launch.profile_name?.trim() ||
+    null
+  );
+}
+
+function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
+  const browser = settings.browser_launch;
+  return {
+    run_id: runId,
+    identity_id: browser.identity_id,
+    display_name: browser.display_name,
+    profile_dir:
+      browser.session_mode === "persistent_profile"
+        ? browser.profile_dir
+        : "temporary",
+    session_mode: browser.session_mode,
+    fingerprint_seed_hash: createHash("sha256")
+      .update(browser.fingerprint_seed)
+      .digest("hex")
+      .slice(0, 16),
+    proxy_label: browser.proxy_label ?? null,
+    proxy_region: browser.proxy_region ?? null,
+    timezone: browser.timezone ?? null,
+    locale: browser.locale ?? null,
+    viewport: {
+      width: browser.viewport_width,
+      height: browser.viewport_height,
+      device_scale_factor: browser.device_scale_factor,
+      mobile: browser.mobile,
+      touch: browser.touch,
+    },
+    humanize: browser.humanize,
+    human_preset: browser.human_preset,
+  };
+}
+
+type FingerprintPreflightVerdict = {
+  passed: boolean;
+  verdict: string;
+  risk_score: number | null;
+  run_id: string;
+  profile_id: string;
+  mismatches: Array<{
+    category: string;
+    field: string;
+    severity: string;
+    expected?: string | null;
+    observed?: string | null;
+    reason: string;
+  }>;
+  evidence: Record<string, unknown>;
+};
+
+function parseFingerprintPreflightVerdict(raw: unknown): FingerprintPreflightVerdict {
+  let parsed: unknown;
+  try {
+    parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch {
+    throw new Error("Fingerprint preflight verdict is malformed");
+  }
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Fingerprint preflight verdict is malformed");
+  }
+  const record = parsed as Record<string, unknown>;
+  if (typeof record.passed !== "boolean") {
+    throw new Error("Fingerprint preflight verdict is missing passed");
+  }
+  if (typeof record.verdict !== "string" || !record.verdict.trim()) {
+    throw new Error("Fingerprint preflight verdict is missing verdict");
+  }
+  if (typeof record.run_id !== "string" || !record.run_id.trim()) {
+    throw new Error("Fingerprint preflight verdict is missing run_id");
+  }
+  if (typeof record.profile_id !== "string" || !record.profile_id.trim()) {
+    throw new Error("Fingerprint preflight verdict is missing profile_id");
+  }
+  if (!Array.isArray(record.mismatches)) {
+    throw new Error("Fingerprint preflight verdict mismatches must be an array");
+  }
+  const mismatches = record.mismatches.map((value) => {
+    const mismatch = value as Record<string, unknown>;
+    return {
+      category: String(mismatch.category ?? "other"),
+      field: String(mismatch.field ?? "unknown"),
+      severity: String(mismatch.severity ?? "medium"),
+      expected: optionalString(mismatch.expected),
+      observed: optionalString(mismatch.observed),
+      reason: String(mismatch.reason ?? "Fingerprint mismatch"),
+    };
+  });
+  return {
+    passed: record.passed,
+    verdict: record.verdict,
+    risk_score: typeof record.risk_score === "number" ? record.risk_score : null,
+    run_id: record.run_id,
+    profile_id: record.profile_id,
+    mismatches,
+    evidence:
+      record.evidence && typeof record.evidence === "object"
+        ? (record.evidence as Record<string, unknown>)
+        : {},
+  };
+}
+
+function sanitizeFingerprintPreflightVerdict(verdict: FingerprintPreflightVerdict) {
+  return {
+    passed: verdict.passed,
+    verdict: verdict.verdict,
+    risk_score: verdict.risk_score,
+    run_id: verdict.run_id,
+    profile_id: verdict.profile_id,
+    mismatches: verdict.mismatches,
+    evidence: verdict.evidence,
+  };
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function originForUrl(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }
 
 async function locatorFor(

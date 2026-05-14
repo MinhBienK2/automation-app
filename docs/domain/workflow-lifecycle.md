@@ -4,7 +4,7 @@
 
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
-- Repository trims and stores the workflow with timestamps, then creates a `Start -> New node` draft graph. `New node` is an unconfigured action node with `config: null`.
+- Repository trims and stores the workflow with timestamps, creates a `Start -> New node` draft graph, and persists default Workflow Settings with a browser identity. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, remaps full Workflow Settings to the new workflow id without package-export sanitization, preserves legacy step rows for compatibility, and refreshes the list.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
@@ -36,7 +36,7 @@
 - Control blocks treat branch ports as work inside the block and continuation ports as work after the block. `If`, `Switch`, and `Try/Catch` expose `done` continuation ports; loop and fallback blocks continue through their existing `done` ports, and retry continues through `success`.
 - Missing optional branch ports are allowed and compile as no-op paths. Missing continuation ports end the current path successfully. Required body ports such as loop body, retry try, try/catch try, and fallback primary block validation/run.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
-- `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header and saves dirty sections through that section command. General updates workflow summary metadata; legacy browser config commands map to `settings.browser_launch`.
+- `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header and saves dirty sections through that section command. General updates workflow summary metadata; legacy browser config commands map to `settings.browser_launch` while preserving stable browser identity metadata and launch preferences.
 - Workflow Settings Run Policy keeps batch defaults visible for compatibility, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
@@ -55,12 +55,12 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch settings before launch including profile, proxy, and headless mode, prepends Environment initial variables before the first graph step, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a pause.
+- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, proxy, timezone, locale, viewport/device flags, WebRTC policy, humanization, and headless mode, optionally runs owned fingerprint preflight before graph actions, prepends Environment initial variables before the first graph step, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a pause.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is still a valid saved legacy draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `get_run_state` while status is `running`, regardless of whether the run was started from the workflow detail workspace or directly from the workflow list.
-- Invalid advanced graph nodes fail before a run starts with a command-facing error instead of silently no-oping.
+- Invalid advanced graph nodes and legacy launch-time identity nodes fail before a run starts with a command-facing error instead of silently no-oping.
 - Graph runs share the same run-state lifecycle as full workflow runs.
 - Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`.
 - End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Run Policy browser retention decides whether terminal runs retain or close the browser session.
@@ -91,7 +91,7 @@
 - Canceling the native Save dialog leaves the export dialog open and does not create a file.
 - The Electron backend writes the package to the path returned by the native Save dialog; canceling the dialog leaves the workflow unchanged.
 - Flow export uses the saved `WorkflowGraph`.
-- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password.
+- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password and secret query/hash portions of fingerprint preflight probe URLs.
 
 ## Import Workflow Package
 

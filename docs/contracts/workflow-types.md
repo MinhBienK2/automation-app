@@ -62,7 +62,30 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
   },
   browser_launch: {
     session_mode,
+    identity_id,
+    display_name,
+    profile_dir,
+    fingerprint_seed,
     profile_name,
+    user_agent,
+    viewport_width,
+    viewport_height,
+    device_scale_factor,
+    mobile,
+    touch,
+    timezone,
+    locale,
+    geoip,
+    proxy_label,
+    proxy_region,
+    webrtc_policy,
+    webrtc_ip,
+    storage_quota_mb,
+    humanize,
+    human_preset,
+    preflight_enabled,
+    preflight_probe_url,
+    preflight_allowed_origins,
     proxy_enabled,
     proxy_server,
     proxy_username,
@@ -75,12 +98,14 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
 }
 ```
 
+`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets or duplicates the identity. `profile_name` remains as a legacy compatibility key and mirrors `profile_dir` for persistent-profile runs.
+
 Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
 Run Policy batch fields remain part of the current contract for backend batch compatibility, but Workflow Settings currently renders those batch controls as visible, disabled values until Batch Run UI is ready.
 
-Legacy v1 settings are migrated on load into v2. Obsolete browser emulation, timing, retry, challenge, context-seeding, storage, trigger, and fingerprint preflight fields are dropped with migration notes instead of being preserved in the public contract.
+Legacy v1 settings are migrated on load into v2. Obsolete browser emulation, timing, retry, challenge, context-seeding, storage, and trigger fields are dropped with migration notes instead of being preserved in the public contract. Removed legacy fingerprint gate data is ignored unless it maps cleanly to the current Browser Launch preflight fields.
 
 Legacy v1 workflow graphs are migrated on load/save/import into graph contract v2. Action configs convert legacy XPath selector fields into structured targets (`xpath` -> `target`, `source_xpath` -> `source_target`, `target_xpath` -> `target_target`, `trigger_xpath` -> `trigger_target`) and fold `iframe_xpath` into nested target iframe selectors. Obsolete per-action engine knobs such as action timeouts, wait readiness, typing delays, click retry/post-click settings, click positioning, and clear-field method settings are dropped with `migration_notes` on the graph.
 
@@ -110,7 +135,7 @@ Legacy package sections named `settings.owned_test_gates` are ignored by current
 
 Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
 
-Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`.
+Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password` and secret search/hash portions of `settings.browser_launch.preflight_probe_url`.
 
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and full Workflow Settings to a new workflow id, including fields that package export sanitizes for external sharing.
 
@@ -157,7 +182,7 @@ The main graph toolbar only exposes beginner-facing authoring groups: New node, 
 The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for compatibility but fails explicitly at runtime until nested lifecycle semantics are implemented. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
-Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser context seeding, default action timeouts, interaction fidelity defaults, fingerprint preflight, and global waits between nodes are legacy settings and are removed from the v2 public contract.
+Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser context seeding, default action timeouts, interaction fidelity defaults, and global waits between nodes are legacy settings and are removed from the v2 public contract. Current owned fingerprint preflight is a Browser Launch identity setting, not a graph prelude action.
 
 Executable frontend/backend ports must agree:
 

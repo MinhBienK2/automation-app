@@ -52,18 +52,31 @@ describeSmoke("CloakBrowser smoke", () => {
                 config: { xpath: "#title", output_name: "title" },
               },
             },
+            {
+              node_id: "webdriver",
+              label: "Check webdriver",
+              config: {
+                type: "execute_js",
+                config: {
+                  script: "return navigator.webdriver",
+                  output_name: "webdriver",
+                  timeout_ms: 1000,
+                },
+              },
+            },
           ],
         },
         settings: {
           ...settings,
-          execution: { ...settings.execution, browser_retention: "close" },
-          browser: { ...settings.browser, headless: true },
+          run_policy: { ...settings.run_policy, browser_retention: "close" },
+          browser_launch: { ...settings.browser_launch, headless: true },
         },
         mode: "run_workflow",
       });
 
       expect(result.status).toBe("success");
       expect(result.outputs?.title).toBe("Owned Fixture");
+      expect(result.outputs?.webdriver).toBe(false);
     },
     60_000,
   );

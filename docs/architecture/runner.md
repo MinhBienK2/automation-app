@@ -16,8 +16,8 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 ## Current Behavior
 
 - `BrowserWorkflowRunner` runs action configs through CloakBrowser and Playwright-compatible page/context APIs.
-- CloakBrowser `humanize` is enabled by default for both temporary and persistent contexts.
-- `BrowserWorkflowRunner` maps Workflow Settings Browser Launch values to CloakBrowser launch options before the first page action.
+- CloakBrowser `humanize` is enabled by default for both temporary and persistent contexts and is controlled by the workflow browser identity.
+- `BrowserWorkflowRunner` maps Workflow Settings Browser Launch identity values to CloakBrowser launch options before the first page action. The mapping includes stable fingerprint seed, persistent profile directory, proxy, timezone, locale, GeoIP, viewport/device flags, WebRTC fingerprint args, storage quota args, user agent, humanize preset, and headless mode.
 - Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC. Nested compiled graph actions retain their source graph node ids so runner progress can light up branch/body nodes before the outer control block continues.
 - Command handlers can also compile a selected main-path graph node into a sub-plan and ask the runner to reuse the retained browser session instead of launching a new context.
 - Command handlers own run orchestration around the runner: one active run at a time, begin/finish state transitions, max-duration timeout, SQLite run persistence, and batch row sequencing.
@@ -31,8 +31,10 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Retained-session metadata tracks workflow/profile ownership and availability. Run-from-selected checks this metadata before execution and refuses stale, closed, missing, or mismatched sessions.
 - Starting a new run closes any retained session from previous terminal outcomes before CloakBrowser launches, so persistent profile directories are not reused while an older browser process still owns the profile lock.
 - Run-from-selected is the exception to the relaunch rule: it keeps the retained context/page alive and runs the selected-node sub-plan against that page. If the operator closed the browser manually, the runner clears retained metadata and reports that no reusable browser session is available.
-- Browser launch settings come from Workflow Settings Browser Launch. `browser_launch.headless` switches CloakBrowser between headed and headless mode. Legacy browser config commands map to Browser Launch.
-- Named browser profiles use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile>`. Runs without a profile use temporary contexts, but terminal retention still follows Run Policy and terminal node `close_browser` settings.
+- Browser launch settings come from Workflow Settings Browser Launch. `browser_launch.headless` switches CloakBrowser between headed and headless mode. Legacy browser config commands map to Browser Launch without rotating identity ids, profile directories, or fingerprint seeds.
+- Browser identities use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile_dir>` when Reuse login session is enabled. Runs without persistent storage use temporary contexts while keeping the configured fingerprint seed, and terminal retention still follows Run Policy and terminal node `close_browser` settings.
+- Optional owned fingerprint preflight runs after launch and initial environment setup but before graph actions. It opens the allowlisted probe URL, parses a structured JSON verdict, stores sanitized `fingerprint_preflight` evidence, and fails the run before graph execution on blocked or malformed verdicts.
+- Runner outputs include a sanitized `browser_identity` record with run id, identity id/display name, profile directory or temporary marker, fingerprint seed hash, proxy label/region, timezone/locale, viewport summary, and humanize settings.
 - Before graph actions run, the command layer prepends Environment initial variables from Workflow Settings.
 - Default action timeouts, interaction fidelity, and global wait-between-nodes settings are legacy v1 settings and are not part of the v2 runner-facing settings contract.
 - Cancellation is checked between actions and inside long waits through an `AbortSignal`. Stop returns a stopped run state and closes temporary contexts according to retention policy.
@@ -45,7 +47,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 ## Belongs Here
 
 - CloakBrowser session launch and tab/frame/download behavior.
-- Workflow Settings Browser Launch application at browser launch.
+- Workflow Settings Browser Launch identity application at browser launch.
 - Action dispatch and browser interaction.
 - Cancellation-aware execution.
 - Runner-level errors and outcomes.

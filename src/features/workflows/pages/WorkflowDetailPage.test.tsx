@@ -202,7 +202,30 @@ describe("Workflow detail integration", () => {
         },
         browser_launch: {
           session_mode: "persistent_profile",
-          profile_name: "qa-profile",
+          identity_id: "bi_workflow-1",
+          display_name: "QA Profile identity",
+          profile_dir: "bi_workflow-1",
+          fingerprint_seed: "14523",
+          profile_name: "bi_workflow-1",
+          user_agent: null,
+          viewport_width: 1920,
+          viewport_height: 947,
+          device_scale_factor: 1,
+          mobile: false,
+          touch: false,
+          timezone: null,
+          locale: null,
+          geoip: false,
+          proxy_label: null,
+          proxy_region: null,
+          webrtc_policy: "default",
+          webrtc_ip: null,
+          storage_quota_mb: null,
+          humanize: true,
+          human_preset: "default",
+          preflight_enabled: false,
+          preflight_probe_url: null,
+          preflight_allowed_origins: [],
           proxy_enabled: true,
           proxy_server: "http://proxy.local:8080",
           proxy_username: "agent",
@@ -248,19 +271,23 @@ describe("Workflow detail integration", () => {
     await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }));
     expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
       .toHaveAttribute("aria-selected", "true");
-    expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(
-      "qa-profile",
+    expect(within(settingsDialog).getByLabelText("Identity display name")).toHaveValue(
+      "QA Profile identity",
     );
+    expect(within(settingsDialog).getByLabelText("Profile directory")).toHaveValue(
+      "bi_workflow-1",
+    );
+    expect(within(settingsDialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
       .toHaveAttribute("aria-checked", "true");
     expect(within(settingsDialog).getByRole("switch", { name: "Use proxy" }))
       .toHaveAttribute("aria-checked", "true");
-    await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
-    await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
+    await userEvent.clear(within(settingsDialog).getByLabelText("Identity display name"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Identity display name"), "Release identity");
     await userEvent.click(within(settingsDialog).getByRole("button", {
-      name: "Browser Launch Settings Help",
+      name: "Browser Identity Settings Help",
     }));
-    expect(await screen.findByText("Browser Launch Settings Help")).toBeInTheDocument();
+    expect(await screen.findByText("Browser Identity Settings Help")).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(within(settingsDialog).getByRole("button", {
@@ -272,7 +299,9 @@ describe("Workflow detail integration", () => {
       section: "browser_launch",
       sectionValue: expect.objectContaining({
         session_mode: "persistent_profile",
-        profile_name: "release",
+        display_name: "Release identity",
+        profile_dir: "bi_workflow-1",
+        fingerprint_seed: "14523",
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
       }),
@@ -327,7 +356,7 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
-  test("omits legacy trigger and owned test gate settings from the simplified settings dialog", async () => {
+  test("omits legacy trigger and owned test gate settings while showing identity preflight", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
@@ -345,8 +374,8 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
     expect(within(settingsDialog).queryByRole("tab", { name: "Owned Test Gates" }))
       .not.toBeInTheDocument();
-    expect(within(settingsDialog).queryByRole("switch", { name: "Fingerprint preflight" }))
-      .not.toBeInTheDocument();
+    expect(within(settingsDialog).getByRole("switch", { name: "Fingerprint preflight" }))
+      .toBeInTheDocument();
     expect(
       within(settingsDialog).queryByRole("checkbox", { name: "Enable trigger" }),
     ).not.toBeInTheDocument();

@@ -23,7 +23,6 @@ import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
 import {
-  createDefaultBrowserProfileName,
   tagsFromInput,
   tagsToInput,
   type WorkflowSettingsHelpLanguage,
@@ -367,6 +366,7 @@ function BrowserLaunchSettingsSection({
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
 }) {
   const persistent = value.session_mode === "persistent_profile";
+  const [seedVisible, setSeedVisible] = useState(false);
   const canEnableRunFromSelected =
     persistent && runPolicy.browser_retention === "retain";
   return (
@@ -378,21 +378,77 @@ function BrowserLaunchSettingsSection({
           onChange({
             ...value,
             session_mode: checked ? "persistent_profile" : "temporary",
-            profile_name: checked
-              ? value.profile_name ?? createDefaultBrowserProfileName()
-              : null,
+            profile_name: checked ? value.profile_dir : null,
             run_from_selected_enabled: checked
               ? value.run_from_selected_enabled
               : false,
           })
         }
       />
+      <label className="field">
+        <span>Identity display name</span>
+        <Input
+          value={value.display_name}
+          onChange={(event) => onChange({ ...value, display_name: event.currentTarget.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Identity id</span>
+        <Input value={value.identity_id} readOnly />
+      </label>
+      <label className="field">
+        <span>Profile directory</span>
+        <Input value={value.profile_dir} readOnly />
+      </label>
+      <label className="field">
+        <span>Fingerprint seed</span>
+        <Input
+          type={seedVisible ? "text" : "password"}
+          value={value.fingerprint_seed}
+          onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
+        />
+      </label>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => setSeedVisible((current) => !current)}
+      >
+        {seedVisible ? "Hide fingerprint seed" : "Show fingerprint seed"}
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => {
+          void navigator.clipboard?.writeText(value.fingerprint_seed);
+        }}
+      >
+        Copy fingerprint seed
+      </Button>
+      <Button
+        type="button"
+        variant="destructive"
+        onClick={() => {
+          if (!window.confirm("Reset this browser identity? This creates a new profile directory and fingerprint seed.")) {
+            return;
+          }
+          onChange(resetBrowserIdentity(value));
+        }}
+      >
+        Reset identity
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => onChange(duplicateBrowserIdentity(value))}
+      >
+        Duplicate identity
+      </Button>
       {persistent ? (
         <label className="field">
-          <span>Profile name</span>
+          <span>Legacy profile key</span>
           <Input
             value={value.profile_name ?? ""}
-            onChange={(event) => onChange({ ...value, profile_name: nullableText(event.currentTarget.value) })}
+            readOnly
           />
         </label>
       ) : null}
@@ -439,6 +495,103 @@ function BrowserLaunchSettingsSection({
               type="password"
               value={value.proxy_password ?? ""}
               onChange={(event) => onChange({ ...value, proxy_password: nullableText(event.currentTarget.value) })}
+            />
+          </label>
+        </>
+      ) : null}
+      <label className="field">
+        <span>Timezone</span>
+        <Input
+          placeholder="America/New_York"
+          value={value.timezone ?? ""}
+          onChange={(event) => onChange({ ...value, timezone: nullableText(event.currentTarget.value) })}
+        />
+      </label>
+      <label className="field">
+        <span>Locale</span>
+        <Input
+          placeholder="en-US"
+          value={value.locale ?? ""}
+          onChange={(event) => onChange({ ...value, locale: nullableText(event.currentTarget.value) })}
+        />
+      </label>
+      <SwitchField
+        checked={Boolean(value.geoip)}
+        label="GeoIP from proxy"
+        onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
+      />
+      <NumberField
+        label="Viewport width"
+        value={value.viewport_width}
+        onChange={(nextValue) => onChange({ ...value, viewport_width: nextValue ?? 1920 })}
+      />
+      <NumberField
+        label="Viewport height"
+        value={value.viewport_height}
+        onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 947 })}
+      />
+      <NumberField
+        label="Device scale factor"
+        value={value.device_scale_factor}
+        onChange={(nextValue) => onChange({ ...value, device_scale_factor: nextValue ?? 1 })}
+      />
+      <SwitchField
+        checked={Boolean(value.mobile)}
+        label="Mobile viewport"
+        onCheckedChange={(checked) => onChange({ ...value, mobile: checked })}
+      />
+      <SwitchField
+        checked={Boolean(value.touch)}
+        label="Touch input"
+        onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
+      />
+      <SwitchField
+        checked={value.humanize !== false}
+        label="Humanize browser input"
+        onCheckedChange={(checked) => onChange({ ...value, humanize: checked })}
+      />
+      <label className="field">
+        <span>Humanize preset</span>
+        <Select
+          value={value.human_preset}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              human_preset: event.currentTarget.value === "careful" ? "careful" : "default",
+            })
+          }
+        >
+          <option value="default">Default</option>
+          <option value="careful">Careful</option>
+        </Select>
+      </label>
+      <SwitchField
+        checked={Boolean(value.preflight_enabled)}
+        label="Fingerprint preflight"
+        onCheckedChange={(checked) => onChange({ ...value, preflight_enabled: checked })}
+      />
+      {value.preflight_enabled ? (
+        <>
+          <label className="field">
+            <span>Preflight probe URL</span>
+            <Input
+              value={value.preflight_probe_url ?? ""}
+              onChange={(event) => onChange({ ...value, preflight_probe_url: nullableText(event.currentTarget.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Allowed probe origins</span>
+            <Input
+              value={value.preflight_allowed_origins.join(", ")}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  preflight_allowed_origins: event.currentTarget.value
+                    .split(",")
+                    .map((origin) => origin.trim())
+                    .filter(Boolean),
+                })
+              }
             />
           </label>
         </>
@@ -503,4 +656,41 @@ function numberOrNull(value: string) {
   if (!value.trim()) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resetBrowserIdentity(value: WorkflowSettingsBrowserLaunch): WorkflowSettingsBrowserLaunch {
+  return applyNewBrowserIdentity(value, value.display_name);
+}
+
+function duplicateBrowserIdentity(value: WorkflowSettingsBrowserLaunch): WorkflowSettingsBrowserLaunch {
+  return applyNewBrowserIdentity(value, `${value.display_name || "Browser identity"} copy`);
+}
+
+function applyNewBrowserIdentity(
+  value: WorkflowSettingsBrowserLaunch,
+  displayName: string,
+): WorkflowSettingsBrowserLaunch {
+  const identityId = createBrowserIdentityId();
+  const fingerprintSeed = createFingerprintSeed(value.fingerprint_seed);
+  return {
+    ...value,
+    identity_id: identityId,
+    display_name: displayName,
+    profile_dir: identityId,
+    profile_name: value.session_mode === "persistent_profile" ? identityId : null,
+    fingerprint_seed: fingerprintSeed,
+    run_from_selected_enabled: false,
+  };
+}
+
+function createBrowserIdentityId() {
+  const randomId = globalThis.crypto?.randomUUID?.().replace(/-/g, "").slice(0, 12);
+  return `bi_${randomId || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`}`;
+}
+
+function createFingerprintSeed(previousSeed: string) {
+  const nextSeed = String(10000 + Math.floor(Math.random() * 90000));
+  if (nextSeed !== previousSeed) return nextSeed;
+  const parsed = Number(nextSeed);
+  return String(parsed >= 99999 ? 10000 : parsed + 1).padStart(5, "0");
 }
