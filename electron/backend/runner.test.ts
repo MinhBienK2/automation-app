@@ -50,29 +50,57 @@ describe("BrowserWorkflowRunner", () => {
     const settings = makeSettings({
       browser_launch: {
         session_mode: "persistent_profile",
-        profile_name: "qa-profile",
+        profile_name: "QA Profile Display",
+        identity_id: "bi_test_identity",
+        display_name: "QA Profile Display",
+        profile_dir: "bi_test_identity",
+        fingerprint_seed: "38291",
         headless: false,
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
         proxy_username: "agent",
         proxy_password: "secret",
+        timezone: "America/New_York",
+        locale: "en-US",
+        viewport_width: 1920,
+        viewport_height: 947,
+        device_scale_factor: 1,
+        mobile: false,
+        touch: false,
+        humanize: true,
+        human_preset: "careful",
+        geoip: false,
+        storage_quota_mb: 256,
+        webrtc_policy: "auto_proxy_exit_ip",
       },
     });
 
     const runner = new BrowserWorkflowRunner({ appPaths: paths, driver });
-    await runner.run({
+    const result = await runner.run({
       graph: { steps: [] },
       settings,
       mode: "run_workflow",
+      runId: "run-identity-1",
     });
 
     expect(driver.launches).toEqual([
       {
         kind: "persistent",
         options: expect.objectContaining({
-          userDataDir: path.join(paths.browserProfilesDir, "qa-profile"),
+          userDataDir: path.join(paths.browserProfilesDir, "bi_test_identity"),
           headless: false,
           humanize: true,
+          humanPreset: "careful",
+          userAgent: undefined,
+          viewport: { width: 1920, height: 947 },
+          timezone: "America/New_York",
+          locale: "en-US",
+          geoip: false,
+          args: [
+            "--fingerprint=38291",
+            "--fingerprint-storage-quota=256",
+            "--fingerprint-webrtc-ip=auto",
+          ],
           proxy: {
             server: "http://proxy.local:8080",
             username: "agent",
@@ -81,11 +109,176 @@ describe("BrowserWorkflowRunner", () => {
           contextOptions: expect.objectContaining({
             acceptDownloads: true,
             downloadsPath: paths.downloadsDir,
+            deviceScaleFactor: 1,
+            isMobile: false,
+            hasTouch: false,
           }),
         }),
       },
     ]);
+    expect(result.outputs?.browser_identity).toEqual({
+      run_id: "run-identity-1",
+      identity_id: "bi_test_identity",
+      display_name: "QA Profile Display",
+      profile_dir: "bi_test_identity",
+      session_mode: "persistent_profile",
+      fingerprint_seed_hash: expect.stringMatching(/^[a-f0-9]{16}$/),
+      proxy_label: null,
+      proxy_region: null,
+      timezone: "America/New_York",
+      locale: "en-US",
+      viewport: {
+        width: 1920,
+        height: 947,
+        device_scale_factor: 1,
+        mobile: false,
+        touch: false,
+      },
+      humanize: true,
+      human_preset: "careful",
+    });
     expect(context.closed).toBe(false);
+  });
+
+  test("stops before graph actions when owned fingerprint preflight fails", async () => {
+    const page = new FakePage();
+    page.evaluateResult = JSON.stringify({
+      passed: false,
+      verdict: "blocked",
+      risk_score: 88,
+      run_id: "fp-run-1",
+      profile_id: "bi_probe",
+      mismatches: [
+        {
+          category: "browser_device",
+          field: "timezone",
+          severity: "high",
+          reason: "Timezone does not match proxy region",
+        },
+      ],
+      evidence: { browser_device_seen: true },
+    });
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("visit", "Visit", {
+            type: "navigate",
+            config: { url: "https://owned.test/app" },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        browser_launch: {
+          preflight_enabled: true,
+          preflight_probe_url: "https://probe.owned.test/verdict",
+          preflight_allowed_origins: ["https://probe.owned.test"],
+        },
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.reason).toContain("Fingerprint preflight blocked");
+    expect(result.completed_step_ids).toEqual([]);
+    expect(page.events.slice(0, 2)).toEqual([
+      "goto:https://probe.owned.test/verdict",
+      "evaluate:preflight",
+    ]);
+    expect(page.events).not.toContain("goto:https://owned.test/app");
+    expect(result.outputs?.fingerprint_preflight).toMatchObject({
+      passed: false,
+      verdict: "blocked",
+      run_id: "fp-run-1",
+    });
+  });
+
+  test("continues into graph actions when owned fingerprint preflight passes", async () => {
+    const page = new FakePage();
+    page.evaluateResult = JSON.stringify({
+      passed: true,
+      verdict: "passed",
+      risk_score: 0,
+      run_id: "fp-run-pass",
+      profile_id: "bi_probe",
+      mismatches: [],
+      evidence: { browser_device_seen: true, automation_seen: true },
+    });
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("visit", "Visit", {
+            type: "navigate",
+            config: { url: "https://owned.test/app" },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        browser_launch: {
+          preflight_enabled: true,
+          preflight_probe_url: "https://probe.owned.test/verdict",
+          preflight_allowed_origins: ["https://probe.owned.test"],
+        },
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "goto:https://probe.owned.test/verdict",
+        "goto:https://owned.test/app",
+      ]),
+    );
+    expect(result.outputs?.fingerprint_preflight).toMatchObject({
+      passed: true,
+      verdict: "passed",
+      run_id: "fp-run-pass",
+    });
+  });
+
+  test("fails preflight with a stable message for malformed probe verdicts", async () => {
+    const page = new FakePage();
+    page.evaluateResult = "not-json";
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("visit", "Visit", {
+            type: "navigate",
+            config: { url: "https://owned.test/app" },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        browser_launch: {
+          preflight_enabled: true,
+          preflight_probe_url: "https://probe.owned.test/verdict",
+          preflight_allowed_origins: ["https://probe.owned.test"],
+        },
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.reason).toBe("Fingerprint preflight verdict is malformed");
+    expect(page.events).not.toContain("goto:https://owned.test/app");
   });
 
   test("executes browser actions, stores outputs, and records action traces", async () => {
@@ -359,6 +552,10 @@ describe("BrowserWorkflowRunner", () => {
       browser_launch: {
         session_mode: "persistent_profile",
         profile_name: "qa-profile",
+        identity_id: "bi_qa_profile",
+        display_name: "QA profile",
+        profile_dir: "bi_qa_profile",
+        fingerprint_seed: "48123",
       },
       run_policy: { browser_retention: "retain" },
     });
@@ -376,7 +573,7 @@ describe("BrowserWorkflowRunner", () => {
       mode: "run_workflow",
       retainedSessionWorkflowId: "workflow-1",
     });
-    expect(runner.hasReusableRetainedSession("workflow-1", "qa-profile")).toBe(true);
+    expect(runner.hasReusableRetainedSession("workflow-1", "bi_qa_profile")).toBe(true);
 
     const result = await runner.run({
       graph: {
@@ -1724,6 +1921,7 @@ class FakeContext implements BrowserDriverContext {
 class FakePage implements BrowserDriverPage {
   events: string[] = [];
   urlValue = "about:blank";
+  evaluateResult: unknown = null;
 
   async goto(url: string) {
     this.urlValue = url.endsWith("/") ? url : `${url}/`;
@@ -1802,6 +2000,10 @@ class FakePage implements BrowserDriverPage {
   }
 
   async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+    if (this.evaluateResult != null) {
+      this.events.push("evaluate:preflight");
+      return this.evaluateResult;
+    }
     if (typeof pageFunction === "string" && pageFunction.includes("window.location.href")) {
       return this.urlValue;
     }

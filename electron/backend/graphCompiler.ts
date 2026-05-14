@@ -14,6 +14,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
+import { actionCapabilities } from "../../src/lib/actionCapabilities.js";
 import { migrateWorkflowGraph } from "./workflowGraphMigration.js";
 
 type ValidationError = {
@@ -496,7 +497,18 @@ function pushNodeSemanticIssues(
       if (node.config == null) {
         issues.push(error(node.id, null, "Choose an action type before running this node"));
       } else {
-        const validation = validateActionConfig(node.config as ActionConfig);
+        const actionConfig = node.config as ActionConfig;
+        if (actionCapabilities[actionConfig.type] === "launch_time_only") {
+          issues.push(
+            error(
+              node.id,
+              null,
+              `Node ${node.label} uses a launch-time browser identity setting. Configure it in Workflow Settings before launch.`,
+            ),
+          );
+          break;
+        }
+        const validation = validateActionConfig(actionConfig);
         if (validation) {
           issues.push(error(node.id, null, `Node ${node.label} has invalid action config: ${validation.message}`));
         }

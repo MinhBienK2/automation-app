@@ -212,8 +212,31 @@ export function defaultWorkflowSettings({
       batch_stop_on_first_failed_row: false,
     },
     browser_launch: {
-      session_mode: "temporary",
-      profile_name: null,
+      session_mode: "persistent_profile",
+      identity_id: createDefaultBrowserIdentityId(workflowId),
+      display_name: `${workflowName} identity`,
+      profile_dir: createDefaultBrowserIdentityId(workflowId),
+      fingerprint_seed: stableFingerprintSeed(createDefaultBrowserIdentityId(workflowId)),
+      profile_name: createDefaultBrowserIdentityId(workflowId),
+      user_agent: null,
+      viewport_width: 1920,
+      viewport_height: 947,
+      device_scale_factor: 1,
+      mobile: false,
+      touch: false,
+      timezone: null,
+      locale: null,
+      geoip: false,
+      proxy_label: null,
+      proxy_region: null,
+      webrtc_policy: "default",
+      webrtc_ip: null,
+      storage_quota_mb: null,
+      humanize: true,
+      human_preset: "default",
+      preflight_enabled: false,
+      preflight_probe_url: null,
+      preflight_allowed_origins: [],
       proxy_enabled: false,
       proxy_server: null,
       proxy_username: null,
@@ -228,6 +251,23 @@ export function defaultWorkflowSettings({
     created_at: createdAt,
     updated_at: updatedAt,
   };
+}
+
+function createDefaultBrowserIdentityId(seed: string) {
+  const safeSeed = seed
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `bi_${safeSeed || "default"}`;
+}
+
+function stableFingerprintSeed(seed: string) {
+  let hash = 0;
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 90000;
+  }
+  return String(10000 + hash).padStart(5, "0");
 }
 
 export function tagsFromInput(value: string) {
@@ -516,9 +556,9 @@ export const workflowSettingsHelp: Record<
   },
   browser_launch: {
     en: {
-      title: "Browser Launch Settings Help",
+      title: "Browser Identity Settings Help",
       summary:
-        "Browser Launch settings control values that must be known before Chromium opens: temporary versus persistent profile, authorized proxy route, proxy credentials, and headed or headless launch mode.",
+        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, viewport, location, network posture, humanized input, and optional owned preflight.",
       uiLabels: enLabels,
       bestFor: [
         "Making session and network posture repeatable from the first browser request.",
@@ -533,16 +573,30 @@ export const workflowSettingsHelp: Record<
         {
           name: "Reuse login session",
           description:
-            "Switch that chooses a persistent named browser profile instead of a temporary clean profile. Turning it on generates a profile name when none is saved.",
+            "Switch that chooses whether the workflow uses the identity's persistent Chromium profile storage or a temporary clean context while keeping the same browser fingerprint seed.",
           whenToUse:
-            "Use it for named approved test accounts that should keep login state between runs.",
+            "Use it for named approved test accounts that should keep login state; turn it off for fresh storage without rotating the device identity.",
         },
         {
-          name: "Profile name",
+          name: "Identity display name",
           description:
-            "Persistent browser profile identifier used to store Chromium user data under the app data directory when Reuse login session is enabled.",
+            "Operator-facing label for the browser identity. Renaming it changes only metadata and never moves profile storage or changes the fingerprint seed.",
           whenToUse:
-            "Use one stable profile name per authorized account or test identity to avoid mixing session state.",
+            "Use readable names that describe the approved account, region, or workflow purpose without treating rename as a reset.",
+        },
+        {
+          name: "Profile directory",
+          description:
+            "Read-only stable storage key used for the persistent CloakBrowser user data directory under app data. It is derived from the identity id rather than the display name.",
+          whenToUse:
+            "Use it for audit and troubleshooting when confirming which on-disk profile belongs to a workflow identity.",
+        },
+        {
+          name: "Fingerprint seed",
+          description:
+            "Stable CloakBrowser fingerprint seed passed at launch so the same identity keeps coherent canvas, WebGL, audio, screen, hardware, and related device signals across runs.",
+          whenToUse:
+            "Keep it fixed for persistent login identities; reset the identity explicitly when the test needs a new device persona.",
         },
         {
           name: "Enable Run from selected",
@@ -580,11 +634,53 @@ export const workflowSettingsHelp: Record<
             "Use it only when the authorized proxy requires a password and avoid placing the value in notes or screenshots.",
         },
         {
+          name: "Timezone",
+          description:
+            "Optional IANA timezone passed through CloakBrowser's launch-level fingerprint flag instead of Playwright context emulation, keeping local browser signals aligned with the identity.",
+          whenToUse:
+            "Set it explicitly when the proxy or account region is known and must be reproducible across machines.",
+        },
+        {
+          name: "Locale",
+          description:
+            "Optional BCP 47 locale passed at launch so browser language and locale-sensitive APIs match the selected identity and network posture.",
+          whenToUse:
+            "Set it with timezone and proxy region when production detection expects a specific regional browser profile.",
+        },
+        {
+          name: "GeoIP from proxy",
+          description:
+            "Optional CloakBrowser GeoIP mode that derives timezone and locale from the configured proxy exit IP when the mmdb-lib dependency is installed.",
+          whenToUse:
+            "Use it when proxy inventory does not already provide explicit timezone and locale values, and validate the result with owned preflight.",
+        },
+        {
+          name: "Viewport",
+          description:
+            "Launch-time viewport and device-class values used to keep screen, window, device scale factor, mobile, and touch settings coherent for the identity.",
+          whenToUse:
+            "Use stable desktop defaults for most owned workflows; only change mobile or touch settings as part of a complete matching identity.",
+        },
+        {
+          name: "Humanize browser input",
+          description:
+            "Controls CloakBrowser's humanized mouse, keyboard, and scroll behavior. It should remain enabled for realistic workflow evidence unless deterministic internal testing requires otherwise.",
+          whenToUse:
+            "Keep it enabled for production-like probes and owned-system red-team simulation where interaction behavior is part of the defense surface.",
+        },
+        {
+          name: "Fingerprint preflight",
+          description:
+            "Optional owned probe gate that launches the resolved browser identity, opens an allowlisted probe, reads a JSON verdict, and blocks graph actions when identity mismatches are reported.",
+          whenToUse:
+            "Enable it for sensitive workflows where browser/device/network consistency must be measured before the first real workflow action.",
+        },
+        {
           name: "Headless browser",
           description:
-            "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled.",
+            "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled. Preflight identities should normally use headed mode.",
           whenToUse:
-            "Use headed mode for debugging and review; use headless only for routine runs that do not need visual inspection.",
+            "Use headed mode for debugging, visual review, and production-like probes; use headless only when the selected identity policy allows it.",
         },
       ],
       workflowExamples: [
@@ -604,9 +700,9 @@ export const workflowSettingsHelp: Record<
       ],
     },
     vi: {
-      title: "Trợ giúp Browser Launch",
+      title: "Trợ giúp Browser Identity",
       summary:
-        "Browser Launch điều khiển các giá trị phải biết trước khi Chromium mở: dùng profile tạm hay persistent, tuyến proxy được phép, credential proxy, và chế độ headed/headless.",
+        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, viewport, vị trí, network posture, humanized input, và preflight owned tùy chọn.",
       uiLabels: viLabels,
       bestFor: [
         "Giữ session và network posture lặp lại được ngay từ request đầu tiên của browser.",
@@ -621,16 +717,30 @@ export const workflowSettingsHelp: Record<
         {
           name: "Reuse login session",
           description:
-            "Switch chọn browser profile persistent có tên thay cho profile tạm sạch. Khi bật mà chưa có tên profile, app sẽ tự sinh tên.",
+            "Switch chọn workflow dùng Chromium profile persistent của identity hay context tạm sạch, trong khi vẫn giữ cùng fingerprint seed của browser/device identity.",
           whenToUse:
-            "Dùng cho test account được phê duyệt cần giữ login state giữa các lần chạy.",
+            "Dùng cho test account được phê duyệt cần giữ login state; tắt khi muốn storage sạch mà không đổi device identity.",
         },
         {
-          name: "Profile name",
+          name: "Identity display name",
           description:
-            "Định danh browser profile persistent dùng để lưu Chromium user data dưới app data directory khi Reuse login session được bật.",
+            "Nhãn operator nhìn thấy cho browser identity. Rename chỉ đổi metadata, không move profile storage và không đổi fingerprint seed.",
           whenToUse:
-            "Dùng một tên profile ổn định cho mỗi account hoặc test identity được phép để tránh trộn session state.",
+            "Dùng tên dễ đọc mô tả account, region, hoặc mục đích workflow mà không coi rename là reset identity.",
+        },
+        {
+          name: "Profile directory",
+          description:
+            "Storage key ổn định, read-only, dùng cho CloakBrowser user data directory dưới app data. Giá trị này lấy từ identity id thay vì display name.",
+          whenToUse:
+            "Dùng để audit và troubleshoot khi cần xác nhận profile trên đĩa thuộc browser identity nào.",
+        },
+        {
+          name: "Fingerprint seed",
+          description:
+            "Seed CloakBrowser ổn định được truyền lúc launch để cùng identity giữ canvas, WebGL, audio, screen, hardware, và các device signal liên quan qua nhiều run.",
+          whenToUse:
+            "Giữ cố định cho identity có login persistent; reset identity rõ ràng khi test cần device persona mới.",
         },
         {
           name: "Enable Run from selected",
@@ -668,11 +778,53 @@ export const workflowSettingsHelp: Record<
             "Chỉ dùng khi proxy được phép yêu cầu password và tránh đưa giá trị này vào notes hoặc screenshot.",
         },
         {
+          name: "Timezone",
+          description:
+            "Timezone IANA tùy chọn được truyền qua launch-level fingerprint flag của CloakBrowser thay vì Playwright context emulation, giúp local browser signal khớp identity.",
+          whenToUse:
+            "Set rõ khi proxy hoặc account region đã biết và phải lặp lại được trên nhiều máy.",
+        },
+        {
+          name: "Locale",
+          description:
+            "Locale BCP 47 tùy chọn được truyền lúc launch để language và locale-sensitive APIs khớp browser identity và network posture.",
+          whenToUse:
+            "Set cùng timezone và proxy region khi production detection kỳ vọng một regional browser profile cụ thể.",
+        },
+        {
+          name: "GeoIP from proxy",
+          description:
+            "Chế độ GeoIP tùy chọn của CloakBrowser để suy ra timezone và locale từ proxy exit IP khi dependency mmdb-lib đã được cài.",
+          whenToUse:
+            "Dùng khi proxy inventory chưa có timezone và locale rõ ràng, rồi xác nhận kết quả bằng owned preflight.",
+        },
+        {
+          name: "Viewport",
+          description:
+            "Viewport và device-class lúc launch để giữ screen, window, device scale factor, mobile, và touch settings nhất quán cho identity.",
+          whenToUse:
+            "Giữ desktop default ổn định cho đa số workflow owned; chỉ đổi mobile hoặc touch khi có identity tương ứng đầy đủ.",
+        },
+        {
+          name: "Humanize browser input",
+          description:
+            "Điều khiển hành vi mouse, keyboard, và scroll đã humanize của CloakBrowser. Nên bật cho evidence thực tế trừ khi test nội bộ cần deterministic.",
+          whenToUse:
+            "Giữ bật cho production-like probes và red-team simulation trên hệ thống owned khi behavior là một mặt phòng thủ.",
+        },
+        {
+          name: "Fingerprint preflight",
+          description:
+            "Gate probe owned tùy chọn: launch identity đã resolve, mở probe allowlisted, đọc JSON verdict, và block graph actions khi có identity mismatch.",
+          whenToUse:
+            "Bật cho workflow nhạy cảm cần đo browser/device/network consistency trước action workflow thật đầu tiên.",
+        },
+        {
           name: "Headless browser",
           description:
-            "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt.",
+            "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt. Preflight identity thường nên dùng headed.",
           whenToUse:
-            "Dùng headed khi debug hoặc review; chỉ dùng headless cho run thường lệ không cần quan sát.",
+            "Dùng headed để debug, review trực quan, và production-like probes; chỉ dùng headless khi identity policy cho phép.",
         },
       ],
       workflowExamples: [

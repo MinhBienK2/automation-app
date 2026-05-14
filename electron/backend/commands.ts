@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   ActionConfig,
@@ -38,6 +39,8 @@ import {
 import { BrowserWorkflowRunner } from "./runner.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./workflowGraphMigration.js";
 import { WorkflowRepository } from "./workflowRepository.js";
+
+const nodeRequire = createRequire(import.meta.url);
 
 export type CommandError = {
   message: string;
@@ -144,7 +147,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     if (!normalized) {
       throw commandError("Workflow name is required", "name");
     }
-    return repository.createWorkflow(normalized, createDraftGraph());
+    const workflow = repository.createWorkflow(normalized, createDraftGraph());
+    repository.saveWorkflowSettings(
+      workflow.id,
+      defaultWorkflowSettings(workflow, { randomizeIdentity: true }),
+    );
+    return workflow;
   }
 
   function getWorkflowGraph(workflowId: string): WorkflowGraph {
@@ -202,7 +210,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const settings = getSettings(workflowId);
       saveSettings(workflowId, {
         ...settings,
-        browser_launch: configToSettingsBrowserLaunch(config),
+        browser_launch: {
+          ...settings.browser_launch,
+          ...configToSettingsBrowserLaunch(config, {
+            id: workflowId,
+            name: settings.general.name,
+          }),
+          ...browserIdentityPreferences(settings.browser_launch),
+        },
       });
     },
 
@@ -394,7 +409,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         throw commandError("A workflow run is already active", "run");
       }
       const settings = getSettings(workflowId);
-      if (settings.browser_launch.session_mode !== "persistent_profile" || !settings.browser_launch.profile_name) {
+      const profileKey = browserProfileKey(settings);
+      if (settings.browser_launch.session_mode !== "persistent_profile" || !profileKey) {
         throw commandError(
           "Run from selected requires Reuse login session to be enabled",
           "browser_launch.session_mode",
@@ -412,7 +428,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           "browser_launch.run_from_selected_enabled",
         );
       }
-      if (!runner.hasReusableRetainedSession?.(workflowId, settings.browser_launch.profile_name)) {
+      if (!runner.hasReusableRetainedSession?.(workflowId, profileKey)) {
         currentRunState = {
           ...currentRunState,
           retained_session: runner.getRetainedSessionState?.() ?? {
@@ -910,6 +926,84 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Proxy server is required when proxy is enabled",
     });
   }
+  if (
+    settings.browser_launch.session_mode === "persistent_profile" &&
+    !settings.browser_launch.fingerprint_seed?.trim()
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "fingerprint_seed",
+      level: "error",
+      message: "Persistent browser identities require a fingerprint seed",
+    });
+  }
+  if (settings.browser_launch.geoip && !isOptionalModuleAvailable("mmdb-lib")) {
+    issues.push({
+      section: "browser_launch",
+      field: "geoip",
+      level: "error",
+      message: "GeoIP requires mmdb-lib to be installed",
+    });
+  }
+  if (settings.browser_launch.webrtc_policy === "explicit_ip" && !settings.browser_launch.webrtc_ip?.trim()) {
+    issues.push({
+      section: "browser_launch",
+      field: "webrtc_ip",
+      level: "error",
+      message: "Explicit WebRTC IP policy requires a WebRTC IP",
+    });
+  }
+  if (
+    settings.browser_launch.webrtc_policy === "auto_proxy_exit_ip" &&
+    (!settings.browser_launch.proxy_enabled || !settings.browser_launch.proxy_server?.trim())
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "webrtc_policy",
+      level: "error",
+      message: "Auto WebRTC proxy IP policy requires an enabled proxy",
+    });
+  }
+  if (
+    settings.browser_launch.user_agent &&
+    /mobile|iphone|android/i.test(settings.browser_launch.user_agent) &&
+    (!settings.browser_launch.mobile || !settings.browser_launch.touch)
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "mobile",
+      level: "warning",
+      message: "Mobile user agents should use mobile viewport and touch settings",
+    });
+  }
+  if (settings.browser_launch.preflight_enabled) {
+    const probeUrl = settings.browser_launch.preflight_probe_url?.trim();
+    if (!probeUrl) {
+      issues.push({
+        section: "browser_launch",
+        field: "preflight_probe_url",
+        level: "error",
+        message: "Fingerprint preflight probe URL is required",
+      });
+    } else if (
+      !settings.browser_launch.preflight_allowed_origins.includes(originForUrl(probeUrl) ?? "")
+    ) {
+      issues.push({
+        section: "browser_launch",
+        field: "preflight_probe_url",
+        level: "error",
+        message: "Fingerprint preflight probe origin must be allowlisted",
+      });
+    }
+    if (settings.browser_launch.headless) {
+      issues.push({
+        section: "browser_launch",
+        field: "headless",
+        level: "error",
+        message: "Fingerprint preflight requires headed browser mode",
+      });
+    }
+  }
   for (const field of [
     "max_workflow_duration_ms",
     "batch_concurrency_limit",
@@ -925,6 +1019,23 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     }
   }
   return issues;
+}
+
+function isOptionalModuleAvailable(name: string) {
+  try {
+    nodeRequire.resolve(name);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function originForUrl(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }
 
 function stripRemovedWorkflowSettingsSections(settings: WorkflowSettings): WorkflowSettings {
@@ -977,7 +1088,25 @@ function sanitizeBrowserLaunchSettings(
     omittedFields.push("settings.browser_launch.proxy_password");
   }
   sanitized.proxy_password = null;
+  if (sanitized.preflight_probe_url) {
+    const sanitizedProbeUrl = sanitizeUrlSearch(sanitized.preflight_probe_url);
+    if (sanitizedProbeUrl !== sanitized.preflight_probe_url) {
+      omittedFields.push("settings.browser_launch.preflight_probe_url.search");
+      sanitized.preflight_probe_url = sanitizedProbeUrl;
+    }
+  }
   return sanitized;
+}
+
+function sanitizeUrlSearch(value: string) {
+  try {
+    const url = new URL(value);
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 function validateWorkflowPackage(packageValue: WorkflowPackage) {
@@ -1224,10 +1353,16 @@ function defaultBrowserConfig(workflowId: string): WorkflowBrowserConfig {
   };
 }
 
-function configToSettingsBrowserLaunch(config: WorkflowBrowserConfig): WorkflowSettingsBrowserLaunch {
+function configToSettingsBrowserLaunch(
+  config: WorkflowBrowserConfig,
+  workflow?: Pick<WorkflowSummary, "id" | "name">,
+  options: { randomizeIdentity?: boolean } = {},
+): WorkflowSettingsBrowserLaunch {
+  const identity = createDefaultBrowserIdentity(workflow, options);
   return normalizeSettingsBrowserLaunch({
     session_mode: config.profile_name ? "persistent_profile" : "temporary",
     profile_name: nullableText(config.profile_name),
+    ...identity,
     proxy_enabled: config.proxy_enabled,
     proxy_server: nullableText(config.proxy_server),
     proxy_username: nullableText(config.proxy_username),
@@ -1256,14 +1391,44 @@ function normalizeSettingsBrowserLaunch(
   browser: WorkflowSettingsBrowserLaunch,
 ): WorkflowSettingsBrowserLaunch {
   const profileName = nullableText(browser.profile_name);
+  const identityId = nullableText(browser.identity_id) ?? createStableBrowserIdentityId(profileName ?? "workflow");
+  const profileDir = nullableText(browser.profile_dir) ?? identityId;
+  const fingerprintSeed = nullableText(browser.fingerprint_seed) ?? stableFingerprintSeed(identityId);
   return {
     ...browser,
-    session_mode: browser.session_mode === "persistent_profile" && profileName
+    identity_id: identityId,
+    display_name: nullableText(browser.display_name) ?? `${profileName ?? "Workflow"} identity`,
+    profile_dir: profileDir,
+    fingerprint_seed: fingerprintSeed,
+    viewport_width: positiveNumberOrDefault(browser.viewport_width, 1920),
+    viewport_height: positiveNumberOrDefault(browser.viewport_height, 947),
+    device_scale_factor: positiveNumberOrDefault(browser.device_scale_factor, 1),
+    mobile: Boolean(browser.mobile),
+    touch: Boolean(browser.touch),
+    timezone: nullableText(browser.timezone),
+    locale: nullableText(browser.locale),
+    geoip: Boolean(browser.geoip),
+    proxy_label: nullableText(browser.proxy_label),
+    proxy_region: nullableText(browser.proxy_region),
+    webrtc_policy: validWebRtcPolicy(browser.webrtc_policy)
+      ? browser.webrtc_policy
+      : "default",
+    webrtc_ip: nullableText(browser.webrtc_ip),
+    storage_quota_mb: positiveOptionalNumber(browser.storage_quota_mb),
+    humanize: browser.humanize !== false,
+    human_preset: browser.human_preset === "careful" ? "careful" : "default",
+    preflight_enabled: Boolean(browser.preflight_enabled),
+    preflight_probe_url: nullableText(browser.preflight_probe_url),
+    preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
+      ? browser.preflight_allowed_origins.filter((origin) => typeof origin === "string" && origin.trim())
+      : [],
+    user_agent: nullableText(browser.user_agent),
+    session_mode: browser.session_mode === "persistent_profile"
       ? "persistent_profile"
       : "temporary",
-    profile_name: browser.session_mode === "persistent_profile" ? profileName : null,
+    profile_name: browser.session_mode === "persistent_profile" ? (profileName ?? profileDir) : null,
     run_from_selected_enabled:
-      browser.session_mode === "persistent_profile" && profileName
+      browser.session_mode === "persistent_profile" && (profileName ?? profileDir)
         ? Boolean(browser.run_from_selected_enabled)
         : false,
     proxy_server: nullableText(browser.proxy_server),
@@ -1272,8 +1437,15 @@ function normalizeSettingsBrowserLaunch(
   };
 }
 
-export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSettings {
-  const browserLaunch = configToSettingsBrowserLaunch(defaultBrowserConfig(workflow.id));
+export function defaultWorkflowSettings(
+  workflow: Pick<WorkflowSummary, "id" | "name" | "created_at" | "updated_at"> &
+    Partial<Pick<WorkflowSummary, "step_count">>,
+  options: { randomizeIdentity?: boolean } = {},
+): WorkflowSettings {
+  const browserLaunch = normalizeSettingsBrowserLaunch({
+    ...configToSettingsBrowserLaunch(defaultBrowserConfig(workflow.id), workflow, options),
+    session_mode: "persistent_profile",
+  });
   return {
     workflow_id: workflow.id,
     version: 2,
@@ -1299,6 +1471,168 @@ export function defaultWorkflowSettings(workflow: WorkflowSummary): WorkflowSett
     migration_notes: [],
     created_at: workflow.created_at,
     updated_at: workflow.updated_at,
+  };
+}
+
+function createDefaultBrowserIdentity(
+  workflow?: Pick<WorkflowSummary, "id" | "name">,
+  options: { randomizeIdentity?: boolean } = {},
+): Pick<
+  WorkflowSettingsBrowserLaunch,
+  | "identity_id"
+  | "display_name"
+  | "profile_dir"
+  | "fingerprint_seed"
+  | "viewport_width"
+  | "viewport_height"
+  | "device_scale_factor"
+  | "mobile"
+  | "touch"
+  | "timezone"
+  | "locale"
+  | "geoip"
+  | "proxy_label"
+  | "proxy_region"
+  | "webrtc_policy"
+  | "webrtc_ip"
+  | "storage_quota_mb"
+  | "humanize"
+  | "human_preset"
+  | "preflight_enabled"
+  | "preflight_probe_url"
+  | "preflight_allowed_origins"
+  | "user_agent"
+> {
+  const identityId = options.randomizeIdentity
+    ? `bi_${randomUUID().replace(/-/g, "").slice(0, 12)}`
+    : createStableBrowserIdentityId(workflow?.id ?? "workflow");
+  return {
+    identity_id: identityId,
+    display_name: `${workflow?.name ?? "Workflow"} identity`,
+    profile_dir: identityId,
+    fingerprint_seed: options.randomizeIdentity
+      ? String(10000 + Math.floor(Math.random() * 90000))
+      : stableFingerprintSeed(identityId),
+    viewport_width: 1920,
+    viewport_height: 947,
+    device_scale_factor: 1,
+    mobile: false,
+    touch: false,
+    timezone: null,
+    locale: null,
+    geoip: false,
+    proxy_label: null,
+    proxy_region: null,
+    webrtc_policy: "default",
+    webrtc_ip: null,
+    storage_quota_mb: null,
+    humanize: true,
+    human_preset: "default",
+    preflight_enabled: false,
+    preflight_probe_url: null,
+    preflight_allowed_origins: [],
+    user_agent: null,
+  };
+}
+
+function createStableBrowserIdentityId(seed: string) {
+  return `bi_${sanitizeIdentityText(seed).slice(0, 40) || "default"}`;
+}
+
+function sanitizeIdentityText(value: string) {
+  return value
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function stableFingerprintSeed(seed: string) {
+  let hash = 0;
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 90000;
+  }
+  return String(10000 + hash).padStart(5, "0");
+}
+
+function positiveNumberOrDefault(value: unknown, defaultValue: number) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : defaultValue;
+}
+
+function positiveOptionalNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+}
+
+function validWebRtcPolicy(value: unknown): value is WorkflowSettingsBrowserLaunch["webrtc_policy"] {
+  return (
+    value === "default" ||
+    value === "auto_proxy_exit_ip" ||
+    value === "explicit_ip" ||
+    value === "disabled_if_supported"
+  );
+}
+
+function browserProfileKey(settings: WorkflowSettings) {
+  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
+  return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
+}
+
+function browserIdentityPreferences(
+  browser: WorkflowSettingsBrowserLaunch,
+): Pick<
+  WorkflowSettingsBrowserLaunch,
+  | "identity_id"
+  | "display_name"
+  | "profile_dir"
+  | "fingerprint_seed"
+  | "user_agent"
+  | "viewport_width"
+  | "viewport_height"
+  | "device_scale_factor"
+  | "mobile"
+  | "touch"
+  | "timezone"
+  | "locale"
+  | "geoip"
+  | "proxy_label"
+  | "proxy_region"
+  | "webrtc_policy"
+  | "webrtc_ip"
+  | "storage_quota_mb"
+  | "humanize"
+  | "human_preset"
+  | "preflight_enabled"
+  | "preflight_probe_url"
+  | "preflight_allowed_origins"
+> {
+  return {
+    identity_id: browser.identity_id,
+    display_name: browser.display_name,
+    profile_dir: browser.profile_dir,
+    fingerprint_seed: browser.fingerprint_seed,
+    user_agent: browser.user_agent,
+    viewport_width: browser.viewport_width,
+    viewport_height: browser.viewport_height,
+    device_scale_factor: browser.device_scale_factor,
+    mobile: browser.mobile,
+    touch: browser.touch,
+    timezone: browser.timezone,
+    locale: browser.locale,
+    geoip: browser.geoip,
+    proxy_label: browser.proxy_label,
+    proxy_region: browser.proxy_region,
+    webrtc_policy: browser.webrtc_policy,
+    webrtc_ip: browser.webrtc_ip,
+    storage_quota_mb: browser.storage_quota_mb,
+    humanize: browser.humanize,
+    human_preset: browser.human_preset,
+    preflight_enabled: browser.preflight_enabled,
+    preflight_probe_url: browser.preflight_probe_url,
+    preflight_allowed_origins: browser.preflight_allowed_origins,
   };
 }
 

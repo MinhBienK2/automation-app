@@ -132,6 +132,12 @@ export type WorkflowSettingsSectionId =
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
+export type WorkflowHumanPreset = "default" | "careful";
+export type WorkflowWebRtcPolicy =
+  | "default"
+  | "auto_proxy_exit_ip"
+  | "explicit_ip"
+  | "disabled_if_supported";
 
 export type WorkflowSettingsGeneral = {
   name: string;
@@ -152,6 +158,29 @@ export type WorkflowSettingsRunPolicy = {
 
 export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
   session_mode: WorkflowBrowserSessionMode;
+  identity_id: string;
+  display_name: string;
+  profile_dir: string;
+  fingerprint_seed: string;
+  user_agent?: string | null;
+  viewport_width: number;
+  viewport_height: number;
+  device_scale_factor: number;
+  mobile: boolean;
+  touch: boolean;
+  timezone?: string | null;
+  locale?: string | null;
+  geoip: boolean;
+  proxy_label?: string | null;
+  proxy_region?: string | null;
+  webrtc_policy: WorkflowWebRtcPolicy;
+  webrtc_ip?: string | null;
+  storage_quota_mb?: number | null;
+  humanize: boolean;
+  human_preset: WorkflowHumanPreset;
+  preflight_enabled: boolean;
+  preflight_probe_url?: string | null;
+  preflight_allowed_origins: string[];
   headless: boolean;
   run_from_selected_enabled: boolean;
 };

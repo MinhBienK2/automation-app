@@ -55,6 +55,16 @@ describe("Electron workflow command handlers", () => {
       id: created.id,
       name: "Login flow",
     });
+    expect(JSON.parse(row?.settings_json ?? "{}")).toMatchObject({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        identity_id: expect.stringMatching(/^bi_/),
+        display_name: "Login flow identity",
+        profile_dir: expect.stringMatching(/^bi_/),
+        fingerprint_seed: expect.stringMatching(/^\d{5}$/),
+        humanize: true,
+      },
+    });
     expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
       version: 2,
       nodes: expect.arrayContaining([
@@ -76,6 +86,9 @@ describe("Electron workflow command handlers", () => {
     });
 
     const settings = handlers.getWorkflowSettings(created.id);
+    expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
+    expect(settings.browser_launch.display_name).toBe("Login flow identity");
+    const initialSeed = settings.browser_launch.fingerprint_seed;
     const saved = handlers.saveWorkflowSettings(created.id, {
       ...settings,
       general: {
@@ -86,6 +99,8 @@ describe("Electron workflow command handlers", () => {
     });
 
     expect(saved.general.name).toBe("Renamed flow");
+    expect(saved.browser_launch.fingerprint_seed).toBe(initialSeed);
+    expect(saved.browser_launch.display_name).toBe("Login flow identity");
     expect(handlers.listWorkflows()[0]).toMatchObject({
       id: created.id,
       name: "Renamed flow",
@@ -216,6 +231,106 @@ describe("Electron workflow command handlers", () => {
       }),
     );
 
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_seed: "",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_seed",
+        level: "error",
+        message: "Persistent browser identities require a fingerprint seed",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          geoip: true,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "geoip",
+        level: "error",
+        message: "GeoIP requires mmdb-lib to be installed",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          preflight_enabled: true,
+          preflight_probe_url: "https://probe.owned.test/verdict",
+          preflight_allowed_origins: ["https://other.owned.test"],
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "preflight_probe_url",
+        level: "error",
+        message: "Fingerprint preflight probe origin must be allowlisted",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          webrtc_policy: "explicit_ip",
+          webrtc_ip: null,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "webrtc_ip",
+        level: "error",
+        message: "Explicit WebRTC IP policy requires a WebRTC IP",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148",
+          mobile: false,
+          touch: false,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "mobile",
+        level: "warning",
+        message: "Mobile user agents should use mobile viewport and touch settings",
+      }),
+    );
+
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...handlers.getWorkflowSettings(workflow.id),
+      browser_launch: {
+        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        timezone: "America/New_York",
+        locale: "en-US",
+        human_preset: "careful",
+      },
+    });
+
     handlers.saveWorkflowBrowserConfig(workflow.id, {
       workflow_id: workflow.id,
       profile_name: "qa-profile",
@@ -232,6 +347,9 @@ describe("Electron workflow command handlers", () => {
       proxy_enabled: true,
       proxy_server: "http://proxy.local:8080",
       proxy_password: "secret",
+      timezone: "America/New_York",
+      locale: "en-US",
+      human_preset: "careful",
     });
   });
 
@@ -305,6 +423,9 @@ describe("Electron workflow command handlers", () => {
       browser_launch: {
         ...settings.browser_launch,
         proxy_password: "secret",
+        preflight_enabled: true,
+        preflight_probe_url: "https://probe.owned.test/verdict?token=secret",
+        preflight_allowed_origins: ["https://probe.owned.test"],
       },
     });
 
@@ -314,8 +435,14 @@ describe("Electron workflow command handlers", () => {
     });
 
     expect(packageValue.settings?.browser_launch?.proxy_password).toBeNull();
+    expect(packageValue.settings?.browser_launch?.preflight_probe_url).toBe(
+      "https://probe.owned.test/verdict",
+    );
     expect(packageValue.omitted_fields).toEqual(
-      expect.arrayContaining(["settings.browser_launch.proxy_password"]),
+      expect.arrayContaining([
+        "settings.browser_launch.proxy_password",
+        "settings.browser_launch.preflight_probe_url.search",
+      ]),
     );
     expect(
       handlers.previewWorkflowPackage({
@@ -634,8 +761,8 @@ describe("Electron workflow command handlers", () => {
     handlers.saveWorkflowGraph(workflow.id, runnableGraph());
 
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
-      message: "Run from selected requires Reuse login session to be enabled",
-      field: "browser_launch.session_mode",
+      message: "Run from selected must be enabled in Workflow Settings",
+      field: "browser_launch.run_from_selected_enabled",
     });
 
     const settings = handlers.getWorkflowSettings(workflow.id);
@@ -643,11 +770,26 @@ describe("Electron workflow command handlers", () => {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
+        session_mode: "temporary",
+        profile_name: null,
+        run_from_selected_enabled: true,
+      },
+    });
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
+      message: "Run from selected requires Reuse login session to be enabled",
+      field: "browser_launch.session_mode",
+    });
+
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...handlers.getWorkflowSettings(workflow.id),
+      browser_launch: {
+        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
         session_mode: "persistent_profile",
-        profile_name: "qa-profile",
+        profile_name: handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir,
+        run_from_selected_enabled: true,
       },
       run_policy: {
-        ...settings.run_policy,
+        ...handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "close",
       },
     });
@@ -661,6 +803,10 @@ describe("Electron workflow command handlers", () => {
       run_policy: {
         ...handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "retain",
+      },
+      browser_launch: {
+        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        run_from_selected_enabled: false,
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({

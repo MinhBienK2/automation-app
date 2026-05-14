@@ -215,6 +215,35 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
+  test("blocks launch-time browser identity actions in workflow graphs", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("proxy", "action", {
+          config: { type: "use_proxy", config: { server: "http://proxy.test:8080" } },
+        }),
+      ],
+      [edge("start", "out", "proxy", "in")],
+    );
+
+    const issues = handlers.validateWorkflowGraph(graph);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          node_id: "proxy",
+          level: "error",
+          message:
+            "Node Proxy uses a launch-time browser identity setting. Configure it in Workflow Settings before launch.",
+        }),
+      ]),
+    );
+    expect(() => handlers.compileWorkflowGraph(graph)).toThrow(
+      "Node Proxy uses a launch-time browser identity setting",
+    );
+  });
+
   test("preserves graph node identity for nested If branch actions", async () => {
     const { handlers } = await createTestHandlers();
     const graph = graphOf(

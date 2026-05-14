@@ -23,8 +23,15 @@ describe("workflow settings model", () => {
     expect(settings.general.tags).toEqual([]);
     expect(settings.run_policy.browser_retention).toBe("retain");
     expect(settings.run_policy.batch_concurrency_limit).toBe(1);
-    expect(settings.browser_launch.session_mode).toBe("temporary");
-    expect(settings.browser_launch.profile_name).toBeNull();
+    expect(settings.browser_launch.session_mode).toBe("persistent_profile");
+    expect(settings.browser_launch.identity_id).toBe("bi_workflow-1");
+    expect(settings.browser_launch.display_name).toBe("Login flow identity");
+    expect(settings.browser_launch.profile_dir).toBe("bi_workflow-1");
+    expect(settings.browser_launch.profile_name).toBe("bi_workflow-1");
+    expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(settings.browser_launch.humanize).toBe(true);
+    expect(settings.browser_launch.viewport_width).toBe(1920);
+    expect(settings.browser_launch.viewport_height).toBe(947);
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.environment.initial_variables).toEqual([]);
@@ -95,20 +102,28 @@ describe("workflow settings model", () => {
       "Batch runs are headless",
       "Stop batch on first failed row",
     ]);
-    expect(workflowSettingsHelp.browser_launch.en.title).toBe("Browser Launch Settings Help");
+    expect(workflowSettingsHelp.browser_launch.en.title).toBe("Browser Identity Settings Help");
     expect(workflowSettingsHelp.browser_launch.en.fieldGuide.map((field) => field.name)).toEqual([
       "Reuse login session",
-      "Profile name",
+      "Identity display name",
+      "Profile directory",
+      "Fingerprint seed",
       "Enable Run from selected",
       "Use proxy",
       "Proxy server",
       "Proxy username",
       "Proxy password",
+      "Timezone",
+      "Locale",
+      "GeoIP from proxy",
+      "Viewport",
+      "Humanize browser input",
+      "Fingerprint preflight",
       "Headless browser",
     ]);
     expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
     expect(helpText).not.toContain("Owned Test Gates");
-    expect(helpText).not.toContain("Fingerprint preflight");
+    expect(helpText).toContain("Fingerprint preflight");
   });
 
   test("creates readable generated browser profile names", () => {

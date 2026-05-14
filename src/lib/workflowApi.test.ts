@@ -33,6 +33,7 @@ import type {
   WorkflowExport,
   WorkflowGraph,
   WorkflowPackage,
+  WorkflowSettingsBrowserLaunch,
   WorkflowSettings,
 } from "../types/workflow";
 
@@ -143,16 +144,7 @@ describe("workflow API phase ten commands", () => {
           tags: [],
           notes: "",
         },
-        browser_launch: {
-          session_mode: "temporary",
-          profile_name: null,
-          proxy_enabled: false,
-          proxy_server: null,
-          proxy_username: null,
-          proxy_password: null,
-          headless: false,
-          run_from_selected_enabled: false,
-        },
+        browser_launch: browserLaunchSettings(),
       },
     };
 
@@ -284,16 +276,7 @@ describe("workflow API settings commands", () => {
         batch_headless: false,
         batch_stop_on_first_failed_row: false,
       },
-      browser_launch: {
-        session_mode: "temporary",
-        profile_name: null,
-        proxy_enabled: false,
-        proxy_server: null,
-        proxy_username: null,
-        proxy_password: null,
-        headless: false,
-        run_from_selected_enabled: false,
-      },
+      browser_launch: browserLaunchSettings(),
       environment: {
         initial_variables: [],
       },
@@ -334,3 +317,39 @@ describe("workflow API settings commands", () => {
     );
   });
 });
+
+function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
+  return {
+    session_mode: "temporary",
+    identity_id: "bi_workflow-1",
+    display_name: "Login flow identity",
+    profile_dir: "bi_workflow-1",
+    fingerprint_seed: "14523",
+    profile_name: null,
+    user_agent: null,
+    viewport_width: 1920,
+    viewport_height: 947,
+    device_scale_factor: 1,
+    mobile: false,
+    touch: false,
+    timezone: null,
+    locale: null,
+    geoip: false,
+    proxy_label: null,
+    proxy_region: null,
+    webrtc_policy: "default",
+    webrtc_ip: null,
+    storage_quota_mb: null,
+    humanize: true,
+    human_preset: "default",
+    preflight_enabled: false,
+    preflight_probe_url: null,
+    preflight_allowed_origins: [],
+    proxy_enabled: false,
+    proxy_server: null,
+    proxy_username: null,
+    proxy_password: null,
+    headless: false,
+    run_from_selected_enabled: false,
+  };
+}
