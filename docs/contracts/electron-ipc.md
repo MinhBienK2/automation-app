@@ -45,6 +45,9 @@ failed calls. This preserves the command-facing error shape used by
 - `saveWorkflowSettings`
 - `saveWorkflowSettingsSection`
 - `validateWorkflowSettings`
+- `getCloakBrowserDiagnostics`
+- `installCloakBrowserBinary`
+- `cleanupOrphanedBrowserProfiles`
 - `validateWorkflowRun`
 - `getWorkflowBrowserConfig`
 - `saveWorkflowBrowserConfig`
@@ -84,6 +87,12 @@ Settings, browser-config compatibility, and workflow package import/export.
 Graph validation/compilation, run orchestration, SQLite persistence, workflow
 package import/export, and CloakBrowser runner execution are owned by the
 Electron backend.
+
+CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
+The renderer can request wrapper/binary/profile diagnostics, trigger an explicit
+binary install/check, and clean up orphaned inactive profile directories, but it
+never imports CloakBrowser, reads profile storage, or receives proxy passwords,
+cookies, localStorage, or sessionStorage values through IPC.
 
 ## Change Checklist
 

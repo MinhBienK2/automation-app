@@ -17,7 +17,8 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 - `BrowserWorkflowRunner` runs action configs through CloakBrowser and Playwright-compatible page/context APIs.
 - CloakBrowser `humanize` is enabled by default for both temporary and persistent contexts and is controlled by the workflow browser identity.
-- `BrowserWorkflowRunner` maps Workflow Settings Browser Launch identity values to CloakBrowser launch options before the first page action. The mapping includes stable fingerprint seed, persistent profile directory, proxy, timezone, locale, GeoIP, viewport/device flags, WebRTC fingerprint args, storage quota args, user agent, humanize preset, and headless mode.
+- `BrowserWorkflowRunner` maps Workflow Settings Browser Launch identity values to CloakBrowser launch options before the first page action. The mapping includes stable fingerprint seed, persistent profile directory, proxy server/bypass/credentials, timezone, locale, GeoIP, viewport/device flags, WebRTC fingerprint args, allowlisted advanced fingerprint args, user agent, humanize preset, behavior fidelity, and headless mode.
+- Real CloakBrowser launches fail before Chromium starts when a headed Linux identity has no `DISPLAY` or `WAYLAND_DISPLAY`; unit tests that inject a fake driver bypass this host prerequisite guard.
 - Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC. Nested compiled graph actions retain their source graph node ids so runner progress can light up branch/body nodes before the outer control block continues.
 - Command handlers can also compile a selected main-path graph node into a sub-plan and ask the runner to reuse the retained browser session instead of launching a new context.
 - Command handlers own run orchestration around the runner: one active run at a time, begin/finish state transitions, max-duration timeout, SQLite run persistence, and batch row sequencing.
@@ -34,12 +35,12 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Browser launch settings come from Workflow Settings Browser Launch. `browser_launch.headless` switches CloakBrowser between headed and headless mode. Legacy browser config commands map to Browser Launch without rotating identity ids, profile directories, or fingerprint seeds.
 - Browser identities use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile_dir>` when Reuse login session is enabled. Runs without persistent storage use temporary contexts while keeping the configured fingerprint seed, and terminal retention still follows Run Policy and terminal node `close_browser` settings.
 - Optional owned fingerprint preflight runs after launch and initial environment setup but before graph actions. It opens the allowlisted probe URL, parses a structured JSON verdict, stores sanitized `fingerprint_preflight` evidence, and fails the run before graph execution on blocked or malformed verdicts.
-- Runner outputs include a sanitized `browser_identity` record with run id, identity id/display name, profile directory or temporary marker, fingerprint seed hash, proxy label/region, timezone/locale, viewport summary, and humanize settings.
+- Runner outputs include a sanitized `browser_identity` record with run id, identity id/display name, profile directory or temporary marker, fingerprint seed hash, non-secret proxy label/region/provider/test-account binding, timezone/locale and source, GeoIP/WebRTC policy, viewport summary, humanize settings, behavior fidelity, active advanced overrides, and CloakBrowser wrapper/binary evidence.
 - Before graph actions run, the command layer prepends Environment initial variables from Workflow Settings.
 - Default action timeouts, interaction fidelity, and global wait-between-nodes settings are legacy v1 settings and are not part of the v2 runner-facing settings contract.
 - Cancellation is checked between actions and inside long waits through an `AbortSignal`. Stop returns a stopped run state and closes temporary contexts according to retention policy.
 - Batch execution compiles the saved graph, prepends row variables, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, persists one run per executed row, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
-- `BrowserWorkflowRunner` records compact action traces into outputs under `__action_traces`, classifying actions as browser input, assisted browser input, direct DOM, observer, or manual.
+- `BrowserWorkflowRunner` records compact action traces into outputs under `__action_traces`, classifying actions by legacy trace mode and by execution path: `humanized`, `browser_api`, `dom_fallback`, or `cdp_sensitive`. Browser Launch `behavior_fidelity: strict_humanized` blocks DOM fallback and CDP-sensitive actions before they run.
 - Generated screenshots and downloads are written under `evidence/runs/<run_id>/...` and mirrored in outputs under both compact output keys and structured `__evidence` metadata.
 - Run-scoped screenshot, download, checkpoint artifact names and path containment checks live in `electron/backend/evidenceArtifacts.ts`; the runner calls those helpers before writing browser-produced files.
 - `run_steps.trace_json` stores action trace entries when the runner emits them, and failed step rows carry serialized run errors for later evidence/history views.
@@ -56,7 +57,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 
 Browser action dispatch lives in `electron/backend/runner.ts` and is grouped by user behavior:
 
-- Pointer: click, hover, double click, and drag/drop dispatch browser-level primitives where possible. Right Click dispatches a browser-side right-button context-menu event sequence through the resolved locator, with a native right-click fallback for minimal drivers.
+- Pointer: click, hover, double click, right click, and drag/drop dispatch browser-level primitives where possible.
 - Scroll: page scrolling runs through browser-side `window.scrollBy` and dispatches a scroll event so the next node can observe page-side scroll listeners deterministically; unsupported scroll modes are rejected by backend validation until runner support lands.
 - Wait: duration, page, URL, text, and element waits with cancellation support.
 - Input: text input, clearing input, and contenteditable updates. `Fill Field`

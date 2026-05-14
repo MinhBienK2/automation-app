@@ -71,6 +71,44 @@ browser runtime:
 npm run test:smoke
 ```
 
+## CloakBrowser Operations
+
+CloakBrowser is a pinned npm dependency through `package-lock.json`, while its
+patched Chromium binary is managed by CloakBrowser's own cache. Prepare a lab
+machine with:
+
+```bash
+npm install
+npx cloakbrowser install
+npx cloakbrowser info
+npm run test:smoke
+```
+
+Operators can inspect the same data through the Electron backend diagnostics
+commands exposed over IPC: `getCloakBrowserDiagnostics`,
+`installCloakBrowserBinary`, and `cleanupOrphanedBrowserProfiles`. Diagnostics
+report wrapper/binary version, platform, binary path/cache/download URL,
+auto-update and checksum-skip status, GeoIP dependency availability, headed
+display availability, and profile storage metadata without proxy passwords,
+cookies, or browser storage values.
+
+For reproducible sensitive runs, keep `CLOAKBROWSER_AUTO_UPDATE=false` on lab
+machines or record the effective binary version from `browser_identity`
+evidence. Supported operator overrides are `CLOAKBROWSER_BINARY_PATH`,
+`CLOAKBROWSER_CACHE_DIR`, `CLOAKBROWSER_DOWNLOAD_URL`, and
+`CLOAKBROWSER_AUTO_UPDATE=false`. Do not set
+`CLOAKBROWSER_SKIP_CHECKSUM=true` in normal product paths; CloakBrowser verifies
+downloaded binaries with SHA-256 checksums. If an update regresses owned probes,
+roll back by pointing `CLOAKBROWSER_BINARY_PATH` at a previous cached Chromium
+binary under `~/.cloakbrowser`.
+
+Linux headed runs require a real display. Use a desktop session or `xvfb-run`
+for headed identities; otherwise set Browser Launch headless mode. Install
+Playwright/Chromium system dependencies where the OS requires shared libraries,
+and keep normal desktop fonts plus emoji/extended fonts available on lab
+machines. GeoIP mode requires `npm install mmdb-lib`; prefer explicit
+timezone/locale when proxy inventory already supplies region metadata.
+
 Typecheck the renderer:
 
 ```bash
@@ -95,7 +133,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes. Confirm Switch Frame and Choose Download Folder are not offered as primary in-run actions.
 7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
 8. Add Set Cookie and Clear Cookies action nodes. Confirm profile, proxy, user agent, fingerprint seed, timezone/locale, headless launch, and browser retention are configured through Workflow Settings rather than primary in-run actions; confirm batch run defaults are visible there but paused until Batch Run UI is ready.
-9. Open Settings from the workflow detail header, confirm it opens to Browser Launch, and configure Reuse login session, identity display name, stable profile directory, fingerprint seed, proxy, timezone/locale, viewport/device flags, humanize preset, optional owned fingerprint preflight, and headed/headless default. Confirm Workflow Settings has General, Run Policy, Browser Launch, and Environment sections; Run Policy shows disabled batch controls with the pause note; Environment edits initial variable rows; section help is available; the dialog has one Save Settings button in the header; and closing with edits shows the unsaved-changes prompt.
+9. Open Settings from the workflow detail header, confirm it opens to Browser Launch, and configure Reuse login session, identity display name, stable profile directory, fingerprint seed, proxy URL/credentials/bypass/metadata, timezone/locale, viewport/device flags, allowlisted advanced fingerprint overrides, humanize preset, behavior fidelity, optional owned fingerprint preflight, and headed/headless default. Confirm Workflow Settings has General, Run Policy, Browser Launch, and Environment sections; Run Policy shows disabled batch controls with the pause note; Environment edits initial variable rows; section help is available; the dialog has one Save Settings button in the header; and closing with edits shows the unsaved-changes prompt.
 10. Confirm hidden compatibility action nodes such as Detect Challenge, Pause For Human, and Resume When Condition still load and show a compatibility inspector when present in an imported or existing workflow.
 11. Confirm hidden compatibility reliability actions such as Fallback Selector, Retry Step, and Checkpoint still load and show a compatibility inspector when present in an imported or existing workflow.
 12. From the workflow list, run a saved workflow directly and confirm the app stays on the list, disables row Run buttons while running, and updates the list-level run status until terminal state.
@@ -104,7 +142,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 14. Generate selector suggestions from an element snapshot, normalize recorded click/input events, dry-run validate a config, and in a debug build generate a local fixture HTML file from a single `.html` filename.
 15. Move graph nodes, reopen the workflow, and confirm node positions persist.
 16. Save Workflow Settings, save the graph, and run the graph workflow.
-17. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, passes the stable fingerprint seed, uses headed/headless according to Workflow Settings, and stores persistent identity data under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
+17. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, passes the stable fingerprint seed, uses headed/headless according to Workflow Settings, reports wrapper/binary evidence, keeps `navigator.webdriver === false`, omits `HeadlessChrome` from UA, exposes baseline `window.chrome`/plugins, reflects timezone/locale/viewport, keeps fixed-seed canvas output stable across two launches, and stores persistent localStorage under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
 17. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
 17. Confirm runner evidence outputs include `__action_traces` and run-scoped `__evidence` metadata when screenshot or download artifacts are produced.
 18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
@@ -113,7 +151,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 21. Confirm download actions save a new file under the current run evidence directory and store its app-local path plus `__evidence` metadata in outputs.
 22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use a variable array, and control-flow blocks run nested actions.
 23. Confirm persistent identity profile state survives a browser restart through Workflow Settings, Reuse login session can be disabled without rotating identity id/profile directory/fingerprint seed, cookies can be set/cleared, and legacy session JSON or secret actions are hidden from active authoring and fail explicitly until implemented.
-24. Confirm Workflow Settings Browser Launch identity profile, proxy, timezone/locale, viewport/device, WebRTC, humanize, preflight, and headless defaults apply before browser launch; Environment initial variables apply before graph actions run; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
+24. Confirm Workflow Settings Browser Launch identity profile, proxy, timezone/locale, viewport/device, WebRTC, advanced fingerprint overrides, humanize, behavior fidelity, preflight, and headless defaults apply before browser launch; Environment initial variables apply before graph actions run; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
 25. Confirm planned challenge and human-verification compatibility actions are hidden from active authoring and fail explicitly if loaded as legacy in-run actions; confirm Resume When Condition waits for the expected condition or timeout.
 26. Confirm fallback selector, retry step, and checkpoint compatibility actions are hidden from active authoring and fail explicitly until implemented; failed steps include a run-scoped failure screenshot path when capture is available.
 27. Confirm batch run results account for each executed row, separate success from failure, use saved graph steps rather than legacy ordered steps, apply batch headless defaults, reject concurrency above 1, and stop after the first failed row when configured.

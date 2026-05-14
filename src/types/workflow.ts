@@ -133,6 +133,11 @@ export type WorkflowSettingsSectionId =
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
 export type WorkflowHumanPreset = "default" | "careful";
+export type WorkflowBehaviorFidelity =
+  | "balanced"
+  | "strict_humanized"
+  | "deterministic_internal";
+export type WorkflowFingerprintPlatform = "windows" | "macos" | "linux";
 export type WorkflowWebRtcPolicy =
   | "default"
   | "auto_proxy_exit_ip"
@@ -173,11 +178,19 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   geoip: boolean;
   proxy_label?: string | null;
   proxy_region?: string | null;
+  proxy_provider?: string | null;
+  proxy_bypass?: string | null;
+  test_account_binding?: string | null;
   webrtc_policy: WorkflowWebRtcPolicy;
   webrtc_ip?: string | null;
+  fingerprint_platform?: WorkflowFingerprintPlatform | null;
+  hardware_concurrency?: number | null;
+  device_memory_gb?: number | null;
+  fingerprint_fonts_dir?: string | null;
   storage_quota_mb?: number | null;
   humanize: boolean;
   human_preset: WorkflowHumanPreset;
+  behavior_fidelity: WorkflowBehaviorFidelity;
   preflight_enabled: boolean;
   preflight_probe_url?: string | null;
   preflight_allowed_origins: string[];
@@ -227,6 +240,45 @@ export type RunValidationIssue = {
   edge_id?: string | null;
   message: string;
   level: "error" | "warning";
+};
+
+export type BrowserProfileDiagnostics = {
+  profile_dir: string;
+  identity_id: string | null;
+  display_name: string | null;
+  workflow_id: string | null;
+  workflow_name: string | null;
+  approximate_size_bytes: number;
+  last_modified_at: string | null;
+  last_run_at: string | null;
+  active_session: boolean;
+};
+
+export type BrowserProfileCleanupResult = {
+  deleted_profiles: string[];
+  skipped_profiles: BrowserProfileDiagnostics[];
+  reclaimed_bytes: number;
+};
+
+export type CloakBrowserDiagnostics = {
+  wrapper_version: string | null;
+  binary: {
+    version: string | null;
+    platform: string | null;
+    installed: boolean;
+    binary_path: string | null;
+    cache_dir: string | null;
+    download_url: string | null;
+  };
+  auto_update_enabled: boolean;
+  checksum_skip_enabled: boolean;
+  geoip_available: boolean;
+  profile_root: string;
+  headed_display: {
+    available: boolean;
+    reason: string | null;
+  };
+  profiles: BrowserProfileDiagnostics[];
 };
 
 export type ActionConfig =

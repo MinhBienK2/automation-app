@@ -11,6 +11,8 @@ import type {
   RunValidationIssue,
   SelectorCandidate,
   SettingsValidationIssue,
+  BrowserProfileCleanupResult,
+  CloakBrowserDiagnostics,
   Workflow,
   WorkflowBrowserConfig,
   WorkflowDetail,
@@ -46,6 +48,9 @@ export type WorkflowElectronBridge = {
   validateWorkflowSettings(
     settings: WorkflowSettings,
   ): Promise<SettingsValidationIssue[]>;
+  getCloakBrowserDiagnostics(): Promise<CloakBrowserDiagnostics>;
+  installCloakBrowserBinary(): Promise<CloakBrowserDiagnostics>;
+  cleanupOrphanedBrowserProfiles(): Promise<BrowserProfileCleanupResult>;
   validateWorkflowRun(workflowId: string): Promise<RunValidationIssue[]>;
   createWorkflow(name: string): Promise<Workflow>;
   renameWorkflow(id: string, name: string): Promise<void>;

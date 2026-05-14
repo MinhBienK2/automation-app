@@ -66,6 +66,18 @@ export function validateWorkflowSettings(settings: WorkflowSettings) {
   return bridge().validateWorkflowSettings(settings);
 }
 
+export function getCloakBrowserDiagnostics() {
+  return bridge().getCloakBrowserDiagnostics();
+}
+
+export function installCloakBrowserBinary() {
+  return bridge().installCloakBrowserBinary();
+}
+
+export function cleanupOrphanedBrowserProfiles() {
+  return bridge().cleanupOrphanedBrowserProfiles();
+}
+
 export function validateWorkflowRun(workflowId: string) {
   return bridge().validateWorkflowRun(workflowId);
 }

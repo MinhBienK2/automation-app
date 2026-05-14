@@ -497,6 +497,42 @@ function BrowserLaunchSettingsSection({
               onChange={(event) => onChange({ ...value, proxy_password: nullableText(event.currentTarget.value) })}
             />
           </label>
+          <label className="field">
+            <span>Proxy label</span>
+            <Input
+              value={value.proxy_label ?? ""}
+              onChange={(event) => onChange({ ...value, proxy_label: nullableText(event.currentTarget.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Proxy region</span>
+            <Input
+              value={value.proxy_region ?? ""}
+              onChange={(event) => onChange({ ...value, proxy_region: nullableText(event.currentTarget.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Proxy provider</span>
+            <Input
+              value={value.proxy_provider ?? ""}
+              onChange={(event) => onChange({ ...value, proxy_provider: nullableText(event.currentTarget.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Test account binding</span>
+            <Input
+              value={value.test_account_binding ?? ""}
+              onChange={(event) => onChange({ ...value, test_account_binding: nullableText(event.currentTarget.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Proxy bypass</span>
+            <Input
+              placeholder=".internal.test"
+              value={value.proxy_bypass ?? ""}
+              onChange={(event) => onChange({ ...value, proxy_bypass: nullableText(event.currentTarget.value) })}
+            />
+          </label>
         </>
       ) : null}
       <label className="field">
@@ -545,6 +581,49 @@ function BrowserLaunchSettingsSection({
         label="Touch input"
         onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
       />
+      <label className="field">
+        <span>Fingerprint platform</span>
+        <Select
+          value={value.fingerprint_platform ?? ""}
+          onChange={(event) => {
+            const nextValue = event.currentTarget.value;
+            onChange({
+              ...value,
+              fingerprint_platform:
+                nextValue === "windows" || nextValue === "macos" || nextValue === "linux"
+                  ? nextValue
+                  : null,
+            });
+          }}
+        >
+          <option value="">Seed default</option>
+          <option value="windows">Windows</option>
+          <option value="macos">macOS</option>
+          <option value="linux">Linux</option>
+        </Select>
+      </label>
+      <NumberField
+        label="Hardware concurrency"
+        value={value.hardware_concurrency ?? null}
+        onChange={(nextValue) => onChange({ ...value, hardware_concurrency: nextValue })}
+      />
+      <NumberField
+        label="Device memory GB"
+        value={value.device_memory_gb ?? null}
+        onChange={(nextValue) => onChange({ ...value, device_memory_gb: nextValue })}
+      />
+      <NumberField
+        label="Storage quota MB"
+        value={value.storage_quota_mb ?? null}
+        onChange={(nextValue) => onChange({ ...value, storage_quota_mb: nextValue })}
+      />
+      <label className="field">
+        <span>Fingerprint fonts directory</span>
+        <Input
+          value={value.fingerprint_fonts_dir ?? ""}
+          onChange={(event) => onChange({ ...value, fingerprint_fonts_dir: nullableText(event.currentTarget.value) })}
+        />
+      </label>
       <SwitchField
         checked={value.humanize !== false}
         label="Humanize browser input"
@@ -563,6 +642,26 @@ function BrowserLaunchSettingsSection({
         >
           <option value="default">Default</option>
           <option value="careful">Careful</option>
+        </Select>
+      </label>
+      <label className="field">
+        <span>Behavior fidelity</span>
+        <Select
+          value={value.behavior_fidelity}
+          onChange={(event) => {
+            const nextValue = event.currentTarget.value;
+            onChange({
+              ...value,
+              behavior_fidelity:
+                nextValue === "strict_humanized" || nextValue === "deterministic_internal"
+                  ? nextValue
+                  : "balanced",
+            });
+          }}
+        >
+          <option value="balanced">Balanced</option>
+          <option value="strict_humanized">Strict humanized</option>
+          <option value="deterministic_internal">Deterministic internal</option>
         </Select>
       </label>
       <SwitchField

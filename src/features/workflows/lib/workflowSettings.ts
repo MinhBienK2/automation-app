@@ -229,11 +229,19 @@ export function defaultWorkflowSettings({
       geoip: false,
       proxy_label: null,
       proxy_region: null,
+      proxy_provider: null,
+      proxy_bypass: null,
+      test_account_binding: null,
       webrtc_policy: "default",
       webrtc_ip: null,
+      fingerprint_platform: null,
+      hardware_concurrency: null,
+      device_memory_gb: null,
+      fingerprint_fonts_dir: null,
       storage_quota_mb: null,
       humanize: true,
       human_preset: "default",
+      behavior_fidelity: "balanced",
       preflight_enabled: false,
       preflight_probe_url: null,
       preflight_allowed_origins: [],
@@ -634,6 +642,13 @@ export const workflowSettingsHelp: Record<
             "Use it only when the authorized proxy requires a password and avoid placing the value in notes or screenshots.",
         },
         {
+          name: "Proxy metadata",
+          description:
+            "Non-secret proxy label, region, provider, bypass list, and approved test-account binding stored separately from credentials for audit and diagnostics.",
+          whenToUse:
+            "Use it whenever the identity depends on a known proxy pool or named owned test account and needs reviewable network posture evidence.",
+        },
+        {
           name: "Timezone",
           description:
             "Optional IANA timezone passed through CloakBrowser's launch-level fingerprint flag instead of Playwright context emulation, keeping local browser signals aligned with the identity.",
@@ -662,11 +677,25 @@ export const workflowSettingsHelp: Record<
             "Use stable desktop defaults for most owned workflows; only change mobile or touch settings as part of a complete matching identity.",
         },
         {
+          name: "Advanced fingerprint overrides",
+          description:
+            "Allowlisted high-risk CloakBrowser overrides for platform, hardware concurrency, device memory, storage quota, and a managed fonts directory; raw Chromium args stay unavailable.",
+          whenToUse:
+            "Prefer seed defaults, and use overrides only when an owned account, proxy inventory, or preflight probe requires a specific coherent device bundle.",
+        },
+        {
           name: "Humanize browser input",
           description:
             "Controls CloakBrowser's humanized mouse, keyboard, and scroll behavior. It should remain enabled for realistic workflow evidence unless deterministic internal testing requires otherwise.",
           whenToUse:
             "Keep it enabled for production-like probes and owned-system red-team simulation where interaction behavior is part of the defense surface.",
+        },
+        {
+          name: "Behavior fidelity",
+          description:
+            "Selects how strictly run actions must stay on humanized or normal browser APIs. Strict humanized mode blocks DOM fallback and CDP-sensitive actions and records the execution path in run traces.",
+          whenToUse:
+            "Use Balanced for normal probes, Strict humanized when behavior analytics are the target surface, and Deterministic internal for repeatable lab debugging.",
         },
         {
           name: "Fingerprint preflight",
@@ -778,6 +807,13 @@ export const workflowSettingsHelp: Record<
             "Chỉ dùng khi proxy được phép yêu cầu password và tránh đưa giá trị này vào notes hoặc screenshot.",
         },
         {
+          name: "Proxy metadata",
+          description:
+            "Metadata không phải secret gồm label, region, provider, bypass list, và test-account binding được phép, lưu tách khỏi credential để audit và diagnostics.",
+          whenToUse:
+            "Dùng khi identity phụ thuộc proxy pool hoặc test account owned có tên rõ ràng và cần evidence network posture dễ review.",
+        },
+        {
           name: "Timezone",
           description:
             "Timezone IANA tùy chọn được truyền qua launch-level fingerprint flag của CloakBrowser thay vì Playwright context emulation, giúp local browser signal khớp identity.",
@@ -806,11 +842,25 @@ export const workflowSettingsHelp: Record<
             "Giữ desktop default ổn định cho đa số workflow owned; chỉ đổi mobile hoặc touch khi có identity tương ứng đầy đủ.",
         },
         {
+          name: "Advanced fingerprint overrides",
+          description:
+            "Các override CloakBrowser allowlist, rủi ro cao cho platform, hardware concurrency, device memory, storage quota, và fonts directory managed; raw Chromium args vẫn không được mở.",
+          whenToUse:
+            "Ưu tiên seed default, chỉ override khi account owned, proxy inventory, hoặc preflight probe yêu cầu một device bundle nhất quán cụ thể.",
+        },
+        {
           name: "Humanize browser input",
           description:
             "Điều khiển hành vi mouse, keyboard, và scroll đã humanize của CloakBrowser. Nên bật cho evidence thực tế trừ khi test nội bộ cần deterministic.",
           whenToUse:
             "Giữ bật cho production-like probes và red-team simulation trên hệ thống owned khi behavior là một mặt phòng thủ.",
+        },
+        {
+          name: "Behavior fidelity",
+          description:
+            "Chọn mức workflow phải bám theo hành vi humanized hoặc browser API bình thường. Strict humanized sẽ chặn DOM fallback và action CDP-sensitive, đồng thời ghi execution path trong trace của run.",
+          whenToUse:
+            "Dùng Balanced cho probe thường, Strict humanized khi behavior analytics là bề mặt cần kiểm tra, và Deterministic internal cho debug lab cần lặp lại.",
         },
         {
           name: "Fingerprint preflight",

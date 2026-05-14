@@ -78,11 +78,19 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
     geoip,
     proxy_label,
     proxy_region,
+    proxy_provider,
+    proxy_bypass,
+    test_account_binding,
     webrtc_policy,
     webrtc_ip,
+    fingerprint_platform,
+    hardware_concurrency,
+    device_memory_gb,
+    fingerprint_fonts_dir,
     storage_quota_mb,
     humanize,
     human_preset,
+    behavior_fidelity,
     preflight_enabled,
     preflight_probe_url,
     preflight_allowed_origins,
@@ -99,6 +107,13 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
 ```
 
 `identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets or duplicates the identity. `profile_name` remains as a legacy compatibility key and mirrors `profile_dir` for persistent-profile runs.
+
+Proxy credentials can be provided as URL credentials or separate
+username/password fields, but not both. Package export removes proxy passwords
+and proxy URL credentials. Advanced fingerprint controls are allowlisted fields
+only; raw Chromium argument text is not part of the public settings contract.
+`behavior_fidelity` is `balanced`, `strict_humanized`, or
+`deterministic_internal`.
 
 Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
@@ -135,7 +150,12 @@ Legacy package sections named `settings.owned_test_gates` are ignored by current
 
 Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
 
-Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password` and secret search/hash portions of `settings.browser_launch.preflight_probe_url`.
+Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and secret search/hash portions of `settings.browser_launch.preflight_probe_url`.
+
+`BrowserProfileDiagnostics` reports profile directory, identity/workflow
+metadata, approximate size, last modified time, last run time, and active-session
+status. `BrowserProfileCleanupResult` reports deleted orphan profile directories,
+skipped referenced or active profiles, and reclaimed bytes.
 
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and full Workflow Settings to a new workflow id, including fields that package export sanitizes for external sharing.
 
