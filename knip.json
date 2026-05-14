@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "electron/main.ts",
+    "electron/preload.cts",
+    "electron/ipc.ts"
+  ],
+  "ignore": [
+    ".agents/skills/brainstorming/scripts/helper.js",
+    ".agents/skills/brainstorming/scripts/server.cjs"
+  ],
+  "ignoreExportsUsedInFile": {
+    "type": true,
+    "interface": true
+  }
+}

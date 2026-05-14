@@ -1,9 +1,15 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { invokeMock, mockTauriCommands, resetTauriInvoke } from "./tests/mocks/tauri";
+import {
+  workflowBridgeMock,
+  workflowCommandCallMock,
+  mockWorkflowBridgeCommands,
+  resetWorkflowBridge,
+} from "./tests/mocks/electron";
 import { workflow } from "./tests/mocks/workflowFixtures";
 import {
+  idleRunState,
   listWorkflowScenario,
   workflowDetailScenario,
 } from "./tests/mocks/workflowScenarios";
@@ -11,38 +17,38 @@ import { renderApp } from "./tests/utils/renderApp";
 
 describe("App settings and graph autosave", () => {
   beforeEach(() => {
-    resetTauriInvoke();
+    resetWorkflowBridge();
     window.localStorage.clear();
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
   test("opens settings from the sidebar and persists the autosave preference", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     const { unmount } = renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
-    const autosaveToggle = screen.getByRole("checkbox", {
+    const autosaveToggle = screen.getByRole("switch", {
       name: "Autosave graph changes",
     });
-    expect(autosaveToggle).toBeChecked();
+    expect(autosaveToggle).toHaveAttribute("aria-checked", "true");
 
     await userEvent.click(autosaveToggle);
-    expect(autosaveToggle).not.toBeChecked();
+    expect(autosaveToggle).toHaveAttribute("aria-checked", "false");
 
     unmount();
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
     expect(
-      screen.getByRole("checkbox", { name: "Autosave graph changes" }),
-    ).not.toBeChecked();
+      screen.getByRole("switch", { name: "Autosave graph changes" }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 
   test("shows graph keyboard and mouse guidance in settings", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
@@ -59,7 +65,7 @@ describe("App settings and graph autosave", () => {
 
   test("autosaves graph changes by default", async () => {
     const saveGraph = vi.fn().mockResolvedValue(undefined);
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: saveGraph,
     });
@@ -96,7 +102,7 @@ describe("App settings and graph autosave", () => {
 
   test("keeps the draft visible when autosave fails and does not run the stale saved graph", async () => {
     const saveGraph = vi.fn().mockRejectedValue(new Error("disk is full"));
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: saveGraph,
       run_workflow: {
@@ -133,13 +139,13 @@ describe("App settings and graph autosave", () => {
     await waitFor(() => {
       expect(saveGraph).toHaveBeenCalled();
     });
-    expect(invokeMock).not.toHaveBeenCalledWith("run_workflow", {
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
       workflowId: "workflow-1",
     });
   });
 
   test("renders primary graph actions only in the workflow header", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
     });
@@ -158,5 +164,39 @@ describe("App settings and graph autosave", () => {
     expect(within(editor).queryByRole("button", { name: "Run" })).not.toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Save Graph" }))
       .not.toBeInTheDocument();
+  });
+
+  test("polls run state for a workflow started from the list", async () => {
+    let runStateCalls = 0;
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_run_state: () => {
+        runStateCalls += 1;
+        return runStateCalls === 1
+          ? idleRunState
+          : {
+              ...idleRunState,
+              status: "success",
+              mode: "run_workflow",
+            };
+      },
+      run_workflow: {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Run Login flow" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.runWorkflow).toHaveBeenCalledWith("workflow-1");
+    });
+    expect(await screen.findByText("Running: Login flow")).toBeInTheDocument();
+
+    expect(await screen.findByText("Run succeeded: Login flow")).toBeInTheDocument();
+    expect(runStateCalls).toBeGreaterThan(1);
   });
 });

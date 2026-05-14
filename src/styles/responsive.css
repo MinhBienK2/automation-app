@@ -24,34 +24,28 @@
     display: grid;
   }
 
-  .builder-grid,
-  .monitor-grid,
   .workflow-graph-layout,
-  .graph-runtime-grid,
   .graph-shortcut-guide,
-  .browser-config-grid,
+  .workflow-settings-body,
+  .workflow-settings-grid,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
   }
 
-  .browser-config-header,
+  .workflow-settings-section-header,
+  .workflow-settings-help-header,
   .run-issue-header,
   .run-issue-item {
     display: grid;
   }
 
-  .browser-config-actions,
   .run-issue-header-actions,
   .run-issue-actions {
     justify-content: stretch;
   }
 
-  .step-detail-panel {
-    position: static;
-  }
-
-  .step-list {
-    max-height: none;
+  .workflow-settings-help-overview {
+    grid-template-columns: 1fr;
   }
 
   .workflow-card .row-actions,
@@ -105,5 +99,41 @@
 
   .action-category {
     flex: 0 0 auto;
+  }
+
+  .workflow-settings-dialog {
+    width: min(100vw - 24px, 680px);
+  }
+
+  .workflow-settings-sidebar {
+    display: flex;
+    overflow-x: auto;
+    padding-right: 0;
+    padding-bottom: 8px;
+    border-right: 0;
+    border-bottom: 1px solid #242424;
+  }
+
+  .workflow-settings-tab {
+    flex: 0 0 auto;
+  }
+
+  .workflow-settings-help-header {
+    padding-right: 32px;
+  }
+
+  .workflow-settings-title-row {
+    display: grid;
+  }
+
+  .workflow-settings-save-button {
+    width: fit-content;
+    margin-right: 38px;
+  }
+
+  .workflow-card .row-actions {
+    grid-template-columns: repeat(4, 40px);
+    justify-content: end;
+    width: auto;
   }
 }

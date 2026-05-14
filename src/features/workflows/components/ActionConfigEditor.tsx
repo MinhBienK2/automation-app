@@ -27,8 +27,8 @@ const actionFieldRenderers: ActionFieldRenderer[] = [
   AdvancedActionFields,
 ];
 
-export function ActionConfigEditor({ config, onChange }: ActionFieldsProps) {
-  return <ActionFields config={config} onChange={onChange} />;
+export function ActionConfigEditor(props: ActionFieldsProps) {
+  return <ActionFields {...props} />;
 }
 
 function ActionFields(props: ActionFieldsProps) {

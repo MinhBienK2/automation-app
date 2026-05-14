@@ -4,7 +4,6 @@
   padding: 16px;
 }
 
-.workflow-graph-heading h2,
 .graph-inspector h2 {
   font-size: 18px;
   font-weight: 400;
@@ -37,23 +36,11 @@
   border-right: 1px solid #242424;
 }
 
-.graph-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.graph-palette,
 .graph-inspector {
   display: grid;
   align-content: start;
   gap: 10px;
   min-width: 0;
-}
-
-.graph-palette button {
-  justify-content: start;
 }
 
 .graph-inspector-header {
@@ -134,8 +121,12 @@
   stroke-width: 1;
 }
 
-.graph-canvas .react-flow__edge.selected .react-flow__edge-path {
+.graph-canvas .react-flow__edge.selected:not(.graph-edge-has-issue):not(.graph-edge-failed) .react-flow__edge-path {
   stroke: #22d3ee;
+  stroke-width: 3.5;
+}
+
+.graph-canvas .react-flow__edge.selected .react-flow__edge-path {
   stroke-width: 3.5;
 }
 
@@ -151,6 +142,10 @@
   stroke: #fbbf24;
 }
 
+.graph-canvas .graph-edge-has-issue.graph-edge-selected .react-flow__edge-path {
+  stroke: #fbbf24;
+}
+
 .graph-canvas .graph-edge-running .react-flow__edge-path {
   stroke: #38bdf8;
 }
@@ -160,6 +155,10 @@
 }
 
 .graph-canvas .graph-edge-failed .react-flow__edge-path {
+  stroke: #ff7b72;
+}
+
+.graph-canvas .graph-edge-failed.graph-edge-selected .react-flow__edge-path {
   stroke: #ff7b72;
 }
 
@@ -302,12 +301,16 @@
 }
 
 .graph-node-selected {
-  border-color: rgba(34, 211, 238, 0.72);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.44);
+  outline: 2px solid rgba(34, 211, 238, 0.58);
+  outline-offset: 2px;
   color: #67e8f9;
 }
 
 .graph-node-has-issue {
+  border-color: rgba(251, 191, 36, 0.6);
+}
+
+.graph-node-has-issue.graph-node-selected {
   border-color: rgba(251, 191, 36, 0.6);
 }
 
@@ -320,6 +323,11 @@
 }
 
 .graph-node-failed {
+  border-color: rgba(248, 113, 113, 0.76);
+  color: #fca5a5;
+}
+
+.graph-node-failed.graph-node-selected {
   border-color: rgba(248, 113, 113, 0.76);
   color: #fca5a5;
 }
@@ -422,6 +430,39 @@
 .graph-config-fields .muted {
   font-size: 12px;
   line-height: 1.45;
+}
+
+.graph-compatibility-action {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #363636;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.graph-compatibility-action .eyebrow {
+  margin-bottom: 0;
+}
+
+.graph-compatibility-action h3 {
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.graph-compatibility-action pre {
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #242424;
+  border-radius: 6px;
+  background: #0f0f0f;
+  color: #b4b4b4;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .template-field {
@@ -592,12 +633,6 @@
   background: #171717;
 }
 
-.graph-move-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
 .graph-node-context-menu {
   position: fixed;
   z-index: 60;
@@ -627,18 +662,6 @@
 
 .graph-node-context-menu button:disabled {
   opacity: 0.45;
-}
-
-.graph-connect-form {
-  display: grid;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid #242424;
-}
-
-.graph-connect-form h3 {
-  font-size: 14px;
-  font-weight: 400;
 }
 
 .graph-node-issues {

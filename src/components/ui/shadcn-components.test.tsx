@@ -16,7 +16,8 @@ import { Input } from "./input";
 import { Label } from "./label";
 import { ScrollArea } from "./scroll-area";
 import { Select } from "./select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { SegmentedControl } from "./segmented-control";
+import { Switch, SwitchField } from "./switch";
 import { Textarea } from "./textarea";
 import {
   Tooltip,
@@ -85,14 +86,22 @@ describe("shadcn UI components", () => {
               <option value="element_visible">Element visible</option>
             </Select>
             <Textarea aria-label="Step notes" defaultValue="Check selector" />
-            <Tabs defaultValue="vi">
-              <TabsList>
-                <TabsTrigger value="vi">Tiếng Việt</TabsTrigger>
-                <TabsTrigger value="en">English</TabsTrigger>
-              </TabsList>
-              <TabsContent value="vi">Nội dung</TabsContent>
-              <TabsContent value="en">Content</TabsContent>
-            </Tabs>
+            <Switch aria-label="Use browser profile" checked onCheckedChange={() => {}} />
+            <SwitchField
+              checked={false}
+              label="Autosave graph changes"
+              description="Save edits automatically."
+              onCheckedChange={() => {}}
+            />
+            <SegmentedControl
+              ariaLabel="Help language"
+              value="vi"
+              options={[
+                { value: "vi", label: "VI" },
+                { value: "en", label: "EN" },
+              ]}
+              onValueChange={() => {}}
+            />
             <ScrollArea>
               <p>Scrollable help</p>
             </ScrollArea>
@@ -112,8 +121,14 @@ describe("shadcn UI components", () => {
     expect(screen.getByLabelText("Condition")).toHaveValue("duration");
     expect(screen.getByLabelText("Step notes")).toHaveValue("Check selector");
 
-    await userEvent.click(screen.getByRole("tab", { name: "English" }));
-
-    expect(screen.getByText("Content")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Use browser profile" }))
+      .toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: "Autosave graph changes" }))
+      .toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "VI" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Scrollable help")).toBeInTheDocument();
   });
 });

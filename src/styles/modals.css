@@ -75,11 +75,6 @@
   font-size: 12px;
 }
 
-.help-language-switch .help-language-active {
-  border-color: rgba(62, 207, 142, 0.48);
-  color: #3ecf8e;
-}
-
 .step-help-body {
   display: grid;
   gap: 12px;

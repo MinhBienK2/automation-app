@@ -7,23 +7,24 @@ Use this when a change may touch more than one layer.
 Check:
 
 - `src/types/workflow.ts`
+- `src/lib/actionCapabilities.ts`
 - `src/lib/workflowUi.ts`
 - `src/features/workflows/lib/workflowStepForm.ts`
-- `src/features/workflows/components/StepForm.tsx`
-- `src-tauri/src/domain/action_config.rs`
-- `src-tauri/src/domain/validation.rs`
-- `src-tauri/src/services/run_service.rs`
-- `src-tauri/src/runner/actions/`
-- `src-tauri/tests/domain_validation.rs`
-- `src-tauri/tests/command_api.rs`
+- `src/features/workflows/components/ActionConfigEditor.tsx`
+- `src/features/workflows/components/ActionConfig*Fields.tsx`
+- `electron/backend/graphCompiler.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/graphCompiler.test.ts`
+- `electron/backend/commands.test.ts`
 - `README.md` smoke checklist
 
 Risk:
 
 - UI can accept a config the backend rejects.
-- Rust can serialize a shape TypeScript does not understand.
+- Persisted JSON can contain a shape TypeScript does not understand.
 - A step can persist but fail at runner dispatch.
 - Defaults can create invalid configs.
+- Capability registry, palette visibility, backend validation, and runner unsupported behavior can drift.
 
 ## Command Changes
 
@@ -31,12 +32,15 @@ Check:
 
 - `src/lib/workflowApi.ts`
 - `src/lib/workflowApi.test.ts`
-- `src-tauri/src/commands.rs`
-- `src-tauri/tests/command_api.rs`
+- `electron/preload.cts`
+- `electron/ipc.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/commands.test.ts`
+- `src/tests/mocks/electron.ts`
 
 Risk:
 
-- Invoke names or payload keys drift.
+- Bridge method names or payload keys drift.
 - Errors stop being field-addressable.
 - UI tests mock old command names.
 
@@ -44,10 +48,11 @@ Risk:
 
 Check:
 
-- `src-tauri/src/runner/`
-- `src-tauri/src/services/run_service.rs`
-- `src-tauri/src/app_state.rs`
-- `src/features/workflows/components/TestStepMonitor.tsx`
+- `electron/backend/runner.ts`
+- `electron/backend/runner.test.ts`
+- `electron/backend/runner.smoke.test.ts`
+- `electron/backend/commands.ts`
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`
 - `src/features/workflows/components/RunStatusBar.tsx`
 
 Risk:
@@ -55,14 +60,16 @@ Risk:
 - Progress reporting no longer matches UI assumptions.
 - Stop becomes slow or misleading.
 - Browser sessions close when users expect inspection after a run.
+- Evidence paths can escape the app evidence directory or lose run-level audit context if path handling changes without tests.
 
 ## Persistence Changes
 
 Check:
 
-- `src-tauri/migrations/`
-- `src-tauri/src/repositories/workflow_repository.rs`
-- `src-tauri/tests/persistence.rs`
+- `electron/backend/database.ts`
+- `electron/backend/workflowRepository.ts`
+- `electron/backend/commands.ts`
+- `electron/backend/commands.test.ts`
 - Import/export commands if persisted shape changes.
 
 Risk:
@@ -70,4 +77,3 @@ Risk:
 - Existing workflows fail to deserialize.
 - Step order becomes non-contiguous.
 - Workflow list sorting or step counts drift.
-

@@ -25,8 +25,8 @@ Update `docs/` in the same change when code changes affect:
 
 - User-visible behavior.
 - Business rules or workflow semantics.
-- TypeScript/Rust payload contracts.
-- Tauri command names, payloads, or errors.
+- TypeScript payload contracts.
+- Electron IPC command names, payloads, or errors.
 - Action configs, defaults, labels, summaries, validation, or runner execution.
 - Persistence schema, ordering, or repository behavior.
 - Run state, progress, cancellation, or browser-session behavior.

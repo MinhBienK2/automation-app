@@ -7,13 +7,25 @@ Preserve these unless the task explicitly changes them.
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
-- Workflow detail includes workflow-level browser runtime config for launch profile, proxy, user agent, viewport, mobile/touch flags, and challenge policy.
+- Workflow list `Edit` opens Workflow Settings at General.
+- Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>` and preserves the saved graph and full copied settings without package-export sanitization.
+- Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run buttons are disabled while any workflow run is active, and list-started runs keep polling run state until terminal status.
+- Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
+- Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords.
+- Workflow detail exposes a header Settings action that opens Workflow Settings at Browser Launch.
+- Workflow Settings contains General, Run Policy, Browser Launch, and Environment sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
+- Workflow Settings Run Policy exposes maximum workflow duration and browser retention as editable fields. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
+- Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
+- Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses a named persistent browser profile and generates a stable profile name when the field is empty; turning it off clears `profile_name` so the run uses temporary browser state.
+- Workflow Settings Browser Launch exposes proxy and headless launch controls.
+- Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls and when to use it.
+- Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
-- Running from the graph workspace saves dirty browser runtime config before execution.
+- Running from the graph workspace saves dirty Workflow Settings sections before execution.
 - If saving the visible graph fails before a run, the run does not start.
-- If saving browser runtime config fails before a run, the run does not start.
+- If saving dirty Workflow Settings fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
 - Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge. Reconnecting a port should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
 - Graph control blocks keep branch work separate from continuation work. `If`, `Switch`, and `Try/Catch` continue after branch work through a `done` port.
@@ -25,10 +37,13 @@ Preserve these unless the task explicitly changes them.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
+- Targetable action editors default Target locator type to XPath for compatibility, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
+- Planned, launch-time, and graph-internal compatibility actions are hidden from primary Add Action authoring. Existing saved configs remain loadable, and legacy graph-internal action configs inside action nodes show a compatibility panel with a read-only JSON preview instead of an empty editor.
+- The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.
 - Graph undo/redo applies to graph edit snapshots only. Run state, validation results, save status, settings, and workflow metadata are not part of graph undo history.
-- Graph editor keyboard shortcuts do not fire while focus is inside inputs, textareas, contenteditable elements, action/node palettes, help dialogs, or dropdown popovers.
+- Graph editor keyboard shortcuts only fire after the graph workspace is active through pointer or focus interaction, and they do not fire while focus is inside inputs, textareas, contenteditable elements, action/node palettes, help dialogs, or dropdown popovers.
 - Dragging empty graph canvas creates a selection box by default. Holding Space temporarily switches the canvas to pan mode, and the toolbar pan hand can keep pan mode active until select mode is chosen again.
 - Selected graph nodes expose detailed schema-backed help from the inspector. Configured action nodes show an action guide popup with a compact header language toggle, minimum setup, detailed field and option explanations grouped by required, optional, and advanced, output guidance, workflow examples, and safety notes when relevant. Graph-native nodes explain purpose, ports and flow before minimum setup, grouped field and option explanations, and workflow examples in the same popup format. Common mistake guidance appears inside relevant field or option details, not as a separate top-level section.
 - `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
@@ -43,28 +58,39 @@ Preserve these unless the task explicitly changes them.
 
 - Workflow list and detail remain separate screens.
 - Workflow list does not expose legacy step counts or raw `updated_at` values; graph editing state belongs in the detail screen.
+- Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
+- Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
+- On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
-- Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off.
+- Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
+- Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
 - Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure.
+- Selecting a graph node or link must not replace amber validation or red failure color with cyan selection color. Selection can add a secondary ring or emphasis while preserving the issue/failure color.
 
 ## Command Boundary
 
-- Tauri command errors serialize as `{ message, field }`.
-- TypeScript invoke payload keys match Rust command parameters.
-- TypeScript and Rust DTO shapes remain compatible.
+- Electron IPC command errors serialize as `{ message, field? }`.
+- Renderer code calls the typed `window.workflowApi` bridge through `src/lib/workflowApi.ts`.
+- The renderer must not import Node, Electron, filesystem, SQLite, Playwright, or CloakBrowser APIs directly.
 
 ## Runner Behavior
 
 - Full runs execute the compiled saved graph.
-- Full runs use persisted workflow browser runtime config when present. Missing config rows keep legacy launch-action inference for compatibility.
+- Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
+- Full runs use persisted Workflow Settings as the run baseline. Browser Launch settings, including headless mode, are resolved before browser launch; Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
+- Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
+- Named browser profiles persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without a named profile use temporary browser state.
+- Missing Workflow Settings rows return lazy v2 defaults. Legacy browser config commands map to `settings.browser_launch`.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
-- Browser sessions remain open after success, failure, and stop unless the terminal End Success, End Failure, or Stop Workflow node has its close-browser option enabled.
+- Batch runs share active-run ownership with normal runs, can be stopped through Stop, and expose progress/summary in run outputs.
+- Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
+- Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 
 ## Persistence
@@ -72,4 +98,4 @@ Preserve these unless the task explicitly changes them.
 - Workflow summaries include the legacy `step_count` field until the summary contract is renamed.
 - Saved workflow graph JSON is keyed by workflow id.
 - Graph saves touch the parent workflow `updated_at`.
-- Saved workflow browser runtime config is keyed by workflow id and touches the parent workflow `updated_at`.
+- Saved Workflow Settings are keyed by workflow id and touch the parent workflow `updated_at`. Saving General also updates the workflow summary name.

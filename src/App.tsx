@@ -6,31 +6,56 @@ import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
-  getWorkflowBrowserConfig,
+  duplicateWorkflow as duplicateWorkflowCommand,
+  exportWorkflowPackage,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
+  getWorkflowSettings,
+  importWorkflowPackage,
   listWorkflows,
+  previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
-  saveWorkflowBrowserConfig,
+  saveWorkflowPackageFile,
   saveWorkflowGraph,
+  saveWorkflowSettingsSection,
   stopRun as stopRunCommand,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import {
   commandMessage,
-  defaultWorkflowBrowserConfig,
   initialRunState,
   normalizeRunState,
 } from "./lib/workflowUi";
+import {
+  defaultWorkflowSettings,
+} from "./features/workflows/lib/workflowSettings";
+import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { Button } from "./components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./components/ui/dialog";
+import {
+  PackageFlowCheckbox,
+  PackageSectionPicker,
+  sectionLabel,
+} from "./features/workflows/components/WorkflowPackageOptions";
 import type {
   GraphValidationIssue,
   RunState,
-  WorkflowBrowserConfig,
   WorkflowGraph,
   WorkflowDetail,
+  WorkflowPackage,
+  WorkflowPackagePreview,
+  WorkflowSettings,
+  WorkflowSettingsSectionId,
   WorkflowSummary,
 } from "./types/workflow";
 import "./App.css";
@@ -38,9 +63,16 @@ import "./App.css";
 type AppScreen = "list" | "detail" | "settings";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
-type BrowserConfigSaveStatus = "saved" | "unsaved" | "saving" | "failed";
+type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
+const workflowPackageSections: WorkflowSettingsSectionId[] = [
+  "general",
+  "run_policy",
+  "browser_launch",
+  "environment",
+];
+const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
 
 function readGraphAutosaveEnabled() {
   try {
@@ -77,19 +109,6 @@ function graphSaveStatusLabel(status: GraphSaveStatus) {
   }
 }
 
-function browserConfigSaveStatusLabel(status: BrowserConfigSaveStatus) {
-  switch (status) {
-    case "saved":
-      return "Saved";
-    case "unsaved":
-      return "Unsaved changes";
-    case "saving":
-      return "Saving...";
-    case "failed":
-      return "Save failed";
-  }
-}
-
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -99,10 +118,18 @@ function App() {
   );
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [workflowGraph, setWorkflowGraph] = useState<WorkflowGraph | null>(null);
-  const [browserConfig, setBrowserConfig] =
-    useState<WorkflowBrowserConfig | null>(null);
-  const [browserConfigSaveStatus, setBrowserConfigSaveStatus] =
-    useState<BrowserConfigSaveStatus>("saved");
+  const [workflowSettings, setWorkflowSettings] =
+    useState<WorkflowSettings | null>(null);
+  const [workflowSettingsSavedSnapshot, setWorkflowSettingsSavedSnapshot] =
+    useState<WorkflowSettings | null>(null);
+  const [workflowSettingsDialogOpen, setWorkflowSettingsDialogOpen] =
+    useState(false);
+  const [workflowSettingsActiveSection, setWorkflowSettingsActiveSection] =
+    useState<WorkflowSettingsSectionId>("general");
+  const [workflowSettingsSaveStatuses, setWorkflowSettingsSaveStatuses] =
+    useState<Record<WorkflowSettingsSectionId, WorkflowSettingsSaveStatus>>(
+      settingsSaveStatuses("saved"),
+    );
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(
     readGraphAutosaveEnabled,
   );
@@ -112,12 +139,29 @@ function App() {
   const [graphRevision, setGraphRevision] = useState(0);
   const [savedGraphRevision, setSavedGraphRevision] = useState(0);
   const [graphIssues, setGraphIssues] = useState<GraphValidationIssue[]>([]);
+  const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
   const [runState, setRunState] = useState<RunState>(initialRunState);
+  const [activeRunWorkflowName, setActiveRunWorkflowName] =
+    useState<string | null>(null);
   const [workflowDialogMode, setWorkflowDialogMode] =
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
+  const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] =
+    useState<WorkflowSummary | null>(null);
+  const [exportPackageWorkflow, setExportPackageWorkflow] =
+    useState<WorkflowSummary | null>(null);
+  const [exportPackageIncludeFlow, setExportPackageIncludeFlow] = useState(true);
+  const [exportPackageSections, setExportPackageSections] =
+    useState<WorkflowSettingsSectionId[]>(workflowPackageSections);
+  const [importPackage, setImportPackage] = useState<WorkflowPackage | null>(null);
+  const [importPackagePreview, setImportPackagePreview] =
+    useState<WorkflowPackagePreview | null>(null);
+  const [importPackageIncludeFlow, setImportPackageIncludeFlow] = useState(true);
+  const [importPackageSections, setImportPackageSections] =
+    useState<WorkflowSettingsSectionId[]>([]);
   const [appError, setAppError] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
 
@@ -206,8 +250,9 @@ function App() {
         setSelectedWorkflowId(null);
         setDetail(null);
         setWorkflowGraph(null);
-        setBrowserConfig(null);
+        setWorkflowSettings(null);
         setGraphIssues([]);
+        setGraphIssuesNeedRecheck(false);
         setAppError("Workflow not found");
         return;
       }
@@ -220,17 +265,27 @@ function App() {
         setWorkflowGraph(linearGraphFromSteps(loaded.steps));
       }
       try {
-        setBrowserConfig(await getWorkflowBrowserConfig(id));
+        const loadedSettings = await getWorkflowSettings(id);
+        setWorkflowSettings(loadedSettings);
+        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
       } catch {
-        setBrowserConfig(defaultWorkflowBrowserConfig(id));
+        const fallbackSettings = defaultWorkflowSettings({
+          workflowId: id,
+          workflowName: loaded.workflow.name,
+          createdAt: loaded.workflow.created_at,
+          updatedAt: loaded.workflow.updated_at,
+        });
+        setWorkflowSettings(fallbackSettings);
+        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(fallbackSettings));
       }
-      setBrowserConfigSaveStatus("saved");
+      setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
       graphRevisionRef.current = 0;
       savedGraphRevisionRef.current = 0;
       setGraphRevision(0);
       setSavedGraphRevision(0);
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
       setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
       setRunState((current) =>
         current.status === "running" ? current : initialRunState,
       );
@@ -248,10 +303,7 @@ function App() {
   }
 
   function openEditWorkflowDialog(workflow: WorkflowSummary) {
-    setWorkflowDialogMode("edit");
-    setEditingWorkflowId(workflow.id);
-    setWorkflowNameDraft(workflow.name);
-    setAppError("");
+    void openWorkflowSettings(workflow, "general");
   }
 
   function closeWorkflowDialog() {
@@ -290,19 +342,134 @@ function App() {
     }
   }
 
-  async function deleteWorkflow(id: string) {
-    if (!window.confirm("Delete this workflow?")) return;
+  function deleteWorkflow(id: string) {
+    setAppError("");
+    setDeleteWorkflowCandidate(
+      workflows.find((workflow) => workflow.id === id) ?? null,
+    );
+  }
 
-    await deleteWorkflowCommand(id);
-    if (selectedWorkflowId === id) {
-      setSelectedWorkflowId(null);
-      setDetail(null);
-      setWorkflowGraph(null);
-      setBrowserConfig(null);
-      setGraphIssues([]);
-      setScreen("list");
+  async function confirmDeleteWorkflow() {
+    if (!deleteWorkflowCandidate) return;
+    const id = deleteWorkflowCandidate.id;
+    setAppError("");
+
+    try {
+      await deleteWorkflowCommand(id);
+      setDeleteWorkflowCandidate(null);
+      if (selectedWorkflowId === id) {
+        setSelectedWorkflowId(null);
+        setDetail(null);
+        setWorkflowGraph(null);
+        setWorkflowSettings(null);
+        setGraphIssues([]);
+        setGraphIssuesNeedRecheck(false);
+        setScreen("list");
+      }
+      await loadWorkflows();
+    } catch (error) {
+      setAppError(commandMessage(error));
     }
-    await loadWorkflows();
+  }
+
+  async function duplicateWorkflow(workflow: WorkflowSummary) {
+    setAppError("");
+    const copyName = `Copy of ${workflow.name}`;
+
+    try {
+      await duplicateWorkflowCommand(workflow.id, copyName);
+      await loadWorkflows();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  function openExportPackageDialog(workflow: WorkflowSummary) {
+    setAppError("");
+    setExportPackageWorkflow(workflow);
+    setExportPackageIncludeFlow(true);
+    setExportPackageSections(workflowPackageSections);
+  }
+
+  function closeExportPackageDialog() {
+    setExportPackageWorkflow(null);
+    setExportPackageIncludeFlow(true);
+    setExportPackageSections(workflowPackageSections);
+    setAppError("");
+  }
+
+  async function submitExportPackage(event: React.FormEvent) {
+    event.preventDefault();
+    if (!exportPackageWorkflow) return;
+    if (!exportPackageIncludeFlow && exportPackageSections.length === 0) {
+      setAppError("Select at least Flow or one Settings section");
+      return;
+    }
+
+    setAppError("");
+
+    try {
+      const packageValue = await exportWorkflowPackage(exportPackageWorkflow.id, {
+        include_flow: exportPackageIncludeFlow,
+        settings_sections: exportPackageSections,
+      });
+      const filePath = await saveWorkflowPackageFile(packageValue);
+      if (!filePath) return;
+      closeExportPackageDialog();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function importWorkflowPackageFile(file: File | null) {
+    if (!file) return;
+    setAppError("");
+    if (file.size > workflowPackageFileSizeLimitBytes) {
+      setAppError("Workflow package file must be 5 MB or smaller");
+      return;
+    }
+
+    try {
+      const packageValue = JSON.parse(await file.text()) as WorkflowPackage;
+      const preview = await previewWorkflowPackage(packageValue);
+      setImportPackage(packageValue);
+      setImportPackagePreview(preview);
+      setImportPackageIncludeFlow(preview.includes_flow);
+      setImportPackageSections(preview.settings_sections);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  function closeImportPackageDialog() {
+    setImportPackage(null);
+    setImportPackagePreview(null);
+    setImportPackageIncludeFlow(true);
+    setImportPackageSections([]);
+    setAppError("");
+  }
+
+  async function submitImportPackage(event: React.FormEvent) {
+    event.preventDefault();
+    if (!importPackage) return;
+    if (!importPackageIncludeFlow && importPackageSections.length === 0) {
+      setAppError("Select at least Flow or one Settings section");
+      return;
+    }
+
+    setAppError("");
+
+    try {
+      const imported = await importWorkflowPackage(importPackage, {
+        include_flow: importPackageIncludeFlow,
+        settings_sections: importPackageSections,
+      });
+      closeImportPackageDialog();
+      await loadWorkflows();
+      await openWorkflow(imported.workflow.id);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
   }
 
   async function persistCurrentGraph() {
@@ -324,22 +491,66 @@ function App() {
     }
   }
 
-  async function persistBrowserConfig({ force = false } = {}) {
-    if (!detail || !browserConfig) return true;
-    if (!force && browserConfigSaveStatus === "saved") return true;
+  async function persistWorkflowSettingsSection(
+    section: WorkflowSettingsSectionId,
+    { force = false } = {},
+  ) {
+    if (!workflowSettings) return true;
+    if (!force && workflowSettingsSaveStatuses[section] === "saved") return true;
     setAppError("");
-    setBrowserConfigSaveStatus("saving");
+    setWorkflowSettingsSaveStatuses((current) => ({
+      ...current,
+      [section]: "saving",
+    }));
 
     try {
-      await saveWorkflowBrowserConfig(detail.workflow.id, browserConfig);
-      setBrowserConfigSaveStatus("saved");
+      const saved = await saveWorkflowSettingsSection(
+        workflowSettings.workflow_id,
+        section,
+        workflowSettings[section],
+      );
+      const nextSettings = isWorkflowSettings(saved) ? saved : workflowSettings;
+      setWorkflowSettings(nextSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(nextSettings));
+      if (section === "general") {
+        updateLoadedWorkflowName(nextSettings.general.name);
+      }
+      setWorkflowSettingsSaveStatuses((current) => ({
+        ...current,
+        [section]: "saved",
+      }));
       await loadWorkflows();
       return true;
     } catch (error) {
-      setBrowserConfigSaveStatus("failed");
+      setWorkflowSettingsSaveStatuses((current) => ({
+        ...current,
+        [section]: "failed",
+      }));
       setAppError(commandMessage(error));
       return false;
     }
+  }
+
+  async function persistDirtyWorkflowSettings() {
+    for (const section of Object.keys(workflowSettingsSaveStatuses) as WorkflowSettingsSectionId[]) {
+      if (workflowSettingsSaveStatuses[section] === "unsaved") {
+        const saved = await persistWorkflowSettingsSection(section, { force: true });
+        if (!saved) return false;
+      }
+    }
+
+    return true;
+  }
+
+  async function persistWorkflowSettings() {
+    const saved = await persistDirtyWorkflowSettings();
+    if (!saved) return false;
+    if (workflowSettings) {
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
+    }
+    setToastMessage("Workflow settings saved.");
+    window.setTimeout(() => setToastMessage(""), 2200);
+    return true;
   }
 
   async function runGraph() {
@@ -349,19 +560,35 @@ function App() {
     try {
       const saved = await persistCurrentGraph();
       if (!saved) return;
-      const browserConfigSaved = await persistBrowserConfig();
-      if (!browserConfigSaved) return;
+      const settingsSaved = await persistDirtyWorkflowSettings();
+      if (!settingsSaved) return;
+      setActiveRunWorkflowName(detail.workflow.name);
       const state = await runWorkflowCommand(detail.workflow.id);
+      setGraphIssues([]);
+      setGraphIssuesNeedRecheck(false);
       setRunState(normalizeRunState(state));
     } catch (error) {
       setAppError(commandMessage(error));
       if (workflowGraph) {
         try {
           setGraphIssues(await validateWorkflowGraph(workflowGraph));
+          setGraphIssuesNeedRecheck(false);
         } catch {
           // Keep the command error as the primary system issue when validation cannot run.
         }
       }
+    }
+  }
+
+  async function runSavedWorkflow(workflow: WorkflowSummary) {
+    setAppError("");
+    setActiveRunWorkflowName(workflow.name);
+
+    try {
+      const state = await runWorkflowCommand(workflow.id);
+      setRunState(normalizeRunState(state));
+    } catch (error) {
+      setAppError(commandMessage(error));
     }
   }
 
@@ -371,6 +598,7 @@ function App() {
 
     try {
       setGraphIssues(await validateWorkflowGraph(workflowGraph));
+      setGraphIssuesNeedRecheck(false);
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -378,10 +606,6 @@ function App() {
 
   async function saveGraph() {
     await persistCurrentGraph();
-  }
-
-  async function saveBrowserConfig() {
-    await persistBrowserConfig({ force: true });
   }
 
   async function stopRun() {
@@ -421,19 +645,100 @@ function App() {
 
   const changeWorkflowGraph = useCallback((nextGraph: WorkflowGraph) => {
     setWorkflowGraph(nextGraph);
-    setGraphIssues([]);
+    setGraphIssuesNeedRecheck((current) => current || graphIssues.length > 0);
     setGraphRevision((current) => {
       const nextRevision = current + 1;
       graphRevisionRef.current = nextRevision;
       return nextRevision;
     });
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
-  }, [graphAutosaveEnabled]);
+  }, [graphAutosaveEnabled, graphIssues.length]);
 
-  const changeBrowserConfig = useCallback((nextConfig: WorkflowBrowserConfig) => {
-    setBrowserConfig(nextConfig);
-    setBrowserConfigSaveStatus("unsaved");
-  }, []);
+  const changeWorkflowSettings = useCallback(
+    (nextSettings: WorkflowSettings) => {
+      setWorkflowSettings(nextSettings);
+      setWorkflowSettingsSaveStatuses((current) => ({
+        ...current,
+        [workflowSettingsActiveSection]: "unsaved",
+      }));
+    },
+    [workflowSettingsActiveSection],
+  );
+
+  async function openWorkflowSettings(
+    workflow: WorkflowSummary,
+    section: WorkflowSettingsSectionId,
+  ) {
+    setAppError("");
+    setWorkflowSettingsActiveSection(section);
+
+    try {
+      const loadedSettings = await getWorkflowSettings(workflow.id);
+      setWorkflowSettings(loadedSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
+    } catch {
+      const fallbackSettings = defaultWorkflowSettings({
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        createdAt: workflow.created_at,
+        updatedAt: workflow.updated_at,
+      });
+      setWorkflowSettings(fallbackSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(fallbackSettings));
+    }
+    setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
+    setWorkflowSettingsDialogOpen(true);
+  }
+
+  function openDetailWorkflowSettings(section: WorkflowSettingsSectionId) {
+    if (!detail) return;
+    if (!workflowSettings) {
+      const fallbackSettings = defaultWorkflowSettings({
+        workflowId: detail.workflow.id,
+        workflowName: detail.workflow.name,
+        createdAt: detail.workflow.created_at,
+        updatedAt: detail.workflow.updated_at,
+      });
+      setWorkflowSettings(fallbackSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(fallbackSettings));
+    }
+    setWorkflowSettingsActiveSection(section);
+    setWorkflowSettingsDialogOpen(true);
+  }
+
+  function closeWorkflowSettingsDialog() {
+    setWorkflowSettingsDialogOpen(false);
+    setAppError("");
+  }
+
+  function discardWorkflowSettingsChanges() {
+    if (workflowSettingsSavedSnapshot) {
+      setWorkflowSettings(cloneWorkflowSettings(workflowSettingsSavedSnapshot));
+    }
+    setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
+    closeWorkflowSettingsDialog();
+  }
+
+  function updateLoadedWorkflowName(name: string) {
+    setDetail((current) =>
+      current
+        ? {
+            ...current,
+            workflow: {
+              ...current.workflow,
+              name,
+            },
+          }
+        : current,
+    );
+    setWorkflows((current) =>
+      current.map((workflow) =>
+        workflow.id === workflowSettings?.workflow_id
+          ? { ...workflow, name }
+          : workflow,
+      ),
+    );
+  }
 
   const isRunning = runState.status === "running";
 
@@ -457,14 +762,12 @@ function App() {
             isRunning={isRunning}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
-            browserConfigSaveStatus={browserConfigSaveStatusLabel(browserConfigSaveStatus)}
             runState={runState}
-            browserConfig={browserConfig}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
+            graphIssuesNeedRecheck={graphIssuesNeedRecheck}
             onBack={backToList}
-            onBrowserConfigChange={changeBrowserConfig}
-            onSaveBrowserConfig={saveBrowserConfig}
+            onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={stopRun}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
@@ -478,16 +781,217 @@ function App() {
           workflowDialogMode={workflowDialogMode}
           workflowNameDraft={workflowNameDraft}
           appError={appError}
+          runState={runState}
+          activeRunWorkflowName={activeRunWorkflowName}
           onWorkflowNameDraftChange={setWorkflowNameDraft}
           onSubmitWorkflowDialog={submitWorkflowDialog}
           onOpenCreateWorkflow={openCreateWorkflowDialog}
           onOpenEditWorkflow={openEditWorkflowDialog}
+          onDuplicateWorkflow={duplicateWorkflow}
+          onRunWorkflow={runSavedWorkflow}
+          onOpenExportWorkflow={openExportPackageDialog}
+          onImportWorkflowPackageFile={importWorkflowPackageFile}
           onCloseWorkflowDialog={closeWorkflowDialog}
           onOpenWorkflow={openWorkflow}
           onDeleteWorkflow={deleteWorkflow}
         />
       )}
+      <WorkflowSettingsDialog
+        open={workflowSettingsDialogOpen}
+        settings={workflowSettings}
+        activeSection={workflowSettingsActiveSection}
+        error={appError}
+        hasUnsavedChanges={Object.values(workflowSettingsSaveStatuses).some(
+          (status) => status === "unsaved",
+        )}
+        onOpenChange={(open) => {
+          if (open) {
+            setWorkflowSettingsDialogOpen(true);
+            return;
+          }
+          closeWorkflowSettingsDialog();
+        }}
+        onActiveSectionChange={setWorkflowSettingsActiveSection}
+        onSettingsChange={changeWorkflowSettings}
+        onSaveSettings={persistWorkflowSettings}
+        onDiscardChanges={discardWorkflowSettingsChanges}
+      />
+      {toastMessage ? (
+        <div className="toast-alert app-toast" role="status">
+          {toastMessage}
+        </div>
+      ) : null}
+      <Dialog
+        open={Boolean(exportPackageWorkflow)}
+        onOpenChange={(open) => {
+          if (!open) closeExportPackageDialog();
+        }}
+      >
+        {exportPackageWorkflow ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Package</p>
+              <DialogTitle>Export Workflow</DialogTitle>
+              <DialogDescription>
+                Choose the workflow parts to include in the JSON package.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="workflow-dialog-form" onSubmit={submitExportPackage}>
+              <PackageFlowCheckbox
+                checked={exportPackageIncludeFlow}
+                label="Flow"
+                onChange={setExportPackageIncludeFlow}
+              />
+              <PackageSectionPicker
+                availableSections={workflowPackageSections}
+                selectedSections={exportPackageSections}
+                onSelectedSectionsChange={setExportPackageSections}
+              />
+              {appError ? <p className="field-error">{appError}</p> : null}
+              <DialogFooter className="form-actions">
+                <Button shape="pill" type="submit">
+                  Export
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeExportPackageDialog}
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <Dialog
+        open={Boolean(importPackage && importPackagePreview)}
+        onOpenChange={(open) => {
+          if (!open) closeImportPackageDialog();
+        }}
+      >
+        {importPackagePreview ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Package</p>
+              <DialogTitle>Import Workflow</DialogTitle>
+              <DialogDescription>
+                Import creates a new workflow and never overwrites an existing one.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="workflow-dialog-form" onSubmit={submitImportPackage}>
+              <dl className="package-preview-list">
+                <div>
+                  <dt>Name</dt>
+                  <dd>{importPackagePreview.workflow_name}</dd>
+                </div>
+                <div>
+                  <dt>Included</dt>
+                  <dd>
+                    {[
+                      importPackagePreview.includes_flow ? "Flow" : null,
+                      ...importPackagePreview.settings_sections.map(sectionLabel),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </dd>
+                </div>
+              </dl>
+              <PackageFlowCheckbox
+                checked={importPackageIncludeFlow}
+                disabled={!importPackagePreview.includes_flow}
+                label="Flow"
+                onChange={setImportPackageIncludeFlow}
+              />
+              <PackageSectionPicker
+                availableSections={importPackagePreview.settings_sections}
+                selectedSections={importPackageSections}
+                onSelectedSectionsChange={setImportPackageSections}
+              />
+              {importPackagePreview.omitted_fields.length > 0 ? (
+                <p className="muted">
+                  Sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
+                </p>
+              ) : null}
+              {appError ? <p className="field-error">{appError}</p> : null}
+              <DialogFooter className="form-actions">
+                <Button shape="pill" type="submit">
+                  Import
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeImportPackageDialog}
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <Dialog
+        open={Boolean(deleteWorkflowCandidate)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteWorkflowCandidate(null);
+        }}
+      >
+        {deleteWorkflowCandidate ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Workflow</p>
+              <DialogTitle>Delete Workflow</DialogTitle>
+              <DialogDescription>
+                This removes {deleteWorkflowCandidate.name} from the app. This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {appError ? <p className="field-error">{appError}</p> : null}
+            <DialogFooter className="form-actions">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  void confirmDeleteWorkflow();
+                }}
+              >
+                Delete Workflow
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setDeleteWorkflowCandidate(null)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </AppShell>
+  );
+}
+
+function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
+  return {
+    general: status,
+    run_policy: status,
+    browser_launch: status,
+    environment: status,
+  };
+}
+
+function cloneWorkflowSettings(settings: WorkflowSettings) {
+  return JSON.parse(JSON.stringify(settings)) as WorkflowSettings;
+}
+
+function isWorkflowSettings(value: unknown): value is WorkflowSettings {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "workflow_id" in value &&
+      "general" in value &&
+      "browser_launch" in value,
   );
 }
 

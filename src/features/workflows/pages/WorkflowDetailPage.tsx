@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
+import { Settings } from "lucide-react";
 import type {
   GraphValidationIssue,
   RunState,
-  WorkflowBrowserConfig,
   WorkflowGraph,
   WorkflowDetail,
 } from "../../../types/workflow";
@@ -15,21 +15,18 @@ import {
   WorkflowGraphEditor,
   type GraphSelectionRequest,
 } from "../components/WorkflowGraphEditor";
-import { WorkflowBrowserConfigPanel } from "../components/WorkflowBrowserConfigPanel";
 
 type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
   isRunning: boolean;
   appError: string;
   graphSaveStatus: string;
-  browserConfigSaveStatus: string;
   runState: RunState;
-  browserConfig: WorkflowBrowserConfig | null;
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
+  graphIssuesNeedRecheck: boolean;
   onBack: () => void;
-  onBrowserConfigChange: (config: WorkflowBrowserConfig) => void;
-  onSaveBrowserConfig: () => void;
+  onOpenWorkflowSettings: () => void;
   onStopRun: () => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
@@ -42,14 +39,12 @@ export function WorkflowDetailPage({
   isRunning,
   appError,
   graphSaveStatus,
-  browserConfigSaveStatus,
   runState,
-  browserConfig,
   workflowGraph,
   graphIssues,
+  graphIssuesNeedRecheck,
   onBack,
-  onBrowserConfigChange,
-  onSaveBrowserConfig,
+  onOpenWorkflowSettings,
   onStopRun,
   onGraphChange,
   onRunGraph,
@@ -59,8 +54,14 @@ export function WorkflowDetailPage({
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
   const runIssues = useMemo(
-    () => buildRunIssues({ appError, graphIssues, runState }),
-    [appError, graphIssues, runState],
+    () =>
+      buildRunIssues({
+        appError,
+        graphIssues,
+        graphIssuesNeedRecheck,
+        runState,
+      }),
+    [appError, graphIssues, graphIssuesNeedRecheck, runState],
   );
   const totalBlockingIssues = graphIssues.filter((issue) => issue.level === "error").length;
   const hasBlockingIssues = totalBlockingIssues > 0;
@@ -78,14 +79,13 @@ export function WorkflowDetailPage({
       edgeId,
     });
   };
-
   return (
     <section className="app-screen workflow-detail-screen">
       <PageHeader
         ariaLabel="Workflow detail header"
         backLabel="Back to Workflows"
         eyebrow="Workflow Detail"
-        meta={["Graph workspace", graphSaveStatus, `Updated ${detail.workflow.updated_at}`]}
+        meta={[graphSaveStatus]}
         status={
           <RunStatusBar
             state={runState}
@@ -97,6 +97,14 @@ export function WorkflowDetailPage({
         onBack={onBack}
         actions={
           <div className={isRunning ? "run-actions run-actions-with-stop" : "run-actions"}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={onOpenWorkflowSettings}
+            >
+              <Settings aria-hidden="true" />
+              Settings
+            </Button>
             <Button
               variant="secondary"
               type="button"
@@ -128,17 +136,9 @@ export function WorkflowDetailPage({
         }
       />
 
-      {browserConfig ? (
-        <WorkflowBrowserConfigPanel
-          config={browserConfig}
-          saveStatus={browserConfigSaveStatus}
-          onChange={onBrowserConfigChange}
-          onSave={onSaveBrowserConfig}
-        />
-      ) : null}
-
       <RunIssuePanel
         issues={runIssues}
+        issuesNeedRecheck={graphIssuesNeedRecheck}
         totalBlockingIssues={totalBlockingIssues}
         onRunAgain={onRunGraph}
         onSaveAgain={onSaveGraph}

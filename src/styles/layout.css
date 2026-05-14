@@ -333,33 +333,3 @@
 .settings-panel .graph-shortcut-guide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-
-.settings-toggle {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #2e2e2e;
-  border-radius: 8px;
-  background: #171717;
-}
-
-.settings-toggle input {
-  width: 18px;
-  min-height: 18px;
-  margin: 3px 0 0;
-  accent-color: #3ecf8e;
-}
-
-.settings-toggle span {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-}
-
-.settings-toggle strong {
-  color: #fafafa;
-  font-size: 14px;
-  font-weight: 500;
-}

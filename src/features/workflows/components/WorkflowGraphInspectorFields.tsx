@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
+import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { actionLabels } from "../../../lib/workflowUi";
 import { defaultActionConfig } from "../lib/workflowGraph";
@@ -570,13 +571,18 @@ export function NodeConfigFields({
       );
     case "action": {
       const actionConfig = isActionConfig(node.config) ? node.config : null;
+      const isCompatibilityAction = actionConfig
+        ? !actionPickerOptions.includes(actionConfig.type as ActionType)
+        : false;
       return (
         <div className="graph-config-fields">
           <ActionTypeDropdown
             value={actionTypeFromConfig(actionConfig)}
             onChange={updateActionType}
           />
-          {actionConfig ? (
+          {actionConfig && isCompatibilityAction ? (
+            <CompatibilityActionConfigPanel config={actionConfig} />
+          ) : actionConfig ? (
             <ActionConfigEditor
               config={actionConfig}
               onChange={(config) => updateConfig(config)}
@@ -699,6 +705,24 @@ function ActionTypeDropdown({
   );
 }
 
+function CompatibilityActionConfigPanel({ config }: { config: ActionConfig }) {
+  const actionLabel = actionLabels[config.type] ?? config.type;
+
+  return (
+    <div className="graph-compatibility-action">
+      <p className="eyebrow">Compatibility action</p>
+      <h3>{actionLabel}</h3>
+      <p className="muted">
+        Convert this saved action into a graph-native node or replace it with a
+        currently supported action type.
+      </p>
+      <pre aria-label="Compatibility action JSON">
+        {JSON.stringify(config, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
 function matchesActionSearch(actionType: ActionType, query: string) {
   const haystack = `${actionLabels[actionType]} ${actionDescriptions[actionType]}`.toLowerCase();
   return query
@@ -750,13 +774,10 @@ function CloseBrowserField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <Label className="graph-checkbox-field">
-      <Input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-      />
-      Close browser after workflow ends
-    </Label>
+    <SwitchField
+      checked={checked}
+      label="Close browser after workflow ends"
+      onCheckedChange={onChange}
+    />
   );
 }

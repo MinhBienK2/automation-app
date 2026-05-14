@@ -1,4 +1,5 @@
 import { GraphShortcutGuide } from "../../workflows/components/GraphShortcutGuide";
+import { SwitchField } from "../../../components/ui/switch";
 
 type SettingsPageProps = {
   graphAutosaveEnabled: boolean;
@@ -26,22 +27,13 @@ export function SettingsPage({
           </div>
         </div>
 
-        <label className="settings-toggle" htmlFor="graph-autosave-enabled">
-          <input
-            id="graph-autosave-enabled"
-            aria-label="Autosave graph changes"
-            aria-describedby="graph-autosave-description"
-            type="checkbox"
-            checked={graphAutosaveEnabled}
-            onChange={(event) => onGraphAutosaveEnabledChange(event.target.checked)}
-          />
-          <span>
-            <strong>Autosave graph changes</strong>
-            <small id="graph-autosave-description">
-              Save graph edits after changes. Turn this off to use manual Save.
-            </small>
-          </span>
-        </label>
+        <SwitchField
+          id="graph-autosave-enabled"
+          label="Autosave graph changes"
+          description="Save graph edits after changes. Turn this off to use manual Save."
+          checked={graphAutosaveEnabled}
+          onCheckedChange={onGraphAutosaveEnabledChange}
+        />
       </section>
 
       <section className="panel settings-panel" aria-label="Graph shortcuts">

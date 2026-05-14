@@ -1,6 +1,8 @@
-import type { WorkflowSummary } from "../../../types/workflow";
+import { Copy, Download, Eye, Pencil, Play, Trash2, Upload } from "lucide-react";
+import type { RunState, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
+import { IconButton } from "../../../components/ui/icon-button";
 import {
   Dialog,
   DialogContent,
@@ -11,16 +13,23 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { runStatusLabel } from "../../../lib/workflowUi";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
   workflowDialogMode: "create" | "edit" | null;
   workflowNameDraft: string;
   appError: string;
+  runState: RunState;
+  activeRunWorkflowName?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
+  onDuplicateWorkflow: (workflow: WorkflowSummary) => void;
+  onRunWorkflow: (workflow: WorkflowSummary) => void;
+  onOpenExportWorkflow: (workflow: WorkflowSummary) => void;
+  onImportWorkflowPackageFile: (file: File | null) => void;
   onCloseWorkflowDialog: () => void;
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
@@ -31,10 +40,16 @@ export function WorkflowListPage({
   workflowDialogMode,
   workflowNameDraft,
   appError,
+  runState,
+  activeRunWorkflowName,
   onWorkflowNameDraftChange,
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
+  onDuplicateWorkflow,
+  onRunWorkflow,
+  onOpenExportWorkflow,
+  onImportWorkflowPackageFile,
   onCloseWorkflowDialog,
   onOpenWorkflow,
   onDeleteWorkflow,
@@ -47,6 +62,11 @@ export function WorkflowListPage({
       : "Rename the workflow without changing its graph.";
   const workflowNameLabel =
     workflowDialogMode === "create" ? "New workflow name" : "Workflow name";
+  const isRunning = runState.status === "running";
+  const runStatusText =
+    runState.status === "idle"
+      ? null
+      : `${runStatusLabel(runState)}${activeRunWorkflowName ? `: ${activeRunWorkflowName}` : ""}`;
 
   return (
     <section className="app-screen workflow-list-screen">
@@ -59,10 +79,34 @@ export function WorkflowListPage({
           <div className="header-stats" aria-label="Workflow summary">
             <span>{workflows.length} workflows</span>
           </div>
+          <label className="workflow-import-button">
+            <Upload aria-hidden="true" />
+            Import Workflow
+            <input
+              aria-label="Workflow package file"
+              className="workflow-package-file-input"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                onImportWorkflowPackageFile(event.currentTarget.files?.[0] ?? null);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
           <Button shape="pill" type="button" onClick={onOpenCreateWorkflow}>
             Create Workflow
           </Button>
         </div>
+        {appError ? (
+          <p className="field-error" role="alert">
+            {appError}
+          </p>
+        ) : null}
+        {runStatusText ? (
+          <p className="muted" role="status">
+            {runStatusText}
+          </p>
+        ) : null}
       </header>
 
       <section className="workflow-library" aria-label="Workflow list">
@@ -80,20 +124,54 @@ export function WorkflowListPage({
                 </div>
               </div>
               <div className="row-actions">
-                <Button shape="pill" type="button" onClick={() => onOpenWorkflow(workflow.id)}>
-                  View Details
-                </Button>
-                <Button
+                <IconButton
+                  label="View Details"
+                  type="button"
+                  onClick={() => onOpenWorkflow(workflow.id)}
+                >
+                  <Eye aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={`Run ${workflow.name}`}
+                  type="button"
+                  variant="secondary"
+                  disabled={isRunning}
+                  onClick={() => onRunWorkflow(workflow)}
+                >
+                  <Play aria-hidden="true" />
+                </IconButton>
+                <IconButton
                   variant="secondary"
                   type="button"
-                  aria-label={`Edit ${workflow.name}`}
+                  label={`Edit ${workflow.name}`}
                   onClick={() => onOpenEditWorkflow(workflow)}
                 >
-                  Edit
-                </Button>
-                <Button variant="destructive" type="button" onClick={() => onDeleteWorkflow(workflow.id)}>
-                  Delete
-                </Button>
+                  <Pencil aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={`Duplicate ${workflow.name}`}
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onDuplicateWorkflow(workflow)}
+                >
+                  <Copy aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={`Export ${workflow.name}`}
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenExportWorkflow(workflow)}
+                >
+                  <Download aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={`Delete ${workflow.name}`}
+                  type="button"
+                  variant="destructive"
+                  onClick={() => onDeleteWorkflow(workflow.id)}
+                >
+                  <Trash2 aria-hidden="true" />
+                </IconButton>
               </div>
             </Card>
           ))

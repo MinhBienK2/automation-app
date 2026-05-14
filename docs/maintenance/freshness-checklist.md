@@ -10,15 +10,15 @@ Use this when docs look stale or the task touches documented behavior.
 
 ## Check Contracts
 
-- Do TypeScript and Rust DTOs still match?
-- Do command names and invoke payload keys still match?
+- Do TypeScript DTOs match Electron bridge/backend payloads?
+- Do command names and bridge payload keys still match?
 - Does `CommandError` still serialize as `{ message, field }`?
-- Do action config type strings still match Rust snake_case serde names?
+- Do action config type strings still match the TypeScript `ActionType` union?
 
 ## Check Behavior
 
 - Does workflow lifecycle behavior match current UI and commands?
-- Does runner progress match current `AppState` and monitor behavior?
+- Does runner progress match current command run state and monitor behavior?
 - Does persistence still preserve step ordering and parent `updated_at`?
 
 ## Check Verification
@@ -30,4 +30,3 @@ Use this when docs look stale or the task touches documented behavior.
 ## Fix Rule
 
 If a doc is wrong for the touched area, update it in the same task.
-

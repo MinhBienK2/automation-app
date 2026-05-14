@@ -178,10 +178,14 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
-  const [isPanMode, setIsPanMode] = useState(false);
+  const [isToolbarPanMode, setIsToolbarPanMode] = useState(false);
+  const [isSpacePanActive, setIsSpacePanActive] = useState(false);
+  const isPanMode = isToolbarPanMode || isSpacePanActive;
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
+  const editorRef = useRef<HTMLElement | null>(null);
+  const isGraphShortcutActiveRef = useRef(false);
   const graphRef = useRef(graph);
   const selectionRef = useRef(selection);
   const clipboardRef = useRef(clipboard);
@@ -399,12 +403,19 @@ export function WorkflowGraphEditor({
   );
 
   useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      isGraphShortcutActiveRef.current =
+        target instanceof Node && Boolean(editorRef.current?.contains(target));
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
+      if (!isGraphShortcutActiveRef.current) return;
       if (shouldIgnoreGraphShortcut(event)) return;
 
       if (event.code === "Space") {
         event.preventDefault();
-        setIsPanMode(true);
+        setIsSpacePanActive(true);
         return;
       }
 
@@ -500,20 +511,23 @@ export function WorkflowGraphEditor({
     }
 
     function handleKeyUp(event: KeyboardEvent) {
+      if (!isGraphShortcutActiveRef.current) return;
       if (event.code === "Space") {
         event.preventDefault();
-        setIsPanMode(false);
+        setIsSpacePanActive(false);
       }
     }
 
     function stopPanMode() {
-      setIsPanMode(false);
+      setIsSpacePanActive(false);
     }
 
+    window.addEventListener("pointerdown", handlePointerDown, true);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", stopPanMode);
     return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, true);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", stopPanMode);
@@ -786,17 +800,30 @@ export function WorkflowGraphEditor({
   }
 
   return (
-    <section className="workflow-graph-editor panel" aria-label="Visual Graph">
+    <section
+      ref={editorRef}
+      className="workflow-graph-editor panel"
+      aria-label="Visual Graph"
+      onFocusCapture={() => {
+        isGraphShortcutActiveRef.current = true;
+      }}
+      onBlurCapture={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (!(nextTarget instanceof Node) || !editorRef.current?.contains(nextTarget)) {
+          isGraphShortcutActiveRef.current = false;
+        }
+      }}
+    >
       <WorkflowGraphToolbar
-        isPanMode={isPanMode}
+        isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}
         onRedo={redoGraphEdit}
-        onSelectMode={() => setIsPanMode(false)}
-        onTogglePanMode={() => setIsPanMode((current) => !current)}
+        onSelectMode={() => setIsToolbarPanMode(false)}
+        onTogglePanMode={() => setIsToolbarPanMode((current) => !current)}
         onUndo={undoGraphEdit}
       />
 

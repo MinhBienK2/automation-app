@@ -1,18 +1,18 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
-import { mockTauriCommands, resetTauriInvoke } from "../tests/mocks/tauri";
+import { mockWorkflowBridgeCommands, resetWorkflowBridge } from "../tests/mocks/electron";
 import { workflow } from "../tests/mocks/workflowFixtures";
 import { listWorkflowScenario } from "../tests/mocks/workflowScenarios";
 import { renderApp } from "../tests/utils/renderApp";
 
 describe("App shell", () => {
   beforeEach(() => {
-    resetTauriInvoke();
+    resetWorkflowBridge();
   });
 
   test("toggles the application sidebar", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
@@ -33,7 +33,7 @@ describe("App shell", () => {
   });
 
   test("renders the sidebar and scrollable content as separate layout regions", async () => {
-    mockTauriCommands(listWorkflowScenario([workflow]));
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 

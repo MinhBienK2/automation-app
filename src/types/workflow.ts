@@ -1,6 +1,7 @@
 export type ActionType =
   | "navigate"
   | "wait"
+  | "random_wait"
   | "input_text"
   | "clear_input"
   | "click"
@@ -51,7 +52,18 @@ export type ActionType =
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
+  | "switch_condition"
+  | "while_loop"
+  | "repeat_until"
+  | "try_catch"
+  | "fallback_block"
+  | "break_loop"
+  | "continue_loop"
   | "stop_workflow"
+  | "transform_variable"
+  | "assert_output"
+  | "run_subworkflow"
+  | "domain_allowlist"
   | "use_profile"
   | "save_session"
   | "load_session"
@@ -81,11 +93,6 @@ export type ActionType =
 export type RunStatus = "idle" | "running" | "success" | "failed" | "stopped";
 export type RunMode = "none" | "run_workflow" | "test_step";
 export type VariableValueType = "text" | "json" | "number" | "boolean";
-export type WorkflowBrowserChallengePolicy =
-  | "none"
-  | "detect_only"
-  | "pause_for_human";
-
 export type VariableAssignment = {
   name: string;
   value_type: VariableValueType;
@@ -114,12 +121,82 @@ export type WorkflowBrowserConfig = {
   proxy_server?: string | null;
   proxy_username?: string | null;
   proxy_password?: string | null;
-  user_agent?: string | null;
-  viewport_width?: number | null;
-  viewport_height?: number | null;
-  mobile: boolean;
-  touch: boolean;
-  challenge_policy: WorkflowBrowserChallengePolicy;
+  headless?: boolean | null;
+};
+
+export type WorkflowSettingsSectionId =
+  | "general"
+  | "run_policy"
+  | "browser_launch"
+  | "environment";
+
+export type WorkflowBrowserRetention = "retain" | "close";
+export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
+
+export type WorkflowSettingsGeneral = {
+  name: string;
+  description: string;
+  tags: string[];
+  notes: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type WorkflowSettingsRunPolicy = {
+  max_workflow_duration_ms?: number | null;
+  browser_retention: WorkflowBrowserRetention;
+  batch_concurrency_limit?: number | null;
+  batch_headless: boolean;
+  batch_stop_on_first_failed_row: boolean;
+};
+
+export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflow_id" | "headless"> & {
+  session_mode: WorkflowBrowserSessionMode;
+  headless: boolean;
+};
+
+export type WorkflowSettingsEnvironment = {
+  initial_variables: VariableAssignment[];
+};
+
+export type WorkflowSettingsMigrationNote = {
+  path: string;
+  action: "converted" | "dropped" | "review";
+  message: string;
+};
+
+export type WorkflowGraphMigrationNote = {
+  path: string;
+  action: "converted" | "dropped" | "review";
+  message: string;
+};
+
+export type WorkflowSettings = {
+  workflow_id: string;
+  version: number;
+  general: WorkflowSettingsGeneral;
+  run_policy: WorkflowSettingsRunPolicy;
+  browser_launch: WorkflowSettingsBrowserLaunch;
+  environment: WorkflowSettingsEnvironment;
+  migration_notes: WorkflowSettingsMigrationNote[];
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type SettingsValidationIssue = {
+  section: WorkflowSettingsSectionId;
+  field?: string | null;
+  message: string;
+  level: "error" | "warning";
+};
+
+export type RunValidationIssue = {
+  source: "graph" | "settings";
+  field?: string | null;
+  node_id?: string | null;
+  edge_id?: string | null;
+  message: string;
+  level: "error" | "warning";
 };
 
 export type ActionConfig =
@@ -150,12 +227,21 @@ export type ActionConfig =
         url?: string | null;
         duration_ms?: number | null;
         timeout_ms?: number | null;
+        target?: ElementTarget | null;
+      };
+    }
+  | {
+      type: "random_wait";
+      config: {
+        min_ms: number;
+        max_ms: number;
       };
     }
   | {
       type: "input_text";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
@@ -168,7 +254,8 @@ export type ActionConfig =
   | {
       type: "clear_input";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         method?: "select_all" | "backspace" | "dom" | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -178,7 +265,8 @@ export type ActionConfig =
   | {
       type: "click";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         mode?: "real" | "force_dom" | null;
         button?: "left" | "right" | "middle" | null;
@@ -209,6 +297,7 @@ export type ActionConfig =
         direction: "up" | "down" | "left" | "right";
         pixels: number;
         xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         behavior?: "instant" | "smooth" | null;
         block?: "start" | "center" | "end" | "nearest" | null;
@@ -220,7 +309,8 @@ export type ActionConfig =
   | {
       type: "select_option";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         match_by: "label" | "value";
         value: string;
@@ -231,7 +321,8 @@ export type ActionConfig =
   | {
       type: "set_checkbox";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         state: "checked" | "unchecked";
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -244,6 +335,7 @@ export type ActionConfig =
       type: "hover";
       config: {
         xpath: string;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -260,8 +352,10 @@ export type ActionConfig =
   | {
       type: "drag_and_drop";
       config: {
-        source_xpath: string;
-        target_xpath: string;
+        source_xpath?: string | null;
+        source_target?: ElementTarget | null;
+        target_xpath?: string | null;
+        target_target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -278,7 +372,8 @@ export type ActionConfig =
   | {
       type: "type_sequence";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         delay_ms?: number | null;
@@ -310,7 +405,8 @@ export type ActionConfig =
   | {
       type: "upload_file";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         files: string[];
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -321,6 +417,7 @@ export type ActionConfig =
       type: "submit_form";
       config: {
         xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -329,7 +426,8 @@ export type ActionConfig =
   | {
       type: "select_custom_option";
       config: {
-        trigger_xpath: string;
+        trigger_xpath?: string | null;
+        trigger_target?: ElementTarget | null;
         option_text: string;
         iframe_xpath?: string | null;
         timeout_ms?: number | null;
@@ -338,7 +436,8 @@ export type ActionConfig =
   | {
       type: "set_contenteditable";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
@@ -382,7 +481,7 @@ export type ActionConfig =
   | { type: "open_new_tab"; config: { url?: string | null } }
   | { type: "switch_tab"; config: { index: number } }
   | { type: "close_tab"; config: { index?: number | null } }
-  | { type: "switch_frame"; config: { xpath?: string | null } }
+  | { type: "switch_frame"; config: { xpath?: string | null; target?: ElementTarget | null } }
   | { type: "accept_dialog"; config: { prompt_text?: string | null } }
   | { type: "dismiss_dialog"; config: Record<string, never> }
   | { type: "set_download_directory"; config: { path: string } }
@@ -403,7 +502,8 @@ export type ActionConfig =
   | {
       type: "assert_element";
       config: {
-        xpath: string;
+        xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
         timeout_ms?: number | null;
@@ -413,6 +513,7 @@ export type ActionConfig =
       type: "assert_text";
       config: {
         xpath?: string | null;
+        target?: ElementTarget | null;
         iframe_xpath?: string | null;
         text: string;
         match_mode: "contains" | "equals";
@@ -423,18 +524,18 @@ export type ActionConfig =
       type: "if_condition";
       config: {
         condition: WorkflowCondition;
-        then_steps: ActionConfig[];
-        else_steps: ActionConfig[];
+        then_steps: CompiledNestedAction[];
+        else_steps: CompiledNestedAction[];
       };
     }
-  | { type: "repeat_times"; config: { times: number; steps: ActionConfig[] } }
+  | { type: "repeat_times"; config: { times: number; steps: CompiledNestedAction[] } }
   | {
       type: "repeat_for_each";
       config: {
         item_name: string;
         array_variable?: string | null;
         items: string[];
-        steps: ActionConfig[];
+        steps: CompiledNestedAction[];
       };
     }
   | {
@@ -442,16 +543,16 @@ export type ActionConfig =
       config: {
         max_attempts: number;
         delay_ms?: number | null;
-        steps: ActionConfig[];
-        failed_steps?: ActionConfig[];
+        steps: CompiledNestedAction[];
+        failed_steps?: CompiledNestedAction[];
       };
     }
   | {
       type: "switch_condition";
       config: {
         expression: string;
-        cases: Array<{ value: string; steps: ActionConfig[] }>;
-        default_steps: ActionConfig[];
+        cases: Array<{ value: string; steps: CompiledNestedAction[] }>;
+        default_steps: CompiledNestedAction[];
       };
     }
   | {
@@ -460,7 +561,7 @@ export type ActionConfig =
         condition: WorkflowCondition;
         max_attempts?: number | null;
         timeout_ms?: number | null;
-        steps: ActionConfig[];
+        steps: CompiledNestedAction[];
       };
     }
   | {
@@ -469,24 +570,24 @@ export type ActionConfig =
         condition: WorkflowCondition;
         max_attempts?: number | null;
         timeout_ms?: number | null;
-        steps: ActionConfig[];
-        timeout_steps: ActionConfig[];
+        steps: CompiledNestedAction[];
+        timeout_steps: CompiledNestedAction[];
       };
     }
   | {
       type: "try_catch";
       config: {
-        try_steps: ActionConfig[];
-        success_steps: ActionConfig[];
-        error_steps: ActionConfig[];
-        finally_steps: ActionConfig[];
+        try_steps: CompiledNestedAction[];
+        success_steps: CompiledNestedAction[];
+        error_steps: CompiledNestedAction[];
+        finally_steps: CompiledNestedAction[];
       };
     }
   | {
       type: "fallback_block";
       config: {
-        primary_steps: ActionConfig[];
-        fallback_steps: ActionConfig[];
+        primary_steps: CompiledNestedAction[];
+        fallback_steps: CompiledNestedAction[];
       };
     }
   | { type: "break_loop"; config: Record<string, never> }
@@ -607,22 +708,55 @@ export type HeaderPair = {
   value: string;
 };
 
+export type ElementLocatorKind =
+  | "test_id"
+  | "role"
+  | "label"
+  | "placeholder"
+  | "text"
+  | "css"
+  | "xpath"
+  | "attribute";
+
+export type ElementLocator = {
+  kind: ElementLocatorKind;
+  value: string;
+  role?: string | null;
+  attribute?: string | null;
+  exact?: boolean | null;
+};
+
+export type ElementTargetConstraints = {
+  visible?: boolean | null;
+  enabled?: boolean | null;
+  contains_text?: string | null;
+  index?: number | null;
+};
+
+export type ElementTarget = {
+  locators: ElementLocator[];
+  constraints?: ElementTargetConstraints | null;
+  iframe?: ElementTarget | null;
+};
+
 export type WorkflowCondition =
   | { kind: "output_equals"; name: string; value: string }
   | { kind: "output_contains"; name: string; value: string }
   | { kind: "text_visible"; text: string }
   | { kind: "url_contains"; value: string }
-  | { kind: "element_visible"; xpath: string };
+  | { kind: "element_visible"; xpath?: string | null; target?: ElementTarget | null };
 
 type ElementTargetActionConfig = {
-  xpath: string;
+  xpath?: string | null;
+  target?: ElementTarget | null;
   iframe_xpath?: string | null;
   wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
   timeout_ms?: number | null;
 };
 
 type DataCaptureElementConfig = {
-  xpath: string;
+  xpath?: string | null;
+  target?: ElementTarget | null;
   iframe_xpath?: string | null;
   output_name: string;
   timeout_ms?: number | null;
@@ -715,6 +849,7 @@ export type WorkflowGraph = {
   nodes: GraphNode[];
   edges: GraphEdge[];
   viewport: GraphViewport;
+  migration_notes?: WorkflowGraphMigrationNote[];
 };
 
 export type GraphValidationIssue = {
@@ -730,8 +865,16 @@ export type CompiledGraphStep = {
   config: ActionConfig;
 };
 
+export type CompiledNestedAction = ActionConfig & {
+  graph_node_id?: string;
+  graph_label?: string;
+};
+
 export type CompiledWorkflowGraph = {
   steps: CompiledGraphStep[];
+  domain_policy?: {
+    allowed_domains: string[];
+  } | null;
 };
 
 export type ScheduleKind =
@@ -747,7 +890,7 @@ export type OrchestrationSchedule = {
 export type BatchRunRequest = {
   rows: Array<Record<string, string>>;
   concurrency_limit?: number | null;
-  headless: boolean;
+  headless?: boolean | null;
 };
 
 export type BatchRunRowResult = {
@@ -767,6 +910,43 @@ export type WorkflowExport = {
   version: number;
   workflow: Workflow;
   steps: WorkflowStep[];
+  settings?: WorkflowSettings | null;
+};
+
+export type WorkflowPackageExportOptions = {
+  include_flow: boolean;
+  settings_sections: WorkflowSettingsSectionId[];
+};
+
+export type WorkflowPackageImportOptions = {
+  include_flow: boolean;
+  settings_sections: WorkflowSettingsSectionId[];
+};
+
+export type WorkflowPackageSettings = Partial<{
+  general: WorkflowSettingsGeneral;
+  run_policy: WorkflowSettingsRunPolicy;
+  browser_launch: WorkflowSettingsBrowserLaunch;
+  environment: WorkflowSettingsEnvironment;
+}>;
+
+export type WorkflowPackage = {
+  kind: "workflow_package";
+  version: 2;
+  workflow: {
+    name: string;
+  };
+  included_sections: string[];
+  omitted_fields: string[];
+  flow?: WorkflowGraph | null;
+  settings?: WorkflowPackageSettings | null;
+};
+
+export type WorkflowPackagePreview = {
+  workflow_name: string;
+  includes_flow: boolean;
+  settings_sections: WorkflowSettingsSectionId[];
+  omitted_fields: string[];
 };
 
 export type ElementSnapshot = {
@@ -788,10 +968,6 @@ export type SelectorCandidate = {
 export type RecordedEvent =
   | { type: "click"; xpath: string }
   | { type: "input_text"; xpath: string; text: string };
-
-export type GeneratedFixture = {
-  path: string;
-};
 
 export type RunState = {
   status: RunStatus;

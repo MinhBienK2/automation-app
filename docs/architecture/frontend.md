@@ -2,16 +2,20 @@
 
 ## Purpose
 
-The frontend renders workflow management UI, owns interaction state, and calls typed Tauri command wrappers.
+The frontend renders workflow management UI, owns interaction state, and calls typed Electron bridge wrappers.
 
 ## Key Files
 
 - `src/App.tsx`: top-level state orchestration.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave and graph shortcut guidance.
-- `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen.
+- `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen with icon-only row actions, including direct Run for saved workflow state.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
-- `src/features/workflows/components/WorkflowBrowserConfigPanel.tsx`: workflow-level browser runtime config form.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Run Policy, Browser Launch, Environment, and section help. Run Policy shows batch defaults as paused, disabled controls until Batch Run UI is ready.
+- `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
+- `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
+- `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
+- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
 - `src/features/workflows/components/RunIssuePanel.tsx`: blocking validation, runtime failure, and system/startup issue presentation.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
@@ -19,11 +23,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/VariableConfigFields.tsx`: shared Set Variables row editor used by action config and graph-node config surfaces.
 - `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector.
 - `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. These catalogs own detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
+- `src/features/workflows/lib/stepHelpTypes.ts`: shared action-help field/reference types consumed by help catalogs, palettes, and modal rendering so the generated action catalog does not own cross-component type contracts.
+- `src/features/workflows/lib/stepHelpFieldGuidance.ts`: shared action-help field details, option references, and locator-field helpers used by action help generation.
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
-- `src/features/workflows/components/StepForm.tsx`: legacy step form container; list-step UI is no longer rendered.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
-- `src/lib/workflowApi.ts`: Tauri invoke wrappers.
+- `src/lib/workflowApi.ts`: Electron bridge wrappers.
+- `src/types/electron.ts`: renderer-visible bridge contract.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
 - `src/types/workflow.ts`: DTO and action config types.
 
@@ -34,19 +40,22 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Visual graph editing state before persistence.
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
-- Workflow browser runtime config editing, save state, and run-before-save orchestration.
+- Workflow Settings editing through list Edit and detail Settings, simplified Run Policy with paused read-only batch defaults, Browser Launch, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
+- Workflow list direct Run, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while shared run polling continues. Duplicate calls `duplicateWorkflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link.
+- Run polling consumes `get_run_state` while a workflow is running, whether the run started from the list or detail workspace. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, and workflow examples with the same modal structure. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, while keeping persisted `WorkflowGraph` as source of truth.
-- Action node creation from the semantic action palette, unconfigured `New node` draft creation from the toolbar, graph-control node creation from simplified grouped node pickers, plus searchable type selection and config editing through the reusable action config editor.
+- Action node creation from the semantic action palette, including fixed Wait and Random Wait actions in the Wait group, unconfigured `New node` draft creation from the toolbar, graph-control node creation from simplified grouped node pickers, plus searchable type selection and config editing through the reusable action config editor.
 - Variable authoring UI for Set Variables, Set JSON Variables, Repeat For Each manual/array modes, and template token insertion/highlighting in supported text fields.
 - Variable picker catalogs known graph variables from Set Variables rows, Set JSON Variables keys, and output-producing action nodes when available.
-- Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and keyboard shortcuts without changing persisted `WorkflowGraph` shape.
-- Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
-- Command invocation through `workflowApi.ts`.
+- Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and graph-scoped keyboard shortcuts without changing persisted `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside the active graph workspace.
+- Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, and shortcuts icon controls.
+- Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.
+- Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands.
 
 ## Does Not Belong Here
 

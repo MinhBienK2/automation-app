@@ -1,6 +1,7 @@
 import { Hand, Maximize, MousePointer2, Redo2, Undo2, Keyboard } from "lucide-react";
 import type { GraphNodeType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
+import { IconButton } from "../../../components/ui/icon-button";
 import {
   endNodeGroups,
   logicNodeGroups,
@@ -42,53 +43,48 @@ export function WorkflowGraphToolbar({
   return (
     <div className="graph-toolbar" role="toolbar" aria-label="Graph tools">
       <div className="graph-icon-tools" aria-label="Graph edit and view tools">
-        <Button
-          aria-label="Undo"
+        <IconButton
+          label="Undo"
           type="button"
           variant="ghost"
-          size="icon"
           onClick={onUndo}
         >
           <Undo2 aria-hidden="true" />
-        </Button>
-        <Button
-          aria-label="Redo"
+        </IconButton>
+        <IconButton
+          label="Redo"
           type="button"
           variant="ghost"
-          size="icon"
           onClick={onRedo}
         >
           <Redo2 aria-hidden="true" />
-        </Button>
-        <Button
-          aria-label="Select canvas mode"
+        </IconButton>
+        <IconButton
+          label="Select canvas mode"
           aria-pressed={!isPanMode}
           type="button"
           variant="ghost"
-          size="icon"
           onClick={onSelectMode}
         >
           <MousePointer2 aria-hidden="true" />
-        </Button>
-        <Button
-          aria-label="Pan canvas mode"
+        </IconButton>
+        <IconButton
+          label="Pan canvas mode"
           aria-pressed={isPanMode}
           type="button"
           variant="ghost"
-          size="icon"
           onClick={onTogglePanMode}
         >
           <Hand aria-hidden="true" />
-        </Button>
-        <Button
-          aria-label="Fit graph view"
+        </IconButton>
+        <IconButton
+          label="Fit graph view"
           type="button"
           variant="ghost"
-          size="icon"
           onClick={onFitView}
         >
           <Maximize aria-hidden="true" />
-        </Button>
+        </IconButton>
       </div>
       <Button type="button" variant="secondary" onClick={onAddNewNode}>
         New node
@@ -138,15 +134,14 @@ export function WorkflowGraphToolbar({
       >
         Add End
       </Button>
-      <Button
-        aria-label="Shortcuts"
+      <IconButton
+        label="Shortcuts"
         type="button"
         variant="ghost"
-        size="icon"
         onClick={onOpenShortcuts}
       >
         <Keyboard aria-hidden="true" />
-      </Button>
+      </IconButton>
     </div>
   );
 }

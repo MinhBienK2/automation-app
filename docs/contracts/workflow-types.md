@@ -3,12 +3,11 @@
 ## Source Files
 
 - TypeScript: `src/types/workflow.ts`
-- Rust workflow domain: `src-tauri/src/domain/workflow.rs`
-- Rust action configs: `src-tauri/src/domain/action_config.rs`
-- Rust graph domain: `src-tauri/src/domain/workflow_graph.rs`
-- Rust browser config domain: `src-tauri/src/domain/browser_config.rs`
-- Rust run types: `src-tauri/src/domain/run.rs`
-- Repository DTOs: `src-tauri/src/repositories/workflow_repository.rs`
+- Electron bridge: `src/types/electron.ts`
+- Node command handlers: `electron/backend/commands.ts`
+- TypeScript graph compiler: `electron/backend/graphCompiler.ts`
+- CloakBrowser runner: `electron/backend/runner.ts`
+- SQLite repository: `electron/backend/workflowRepository.ts`
 
 ## Workflow Shapes
 
@@ -18,15 +17,17 @@ Frontend and backend must agree on:
 - `Workflow`: `id`, `name`, `created_at`, `updated_at`.
 - `WorkflowStep`: legacy/internal step row shape used by import/export compatibility and compiled graph runner adapters.
 - `WorkflowDetail`: currently `workflow`, `steps` for compatibility, while the product UI loads graph authoring data through `get_workflow_graph`.
-- `WorkflowBrowserConfig`: optional workflow-level browser launch config loaded through `get_workflow_browser_config`.
+- `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `run_policy`, `browser_launch`, and `environment` sections.
+- `WorkflowBrowserConfig`: legacy compatibility shape loaded through `get_workflow_browser_config`; command handlers map it to `WorkflowSettings.browser_launch`.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`.
-- `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`.
+- `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
+- `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 
 ## Browser Config Shape
 
-Workflow browser config is persisted separately from graph JSON and legacy ordered steps:
+Workflow browser config remains as a legacy compatibility command shape:
 
 ```text
 {
@@ -36,20 +37,99 @@ Workflow browser config is persisted separately from graph JSON and legacy order
   proxy_server: string | null,
   proxy_username: string | null,
   proxy_password: string | null,
-  user_agent: string | null,
-  viewport_width: number | null,
-  viewport_height: number | null,
-  mobile: boolean,
-  touch: boolean,
-  challenge_policy: "none" | "detect_only" | "pause_for_human"
+  headless: boolean
 }
 ```
 
-Blank optional text fields normalize to `null`. A proxy server is required when `proxy_enabled` is true, and viewport dimensions must be greater than zero when present.
+Blank optional text fields normalize to `null`. A proxy server is required when `proxy_enabled` is true. This compatibility shape maps into `settings.browser_launch`.
+
+## Workflow Settings Shape
+
+Workflow Settings are persisted separately from graph JSON and legacy ordered steps:
+
+```text
+{
+  workflow_id: string,
+  version: 2,
+  general: { name, description, tags, notes, created_at, updated_at },
+  run_policy: {
+    max_workflow_duration_ms,
+    browser_retention,
+    batch_concurrency_limit,
+    batch_headless,
+    batch_stop_on_first_failed_row
+  },
+  browser_launch: {
+    session_mode,
+    profile_name,
+    proxy_enabled,
+    proxy_server,
+    proxy_username,
+    proxy_password,
+    headless
+  },
+  environment: { initial_variables },
+  migration_notes: [{ path, action, message }]
+}
+```
+
+Settings validation issues serialize as `{ section, field, message, level }`.
+Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
+Workflow exports include optional `settings`; imports without settings remain valid legacy exports.
+Run Policy batch fields remain part of the current contract for backend batch compatibility, but Workflow Settings currently renders those batch controls as visible, disabled values until Batch Run UI is ready.
+
+Legacy v1 settings are migrated on load into v2. Obsolete browser emulation, timing, retry, challenge, context-seeding, storage, trigger, and fingerprint preflight fields are dropped with migration notes instead of being preserved in the public contract.
+
+Legacy v1 workflow graphs are migrated on load/save/import into graph contract v2. Action configs convert legacy XPath selector fields into structured targets (`xpath` -> `target`, `source_xpath` -> `source_target`, `target_xpath` -> `target_target`, `trigger_xpath` -> `trigger_target`) and fold `iframe_xpath` into nested target iframe selectors. Obsolete per-action engine knobs such as action timeouts, wait readiness, typing delays, click retry/post-click settings, click positioning, and clear-field method settings are dropped with `migration_notes` on the graph.
+
+## Workflow Package Shape
+
+Workflow Package v2 is the current user-facing import/export format. It is graph-first and does not use legacy ordered step rows:
+
+```text
+{
+  kind: "workflow_package",
+  version: 2,
+  workflow: { name },
+  included_sections: ["flow", "settings.general"],
+  omitted_fields: ["settings.browser_launch.proxy_password"],
+  flow: WorkflowGraph | null,
+  settings: {
+    general,
+    run_policy,
+    browser_launch,
+    environment
+  } // every section optional
+}
+```
+
+Package export options serialize as `{ include_flow, settings_sections }`, where `settings_sections` contains Workflow Settings section ids. Package import uses the same option shape, always creates a new workflow, and remaps selected settings to the new workflow id.
+Legacy package sections named `settings.owned_test_gates` are ignored by current preview/import flows and are not offered as selectable current settings.
+
+Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI checkpoint before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
+
+Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`.
+
+Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and full Workflow Settings to a new workflow id, including fields that package export sanitizes for external sharing.
+
+## Batch Run Shape
+
+`BatchRunRequest` serializes as:
+
+```text
+{
+  rows: Array<Record<string, string>>,
+  concurrency_limit?: number | null,
+  headless?: boolean | null
+}
+```
+
+When `concurrency_limit` or `headless` is omitted, the backend uses Workflow Settings Run Policy defaults. Concurrency values above 1 are rejected until rows can run in isolated browser/session contexts.
+Those Run Policy defaults are still honored by `run_batch_workflow`; the current Settings UI shows them as paused, read-only controls rather than editable Run Policy fields.
 
 ## Graph Shape
 
-Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a `Start -> New node` draft graph, where `New node` is an action node with `config: null`. Existing Start-only saved graphs remain valid drafts, and existing linear step rows can still be represented as a generated graph with action nodes and a success end node for compatibility paths.
+Workflow graph data is the product authoring surface and is versioned separately from legacy ordered workflow step rows. New workflows create a v2 `Start -> New node` draft graph, where `New node` is an action node with `config: null`. Existing Start-only saved graphs remain valid drafts, and existing linear step rows can still be represented as a generated v2 graph with action nodes and a success end node for compatibility paths.
 
 Graph validation issues serialize as `{ level, node_id, edge_id, message }`, where `level` is `error` or `warning`.
 
@@ -67,13 +147,16 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `retry` max attempts and delay.
 - `manual_approval` reason and optional timeout.
 - `rate_limit` delay.
+- `wait` duration/condition waits and `random_wait` min/max duration waits.
 - `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `run_subworkflow`, `domain_allowlist`, `end_success`, and `end_failure`.
 
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
-The backend compiler currently executes action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is expanded at the command layer before the browser runner starts. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for compatibility but fails explicitly at runtime until nested lifecycle semantics are implemented. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 
-Executable frontend/Rust ports must agree:
+Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser context seeding, default action timeouts, interaction fidelity defaults, fingerprint preflight, and global waits between nodes are legacy settings and are removed from the v2 public contract.
+
+Executable frontend/backend ports must agree:
 
 - `start`: output `out`
 - `end_success` / `end_failure`: input `in`
@@ -91,13 +174,13 @@ Executable frontend/Rust ports must agree:
 
 ## Action Config Shape
 
-Action configs use a tagged shape compatible with Rust serde:
+Action configs use a tagged TypeScript DTO shape:
 
 ```text
 { type: "click", config: { ... } }
 ```
 
-The `type` string must match Rust `ActionType` snake_case serialization.
+The `type` string must match the TypeScript `ActionType` union.
 
 `set_variable` remains backward compatible with saved single-value configs:
 
@@ -129,9 +212,11 @@ New variable authoring stores multiple rows:
 
 Terminal End Success, End Failure, and Stop Workflow graph nodes can carry `close_browser: true` in their node config. The compiler maps that to executable `stop_workflow` configs so the runner closes the browser after outputs are captured. Missing or false keeps the browser session retained.
 
+Workflow-level wait-between-nodes settings are not part of the v2 public settings contract. Authors use explicit `wait` and `random_wait` graph nodes when a workflow needs a business-semantic pause.
+
 ## Change Checklist
 
-- Update TypeScript and Rust together.
+- Update TypeScript DTOs, graph compiler, runner, and UI defaults together.
 - Update default configs for new action variants.
 - Update persistence tests if stored JSON shape changes.
 - Update command tests if command response shape changes.

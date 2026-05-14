@@ -17,7 +17,7 @@ describe("StepHelpModal", () => {
     const header = within(help).getByTestId("action-help-header");
 
     expect(within(header).getByText("Hướng dẫn action")).toBeInTheDocument();
-    expect(within(header).getByRole("tablist", { name: "Help language" }))
+    expect(within(header).getByRole("group", { name: "Help language" }))
       .toHaveClass("help-language-switch-compact");
     expect(within(help).getByText("Tất cả field và option")).toBeInTheDocument();
   });
@@ -25,14 +25,14 @@ describe("StepHelpModal", () => {
   test("groups field references by category and keeps mistakes inside field cards", async () => {
     render(
       <StepHelpModal
-        actionType="click"
+        actionType="assert_text"
         language="en"
         onClose={vi.fn()}
         onLanguageChange={vi.fn()}
       />,
     );
 
-    const help = await screen.findByRole("dialog", { name: "Click Help" });
+    const help = await screen.findByRole("dialog", { name: "Assert Text Help" });
     const fieldsSection = within(help)
       .getByRole("heading", { name: "All fields and options" })
       .closest("section")!;

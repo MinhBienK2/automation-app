@@ -16,7 +16,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { ScrollArea } from "../../../components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { graphNodeLabel } from "../lib/workflowGraph";
 import {
   actionGroups,
@@ -28,7 +28,7 @@ import {
   type GraphNodeFieldReference,
   type GraphNodeHelpLanguage,
 } from "../lib/graphNodeHelpContent";
-import type { HelpFieldCategory } from "../lib/stepHelpContent";
+import type { HelpFieldCategory } from "../lib/stepHelpTypes";
 import { StepHelpModal } from "./StepHelpModal";
 
 export const logicNodeGroups: Array<{
@@ -323,25 +323,16 @@ export function NodeHelpDialog({
           </div>
         </DialogHeader>
 
-        <Tabs
+        <SegmentedControl
+          ariaLabel="Help language"
+          className="help-language-switch"
           value={language}
-          onValueChange={(value) => onLanguageChange(value as GraphNodeHelpLanguage)}
-        >
-          <TabsList className="help-language-switch" aria-label="Help language">
-            <TabsTrigger
-              className={language === "vi" ? "help-language-active" : ""}
-              value="vi"
-            >
-              Tiếng Việt
-            </TabsTrigger>
-            <TabsTrigger
-              className={language === "en" ? "help-language-active" : ""}
-              value="en"
-            >
-              English
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          options={[
+            { value: "vi", label: "Tiếng Việt" },
+            { value: "en", label: "English" },
+          ]}
+          onValueChange={onLanguageChange}
+        />
 
         {content ? (
           <ScrollArea className="step-help-body">
@@ -595,12 +586,23 @@ type ActionNodePaletteProps = {
   onSelectAction: (actionType: ActionType) => void;
 };
 
-export const hiddenActionPickerTypes = new Set<ActionType>([
+const hiddenActionPickerTypes = new Set<ActionType>([
   "if_condition",
   "repeat_times",
   "repeat_for_each",
   "retry_block",
+  "switch_condition",
+  "while_loop",
+  "repeat_until",
+  "try_catch",
+  "fallback_block",
+  "break_loop",
+  "continue_loop",
   "stop_workflow",
+  "transform_variable",
+  "assert_output",
+  "run_subworkflow",
+  "domain_allowlist",
 ]);
 
 export const actionPickerGroups = actionGroups
@@ -625,6 +627,7 @@ const commonActionTypes: ActionType[] = [
 export const actionDescriptions: Record<ActionType, string> = {
   navigate: "Open a page",
   wait: "Pause or wait for a condition",
+  random_wait: "Pause for a random duration",
   input_text: "Fill a field",
   clear_input: "Clear a field",
   click: "Click an element",
@@ -675,7 +678,18 @@ export const actionDescriptions: Record<ActionType, string> = {
   repeat_times: "Repeat nested steps",
   repeat_for_each: "Repeat for each item",
   retry_block: "Retry a group of steps",
+  switch_condition: "Choose a branch by value",
+  while_loop: "Repeat while a condition is true",
+  repeat_until: "Repeat until a condition is true",
+  try_catch: "Handle errors with recovery branches",
+  fallback_block: "Run fallback steps after a primary failure",
+  break_loop: "Exit the current loop",
+  continue_loop: "Continue the current loop",
   stop_workflow: "Stop execution",
+  transform_variable: "Map one variable to another",
+  assert_output: "Require an output value",
+  run_subworkflow: "Run another saved workflow",
+  domain_allowlist: "Restrict allowed domains",
   use_profile: "Use a browser profile",
   save_session: "Save browser session",
   load_session: "Load browser session",

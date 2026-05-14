@@ -26,14 +26,3 @@ export const sleepStep: WorkflowStep = {
   created_at: "1",
   updated_at: "1",
 };
-
-export const clickStep: WorkflowStep = {
-  id: "step-2",
-  name: "Click login button",
-  workflow_id: "workflow-1",
-  order_index: 1,
-  action_type: "click",
-  config: { type: "click", config: { xpath: '//*[@id="submit"]' } },
-  created_at: "1",
-  updated_at: "1",
-};

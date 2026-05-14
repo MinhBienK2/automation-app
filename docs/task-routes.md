@@ -25,9 +25,9 @@ Update docs: task routes, product model, overview, or invariants only if the tas
 
 Read: `domain/action-taxonomy.md`, `domain/cross-feature-impact-map.md`, `architecture/frontend.md`, `architecture/domain.md`, `architecture/runner.md`, `contracts/action-configs.md`, `contracts/workflow-types.md`
 
-Verify: `src/types/workflow.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/StepForm.tsx`, `src-tauri/src/domain/action_config.rs`, `src-tauri/src/domain/validation.rs`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/runner/actions/`, `README.md`
+Verify: `src/types/workflow.ts`, `src/lib/actionCapabilities.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/ActionConfigEditor.tsx`, `src/features/workflows/components/ActionConfig*Fields.tsx`, `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, `electron/backend/commands.ts`, `README.md`
 
-Checks: `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `cd src-tauri && cargo test --test domain_validation`, `cd src-tauri && cargo test --test command_api`; add runner tests when execution changes.
+Checks: `npm test -- src/lib/actionCapabilities.test.ts`, `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/graphCompiler.test.ts`, `npm test -- electron/backend/commands.test.ts`; add runner tests when execution changes.
 
 Update docs: action taxonomy, action config contract, workflow types, runner docs, smoke checklist if user-visible behavior changes.
 
@@ -35,7 +35,7 @@ Update docs: action taxonomy, action config contract, workflow types, runner doc
 
 Read: `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/frontend.md`, `contracts/run-state.md` when run/test UI changes
 
-Verify: `src/App.tsx`, `src/features/settings/`, `src/features/workflows/pages/`, `src/features/workflows/components/`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`
+Verify: `src/App.tsx`, `src/features/settings/`, `src/features/workflows/pages/`, `src/features/workflows/components/`, `src/features/workflows/lib/workflowSettings.ts`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`
 
 Checks: focused page/component test; `npx tsc --noEmit` when types or props change.
 
@@ -51,23 +51,23 @@ Checks: focused UI tests; `npm test -- src/AppCss.test.ts` when CSS invariants c
 
 Update docs: frontend architecture or invariants when layout ownership/behavior changes.
 
-## Change A Tauri Command
+## Change An Electron IPC Command
 
-Read: `architecture/command-boundary.md`, `contracts/tauri-commands.md`, `contracts/workflow-types.md`
+Read: `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
 
-Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src-tauri/src/commands.rs`, focused modules under `src-tauri/src/commands/`, `src-tauri/src/lib.rs`, `src-tauri/tests/command_api.rs`
+Verify: `src/lib/workflowApi.ts`, `src/lib/workflowApi.test.ts`, `src/types/electron.ts`, `electron/preload.cts`, `electron/ipc.ts`, `electron/main.ts`, focused modules under `electron/backend/`
 
-Checks: `npm test -- src/lib/workflowApi.test.ts`, `cd src-tauri && cargo test --test command_api`
+Checks: `npm test -- src/lib/workflowApi.test.ts`, focused Electron backend command tests, `npx tsc --noEmit`, `npm run build:electron`
 
-Update docs: command boundary, Tauri command contract, workflow types when response/payload shapes change.
+Update docs: command boundary, Electron IPC contract, workflow types when response/payload shapes change.
 
 ## Change Domain Validation
 
 Read: `architecture/domain.md`, `contracts/action-configs.md`, `domain/user-visible-invariants.md`
 
-Verify: `src-tauri/src/domain/validation.rs`, `src-tauri/src/domain/action_config.rs`, `src-tauri/tests/domain_validation.rs`, affected UI error display.
+Verify: `electron/backend/graphCompiler.ts`, `electron/backend/commands.ts`, `electron/backend/graphCompiler.test.ts`, affected UI error display.
 
-Checks: `cd src-tauri && cargo test --test domain_validation`; add `cd src-tauri && cargo test --test command_api` when command-facing errors change.
+Checks: `npm test -- electron/backend/graphCompiler.test.ts`; add `npm test -- electron/backend/commands.test.ts` when command-facing errors change; run `npm run build:electron` when backend types change.
 
 Update docs: domain architecture, action config contract, user-visible invariants.
 
@@ -75,9 +75,9 @@ Update docs: domain architecture, action config contract, user-visible invariant
 
 Read: `architecture/persistence.md`, `contracts/workflow-types.md`, `domain/workflow-lifecycle.md`
 
-Verify: `src-tauri/src/repositories/workflow_repository.rs`, `src-tauri/migrations/`, `src-tauri/tests/persistence.rs`, import/export code in `src-tauri/src/commands/import_export.rs` if persisted shape changes
+Verify: `electron/backend/database.ts`, `electron/backend/workflowRepository.ts`, `electron/backend/commands.ts`, repository/command tests, import/export code in the Electron backend if persisted shape changes.
 
-Checks: `cd src-tauri && cargo test --test persistence`; add command tests when command results change.
+Checks: `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; add narrower repository tests when repository behavior changes independently of command handlers.
 
 Update docs: persistence architecture, workflow types, workflow lifecycle.
 
@@ -85,9 +85,9 @@ Update docs: persistence architecture, workflow types, workflow lifecycle.
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src-tauri/src/runner/`, `src-tauri/src/services/run_service.rs`, `src-tauri/src/app_state.rs`, `src-tauri/tests/runner_spike.rs`, `src-tauri/tests/command_api.rs`
+Verify: `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, Electron runner tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
 
-Checks: `cd src-tauri && cargo test --test runner_spike`, `cd src-tauri && cargo test --test command_api`
+Checks: focused Electron runner/compiler tests, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
 
 Update docs: execution semantics, runner architecture, run-state contract, impact map.
 
@@ -95,9 +95,9 @@ Update docs: execution semantics, runner architecture, run-state contract, impac
 
 Read: `domain/execution-semantics.md`, `architecture/frontend.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/App.tsx`, `src/features/workflows/components/TestStepMonitor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/lib/workflowUi.ts`, `src-tauri/src/app_state.rs`, `src-tauri/src/services/run_service.rs`
+Verify: `src/App.tsx`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runner.ts`
 
-Checks: `npm test -- src/features/workflows/components/TestStepMonitor.test.tsx`, `cd src-tauri && cargo test --test command_api`
+Checks: `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- electron/backend/commands.test.ts`
 
 Update docs: run-state contract, execution semantics, frontend/runner docs.
 
@@ -117,7 +117,7 @@ Read: architecture doc for the module, related contract docs when public shapes 
 
 Verify: current imports, callers, tests around moved logic.
 
-Checks: existing tests for the module; typecheck or Rust compiler checks for moved boundaries.
+Checks: existing tests for the module; typecheck or Electron backend build checks for moved boundaries.
 
 Update docs: architecture ownership and task routes if file ownership or reading paths change.
 
@@ -125,7 +125,7 @@ Update docs: architecture ownership and task routes if file ownership or reading
 
 Read: `architecture/testing.md` and the route for the behavior under test.
 
-Verify: test fixtures under `src/tests/` or `src-tauri/tests/support/`; source behavior the test asserts.
+Verify: test fixtures under `src/tests/` or `electron/backend/`; source behavior the test asserts.
 
 Checks: focused test command for the edited test.
 

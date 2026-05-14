@@ -4,6 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { ElementTargetFields } from "./ActionConfigElementSharedFields";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -104,15 +105,7 @@ function DataCaptureFields({
 }) {
   return (
     <>
-      <Label>
-        XPath
-        <Input
-          value={config.config.xpath}
-          onChange={(event) =>
-            onChange(updateActionConfigField(config, "xpath", event.currentTarget.value))
-          }
-        />
-      </Label>
+      <ElementTargetFields config={config} onChange={onChange} />
       <Label>
         Output name
         <Input
@@ -120,31 +113,6 @@ function DataCaptureFields({
           onChange={(event) =>
             onChange(
               updateActionConfigField(config, "output_name", event.currentTarget.value),
-            )
-          }
-        />
-      </Label>
-      <Label>
-        Iframe XPath
-        <Input
-          value={config.config.iframe_xpath ?? ""}
-          onChange={(event) =>
-            onChange(
-              updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
-            )
-          }
-          placeholder="Optional iframe XPath"
-        />
-      </Label>
-      <Label>
-        Timeout ms
-        <Input
-          min="1"
-          type="number"
-          value={config.config.timeout_ms ?? 5000}
-          onChange={(event) =>
-            onChange(
-              updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
             )
           }
         />

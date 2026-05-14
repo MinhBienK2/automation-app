@@ -2,10 +2,10 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import {
-  invokeMock,
-  mockTauriCommands,
-  resetTauriInvoke,
-} from "../../../tests/mocks/tauri";
+  workflowCommandCallMock,
+  mockWorkflowBridgeCommands,
+  resetWorkflowBridge,
+} from "../../../tests/mocks/electron";
 import { sleepStep, workflow } from "../../../tests/mocks/workflowFixtures";
 import {
   idleRunState,
@@ -15,11 +15,11 @@ import { renderApp } from "../../../tests/utils/renderApp";
 
 describe("Workflow detail integration", () => {
   beforeEach(() => {
-    resetTauriInvoke();
+    resetWorkflowBridge();
   });
 
   test("opens workflow details on a separate screen and returns to the list", async () => {
-    mockTauriCommands(workflowDetailScenario([sleepStep]));
+    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
@@ -44,7 +44,7 @@ describe("Workflow detail integration", () => {
   });
 
   test("shows workflow detail header without inline workflow name editing", async () => {
-    mockTauriCommands(workflowDetailScenario([sleepStep]));
+    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
@@ -74,8 +74,8 @@ describe("Workflow detail integration", () => {
     expect(within(titleRow).queryByRole("heading", { name: "Login flow" }))
       .not.toBeInTheDocument();
     expect(within(titleRow).getByText("Workflow Detail")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("Graph workspace")).toBeInTheDocument();
-    expect(within(controlsRow).getByText("Updated 1")).toBeInTheDocument();
+    expect(within(controlsRow).queryByText("Graph workspace")).not.toBeInTheDocument();
+    expect(within(controlsRow).queryByText("Updated 1")).not.toBeInTheDocument();
     expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Idle")).toHaveAttribute(
       "data-slot",
@@ -93,67 +93,184 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
-  test("edits and saves workflow browser runtime config from workflow detail", async () => {
-    mockTauriCommands({
+  test("opens workflow settings on the Browser Launch section from the detail header", async () => {
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
-      get_workflow_browser_config: {
+      get_workflow_settings: {
         workflow_id: "workflow-1",
-        profile_name: "qa-profile",
-        proxy_enabled: true,
-        proxy_server: "http://proxy.local:8080",
-        proxy_username: "agent",
-        proxy_password: "secret",
-        user_agent: "WorkflowBot/1.0",
-        viewport_width: 1280,
-        viewport_height: 720,
-        mobile: false,
-        touch: false,
-        challenge_policy: "pause_for_human",
+        version: 2,
+        general: {
+          name: "Login flow",
+          description: "",
+          tags: [],
+          notes: "",
+          created_at: "1",
+          updated_at: "1",
+        },
+        run_policy: {
+          max_workflow_duration_ms: null,
+          browser_retention: "retain",
+          batch_concurrency_limit: 1,
+          batch_headless: false,
+          batch_stop_on_first_failed_row: false,
+        },
+        browser_launch: {
+          session_mode: "persistent_profile",
+          profile_name: "qa-profile",
+          proxy_enabled: true,
+          proxy_server: "http://proxy.local:8080",
+          proxy_username: "agent",
+          proxy_password: "secret",
+          headless: false,
+        },
+        environment: {
+          initial_variables: [],
+        },
+        migration_notes: [],
+        created_at: "1",
+        updated_at: "1",
       },
-      save_workflow_browser_config: undefined,
+      save_workflow_settings_section: undefined,
     });
 
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    const configPanel = await screen.findByRole("region", {
-      name: "Browser runtime config",
+    expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
+      .not.toBeInTheDocument();
+
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
     });
 
-    expect(within(configPanel).getByLabelText("Profile name")).toHaveValue(
+    expect(
+      within(settingsDialog).getByText("Configure workflow settings before running this workflow."),
+    ).toBeInTheDocument();
+    expect(within(settingsDialog).getByRole("tab", { name: "Environment" }))
+      .toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
+      .not.toBeInTheDocument();
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Environment" }));
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Add variable row",
+    }));
+    expect(within(settingsDialog).getByLabelText("Variable 2 name")).toBeInTheDocument();
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }));
+    expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(within(settingsDialog).getByLabelText("Profile name")).toHaveValue(
       "qa-profile",
     );
-    expect(within(configPanel).getByLabelText("Proxy enabled")).toBeChecked();
-    await userEvent.clear(within(configPanel).getByLabelText("Profile name"));
-    await userEvent.type(within(configPanel).getByLabelText("Profile name"), "release");
-    await userEvent.clear(within(configPanel).getByLabelText("Viewport width"));
-    await userEvent.type(within(configPanel).getByLabelText("Viewport width"), "1440");
-    await userEvent.click(within(configPanel).getByLabelText("Touch input"));
-    await userEvent.selectOptions(
-      within(configPanel).getByLabelText("Challenge policy"),
-      "detect_only",
-    );
-    await userEvent.click(within(configPanel).getByRole("button", {
-      name: "Save browser config",
+    expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
+      .toHaveAttribute("aria-checked", "true");
+    expect(within(settingsDialog).getByRole("switch", { name: "Use proxy" }))
+      .toHaveAttribute("aria-checked", "true");
+    await userEvent.clear(within(settingsDialog).getByLabelText("Profile name"));
+    await userEvent.type(within(settingsDialog).getByLabelText("Profile name"), "release");
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Browser Launch Settings Help",
+    }));
+    expect(await screen.findByText("Browser Launch Settings Help")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Save Settings",
     }));
 
-    expect(invokeMock).toHaveBeenCalledWith("save_workflow_browser_config", {
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("save_workflow_settings_section", {
       workflowId: "workflow-1",
-      config: expect.objectContaining({
-        workflow_id: "workflow-1",
+      section: "browser_launch",
+      sectionValue: expect.objectContaining({
+        session_mode: "persistent_profile",
         profile_name: "release",
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
-        viewport_width: 1440,
-        viewport_height: 720,
-        touch: true,
-        challenge_policy: "detect_only",
       }),
     });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Workflow settings saved.",
+    );
+  });
+
+  test("asks before closing workflow settings with unsaved changes", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_settings_section: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
+    });
+
+    await userEvent.click(within(settingsDialog).getByRole("tab", { name: "General" }));
+    await userEvent.type(within(settingsDialog).getByLabelText("Description"), " changed");
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Close dialog",
+    }));
+
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: "Unsaved changes",
+    });
+    expect(within(confirmDialog).getByText(/You have unsaved changes/i))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(confirmDialog).getByRole("button", {
+      name: "Keep editing",
+    }));
+    expect(screen.getByRole("dialog", { name: "Workflow Settings" })).toBeInTheDocument();
+
+    await userEvent.click(within(settingsDialog).getByRole("button", {
+      name: "Close dialog",
+    }));
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Discard changes",
+    }));
+
+    expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
+      .not.toBeInTheDocument();
+  });
+
+  test("omits legacy trigger and owned test gate settings from the simplified settings dialog", async () => {
+    mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Workflow Settings",
+    });
+
+    expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
+      .not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("tab", { name: "Owned Test Gates" }))
+      .not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("switch", { name: "Fingerprint preflight" }))
+      .not.toBeInTheDocument();
+    expect(
+      within(settingsDialog).queryByRole("checkbox", { name: "Enable trigger" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(settingsDialog).queryByLabelText("Trigger mode"),
+    ).not.toBeInTheDocument();
   });
 
   test("shows blocking validation issues in the run issue panel", async () => {
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       validate_workflow_graph: [
         {
@@ -180,9 +297,40 @@ describe("Workflow detail integration", () => {
       .toBeInTheDocument();
   });
 
+  test("keeps graph issues visible after an edit and marks them for recheck", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      validate_workflow_graph: [
+        {
+          level: "error",
+          node_id: "step-1",
+          edge_id: null,
+          message: "Choose an action type before running this node",
+        },
+      ],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(screen.getByRole("button", { name: "Validate" }));
+    const panel = await screen.findByRole("region", { name: "Run issues" });
+
+    await userEvent.click(screen.getByRole("button", { name: "New node" }));
+
+    expect(within(panel).getByText("Needs recheck")).toBeInTheDocument();
+    expect(within(panel).getByText("Run issues may be out of date after graph edits."))
+      .toBeInTheDocument();
+    expect(within(panel).getByText("Choose an action type before running this node"))
+      .toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Validate again" }))
+      .toBeInTheDocument();
+  });
+
   test("disables graph run actions while running and polls final failure", async () => {
     let runStateCalls = 0;
-    mockTauriCommands({
+    mockWorkflowBridgeCommands({
       list_workflows: [workflow],
       get_workflow: { workflow, steps: [sleepStep] },
       get_workflow_browser_config: {

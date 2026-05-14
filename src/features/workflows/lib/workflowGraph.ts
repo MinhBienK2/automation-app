@@ -8,12 +8,11 @@ import type {
   WorkflowGraph,
   WorkflowStep,
 } from "../../../types/workflow";
-import { defaultActionConfig } from "./workflowActionDefaults";
 export { defaultActionConfig } from "./workflowActionDefaults";
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 
-export const graphIssueKey = "__graph__";
+const graphIssueKey = "__graph__";
 
 export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed";
 
@@ -88,7 +87,7 @@ export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
     };
 
     return {
-      version: 1,
+      version: 2,
       nodes: [startNode, newNode],
       edges: [
         {
@@ -148,7 +147,7 @@ export function linearGraphFromSteps(steps: WorkflowStep[]): WorkflowGraph {
   }));
 
   return {
-    version: 1,
+    version: 2,
     nodes,
     edges,
     viewport: { x: 0, y: 0, zoom: 1 },
@@ -232,7 +231,7 @@ export function toReactFlowGraph(
   };
 }
 
-export function graphEdgeOrders(graph: WorkflowGraph) {
+function graphEdgeOrders(graph: WorkflowGraph) {
   const orders = new Map<string, number>();
   const edgesBySource = new Map<string, typeof graph.edges>();
   graph.edges.forEach((edge) => {
@@ -477,7 +476,7 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
 function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
   switch (nodeType) {
     case "action":
-      return defaultActionConfig("wait");
+      return null;
     case "if":
       return { condition: { kind: "output_equals", name: "name", value: "" } };
     case "repeat_until":
