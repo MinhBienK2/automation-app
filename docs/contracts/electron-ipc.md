@@ -49,6 +49,7 @@ failed calls. This preserves the command-facing error shape used by
 - `getWorkflowBrowserConfig`
 - `saveWorkflowBrowserConfig`
 - `runWorkflow`
+- `runWorkflowFromNode`
 - `stopRun`
 - `getRunState`
 - `validateSchedule`

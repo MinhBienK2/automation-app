@@ -17,6 +17,7 @@ export const workflowIpcChannels = {
   validateWorkflowGraph: "workflow:validateWorkflowGraph",
   compileWorkflowGraph: "workflow:compileWorkflowGraph",
   runWorkflow: "workflow:runWorkflow",
+  runWorkflowFromNode: "workflow:runWorkflowFromNode",
   stopRun: "workflow:stopRun",
   getRunState: "workflow:getRunState",
   validateSchedule: "workflow:validateSchedule",

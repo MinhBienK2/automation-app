@@ -23,6 +23,7 @@ Frontend and backend must agree on:
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`.
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
+- `RunState.retained_session`: optional retained browser session availability metadata used by debug run-from-selected UI.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 
 ## Browser Config Shape
@@ -66,7 +67,8 @@ Workflow Settings are persisted separately from graph JSON and legacy ordered st
     proxy_server,
     proxy_username,
     proxy_password,
-    headless
+    headless,
+    run_from_selected_enabled
   },
   environment: { initial_variables },
   migration_notes: [{ path, action, message }]
@@ -153,6 +155,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 The main graph toolbar only exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End. Some graph node types in the contract remain loadable/editable for compatibility but are hidden from the main add palettes.
 
 The Electron backend compiler currently emits action, manual approval, rate limit, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, subworkflow, domain allowlist, success end, and failure end graph nodes. `run_subworkflow` is represented in the compiled action plan for compatibility but fails explicitly at runtime until nested lifecycle semantics are implemented. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
 Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser context seeding, default action timeouts, interaction fidelity defaults, fingerprint preflight, and global waits between nodes are legacy settings and are removed from the v2 public contract.
 

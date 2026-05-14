@@ -106,6 +106,10 @@ export function runWorkflow(workflowId: string) {
   return bridge().runWorkflow(workflowId);
 }
 
+export function runWorkflowFromNode(workflowId: string, startNodeId: string) {
+  return bridge().runWorkflowFromNode(workflowId, startNodeId);
+}
+
 export function stopRun() {
   return bridge().stopRun();
 }

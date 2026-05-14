@@ -219,6 +219,7 @@ export function defaultWorkflowSettings({
       proxy_username: null,
       proxy_password: null,
       headless: false,
+      run_from_selected_enabled: false,
     },
     environment: {
       initial_variables: [],
@@ -544,6 +545,13 @@ export const workflowSettingsHelp: Record<
             "Use one stable profile name per authorized account or test identity to avoid mixing session state.",
         },
         {
+          name: "Enable Run from selected",
+          description:
+            "Shows the Run from selected workflow action when the workflow uses a retained persistent browser session.",
+          whenToUse:
+            "Use it for workflows where operators need to continue from a selected main-path node without reopening Chromium.",
+        },
+        {
           name: "Use proxy",
           description:
             "Switch that enables or disables the saved proxy route. When off, saved server and credential values remain stored but are ignored at launch.",
@@ -623,6 +631,13 @@ export const workflowSettingsHelp: Record<
             "Định danh browser profile persistent dùng để lưu Chromium user data dưới app data directory khi Reuse login session được bật.",
           whenToUse:
             "Dùng một tên profile ổn định cho mỗi account hoặc test identity được phép để tránh trộn session state.",
+        },
+        {
+          name: "Enable Run from selected",
+          description:
+            "Hiển thị action Run from selected khi workflow dùng browser session persistent đang được giữ lại.",
+          whenToUse:
+            "Dùng cho workflow cần chạy tiếp từ một node main-path được chọn mà không mở lại Chromium.",
         },
         {
           name: "Use proxy",

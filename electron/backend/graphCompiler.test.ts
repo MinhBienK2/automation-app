@@ -6,7 +6,11 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { createWorkflowCommandHandlers } from "./commands";
 import { createAppPaths, initializeDatabase } from "./database";
-import { compileWorkflowRunPlan, validateActionConfig } from "./graphCompiler";
+import {
+  compileWorkflowGraphFromNode,
+  compileWorkflowRunPlan,
+  validateActionConfig,
+} from "./graphCompiler";
 import type {
   ActionConfig,
   GraphNode,
@@ -171,6 +175,44 @@ describe("TypeScript graph compiler parity", () => {
         },
       },
     ]);
+  });
+
+  test("compiles a run plan from a selected main-path node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: waitAction(100) }),
+        graphNode("second", "action", { config: clickAction("//continue") }),
+      ],
+      [
+        edge("start", "out", "first", "in"),
+        edge("first", "out", "second", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowGraphFromNode(graph, "second");
+
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["second"]);
+  });
+
+  test("rejects selected nodes inside nested branch bodies", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("branch-step", "action", { config: clickAction("//branch") }),
+        graphNode("after-if", "action", { config: clickAction("//after") }),
+      ],
+      [
+        edge("start", "out", "if-node", "in"),
+        edge("if-node", "true", "branch-step", "in"),
+        edge("if-node", "done", "after-if", "in"),
+      ],
+    );
+
+    expect(() => compileWorkflowGraphFromNode(graph, "branch-step")).toThrow(
+      "Run from selected is only supported for main path nodes",
+    );
   });
 
   test("preserves graph node identity for nested If branch actions", async () => {

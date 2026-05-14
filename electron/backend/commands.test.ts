@@ -558,6 +558,130 @@ describe("Electron workflow command handlers", () => {
     ]);
   });
 
+  test("runs from a selected graph node only when a reusable retained session exists", async () => {
+    const runnerCalls: Array<{
+      graph: CompiledWorkflowGraph;
+      reuseRetainedSession?: boolean;
+      retainedSessionWorkflowId?: string | null;
+    }> = [];
+    const { handlers } = await createTestHandlers({
+      runner: {
+        hasReusableRetainedSession: vi.fn(() => true),
+        async run(request: {
+          graph: CompiledWorkflowGraph;
+          reuseRetainedSession?: boolean;
+          retainedSessionWorkflowId?: string | null;
+        }): Promise<RunState> {
+          runnerCalls.push(request);
+          return {
+            status: "success",
+            mode: "run_workflow",
+            target_step_id: "visit",
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: ["visit"],
+            outputs: { continued: true },
+            error: null,
+            retained_session: {
+              available: true,
+              workflow_id: "workflow-1",
+              profile_name: "qa-profile",
+              reason: null,
+            },
+          };
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Runnable");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+        run_from_selected_enabled: true,
+      },
+      run_policy: {
+        ...settings.run_policy,
+        browser_retention: "retain",
+      },
+    });
+
+    const result = await handlers.runWorkflowFromNode(workflow.id, "visit");
+
+    expect(result).toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+      target_step_id: "visit",
+    });
+    expect(runnerCalls).toHaveLength(1);
+    expect(runnerCalls[0]).toMatchObject({
+      reuseRetainedSession: true,
+      retainedSessionWorkflowId: workflow.id,
+    });
+    expect(runnerCalls[0]?.graph.steps.map((step) => step.node_id)).toEqual(["visit"]);
+  });
+
+  test("rejects run-from-selected when reuse session or retained browser state is unavailable", async () => {
+    const runner = {
+      hasReusableRetainedSession: vi.fn(() => false),
+      run: vi.fn(),
+    };
+    const { handlers } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("No reusable session");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
+      message: "Run from selected requires Reuse login session to be enabled",
+      field: "browser_launch.session_mode",
+    });
+
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+      },
+      run_policy: {
+        ...settings.run_policy,
+        browser_retention: "close",
+      },
+    });
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
+      message: "Run from selected requires browser retention to be set to retain",
+      field: "run_policy.browser_retention",
+    });
+
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...handlers.getWorkflowSettings(workflow.id),
+      run_policy: {
+        ...handlers.getWorkflowSettings(workflow.id).run_policy,
+        browser_retention: "retain",
+      },
+    });
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
+      message: "Run from selected must be enabled in Workflow Settings",
+      field: "browser_launch.run_from_selected_enabled",
+    });
+
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...handlers.getWorkflowSettings(workflow.id),
+      browser_launch: {
+        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        run_from_selected_enabled: true,
+      },
+    });
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
+      message: "No reusable browser session is available. Run the workflow again to create one.",
+      field: "run",
+    });
+    expect(runner.run).not.toHaveBeenCalled();
+  });
+
   test("runs when IPC invokes command handlers without object binding", async () => {
     const runner = {
       run: vi.fn(async (): Promise<RunState> => ({

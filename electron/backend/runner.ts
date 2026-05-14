@@ -39,6 +39,7 @@ export type BrowserDriverContext = {
   pages(): BrowserDriverPage[];
   newPage(): Promise<BrowserDriverPage>;
   close(): Promise<void>;
+  on?(eventName: "close", handler: () => void): void;
   addCookies?(cookies: Array<Record<string, unknown>>): Promise<void>;
   clearCookies?(options?: Record<string, unknown>): Promise<void>;
   grantPermissions?(permissions: string[], options?: { origin?: string }): Promise<void>;
@@ -74,6 +75,7 @@ export type BrowserDriverPage = {
   reload?(): Promise<unknown>;
   bringToFront?(): Promise<void>;
   close?(): Promise<void>;
+  isClosed?(): boolean;
   screenshot?(options?: Record<string, unknown>): Promise<Buffer>;
   evaluate<R = unknown, A = unknown>(
     pageFunction: string | ((arg?: A) => R | Promise<R>),
@@ -166,8 +168,17 @@ export type RunnerRunRequest = {
   settings: WorkflowSettings;
   mode: RunMode;
   targetStepId?: string | null;
+  reuseRetainedSession?: boolean;
+  retainedSessionWorkflowId?: string | null;
   signal?: AbortSignal;
   onProgress?: (state: Partial<RunState>) => void;
+};
+
+type RetainedSession = {
+  context: BrowserDriverContext;
+  page: BrowserDriverPage;
+  workflowId: string | null;
+  profileName: string | null;
 };
 
 type Runtime = {
@@ -233,7 +244,7 @@ export class BrowserWorkflowRunner {
   private readonly driver: BrowserDriver;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
-  private retainedContext: BrowserDriverContext | null = null;
+  private retainedSession: RetainedSession | null = null;
 
   constructor(options: RunnerOptions) {
     this.appPaths = options.appPaths;
@@ -243,8 +254,9 @@ export class BrowserWorkflowRunner {
   }
 
   async run(request: RunnerRunRequest): Promise<RunState> {
-    await this.closeRetainedContext();
-    const launch = await this.launch(request.settings);
+    const launch = request.reuseRetainedSession
+      ? await this.reuseRetainedSession(request)
+      : await this.launchFreshSession(request);
     const state: RunState = {
       status: "running",
       mode: request.mode,
@@ -253,6 +265,7 @@ export class BrowserWorkflowRunner {
       current_step_number: null,
       completed_step_ids: [],
       outputs: {},
+      retained_session: this.retainedSessionState(),
       error: null,
     };
     const runtime: Runtime = {
@@ -334,18 +347,107 @@ export class BrowserWorkflowRunner {
 
       if (closeBrowser) {
         await runtime.context.close();
+        if (this.retainedSession?.context === runtime.context) {
+          this.retainedSession = null;
+        }
       } else {
-        this.retainedContext = runtime.context;
+        this.retainSession(
+          runtime.context,
+          runtime.page,
+          request.retainedSessionWorkflowId ?? null,
+          request.settings.browser_launch.profile_name ?? null,
+        );
       }
+      state.retained_session = this.retainedSessionState();
     }
 
     return state;
   }
 
   async closeRetainedContext() {
-    if (!this.retainedContext) return;
-    await this.retainedContext.close();
-    this.retainedContext = null;
+    if (!this.retainedSession) return;
+    await this.retainedSession.context.close();
+    this.retainedSession = null;
+  }
+
+  hasReusableRetainedSession(workflowId: string, profileName?: string | null) {
+    if (!this.retainedSession || this.isRetainedSessionStale()) {
+      this.retainedSession = null;
+      return false;
+    }
+    return (
+      this.retainedSession.workflowId === workflowId &&
+      this.retainedSession.profileName === (profileName ?? null)
+    );
+  }
+
+  getRetainedSessionState() {
+    return this.retainedSessionState();
+  }
+
+  private async launchFreshSession(request: RunnerRunRequest) {
+    await this.closeRetainedContext();
+    return this.launch(request.settings);
+  }
+
+  private async reuseRetainedSession(request: RunnerRunRequest) {
+    const profileName = request.settings.browser_launch.profile_name ?? null;
+    const workflowId = request.retainedSessionWorkflowId ?? null;
+    if (!workflowId || !this.hasReusableRetainedSession(workflowId, profileName)) {
+      throw new Error("No reusable browser session is available. Run the workflow again to create one.");
+    }
+    const session = this.retainedSession;
+    if (!session) {
+      throw new Error("No reusable browser session is available. Run the workflow again to create one.");
+    }
+    return { context: session.context, page: session.page, temporary: false };
+  }
+
+  private retainSession(
+    context: BrowserDriverContext,
+    page: BrowserDriverPage,
+    workflowId: string | null,
+    profileName: string | null,
+  ) {
+    this.retainedSession = { context, page, workflowId, profileName };
+    context.on?.("close", () => {
+      if (this.retainedSession?.context === context) {
+        this.retainedSession = null;
+      }
+    });
+  }
+
+  private retainedSessionState(): RunState["retained_session"] {
+    if (!this.retainedSession) {
+      return {
+        available: false,
+        workflow_id: null,
+        profile_name: null,
+        reason: "No retained browser session",
+      };
+    }
+    if (this.isRetainedSessionStale()) {
+      this.retainedSession = null;
+      return {
+        available: false,
+        workflow_id: null,
+        profile_name: null,
+        reason: "Browser session was closed",
+      };
+    }
+    return {
+      available: true,
+      workflow_id: this.retainedSession.workflowId,
+      profile_name: this.retainedSession.profileName,
+      reason: null,
+    };
+  }
+
+  private isRetainedSessionStale() {
+    if (!this.retainedSession) return true;
+    const contextClosed = (this.retainedSession.context as { closed?: boolean }).closed === true;
+    const pageClosed = this.retainedSession.page.isClosed?.() === true;
+    return contextClosed || pageClosed;
   }
 
   private async launch(settings: WorkflowSettings) {

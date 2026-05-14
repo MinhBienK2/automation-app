@@ -184,6 +184,38 @@ export function compileWorkflowRunPlan(
   };
 }
 
+export function compileWorkflowGraphFromNode(
+  graph: WorkflowGraph,
+  startNodeId: string,
+): CompiledWorkflowGraph {
+  const normalizedGraph = migrateWorkflowGraph(graph);
+  const blocking = validateWorkflowGraph(normalizedGraph).find((issue) => issue.level === "error");
+  if (blocking) {
+    throw validationError("graph", blocking.message);
+  }
+
+  if (!mainPathNodeIds(normalizedGraph).has(startNodeId)) {
+    throw validationError("startNodeId", "Run from selected is only supported for main path nodes");
+  }
+
+  const node = normalizedGraph.nodes.find((candidate) => candidate.id === startNodeId);
+  if (!node || node.node_type === "start") {
+    throw validationError("startNodeId", "Run from selected requires an executable graph node");
+  }
+
+  const steps: CompiledGraphStep[] = [];
+  compilePath(normalizedGraph, startNodeId, new Set(), steps);
+  const compiled = steps.map((stepValue) => ({
+    ...stepValue,
+    config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
+  }));
+  const withWaits = insertWaitBetweenGraphNodes(compiled);
+  return {
+    steps: withWaits,
+    domain_policy: domainPolicyFromSteps(withWaits),
+  };
+}
+
 function compilePath(
   graph: WorkflowGraph,
   nodeId: string | null,
@@ -1424,6 +1456,54 @@ function nextTarget(graph: WorkflowGraph, sourceNodeId: string, sourcePort: stri
   return [...graph.edges]
     .filter((edgeValue) => edgeValue.source_node_id === sourceNodeId && edgeValue.source_port === sourcePort)
     .sort((left, right) => left.id.localeCompare(right.id))[0]?.target_node_id ?? null;
+}
+
+function mainPathNodeIds(graph: WorkflowGraph) {
+  const nodeIds = new Set<string>();
+  let node = graph.nodes.find((candidate) => candidate.node_type === "start") ?? null;
+  const visited = new Set<string>();
+
+  while (node && !visited.has(node.id)) {
+    nodeIds.add(node.id);
+    visited.add(node.id);
+    const nextPort = mainContinuationPort(node.node_type);
+    if (!nextPort) break;
+    const nextNodeId = nextTarget(graph, node.id, nextPort);
+    node = nextNodeId
+      ? graph.nodes.find((candidate) => candidate.id === nextNodeId) ?? null
+      : null;
+  }
+
+  return nodeIds;
+}
+
+function mainContinuationPort(nodeType: GraphNodeType) {
+  switch (nodeType) {
+    case "start":
+    case "action":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "assert_output":
+    case "run_subworkflow":
+    case "domain_allowlist":
+    case "manual_approval":
+    case "rate_limit":
+      return "out";
+    case "if":
+    case "switch":
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+    case "repeat_until":
+    case "try_catch":
+    case "fallback":
+      return "done";
+    case "retry":
+      return "success";
+    default:
+      return null;
+  }
 }
 
 function hasOutgoing(graph: WorkflowGraph, sourceNodeId: string, sourcePort: string): boolean {
