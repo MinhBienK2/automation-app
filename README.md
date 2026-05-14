@@ -42,6 +42,28 @@ Run desktop Electron E2E tests against deterministic local fixtures:
 npm run test:e2e
 ```
 
+Run the fast E2E smoke lane:
+
+```bash
+npm run test:e2e:smoke
+```
+
+Run high-risk E2E interaction suites repeatedly to catch flaky pointer/form/keyboard behavior:
+
+```bash
+npm run test:e2e:flake
+```
+
+Run authorized staging E2E only with explicit owned target allowlists and named test accounts:
+
+```bash
+E2E_STAGING_TARGETS_FILE=./staging-targets.local.json \
+E2E_STAGING_ACCOUNTS_FILE=./staging-accounts.local.json \
+npm run test:e2e:staging
+```
+
+Example file shapes live in `tests/e2e/fixtures/staging-targets.example.json` and `tests/e2e/fixtures/staging-accounts.example.json`.
+
 Run the real CloakBrowser smoke test separately. First run may download the
 browser runtime:
 

@@ -12,7 +12,12 @@ dist
 dist-electron
 dist-ssr
 release
+test-results
+playwright-report
 *.local
+*.local.json
+*.e2e.local.json
+*.staging.local.json
 *.tsbuildinfo
 vite.config.d.ts
 vite.config.js

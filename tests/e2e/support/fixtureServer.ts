@@ -269,9 +269,16 @@ function pointerPage() {
     <title>Pointer Fixture</title>
     <style>
       body { min-height: 1800px; font-family: sans-serif; }
-      button, [draggable] { margin: 8px; padding: 8px 12px; }
-      #drop-zone { align-items: center; border: 2px dashed #667085; display: flex; height: 96px; margin: 8px; width: 240px; }
-      [data-testid="pointer-summary"] { background: white; border: 1px solid #d0d5dd; padding: 8px; position: sticky; top: 0; z-index: 1; }
+      button, [draggable] {
+        display: block;
+        font-size: 16px;
+        margin: 18px 8px;
+        min-height: 56px;
+        min-width: 260px;
+        padding: 14px 18px;
+      }
+      #drop-zone { align-items: center; border: 2px dashed #667085; display: flex; height: 128px; margin: 18px 8px; width: 320px; }
+      [data-testid="pointer-summary"] { background: white; border: 1px solid #d0d5dd; margin: 8px; padding: 8px; }
     </style>
   </head>
   <body>

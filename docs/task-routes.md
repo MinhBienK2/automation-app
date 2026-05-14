@@ -130,3 +130,10 @@ Verify: test fixtures under `src/tests/` or `electron/backend/`; source behavior
 Checks: focused test command for the edited test.
 
 Update docs: testing architecture or route checks only if verification expectations changed.
+
+Common E2E commands:
+
+- Smoke: `npm run test:e2e:smoke`
+- Full local desktop: `npm run test:e2e:full`
+- Flake detection: `npm run test:e2e:flake`
+- Authorized staging: `npm run test:e2e:staging` with `E2E_STAGING_TARGETS_FILE` and `E2E_STAGING_ACCOUNTS_FILE`

@@ -24,13 +24,17 @@ export async function createAndRunWorkflow(
 
 export async function createAndRunGraph(page: Page, name: string, graph: WorkflowGraph) {
   const workflowId = await createWorkflow(page, name, graph);
+  let lastState: RunState | null = null;
 
   try {
     await expect
-      .poll(() => runState(page), { timeout: 45_000 })
+      .poll(async () => {
+        lastState = await runState(page);
+        return lastState;
+      }, { timeout: 45_000 })
       .toMatchObject({ status: "success" });
   } catch (error) {
-    const state = await runState(page);
+    const state = await runStateForError(page, lastState);
     throw new Error(
       `Workflow did not finish successfully. Last run state: ${JSON.stringify(state)}`,
       { cause: error },
@@ -53,15 +57,19 @@ export async function createAndRunGraphExpectingFailure(
   graph: WorkflowGraph,
 ) {
   const workflowId = await createWorkflow(page, name, graph);
+  let lastState: RunState | null = null;
 
   await expect
-    .poll(() => runState(page), { timeout: 45_000 })
+    .poll(async () => {
+      lastState = await runState(page);
+      return lastState;
+    }, { timeout: 45_000 })
     .toMatchObject({ status: "failed" });
 
   return { workflowId, state: await runState(page) };
 }
 
-async function runState(page: Page): Promise<RunState> {
+export async function runState(page: Page): Promise<RunState> {
   return page.evaluate(async () => {
     const api = window.workflowApi;
     if (!api) throw new Error("Workflow API bridge is unavailable");
@@ -69,7 +77,7 @@ async function runState(page: Page): Promise<RunState> {
   });
 }
 
-async function createWorkflow(page: Page, name: string, graph: WorkflowGraph) {
+export async function createWorkflow(page: Page, name: string, graph: WorkflowGraph) {
   return page.evaluate(
     async ({ workflowName, workflowGraph }) => {
       const api = window.workflowApi;
@@ -95,7 +103,49 @@ async function createWorkflow(page: Page, name: string, graph: WorkflowGraph) {
   );
 }
 
-function linearGraph(
+export async function createWorkflowWithoutRun(page: Page, name: string, graph: WorkflowGraph) {
+  return page.evaluate(
+    async ({ workflowName, workflowGraph }) => {
+      const api = window.workflowApi;
+      if (!api) throw new Error("Workflow API bridge is unavailable");
+      const workflow = await api.createWorkflow(workflowName);
+      const settings = await api.getWorkflowSettings(workflow.id);
+      await api.saveWorkflowSettings(workflow.id, {
+        ...settings,
+        run_policy: {
+          ...settings.run_policy,
+          browser_retention: "close",
+        },
+        browser_launch: {
+          ...settings.browser_launch,
+          headless: true,
+        },
+      });
+      await api.saveWorkflowGraph(workflow.id, workflowGraph);
+      return workflow.id;
+    },
+    { workflowName: name, workflowGraph: graph },
+  );
+}
+
+export async function runWorkflowExpectingCommandError(page: Page, workflowId: string) {
+  return page.evaluate(async (id) => {
+    const api = window.workflowApi;
+    if (!api) throw new Error("Workflow API bridge is unavailable");
+    try {
+      await api.runWorkflow(id);
+      return null;
+    } catch (error) {
+      return error instanceof Error
+        ? { message: error.message }
+        : error && typeof error === "object" && "message" in error
+          ? { message: String((error as { message?: unknown }).message) }
+          : { message: String(error) };
+    }
+  }, workflowId);
+}
+
+export function linearGraph(
   steps: Array<{ id: string; label: string; config: ActionConfig }>,
 ): WorkflowGraph {
   return {
@@ -133,4 +183,16 @@ function linearGraph(
     viewport: { x: 0, y: 0, zoom: 1 },
     migration_notes: [],
   };
+}
+
+async function runStateForError(page: Page, fallback: RunState | null) {
+  try {
+    return await runState(page);
+  } catch (error) {
+    return {
+      unavailable: true,
+      fallback,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

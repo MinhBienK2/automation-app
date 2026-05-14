@@ -41,19 +41,26 @@ Focused commands:
 
 Focused commands:
 
-- `npm run test:e2e -- tests/e2e/electron-isolation.e2e.ts`
-- `npm run test:e2e -- tests/e2e/core-execution.e2e.ts`
-- `npm run test:e2e -- tests/e2e/capture-network.e2e.ts`
-- `npm run test:e2e -- tests/e2e/keyboard-dialog.e2e.ts`
-- `npm run test:e2e -- tests/e2e/pointer-actions.e2e.ts`
-- `npm run test:e2e -- tests/e2e/navigation-actions.e2e.ts`
-- `npm run test:e2e -- tests/e2e/extended-form-actions.e2e.ts`
-- `npm run test:e2e -- tests/e2e/wait-assertion-actions.e2e.ts`
-- `npm run test:e2e -- tests/e2e/control-flow.e2e.ts`
-- `npm run test:e2e -- tests/e2e/browser-context-storage.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/electron-isolation.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/core-execution.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/capture-network.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/keyboard-dialog.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/pointer-actions.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/navigation-actions.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/extended-form-actions.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/wait-assertion-actions.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/control-flow.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/browser-context-storage.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/run-validation-and-stop.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/batch-evidence.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/workflow-user-journeys.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/workflow-package.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/coverage-matrix.e2e.ts`
+- `npm run test:e2e:staging` with staging env files
 
 Desktop coverage map:
 
+- `coverage-matrix.e2e.ts`: guardrail that keeps visible action coverage, hidden-action coverage decisions, graph-node coverage, and workflow journey coverage aligned with the current type/capability registry.
 - `electron-isolation.e2e.ts`: Electron launch, temp app-data isolation, SQLite-backed desktop state.
 - `core-execution.e2e.ts`: `navigate`, `click`, `wait(text_visible)`, `input_text`, `clear_input`, `select_option`, `check`, `uncheck`, `toggle_checkbox`, `select_radio`, `submit_form`, `extract_text`, `extract_input_value`.
 - `capture-network.e2e.ts`: `extract_text`, `extract_attribute`, `extract_input_value`, `extract_list`, `extract_table`, `take_screenshot`, `wait_for_download`, `execute_js`, `wait_for_request`, `wait_for_response`, `block_request`, `mock_response`.
@@ -64,11 +71,23 @@ Desktop coverage map:
 - `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(element_visible)`, `wait(text_visible)`, `wait(url_contains)`, `random_wait`, `assert_element`, `assert_text` pass and failure run-state paths.
 - `control-flow.e2e.ts`: graph-visible `set_variable`, `set_json_variables`, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `break_loop`, `continue_loop`, `end_success`, `end_failure`, and `stop_workflow`.
 - `browser-context-storage.e2e.ts`: `set_viewport`, `set_geolocation`, `grant_permission`, `set_extra_headers`, `set_cookie`, `clear_cookies`, `set_local_storage`, `set_session_storage`.
+- `run-validation-and-stop.e2e.ts`: unconfigured graph run blocking, domain allowlist navigation blocking, and stop during a running wait.
+- `batch-evidence.e2e.ts`: graph-backed batch execution, row variable interpolation, persisted SQLite `runs`/`run_steps`, screenshot evidence files, and `__evidence` metadata.
+- `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
+- `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
+- `staging-owned-targets.e2e.ts`: opt-in authorized staging smoke workflows against allowlisted owned targets and named test accounts.
+
+E2E lanes:
+
+- `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, and coverage matrix.
+- `npm run test:e2e:full`: all local deterministic desktop E2E except staging unless `E2E_STAGING=1`.
+- `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing and humanized pointer regressions.
+- `npm run test:e2e:staging`: opt-in staging lane. Requires `E2E_STAGING_TARGETS_FILE` and `E2E_STAGING_ACCOUNTS_FILE`; targets must be allowlisted and accounts named. Example schemas live in `tests/e2e/fixtures/staging-targets.example.json` and `tests/e2e/fixtures/staging-accounts.example.json`.
 
 Lower-level or compatibility-only coverage:
 
 - Launch-time-only actions such as `use_profile`, `use_proxy`, `set_user_agent`, and `set_download_directory` are hidden from visible in-run authoring and covered by runner/settings tests.
-- Planned or compatibility-hidden actions such as `switch_frame`, `save_session`, `load_session`, `set_secret`, `detect_challenge`, `pause_for_human`, `resume_when_condition`, `try_catch`, `fallback`, `domain_allowlist`, and subworkflow/output assertion internals remain outside desktop visible-node E2E until they return to the visible authoring surface.
+- Planned or compatibility-hidden actions such as `switch_frame`, `save_session`, `load_session`, `set_secret`, `detect_challenge`, `pause_for_human`, `resume_when_condition`, `try_catch`, `fallback`, and subworkflow/output assertion internals remain outside primary visible-node E2E until they return to the visible authoring surface. `domain_allowlist` has desktop E2E coverage for navigation policy because it is a safety boundary.
 - Additional wait condition variants and numeric validation edges remain covered in runner, graph compiler, and form validation suites unless a desktop regression exposes a user-facing gap.
 
 ## Policy

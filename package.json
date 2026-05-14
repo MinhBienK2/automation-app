@@ -12,7 +12,11 @@
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:pack": "npm run build && electron-builder --linux dir",
     "test": "vitest run",
-    "test:e2e": "npm run build:electron && playwright test",
+    "test:e2e": "npm run test:e2e:full",
+    "test:e2e:smoke": "npm run build:electron && playwright test tests/e2e/electron-isolation.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/workflow-user-journeys.e2e.ts tests/e2e/coverage-matrix.e2e.ts",
+    "test:e2e:full": "npm run build:electron && playwright test",
+    "test:e2e:flake": "npm run build:electron && playwright test tests/e2e/pointer-actions.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/extended-form-actions.e2e.ts tests/e2e/keyboard-dialog.e2e.ts --repeat-each=5",
+    "test:e2e:staging": "npm run build:electron && E2E_STAGING=1 playwright test tests/e2e/staging-owned-targets.e2e.ts",
     "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runner.smoke.test.ts",
     "preview": "vite preview"
   },
