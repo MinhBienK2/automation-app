@@ -4,12 +4,14 @@ import {
   workflowBridgeMock,
 } from "../tests/mocks/electron";
 import {
+  cleanupOrphanedBrowserProfiles,
   exportWorkflow,
   exportWorkflowPackage,
   duplicateWorkflow,
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  getCloakBrowserDiagnostics,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
@@ -18,6 +20,7 @@ import {
   runWorkflow,
   runWorkflowFromNode,
   saveWorkflowSettings,
+  installCloakBrowserBinary,
   saveWorkflowSettingsSection,
   saveWorkflowBrowserConfig,
   saveWorkflowGraph,
@@ -86,6 +89,9 @@ describe("workflow API phase ten commands", () => {
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
     });
+    await getCloakBrowserDiagnostics();
+    await installCloakBrowserBinary();
+    await cleanupOrphanedBrowserProfiles();
 
     expect(workflowBridgeMock.validateSchedule).toHaveBeenCalledWith({
       workflow_id: "workflow-1",
@@ -121,6 +127,9 @@ describe("workflow API phase ten commands", () => {
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
     });
+    expect(workflowBridgeMock.getCloakBrowserDiagnostics).toHaveBeenCalled();
+    expect(workflowBridgeMock.installCloakBrowserBinary).toHaveBeenCalled();
+    expect(workflowBridgeMock.cleanupOrphanedBrowserProfiles).toHaveBeenCalled();
   });
 
   test("invokes workflow package commands with selected sections", async () => {
@@ -337,11 +346,19 @@ function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
     geoip: false,
     proxy_label: null,
     proxy_region: null,
+    proxy_provider: null,
+    proxy_bypass: null,
+    test_account_binding: null,
     webrtc_policy: "default",
     webrtc_ip: null,
+    fingerprint_platform: null,
+    hardware_concurrency: null,
+    device_memory_gb: null,
+    fingerprint_fonts_dir: null,
     storage_quota_mb: null,
     humanize: true,
     human_preset: "default",
+    behavior_fidelity: "balanced",
     preflight_enabled: false,
     preflight_probe_url: null,
     preflight_allowed_origins: [],

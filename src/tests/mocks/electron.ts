@@ -17,6 +17,9 @@ const methodNames: BridgeMethodName[] = [
   "saveWorkflowSettings",
   "saveWorkflowSettingsSection",
   "validateWorkflowSettings",
+  "getCloakBrowserDiagnostics",
+  "installCloakBrowserBinary",
+  "cleanupOrphanedBrowserProfiles",
   "validateWorkflowRun",
   "createWorkflow",
   "renameWorkflow",
@@ -107,6 +110,15 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.validateWorkflowSettings.mockImplementation((settings: unknown) =>
     resolveCommand(commands, "validate_workflow_settings", { settings }),
+  );
+  workflowBridgeMock.getCloakBrowserDiagnostics.mockImplementation(() =>
+    resolveCommand(commands, "get_cloakbrowser_diagnostics", undefined),
+  );
+  workflowBridgeMock.installCloakBrowserBinary.mockImplementation(() =>
+    resolveCommand(commands, "install_cloakbrowser_binary", undefined),
+  );
+  workflowBridgeMock.cleanupOrphanedBrowserProfiles.mockImplementation(() =>
+    resolveCommand(commands, "cleanup_orphaned_browser_profiles", undefined),
   );
   workflowBridgeMock.validateWorkflowRun.mockImplementation((workflowId: string) =>
     resolveCommand(commands, "validate_workflow_run", { workflowId }),

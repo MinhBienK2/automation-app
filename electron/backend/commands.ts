@@ -1,9 +1,15 @@
+import fs from "node:fs/promises";
+import nodeFs from "node:fs";
+import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   ActionConfig,
   BatchRunRequest,
+  BrowserProfileCleanupResult,
+  BrowserProfileDiagnostics,
+  CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
   ElementSnapshot,
   GraphValidationIssue,
@@ -41,6 +47,18 @@ import { elementTargetFromXpath, migrateWorkflowGraph } from "./workflowGraphMig
 import { WorkflowRepository } from "./workflowRepository.js";
 
 const nodeRequire = createRequire(import.meta.url);
+
+type CloakBrowserDiagnosticsModule = {
+  binaryInfo: () => {
+    version?: string;
+    platform?: string;
+    binaryPath?: string;
+    installed?: boolean;
+    cacheDir?: string;
+    downloadUrl?: string;
+  };
+  ensureBinary: () => Promise<string>;
+};
 
 export type CommandError = {
   message: string;
@@ -108,8 +126,58 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return defaultWorkflowSettings(requireWorkflow(workflowId));
   }
 
+  function lastRunAtForWorkflow(workflowId: string): string | null {
+    const row = context.database
+      .prepare(
+        `SELECT COALESCE(finished_at, started_at) AS last_run_at
+         FROM runs
+         WHERE workflow_id = ?
+         ORDER BY started_at DESC
+         LIMIT 1`,
+      )
+      .get(workflowId) as { last_run_at?: string | null } | undefined;
+    return row?.last_run_at ?? null;
+  }
+
+  function retainedProfileName() {
+    return runner.getRetainedSessionState?.()?.profile_name ?? null;
+  }
+
+  function assertCanChangeBrowserIdentityProfile(
+    workflowId: string,
+    nextSettings: WorkflowSettings,
+  ) {
+    const activeProfileName = retainedProfileName();
+    if (!activeProfileName) return;
+    const currentSettings = getSettings(workflowId);
+    const currentProfileKey = browserProfileKey(currentSettings);
+    if (currentProfileKey !== activeProfileName) return;
+    const nextProfileKey = browserProfileKey(nextSettings);
+    const changingIdentityProfile =
+      nextProfileKey !== currentProfileKey ||
+      nextSettings.browser_launch.identity_id !== currentSettings.browser_launch.identity_id ||
+      nextSettings.browser_launch.fingerprint_seed !== currentSettings.browser_launch.fingerprint_seed;
+    if (!changingIdentityProfile) return;
+    throw commandError(
+      "Close the retained browser session before changing or deleting its identity profile",
+      "browser_launch.profile_dir",
+    );
+  }
+
+  function assertProfileNotActiveForWorkflow(workflowId: string) {
+    const activeProfileName = retainedProfileName();
+    if (!activeProfileName) return;
+    const currentProfileKey = browserProfileKey(getSettings(workflowId));
+    if (currentProfileKey !== activeProfileName) return;
+    throw commandError(
+      "Close the retained browser session before changing or deleting its identity profile",
+      "browser_launch.profile_dir",
+    );
+  }
+
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
     const activeSettings = stripRemovedWorkflowSettingsSections(settings);
+    assertCanChangeBrowserIdentityProfile(workflowId, activeSettings);
     const issues = validateSettings(activeSettings);
     const firstError = issues.find((issue) => issue.level === "error");
     if (firstError) {
@@ -242,6 +310,57 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return validateSettings(settings);
     },
 
+    async getCloakBrowserDiagnostics(): Promise<CloakBrowserDiagnostics> {
+      return buildCloakBrowserDiagnostics({
+        appPaths: context.appPaths,
+        workflows: repository.listWorkflows(),
+        settingsForWorkflow: getSettings,
+        lastRunAtForWorkflow,
+        retainedProfileName: retainedProfileName(),
+      });
+    },
+
+    async installCloakBrowserBinary(): Promise<CloakBrowserDiagnostics> {
+      const cloakbrowser = await loadCloakBrowserDiagnosticsModule();
+      await cloakbrowser.ensureBinary();
+      return buildCloakBrowserDiagnostics({
+        appPaths: context.appPaths,
+        workflows: repository.listWorkflows(),
+        settingsForWorkflow: getSettings,
+        lastRunAtForWorkflow,
+        retainedProfileName: retainedProfileName(),
+      });
+    },
+
+    async cleanupOrphanedBrowserProfiles(): Promise<BrowserProfileCleanupResult> {
+      const diagnostics = await buildCloakBrowserDiagnostics({
+        appPaths: context.appPaths,
+        workflows: repository.listWorkflows(),
+        settingsForWorkflow: getSettings,
+        lastRunAtForWorkflow,
+        retainedProfileName: retainedProfileName(),
+      });
+      const result: BrowserProfileCleanupResult = {
+        deleted_profiles: [],
+        skipped_profiles: [],
+        reclaimed_bytes: 0,
+      };
+      for (const profile of diagnostics.profiles) {
+        if (profile.workflow_id || profile.active_session) {
+          result.skipped_profiles.push(profile);
+          continue;
+        }
+        await fs.rm(path.join(context.appPaths.browserProfilesDir, profile.profile_dir), {
+          recursive: true,
+          force: true,
+        });
+        result.deleted_profiles.push(profile.profile_dir);
+        result.reclaimed_bytes += profile.approximate_size_bytes;
+      }
+      result.deleted_profiles.sort((left, right) => left.localeCompare(right));
+      return result;
+    },
+
     validateWorkflowRun(workflowId: string): RunValidationIssue[] {
       return validateWorkflowRun(workflowId);
     },
@@ -258,6 +377,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     deleteWorkflow(id: string) {
+      assertProfileNotActiveForWorkflow(id);
       repository.deleteWorkflow(id);
     },
 
@@ -926,6 +1046,27 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Proxy server is required when proxy is enabled",
     });
   }
+  if (settings.browser_launch.proxy_enabled && settings.browser_launch.proxy_server?.trim()) {
+    const parsedProxy = parseProxyServer(settings.browser_launch.proxy_server);
+    if (!parsedProxy.valid) {
+      issues.push({
+        section: "browser_launch",
+        field: "proxy_server",
+        level: "error",
+        message: parsedProxy.message,
+      });
+    } else if (
+      parsedProxy.hasCredentials &&
+      (settings.browser_launch.proxy_username?.trim() || settings.browser_launch.proxy_password?.trim())
+    ) {
+      issues.push({
+        section: "browser_launch",
+        field: "proxy_username",
+        level: "error",
+        message: "Proxy credentials must be configured either in the proxy URL or the username/password fields, not both",
+      });
+    }
+  }
   if (
     settings.browser_launch.session_mode === "persistent_profile" &&
     !settings.browser_launch.fingerprint_seed?.trim()
@@ -954,6 +1095,18 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     });
   }
   if (
+    settings.browser_launch.webrtc_policy === "explicit_ip" &&
+    settings.browser_launch.webrtc_ip?.trim() &&
+    !validIpAddress(settings.browser_launch.webrtc_ip)
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "webrtc_ip",
+      level: "error",
+      message: "Explicit WebRTC IP must be a valid IPv4 or IPv6 address",
+    });
+  }
+  if (
     settings.browser_launch.webrtc_policy === "auto_proxy_exit_ip" &&
     (!settings.browser_launch.proxy_enabled || !settings.browser_launch.proxy_server?.trim())
   ) {
@@ -975,6 +1128,54 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       level: "warning",
       message: "Mobile user agents should use mobile viewport and touch settings",
     });
+  }
+  if (
+    settings.browser_launch.fingerprint_platform &&
+    !validFingerprintPlatform(settings.browser_launch.fingerprint_platform)
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "fingerprint_platform",
+      level: "error",
+      message: "Fingerprint platform must be windows, macos, or linux",
+    });
+  }
+  if (
+    settings.browser_launch.hardware_concurrency != null &&
+    (!Number.isInteger(settings.browser_launch.hardware_concurrency) ||
+      settings.browser_launch.hardware_concurrency < 1 ||
+      settings.browser_launch.hardware_concurrency > 64)
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "hardware_concurrency",
+      level: "error",
+      message: "Hardware concurrency must be an integer between 1 and 64",
+    });
+  }
+  if (
+    settings.browser_launch.device_memory_gb != null &&
+    (!Number.isFinite(settings.browser_launch.device_memory_gb) ||
+      settings.browser_launch.device_memory_gb <= 0 ||
+      settings.browser_launch.device_memory_gb > 128)
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "device_memory_gb",
+      level: "error",
+      message: "Device memory must be greater than 0 and no more than 128 GB",
+    });
+  }
+  if (settings.browser_launch.fingerprint_fonts_dir?.trim()) {
+    const fontsDir = settings.browser_launch.fingerprint_fonts_dir.trim();
+    if (!directoryReadable(fontsDir)) {
+      issues.push({
+        section: "browser_launch",
+        field: "fingerprint_fonts_dir",
+        level: "error",
+        message: "Fingerprint fonts directory must be readable",
+      });
+    }
   }
   if (settings.browser_launch.preflight_enabled) {
     const probeUrl = settings.browser_launch.preflight_probe_url?.trim();
@@ -1038,6 +1239,206 @@ function originForUrl(value: string) {
   }
 }
 
+function parseProxyServer(value: string):
+  | { valid: true; hasCredentials: boolean }
+  | { valid: false; message: string } {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return { valid: false, message: "Proxy server must be a valid URL" };
+  }
+  if (!["http:", "https:", "socks5:"].includes(url.protocol)) {
+    return { valid: false, message: "Proxy server must use http, https, or socks5" };
+  }
+  if (!url.hostname) {
+    return { valid: false, message: "Proxy server must include a hostname" };
+  }
+  return {
+    valid: true,
+    hasCredentials: Boolean(url.username || url.password),
+  };
+}
+
+function validIpAddress(value: string) {
+  const candidate = value.trim();
+  if (!candidate) return false;
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(candidate)) {
+    return candidate
+      .split(".")
+      .every((part) => Number(part) >= 0 && Number(part) <= 255);
+  }
+  return /^[0-9a-f:]+$/i.test(candidate) && candidate.includes(":");
+}
+
+function directoryReadable(value: string) {
+  try {
+    const stat = nodeFs.statSync(value);
+    if (!stat.isDirectory()) return false;
+    nodeFs.accessSync(value, nodeFs.constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function buildCloakBrowserDiagnostics({
+  appPaths,
+  workflows,
+  settingsForWorkflow,
+  lastRunAtForWorkflow,
+  retainedProfileName,
+}: {
+  appPaths: AppPaths;
+  workflows: WorkflowSummary[];
+  settingsForWorkflow: (workflowId: string) => WorkflowSettings;
+  lastRunAtForWorkflow: (workflowId: string) => string | null;
+  retainedProfileName: string | null;
+}): Promise<CloakBrowserDiagnostics> {
+  const binary = await cloakBinaryInfo();
+  const identityByProfileDir = new Map<
+    string,
+    Pick<
+      BrowserProfileDiagnostics,
+      "identity_id" | "display_name" | "workflow_id" | "workflow_name" | "last_run_at"
+    >
+  >();
+  for (const workflow of workflows) {
+    const settings = settingsForWorkflow(workflow.id);
+    const profileDir = settings.browser_launch.profile_dir?.trim();
+    if (!profileDir) continue;
+    identityByProfileDir.set(profileDir, {
+      identity_id: settings.browser_launch.identity_id,
+      display_name: settings.browser_launch.display_name,
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+      last_run_at: lastRunAtForWorkflow(workflow.id),
+    });
+  }
+
+  return {
+    wrapper_version: await cloakWrapperVersion(),
+    binary,
+    auto_update_enabled: process.env.CLOAKBROWSER_AUTO_UPDATE !== "false",
+    checksum_skip_enabled: process.env.CLOAKBROWSER_SKIP_CHECKSUM === "true",
+    geoip_available: isOptionalModuleAvailable("mmdb-lib"),
+    profile_root: appPaths.browserProfilesDir,
+    headed_display: headedDisplayAvailability(),
+    profiles: await browserProfileDiagnostics(
+      appPaths.browserProfilesDir,
+      identityByProfileDir,
+      retainedProfileName,
+    ),
+  };
+}
+
+async function cloakBinaryInfo(): Promise<CloakBrowserDiagnostics["binary"]> {
+  try {
+    const cloakbrowser = await loadCloakBrowserDiagnosticsModule();
+    const info = cloakbrowser.binaryInfo();
+    return {
+      version: info.version ?? null,
+      platform: info.platform ?? null,
+      installed: Boolean(info.installed),
+      binary_path: info.binaryPath ?? null,
+      cache_dir: info.cacheDir ?? null,
+      download_url: info.downloadUrl ?? null,
+    };
+  } catch {
+    return {
+      version: null,
+      platform: process.platform,
+      installed: false,
+      binary_path: process.env.CLOAKBROWSER_BINARY_PATH ?? null,
+      cache_dir: process.env.CLOAKBROWSER_CACHE_DIR ?? null,
+      download_url: process.env.CLOAKBROWSER_DOWNLOAD_URL ?? null,
+    };
+  }
+}
+
+async function loadCloakBrowserDiagnosticsModule(): Promise<CloakBrowserDiagnosticsModule> {
+  return (await import("cloakbrowser")) as unknown as CloakBrowserDiagnosticsModule;
+}
+
+async function cloakWrapperVersion() {
+  try {
+    const packageJson = await fs.readFile(
+      path.join(process.cwd(), "node_modules", "cloakbrowser", "package.json"),
+      "utf8",
+    );
+    const parsed = JSON.parse(packageJson) as { version?: unknown };
+    return typeof parsed.version === "string" ? parsed.version : null;
+  } catch {
+    return null;
+  }
+}
+
+function headedDisplayAvailability(): CloakBrowserDiagnostics["headed_display"] {
+  if (process.platform !== "linux") {
+    return { available: true, reason: null };
+  }
+  if (process.env.DISPLAY || process.env.WAYLAND_DISPLAY) {
+    return { available: true, reason: null };
+  }
+  return {
+    available: false,
+    reason: "No DISPLAY or WAYLAND_DISPLAY is configured for headed Linux runs",
+  };
+}
+
+async function browserProfileDiagnostics(
+  profileRoot: string,
+  identityByProfileDir: Map<
+    string,
+    Pick<
+      BrowserProfileDiagnostics,
+      "identity_id" | "display_name" | "workflow_id" | "workflow_name" | "last_run_at"
+    >
+  >,
+  retainedProfileName: string | null,
+): Promise<BrowserProfileDiagnostics[]> {
+  let entries: Array<{ name: string; isDirectory(): boolean }>;
+  try {
+    entries = await fs.readdir(profileRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const profiles: BrowserProfileDiagnostics[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const profileDir = entry.name;
+    const fullPath = path.join(profileRoot, profileDir);
+    const stat = await fs.stat(fullPath).catch(() => null);
+    const identity = identityByProfileDir.get(profileDir);
+    profiles.push({
+      profile_dir: profileDir,
+      identity_id: identity?.identity_id ?? null,
+      display_name: identity?.display_name ?? null,
+      workflow_id: identity?.workflow_id ?? null,
+      workflow_name: identity?.workflow_name ?? null,
+      approximate_size_bytes: await directorySize(fullPath),
+      last_modified_at: stat?.mtime ? stat.mtime.toISOString() : null,
+      last_run_at: identity?.last_run_at ?? null,
+      active_session: retainedProfileName === profileDir,
+    });
+  }
+  return profiles.sort((left, right) => left.profile_dir.localeCompare(right.profile_dir));
+}
+
+async function directorySize(directory: string): Promise<number> {
+  let total = 0;
+  const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    const childPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      total += await directorySize(childPath);
+    } else if (entry.isFile()) {
+      total += (await fs.stat(childPath).catch(() => ({ size: 0 }))).size;
+    }
+  }
+  return total;
+}
+
 function stripRemovedWorkflowSettingsSections(settings: WorkflowSettings): WorkflowSettings {
   const legacySettings = settings as WorkflowSettings & { owned_test_gates?: unknown };
   const { owned_test_gates: removedOwnedTestGates, ...activeSettings } = legacySettings;
@@ -1088,6 +1489,13 @@ function sanitizeBrowserLaunchSettings(
     omittedFields.push("settings.browser_launch.proxy_password");
   }
   sanitized.proxy_password = null;
+  if (sanitized.proxy_server) {
+    const sanitizedProxyServer = sanitizeProxyServerCredentials(sanitized.proxy_server);
+    if (sanitizedProxyServer !== sanitized.proxy_server) {
+      omittedFields.push("settings.browser_launch.proxy_server.credentials");
+      sanitized.proxy_server = sanitizedProxyServer;
+    }
+  }
   if (sanitized.preflight_probe_url) {
     const sanitizedProbeUrl = sanitizeUrlSearch(sanitized.preflight_probe_url);
     if (sanitizedProbeUrl !== sanitized.preflight_probe_url) {
@@ -1096,6 +1504,18 @@ function sanitizeBrowserLaunchSettings(
     }
   }
   return sanitized;
+}
+
+function sanitizeProxyServerCredentials(value: string) {
+  try {
+    const url = new URL(value);
+    if (!url.username && !url.password) return value;
+    url.username = "";
+    url.password = "";
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 function sanitizeUrlSearch(value: string) {
@@ -1410,13 +1830,25 @@ function normalizeSettingsBrowserLaunch(
     geoip: Boolean(browser.geoip),
     proxy_label: nullableText(browser.proxy_label),
     proxy_region: nullableText(browser.proxy_region),
+    proxy_provider: nullableText(browser.proxy_provider),
+    proxy_bypass: nullableText(browser.proxy_bypass),
+    test_account_binding: nullableText(browser.test_account_binding),
     webrtc_policy: validWebRtcPolicy(browser.webrtc_policy)
       ? browser.webrtc_policy
       : "default",
     webrtc_ip: nullableText(browser.webrtc_ip),
+    fingerprint_platform: validFingerprintPlatform(browser.fingerprint_platform)
+      ? browser.fingerprint_platform
+      : null,
+    hardware_concurrency: positiveIntegerOptionalNumber(browser.hardware_concurrency),
+    device_memory_gb: positiveOptionalNumber(browser.device_memory_gb),
+    fingerprint_fonts_dir: nullableText(browser.fingerprint_fonts_dir),
     storage_quota_mb: positiveOptionalNumber(browser.storage_quota_mb),
     humanize: browser.humanize !== false,
     human_preset: browser.human_preset === "careful" ? "careful" : "default",
+    behavior_fidelity: validBehaviorFidelity(browser.behavior_fidelity)
+      ? browser.behavior_fidelity
+      : "balanced",
     preflight_enabled: Boolean(browser.preflight_enabled),
     preflight_probe_url: nullableText(browser.preflight_probe_url),
     preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
@@ -1493,11 +1925,19 @@ function createDefaultBrowserIdentity(
   | "geoip"
   | "proxy_label"
   | "proxy_region"
+  | "proxy_provider"
+  | "proxy_bypass"
+  | "test_account_binding"
   | "webrtc_policy"
   | "webrtc_ip"
+  | "fingerprint_platform"
+  | "hardware_concurrency"
+  | "device_memory_gb"
+  | "fingerprint_fonts_dir"
   | "storage_quota_mb"
   | "humanize"
   | "human_preset"
+  | "behavior_fidelity"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
@@ -1523,11 +1963,19 @@ function createDefaultBrowserIdentity(
     geoip: false,
     proxy_label: null,
     proxy_region: null,
+    proxy_provider: null,
+    proxy_bypass: null,
+    test_account_binding: null,
     webrtc_policy: "default",
     webrtc_ip: null,
+    fingerprint_platform: null,
+    hardware_concurrency: null,
+    device_memory_gb: null,
+    fingerprint_fonts_dir: null,
     storage_quota_mb: null,
     humanize: true,
     human_preset: "default",
+    behavior_fidelity: "balanced",
     preflight_enabled: false,
     preflight_probe_url: null,
     preflight_allowed_origins: [],
@@ -1567,12 +2015,34 @@ function positiveOptionalNumber(value: unknown) {
     : null;
 }
 
+function positiveIntegerOptionalNumber(value: unknown) {
+  return Number.isInteger(value) && Number(value) > 0
+    ? Number(value)
+    : null;
+}
+
 function validWebRtcPolicy(value: unknown): value is WorkflowSettingsBrowserLaunch["webrtc_policy"] {
   return (
     value === "default" ||
     value === "auto_proxy_exit_ip" ||
     value === "explicit_ip" ||
     value === "disabled_if_supported"
+  );
+}
+
+function validFingerprintPlatform(
+  value: unknown,
+): value is NonNullable<WorkflowSettingsBrowserLaunch["fingerprint_platform"]> {
+  return value === "windows" || value === "macos" || value === "linux";
+}
+
+function validBehaviorFidelity(
+  value: unknown,
+): value is WorkflowSettingsBrowserLaunch["behavior_fidelity"] {
+  return (
+    value === "balanced" ||
+    value === "strict_humanized" ||
+    value === "deterministic_internal"
   );
 }
 
@@ -1600,11 +2070,19 @@ function browserIdentityPreferences(
   | "geoip"
   | "proxy_label"
   | "proxy_region"
+  | "proxy_provider"
+  | "proxy_bypass"
+  | "test_account_binding"
   | "webrtc_policy"
   | "webrtc_ip"
+  | "fingerprint_platform"
+  | "hardware_concurrency"
+  | "device_memory_gb"
+  | "fingerprint_fonts_dir"
   | "storage_quota_mb"
   | "humanize"
   | "human_preset"
+  | "behavior_fidelity"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
@@ -1625,11 +2103,19 @@ function browserIdentityPreferences(
     geoip: browser.geoip,
     proxy_label: browser.proxy_label,
     proxy_region: browser.proxy_region,
+    proxy_provider: browser.proxy_provider,
+    proxy_bypass: browser.proxy_bypass,
+    test_account_binding: browser.test_account_binding,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_ip,
+    fingerprint_platform: browser.fingerprint_platform,
+    hardware_concurrency: browser.hardware_concurrency,
+    device_memory_gb: browser.device_memory_gb,
+    fingerprint_fonts_dir: browser.fingerprint_fonts_dir,
     storage_quota_mb: browser.storage_quota_mb,
     humanize: browser.humanize,
     human_preset: browser.human_preset,
+    behavior_fidelity: browser.behavior_fidelity,
     preflight_enabled: browser.preflight_enabled,
     preflight_probe_url: browser.preflight_probe_url,
     preflight_allowed_origins: browser.preflight_allowed_origins,

@@ -60,6 +60,11 @@ describe("BrowserWorkflowRunner", () => {
         proxy_server: "http://proxy.local:8080",
         proxy_username: "agent",
         proxy_password: "secret",
+        proxy_label: "Corp proxy",
+        proxy_region: "us-east",
+        proxy_provider: "owned-lab",
+        proxy_bypass: ".internal.test",
+        test_account_binding: "acct-checkout-1",
         timezone: "America/New_York",
         locale: "en-US",
         viewport_width: 1920,
@@ -70,6 +75,9 @@ describe("BrowserWorkflowRunner", () => {
         humanize: true,
         human_preset: "careful",
         geoip: false,
+        fingerprint_platform: "windows",
+        hardware_concurrency: 8,
+        device_memory_gb: 16,
         storage_quota_mb: 256,
         webrtc_policy: "auto_proxy_exit_ip",
       },
@@ -98,11 +106,15 @@ describe("BrowserWorkflowRunner", () => {
           geoip: false,
           args: [
             "--fingerprint=38291",
+            "--fingerprint-platform=windows",
+            "--fingerprint-hardware-concurrency=8",
+            "--fingerprint-device-memory=16",
             "--fingerprint-storage-quota=256",
             "--fingerprint-webrtc-ip=auto",
           ],
           proxy: {
             server: "http://proxy.local:8080",
+            bypass: ".internal.test",
             username: "agent",
             password: "secret",
           },
@@ -123,10 +135,17 @@ describe("BrowserWorkflowRunner", () => {
       profile_dir: "bi_test_identity",
       session_mode: "persistent_profile",
       fingerprint_seed_hash: expect.stringMatching(/^[a-f0-9]{16}$/),
-      proxy_label: null,
-      proxy_region: null,
+      proxy_label: "Corp proxy",
+      proxy_region: "us-east",
+      proxy_provider: "owned-lab",
+      test_account_binding: "acct-checkout-1",
       timezone: "America/New_York",
+      timezone_source: "explicit",
       locale: "en-US",
+      locale_source: "explicit",
+      geoip: false,
+      webrtc_policy: "auto_proxy_exit_ip",
+      webrtc_ip: null,
       viewport: {
         width: 1920,
         height: 947,
@@ -136,9 +155,85 @@ describe("BrowserWorkflowRunner", () => {
       },
       humanize: true,
       human_preset: "careful",
+      behavior_fidelity: "balanced",
+      advanced_overrides: [
+        "fingerprint_platform",
+        "hardware_concurrency",
+        "device_memory_gb",
+        "storage_quota_mb",
+      ],
+      cloakbrowser: {
+        wrapper_version: expect.stringMatching(/^\d+\.\d+\.\d+/),
+        binary_version: expect.stringMatching(/^\d+/),
+        binary_platform: expect.any(String),
+        binary_installed: expect.any(Boolean),
+      },
     });
     expect(context.closed).toBe(false);
   });
+
+  test("normalizes proxy URL credentials into Playwright proxy fields", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const settings = makeSettings({
+      browser_launch: {
+        proxy_enabled: true,
+        proxy_server: "socks5://agent:secret@proxy.local:1080",
+      },
+      run_policy: { browser_retention: "close" },
+    });
+
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    await runner.run({
+      graph: { steps: [] },
+      settings,
+      mode: "run_workflow",
+    });
+
+    expect(driver.launches[0]?.options.proxy).toEqual({
+      server: "socks5://proxy.local:1080",
+      username: "agent",
+      password: "secret",
+    });
+  });
+
+  test.skipIf(process.platform !== "linux")(
+    "fails clearly before headed real CloakBrowser launches without a display",
+    async () => {
+      const previousDisplay = process.env.DISPLAY;
+      const previousWaylandDisplay = process.env.WAYLAND_DISPLAY;
+      delete process.env.DISPLAY;
+      delete process.env.WAYLAND_DISPLAY;
+      try {
+        const runner = new BrowserWorkflowRunner({
+          appPaths: await createTempAppPaths(),
+        });
+        await expect(
+          runner.run({
+            graph: { steps: [] },
+            settings: makeSettings({ browser_launch: { headless: false } }),
+            mode: "run_workflow",
+          }),
+        ).rejects.toThrow(
+          "Headed CloakBrowser runs require DISPLAY or WAYLAND_DISPLAY on Linux",
+        );
+      } finally {
+        if (previousDisplay === undefined) {
+          delete process.env.DISPLAY;
+        } else {
+          process.env.DISPLAY = previousDisplay;
+        }
+        if (previousWaylandDisplay === undefined) {
+          delete process.env.WAYLAND_DISPLAY;
+        } else {
+          process.env.WAYLAND_DISPLAY = previousWaylandDisplay;
+        }
+      }
+    },
+  );
 
   test("stops before graph actions when owned fingerprint preflight fails", async () => {
     const page = new FakePage();
@@ -328,11 +423,36 @@ describe("BrowserWorkflowRunner", () => {
       href: "https://owned.test/",
     });
     expect(result.outputs?.__action_traces).toEqual([
-      expect.objectContaining({ node_id: "open", action_type: "navigate", mode: "browser" }),
-      expect.objectContaining({ node_id: "fill", action_type: "input_text", mode: "browser" }),
-      expect.objectContaining({ node_id: "click", action_type: "click", mode: "browser" }),
-      expect.objectContaining({ node_id: "extract", action_type: "extract_text", mode: "observer" }),
-      expect.objectContaining({ node_id: "script", action_type: "execute_js", mode: "direct_dom" }),
+      expect.objectContaining({
+        node_id: "open",
+        action_type: "navigate",
+        mode: "browser",
+        execution_path: "browser_api",
+      }),
+      expect.objectContaining({
+        node_id: "fill",
+        action_type: "input_text",
+        mode: "browser",
+        execution_path: "humanized",
+      }),
+      expect.objectContaining({
+        node_id: "click",
+        action_type: "click",
+        mode: "browser",
+        execution_path: "humanized",
+      }),
+      expect.objectContaining({
+        node_id: "extract",
+        action_type: "extract_text",
+        mode: "observer",
+        execution_path: "browser_api",
+      }),
+      expect.objectContaining({
+        node_id: "script",
+        action_type: "execute_js",
+        mode: "direct_dom",
+        execution_path: "cdp_sensitive",
+      }),
     ]);
     expect(page.events).toEqual(
       expect.arrayContaining([
@@ -343,6 +463,41 @@ describe("BrowserWorkflowRunner", () => {
         "click://button[@id='go']",
       ]),
     );
+  });
+
+  test("strict humanized behavior blocks CDP-sensitive actions", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("script", "Script", {
+            type: "execute_js",
+            config: { script: "return 1", output_name: "value", timeout_ms: 1000 },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        browser_launch: { behavior_fidelity: "strict_humanized" },
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.reason).toBe(
+      "Action execute_js is cdp_sensitive and is blocked by strict humanized behavior",
+    );
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "script",
+        action_type: "execute_js",
+        status: "failed",
+        execution_path: "cdp_sensitive",
+      }),
+    ]);
   });
 
   test("submits targeted forms through locator DOM evaluation", async () => {
@@ -429,7 +584,7 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toContain("scrollBy:0:900");
   });
 
-  test("dispatches right-click targets through locator DOM evaluation", async () => {
+  test("dispatches right-click targets through native locator input", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -453,10 +608,10 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "getByTestId:menu-target",
-        "evaluate:testid=menu-target",
+        "click:testid=menu-target:right",
       ]),
     );
-    expect(page.events).not.toContain("click:testid=menu-target");
+    expect(page.events).not.toContain("evaluate:testid=menu-target");
   });
 
   test("extracts table outputs through locator DOM evaluation", async () => {
@@ -2061,8 +2216,10 @@ class FakeLocator {
     this.events.push(`type:${this.selector}:${value}:${options?.delay ?? 0}`);
   }
 
-  async click() {
-    this.events.push(`click:${this.selector}`);
+  async click(options?: { button?: string }) {
+    this.events.push(
+      options?.button ? `click:${this.selector}:${options.button}` : `click:${this.selector}`,
+    );
   }
 
   async evaluate() {
@@ -2157,8 +2314,10 @@ class MinimalMethodLocator {
     this.events.push(`fill:${this.selector}:${value}`);
   }
 
-  async click() {
-    this.events.push(`click:${this.selector}`);
+  async click(options?: { button?: string }) {
+    this.events.push(
+      options?.button ? `click:${this.selector}:${options.button}` : `click:${this.selector}`,
+    );
   }
 }
 

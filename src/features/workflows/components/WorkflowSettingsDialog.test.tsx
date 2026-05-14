@@ -39,15 +39,18 @@ describe("WorkflowSettingsDialog", () => {
   });
 
   test("renders Browser Identity controls without restoring Owned Test Gates", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.browser_launch.proxy_enabled = true;
+
     render(
       <WorkflowSettingsDialog
         activeSection="browser_launch"
         hasUnsavedChanges={false}
         open
-        settings={defaultWorkflowSettings({
-          workflowId: "workflow-1",
-          workflowName: "Checkout QA",
-        })}
+        settings={settings}
         onActiveSectionChange={vi.fn()}
         onDiscardChanges={vi.fn()}
         onOpenChange={vi.fn()}
@@ -71,10 +74,20 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");
     expect(within(dialog).getByRole("button", { name: "Show fingerprint seed" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Copy fingerprint seed" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Proxy label")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Proxy provider")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Test account binding")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Proxy bypass")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "GeoIP from proxy" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Fingerprint platform")).toHaveValue("");
+    expect(within(dialog).getByLabelText("Hardware concurrency")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Device memory GB")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Storage quota MB")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
+    expect(within(dialog).getByLabelText("Behavior fidelity")).toHaveValue("balanced");
     expect(within(dialog).getByRole("switch", { name: "Fingerprint preflight" })).toBeInTheDocument();
   });
 

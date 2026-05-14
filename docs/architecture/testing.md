@@ -30,6 +30,14 @@ Focused commands:
 - `npm run test:smoke`
 - `npm run build:electron`
 
+`npm run test:smoke` launches the real CloakBrowser binary against a local
+fixture, so it is intentionally separate from the normal unit suite. It verifies
+`navigator.webdriver === false`, UA/headless masking, `window.chrome` and plugin
+baseline signals, persistent localStorage across two launches of the same
+profile, fixed-seed canvas stability, timezone/locale, viewport/screen
+coherence, and CloakBrowser wrapper/binary evidence. A fresh machine may download
+the CloakBrowser binary before the smoke test runs.
+
 ## Desktop E2E Tests
 
 - Test runner: Playwright Test.

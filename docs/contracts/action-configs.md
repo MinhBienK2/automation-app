@@ -28,6 +28,13 @@ Every user-addable action type must have:
 
 Launch-time browser identity actions such as `use_profile`, `use_proxy`, `set_user_agent`, and `set_download_directory` are not user-addable in the primary action palette. Browser identity belongs in Workflow Settings Browser Launch. Existing serialized configs remain DTO-compatible, but graph validation blocks legacy launch-time nodes with an instruction to move the setting to Workflow Settings before launch; the runner also fails explicitly if one reaches runtime.
 
+Runner traces classify every top-level executed action with an execution path:
+`humanized`, `browser_api`, `dom_fallback`, or `cdp_sensitive`. This is evidence
+metadata, not an action config field. Browser Launch `behavior_fidelity:
+strict_humanized` blocks actions classified as `dom_fallback` or
+`cdp_sensitive`; authors should switch to humanized-capable actions or choose a
+less strict identity policy for deterministic internal workflows.
+
 Graph-internal executable configs such as `if_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Legacy action nodes that contain graph-internal configs render a compatibility panel with the action label, read-only JSON, and replacement/delete affordances instead of an empty editor. Variable configs include backward-compatible `set_variable`, multi-row `set_variable`, and `set_json_variables`. Hidden compatibility actions such as `set_checkbox`, reliability actions, and human checkpoint actions remain loadable when present in existing workflows, but are not visible in the main Add Action picker. They still require DTO compatibility, validation, and runner or command-layer execution semantics.
 
 Terminal graph nodes can compile to `stop_workflow` with `close_browser: true`. When `close_browser` is missing or false, terminal runs keep retaining the browser session. When true, the runner still captures outputs first and then closes the browser instead of retaining the session.

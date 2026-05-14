@@ -24,6 +24,11 @@ type CloakBrowserModule = {
   launchPersistentContext: (
     options: BrowserLaunchOptions & { userDataDir: string },
   ) => Promise<BrowserDriverContext>;
+  binaryInfo?: () => {
+    version?: string;
+    platform?: string;
+    installed?: boolean;
+  };
 };
 
 export type BrowserLaunchOptions = Record<string, unknown>;
@@ -185,6 +190,7 @@ type Runtime = {
   runId: string;
   context: BrowserDriverContext;
   page: BrowserDriverPage;
+  behaviorFidelity: WorkflowSettings["browser_launch"]["behavior_fidelity"];
   domainPolicy: { allowed_domains: string[] } | null;
   outputs: Record<string, unknown>;
   traces: ActionTrace[];
@@ -204,10 +210,13 @@ type ActionTrace = {
   action_type: string;
   status: "success" | "failed" | "stopped";
   mode: "browser" | "assisted_browser" | "direct_dom" | "observer" | "manual";
+  execution_path: ActionExecutionPath;
   started_at: string;
   finished_at: string;
   reason?: string;
 };
+
+type ActionExecutionPath = "humanized" | "browser_api" | "dom_fallback" | "cdp_sensitive";
 
 type EvidenceArtifact = {
   run_id: string;
@@ -244,11 +253,13 @@ export class BrowserWorkflowRunner {
   private readonly driver: BrowserDriver;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
+  private readonly usesDefaultDriver: boolean;
   private retainedSession: RetainedSession | null = null;
 
   constructor(options: RunnerOptions) {
     this.appPaths = options.appPaths;
     this.driver = options.driver ?? createCloakBrowserDriver();
+    this.usesDefaultDriver = !options.driver;
     this.sleep = options.sleep ?? sleep;
     this.random = options.random ?? Math.random;
   }
@@ -272,6 +283,7 @@ export class BrowserWorkflowRunner {
       runId: request.runId ?? randomUUID(),
       context: launch.context,
       page: launch.page,
+      behaviorFidelity: request.settings.browser_launch.behavior_fidelity,
       domainPolicy: request.graph.domain_policy ?? null,
       outputs: {},
       traces: [],
@@ -284,7 +296,7 @@ export class BrowserWorkflowRunner {
       onProgress: request.onProgress,
       signal: request.signal,
     };
-    runtime.outputs.browser_identity = browserIdentityEvidence(
+    runtime.outputs.browser_identity = await browserIdentityEvidence(
       request.settings,
       runtime.runId,
     );
@@ -456,6 +468,7 @@ export class BrowserWorkflowRunner {
   }
 
   private async launch(settings: WorkflowSettings) {
+    if (this.usesDefaultDriver) assertHeadedDisplayAvailable(settings);
     const options = buildLaunchOptions(settings, this.appPaths);
     const profileDir = retainedProfileKey(settings);
     const context = profileDir
@@ -501,6 +514,7 @@ export class BrowserWorkflowRunner {
 
   private async executeStep(runtime: Runtime, step: CompiledGraphStep) {
     const startedAt = new Date().toISOString();
+    const executionPath = actionExecutionPath(step.config);
     try {
       await this.executeAction(runtime, step.config);
       runtime.traces.push({
@@ -509,6 +523,7 @@ export class BrowserWorkflowRunner {
         action_type: step.config.type,
         status: "success",
         mode: actionTraceMode(step.config),
+        execution_path: executionPath,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
       });
@@ -519,6 +534,7 @@ export class BrowserWorkflowRunner {
         action_type: step.config.type,
         status: isAbortError(error) ? "stopped" : "failed",
         mode: actionTraceMode(step.config),
+        execution_path: executionPath,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         reason: error instanceof Error ? error.message : String(error),
@@ -543,6 +559,7 @@ export class BrowserWorkflowRunner {
         `${action.type} is not supported as an in-run action: ${unsupportedReason}`,
       );
     }
+    enforceBehaviorFidelity(runtime, action, actionExecutionPath(action));
     switch (action.type) {
       case "navigate": {
         const url = renderTemplate(action.config.url, runtime.outputs);
@@ -1493,7 +1510,7 @@ export class BrowserWorkflowRunner {
 
 export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): BrowserDriver {
   async function loadModule() {
-    return moduleOverride ?? ((await import("cloakbrowser")) as unknown as CloakBrowserModule);
+    return moduleOverride ?? loadCloakBrowserModule();
   }
 
   return {
@@ -1506,6 +1523,19 @@ export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): B
       return cloakbrowser.launchPersistentContext(options);
     },
   };
+}
+
+function assertHeadedDisplayAvailable(settings: WorkflowSettings) {
+  if (settings.browser_launch.headless) return;
+  if (process.platform !== "linux") return;
+  if (process.env.DISPLAY || process.env.WAYLAND_DISPLAY) return;
+  throw new Error(
+    "Headed CloakBrowser runs require DISPLAY or WAYLAND_DISPLAY on Linux. Enable headless mode or run under Xvfb/Wayland before launching a headed identity.",
+  );
+}
+
+async function loadCloakBrowserModule(): Promise<CloakBrowserModule> {
+  return (await import("cloakbrowser")) as unknown as CloakBrowserModule;
 }
 
 async function submitFormTarget(locator: BrowserDriverLocator) {
@@ -1563,29 +1593,6 @@ async function selectRadioTarget(locator: BrowserDriverLocator) {
 }
 
 async function rightClickTarget(locator: BrowserDriverLocator) {
-  if (locator.evaluate) {
-    await locator.evaluate((element) => {
-      const target = element instanceof HTMLElement ? element : element.parentElement;
-      if (!target) return;
-      const rect = target.getBoundingClientRect();
-      const clientX = rect.left + rect.width / 2;
-      const clientY = rect.top + rect.height / 2;
-      const eventInit = {
-        bubbles: true,
-        button: 2,
-        buttons: 2,
-        cancelable: true,
-        clientX,
-        clientY,
-        view: window,
-      };
-      target.dispatchEvent(new MouseEvent("mousedown", eventInit));
-      target.dispatchEvent(new MouseEvent("mouseup", { ...eventInit, buttons: 0 }));
-      target.dispatchEvent(new MouseEvent("contextmenu", eventInit));
-    });
-    return;
-  }
-
   await locator.click({ button: "right" });
 }
 
@@ -1594,16 +1601,22 @@ function buildLaunchOptions(
   appPaths: AppPaths,
 ): BrowserLaunchOptions {
   const browser = settings.browser_launch;
-  const proxy = settings.browser_launch.proxy_enabled && settings.browser_launch.proxy_server
-    ? {
-        server: settings.browser_launch.proxy_server,
-        username: settings.browser_launch.proxy_username ?? undefined,
-        password: settings.browser_launch.proxy_password ?? undefined,
-      }
-    : undefined;
+  const proxy = buildProxyLaunchOptions(browser);
   const args = [
     browser.fingerprint_seed?.trim()
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
+      : null,
+    browser.fingerprint_platform?.trim()
+      ? `--fingerprint-platform=${browser.fingerprint_platform.trim()}`
+      : null,
+    browser.hardware_concurrency
+      ? `--fingerprint-hardware-concurrency=${browser.hardware_concurrency}`
+      : null,
+    browser.device_memory_gb
+      ? `--fingerprint-device-memory=${browser.device_memory_gb}`
+      : null,
+    browser.fingerprint_fonts_dir?.trim()
+      ? `--fingerprint-fonts-dir=${browser.fingerprint_fonts_dir.trim()}`
       : null,
     browser.storage_quota_mb
       ? `--fingerprint-storage-quota=${browser.storage_quota_mb}`
@@ -1638,6 +1651,31 @@ function buildLaunchOptions(
   };
 }
 
+function buildProxyLaunchOptions(browser: WorkflowSettings["browser_launch"]) {
+  if (!browser.proxy_enabled || !browser.proxy_server) return undefined;
+  const proxy = {
+    server: browser.proxy_server,
+    bypass: browser.proxy_bypass ?? undefined,
+    username: browser.proxy_username ?? undefined,
+    password: browser.proxy_password ?? undefined,
+  };
+  try {
+    const url = new URL(browser.proxy_server);
+    const username = url.username ? decodeURIComponent(url.username) : undefined;
+    const password = url.password ? decodeURIComponent(url.password) : undefined;
+    if (username || password) {
+      url.username = "";
+      url.password = "";
+      proxy.server = url.toString();
+      proxy.username = proxy.username ?? username;
+      proxy.password = proxy.password ?? password;
+    }
+  } catch {
+    return proxy;
+  }
+  return proxy;
+}
+
 function retainedProfileKey(settings: WorkflowSettings) {
   if (settings.browser_launch.session_mode !== "persistent_profile") return null;
   return (
@@ -1647,7 +1685,7 @@ function retainedProfileKey(settings: WorkflowSettings) {
   );
 }
 
-function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
+async function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
   const browser = settings.browser_launch;
   return {
     run_id: runId,
@@ -1664,8 +1702,15 @@ function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
       .slice(0, 16),
     proxy_label: browser.proxy_label ?? null,
     proxy_region: browser.proxy_region ?? null,
+    proxy_provider: browser.proxy_provider ?? null,
+    test_account_binding: browser.test_account_binding ?? null,
     timezone: browser.timezone ?? null,
+    timezone_source: browser.timezone ? "explicit" : browser.geoip ? "geoip" : "default",
     locale: browser.locale ?? null,
+    locale_source: browser.locale ? "explicit" : browser.geoip ? "geoip" : "default",
+    geoip: browser.geoip,
+    webrtc_policy: browser.webrtc_policy,
+    webrtc_ip: browser.webrtc_policy === "explicit_ip" ? browser.webrtc_ip ?? null : null,
     viewport: {
       width: browser.viewport_width,
       height: browser.viewport_height,
@@ -1675,7 +1720,64 @@ function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
     },
     humanize: browser.humanize,
     human_preset: browser.human_preset,
+    behavior_fidelity: browser.behavior_fidelity,
+    advanced_overrides: activeAdvancedFingerprintOverrides(browser),
+    cloakbrowser: await cloakBrowserRuntimeEvidence(),
   };
+}
+
+function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {
+  return [
+    browser.fingerprint_platform ? "fingerprint_platform" : null,
+    browser.hardware_concurrency ? "hardware_concurrency" : null,
+    browser.device_memory_gb ? "device_memory_gb" : null,
+    browser.fingerprint_fonts_dir ? "fingerprint_fonts_dir" : null,
+    browser.storage_quota_mb ? "storage_quota_mb" : null,
+  ].filter((field): field is string => Boolean(field));
+}
+
+async function cloakBrowserRuntimeEvidence() {
+  const [wrapperVersion, binary] = await Promise.all([
+    cloakBrowserWrapperVersion(),
+    cloakBrowserBinaryEvidence(),
+  ]);
+  return {
+    wrapper_version: wrapperVersion,
+    binary_version: binary.version,
+    binary_platform: binary.platform,
+    binary_installed: binary.installed,
+  };
+}
+
+async function cloakBrowserBinaryEvidence() {
+  try {
+    const moduleValue = await loadCloakBrowserModule();
+    const info = moduleValue.binaryInfo?.();
+    return {
+      version: info?.version ?? null,
+      platform: info?.platform ?? null,
+      installed: Boolean(info?.installed),
+    };
+  } catch {
+    return {
+      version: null,
+      platform: process.platform,
+      installed: false,
+    };
+  }
+}
+
+async function cloakBrowserWrapperVersion() {
+  try {
+    const packageJson = await fs.readFile(
+      path.join(process.cwd(), "node_modules", "cloakbrowser", "package.json"),
+      "utf8",
+    );
+    const parsed = JSON.parse(packageJson) as { version?: unknown };
+    return typeof parsed.version === "string" ? parsed.version : null;
+  } catch {
+    return null;
+  }
 }
 
 type FingerprintPreflightVerdict = {
@@ -1996,6 +2098,73 @@ function actionTraceMode(action: ActionConfig): ActionTrace["mode"] {
   if (action.type === "pause_for_human" || action.type === "checkpoint") return "manual";
   if (action.type === "click" && action.config.mode === "force_dom") return "assisted_browser";
   return "browser";
+}
+
+function enforceBehaviorFidelity(
+  runtime: Runtime,
+  action: ActionConfig,
+  executionPath: ActionExecutionPath,
+) {
+  if (runtime.behaviorFidelity !== "strict_humanized") return;
+  if (executionPath !== "dom_fallback" && executionPath !== "cdp_sensitive") return;
+  throw new Error(
+    `Action ${action.type} is ${executionPath} and is blocked by strict humanized behavior`,
+  );
+}
+
+function actionExecutionPath(action: ActionConfig): ActionExecutionPath {
+  switch (action.type) {
+    case "input_text":
+      return action.config.typing_mode === "type" ? "humanized" : "dom_fallback";
+    case "click":
+      return action.config.mode === "force_dom" ? "dom_fallback" : "humanized";
+    case "hover":
+    case "double_click":
+    case "right_click":
+    case "drag_and_drop":
+    case "focus_element":
+    case "press_key":
+    case "hotkey":
+    case "type_sequence":
+    case "check":
+    case "uncheck":
+    case "toggle_checkbox":
+    case "set_checkbox":
+      return "humanized";
+    case "execute_js":
+    case "block_request":
+    case "mock_response":
+      return "cdp_sensitive";
+    case "clear_input":
+    case "scroll":
+    case "select_option":
+    case "select_radio":
+    case "select_custom_option":
+    case "set_contenteditable":
+    case "paste_clipboard":
+    case "set_clipboard":
+    case "submit_form":
+    case "set_local_storage":
+    case "set_session_storage":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "use_profile":
+    case "save_session":
+    case "load_session":
+    case "set_secret":
+    case "use_proxy":
+    case "set_user_agent":
+    case "set_viewport":
+    case "set_geolocation":
+    case "set_extra_headers":
+    case "grant_permission":
+    case "set_cookie":
+    case "clear_cookies":
+      return "dom_fallback";
+    default:
+      return "browser_api";
+  }
 }
 
 function setVariables(

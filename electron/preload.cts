@@ -16,6 +16,9 @@ const workflowIpcChannels = {
   saveWorkflowSettings: "workflow:saveWorkflowSettings",
   saveWorkflowSettingsSection: "workflow:saveWorkflowSettingsSection",
   validateWorkflowSettings: "workflow:validateWorkflowSettings",
+  getCloakBrowserDiagnostics: "workflow:getCloakBrowserDiagnostics",
+  installCloakBrowserBinary: "workflow:installCloakBrowserBinary",
+  cleanupOrphanedBrowserProfiles: "workflow:cleanupOrphanedBrowserProfiles",
   validateWorkflowRun: "workflow:validateWorkflowRun",
   createWorkflow: "workflow:createWorkflow",
   renameWorkflow: "workflow:renameWorkflow",
@@ -74,6 +77,12 @@ const workflowApi: WorkflowElectronBridge = {
     ),
   validateWorkflowSettings: (settings) =>
     invokeWorkflow(workflowIpcChannels.validateWorkflowSettings, settings),
+  getCloakBrowserDiagnostics: () =>
+    invokeWorkflow(workflowIpcChannels.getCloakBrowserDiagnostics),
+  installCloakBrowserBinary: () =>
+    invokeWorkflow(workflowIpcChannels.installCloakBrowserBinary),
+  cleanupOrphanedBrowserProfiles: () =>
+    invokeWorkflow(workflowIpcChannels.cleanupOrphanedBrowserProfiles),
   validateWorkflowRun: (workflowId) =>
     invokeWorkflow(workflowIpcChannels.validateWorkflowRun, workflowId),
   createWorkflow: (name) =>

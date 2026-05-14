@@ -118,6 +118,119 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
+  test("reports CloakBrowser diagnostics and profile storage without secrets", async () => {
+    const { handlers, appPaths } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Diagnostics flow");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        display_name: "QA US Login",
+        proxy_enabled: true,
+        proxy_server: "http://proxy.test:8080",
+        proxy_password: "secret-proxy-password",
+      },
+    });
+    const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
+    await fs.mkdir(path.join(appPaths.browserProfilesDir, profileDir), { recursive: true });
+    await fs.writeFile(path.join(appPaths.browserProfilesDir, profileDir, "storage.txt"), "state");
+
+    const diagnostics = await handlers.getCloakBrowserDiagnostics();
+
+    expect(diagnostics.wrapper_version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(diagnostics.binary.version).toMatch(/^\d+/);
+    expect(diagnostics.binary.platform).toBeTruthy();
+    expect(typeof diagnostics.binary.installed).toBe("boolean");
+    expect(diagnostics.profile_root).toBe(appPaths.browserProfilesDir);
+    expect(diagnostics.geoip_available).toBe(false);
+    expect(diagnostics.profiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          profile_dir: profileDir,
+          display_name: "QA US Login",
+          approximate_size_bytes: expect.any(Number),
+          active_session: false,
+        }),
+      ]),
+    );
+    expect(diagnostics.profiles[0]?.last_run_at).toBeNull();
+    expect(JSON.stringify(diagnostics)).not.toContain("secret-proxy-password");
+  });
+
+  test("cleans up only orphaned inactive CloakBrowser profiles", async () => {
+    const activeRunner = {
+      run: vi.fn(),
+      getRetainedSessionState: vi.fn(() => ({
+        available: true,
+        workflow_id: "active-workflow",
+        profile_name: "active-profile",
+        reason: null,
+      })),
+    };
+    const { handlers, appPaths } = await createTestHandlers({ runner: activeRunner });
+    const workflow = handlers.createWorkflow("Persistent profile");
+    const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
+    await fs.mkdir(path.join(appPaths.browserProfilesDir, profileDir), { recursive: true });
+    await fs.writeFile(path.join(appPaths.browserProfilesDir, profileDir, "state.txt"), "state");
+    await fs.mkdir(path.join(appPaths.browserProfilesDir, "orphan-profile"), { recursive: true });
+    await fs.writeFile(path.join(appPaths.browserProfilesDir, "orphan-profile", "cache.bin"), "cache");
+    await fs.mkdir(path.join(appPaths.browserProfilesDir, "active-profile"), { recursive: true });
+    await fs.writeFile(path.join(appPaths.browserProfilesDir, "active-profile", "lock"), "lock");
+
+    const result = await handlers.cleanupOrphanedBrowserProfiles();
+
+    expect(result.deleted_profiles).toEqual(["orphan-profile"]);
+    expect(result.reclaimed_bytes).toBeGreaterThan(0);
+    expect(result.skipped_profiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ profile_dir: profileDir, workflow_id: workflow.id }),
+        expect.objectContaining({ profile_dir: "active-profile", active_session: true }),
+      ]),
+    );
+    await expect(fs.stat(path.join(appPaths.browserProfilesDir, "orphan-profile"))).rejects.toThrow();
+    await expect(fs.stat(path.join(appPaths.browserProfilesDir, profileDir))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(appPaths.browserProfilesDir, "active-profile"))).resolves.toBeTruthy();
+  });
+
+  test("prevents changing or deleting an actively retained browser identity profile", async () => {
+    const runner = {
+      run: vi.fn(),
+      getRetainedSessionState: vi.fn(() => ({
+        available: true,
+        workflow_id: "workflow-1",
+        profile_name: "bi_workflow-1",
+        reason: null,
+      })),
+    };
+    const { handlers } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Active identity");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    runner.getRetainedSessionState.mockReturnValue({
+      available: true,
+      workflow_id: workflow.id,
+      profile_name: settings.browser_launch.profile_dir,
+      reason: null,
+    });
+
+    expect(() =>
+      handlers.saveWorkflowSettings(workflow.id, {
+        ...settings,
+        browser_launch: {
+          ...settings.browser_launch,
+          identity_id: "bi_rotated",
+          profile_dir: "bi_rotated",
+          fingerprint_seed: "99999",
+          profile_name: "bi_rotated",
+        },
+      }),
+    ).toThrow("Close the retained browser session before changing or deleting its identity profile");
+
+    expect(() => handlers.deleteWorkflow(workflow.id)).toThrow(
+      "Close the retained browser session before changing or deleting its identity profile",
+    );
+  });
+
   test("migrates legacy workflow graphs on load and persists the upgraded action contract", async () => {
     const { handlers, database } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Legacy graph");
@@ -236,6 +349,43 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          proxy_enabled: true,
+          proxy_server: "ftp://proxy.local:8080",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "proxy_server",
+        level: "error",
+        message: "Proxy server must use http, https, or socks5",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          proxy_enabled: true,
+          proxy_server: "http://user:secret@proxy.local:8080",
+          proxy_username: "agent",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "proxy_username",
+        level: "error",
+        message: "Proxy credentials must be configured either in the proxy URL or the username/password fields, not both",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           fingerprint_seed: "",
         },
       }),
@@ -299,6 +449,75 @@ describe("Electron workflow command handlers", () => {
         field: "webrtc_ip",
         level: "error",
         message: "Explicit WebRTC IP policy requires a WebRTC IP",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          webrtc_policy: "explicit_ip",
+          webrtc_ip: "not-an-ip",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "webrtc_ip",
+        level: "error",
+        message: "Explicit WebRTC IP must be a valid IPv4 or IPv6 address",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_platform: "plan9" as never,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_platform",
+        level: "error",
+        message: "Fingerprint platform must be windows, macos, or linux",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          hardware_concurrency: 0,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "hardware_concurrency",
+        level: "error",
+        message: "Hardware concurrency must be an integer between 1 and 64",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_fonts_dir: "/path/that/does/not/exist",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_fonts_dir",
+        level: "error",
+        message: "Fingerprint fonts directory must be readable",
       }),
     );
 
@@ -423,6 +642,7 @@ describe("Electron workflow command handlers", () => {
       browser_launch: {
         ...settings.browser_launch,
         proxy_password: "secret",
+        proxy_server: "http://agent:secret@proxy.owned.test:8080",
         preflight_enabled: true,
         preflight_probe_url: "https://probe.owned.test/verdict?token=secret",
         preflight_allowed_origins: ["https://probe.owned.test"],
@@ -435,12 +655,16 @@ describe("Electron workflow command handlers", () => {
     });
 
     expect(packageValue.settings?.browser_launch?.proxy_password).toBeNull();
+    expect(packageValue.settings?.browser_launch?.proxy_server).toBe(
+      "http://proxy.owned.test:8080/",
+    );
     expect(packageValue.settings?.browser_launch?.preflight_probe_url).toBe(
       "https://probe.owned.test/verdict",
     );
     expect(packageValue.omitted_fields).toEqual(
       expect.arrayContaining([
         "settings.browser_launch.proxy_password",
+        "settings.browser_launch.proxy_server.credentials",
         "settings.browser_launch.preflight_probe_url.search",
       ]),
     );
