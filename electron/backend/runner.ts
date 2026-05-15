@@ -319,7 +319,7 @@ export class BrowserWorkflowRunner {
         await this.executeStep(runtime, step);
         state.completed_step_ids.push(step.node_id);
         this.reportProgress(runtime);
-        if (request.targetStepId === step.node_id) break;
+        if (request.mode === "test_step" && request.targetStepId === step.node_id) break;
       }
       state.status = "success";
     } catch (error) {
@@ -823,15 +823,16 @@ export class BrowserWorkflowRunner {
         return;
       case "switch_tab": {
         const page = runtime.context.pages()[action.config.index];
-        if (page) {
-          runtime.page = page;
-          await runtime.page.bringToFront?.();
-        }
+        if (!page) throw new Error(`Tab index ${action.config.index} does not exist`);
+        runtime.page = page;
+        await runtime.page.bringToFront?.();
         return;
       }
       case "close_tab": {
-        const page = runtime.context.pages()[action.config.index ?? runtime.context.pages().length - 1];
-        await page?.close?.();
+        const pageIndex = action.config.index ?? runtime.context.pages().length - 1;
+        const page = runtime.context.pages()[pageIndex];
+        if (!page) throw new Error(`Tab index ${pageIndex} does not exist`);
+        await page.close?.();
         runtime.page = runtime.context.pages()[0] ?? (await runtime.context.newPage());
         return;
       }

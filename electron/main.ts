@@ -54,6 +54,13 @@ function createMainWindow() {
   });
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    if (!isAllowedRendererUrl(targetUrl, devServerUrl)) {
+      event.preventDefault();
+    }
+  });
+
   if (devServerUrl) {
     void mainWindow.loadURL(devServerUrl);
     if (process.env.ELECTRON_OPEN_DEVTOOLS === "1") {
@@ -125,4 +132,16 @@ function filenameFromWorkflowName(name: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return normalized || "workflow";
+}
+
+function isAllowedRendererUrl(targetUrl: string, devServerUrl?: string) {
+  try {
+    const parsedTarget = new URL(targetUrl);
+    if (devServerUrl) {
+      return parsedTarget.origin === new URL(devServerUrl).origin;
+    }
+    return parsedTarget.protocol === "file:";
+  } catch {
+    return false;
+  }
 }

@@ -177,22 +177,24 @@ describe("TypeScript graph compiler parity", () => {
     ]);
   });
 
-  test("compiles a run plan from a selected main-path node", () => {
+  test("compiles a run plan from a selected main-path node through the end", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
         graphNode("first", "action", { config: waitAction(100) }),
         graphNode("second", "action", { config: clickAction("//continue") }),
+        graphNode("third", "action", { config: waitAction(200) }),
       ],
       [
         edge("start", "out", "first", "in"),
         edge("first", "out", "second", "in"),
+        edge("second", "out", "third", "in"),
       ],
     );
 
     const plan = compileWorkflowGraphFromNode(graph, "second");
 
-    expect(plan.steps.map((step) => step.node_id)).toEqual(["second"]);
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["second", "third"]);
   });
 
   test("rejects selected nodes inside nested branch bodies", () => {
@@ -519,6 +521,33 @@ describe("TypeScript graph compiler parity", () => {
         }),
       ]),
     );
+  });
+
+  test("keeps upstream domain allowlist policy when compiling from a selected node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("allow", "domain_allowlist", {
+          config: { domains: ["owned.test"] },
+        }),
+        graphNode("visit", "action", {
+          config: { type: "navigate", config: { url: "https://owned.test" } },
+        }),
+        graphNode("after", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "allow", "in"),
+        edge("allow", "out", "visit", "in"),
+        edge("visit", "out", "after", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowGraphFromNode(graph, "visit");
+
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["visit", "after"]);
+    expect(plan.domain_policy).toEqual({
+      allowed_domains: ["owned.test"],
+    });
   });
 
   test("validates invalid configs across visible action groups", () => {

@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   createWorkflowCommandHandlers,
+  finishRun,
   serializeCommandError,
 } from "./commands";
 import {
@@ -116,6 +117,27 @@ describe("Electron workflow command handlers", () => {
 
     handlers.deleteWorkflow(created.id);
     expect(handlers.getWorkflow(created.id)).toBeNull();
+  });
+
+  test("rolls back duplicate workflow when copied graph persistence fails", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const source = handlers.createWorkflow("Source");
+    handlers.saveWorkflowGraph(source.id, runnableGraph());
+    const initialIds = handlers.listWorkflows().map((workflow) => workflow.id);
+    database.exec(`
+      CREATE TRIGGER fail_duplicate_graph_copy
+      BEFORE UPDATE OF graph_json ON workflows
+      WHEN OLD.id != '${source.id}'
+      BEGIN
+        SELECT RAISE(ABORT, 'graph copy failed');
+      END;
+    `);
+
+    expect(() => handlers.duplicateWorkflow(source.id, "Copy of Source")).toThrow(
+      "graph copy failed",
+    );
+
+    expect(handlers.listWorkflows().map((workflow) => workflow.id)).toEqual(initialIds);
   });
 
   test("deletes private browser profile data only when requested", async () => {
@@ -873,6 +895,44 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.listWorkflows()).toHaveLength(initialCount);
   });
 
+  test("rejects malformed workflow package payloads with command errors", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(() =>
+      handlers.previewWorkflowPackage(null as unknown as WorkflowPackage),
+    ).toThrow(expect.objectContaining({
+      message: "Unsupported workflow package",
+      field: "package",
+    }));
+    expect(() =>
+      handlers.previewWorkflowPackage({
+        kind: "workflow_package",
+        version: 2,
+        workflow: null,
+        included_sections: [],
+        omitted_fields: [],
+        flow: null,
+        settings: null,
+      } as unknown as WorkflowPackage),
+    ).toThrow(expect.objectContaining({
+      message: "Workflow package name is required",
+      field: "package.workflow.name",
+    }));
+    expect(() =>
+      handlers.previewWorkflowPackage({
+        kind: "workflow_package",
+        version: 2,
+        workflow: { name: "Package" },
+        omitted_fields: [],
+        flow: null,
+        settings: null,
+      } as unknown as WorkflowPackage),
+    ).toThrow(expect.objectContaining({
+      message: "Workflow package sections are required",
+      field: "package.included_sections",
+    }));
+  });
+
   test("serializes command errors with message and optional field", () => {
     expect(
       serializeCommandError({ message: "Name required", field: "name" }),
@@ -900,13 +960,44 @@ describe("Electron workflow command handlers", () => {
     ).toThrow("JSON variables must be an object");
   });
 
+  test("escapes selector suggestion attribute values", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(
+      handlers.suggestSelectors({
+        tag: "button",
+        id: "save:primary",
+        test_id: 'save"primary',
+        text: "Save",
+        classes: [],
+        attributes: {},
+      })[0],
+    ).toMatchObject({
+      selector_type: "test_id",
+      selector: '[data-testid="save\\"primary"]',
+    });
+    expect(
+      handlers.suggestSelectors({
+        tag: "button",
+        id: 'save"primary',
+        test_id: null,
+        text: "Save",
+        classes: [],
+        attributes: {},
+      })[0],
+    ).toMatchObject({
+      selector_type: "id",
+      selector: '[id="save\\"primary"]',
+    });
+  });
+
   test("normalizes recorded events into structured target action configs", async () => {
     const { handlers } = await createTestHandlers();
 
     expect(
       handlers.normalizeRecordedEvents([
         { type: "click", xpath: "//*[@data-testid='save']" },
-        { type: "input", xpath: "//*[@name='email']", text: "qa@example.test" },
+        { type: "input_text", xpath: "//*[@name='email']", text: "qa@example.test" },
       ]),
     ).toEqual([
       {
@@ -928,6 +1019,19 @@ describe("Electron workflow command handlers", () => {
         },
       },
     ]);
+  });
+
+  test("rejects unknown recorded event types", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(() =>
+      handlers.normalizeRecordedEvents([
+        { type: "hover", xpath: "//*[@data-testid='save']" },
+      ] as unknown as Parameters<typeof handlers.normalizeRecordedEvents>[0]),
+    ).toThrow(expect.objectContaining({
+      message: "Unsupported recorded event type: hover",
+      field: "events.type",
+    }));
   });
 
   test("runs saved workflow graph through the Electron browser runner", async () => {
@@ -1292,6 +1396,159 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("rolls back terminal run evidence when a step insert fails", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Evidence rollback");
+    const runId = "run-rollback";
+    database
+      .prepare(
+        `INSERT INTO runs (id, workflow_id, status, started_at)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(runId, workflow.id, "running", "1");
+    database.exec(`
+      CREATE TRIGGER fail_second_step_insert
+      BEFORE INSERT ON run_steps
+      WHEN NEW.node_id = 'second'
+      BEGIN
+        SELECT RAISE(ABORT, 'step insert failed');
+      END;
+    `);
+    const graph: CompiledWorkflowGraph = {
+      steps: [
+        {
+          node_id: "first",
+          label: "First",
+          config: { type: "wait", config: { condition: "duration", duration_ms: 1 } },
+        },
+        {
+          node_id: "second",
+          label: "Second",
+          config: { type: "wait", config: { condition: "duration", duration_ms: 1 } },
+        },
+      ],
+    };
+
+    expect(() =>
+      finishRun(database, runId, graph, {
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["first", "second"],
+        outputs: {},
+        error: null,
+      }),
+    ).toThrow("step insert failed");
+
+    expect(
+      database.prepare("SELECT status, finished_at FROM runs WHERE id = ?").get(runId),
+    ).toMatchObject({ status: "running", finished_at: null });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM run_steps WHERE run_id = ?").get(runId))
+      .toMatchObject({ count: 0 });
+  });
+
+  test("does not keep the active-run lock when run persistence fails before launch", async () => {
+    const runner = {
+      run: vi.fn(async (): Promise<RunState> => ({
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["visit"],
+        outputs: {},
+        error: null,
+      })),
+    };
+    const { handlers, database } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Persistence failure");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    database.exec(`
+      CREATE TRIGGER fail_run_insert
+      BEFORE INSERT ON runs
+      BEGIN
+        SELECT RAISE(ABORT, 'run insert failed');
+      END;
+    `);
+
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toThrow("run insert failed");
+    expect(runner.run).not.toHaveBeenCalled();
+
+    database.exec("DROP TRIGGER fail_run_insert");
+    await expect(handlers.runWorkflow(workflow.id)).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+    });
+    expect(runner.run).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not keep the active-run lock when run-from-selected persistence fails before launch", async () => {
+    const runner = {
+      hasReusableRetainedSession: vi.fn(() => true),
+      getRetainedSessionState: vi.fn(() => ({
+        available: true,
+        workflow_id: "workflow-1",
+        profile_name: "qa-profile",
+        reason: null,
+      })),
+      run: vi.fn(async (): Promise<RunState> => ({
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: "visit",
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["visit"],
+        outputs: {},
+        error: null,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      })),
+    };
+    const { handlers, database } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Selected persistence failure");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+        run_from_selected_enabled: true,
+      },
+      run_policy: {
+        ...settings.run_policy,
+        browser_retention: "retain",
+      },
+    });
+    database.exec(`
+      CREATE TRIGGER fail_run_insert
+      BEFORE INSERT ON runs
+      BEGIN
+        SELECT RAISE(ABORT, 'run insert failed');
+      END;
+    `);
+
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toThrow(
+      "run insert failed",
+    );
+    expect(runner.run).not.toHaveBeenCalled();
+
+    database.exec("DROP TRIGGER fail_run_insert");
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+      target_step_id: "visit",
+    });
+    expect(runner.run).toHaveBeenCalledTimes(1);
+  });
+
   test("maps runner progress into getRunState while a run is active", async () => {
     let finishRun: ((state: RunState) => void) | null = null;
     const { handlers } = await createTestHandlers({
@@ -1552,6 +1809,37 @@ describe("Electron workflow command handlers", () => {
       results: [{ row_index: 0, status: "stopped", error: null }],
     });
     expect(runnerCalls).toHaveLength(1);
+  });
+
+  test("clears batch running state when row persistence fails", async () => {
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        run: vi.fn(),
+      },
+    });
+    const workflow = handlers.createWorkflow("Batch persistence failure");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    database.exec(`
+      CREATE TRIGGER fail_batch_run_insert
+      BEFORE INSERT ON runs
+      BEGIN
+        SELECT RAISE(ABORT, 'run insert failed');
+      END;
+    `);
+
+    await expect(
+      handlers.runBatchWorkflow(workflow.id, {
+        rows: [{ name: "A" }],
+      }),
+    ).rejects.toThrow("run insert failed");
+
+    expect(handlers.getRunState()).toMatchObject({
+      status: "failed",
+      mode: "run_workflow",
+      error: expect.objectContaining({
+        reason: "run insert failed",
+      }),
+    });
   });
 });
 

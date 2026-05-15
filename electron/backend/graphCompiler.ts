@@ -211,9 +211,14 @@ export function compileWorkflowGraphFromNode(
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
   }));
   const withWaits = insertWaitBetweenGraphNodes(compiled);
+  const fullCompiled = compileWorkflowGraph(normalizedGraph).steps.map((stepValue) => ({
+    ...stepValue,
+    config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
+  }));
+  const fullWithWaits = insertWaitBetweenGraphNodes(fullCompiled);
   return {
     steps: withWaits,
-    domain_policy: domainPolicyFromSteps(withWaits),
+    domain_policy: domainPolicyFromSteps(fullWithWaits),
   };
 }
 

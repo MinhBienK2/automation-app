@@ -31,6 +31,23 @@ describe("Electron main process", () => {
     expect(source).toContain("sandbox: true");
     expect(source).toContain('path.join(currentDir, "preload.cjs")');
   });
+
+  test("blocks unexpected renderer navigation and new windows", async () => {
+    const source = await readMainSource();
+
+    expect(source).toContain("setWindowOpenHandler");
+    expect(source).toContain('action: "deny"');
+    expect(source).toContain('"will-navigate"');
+    expect(source).toContain("preventDefault()");
+  });
+
+  test("declares a renderer content security policy", async () => {
+    const source = await fs.readFile(path.join(process.cwd(), "index.html"), "utf8");
+
+    expect(source).toContain('http-equiv="Content-Security-Policy"');
+    expect(source).toContain("default-src 'self'");
+    expect(source).toContain("object-src 'none'");
+  });
 });
 
 function readMainSource() {

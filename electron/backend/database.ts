@@ -81,6 +81,25 @@ export function initializeDatabase(paths: AppPaths) {
       FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
     );
   `);
+  migrateWorkflowSchema(database);
 
   return database;
+}
+
+function migrateWorkflowSchema(database: DatabaseSync) {
+  const columns = new Set(
+    database
+      .prepare("PRAGMA table_info(workflows)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+  if (!columns.has("description")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  }
+  if (!columns.has("tags_json")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'");
+  }
+  if (!columns.has("settings_json")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN settings_json TEXT");
+  }
 }

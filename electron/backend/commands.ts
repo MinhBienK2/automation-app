@@ -415,21 +415,28 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     duplicateWorkflow(workflowId: string, name: string): WorkflowDetail {
       requireWorkflow(workflowId);
-      const created = createWorkflow(name);
-      const graph = repository.getWorkflowGraph(workflowId);
-      if (graph) repository.saveWorkflowGraph(created.id, graph);
-      const settings = repository.getWorkflowSettings(workflowId);
-      if (settings) {
-        saveSettings(created.id, {
-          ...structuredClone(settings),
-          workflow_id: created.id,
-          general: {
-            ...settings.general,
-            name: created.name,
-          },
-        });
+      context.database.exec("BEGIN IMMEDIATE");
+      try {
+        const created = createWorkflow(name);
+        const graph = repository.getWorkflowGraph(workflowId);
+        if (graph) repository.saveWorkflowGraph(created.id, graph);
+        const settings = repository.getWorkflowSettings(workflowId);
+        if (settings) {
+          saveSettings(created.id, {
+            ...structuredClone(settings),
+            workflow_id: created.id,
+            general: {
+              ...settings.general,
+              name: created.name,
+            },
+          });
+        }
+        context.database.exec("COMMIT");
+        return { workflow: created, steps: [] };
+      } catch (error) {
+        context.database.exec("ROLLBACK");
+        throw error;
       }
-      return { workflow: created, steps: [] };
     },
 
     getWorkflowGraph(workflowId: string): WorkflowGraph {
@@ -466,16 +473,16 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
       const settings = getSettings(workflowId);
       const compiledGraph = compileWorkflowRunPlan(graph, settings);
-      currentRunAbortController = new AbortController();
-      currentRunId = beginRun(context.database, workflowId, settings, graph);
+      const abortController = new AbortController();
+      const runId = beginRun(context.database, workflowId, settings, graph);
+      currentRunAbortController = abortController;
+      currentRunId = runId;
       currentRunState = {
         ...idleRunState,
         status: "running",
         mode: "run_workflow",
       };
       let timedOut = false;
-      const abortController = currentRunAbortController;
-      const runId = currentRunId;
       const timeoutMs = settings.run_policy.max_workflow_duration_ms;
       const timeoutHandle = timeoutMs
         ? setTimeout(() => {
@@ -602,8 +609,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         throw commandError("Selected graph node has no executable steps", "startNodeId");
       }
 
-      currentRunAbortController = new AbortController();
-      currentRunId = beginRun(context.database, workflowId, settings, graph);
+      const abortController = new AbortController();
+      const runId = beginRun(context.database, workflowId, settings, graph);
+      currentRunAbortController = abortController;
+      currentRunId = runId;
       currentRunState = {
         ...idleRunState,
         status: "running",
@@ -612,8 +621,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
       };
       let timedOut = false;
-      const abortController = currentRunAbortController;
-      const runId = currentRunId;
       const timeoutMs = settings.run_policy.max_workflow_duration_ms;
       const timeoutHandle = timeoutMs
         ? setTimeout(() => {
@@ -990,6 +997,25 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             },
           };
         }
+      } catch (error) {
+        currentRunState = {
+          ...idleRunState,
+          status: "failed",
+          mode: "run_workflow",
+          outputs: {
+            batch_total: request.rows.length,
+            batch_succeeded: succeeded,
+            batch_failed: failed,
+          },
+          error: {
+            step_id: currentRunState.current_step_id,
+            step_number: currentRunState.current_step_number ?? 0,
+            step_name: null,
+            action_type: "workflow",
+            reason: error instanceof Error ? error.message : String(error),
+          },
+        };
+        throw error;
       } finally {
         if (currentRunAbortController === abortController) {
           currentRunAbortController = null;
@@ -1006,9 +1032,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     suggestSelectors(snapshot: ElementSnapshot): SelectorCandidate[] {
       const selector = snapshot.test_id
-        ? `[data-testid="${snapshot.test_id}"]`
+        ? cssAttributeSelector("data-testid", snapshot.test_id)
         : snapshot.id
-          ? `#${snapshot.id}`
+          ? cssAttributeSelector("id", snapshot.id)
           : snapshot.tag;
       return [
         {
@@ -1021,23 +1047,30 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     normalizeRecordedEvents(events: RecordedEvent[]): ActionConfig[] {
-      return events.map((event) =>
-        event.type === "click"
-          ? {
-              type: "click",
-              config: {
-                target: elementTargetFromXpath(event.xpath),
-              },
-            }
-          : {
-              type: "input_text",
-              config: {
-                target: elementTargetFromXpath(event.xpath),
-                text: event.text,
-                clear_before_input: true,
-              },
+      return events.map((event) => {
+        if (event.type === "click") {
+          return {
+            type: "click",
+            config: {
+              target: elementTargetFromXpath(event.xpath),
             },
-      ) as ActionConfig[];
+          };
+        }
+        if (event.type === "input_text") {
+          return {
+            type: "input_text",
+            config: {
+              target: elementTargetFromXpath(event.xpath),
+              text: event.text,
+              clear_before_input: true,
+            },
+          };
+        }
+        throw commandError(
+          `Unsupported recorded event type: ${(event as { type?: unknown }).type}`,
+          "events.type",
+        );
+      }) as ActionConfig[];
     },
 
     dryRunValidateConfig(config: ActionConfig) {
@@ -1261,6 +1294,17 @@ function isOptionalModuleAvailable(name: string) {
   } catch {
     return false;
   }
+}
+
+function cssAttributeSelector(attribute: string, value: string) {
+  return `[${attribute}="${cssStringValue(value)}"]`;
+}
+
+function cssStringValue(value: string) {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\A ");
 }
 
 function originForUrl(value: string) {
@@ -1623,11 +1667,24 @@ function sanitizeUrlSearch(value: string) {
 }
 
 function validateWorkflowPackage(packageValue: WorkflowPackage) {
-  if (packageValue.kind !== "workflow_package" || packageValue.version !== 2) {
+  if (
+    !packageValue ||
+    typeof packageValue !== "object" ||
+    packageValue.kind !== "workflow_package" ||
+    packageValue.version !== 2
+  ) {
     throw commandError("Unsupported workflow package", "package");
   }
-  if (!packageValue.workflow.name.trim()) {
+  if (
+    !packageValue.workflow ||
+    typeof packageValue.workflow !== "object" ||
+    typeof packageValue.workflow.name !== "string" ||
+    !packageValue.workflow.name.trim()
+  ) {
     throw commandError("Workflow package name is required", "package.workflow.name");
+  }
+  if (!Array.isArray(packageValue.included_sections)) {
+    throw commandError("Workflow package sections are required", "package.included_sections");
   }
 }
 
@@ -2244,61 +2301,68 @@ function beginRun(
   return runId;
 }
 
-function finishRun(
+export function finishRun(
   database: DatabaseSync,
   runId: string | null,
   graph: CompiledWorkflowGraph,
   state: RunState,
 ) {
   if (!runId) return;
-  database
-    .prepare(
-      `UPDATE runs
-       SET status = ?,
-           finished_at = ?,
-           outputs_json = ?,
-           error_json = ?
-       WHERE id = ?`,
-    )
-    .run(
-      state.status,
-      new Date().toISOString(),
-      JSON.stringify(state.outputs ?? {}),
-      state.error ? JSON.stringify(state.error) : null,
-      runId,
-    );
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database
+      .prepare(
+        `UPDATE runs
+         SET status = ?,
+             finished_at = ?,
+             outputs_json = ?,
+             error_json = ?
+         WHERE id = ?`,
+      )
+      .run(
+        state.status,
+        new Date().toISOString(),
+        JSON.stringify(state.outputs ?? {}),
+        state.error ? JSON.stringify(state.error) : null,
+        runId,
+      );
 
-  const traces = Array.isArray(state.outputs?.__action_traces)
-    ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
-    : [];
-  const insertStep = database.prepare(
-    `INSERT INTO run_steps (
-      id,
-      run_id,
-      node_id,
-      step_number,
-      action_type,
-      status,
-      finished_at,
-      trace_json,
-      error_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  for (const [index, step] of graph.steps.entries()) {
-    const trace = traces.find((candidate) => candidate.node_id === step.node_id);
-    const failed = state.error?.step_id === step.node_id;
-    const completed = state.completed_step_ids.includes(step.node_id);
-    insertStep.run(
-      randomUUID(),
-      runId,
-      step.node_id,
-      index + 1,
-      step.config.type,
-      failed ? "failed" : completed ? "success" : "skipped",
-      trace || failed ? new Date().toISOString() : null,
-      trace ? JSON.stringify(trace) : null,
-      failed && state.error ? JSON.stringify(state.error) : null,
+    const traces = Array.isArray(state.outputs?.__action_traces)
+      ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
+      : [];
+    const insertStep = database.prepare(
+      `INSERT INTO run_steps (
+        id,
+        run_id,
+        node_id,
+        step_number,
+        action_type,
+        status,
+        finished_at,
+        trace_json,
+        error_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
+    for (const [index, step] of graph.steps.entries()) {
+      const trace = traces.find((candidate) => candidate.node_id === step.node_id);
+      const failed = state.error?.step_id === step.node_id;
+      const completed = state.completed_step_ids.includes(step.node_id);
+      insertStep.run(
+        randomUUID(),
+        runId,
+        step.node_id,
+        index + 1,
+        step.config.type,
+        failed ? "failed" : completed ? "success" : "skipped",
+        trace || failed ? new Date().toISOString() : null,
+        trace ? JSON.stringify(trace) : null,
+        failed && state.error ? JSON.stringify(state.error) : null,
+      );
+    }
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
   }
 }
 

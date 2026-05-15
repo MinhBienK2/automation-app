@@ -752,6 +752,60 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(false);
   });
 
+  test("continues after the selected node when reusing a retained browser session", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+      },
+      run_policy: { browser_retention: "retain" },
+    });
+
+    await runner.run({
+      graph: {
+        steps: [
+          step("first", "First", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("second", "Second", {
+            type: "set_variable",
+            config: { name: "second", value: "done", value_type: "text" },
+          }),
+          step("third", "Third", {
+            type: "set_variable",
+            config: { name: "third", value: "done", value_type: "text" },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      targetStepId: "second",
+      reuseRetainedSession: true,
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.completed_step_ids).toEqual(["second", "third"]);
+    expect(result.outputs).toMatchObject({ second: "done", third: "done" });
+  });
+
   test("clears stale retained session state when the retained browser was closed manually", async () => {
     const context = new FakeContext();
     const runner = new BrowserWorkflowRunner({
@@ -1453,6 +1507,60 @@ describe("BrowserWorkflowRunner", () => {
 
     expect(allowed.status).toBe("success");
     expect(page.events).toContain("goto:https://app.owned.test/dashboard");
+  });
+
+  test("fails when switching to a missing tab index", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("switch-missing", "Switch missing", {
+            type: "switch_tab",
+            config: { index: 2 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "switch-missing",
+      action_type: "switch_tab",
+      reason: "Tab index 2 does not exist",
+    });
+  });
+
+  test("fails when closing a missing tab index", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("close-missing", "Close missing", {
+            type: "close_tab",
+            config: { index: 3 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "close-missing",
+      action_type: "close_tab",
+      reason: "Tab index 3 does not exist",
+    });
   });
 
   test("rejects screenshot paths outside run evidence", async () => {
