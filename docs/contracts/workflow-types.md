@@ -156,6 +156,9 @@ Export sanitizes machine-local or sensitive fields by default: `settings.browser
 metadata, approximate size, last modified time, last run time, and active-session
 status. `BrowserProfileCleanupResult` reports deleted orphan profile directories,
 skipped referenced or active profiles, and reclaimed bytes.
+`CloakBrowserDiagnostics` also reports font-check status, last smoke result
+status, and the latest persisted `fingerprint_preflight` verdict summary when a
+run has produced one.
 
 `WorkflowDeleteOptions` serializes as `{ deleteBrowserProfile?: boolean }`.
 Deletion keeps profile data by default. When `deleteBrowserProfile` is true, the

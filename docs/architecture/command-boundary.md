@@ -37,7 +37,7 @@ Node/Electron backend.
 - Workflow package import validates selected sections before creation and wraps workflow, graph, and settings writes in a SQLite transaction.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies saved graph and full local settings without package-export sanitization.
-- CloakBrowser operational commands stay in the backend: diagnostics report wrapper/binary/cache/display/GeoIP/profile metadata, install triggers `ensureBinary()`, and orphan cleanup deletes only inactive profile directories that no workflow references.
+- CloakBrowser operational commands stay in the backend: diagnostics report wrapper/binary/cache/display/GeoIP/font/profile metadata plus last smoke/preflight summary fields, install triggers `ensureBinary()`, and orphan cleanup deletes only inactive profile directories that no workflow references.
 - Workflow deletion accepts an explicit profile-data choice from the renderer. It keeps browser profile data by default, deletes only unshared profile directories when requested, and rejects deletion while that workflow's retained browser session still owns the profile.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.
