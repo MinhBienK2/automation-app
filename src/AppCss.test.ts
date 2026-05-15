@@ -118,6 +118,23 @@ describe("App CSS", () => {
     expect(graphFlow).toContain("height: 100%");
   });
 
+  test("keeps run error surfaces dense and text-contained", () => {
+    const runActions = cssRule(".page-detail-header .run-actions");
+    const issueSummary = cssRule(".run-issue-summary-text");
+    const issueDetails = cssRule(".run-issue-details");
+    const inspector = cssRule(".graph-inspector");
+    const graphErrorDetails = cssRule(".graph-error-details");
+
+    expect(runActions).toContain("display: flex");
+    expect(runActions).toContain("width: auto");
+    expect(issueSummary).toContain("overflow-wrap: anywhere");
+    expect(issueDetails).toContain("white-space: pre-wrap");
+    expect(issueDetails).toContain("max-height:");
+    expect(inspector).toContain("min-width: 0");
+    expect(graphErrorDetails).toContain("overflow-wrap: anywhere");
+    expect(graphErrorDetails).toContain("white-space: pre-wrap");
+  });
+
   test("keeps React Flow edges and connection previews visible while dragging ports", () => {
     const graphNode = cssRule(".graph-node");
     const graphHandle = cssRule(".graph-handle");

@@ -16,7 +16,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
 - `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
-- `src/features/workflows/components/RunIssuePanel.tsx`: blocking validation, runtime failure, and system/startup issue presentation.
+- `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, runtime failure, and system/startup issue presentation with copyable collapsed raw details for long errors.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes and the legacy step form container; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
 - `src/features/workflows/components/TemplateTextField.tsx`: template-aware textarea with token preview/highlighting and variable insertion from known graph variables.
@@ -42,7 +42,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Workflow Settings editing through list Edit and detail Settings, simplified Run Policy with paused read-only batch defaults, Browser Launch, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual section help with field-level guidance, and run-before-save orchestration.
 - Workflow list direct Run, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while shared run polling continues. Duplicate calls `duplicateWorkflow` so local copies preserve saved graph and full settings. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
-- Run issue summaries that route graph-backed issues back to the affected node or link.
+- Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Run polling consumes `get_run_state` while a workflow is running, whether the run started from the list or detail workspace. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Browser Launch. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session.
 - Selected-node port guidance for required body ports, optional no-op branches, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
@@ -56,7 +56,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.
-- Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands.
+- Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands. Workflow detail header commands keep Settings, Validate, and Save icon-only while Run, Stop, and Run from selected remain text commands.
 
 ## Does Not Belong Here
 

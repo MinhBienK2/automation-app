@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ClipboardCopy } from "lucide-react";
 import type {
   GraphEdge,
   GraphNode,
@@ -6,6 +8,7 @@ import type {
   WorkflowGraph,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
+import { Badge } from "../../../components/ui/badge";
 import { graphNodeLabel } from "../lib/workflowGraph";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import { ConnectionSummary } from "./WorkflowGraphPalettes";
@@ -53,6 +56,11 @@ export function WorkflowGraphInspector({
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
   const variableOptions = collectVariableOptions(graph);
+  const [runErrorDetailsVisible, setRunErrorDetailsVisible] = useState(false);
+  const selectedRunError =
+    selectedNode && runState.error?.step_id === selectedNode.id
+      ? runState.error
+      : null;
 
   return (
     <aside className="graph-inspector" aria-label="Graph inspector">
@@ -117,14 +125,41 @@ export function WorkflowGraphInspector({
               ))}
             </div>
           ) : null}
-          {runState.error?.step_id === selectedNode.id ? (
+          {selectedRunError ? (
             <section className="graph-last-run-error" aria-label="Last run error">
-              <h3>Last run error</h3>
-              <p>
-                Step {runState.error.step_number}:{" "}
-                {runState.error.step_name ?? selectedNode.label}
+              <div className="graph-error-card-header">
+                <Badge variant="destructive">Runtime failure</Badge>
+                <h3>Last run error</h3>
+              </div>
+              <p className="graph-error-context">
+                Step {selectedRunError.step_number}:{" "}
+                {selectedRunError.step_name ?? selectedNode.label}
               </p>
-              <p>{runState.error.reason}</p>
+              <p className="graph-error-summary">
+                {summarizeRunError(selectedRunError.reason)}
+              </p>
+              <div className="graph-error-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setRunErrorDetailsVisible((current) => !current)}
+                >
+                  {runErrorDetailsVisible ? "Hide details" : "View details"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => copyRunError(selectedRunError.reason)}
+                >
+                  <ClipboardCopy aria-hidden="true" />
+                  Copy details
+                </Button>
+              </div>
+              {runErrorDetailsVisible ? (
+                <pre className="graph-error-details">{selectedRunError.reason}</pre>
+              ) : null}
             </section>
           ) : null}
           <NodeConfigFields
@@ -150,6 +185,19 @@ export function WorkflowGraphInspector({
 
     </aside>
   );
+}
+
+function summarizeRunError(reason: string) {
+  const firstLine = reason
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean) ?? reason.trim();
+  if (firstLine.length <= 160) return firstLine;
+  return `${firstLine.slice(0, 157)}...`;
+}
+
+function copyRunError(reason: string) {
+  void navigator.clipboard?.writeText(reason);
 }
 
 function collectVariableOptions(graph: WorkflowGraph): VariableOption[] {

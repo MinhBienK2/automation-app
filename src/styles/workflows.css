@@ -135,13 +135,27 @@
 }
 
 .page-detail-header .run-actions {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  width: min(560px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  width: auto;
+  max-width: 360px;
 }
 
 .page-detail-header .run-actions-with-stop {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  width: min(680px, 100%);
+  max-width: 520px;
+}
+
+.workflow-command-icon {
+  flex: 0 0 auto;
+}
+
+.workflow-command-primary,
+.workflow-command-secondary,
+.workflow-command-stop {
+  flex: 0 0 auto;
 }
 
 .field-error {
@@ -600,15 +614,24 @@
 
 .run-issue-panel {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
 }
 
 .run-issue-header {
   display: flex;
-  gap: 16px;
+  min-width: 0;
+  gap: 12px;
   align-items: start;
   justify-content: space-between;
+}
+
+.run-issue-header-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
 }
 
 .run-issue-header h2 {
@@ -638,7 +661,7 @@
 }
 
 .run-issue-header p {
-  margin-top: 6px;
+  margin-top: 2px;
   color: #b4b4b4;
 }
 
@@ -648,15 +671,16 @@
 
 .run-issue-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .run-issue-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  min-width: 0;
+  gap: 10px;
   align-items: start;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid #2e2e2e;
   border-radius: 8px;
   background: #0f0f0f;
@@ -671,9 +695,42 @@
 .run-issue-item p,
 .run-issue-suggestions li,
 .run-issue-overflow {
+  min-width: 0;
   color: #b4b4b4;
   font-size: 14px;
   line-height: 1.45;
+}
+
+.run-issue-summary-text {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.run-issue-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.run-issue-details {
+  max-height: 128px;
+  min-width: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  margin-top: 8px;
+  background: #171717;
+  color: #b4b4b4;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .run-issue-suggestions {

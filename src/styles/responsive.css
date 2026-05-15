@@ -73,13 +73,24 @@
   }
 
   .workflow-card .row-actions,
-  .run-actions,
   .row-actions,
   .form-actions,
   .page-detail-header .run-actions,
   .page-detail-header .run-actions-with-stop {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .run-actions,
+  .page-detail-header .run-actions,
+  .page-detail-header .run-actions-with-stop {
+    display: flex;
+    width: 100%;
+    max-width: none;
+  }
+
+  .page-detail-header .run-actions {
+    justify-content: flex-start;
   }
 
   .add-step-palette {

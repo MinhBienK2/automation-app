@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Settings } from "lucide-react";
+import { CheckCircle2, Save, Settings } from "lucide-react";
 import type {
   GraphValidationIssue,
   RunState,
@@ -8,6 +8,7 @@ import type {
 } from "../../../types/workflow";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button } from "../../../components/ui/button";
+import { IconButton } from "../../../components/ui/icon-button";
 import { buildRunIssues } from "../../../lib/workflowUi";
 import { RunIssuePanel } from "../components/RunIssuePanel";
 import { RunStatusBar } from "../components/RunStatusBar";
@@ -107,32 +108,38 @@ export function WorkflowDetailPage({
         onBack={onBack}
         actions={
           <div className={isRunning ? "run-actions run-actions-with-stop" : "run-actions"}>
-            <Button
+            <IconButton
+              className="workflow-command-icon"
               variant="secondary"
               type="button"
+              label="Settings"
               onClick={onOpenWorkflowSettings}
             >
               <Settings aria-hidden="true" />
-              Settings
-            </Button>
-            <Button
+            </IconButton>
+            <IconButton
+              className="workflow-command-icon"
               variant="secondary"
               type="button"
+              label="Validate"
               onClick={onValidateGraph}
             >
-              Validate
-            </Button>
-            <Button
-              shape="pill"
+              <CheckCircle2 aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              className="workflow-command-icon"
+              variant="secondary"
               type="button"
-              onClick={onRunGraph}
-              disabled={isRunning}
+              label="Save"
+              onClick={onSaveGraph}
             >
-              Run
-            </Button>
+              <Save aria-hidden="true" />
+            </IconButton>
             {showRunGraphFromSelected ? (
               <Button
+                className="workflow-command-secondary"
                 variant="secondary"
+                size="sm"
                 type="button"
                 onClick={onRunGraphFromSelected}
                 disabled={!canRunGraphFromSelected}
@@ -142,14 +149,23 @@ export function WorkflowDetailPage({
               </Button>
             ) : null}
             <Button
-              variant="secondary"
+              className="workflow-command-primary"
+              shape="pill"
+              size="sm"
               type="button"
-              onClick={onSaveGraph}
+              onClick={onRunGraph}
+              disabled={isRunning}
             >
-              Save
+              Run
             </Button>
             {isRunning ? (
-              <Button variant="destructive" type="button" onClick={onStopRun}>
+              <Button
+                className="workflow-command-stop"
+                variant="destructive"
+                size="sm"
+                type="button"
+                onClick={onStopRun}
+              >
                 Stop
               </Button>
             ) : null}
