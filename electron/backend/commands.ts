@@ -21,6 +21,7 @@ import type {
   SettingsValidationIssue,
   Workflow,
   WorkflowBrowserConfig,
+  WorkflowDeleteOptions,
   WorkflowDetail,
   WorkflowExport,
   WorkflowGraph,
@@ -43,6 +44,7 @@ import {
   validateWorkflowGraph as validateGraph,
 } from "./graphCompiler.js";
 import { BrowserWorkflowRunner } from "./runner.js";
+import { sanitizePathSegment } from "./evidenceArtifacts.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./workflowGraphMigration.js";
 import { WorkflowRepository } from "./workflowRepository.js";
 
@@ -173,6 +175,29 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       "Close the retained browser session before changing or deleting its identity profile",
       "browser_launch.profile_dir",
     );
+  }
+
+  function deleteBrowserProfileDirectoryIfPrivate(
+    workflowId: string,
+    settings: WorkflowSettings,
+  ) {
+    const profileDir = browserProfileKey(settings);
+    if (!profileDir || isProfileReferencedByAnotherWorkflow(workflowId, profileDir)) {
+      return;
+    }
+    nodeFs.rmSync(path.join(context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
+      recursive: true,
+      force: true,
+    });
+  }
+
+  function isProfileReferencedByAnotherWorkflow(workflowId: string, profileDir: string) {
+    return repository
+      .listWorkflows()
+      .some((workflow) => {
+        if (workflow.id === workflowId) return false;
+        return browserProfileKey(getSettings(workflow.id)) === profileDir;
+      });
   }
 
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
@@ -376,8 +401,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       repository.renameWorkflow(id, normalized);
     },
 
-    deleteWorkflow(id: string) {
+    deleteWorkflow(id: string, options: WorkflowDeleteOptions = {}) {
+      const settings = getSettings(id);
       assertProfileNotActiveForWorkflow(id);
+      if (options.deleteBrowserProfile) {
+        deleteBrowserProfileDirectoryIfPrivate(id, settings);
+      }
       repository.deleteWorkflow(id);
     },
 

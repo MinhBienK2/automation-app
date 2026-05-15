@@ -129,8 +129,8 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   workflowBridgeMock.renameWorkflow.mockImplementation((id: string, name: string) =>
     resolveCommand(commands, "rename_workflow", { id, name }),
   );
-  workflowBridgeMock.deleteWorkflow.mockImplementation((id: string) =>
-    resolveCommand(commands, "delete_workflow", { id }),
+  workflowBridgeMock.deleteWorkflow.mockImplementation((id: string, options: unknown) =>
+    resolveCommand(commands, "delete_workflow", { id, options }),
   );
   workflowBridgeMock.duplicateWorkflow.mockImplementation(
     (workflowId: string, name: string) =>

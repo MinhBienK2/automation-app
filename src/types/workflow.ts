@@ -260,6 +260,10 @@ export type BrowserProfileCleanupResult = {
   reclaimed_bytes: number;
 };
 
+export type WorkflowDeleteOptions = {
+  deleteBrowserProfile?: boolean;
+};
+
 export type CloakBrowserDiagnostics = {
   wrapper_version: string | null;
   binary: {

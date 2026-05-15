@@ -5,6 +5,7 @@ import type {
   OrchestrationSchedule,
   RecordedEvent,
   WorkflowBrowserConfig,
+  WorkflowDeleteOptions,
   WorkflowExport,
   WorkflowGraph,
   WorkflowPackage,
@@ -90,8 +91,8 @@ export function renameWorkflow(id: string, name: string) {
   return bridge().renameWorkflow(id, name);
 }
 
-export function deleteWorkflow(id: string) {
-  return bridge().deleteWorkflow(id);
+export function deleteWorkflow(id: string, options?: WorkflowDeleteOptions) {
+  return bridge().deleteWorkflow(id, options);
 }
 
 export function duplicateWorkflow(workflowId: string, name: string) {
