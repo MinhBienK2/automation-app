@@ -102,6 +102,10 @@ evidence. Supported operator overrides are `CLOAKBROWSER_BINARY_PATH`,
 downloaded binaries with SHA-256 checksums. If an update regresses owned probes,
 roll back by pointing `CLOAKBROWSER_BINARY_PATH` at a previous cached Chromium
 binary under `~/.cloakbrowser`.
+For production-like lab machines that require stronger supply-chain checks,
+verify CloakBrowser signed release tags, binary attestations, or Docker image
+signatures when those artifacts are published by the upstream project before
+accepting a new wrapper or binary version.
 
 Linux headed runs require a real display. Use a desktop session or `xvfb-run`
 for headed identities; otherwise set Browser Launch headless mode. Install
