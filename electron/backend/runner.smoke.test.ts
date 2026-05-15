@@ -11,6 +11,8 @@ import { BrowserWorkflowRunner } from "./runner";
 
 const tempRoots: string[] = [];
 const describeSmoke = process.env.RUN_CLOAKBROWSER_SMOKE === "1" ? describe : describe.skip;
+const headedDisplayAvailable =
+  process.platform !== "linux" || Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
 
 afterEach(async () => {
   for (const root of tempRoots.splice(0)) {
@@ -147,6 +149,70 @@ describeSmoke("CloakBrowser smoke", () => {
             binary_version: expect.stringMatching(/^\d+/),
             binary_installed: true,
           },
+        });
+      } finally {
+        await closeServer(server);
+      }
+    },
+    60_000,
+  );
+
+  test.skipIf(!headedDisplayAvailable)(
+    "launches headed when a display is available",
+    async () => {
+      const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-smoke-headed-"));
+      tempRoots.push(tempRoot);
+      const appPaths = createAppPaths(tempRoot);
+      const runner = new BrowserWorkflowRunner({ appPaths });
+      const { server, url: fixtureUrl } = await createFixtureServer();
+      const settings = defaultWorkflowSettings({
+        id: "workflow-smoke-headed",
+        name: "Smoke Headed",
+        step_count: 0,
+        created_at: "2026-05-09T00:00:00.000Z",
+        updated_at: "2026-05-09T00:00:00.000Z",
+      });
+
+      try {
+        const result = await runner.run({
+          graph: {
+            steps: [
+              {
+                node_id: "open",
+                label: "Open fixture",
+                config: { type: "navigate", config: { url: fixtureUrl } },
+              },
+              {
+                node_id: "probe",
+                label: "Probe browser signals",
+                config: {
+                  type: "execute_js",
+                  config: {
+                    script: "return { webdriver: navigator.webdriver, userAgent: navigator.userAgent };",
+                    output_name: "probe",
+                    timeout_ms: 1000,
+                  },
+                },
+              },
+            ],
+          },
+          settings: {
+            ...settings,
+            run_policy: { ...settings.run_policy, browser_retention: "close" as const },
+            browser_launch: {
+              ...settings.browser_launch,
+              headless: false,
+              profile_dir: "smoke-headed-identity",
+              profile_name: "smoke-headed-identity",
+              fingerprint_seed: "48391",
+            },
+          },
+          mode: "run_workflow",
+        });
+
+        expect(result.status).toBe("success");
+        expect(result.outputs?.probe).toMatchObject({
+          webdriver: false,
         });
       } finally {
         await closeServer(server);
