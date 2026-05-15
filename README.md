@@ -89,8 +89,9 @@ commands exposed over IPC: `getCloakBrowserDiagnostics`,
 `installCloakBrowserBinary`, and `cleanupOrphanedBrowserProfiles`. Diagnostics
 report wrapper/binary version, platform, binary path/cache/download URL,
 auto-update and checksum-skip status, GeoIP dependency availability, headed
-display availability, and profile storage metadata without proxy passwords,
-cookies, or browser storage values.
+display availability, font-check status, last recorded smoke/preflight summary,
+and profile storage metadata without proxy passwords, cookies, or browser
+storage values.
 
 For reproducible sensitive runs, keep `CLOAKBROWSER_AUTO_UPDATE=false` on lab
 machines or record the effective binary version from `browser_identity`

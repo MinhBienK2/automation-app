@@ -177,7 +177,7 @@ describe("Electron workflow command handlers", () => {
   });
 
   test("reports CloakBrowser diagnostics and profile storage without secrets", async () => {
-    const { handlers, appPaths } = await createTestHandlers();
+    const { handlers, appPaths, database } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Diagnostics flow");
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
@@ -193,6 +193,28 @@ describe("Electron workflow command handlers", () => {
     const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
     await fs.mkdir(path.join(appPaths.browserProfilesDir, profileDir), { recursive: true });
     await fs.writeFile(path.join(appPaths.browserProfilesDir, profileDir, "storage.txt"), "state");
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-preflight",
+        workflow.id,
+        "failed",
+        "2026-05-15T00:00:00.000Z",
+        "2026-05-15T00:00:02.000Z",
+        JSON.stringify({
+          fingerprint_preflight: {
+            passed: false,
+            verdict: "blocked",
+            risk_score: 72,
+            run_id: "fp-001",
+            profile_id: "bi_qa",
+          },
+        }),
+      );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
 
@@ -202,6 +224,23 @@ describe("Electron workflow command handlers", () => {
     expect(typeof diagnostics.binary.installed).toBe("boolean");
     expect(diagnostics.profile_root).toBe(appPaths.browserProfilesDir);
     expect(diagnostics.geoip_available).toBe(false);
+    expect(diagnostics.font_checklist).toEqual({
+      status: "not_checked",
+      reason: "Font coverage detection is not implemented",
+    });
+    expect(diagnostics.last_smoke_result).toEqual({
+      status: "not_recorded",
+      reason: "Smoke tests are recorded by the npm run test:smoke command output",
+    });
+    expect(diagnostics.last_preflight_verdict).toMatchObject({
+      workflow_id: workflow.id,
+      workflow_name: "Diagnostics flow",
+      run_id: "fp-001",
+      verdict: "blocked",
+      passed: false,
+      risk_score: 72,
+      finished_at: "2026-05-15T00:00:02.000Z",
+    });
     expect(diagnostics.profiles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -212,7 +251,7 @@ describe("Electron workflow command handlers", () => {
         }),
       ]),
     );
-    expect(diagnostics.profiles[0]?.last_run_at).toBeNull();
+    expect(diagnostics.profiles[0]?.last_run_at).toBe("2026-05-15T00:00:02.000Z");
     expect(JSON.stringify(diagnostics)).not.toContain("secret-proxy-password");
   });
 

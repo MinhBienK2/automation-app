@@ -278,6 +278,23 @@ export type CloakBrowserDiagnostics = {
   checksum_skip_enabled: boolean;
   geoip_available: boolean;
   profile_root: string;
+  font_checklist: {
+    status: "not_checked";
+    reason: string | null;
+  };
+  last_smoke_result: {
+    status: "not_recorded";
+    reason: string | null;
+  };
+  last_preflight_verdict: {
+    workflow_id: string;
+    workflow_name: string | null;
+    run_id: string | null;
+    verdict: string;
+    passed: boolean;
+    risk_score: number | null;
+    finished_at: string | null;
+  } | null;
   headed_display: {
     available: boolean;
     reason: string | null;
