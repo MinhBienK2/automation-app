@@ -41,6 +41,7 @@
   align-content: start;
   gap: 10px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .graph-inspector-header {
@@ -48,6 +49,10 @@
   align-items: start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.graph-inspector-header > div {
+  min-width: 0;
 }
 
 .graph-canvas-wrap {
@@ -389,6 +394,63 @@
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.graph-last-run-error {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.42);
+  border-radius: 8px;
+  background: #121212;
+}
+
+.graph-error-card-header,
+.graph-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.graph-error-card-header h3 {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.graph-error-context {
+  color: #898989;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.graph-error-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: #fca5a5;
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.graph-error-details {
+  max-height: 150px;
+  min-width: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  background: #0f0f0f;
+  color: #b4b4b4;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .graph-connection-summary {

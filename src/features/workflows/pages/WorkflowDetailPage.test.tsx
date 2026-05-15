@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   workflowCommandCallMock,
   mockWorkflowBridgeCommands,
@@ -81,6 +81,14 @@ describe("Workflow detail integration", () => {
       "data-slot",
       "badge",
     );
+    expect(within(controlsRow).getByRole("button", { name: "Settings" }))
+      .toHaveClass("workflow-command-icon");
+    expect(within(controlsRow).getByRole("button", { name: "Settings" }))
+      .toHaveAttribute("data-tooltip", "Settings");
+    expect(within(controlsRow).getByRole("button", { name: "Validate" }))
+      .toHaveClass("workflow-command-icon");
+    expect(within(controlsRow).getByRole("button", { name: "Save" }))
+      .toHaveClass("workflow-command-icon");
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
     expect(within(controlsRow).getByRole("button", { name: "Run" }))
       .toHaveAttribute("data-slot", "button");
@@ -96,6 +104,7 @@ describe("Workflow detail integration", () => {
   test("runs from the selected node when a retained persistent session is available", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
       get_run_state: {
         ...idleRunState,
         retained_session: {
@@ -118,7 +127,6 @@ describe("Workflow detail integration", () => {
           run_from_selected_enabled: true,
         },
       },
-      save_workflow_graph: undefined,
       run_workflow_from_node: {
         status: "running",
         mode: "run_workflow",
@@ -545,5 +553,63 @@ describe("Workflow detail integration", () => {
     expect(within(panel).getByText("XPath not found")).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Select failed node" }))
       .toBeInTheDocument();
+  });
+
+  test("keeps long runtime errors compact with copyable details in panel and inspector", async () => {
+    const longReason = [
+      "page.goto: net::ERR_NAME_NOT_RESOLVED at https://owned.example.test/path/with/a/very/long/token/abcdefghijklmnopqrstuvwxyz0123456789",
+      "Call log:",
+      "  - navigating to https://owned.example.test/path/with/a/very/long/token/abcdefghijklmnopqrstuvwxyz0123456789, waiting until load",
+    ].join("\n");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+      run_workflow: {
+        ...idleRunState,
+        status: "failed",
+        error: {
+          step_id: "step-1",
+          step_number: 1,
+          step_name: "Navigate",
+          action_type: "navigate",
+          reason: longReason,
+        },
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    await userEvent.click(within(controlsRow).getByRole("button", { name: "Run" }));
+
+    const panel = await screen.findByRole("region", { name: "Run issues" });
+    expect(within(panel).getByText("Run failed at step 1: Navigate")).toBeInTheDocument();
+    expect(within(panel).getByText(/page.goto: net::ERR_NAME_NOT_RESOLVED/))
+      .toHaveClass("run-issue-summary-text");
+    expect(within(panel).queryByText(/waiting until load/)).not.toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole("button", { name: "Copy details" }));
+    expect(writeText).toHaveBeenCalledWith(longReason);
+    await userEvent.click(within(panel).getByRole("button", { name: "Details" }));
+    expect(within(panel).getByText(/waiting until load/)).toHaveClass("run-issue-details");
+
+    const editor = screen.getByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
+    const inspectorError = within(editor).getByRole("region", { name: "Last run error" });
+    expect(within(inspectorError).getByText(/page.goto: net::ERR_NAME_NOT_RESOLVED/))
+      .toHaveClass("graph-error-summary");
+    expect(within(inspectorError).queryByText(/waiting until load/)).not.toBeInTheDocument();
+    await userEvent.click(within(inspectorError).getByRole("button", { name: "View details" }));
+    expect(within(inspectorError).getByText(/waiting until load/)).toHaveClass("graph-error-details");
   });
 });
