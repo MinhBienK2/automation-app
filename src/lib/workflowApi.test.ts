@@ -5,6 +5,7 @@ import {
 } from "../tests/mocks/electron";
 import {
   cleanupOrphanedBrowserProfiles,
+  deleteWorkflow,
   exportWorkflow,
   exportWorkflowPackage,
   duplicateWorkflow,
@@ -92,6 +93,7 @@ describe("workflow API phase ten commands", () => {
     await getCloakBrowserDiagnostics();
     await installCloakBrowserBinary();
     await cleanupOrphanedBrowserProfiles();
+    await deleteWorkflow("workflow-1", { deleteBrowserProfile: true });
 
     expect(workflowBridgeMock.validateSchedule).toHaveBeenCalledWith({
       workflow_id: "workflow-1",
@@ -130,6 +132,10 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.getCloakBrowserDiagnostics).toHaveBeenCalled();
     expect(workflowBridgeMock.installCloakBrowserBinary).toHaveBeenCalled();
     expect(workflowBridgeMock.cleanupOrphanedBrowserProfiles).toHaveBeenCalled();
+    expect(workflowBridgeMock.deleteWorkflow).toHaveBeenCalledWith(
+      "workflow-1",
+      { deleteBrowserProfile: true },
+    );
   });
 
   test("invokes workflow package commands with selected sections", async () => {

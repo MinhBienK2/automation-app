@@ -89,8 +89,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow(workflowIpcChannels.createWorkflow, name),
   renameWorkflow: (id, name) =>
     invokeWorkflow(workflowIpcChannels.renameWorkflow, id, name),
-  deleteWorkflow: (id) =>
-    invokeWorkflow(workflowIpcChannels.deleteWorkflow, id),
+  deleteWorkflow: (id, options) =>
+    invokeWorkflow(workflowIpcChannels.deleteWorkflow, id, options),
   duplicateWorkflow: (workflowId, name) =>
     invokeWorkflow(workflowIpcChannels.duplicateWorkflow, workflowId, name),
   getWorkflowGraph: (workflowId) =>

@@ -278,6 +278,7 @@ function App() {
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] =
     useState<WorkflowSummary | null>(null);
+  const [deleteBrowserProfileData, setDeleteBrowserProfileData] = useState(false);
   const [exportPackageWorkflow, setExportPackageWorkflow] =
     useState<WorkflowSummary | null>(null);
   const [exportPackageIncludeFlow, setExportPackageIncludeFlow] = useState(true);
@@ -477,6 +478,7 @@ function App() {
 
   function deleteWorkflow(id: string) {
     setAppError("");
+    setDeleteBrowserProfileData(false);
     setDeleteWorkflowCandidate(
       workflows.find((workflow) => workflow.id === id) ?? null,
     );
@@ -488,8 +490,11 @@ function App() {
     setAppError("");
 
     try {
-      await deleteWorkflowCommand(id);
+      await deleteWorkflowCommand(id, {
+        deleteBrowserProfile: deleteBrowserProfileData,
+      });
       setDeleteWorkflowCandidate(null);
+      setDeleteBrowserProfileData(false);
       if (selectedWorkflowId === id) {
         setSelectedWorkflowId(null);
         setDetail(null);
@@ -1110,7 +1115,10 @@ function App() {
       <Dialog
         open={Boolean(deleteWorkflowCandidate)}
         onOpenChange={(open) => {
-          if (!open) setDeleteWorkflowCandidate(null);
+          if (!open) {
+            setDeleteWorkflowCandidate(null);
+            setDeleteBrowserProfileData(false);
+          }
         }}
       >
         {deleteWorkflowCandidate ? (
@@ -1123,6 +1131,17 @@ function App() {
                 action cannot be undone.
               </DialogDescription>
             </DialogHeader>
+            <div className="package-section-list">
+              <PackageFlowCheckbox
+                checked={deleteBrowserProfileData}
+                label="Delete private browser profile data"
+                onChange={setDeleteBrowserProfileData}
+              />
+              <p className="muted">
+                Keep it when you want retained login state available for manual
+                recovery or a later profile cleanup.
+              </p>
+            </div>
             {appError ? <p className="field-error">{appError}</p> : null}
             <DialogFooter className="form-actions">
               <Button
@@ -1137,7 +1156,10 @@ function App() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setDeleteWorkflowCandidate(null)}
+                onClick={() => {
+                  setDeleteWorkflowCandidate(null);
+                  setDeleteBrowserProfileData(false);
+                }}
               >
                 Cancel
               </Button>

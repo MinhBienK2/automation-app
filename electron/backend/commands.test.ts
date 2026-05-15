@@ -118,6 +118,64 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
+  test("deletes private browser profile data only when requested", async () => {
+    const { handlers, appPaths } = await createTestHandlers();
+    const keptWorkflow = handlers.createWorkflow("Keep profile");
+    const keptSettings = handlers.getWorkflowSettings(keptWorkflow.id);
+    const keptProfilePath = path.join(
+      appPaths.browserProfilesDir,
+      keptSettings.browser_launch.profile_dir,
+    );
+    await fs.mkdir(keptProfilePath, { recursive: true });
+    await fs.writeFile(path.join(keptProfilePath, "storage.txt"), "state");
+
+    handlers.deleteWorkflow(keptWorkflow.id, { deleteBrowserProfile: false });
+
+    expect(handlers.getWorkflow(keptWorkflow.id)).toBeNull();
+    await expect(fs.stat(keptProfilePath)).resolves.toBeTruthy();
+
+    const deletedWorkflow = handlers.createWorkflow("Delete profile");
+    const deletedSettings = handlers.getWorkflowSettings(deletedWorkflow.id);
+    const deletedProfilePath = path.join(
+      appPaths.browserProfilesDir,
+      deletedSettings.browser_launch.profile_dir,
+    );
+    await fs.mkdir(deletedProfilePath, { recursive: true });
+    await fs.writeFile(path.join(deletedProfilePath, "storage.txt"), "state");
+
+    handlers.deleteWorkflow(deletedWorkflow.id, { deleteBrowserProfile: true });
+
+    expect(handlers.getWorkflow(deletedWorkflow.id)).toBeNull();
+    await expect(fs.stat(deletedProfilePath)).rejects.toThrow();
+  });
+
+  test("does not delete browser profile data that another workflow still references", async () => {
+    const { handlers, appPaths } = await createTestHandlers();
+    const owner = handlers.createWorkflow("Profile owner");
+    const shared = handlers.createWorkflow("Profile shared");
+    const ownerSettings = handlers.getWorkflowSettings(owner.id);
+    const sharedSettings = handlers.getWorkflowSettings(shared.id);
+    const profileDir = ownerSettings.browser_launch.profile_dir;
+    const profilePath = path.join(appPaths.browserProfilesDir, profileDir);
+    await fs.mkdir(profilePath, { recursive: true });
+    await fs.writeFile(path.join(profilePath, "storage.txt"), "state");
+    handlers.saveWorkflowSettings(shared.id, {
+      ...sharedSettings,
+      browser_launch: {
+        ...sharedSettings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_dir: profileDir,
+        profile_name: profileDir,
+      },
+    });
+
+    handlers.deleteWorkflow(owner.id, { deleteBrowserProfile: true });
+
+    expect(handlers.getWorkflow(owner.id)).toBeNull();
+    expect(handlers.getWorkflow(shared.id)).not.toBeNull();
+    await expect(fs.stat(profilePath)).resolves.toBeTruthy();
+  });
+
   test("reports CloakBrowser diagnostics and profile storage without secrets", async () => {
     const { handlers, appPaths } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Diagnostics flow");

@@ -157,6 +157,11 @@ metadata, approximate size, last modified time, last run time, and active-sessio
 status. `BrowserProfileCleanupResult` reports deleted orphan profile directories,
 skipped referenced or active profiles, and reclaimed bytes.
 
+`WorkflowDeleteOptions` serializes as `{ deleteBrowserProfile?: boolean }`.
+Deletion keeps profile data by default. When `deleteBrowserProfile` is true, the
+backend removes only the deleting workflow's private profile directory; shared
+or active-session profile directories are retained.
+
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and full Workflow Settings to a new workflow id, including fields that package export sanitizes for external sharing.
 
 ## Batch Run Shape

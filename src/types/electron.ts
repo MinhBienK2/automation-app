@@ -15,6 +15,7 @@ import type {
   CloakBrowserDiagnostics,
   Workflow,
   WorkflowBrowserConfig,
+  WorkflowDeleteOptions,
   WorkflowDetail,
   WorkflowExport,
   WorkflowGraph,
@@ -54,7 +55,7 @@ export type WorkflowElectronBridge = {
   validateWorkflowRun(workflowId: string): Promise<RunValidationIssue[]>;
   createWorkflow(name: string): Promise<Workflow>;
   renameWorkflow(id: string, name: string): Promise<void>;
-  deleteWorkflow(id: string): Promise<void>;
+  deleteWorkflow(id: string, options?: WorkflowDeleteOptions): Promise<void>;
   duplicateWorkflow(workflowId: string, name: string): Promise<WorkflowDetail>;
   getWorkflowGraph(workflowId: string): Promise<WorkflowGraph>;
   saveWorkflowGraph(workflowId: string, graph: WorkflowGraph): Promise<void>;
