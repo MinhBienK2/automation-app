@@ -23,6 +23,7 @@ import type {
   ActionType,
   GraphNode,
   GraphNodeType,
+  GraphPosition,
   GraphPort,
   GraphValidationIssue,
   RunState,
@@ -95,6 +96,20 @@ type ActivePortConnection = {
   direction: GraphPort["direction"];
 } | null;
 
+type ScreenToFlowPosition = Pick<
+  ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge>,
+  "screenToFlowPosition"
+>;
+
+const graphNodeDimensions = {
+  width: 160,
+  height: 64,
+};
+const visibleNodeStagger = {
+  step: 24,
+  cycle: 5,
+};
+
 function initialSelectedNodeId(graph: WorkflowGraph) {
   return (
     graph.nodes.find((node) => node.node_type !== "start")?.id ??
@@ -139,6 +154,41 @@ function shouldIgnoreGraphShortcut(event: KeyboardEvent) {
   }
 
   return Boolean(target.closest('[role="dialog"], .action-type-popover'));
+}
+
+function fallbackNodeInsertionPosition(nodeCount: number): GraphPosition {
+  return {
+    x: 120 + nodeCount * 48,
+    y: 120 + nodeCount * 16,
+  };
+}
+
+export function getVisibleNodeInsertionPosition(
+  nodeCount: number,
+  reactFlowInstance: ScreenToFlowPosition | null,
+  canvasElement: Pick<HTMLElement, "getBoundingClientRect"> | null,
+): GraphPosition {
+  const fallbackPosition = fallbackNodeInsertionPosition(nodeCount);
+  if (!reactFlowInstance || !canvasElement) return fallbackPosition;
+
+  const canvasBounds = canvasElement.getBoundingClientRect();
+  if (canvasBounds.width <= 0 || canvasBounds.height <= 0) {
+    return fallbackPosition;
+  }
+
+  const visibleCenter = reactFlowInstance.screenToFlowPosition(
+    {
+      x: canvasBounds.left + canvasBounds.width / 2,
+      y: canvasBounds.top + canvasBounds.height / 2,
+    },
+    { snapToGrid: false },
+  );
+  const stagger = (nodeCount % visibleNodeStagger.cycle) * visibleNodeStagger.step;
+
+  return {
+    x: Math.round(visibleCenter.x - graphNodeDimensions.width / 2 + stagger),
+    y: Math.round(visibleCenter.y - graphNodeDimensions.height / 2 + stagger),
+  };
 }
 
 export function WorkflowGraphEditor({
@@ -187,6 +237,7 @@ export function WorkflowGraphEditor({
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const editorRef = useRef<HTMLElement | null>(null);
+  const graphCanvasRef = useRef<HTMLDivElement | null>(null);
   const isGraphShortcutActiveRef = useRef(false);
   const graphRef = useRef(graph);
   const selectionRef = useRef(selection);
@@ -542,10 +593,14 @@ export function WorkflowGraphEditor({
 
   function addNode(nodeType: GraphNodeType) {
     const currentGraph = graphRef.current;
-    const node = createDefaultGraphNode(nodeType, {
-      x: 120 + currentGraph.nodes.length * 48,
-      y: 120 + currentGraph.nodes.length * 16,
-    });
+    const node = createDefaultGraphNode(
+      nodeType,
+      getVisibleNodeInsertionPosition(
+        currentGraph.nodes.length,
+        reactFlowInstance,
+        graphCanvasRef.current,
+      ),
+    );
     commitGraphChange(
       { ...currentGraph, nodes: [...currentGraph.nodes, node] },
       { nodeIds: [node.id], edgeIds: [] },
@@ -556,10 +611,14 @@ export function WorkflowGraphEditor({
   function addNewNode() {
     const currentGraph = graphRef.current;
     const node = {
-      ...createDefaultGraphNode("action", {
-        x: 120 + currentGraph.nodes.length * 48,
-        y: 120 + currentGraph.nodes.length * 16,
-      }),
+      ...createDefaultGraphNode(
+        "action",
+        getVisibleNodeInsertionPosition(
+          currentGraph.nodes.length,
+          reactFlowInstance,
+          graphCanvasRef.current,
+        ),
+      ),
       label: "New node",
       config: null,
     };
@@ -572,10 +631,14 @@ export function WorkflowGraphEditor({
   function addActionNode(actionType: ActionType) {
     const currentGraph = graphRef.current;
     const node = {
-      ...createDefaultGraphNode("action", {
-        x: 120 + currentGraph.nodes.length * 48,
-        y: 120 + currentGraph.nodes.length * 16,
-      }),
+      ...createDefaultGraphNode(
+        "action",
+        getVisibleNodeInsertionPosition(
+          currentGraph.nodes.length,
+          reactFlowInstance,
+          graphCanvasRef.current,
+        ),
+      ),
       label: actionLabels[actionType],
       config: defaultActionConfig(actionType),
     };
@@ -840,6 +903,7 @@ export function WorkflowGraphEditor({
               .filter(Boolean)
               .join(" ")}
             onPointerUp={clearPreviewConnection}
+            ref={graphCanvasRef}
             role="application"
             aria-label="Workflow graph canvas"
           >

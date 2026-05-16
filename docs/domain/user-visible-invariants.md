@@ -41,7 +41,7 @@ Preserve these unless the task explicitly changes them.
 - Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
-- The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. It does not expose Add Output.
+- The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. It does not expose Add Output.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.

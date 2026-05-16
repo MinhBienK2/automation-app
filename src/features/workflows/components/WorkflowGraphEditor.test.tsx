@@ -144,6 +144,54 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphCanvasPartsSource).not.toContain("graph-edge-arrow");
   });
 
+  test("calculates toolbar node positions from the current visible canvas center", async () => {
+    expect(
+      workflowGraphEditorSource.match(
+        /getVisibleNodeInsertionPosition\(\s*currentGraph\.nodes\.length,/g,
+      ),
+    ).toHaveLength(3);
+    expect(workflowGraphEditorSource).not.toContain(
+      "x: 120 + currentGraph.nodes.length * 48",
+    );
+
+    const graphEditorModule = await import("./WorkflowGraphEditor");
+    expect(graphEditorModule).toHaveProperty("getVisibleNodeInsertionPosition");
+
+    const getVisibleNodeInsertionPosition = graphEditorModule[
+      "getVisibleNodeInsertionPosition"
+    ] as (
+      nodeCount: number,
+      reactFlowInstance: {
+        screenToFlowPosition: (
+          position: { x: number; y: number },
+          options?: { snapToGrid?: boolean },
+        ) => { x: number; y: number };
+      } | null,
+      canvasElement: { getBoundingClientRect: () => DOMRect },
+    ) => { x: number; y: number };
+    const screenToFlowPosition = vi.fn(({ x, y }: { x: number; y: number }) => ({
+      x: x + 1000,
+      y: y + 2000,
+    }));
+    const canvasElement = {
+      getBoundingClientRect: () =>
+        ({
+          left: 40,
+          top: 80,
+          width: 800,
+          height: 600,
+        }) as DOMRect,
+    };
+
+    expect(
+      getVisibleNodeInsertionPosition(3, { screenToFlowPosition }, canvasElement),
+    ).toEqual({ x: 1432, y: 2420 });
+    expect(screenToFlowPosition).toHaveBeenCalledWith(
+      { x: 440, y: 380 },
+      { snapToGrid: false },
+    );
+  });
+
   test("opens graph shortcuts from the toolbar", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
