@@ -291,8 +291,6 @@ describe("step help content", () => {
       { actionType: "set_checkbox", fieldName: "State", labels: ["Checked", "Unchecked"] },
       { actionType: "set_contenteditable", fieldName: "Clear before input", labels: ["Yes", "No"] },
       { actionType: "take_screenshot", fieldName: "Full page", labels: ["Yes", "No"] },
-      { actionType: "set_viewport", fieldName: "Mobile", labels: ["False", "True"] },
-      { actionType: "set_viewport", fieldName: "Touch", labels: ["False", "True"] },
       { actionType: "assert_element", fieldName: "State", labels: ["Visible", "Hidden", "Attached", "Enabled", "Disabled"] },
       { actionType: "assert_text", fieldName: "Match mode", labels: ["Contains", "Equals"] },
       { actionType: "stop_workflow", fieldName: "Status", labels: ["Success", "Failure"] },
@@ -306,6 +304,14 @@ describe("step help content", () => {
         `${actionType} ${fieldName}`,
       ).toEqual(labels);
     }
+  });
+
+  test("describes Set Viewport as runtime width and height only", () => {
+    expect(stepHelpContent.set_viewport.en.summary).toContain("viewport size");
+    expect(stepHelpContent.set_viewport.en.summary).not.toContain("device shape");
+    expect(
+      stepHelpContent.set_viewport.en.fieldReference?.map((field) => field.name),
+    ).toEqual(["Width", "Height"]);
   });
 
   test("schema-backed graph node help covers fields, ports, and select options", () => {

@@ -585,6 +585,30 @@ describe("TypeScript graph compiler parity", () => {
       },
       {
         config: {
+          type: "select_option",
+          config: { xpath: "//select", target, iframe_xpath: null, match_by: "index" as never, value: "1" },
+        },
+        field: "match_by",
+        message: "Match by must be label or value",
+      },
+      {
+        config: {
+          type: "input_text",
+          config: { xpath: "//input", target, iframe_xpath: null, text: "x", typing_mode: "fast" as never },
+        },
+        field: "typing_mode",
+        message: "Typing mode must be set_value or type",
+      },
+      {
+        config: {
+          type: "click",
+          config: { xpath: "//button", target, iframe_xpath: null, wait_until: "ready" as never },
+        },
+        field: "wait_until",
+        message: "Wait until must be attached, visible, enabled, or clickable",
+      },
+      {
+        config: {
           type: "upload_file",
           config: { xpath: "//input", target, iframe_xpath: null, files: [] },
         },
@@ -624,9 +648,36 @@ describe("TypeScript graph compiler parity", () => {
         message: "Assertion text is required",
       },
       {
+        config: {
+          type: "assert_text",
+          config: { xpath: "//body", target, iframe_xpath: null, text: "Ready", match_mode: "regex" as never },
+        },
+        field: "match_mode",
+        message: "Match mode must be contains or equals",
+      },
+      {
+        config: { type: "assert_output", config: { name: "status", match_mode: "regex" as never, value: "Ready" } },
+        field: "match_mode",
+        message: "Match mode must be contains or equals",
+      },
+      {
+        config: { type: "set_checkbox", config: { xpath: "//input", state: "mixed" as never } },
+        field: "state",
+        message: "Checkbox state must be checked or unchecked",
+      },
+      {
         config: { type: "set_viewport", config: { width: 0, height: 720, mobile: false, touch: false } },
         field: "width",
         message: "Viewport width must be greater than 0",
+      },
+      {
+        config: {
+          type: "set_viewport",
+          config: { width: 390, height: 844, device_scale_factor: 2, mobile: true, touch: true },
+        },
+        field: "device_scale_factor",
+        message:
+          "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch",
       },
       {
         config: { type: "set_geolocation", config: { latitude: 91, longitude: 0, accuracy: 10 } },

@@ -22,6 +22,9 @@ type ValidationError = {
   message: string;
 };
 
+const runtimeViewportDeviceShapeMessage =
+  "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch";
+
 const nestedStepKeys = [
   "then_steps",
   "else_steps",
@@ -697,11 +700,21 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       }
       return null;
     case "click":
-    case "input_text":
     case "clear_input":
       return firstValidation(
         validateElementTarget(config.config),
         validateElementActionTiming(config.config),
+      );
+    case "input_text":
+      return firstValidation(
+        validateElementTarget(config.config),
+        validateElementActionTiming(config.config),
+        validateOptionalEnumValue(
+          config.config.typing_mode,
+          ["set_value", "type"],
+          "typing_mode",
+          "Typing mode must be set_value or type",
+        ),
       );
     case "hover":
     case "double_click":
@@ -733,6 +746,23 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return firstValidation(
         validateElementTarget(config.config),
         requiredActionString(config.config.value, "value", "Option value is required"),
+        validateRequiredEnumValue(
+          config.config.match_by,
+          ["label", "value"],
+          "match_by",
+          "Match by must be label or value",
+        ),
+        validateElementActionTiming(config.config),
+      );
+    case "set_checkbox":
+      return firstValidation(
+        validateElementTarget(config.config),
+        validateRequiredEnumValue(
+          config.config.state,
+          ["checked", "unchecked"],
+          "state",
+          "Checkbox state must be checked or unchecked",
+        ),
         validateElementActionTiming(config.config),
       );
     case "press_key":
@@ -854,6 +884,12 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return firstValidation(
         validateElementTarget(config.config),
         requiredActionString(config.config.text, "text", "Assertion text is required"),
+        validateRequiredEnumValue(
+          config.config.match_mode,
+          ["contains", "equals"],
+          "match_mode",
+          "Match mode must be contains or equals",
+        ),
         optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
       );
     case "if_condition":
@@ -928,6 +964,12 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
     case "assert_output":
       return firstValidation(
         requiredActionString(config.config.name, "name", "Output name is required"),
+        validateRequiredEnumValue(
+          config.config.match_mode,
+          ["contains", "equals"],
+          "match_mode",
+          "Match mode must be contains or equals",
+        ),
         requiredActionString(config.config.value, "value", "Expected output value is required"),
       );
     case "run_subworkflow":
@@ -964,6 +1006,7 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
         positiveValue(config.config.width, "width", "Viewport width must be greater than 0"),
         positiveValue(config.config.height, "height", "Viewport height must be greater than 0"),
         optionalPositive(config.config.device_scale_factor, "device_scale_factor", "Device scale factor must be greater than 0"),
+        runtimeViewportDeviceShapeValidation(config.config),
       );
     case "set_geolocation":
       return firstValidation(
@@ -1063,6 +1106,21 @@ function optionalPositive(value: number | null | undefined, field: string, messa
   return value == null ? null : positiveValue(value, field, message);
 }
 
+function runtimeViewportDeviceShapeValidation(
+  config: Extract<ActionConfig, { type: "set_viewport" }>["config"],
+) {
+  if (config.device_scale_factor != null && config.device_scale_factor !== 1) {
+    return validationError("device_scale_factor", runtimeViewportDeviceShapeMessage);
+  }
+  if (config.mobile) {
+    return validationError("mobile", runtimeViewportDeviceShapeMessage);
+  }
+  if (config.touch) {
+    return validationError("touch", runtimeViewportDeviceShapeMessage);
+  }
+  return null;
+}
+
 function optionalNonNegative(value: number | null | undefined, field: string, message: string) {
   return value == null || (typeof value === "number" && Number.isFinite(value) && value >= 0)
     ? null
@@ -1095,10 +1153,38 @@ function validateElementTarget(
 function validateElementActionTiming(config: unknown) {
   const record = asRecord(config);
   return firstValidation(
+    validateOptionalEnumValue(
+      record.wait_until,
+      ["attached", "visible", "enabled", "clickable"],
+      "wait_until",
+      "Wait until must be attached, visible, enabled, or clickable",
+    ),
     optionalPositive(record.timeout_ms as number | null | undefined, "timeout_ms", "Timeout must be greater than 0"),
     optionalNonNegative(record.retry_interval_ms as number | null | undefined, "retry_interval_ms", "Retry interval must be zero or greater"),
     optionalNonNegative(record.post_click_wait_ms as number | null | undefined, "post_click_wait_ms", "Post-click wait must be zero or greater"),
   );
+}
+
+function validateOptionalEnumValue(
+  value: unknown,
+  allowedValues: readonly string[],
+  field: string,
+  message: string,
+) {
+  return value == null || (typeof value === "string" && allowedValues.includes(value))
+    ? null
+    : validationError(field, message);
+}
+
+function validateRequiredEnumValue(
+  value: unknown,
+  allowedValues: readonly string[],
+  field: string,
+  message: string,
+) {
+  return typeof value === "string" && allowedValues.includes(value)
+    ? null
+    : validationError(field, message);
 }
 
 function validateDataCaptureConfig(config: {

@@ -58,16 +58,16 @@ Docs/README impact:
 
 | ID | Severity | Area | Status | Summary | Fix batch |
 |---|---|---|---|---|---|
-| F-001 | P1 | CloakBrowser WebRTC policy | open | `disabled_if_supported` is accepted and evidenced but has no UI/runtime effect | Batch A |
+| F-001 | P1 | CloakBrowser WebRTC policy | fixed | `disabled_if_supported` is rejected/defaulted because installed CloakBrowser has no supported disable mapping | Batch A |
 | F-002 | P2 | Workflow Settings user agent | open | `user_agent` is runtime-mapped but absent from Workflow Settings UI/help | Batch C |
 | F-003 | P2 | Launch-time action guard tests | open | Coverage matrix overstates launch-time guard coverage for `use_profile` and compiler guard variants | Batch C |
 | F-004 | P2 | Planned hidden action guard tests | open | Coverage matrix says planned actions have runner unsupported tests, but several are not in the test table | Batch C |
 | F-005 | P2 | Compatibility output/subworkflow coverage | open | Coverage matrix names backend behavior tests that do not cover `transform_variable`, `assert_output`, and `run_subworkflow` compile paths | Batch C |
 | F-006 | P2 | Recovery control-flow coverage | open | Coverage matrix says `try_catch` and `fallback` have backend semantics tests, but direct tests are missing | Batch C |
-| F-007 | P1 | `set_viewport` runtime mapping | open | `device_scale_factor`, `mobile`, and `touch` are editable and persisted but ignored at runtime | Batch A |
-| F-008 | P1 | `mock_response` URL matching | open | `url_contains` is treated as a raw route pattern, so substring/default matching can silently miss | Batch A |
+| F-007 | P1 | `set_viewport` runtime mapping | fixed | `device_scale_factor`, `mobile`, and `touch` are launch-time only; active `set_viewport` authoring/runtime now rejects non-default values | Batch A |
+| F-008 | P1 | `mock_response` URL matching | fixed | `url_contains` now registers a substring predicate before fulfilling mocked responses | Batch A |
 | F-009 | P2 | Hidden graph utility node coverage | open | `manual_approval` and `rate_limit` coverage matrix entries point to compiler tests that do not assert their compile shapes | Batch C |
-| F-010 | P1 | `assert_element` state handling | open | `attached`, `hidden`, `enabled`, and `disabled` states can silently pass because runner only checks `visible` | Batch A |
+| F-010 | P1 | `assert_element` state handling | fixed | `attached`, `visible`, `hidden`, `enabled`, and `disabled` now have explicit runner pass/fail checks | Batch A |
 | F-011 | P2 | `set_checkbox` compatibility coverage | open | Coverage matrix claims compatibility/migration coverage, but no direct behavior or migration test was found | Batch C |
 | F-012 | P2 | Structured iframe target UI | open | `ElementTarget.iframe` is supported by contract/runtime/migration but cannot be authored in the primary structured target UI | Batch C |
 | F-013 | P2 | Workflow condition validation | open | Unknown `WorkflowCondition.kind` values are not rejected and evaluate false at runtime | Batch B |
@@ -75,17 +75,19 @@ Docs/README impact:
 | F-015 | P2 | Navigate field drift | open | `navigate.wait_until` is documented/executed but not editable or enum-validated | Batch B/C |
 | F-016 | P2 | Screenshot help drift | open | Screenshot help describes arbitrary filesystem paths even though validation/runtime use managed artifact names | Batch C |
 | F-017 | P2 | Capture timeout runtime drift | open | Data capture `timeout_ms` is type/validation-supported but ignored by runner extraction paths | Batch B |
-| F-018 | P1 | Set Cookie current-host semantics | open | Blank Domain is defaulted/documented as current host but runner does not infer it | Batch A |
-| F-019 | P1 | Execute JS timeout runtime drift | open | `execute_js.timeout_ms` is editable/validated but ignored during runtime evaluation | Batch A |
+| F-018 | P1 | Set Cookie current-host semantics | fixed | Blank Domain now infers the current page host before `context.addCookies` | Batch A |
+| F-019 | P1 | Execute JS timeout runtime drift | fixed | `execute_js.timeout_ms` now bounds page evaluation and fails with a timeout error | Batch A |
 | F-020 | P2 | Scroll UI/runtime drift | open | Scroll UI exposes non-page modes that compiler rejects and behavior fields runner ignores | Batch B |
-| F-021 | P1 | Click advanced runtime drift | open | Click advanced fields are preserved but mostly ignored by runner execution | Batch A |
+| F-021 | P1 | Click advanced runtime drift | fixed | Click now honors `force_dom`, scroll alignment, and click position/offset fields at runtime | Batch A |
 | F-022 | P2 | Clear Input method drift | open | `clear_input.method` is documented/preserved but ignored at runtime | Batch B |
-| F-023 | P1 | Enum validation gaps | open | Element/form assertion enum fields are not validated and malformed values can silently fall back or pass | Batch A |
+| F-023 | P1 | Enum validation gaps | fixed | Element/form assertion enum fields now fail graph validation and defensive runner execution when malformed | Batch A |
 | F-024 | P2 | Batch headless test gap | open | Batch headless launch mapping is implemented but lacks direct command test coverage | Batch C |
 
 ## F-001 - `disabled_if_supported` WebRTC Policy Is A Silent No-Op
 
 Severity: P1
+
+Status: fixed 2026-05-15
 
 Action/node/field: `settings.browser_launch.webrtc_policy`
 
@@ -117,19 +119,19 @@ Evidence:
 
 Minimal fix plan:
 
-- Decide whether `disabled_if_supported` is supported by cloakbrowser@0.3.27. If unsupported, reject it in settings validation or migrate it to `default` with a migration note.
-- Add Workflow Settings WebRTC controls for supported policies only, or update docs if WebRTC remains internal/API-only.
-- Ensure browser identity evidence cannot imply a policy was applied when runtime did nothing.
+- Completed: `disabled_if_supported` is rejected by backend settings validation because cloakbrowser@0.3.27 does not expose a disable flag.
+- Completed: settings normalization no longer treats `disabled_if_supported` as an active valid policy, so legacy persisted JSON falls back to `default` instead of emitting no-op evidence.
+- Completed: docs now describe supported WebRTC IP policy values instead of implying every persisted enum value is user-visible/runtime-supported.
 
 Required tests:
 
-- Red test: `electron/backend/commands.test.ts` should reject or migrate `disabled_if_supported` when there is no supported CloakBrowser mapping.
-- Runner test: prove selected WebRTC policies produce exact expected launch args and evidence.
-- UI test: prove supported WebRTC policy controls render, save, and validate.
+- Red test: `electron/backend/commands.test.ts` now rejects `disabled_if_supported` when there is no supported CloakBrowser mapping.
+- Runner test: `electron/backend/runner.test.ts` now proves `default`, `auto_proxy_exit_ip`, and `explicit_ip` produce exact expected launch args and evidence.
+- UI test: not applicable for this fix path because unsupported disable mode is rejected and WebRTC remains non-visible/API-compatible rather than newly exposed.
 
 Docs/README impact:
 
-- Update `docs/domain/user-visible-invariants.md`, `docs/domain/product-model.md`, and `docs/architecture/runner.md` to match the chosen behavior.
+- Updated `docs/domain/user-visible-invariants.md`, `docs/domain/product-model.md`, and `docs/architecture/runner.md` to match the chosen behavior. No README smoke checklist change was required.
 
 ## F-002 - `user_agent` Is Runtime-Mapped But Not Editable In Workflow Settings
 
@@ -369,6 +371,8 @@ Docs/README impact:
 
 Severity: P1
 
+Status: fixed 2026-05-15
+
 Action/node/field: `set_viewport.config.device_scale_factor`, `set_viewport.config.mobile`, `set_viewport.config.touch`
 
 Source-of-truth drift:
@@ -400,23 +404,27 @@ Evidence:
 
 Minimal fix plan:
 
-- Decide whether device-shape changes belong only in Workflow Settings Browser Launch or should remain in the in-run action.
-- If launch-only, remove/hide/reject `device_scale_factor`, `mobile`, and `touch` from the in-run action while preserving migration for saved workflows.
-- If still supported in-run, extend the driver/runtime with a tested mechanism that actually changes observable device scale, mobile, and touch state, or fail explicitly when the driver cannot support it.
+- Completed: device shape changes remain launch-time Browser Launch identity settings.
+- Completed: active Set Viewport editor/help now exposes only width and height.
+- Completed: graph validation and runner execution reject non-default `device_scale_factor`, `mobile`, and `touch` if those compatibility fields reach runtime.
+- Completed: saved JSON compatibility is preserved for default legacy values (`device_scale_factor: 1`, `mobile: false`, `touch: false`).
 
 Required tests:
 
-- Red test: runner test proving `device_scale_factor`, `mobile`, and `touch` are either applied through an explicit driver API or rejected before execution.
-- Component/help tests updated for whichever fields remain editable.
-- E2E or browser-driver smoke checking observable device-shape behavior if the fields remain supported.
+- Red test: `electron/backend/runner.test.ts` proves non-default `device_scale_factor`, `mobile`, and `touch` fail explicitly before viewport resize.
+- Compiler test: `electron/backend/graphCompiler.test.ts` rejects non-default device-shape fields before run.
+- Component/help tests: `src/features/workflows/components/ActionConfigEditor.test.tsx` and `src/features/workflows/lib/stepHelpContent.test.ts` prove only width and height remain in active Set Viewport authoring/help.
+- E2E/browser-driver device-shape smoke: not applicable because the fields are no longer supported on the in-run action; Browser Launch device-shape mapping remains covered separately.
 
 Docs/README impact:
 
-- Update `docs/domain/action-taxonomy.md`, `docs/architecture/testing.md`, and action/help docs to distinguish runtime viewport-size changes from launch-time device identity settings.
+- Updated `docs/domain/action-taxonomy.md`, `docs/contracts/action-configs.md`, `docs/domain/execution-semantics.md`, `docs/domain/user-visible-invariants.md`, `docs/architecture/runner.md`, and `docs/architecture/testing.md` to distinguish runtime viewport-size changes from launch-time device identity settings. No README smoke checklist change was required.
 
 ## F-008 - `mock_response.url_contains` Uses Route Pattern Semantics
 
 Severity: P1
+
+Status: fixed 2026-05-15
 
 Action/node/field: `mock_response.config.url_contains`
 
@@ -447,19 +455,18 @@ Evidence:
 
 Minimal fix plan:
 
-- Choose one contract: substring predicate or explicit route pattern.
-- If substring, change runner route registration to a predicate with `route.request().url().includes(config.url_contains)`.
-- If pattern, rename/migrate the field or update labels/help/defaults/docs to pattern semantics and add examples such as `**/api/mock`.
+- Completed: kept the existing `url_contains` contract and changed runner route registration to a URL predicate using substring semantics.
+- Completed: kept `block_request.url_patterns` unchanged as route-pattern behavior.
 
 Required tests:
 
-- Red runner test or E2E using `url_contains: "/api/mock"` against a full fixture URL.
-- Regression test for full URL matching.
-- Validation/help test updated if the field semantics are renamed to pattern matching.
+- Red runner test: `electron/backend/runner.test.ts` now uses `url_contains: "/api/mock"` and simulates a full URL request before asserting the mocked response is fulfilled.
+- Regression coverage: the same runner test covers substring and full URL matching because the request URL includes scheme/host/query around the configured substring.
+- Validation/help test: not applicable because the field semantics were not renamed.
 
 Docs/README impact:
 
-- Update action help and `docs/architecture/testing.md` if semantics or coverage ownership changes.
+- No product docs or README smoke checklist changes required; existing action label/help already described contains semantics. Audit coverage notes were updated.
 
 ## F-009 - Hidden Graph Utility Node Coverage Is Overstated
 
@@ -511,6 +518,8 @@ Docs/README impact:
 
 Severity: P1
 
+Status: fixed 2026-05-15
+
 Action/node/field: `assert_element.config.state`
 
 Source-of-truth drift:
@@ -539,18 +548,18 @@ Evidence:
 
 Minimal fix plan:
 
-- Implement state-specific checks using locator wait/visibility/enabled semantics, matching the existing wait action behavior where possible.
-- Ensure unsupported driver methods fail explicitly instead of silently passing.
+- Completed: implemented state-specific checks using locator wait, visibility, enabled-state, and count semantics.
+- Completed: unsupported locator capabilities now fail explicitly instead of silently passing.
 
 Required tests:
 
-- Red runner tests or E2E cases for `hidden`, `attached`, `enabled`, and `disabled` pass/fail behavior.
-- Regression test for existing `visible` behavior.
-- Focused checks: `npm test -- electron/backend/runner.test.ts` and `npm run test:e2e:full -- tests/e2e/wait-assertion-actions.e2e.ts`.
+- Red runner tests: `electron/backend/runner.test.ts` now covers pass and fail behavior for `hidden`, `attached`, `enabled`, and `disabled`.
+- Regression test: `electron/backend/runner.test.ts` covers existing `visible` pass/fail behavior.
+- Focused checks: `npm test -- electron/backend/runner.test.ts`.
 
 Docs/README impact:
 
-- No README change if behavior is fixed to match the existing contract; update help only if supported states are reduced.
+- No README or action-help change; behavior now matches the existing five-state contract. Testing ownership notes were updated.
 
 ## F-011 - `set_checkbox` Compatibility Coverage Is Overstated
 
@@ -880,6 +889,8 @@ Docs/README impact:
 
 Severity: P1
 
+Status: fixed 2026-05-15
+
 Action/node/field: `set_cookie.config.domain`
 
 Source-of-truth drift:
@@ -906,23 +917,25 @@ Evidence:
 
 Minimal fix plan:
 
-- Add a failing runner or E2E test for a `set_cookie` action that runs after navigation with `domain: null`.
-- Either derive current hostname and pass a valid cookie domain or URL to `context.addCookies`, or require Domain in validation/UI and remove the current-host placeholder.
-- Keep the fix narrowly scoped to cookie domain handling.
+- Completed: added a runner test for `set_cookie` after navigation with `domain: null`.
+- Completed: runner derives the current page hostname and passes it as the cookie domain; if no current host exists, the action fails explicitly.
+- Completed: runtime output records the resolved domain so evidence matches the applied cookie.
 
 Required tests:
 
-- Red runner test with `set_cookie` after navigation and `domain: null`, asserting either inferred current host or explicit validation failure depending on chosen contract.
-- E2E smoke for default-palette `set_cookie` with a filled name/value but blank domain if current-host inference is kept.
-- Focused check: `npm test -- electron/backend/runner.test.ts electron/backend/graphCompiler.test.ts`.
+- Red runner test: `electron/backend/runner.test.ts` covers `set_cookie` after navigation with `domain: null` and asserts inferred current host.
+- E2E smoke: existing desktop browser-context E2E keeps explicit-domain coverage; default blank-domain behavior is now covered at runner level.
+- Focused check: `npm test -- electron/backend/runner.test.ts`.
 
 Docs/README impact:
 
-- Update field help and UI placeholder if blank Domain becomes invalid; otherwise document current-host inference.
+- No user-facing docs or README change required; this implements the existing field placeholder/default contract. Audit coverage notes were updated.
 
 ## F-019 - Execute JS `timeout_ms` Is Validated And Editable But Ignored At Runtime
 
 Severity: P1
+
+Status: fixed 2026-05-15
 
 Action/node/field: `execute_js.config.timeout_ms`
 
@@ -950,19 +963,19 @@ Evidence:
 
 Minimal fix plan:
 
-- Add a failing runner test proving `execute_js.timeout_ms` fails an unresolved/overlong script promptly.
-- Implement timeout enforcement around `page.evaluate`, or remove/reclassify the field if per-action JS timeouts are not supported.
-- Preserve strict-humanized blocking behavior before evaluation.
+- Completed: added a runner test proving `execute_js.timeout_ms` fails an overlong script promptly.
+- Completed: wrapped `page.evaluate` in per-action timeout enforcement for both output and no-output variants.
+- Completed: strict-humanized blocking still occurs before evaluation.
 
 Required tests:
 
-- Red runner test for an unresolved async script with a short `timeout_ms`.
-- Regression test that a normal script with `output_name` still stores its output.
-- Focused check: `npm test -- electron/backend/runner.test.ts electron/backend/graphCompiler.test.ts src/features/workflows/lib/workflowStepForm.test.ts`.
+- Red runner test: `electron/backend/runner.test.ts` covers a slow script with a short `timeout_ms`.
+- Regression test: existing `electron/backend/runner.test.ts` normal-script coverage still verifies `output_name` storage.
+- Focused check: `npm test -- electron/backend/runner.test.ts`.
 
 Docs/README impact:
 
-- Update action help/docs if JS timeout remains unsupported or if timeout behavior/error text changes.
+- No action-help, product docs, or README change required; behavior now matches the existing timeout contract. Audit coverage notes were updated.
 
 ## F-020 - Scroll UI Exposes Unsupported Modes And Runtime Ignores Scroll Behavior Fields
 
@@ -1014,6 +1027,8 @@ Docs/README impact:
 
 Severity: P1
 
+Status: fixed 2026-05-15
+
 Action/node/field: `click.config.mode`, `scroll_into_view`, `block`, `inline`, `position`, `offset_x`, `offset_y`, and related advanced fields
 
 Source-of-truth drift:
@@ -1041,20 +1056,20 @@ Evidence:
 
 Minimal fix plan:
 
-- Add failing runner tests for each supported click advanced behavior, starting with `mode: "force_dom"` and `position: "offset"`.
-- Either implement advanced click behavior or classify unsupported fields as legacy/API-only and reject/hide them consistently.
-- Align step help visible fields with the actual editor.
+- Completed: added failing runner tests for `mode: "force_dom"` and offset click behavior with scroll alignment.
+- Completed: implemented advanced click behavior for DOM click mode, `scroll_into_view` with `block`/`inline`, offset and named corner positions, button, click count, and post-click wait.
+- Completed: kept detailed help because the advanced fields now execute for imported/API workflows even though active primary UI still exposes only target fields.
 
 Required tests:
 
-- Red runner test showing `force_dom` uses DOM click or is rejected explicitly.
-- Red runner test showing offset/position affects click options or is rejected explicitly.
-- Help/content test so Click detailed help does not advertise hidden unsupported controls.
+- Red runner test: `electron/backend/runner.test.ts` shows `force_dom` uses DOM evaluation instead of pointer click.
+- Red runner test: `electron/backend/runner.test.ts` shows scroll alignment and offset position affect click execution options.
+- Help/content test: not needed because the advertised advanced fields are now supported rather than removed.
 - Focused check: `npm test -- electron/backend/runner.test.ts electron/backend/graphCompiler.test.ts src/features/workflows/lib/stepHelpContent.test.ts`.
 
 Docs/README impact:
 
-- Update Click help/docs to reflect which advanced fields are supported and visible.
+- Updated runner/execution docs to reflect advanced Click behavior. No README smoke checklist change was required.
 
 ## F-022 - Clear Input `method` Field Is Documented But Ignored
 
@@ -1105,6 +1120,8 @@ Docs/README impact:
 
 Severity: P1
 
+Status: fixed 2026-05-15
+
 Action/node/field: element action `wait_until`, `input_text.typing_mode`, `select_option.match_by`, `set_checkbox.state`, `assert_text.match_mode`, `assert_output.match_mode`
 
 Source-of-truth drift:
@@ -1138,14 +1155,14 @@ Evidence:
 
 Minimal fix plan:
 
-- Add enum validators for these fields in `validateActionConfig`.
-- Keep runner defensive after validation, but avoid silent fallback for malformed imported configs.
-- Add focused invalid-value tests before changing validation.
+- Completed: added enum validators for these fields in `validateActionConfig`.
+- Completed: kept runner defensive after validation so direct runner inputs do not silently fall back.
+- Completed: added focused invalid-value tests before changing validation.
 
 Required tests:
 
-- Red graph compiler tests for invalid `wait_until`, `typing_mode`, `match_by`, checkbox `state`, `assert_text.match_mode`, and `assert_output.match_mode`.
-- Runner defensive tests for malformed configs if runner can still receive direct API inputs.
+- Red graph compiler tests added for invalid `wait_until`, `typing_mode`, `match_by`, checkbox `state`, `assert_text.match_mode`, and `assert_output.match_mode`.
+- Runner defensive tests added for malformed configs reaching direct runner inputs.
 - Focused check: `npm test -- electron/backend/graphCompiler.test.ts electron/backend/runner.test.ts`.
 
 Docs/README impact:

@@ -1151,6 +1151,14 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "GeoIP requires mmdb-lib to be installed",
     });
   }
+  if (settings.browser_launch.webrtc_policy === "disabled_if_supported") {
+    issues.push({
+      section: "browser_launch",
+      field: "webrtc_policy",
+      level: "error",
+      message: "Disabled WebRTC policy is not supported by the installed CloakBrowser runtime",
+    });
+  }
   if (settings.browser_launch.webrtc_policy === "explicit_ip" && !settings.browser_launch.webrtc_ip?.trim()) {
     issues.push({
       section: "browser_launch",
@@ -2175,8 +2183,7 @@ function validWebRtcPolicy(value: unknown): value is WorkflowSettingsBrowserLaun
   return (
     value === "default" ||
     value === "auto_proxy_exit_ip" ||
-    value === "explicit_ip" ||
-    value === "disabled_if_supported"
+    value === "explicit_ip"
   );
 }
 

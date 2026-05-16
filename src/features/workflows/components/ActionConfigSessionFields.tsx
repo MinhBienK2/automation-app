@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 
@@ -189,48 +188,6 @@ export function SessionActionFields({
                 onChange(updateActionConfigField(config, "height", event.currentTarget.value))
               }
             />
-          </Label>
-          <Label>
-            Device scale factor
-            <Input
-              min="0.1"
-              step="0.1"
-              type="number"
-              value={config.config.device_scale_factor ?? 1}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "device_scale_factor",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            />
-          </Label>
-          <Label>
-            Mobile
-            <Select
-              value={String(config.config.mobile)}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "mobile", event.currentTarget.value))
-              }
-            >
-              <option value="false">False</option>
-              <option value="true">True</option>
-            </Select>
-          </Label>
-          <Label>
-            Touch
-            <Select
-              value={String(config.config.touch)}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "touch", event.currentTarget.value))
-              }
-            >
-              <option value="false">False</option>
-              <option value="true">True</option>
-            </Select>
           </Label>
         </>
       );

@@ -19,6 +19,9 @@ import {
   sanitizePathSegment,
 } from "./evidenceArtifacts.js";
 
+const runtimeViewportDeviceShapeMessage =
+  "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch";
+
 type CloakBrowserModule = {
   launchContext: (options?: BrowserLaunchOptions) => Promise<BrowserDriverContext>;
   launchPersistentContext: (
@@ -55,7 +58,7 @@ export type BrowserDriverContext = {
   }): Promise<void>;
   setExtraHTTPHeaders?(headers: Record<string, string>): Promise<void>;
   route?(
-    url: string | RegExp,
+    url: string | RegExp | ((url: URL) => boolean),
     handler: (route: BrowserRoute) => Promise<void> | void,
   ): Promise<void>;
 };
@@ -112,9 +115,9 @@ export type BrowserDriverLocator = {
   fill(value: string, options?: Record<string, unknown>): Promise<void>;
   type?(value: string, options?: Record<string, unknown>): Promise<void>;
   click(options?: Record<string, unknown>): Promise<void>;
-  evaluate?<Result>(
-    pageFunction: (element: Element) => Result | Promise<Result>,
-    arg?: unknown,
+  evaluate?<Result, Arg = unknown>(
+    pageFunction: (element: Element, arg: Arg) => Result | Promise<Result>,
+    arg?: Arg,
   ): Promise<Result>;
   hover?(options?: Record<string, unknown>): Promise<void>;
   dblclick?(options?: Record<string, unknown>): Promise<void>;
@@ -126,6 +129,7 @@ export type BrowserDriverLocator = {
   textContent?(options?: Record<string, unknown>): Promise<string | null>;
   getAttribute?(attribute: string, options?: Record<string, unknown>): Promise<string | null>;
   inputValue?(options?: Record<string, unknown>): Promise<string>;
+  boundingBox?(): Promise<{ width: number; height: number } | null>;
   count?(): Promise<number>;
   nth?(index: number): BrowserDriverLocator;
   isVisible?(options?: Record<string, unknown>): Promise<boolean>;
@@ -581,6 +585,11 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "input_text": {
+        assertOptionalRuntimeEnumValue(
+          action.config.typing_mode,
+          ["set_value", "type"],
+          "Typing mode must be set_value or type",
+        );
         const locator = await this.locatorForAction(runtime, action.config);
         if (action.config.clear_before_input) await locator.fill("");
         if (action.config.typing_mode === "type" && locator.type) {
@@ -596,10 +605,7 @@ export class BrowserWorkflowRunner {
         await (await this.locatorForAction(runtime, action.config)).fill("");
         return;
       case "click":
-        await (await this.locatorForAction(runtime, action.config)).click({
-          button: action.config.button ?? undefined,
-          clickCount: action.config.click_count ?? undefined,
-        });
+        await clickTarget(await this.locatorForAction(runtime, action.config), action.config);
         if (action.config.post_click_wait_ms) {
           await this.sleep(action.config.post_click_wait_ms, runtime.signal);
         }
@@ -648,6 +654,11 @@ export class BrowserWorkflowRunner {
         );
         return;
       case "select_option":
+        assertRuntimeEnumValue(
+          action.config.match_by,
+          ["label", "value"],
+          "Match by must be label or value",
+        );
         await requireLocatorMethod(
           await this.locatorForAction(runtime, action.config),
           "selectOption",
@@ -659,6 +670,11 @@ export class BrowserWorkflowRunner {
         );
         return;
       case "set_checkbox":
+        assertRuntimeEnumValue(
+          action.config.state,
+          ["checked", "unchecked"],
+          "Checkbox state must be checked or unchecked",
+        );
         if (action.config.state === "checked") {
           await requireLocatorMethod(
             await this.locatorForAction(runtime, action.config),
@@ -863,11 +879,16 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "assert_element": {
-        const visible = await (await locatorFor(runtime.page, action.config.target, action.config.xpath)).isVisible?.();
-        if (action.config.state === "visible" && !visible) throw new Error("Element is not visible");
+        const locator = await locatorFor(runtime.page, action.config.target, action.config.xpath);
+        await assertElementState(locator, action.config.state, action.config.timeout_ms);
         return;
       }
       case "assert_text": {
+        assertRuntimeEnumValue(
+          action.config.match_mode,
+          ["contains", "equals"],
+          "Match mode must be contains or equals",
+        );
         const text = action.config.xpath || action.config.target
           ? await (await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body")).textContent?.()
           : "";
@@ -972,6 +993,11 @@ export class BrowserWorkflowRunner {
         runtime.outputs[action.config.target_name] = renderTemplate(action.config.expression, runtime.outputs);
         return;
       case "assert_output": {
+        assertRuntimeEnumValue(
+          action.config.match_mode,
+          ["contains", "equals"],
+          "Match mode must be contains or equals",
+        );
         const actual = String(runtime.outputs[action.config.name] ?? "");
         if (action.config.match_mode === "equals" && actual !== action.config.value) {
           throw new Error(`Output ${action.config.name} did not equal ${action.config.value}`);
@@ -995,6 +1021,13 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "set_viewport":
+        if (
+          (action.config.device_scale_factor != null && action.config.device_scale_factor !== 1) ||
+          action.config.mobile ||
+          action.config.touch
+        ) {
+          throw new Error(runtimeViewportDeviceShapeMessage);
+        }
         await runtime.page.setViewportSize?.({
           width: action.config.width,
           height: action.config.height,
@@ -1020,17 +1053,22 @@ export class BrowserWorkflowRunner {
         );
         runtime.outputs.last_grant_permission = action.config;
         return;
-      case "set_cookie":
+      case "set_cookie": {
+        const domain = action.config.domain?.trim() || await currentPageHostname(runtime);
+        if (!domain) {
+          throw new Error("Set cookie requires a current page host when Domain is blank");
+        }
         await runtime.context.addCookies?.([
           {
             name: action.config.name,
             value: action.config.value,
-            domain: action.config.domain ?? undefined,
+            domain,
             path: action.config.path ?? "/",
           },
         ]);
-        runtime.outputs.last_set_cookie = action.config;
+        runtime.outputs.last_set_cookie = { ...action.config, domain };
         return;
+      }
       case "clear_cookies":
         await runtime.context.clearCookies?.(
           action.config.domain ? { domain: action.config.domain } : undefined,
@@ -1062,11 +1100,17 @@ export class BrowserWorkflowRunner {
         return;
       case "execute_js":
         if (action.config.output_name) {
-          runtime.outputs[action.config.output_name] = await runtime.page.evaluate(
-            executableJavaScript(action.config.script),
+          runtime.outputs[action.config.output_name] = await withActionTimeout(
+            runtime.page.evaluate(executableJavaScript(action.config.script)),
+            action.config.timeout_ms,
+            (timeoutMs) => `Execute JavaScript timed out after ${timeoutMs} ms`,
           );
         } else {
-          await runtime.page.evaluate(executableJavaScript(action.config.script));
+          await withActionTimeout(
+            runtime.page.evaluate(executableJavaScript(action.config.script)),
+            action.config.timeout_ms,
+            (timeoutMs) => `Execute JavaScript timed out after ${timeoutMs} ms`,
+          );
         }
         return;
       case "wait_for_request":
@@ -1093,12 +1137,14 @@ export class BrowserWorkflowRunner {
         }
         return;
       case "mock_response":
-        await runtime.context.route?.(action.config.url_contains, async (route) =>
-          route.fulfill({
-            status: action.config.status,
-            body: action.config.body,
-            contentType: action.config.content_type ?? "text/plain",
-          }),
+        await runtime.context.route?.(
+          (url) => url.toString().includes(action.config.url_contains),
+          async (route) =>
+            route.fulfill({
+              status: action.config.status,
+              body: action.config.body,
+              contentType: action.config.content_type ?? "text/plain",
+            }),
         );
         return;
       case "set_local_storage":
@@ -1359,7 +1405,7 @@ export class BrowserWorkflowRunner {
 
   private async waitForElementReadiness(
     locator: BrowserDriverLocator,
-    waitUntil: "attached" | "visible" | "enabled" | "clickable" | null,
+    waitUntil: unknown,
     timeoutMs: number | null | undefined,
     signal?: AbortSignal,
     retryIntervalMs?: number | null,
@@ -1384,6 +1430,8 @@ export class BrowserWorkflowRunner {
         return;
       case null:
         return;
+      default:
+        throw new Error("Wait until must be attached, visible, enabled, or clickable");
     }
   }
 
@@ -1591,6 +1639,80 @@ async function selectRadioTarget(locator: BrowserDriverLocator) {
   }
 
   await locator.click();
+}
+
+async function clickTarget(
+  locator: BrowserDriverLocator,
+  config: Extract<ActionConfig, { type: "click" }>["config"],
+) {
+  if (config.scroll_into_view) {
+    if (!locator.evaluate) {
+      throw new Error("Click scroll_into_view requires locator DOM evaluation support");
+    }
+    await locator.evaluate(
+      (element, options) => {
+        element.scrollIntoView({
+          block: options.block as ScrollLogicalPosition,
+          inline: options.inline as ScrollLogicalPosition,
+        });
+      },
+      {
+        block: config.block ?? "center",
+        inline: config.inline ?? "nearest",
+      },
+    );
+  }
+
+  if (config.mode === "force_dom") {
+    if (!locator.evaluate) {
+      throw new Error("Click force_dom mode requires locator DOM evaluation support");
+    }
+    await locator.evaluate((element) => {
+      if (!(element instanceof HTMLElement)) {
+        throw new Error("Target is not an HTMLElement");
+      }
+      element.click();
+    });
+    return;
+  }
+
+  await locator.click({
+    button: config.button ?? undefined,
+    clickCount: config.click_count ?? undefined,
+    position: await clickPosition(locator, config),
+  });
+}
+
+async function clickPosition(
+  locator: BrowserDriverLocator,
+  config: Extract<ActionConfig, { type: "click" }>["config"],
+) {
+  switch (config.position) {
+    case null:
+    case undefined:
+    case "center":
+      return undefined;
+    case "offset":
+      return { x: config.offset_x ?? 0, y: config.offset_y ?? 0 };
+    case "top_left":
+      return { x: 0, y: 0 };
+    case "top_right":
+    case "bottom_left":
+    case "bottom_right": {
+      if (!locator.boundingBox) {
+        throw new Error(`Click position ${config.position} requires locator bounding box support`);
+      }
+      const box = await locator.boundingBox();
+      if (!box) throw new Error("Click target bounding box is unavailable");
+      const x = config.position === "top_right" || config.position === "bottom_right"
+        ? Math.max(0, box.width - 1)
+        : 0;
+      const y = config.position === "bottom_left" || config.position === "bottom_right"
+        ? Math.max(0, box.height - 1)
+        : 0;
+      return { x, y };
+    }
+  }
 }
 
 async function rightClickTarget(locator: BrowserDriverLocator) {
@@ -2011,6 +2133,25 @@ function cssAttributeValue(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
+function assertOptionalRuntimeEnumValue(
+  value: unknown,
+  allowedValues: readonly string[],
+  message: string,
+) {
+  if (value == null) return;
+  assertRuntimeEnumValue(value, allowedValues, message);
+}
+
+function assertRuntimeEnumValue(
+  value: unknown,
+  allowedValues: readonly string[],
+  message: string,
+) {
+  if (typeof value !== "string" || !allowedValues.includes(value)) {
+    throw new Error(message);
+  }
+}
+
 async function waitForLocatorState(
   locator: BrowserDriverLocator,
   state: "attached" | "detached" | "visible" | "hidden",
@@ -2024,6 +2165,34 @@ async function waitForLocatorState(
     const visible = await locator.isVisible?.({ timeout: timeoutMs ?? undefined });
     if (!visible) throw new Error("Element is not visible");
   }
+}
+
+async function assertElementState(
+  locator: BrowserDriverLocator,
+  state: "attached" | "visible" | "hidden" | "enabled" | "disabled",
+  timeoutMs: number | null | undefined,
+) {
+  if (state === "attached") {
+    await locator.waitFor?.({ state: "attached", timeout: timeoutMs ?? undefined });
+    if (!locator.count) throw new Error("Element attached assertion requires locator count support");
+    if ((await locator.count()) <= 0) throw new Error("Element is not attached");
+    return;
+  }
+
+  if (state === "visible" || state === "hidden") {
+    await locator.waitFor?.({ state, timeout: timeoutMs ?? undefined });
+    if (!locator.isVisible) throw new Error("Element visibility assertion requires locator visibility support");
+    const visible = await locator.isVisible({ timeout: timeoutMs ?? undefined });
+    if (state === "visible" && !visible) throw new Error("Element is not visible");
+    if (state === "hidden" && visible) throw new Error("Element is not hidden");
+    return;
+  }
+
+  await locator.waitFor?.({ state: "visible", timeout: timeoutMs ?? undefined });
+  if (!locator.isEnabled) throw new Error("Element enabled assertion requires locator enabled-state support");
+  const enabled = await locator.isEnabled({ timeout: timeoutMs ?? undefined });
+  if (state === "enabled" && !enabled) throw new Error("Element is not enabled");
+  if (state === "disabled" && enabled) throw new Error("Element is not disabled");
 }
 
 function requireLocatorMethod(
@@ -2289,6 +2458,27 @@ function renderTemplate(value: string, outputs: Record<string, unknown>) {
 
 function executableJavaScript(script: string) {
   return `(() => {\n${script}\n})()`;
+}
+
+async function withActionTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number | null | undefined,
+  message: (timeoutMs: number) => string,
+) {
+  if (!timeoutMs) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const handle = setTimeout(() => reject(new Error(message(timeoutMs))), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(handle);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(handle);
+        reject(error);
+      },
+    );
+  });
 }
 
 async function extractListLike(locator: BrowserDriverLocator) {

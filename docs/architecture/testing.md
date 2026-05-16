@@ -76,9 +76,9 @@ Desktop coverage map:
 - `pointer-actions.e2e.ts`: `click`, `double_click`, `right_click`, `hover`, `drag_and_drop`, `scroll`.
 - `navigation-actions.e2e.ts`: `navigate`, `go_back`, `go_forward`, `reload`, `open_new_tab`, `switch_tab`, `close_tab`.
 - `extended-form-actions.e2e.ts`: `upload_file`, `select_custom_option`, `set_contenteditable`.
-- `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(element_visible)`, `wait(text_visible)`, `wait(url_contains)`, `random_wait`, `assert_element`, `assert_text` pass and failure run-state paths.
+- `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(element_visible)`, `wait(text_visible)`, `wait(url_contains)`, `random_wait`, visible `assert_element`, `assert_text` pass and failure run-state paths. Non-visible `assert_element` states and invalid element/form/assertion enum paths are covered in `electron/backend/runner.test.ts` and `electron/backend/graphCompiler.test.ts`.
 - `control-flow.e2e.ts`: graph-visible `set_variable`, `set_json_variables`, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `break_loop`, `continue_loop`, `end_success`, `end_failure`, and `stop_workflow`.
-- `browser-context-storage.e2e.ts`: `set_viewport`, `set_geolocation`, `grant_permission`, `set_extra_headers`, `set_cookie`, `clear_cookies`, `set_local_storage`, `set_session_storage`.
+- `browser-context-storage.e2e.ts`: runtime `set_viewport` width/height behavior, `set_geolocation`, `grant_permission`, `set_extra_headers`, `set_cookie`, `clear_cookies`, `set_local_storage`, `set_session_storage`. Set Viewport launch-time device-shape rejection is covered by runner/compiler/component/help tests.
 - `run-validation-and-stop.e2e.ts`: unconfigured graph run blocking, domain allowlist navigation blocking, and stop during a running wait.
 - `batch-evidence.e2e.ts`: graph-backed batch execution, row variable interpolation, persisted SQLite `runs`/`run_steps`, screenshot evidence files, and `__evidence` metadata.
 - `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.

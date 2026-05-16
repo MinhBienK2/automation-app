@@ -22,7 +22,7 @@ remain serializable but are not promoted as ordinary in-run choices.
 - Keyboard: key presses, hotkeys, character-by-character typing, clipboard, and paste.
 - Wait: fixed duration/condition waits and random duration waits.
 - Capture Data: text/attribute/field/table/list extraction, screenshots, and downloads that create outputs.
-- Browser Context: dialogs, downloads, viewport, geolocation, permissions, and other runtime-safe browser context actions.
+- Browser Context: dialogs, downloads, runtime viewport size, geolocation, permissions, and other runtime-safe browser context actions. Device scale factor, mobile mode, and touch capability are launch-time Browser Launch identity settings, not in-run Set Viewport behavior.
 - Variables & Checks: set variables, set JSON variables, assert element, assert text.
 - Session & Storage: cookies, clear cookies, localStorage, and sessionStorage. Profile, proxy, user-agent, session, and secret actions are launch-time or planned compatibility actions.
 - Network: request headers, request/response waits, request blocking, and response mocking. Proxy selection belongs in Workflow Settings before launch.

@@ -58,6 +58,7 @@ Element target config rules:
 - Backend validation accepts either a non-empty legacy XPath or a valid structured target for required element actions.
 - The runner resolves structured targets at runtime through ordered locators, supports role/label/placeholder/text/CSS/XPath/attribute locator kinds, applies supported constraints, and reuses the frame-aware action path.
 - Visible action defaults no longer include action-level `wait_until`, `timeout_ms`, typing fidelity, retry interval, post-click wait, click positioning, clear-field method, or scroll tuning fields. Those fields may still appear in compatibility-loaded configs until the migration layer rewrites or drops them.
+- Backend validation rejects unsupported enum values for preserved element/form/assertion fields such as readiness wait mode, text-input typing mode, select matching mode, checkbox state, and assertion match mode; the runner keeps matching defensive guards for direct execution inputs.
 
 Evidence config rules:
 
@@ -79,6 +80,8 @@ Recovery config semantics must preserve failure behavior when recovery branches 
 - Frontend may provide ergonomic form behavior but cannot be the only validation.
 - `dry_run_validate_config` exposes backend validation for builder assist.
 - Backend action validation covers visible action families, nested graph-internal action arrays, safe evidence names, geolocation and viewport ranges, network status ranges, required output names, and storage/header/permission lists.
+
+Set Viewport is a runtime viewport-size action. Active authoring exposes only `width` and `height`; legacy serialized `device_scale_factor`, `mobile`, and `touch` fields remain loadable only at their default values and fail validation/runtime when non-default values request launch-time device-shape changes. Device scale factor, mobile mode, and touch capability belong in Workflow Settings Browser Launch before Chromium starts.
 
 ## Persistence
 

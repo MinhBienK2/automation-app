@@ -562,7 +562,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   set_secret: elementHelp("Set Secret", "store a redacted secret variable", "lưu secret", "secret"),
   use_proxy: elementHelp("Use Proxy", "route browser traffic through a proxy", "dùng proxy", "proxy"),
   set_user_agent: elementHelp("Set User Agent", "override the browser user agent", "đổi user agent", "network"),
-  set_viewport: elementHelp("Set Viewport", "emulate viewport and device shape", "đổi viewport", "device"),
+  set_viewport: elementHelp("Set Viewport", "set runtime viewport size", "đổi kích thước viewport", "device"),
   set_geolocation: elementHelp("Set Geolocation", "override browser geolocation", "đổi vị trí", "geo"),
   set_extra_headers: elementHelp("Set Extra Headers", "send extra HTTP headers", "thêm header", "headers"),
   grant_permission: elementHelp("Grant Permission", "grant browser permissions", "cấp quyền", "permission"),
@@ -1023,7 +1023,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "set_user_agent":
       return ["User agent"];
     case "set_viewport":
-      return ["Width", "Height", "Device scale factor", "Mobile", "Touch"];
+      return ["Width", "Height"];
     case "set_geolocation":
       return ["Latitude", "Longitude", "Accuracy"];
     case "set_extra_headers":

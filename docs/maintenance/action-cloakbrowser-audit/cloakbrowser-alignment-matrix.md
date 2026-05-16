@@ -49,7 +49,7 @@ Local package source of truth: `cloakbrowser@0.3.27`.
 | `proxy_region` | evidence only | Evidence only | Same | P2 proxy/timezone review drift | runner evidence tests | consistency warning tests | P2 |
 | `proxy_provider` | evidence only | Evidence only | Same | P3 audit metadata loss | runner evidence tests | none | P3 |
 | `test_account_binding` | evidence only | Evidence only | Same | P2 weak auditability for owned account scope | runner evidence tests | UI/export redaction audit | P2 |
-| `webrtc_policy` | `args: --fingerprint-webrtc-ip=*` | `auto_proxy_exit_ip` and `explicit_ip` map to args; default/disabled not mapped | Audit `disabled_if_supported` semantics against CloakBrowser support | P1 WebRTC leak if disabled mode is a no-op | runner launch options tests | F-001: `disabled_if_supported` is accepted but has no UI/runtime effect | P1 |
+| `webrtc_policy` | `args: --fingerprint-webrtc-ip=*` | `auto_proxy_exit_ip` and `explicit_ip` map to args; `default` omits WebRTC args; `disabled_if_supported` is rejected/defaulted because CloakBrowser has no disable flag | Same | P1 WebRTC leak if disabled mode is a no-op | `electron/backend/commands.test.ts`, `electron/backend/runner.test.ts` | none for F-001 | P1 |
 | `webrtc_ip` | `args: --fingerprint-webrtc-ip=<ip>` | Used only with `explicit_ip` | Same | P1 IP mismatch/leak | runner launch options tests | IP format validation boundary | P1 |
 | `fingerprint_platform` | `args: --fingerprint-platform=*` | Top-level arg | Same | P2 incoherent platform bundle | commands validation, runner tests | platform/hardware bundle consistency | P2 |
 | `hardware_concurrency` | `args: --fingerprint-hardware-concurrency=*` | Top-level arg | Same | P2 incoherent hardware | commands validation, runner tests | min/max boundary tests | P2 |
@@ -105,7 +105,7 @@ Reviewed test rows:
 
 Reviewed gaps:
 
-- F-001 records WebRTC policy drift.
+- F-001 WebRTC policy drift is fixed: unsupported `disabled_if_supported` is rejected/defaulted, and supported policy launch args/evidence are covered by backend tests.
 - F-002 records `user_agent` UI/help drift.
 - No app path currently exposes raw `stealthArgs`, `launchOptions`, `humanConfig`, `timezoneId`, or `colorScheme`; `rg` found only audit docs for those names outside CloakBrowser sources.
 

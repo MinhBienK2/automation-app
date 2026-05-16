@@ -135,4 +135,22 @@ describe("ActionConfigEditor", () => {
 
     expect(screen.queryByLabelText("Method")).not.toBeInTheDocument();
   });
+
+  test("Set Viewport editor omits launch-time device shape controls", () => {
+    render(
+      <ActionConfigEditor
+        config={{
+          type: "set_viewport",
+          config: { width: 1280, height: 720, device_scale_factor: 1, mobile: false, touch: false },
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Width")).toBeInTheDocument();
+    expect(screen.getByLabelText("Height")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Device scale factor")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Mobile")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Touch")).not.toBeInTheDocument();
+  });
 });

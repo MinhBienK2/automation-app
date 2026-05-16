@@ -172,6 +172,59 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(false);
   });
 
+  test("maps supported WebRTC policies to launch args and browser identity evidence", async () => {
+    const cases = [
+      {
+        policy: "default" as const,
+        ip: null,
+        expectedArg: null,
+      },
+      {
+        policy: "auto_proxy_exit_ip" as const,
+        ip: null,
+        expectedArg: "--fingerprint-webrtc-ip=auto",
+      },
+      {
+        policy: "explicit_ip" as const,
+        ip: "203.0.113.10",
+        expectedArg: "--fingerprint-webrtc-ip=203.0.113.10",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const context = new FakeContext();
+      const driver = createFakeDriver(context);
+      const runner = new BrowserWorkflowRunner({
+        appPaths: await createTempAppPaths(),
+        driver,
+      });
+
+      const result = await runner.run({
+        graph: { steps: [] },
+        settings: makeSettings({
+          browser_launch: {
+            webrtc_policy: testCase.policy,
+            webrtc_ip: testCase.ip,
+          },
+          run_policy: { browser_retention: "close" },
+        }),
+        mode: "run_workflow",
+        runId: `run-webrtc-${testCase.policy}`,
+      });
+
+      const args = driver.launches[0].options.args as string[];
+      if (testCase.expectedArg) {
+        expect(args).toContain(testCase.expectedArg);
+      } else {
+        expect(args.some((arg) => arg.startsWith("--fingerprint-webrtc-ip="))).toBe(false);
+      }
+      expect(result.outputs?.browser_identity).toMatchObject({
+        webrtc_policy: testCase.policy,
+        webrtc_ip: testCase.policy === "explicit_ip" ? testCase.ip : null,
+      });
+    }
+  });
+
   test("normalizes proxy URL credentials into Playwright proxy fields", async () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);
@@ -500,6 +553,85 @@ describe("BrowserWorkflowRunner", () => {
     ]);
   });
 
+  test("times out execute_js when timeout_ms elapses before evaluation resolves", async () => {
+    class SlowEvaluatePage extends FakePage {
+      override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+        if (typeof pageFunction === "string" && pageFunction.includes("__slow_execute_js__")) {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          return "late";
+        }
+        return super.evaluate(pageFunction, arg);
+      }
+    }
+
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(new SlowEvaluatePage())),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("script", "Script", {
+            type: "execute_js",
+            config: {
+              script: "return '__slow_execute_js__'",
+              output_name: "value",
+              timeout_ms: 1,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "script",
+      action_type: "execute_js",
+      reason: "Execute JavaScript timed out after 1 ms",
+    });
+    expect(result.outputs?.value).toBeUndefined();
+  });
+
+  test("mock_response matches url_contains by substring before fulfilling a response", async () => {
+    const context = new FakeContext();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("mock", "Mock API", {
+            type: "mock_response",
+            config: {
+              url_contains: "/api/mock",
+              status: 201,
+              body: "{\"ok\":true}",
+              content_type: "application/json",
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    const mockedResponse = await context.triggerRoute(
+      "https://fixture.owned.test/api/mock?source=default",
+    );
+
+    expect(result.status).toBe("success");
+    expect(mockedResponse).toEqual({
+      status: 201,
+      body: "{\"ok\":true}",
+      contentType: "application/json",
+    });
+  });
+
   test("submits targeted forms through locator DOM evaluation", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
@@ -528,6 +660,66 @@ describe("BrowserWorkflowRunner", () => {
       ]),
     );
     expect(page.events).not.toContain("click://button[@type='submit']");
+  });
+
+  test("click force_dom uses a DOM click instead of a pointer click", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("click", "Click", {
+            type: "click",
+            config: { xpath: "#hard-click", mode: "force_dom" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("evaluate:#hard-click");
+    expect(page.events).not.toContain("click:#hard-click");
+  });
+
+  test("click applies scroll alignment and offset position options", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("click", "Click", {
+            type: "click",
+            config: {
+              xpath: "#offset-click",
+              scroll_into_view: true,
+              block: "end",
+              inline: "nearest",
+              position: "offset",
+              offset_x: 12,
+              offset_y: 8,
+              button: "middle",
+              click_count: 2,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("scrollIntoView:#offset-click:end:nearest");
+    expect(page.events).toContain("click:#offset-click:middle:2:12:8");
   });
 
   test("selects radio targets through locator DOM evaluation", async () => {
@@ -904,6 +1096,158 @@ describe("BrowserWorkflowRunner", () => {
         "isEnabled:#blocked",
       ]),
     );
+  });
+
+  test("asserts element states using visibility, attachment, and enabled checks", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("visible", "Visible", {
+            type: "assert_element",
+            config: { xpath: "#ready", state: "visible", timeout_ms: 500 },
+          }),
+          step("hidden", "Hidden", {
+            type: "assert_element",
+            config: { xpath: "#hidden", state: "hidden", timeout_ms: 600 },
+          }),
+          step("attached", "Attached", {
+            type: "assert_element",
+            config: { xpath: "#panel", state: "attached", timeout_ms: 700 },
+          }),
+          step("enabled", "Enabled", {
+            type: "assert_element",
+            config: { xpath: "#submit", state: "enabled", timeout_ms: 800 },
+          }),
+          step("disabled", "Disabled", {
+            type: "assert_element",
+            config: { xpath: "#blocked", state: "disabled", timeout_ms: 900 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "waitFor:#ready:visible:500",
+        "isVisible:#ready",
+        "waitFor:#hidden:hidden:600",
+        "isVisible:#hidden",
+        "waitFor:#panel:attached:700",
+        "count:#panel",
+        "waitFor:#submit:visible:800",
+        "isEnabled:#submit",
+        "waitFor:#blocked:visible:900",
+        "isEnabled:#blocked",
+      ]),
+    );
+  });
+
+  test("fails assert_element when the requested state is false", async () => {
+    const cases: Array<{
+      state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
+      xpath: string;
+      reason: string;
+    }> = [
+      { state: "visible", xpath: "#hidden", reason: "Element is not visible" },
+      { state: "hidden", xpath: "#ready", reason: "Element is not hidden" },
+      { state: "attached", xpath: "#missing", reason: "Element is not attached" },
+      { state: "enabled", xpath: "#blocked", reason: "Element is not enabled" },
+      { state: "disabled", xpath: "#submit", reason: "Element is not disabled" },
+    ];
+
+    for (const testCase of cases) {
+      const runner = new BrowserWorkflowRunner({
+        appPaths: await createTempAppPaths(),
+        driver: createFakeDriver(new FakeContext(new FakePage())),
+      });
+
+      const result = await runner.run({
+        graph: {
+          steps: [
+            step("assert", "Assert", {
+              type: "assert_element",
+              config: { xpath: testCase.xpath, state: testCase.state, timeout_ms: 500 },
+            }),
+          ],
+        },
+        settings: makeSettings(),
+        mode: "run_workflow",
+      });
+
+      expect(result.status, testCase.state).toBe("failed");
+      expect(result.error).toMatchObject({
+        step_id: "assert",
+        action_type: "assert_element",
+        reason: testCase.reason,
+      });
+    }
+  });
+
+  test("fails malformed enum fields defensively if invalid configs reach the runner", async () => {
+    const cases: Array<{
+      label: string;
+      config: ActionConfig;
+      reason: string;
+    }> = [
+      {
+        label: "wait_until",
+        config: { type: "click", config: { xpath: "#button", wait_until: "ready" as never } },
+        reason: "Wait until must be attached, visible, enabled, or clickable",
+      },
+      {
+        label: "typing_mode",
+        config: { type: "input_text", config: { xpath: "#email", text: "user", typing_mode: "fast" as never } },
+        reason: "Typing mode must be set_value or type",
+      },
+      {
+        label: "match_by",
+        config: { type: "select_option", config: { xpath: "#country", match_by: "index" as never, value: "1" } },
+        reason: "Match by must be label or value",
+      },
+      {
+        label: "checkbox_state",
+        config: { type: "set_checkbox", config: { xpath: "#terms", state: "mixed" as never } },
+        reason: "Checkbox state must be checked or unchecked",
+      },
+      {
+        label: "assert_text_match",
+        config: { type: "assert_text", config: { xpath: "#status", text: "Ready", match_mode: "regex" as never } },
+        reason: "Match mode must be contains or equals",
+      },
+      {
+        label: "assert_output_match",
+        config: { type: "assert_output", config: { name: "status", match_mode: "regex" as never, value: "Ready" } },
+        reason: "Match mode must be contains or equals",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const runner = new BrowserWorkflowRunner({
+        appPaths: await createTempAppPaths(),
+        driver: createFakeDriver(new FakeContext(new FakePage())),
+      });
+
+      const result = await runner.run({
+        graph: { steps: [step(testCase.label, testCase.label, testCase.config)] },
+        settings: makeSettings(),
+        mode: "run_workflow",
+      });
+
+      expect(result.status, testCase.label).toBe("failed");
+      expect(result.error).toMatchObject({
+        step_id: testCase.label,
+        reason: testCase.reason,
+      });
+    }
   });
 
   test("writes local and session storage actions into the browser page", async () => {
@@ -1722,9 +2066,9 @@ describe("BrowserWorkflowRunner", () => {
             config: {
               width: 390,
               height: 844,
-              device_scale_factor: 2,
-              mobile: true,
-              touch: true,
+              device_scale_factor: 1,
+              mobile: false,
+              touch: false,
             },
           }),
         ],
@@ -1741,6 +2085,79 @@ describe("BrowserWorkflowRunner", () => {
       "geolocation:10.5:20.5:9",
     ]);
     expect(page.events).toContain("viewport:390:844");
+  });
+
+  test("infers the current page host for set_cookie when domain is blank", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://owned.test/account" },
+          }),
+          step("cookie", "Cookie", {
+            type: "set_cookie",
+            config: { name: "sid", value: "123", domain: null, path: "/" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(context.addedCookies).toContainEqual(
+      expect.objectContaining({
+        name: "sid",
+        value: "123",
+        domain: "owned.test",
+        path: "/",
+      }),
+    );
+  });
+
+  test("fails set_viewport device shape changes because they are launch-time identity settings", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("viewport", "Viewport", {
+            type: "set_viewport",
+            config: {
+              width: 390,
+              height: 844,
+              device_scale_factor: 2,
+              mobile: true,
+              touch: true,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "viewport",
+      action_type: "set_viewport",
+      reason:
+        "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch",
+    });
+    expect(page.events).not.toContain("viewport:390:844");
   });
 
   test("fails stubbed or launch-time actions with explicit unsupported errors", async () => {
@@ -2140,6 +2557,11 @@ function createFakeDriver(context: FakeContext) {
 class FakeContext implements BrowserDriverContext {
   closed = false;
   events: string[] = [];
+  addedCookies: Array<Record<string, unknown>> = [];
+  routes: Array<{
+    matcher: string | RegExp | ((url: URL) => boolean);
+    handler: (route: FakeRoute) => Promise<void> | void;
+  }> = [];
   readonly page: FakePage;
 
   constructor(page = new FakePage()) {
@@ -2159,6 +2581,7 @@ class FakeContext implements BrowserDriverContext {
   }
 
   async addCookies(cookies: Array<Record<string, unknown>>) {
+    this.addedCookies.push(...cookies);
     this.events.push(
       `cookies:${cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(",")}`,
     );
@@ -2178,7 +2601,37 @@ class FakeContext implements BrowserDriverContext {
     );
   }
 
-  async route() {}
+  async route(
+    matcher: string | RegExp | ((url: URL) => boolean),
+    handler: (route: FakeRoute) => Promise<void> | void,
+  ) {
+    this.routes.push({ matcher, handler });
+  }
+
+  async triggerRoute(url: string) {
+    const matchedRoute = this.routes.find((route) => {
+      if (typeof route.matcher === "function") return route.matcher(new URL(url));
+      if (typeof route.matcher === "string") return route.matcher === url;
+      return route.matcher.test(url);
+    });
+    if (!matchedRoute) return null;
+
+    const route = new FakeRoute();
+    await matchedRoute.handler(route);
+    return route.fulfilledResponse;
+  }
+}
+
+class FakeRoute {
+  fulfilledResponse: Record<string, unknown> | null = null;
+
+  async abort() {}
+
+  async fulfill(response: Record<string, unknown>) {
+    this.fulfilledResponse = response;
+  }
+
+  async continue() {}
 }
 
 class FakePage implements BrowserDriverPage {
@@ -2324,13 +2777,27 @@ class FakeLocator {
     this.events.push(`type:${this.selector}:${value}:${options?.delay ?? 0}`);
   }
 
-  async click(options?: { button?: string }) {
+  async click(options?: {
+    button?: string;
+    clickCount?: number;
+    position?: { x: number; y: number };
+  }) {
+    if (options?.position || options?.clickCount) {
+      this.events.push(
+        `click:${this.selector}:${options.button ?? "left"}:${options.clickCount ?? 1}:${options.position?.x ?? "center"}:${options.position?.y ?? "center"}`,
+      );
+      return;
+    }
     this.events.push(
       options?.button ? `click:${this.selector}:${options.button}` : `click:${this.selector}`,
     );
   }
 
-  async evaluate() {
+  async evaluate(_pageFunction?: unknown, arg?: unknown) {
+    if (isScrollIntoViewArg(arg)) {
+      this.events.push(`scrollIntoView:${this.selector}:${arg.block}:${arg.inline}`);
+      return null;
+    }
     this.events.push(`evaluate:${this.selector}`);
     if (this.selector.includes("table")) {
       return [
@@ -2367,8 +2834,13 @@ class FakeLocator {
     return "input";
   }
 
+  async boundingBox() {
+    return { width: 100, height: 40 };
+  }
+
   async count() {
-    return 1;
+    this.events.push(`count:${this.selector}`);
+    return this.selector === "#missing" ? 0 : 1;
   }
 
   nth() {
@@ -2473,5 +2945,16 @@ function isScrollEvaluationArg(value: unknown): value is { deltaX: number; delta
       typeof value === "object" &&
       "deltaX" in value &&
       "deltaY" in value,
+  );
+}
+
+function isScrollIntoViewArg(
+  value: unknown,
+): value is { block: string; inline: string } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "block" in value &&
+      "inline" in value,
   );
 }

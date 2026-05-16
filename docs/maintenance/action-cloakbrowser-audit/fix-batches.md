@@ -1,6 +1,6 @@
 # Audit Fix Batches
 
-Status: planning scaffold.
+Status: Batch A complete; F-001, F-007, F-008, F-010, F-018, F-019, F-021, and F-023 fixed.
 
 Do not implement fixes from this file without first adding or updating failing tests. Docs-only corrections are exempt from TDD.
 
@@ -27,16 +27,18 @@ Likely checks:
 - `npm run build:electron`
 - `npm run test:e2e:smoke` when desktop behavior changes
 
-Current findings:
+Current findings: none.
 
-- F-001: `disabled_if_supported` WebRTC policy is accepted/evidenced but has no UI/runtime effect.
-- F-007: `set_viewport` exposes device shape fields that are ignored at runtime.
-- F-008: `mock_response.url_contains` is treated as a route pattern instead of contains semantics.
-- F-010: `assert_element` only enforces `visible`, silently passing other requested states.
-- F-018: `set_cookie` blank Domain is documented/defaulted as current host but runner does not infer it.
-- F-019: `execute_js.timeout_ms` is editable/validated but ignored during JavaScript execution.
-- F-021: Click advanced contract fields are preserved but ignored by runner execution.
-- F-023: Element/form assertion enum fields are not validated and malformed values can silently fall back or pass.
+Completed findings:
+
+- F-001: `disabled_if_supported` WebRTC policy is rejected by backend settings validation and legacy persisted values normalize to `default`; supported WebRTC policy launch args/evidence are covered by runner tests.
+- F-007: `set_viewport` active authoring now exposes only width/height, and graph validation plus runner execution reject launch-time device-shape fields when non-default values are present.
+- F-008: `mock_response.url_contains` now uses substring matching through a URL predicate while preserving route-pattern behavior for `block_request.url_patterns`.
+- F-010: `assert_element` now checks all supported states and fails explicitly when `attached`, `visible`, `hidden`, `enabled`, or `disabled` is false.
+- F-018: `set_cookie` now infers the current page host when Domain is blank and records the resolved domain in runtime output.
+- F-019: `execute_js.timeout_ms` now wraps page evaluation and fails overlong scripts with a clear timeout error.
+- F-021: Click now honors `force_dom`, scroll alignment, and offset/named position options instead of silently falling back to a normal locator click.
+- F-023: Element/form assertion enum fields now fail graph validation and defensive runner execution instead of silently falling back or passing.
 
 ## Batch B - Validation, Compiler, And Field Drift P1/P2
 

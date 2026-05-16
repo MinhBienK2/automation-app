@@ -594,6 +594,23 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          webrtc_policy: "disabled_if_supported",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "webrtc_policy",
+        level: "error",
+        message: "Disabled WebRTC policy is not supported by the installed CloakBrowser runtime",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           fingerprint_platform: "plan9" as never,
         },
       }),
