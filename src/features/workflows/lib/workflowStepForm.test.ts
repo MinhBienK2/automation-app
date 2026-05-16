@@ -59,6 +59,57 @@ describe("workflow step form config helpers", () => {
     });
   });
 
+  test("updates targeted scroll mode fields without dropping legacy page settings", () => {
+    const config: ActionConfig = {
+      type: "scroll",
+      config: { mode: "page", direction: "down", pixels: 300 },
+    };
+
+    expect(updateActionConfigField(config, "mode", "into_view")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "into_view",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 5000,
+      },
+    });
+
+    const targetedConfig: ActionConfig = {
+      type: "scroll",
+      config: {
+        mode: "until_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 5000,
+      },
+    };
+
+    expect(updateActionConfigField(targetedConfig, "xpath", "//h2")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "until_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        xpath: "//h2",
+        timeout_ms: 5000,
+      },
+    });
+    expect(updateActionConfigField(targetedConfig, "timeout_ms", "9000")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "until_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 9000,
+      },
+    });
+  });
+
   test("updates click iframe without dropping the xpath", () => {
     const config: ActionConfig = {
       type: "click",

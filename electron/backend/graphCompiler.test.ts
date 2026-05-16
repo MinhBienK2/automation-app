@@ -871,6 +871,46 @@ describe("TypeScript graph compiler parity", () => {
     }
   });
 
+  test("accepts scroll target modes and rejects missing element targets", () => {
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "into_view",
+          target: elementTarget(),
+          timeout_ms: 5000,
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "until_visible",
+          xpath: "//h2[normalize-space(.)='Ready']",
+          iframe_xpath: "//iframe[@id='main']",
+          timeout_ms: 5000,
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "into_view",
+          target: null,
+          xpath: null,
+          timeout_ms: 5000,
+        },
+      }),
+    ).toEqual({
+      field: "xpath",
+      message: "Element target is required",
+    });
+  });
+
   test("validates nested action configs recursively", () => {
     const validation = validateActionConfig({
       type: "if_condition",

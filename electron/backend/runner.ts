@@ -3,6 +3,7 @@ import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type {
   ActionConfig,
+  ActionType,
   CompiledGraphStep,
   CompiledNestedAction,
   CompiledWorkflowGraph,
@@ -90,9 +91,15 @@ export type BrowserDriverPage = {
   setViewportSize?(viewport: { width: number; height: number }): Promise<void>;
   keyboard?: {
     press(key: string, options?: Record<string, unknown>): Promise<void>;
+    down?(key: string, options?: Record<string, unknown>): Promise<void>;
+    up?(key: string, options?: Record<string, unknown>): Promise<void>;
     type(text: string, options?: Record<string, unknown>): Promise<void>;
+    insertText?(text: string): Promise<void>;
   };
   mouse?: {
+    move?(x: number, y: number): Promise<void>;
+    down?(options?: Record<string, unknown>): Promise<void>;
+    up?(options?: Record<string, unknown>): Promise<void>;
     wheel(deltaX: number, deltaY: number): Promise<void>;
   };
 };
@@ -121,17 +128,18 @@ export type BrowserDriverLocator = {
   uncheck?(options?: Record<string, unknown>): Promise<void>;
   selectOption?(value: string | string[] | Record<string, string>): Promise<unknown>;
   setInputFiles?(files: string[]): Promise<void>;
-  press?(key: string): Promise<void>;
+  press?(key: string, options?: Record<string, unknown>): Promise<void>;
   textContent?(options?: Record<string, unknown>): Promise<string | null>;
   getAttribute?(attribute: string, options?: Record<string, unknown>): Promise<string | null>;
   inputValue?(options?: Record<string, unknown>): Promise<string>;
-  boundingBox?(): Promise<{ width: number; height: number } | null>;
+  boundingBox?(): Promise<{ x?: number; y?: number; width: number; height: number } | null>;
   count?(): Promise<number>;
   nth?(index: number): BrowserDriverLocator;
   isVisible?(options?: Record<string, unknown>): Promise<boolean>;
   isEnabled?(options?: Record<string, unknown>): Promise<boolean>;
   waitFor?(options?: Record<string, unknown>): Promise<void>;
   dragTo?(target: BrowserDriverLocator, options?: Record<string, unknown>): Promise<void>;
+  scrollIntoViewIfNeeded?(options?: Record<string, unknown>): Promise<void>;
 };
 
 type BrowserDialog = {
@@ -212,6 +220,34 @@ type ActionTrace = {
   started_at: string;
   finished_at: string;
   reason?: string;
+};
+
+type RunnerActionCapability = "cloak_native" | "custom_human" | "direct_dom";
+
+const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapability>> = {
+  click: "cloak_native",
+  double_click: "cloak_native",
+  hover: "cloak_native",
+  input_text: "cloak_native",
+  clear_input: "cloak_native",
+  check: "cloak_native",
+  uncheck: "cloak_native",
+  toggle_checkbox: "cloak_native",
+  select_option: "cloak_native",
+  select_radio: "cloak_native",
+  submit_form: "cloak_native",
+  type_sequence: "cloak_native",
+  drag_and_drop: "cloak_native",
+  upload_file: "cloak_native",
+  set_contenteditable: "cloak_native",
+  focus_element: "cloak_native",
+  right_click: "custom_human",
+  press_key: "custom_human",
+  hotkey: "custom_human",
+  paste_clipboard: "custom_human",
+  execute_js: "direct_dom",
+  set_local_storage: "direct_dom",
+  set_session_storage: "direct_dom",
 };
 
 type EvidenceArtifact = {
@@ -592,13 +628,20 @@ export class BrowserWorkflowRunner {
         )();
         return;
       case "right_click":
-        await rightClickTarget(await this.locatorForAction(runtime, action.config));
+        await rightClickTarget(
+          runtime.page,
+          await this.locatorForAction(runtime, action.config),
+          this.sleep,
+          this.random,
+          action.config.timeout_ms,
+          runtime.signal,
+        );
         return;
       case "drag_and_drop":
         await this.executeDragAndDrop(runtime, action);
         return;
       case "scroll":
-        await pageScroll(runtime.page, action.config.direction, action.config.pixels);
+        await this.executeScroll(runtime, action);
         return;
       case "select_option":
         assertRuntimeEnumValue(
@@ -637,10 +680,10 @@ export class BrowserWorkflowRunner {
         await (await this.locatorForAction(runtime, action.config)).click();
         return;
       case "press_key":
-        await runtime.page.keyboard?.press(action.config.key);
+        await this.pressKeyHuman(runtime.page, action.config.key, runtime.signal);
         return;
       case "hotkey":
-        await runtime.page.keyboard?.press(action.config.keys.join("+"));
+        await this.pressHotkeyHuman(runtime.page, action.config.keys, runtime.signal);
         return;
       case "type_sequence":
         await requireLocatorMethod(
@@ -656,7 +699,7 @@ export class BrowserWorkflowRunner {
         runtime.clipboard = action.config.text;
         return;
       case "paste_clipboard":
-        await (await this.locatorForAction(runtime, action.config)).fill(runtime.clipboard);
+        await this.executePasteClipboard(runtime, action);
         return;
       case "focus_element":
         await (await this.locatorForAction(runtime, action.config)).click();
@@ -677,7 +720,7 @@ export class BrowserWorkflowRunner {
         if (action.config.xpath || action.config.target) {
           await submitFormTarget(await this.locatorForAction(runtime, action.config, "form"));
         } else {
-          await runtime.page.keyboard?.press("Enter");
+          await this.pressKeyHuman(runtime.page, "Enter", runtime.signal);
         }
         return;
       case "select_custom_option":
@@ -1238,6 +1281,88 @@ export class BrowserWorkflowRunner {
     await source.dragTo(target, { timeout: action.config.timeout_ms ?? undefined });
   }
 
+  private async executeScroll(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "scroll" }>,
+  ) {
+    const mode = action.config.mode ?? "page";
+    if (mode === "page") {
+      await humanPageScroll(
+        runtime.page,
+        action.config.direction ?? "down",
+        action.config.pixels ?? 0,
+        this.sleep,
+        this.random,
+        runtime.signal,
+      );
+      return;
+    }
+
+    const locator = await this.locatorForAction(runtime, action.config, "");
+    if (mode === "until_visible") {
+      await waitForLocatorState(locator, "visible", action.config.timeout_ms);
+    }
+    await scrollLocatorIntoView(locator, action.config.timeout_ms);
+  }
+
+  private async executePasteClipboard(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "paste_clipboard" }>,
+  ) {
+    await runtime.context.grantPermissions?.(["clipboard-read", "clipboard-write"]).catch(() => undefined);
+    await writeBrowserClipboard(runtime.page, runtime.clipboard);
+    await (await this.locatorForAction(runtime, action.config)).click();
+    await pressKeyboardShortcut(
+      runtime.page,
+      process.platform === "darwin" ? "Meta+V" : "Control+V",
+    );
+  }
+
+  private async pressKeyHuman(
+    page: BrowserDriverPage,
+    key: string,
+    signal?: AbortSignal,
+  ) {
+    const keyboard = page.keyboard;
+    if (!keyboard) return;
+    if (keyboard.down && keyboard.up) {
+      await keyboard.down(key);
+      await this.sleep(keyHoldMs(this.random), signal);
+      await keyboard.up(key);
+      return;
+    }
+    await keyboard.press(key);
+  }
+
+  private async pressHotkeyHuman(
+    page: BrowserDriverPage,
+    keys: string[],
+    signal?: AbortSignal,
+  ) {
+    const keyboard = page.keyboard;
+    if (!keyboard) return;
+    if (!keyboard.down || !keyboard.up) {
+      await keyboard.press(keys.join("+"));
+      return;
+    }
+
+    const primaryKey = keys[keys.length - 1];
+    const modifiers = keys.slice(0, -1);
+    for (const modifier of modifiers) {
+      await keyboard.down(modifier);
+      await this.sleep(keyGapMs(this.random), signal);
+    }
+    if (primaryKey) {
+      await keyboard.down(primaryKey);
+      await this.sleep(keyHoldMs(this.random), signal);
+      await keyboard.up(primaryKey);
+    }
+    for (const modifier of [...modifiers].reverse()) {
+      await this.sleep(keyGapMs(this.random), signal);
+      await keyboard.up(modifier);
+    }
+  }
+
   private registerDialogHandler(
     runtime: Runtime,
     behavior: "accept" | "dismiss",
@@ -1295,12 +1420,18 @@ export class BrowserWorkflowRunner {
     config: {
       target?: ElementTarget | null;
       xpath?: string | null;
+      iframe_xpath?: string | null;
       wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
       timeout_ms?: number | null;
     },
     fallbackXpath = "body",
   ) {
-    const locator = await locatorFor(runtime.page, config.target, config.xpath ?? fallbackXpath);
+    const locator = await locatorFor(
+      runtime.page,
+      config.target,
+      config.xpath ?? fallbackXpath,
+      config.iframe_xpath,
+    );
     await this.waitForElementReadiness(
       locator,
       config.wait_until ?? null,
@@ -1479,6 +1610,23 @@ async function loadCloakBrowserModule(): Promise<CloakBrowserModule> {
 }
 
 async function submitFormTarget(locator: BrowserDriverLocator) {
+  const failures: unknown[] = [];
+  try {
+    await locator.click();
+    return;
+  } catch (error) {
+    failures.push(error);
+  }
+
+  if (locator.press) {
+    try {
+      await locator.press("Enter");
+      return;
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+
   if (locator.evaluate) {
     await locator.evaluate((element) => {
       const form = element instanceof HTMLFormElement ? element : element.closest("form");
@@ -1505,10 +1653,27 @@ async function submitFormTarget(locator: BrowserDriverLocator) {
     return;
   }
 
-  await locator.click();
+  throw firstActionFailure(failures, "submit_form could not click, press, or submit the target");
 }
 
 async function selectRadioTarget(locator: BrowserDriverLocator) {
+  const failures: unknown[] = [];
+  if (locator.check) {
+    try {
+      await locator.check();
+      return;
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+
+  try {
+    await locator.click();
+    return;
+  } catch (error) {
+    failures.push(error);
+  }
+
   if (locator.evaluate) {
     await locator.evaluate((element) => {
       const radio =
@@ -1529,18 +1694,35 @@ async function selectRadioTarget(locator: BrowserDriverLocator) {
     return;
   }
 
-  await locator.click();
+  throw firstActionFailure(failures, "select_radio could not check or click the target");
 }
 
-async function pageScroll(
+async function humanPageScroll(
   page: BrowserDriverPage,
   direction: Extract<ActionConfig, { type: "scroll" }>["config"]["direction"],
   pixels: number,
+  sleepFn: (ms: number, signal?: AbortSignal) => Promise<void>,
+  random: () => number,
+  signal?: AbortSignal,
 ) {
   const deltaX = direction === "left" ? -pixels : direction === "right" ? pixels : 0;
   const deltaY = direction === "up" ? -pixels : direction === "down" ? pixels : 0;
   if (page.mouse?.wheel) {
-    await page.mouse.wheel(deltaX, deltaY);
+    const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+    const steps = Math.max(2, Math.min(10, Math.ceil(distance / 180)));
+    let remainingX = deltaX;
+    let remainingY = deltaY;
+    for (let remainingSteps = steps; remainingSteps > 0; remainingSteps -= 1) {
+      throwIfAborted(signal);
+      const chunkX = nextScrollChunk(remainingX, remainingSteps, random);
+      const chunkY = nextScrollChunk(remainingY, remainingSteps, random);
+      await page.mouse.wheel(chunkX, chunkY);
+      remainingX -= chunkX;
+      remainingY -= chunkY;
+      if (remainingSteps > 1) {
+        await sleepFn(scrollPauseMs(random), signal);
+      }
+    }
     return;
   }
   await page.evaluate(
@@ -1553,8 +1735,128 @@ async function pageScroll(
   );
 }
 
-async function rightClickTarget(locator: BrowserDriverLocator) {
+async function scrollLocatorIntoView(
+  locator: BrowserDriverLocator,
+  timeoutMs: number | null | undefined,
+) {
+  if (locator.scrollIntoViewIfNeeded) {
+    await locator.scrollIntoViewIfNeeded({ timeout: timeoutMs ?? undefined });
+    return;
+  }
+
+  if (locator.evaluate) {
+    await locator.evaluate(
+      (element, arg?: { block: ScrollLogicalPosition; inline: ScrollLogicalPosition }) => {
+        element.scrollIntoView({
+          block: arg?.block ?? "center",
+          inline: arg?.inline ?? "nearest",
+          behavior: "smooth",
+        });
+      },
+      { block: "center", inline: "nearest" },
+    );
+    return;
+  }
+
+  throw new Error("scroll requires driver support for locator.scrollIntoViewIfNeeded");
+}
+
+async function writeBrowserClipboard(page: BrowserDriverPage, text: string) {
+  await page.evaluate(
+    async (payload?: { text: string }) => {
+      await navigator.clipboard.writeText(payload?.text ?? "");
+    },
+    { text },
+  );
+}
+
+async function pressKeyboardShortcut(page: BrowserDriverPage, shortcut: string) {
+  if (page.keyboard?.press) {
+    await page.keyboard.press(shortcut);
+    return;
+  }
+  throw new Error("paste_clipboard requires driver keyboard shortcut support");
+}
+
+async function rightClickTarget(
+  page: BrowserDriverPage,
+  locator: BrowserDriverLocator,
+  sleepFn: (ms: number, signal?: AbortSignal) => Promise<void>,
+  random: () => number,
+  timeoutMs: number | null | undefined,
+  signal?: AbortSignal,
+) {
+  await scrollLocatorIntoView(locator, timeoutMs);
+  const box = await locator.boundingBox?.();
+  if (box && page.mouse?.move && page.mouse.down && page.mouse.up) {
+    const targetX = Math.round((box.x ?? 0) + box.width / 2);
+    const targetY = Math.round((box.y ?? 0) + box.height / 2);
+    await humanMoveToPoint(page, targetX, targetY, sleepFn, random, signal);
+    await page.mouse.down({ button: "right" });
+    await sleepFn(keyHoldMs(random), signal);
+    await page.mouse.up({ button: "right" });
+    return;
+  }
   await locator.click({ button: "right" });
+}
+
+async function humanMoveToPoint(
+  page: BrowserDriverPage,
+  targetX: number,
+  targetY: number,
+  sleepFn: (ms: number, signal?: AbortSignal) => Promise<void>,
+  random: () => number,
+  signal?: AbortSignal,
+) {
+  const steps = 3 + Math.floor(random() * 3);
+  for (let index = 1; index <= steps; index += 1) {
+    throwIfAborted(signal);
+    const progress = index / steps;
+    const wobble = index === steps ? 0 : (random() - 0.5) * 8;
+    await page.mouse?.move?.(
+      Math.round(targetX * progress + wobble),
+      Math.round(targetY * progress + wobble),
+    );
+    if (index < steps) {
+      await sleepFn(mouseMovePauseMs(random), signal);
+    }
+  }
+}
+
+function nextScrollChunk(total: number, remainingSteps: number, random: () => number) {
+  if (remainingSteps <= 1) return total;
+  const base = total / remainingSteps;
+  const jitter = Math.abs(base) * 0.25 * (random() - 0.5);
+  const chunk = Math.round(base + jitter);
+  if (chunk !== 0) return chunk;
+  return total > 0 ? 1 : total < 0 ? -1 : 0;
+}
+
+function scrollPauseMs(random: () => number) {
+  return 30 + Math.floor(random() * 90);
+}
+
+function keyHoldMs(random: () => number) {
+  return 35 + Math.floor(random() * 85);
+}
+
+function keyGapMs(random: () => number) {
+  return 20 + Math.floor(random() * 50);
+}
+
+function mouseMovePauseMs(random: () => number) {
+  return 20 + Math.floor(random() * 40);
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new RunnerStop("stopped", "Run stopped");
+  }
+}
+
+function firstActionFailure(failures: unknown[], fallbackMessage: string) {
+  const firstFailure = failures.find((failure) => failure instanceof Error);
+  return firstFailure instanceof Error ? firstFailure : new Error(fallbackMessage);
 }
 
 function buildLaunchOptions(
@@ -1836,10 +2138,13 @@ async function locatorFor(
   page: BrowserDriverPage,
   target: unknown,
   xpath?: string | null,
+  iframeXpath?: string | null,
 ): Promise<BrowserDriverLocator> {
   const typedTarget = isElementTarget(target) ? target : null;
   const root = typedTarget?.iframe
     ? frameRootForTarget(page, typedTarget.iframe)
+    : iframeXpath?.trim()
+      ? frameRootForXpath(page, iframeXpath)
     : page;
   const locators = typedTarget?.locators?.length
     ? typedTarget.locators
@@ -1875,6 +2180,13 @@ function frameRootForTarget(page: BrowserDriverPage, iframeTarget: ElementTarget
     throw new Error("iframe target requires a locator");
   }
   return page.frameLocator(selectorFromLocatorConfig(iframeLocator));
+}
+
+function frameRootForXpath(page: BrowserDriverPage, iframeXpath: string) {
+  if (!page.frameLocator) {
+    throw new Error("iframe targets require driver support for frameLocator");
+  }
+  return page.frameLocator(iframeXpath);
 }
 
 function locatorFromConfig(
@@ -2091,10 +2403,18 @@ function isAbortError(error: unknown) {
 function actionTraceMode(action: ActionConfig): ActionTrace["mode"] {
   if (action.type === "graph_noop" || action.type === "router_condition") return "manual";
   if (action.type.startsWith("extract") || action.type.startsWith("assert")) return "observer";
-  if (action.type === "execute_js" || action.type.includes("storage") || action.type === "set_variable") {
+  if (runnerCapabilityForAction(action) === "direct_dom" || action.type === "set_variable") {
     return "direct_dom";
   }
+  if (runnerCapabilityForAction(action) === "custom_human") return "assisted_browser";
   return "browser";
+}
+
+function runnerCapabilityForAction(action: ActionConfig): RunnerActionCapability | null {
+  if (action.type === "scroll") {
+    return (action.config.mode ?? "page") === "page" ? "custom_human" : "cloak_native";
+  }
+  return runnerActionCapabilities[action.type] ?? null;
 }
 
 function setVariables(

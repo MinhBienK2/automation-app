@@ -48,6 +48,7 @@ Preserve these unless the task explicitly changes them.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible. Branching includes If, Switch, Router, and Merge.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
 - Targetable action editors default Target locator type to XPath, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
+- Scroll authoring exposes Page, Into View, and Until Visible modes. Page mode shows Direction and Pixels; element-targeted modes show Target locator, optional Iframe XPath, and Timeout ms.
 - Browser identity belongs in Workflow Settings Browser Launch. Launch-time identity settings are not represented as in-run action nodes in the current workflow contract.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.

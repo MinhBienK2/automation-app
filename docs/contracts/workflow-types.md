@@ -211,6 +211,10 @@ Action configs use a tagged TypeScript DTO shape:
 ```
 
 The `type` string must match the TypeScript `ActionType` union.
+`scroll` accepts `mode: "page" | "into_view" | "until_visible"`. Missing
+mode is treated as legacy `"page"` and uses `direction` plus `pixels`.
+Element-targeted scroll modes use `target` or legacy `xpath`, optional
+`iframe_xpath`, and optional `timeout_ms`.
 
 Graph-internal Merge and Router configs use:
 

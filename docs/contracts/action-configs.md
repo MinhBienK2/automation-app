@@ -28,7 +28,7 @@ Every user-addable action type must have:
 
 Browser identity actions such as profile, proxy, user-agent, and download-directory settings are not part of the in-run action contract. Browser identity belongs in Workflow Settings Browser Launch.
 
-Runner traces classify every top-level executed action with compact mode/status metadata. Behavior-fidelity execution-path gating is not part of the current action config contract.
+Runner traces classify every top-level executed action with compact mode/status metadata. The runner's CloakBrowser-native/custom-human/direct-DOM capability map is internal execution policy, not a serialized action config field.
 
 Graph-internal executable configs such as `graph_noop`, `if_condition`, `router_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, and `domain_allowlist` are TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Variable configs include multi-row `set_variable` and `set_json_variables`.
 
@@ -51,8 +51,10 @@ Element target config rules:
 - Drag/drop uses `source_target` and `target_target`; custom select uses `trigger_target`.
 - Backend validation requires a valid structured target for required element actions.
 - The runner resolves structured targets at runtime through ordered locators, supports role/label/placeholder/text/CSS/XPath/attribute locator kinds, applies supported constraints, and reuses the frame-aware action path.
-- Visible action defaults no longer include action-level typing fidelity, retry interval, post-click wait, click positioning, clear-field method, or scroll tuning fields.
+- Scroll config supports `mode: "page" | "into_view" | "until_visible"`. Missing `mode` remains compatible with legacy Page scroll and requires `direction` plus positive `pixels`. `into_view` and `until_visible` require `target` or legacy `xpath`, may include `iframe_xpath`, and may set positive `timeout_ms`.
+- Visible action defaults no longer include action-level typing fidelity, retry interval, post-click wait, click positioning, or clear-field method fields. Scroll exposes only mode-specific fields: Page shows direction/pixels, while element-targeted modes show target and timeout.
 - Backend validation rejects unsupported enum values for preserved element/form/assertion fields such as readiness wait mode, select matching mode, checkbox state, and assertion match mode; the runner keeps matching defensive guards for direct execution inputs.
+- Runner interaction dispatch uses an internal capability map: CloakBrowser-native paths are preferred for supported element/page/frame APIs, custom human behavior is isolated to unsupported cases such as page pixel scroll, untargeted key chords, paste shortcut orchestration, and right-click button preservation, and direct DOM is used for read/assert/storage actions or final fallbacks only.
 
 Evidence config rules:
 

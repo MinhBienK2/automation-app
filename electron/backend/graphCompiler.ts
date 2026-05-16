@@ -705,11 +705,28 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       );
     case "scroll": {
       const mode = config.config.mode ?? "page";
-      if (mode !== "page") {
-        return validationError("mode", "Only page scroll is currently supported");
+      const modeValidation = validateRequiredEnumValue(
+        mode,
+        ["page", "into_view", "until_visible"],
+        "mode",
+        "Scroll mode must be page, into_view, or until_visible",
+      );
+      if (modeValidation) return modeValidation;
+
+      if (mode === "page") {
+        return firstValidation(
+          validateRequiredEnumValue(
+            config.config.direction,
+            ["up", "down", "left", "right"],
+            "direction",
+            "Scroll direction must be up, down, left, or right",
+          ),
+          positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
+        );
       }
       return firstValidation(
-        positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
+        validateElementTarget(config.config),
+        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
       );
     }
     case "select_option":

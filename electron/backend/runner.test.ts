@@ -620,7 +620,7 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
-  test("submits targeted forms through locator DOM evaluation", async () => {
+  test("submits targeted forms through CloakBrowser locator input before DOM fallback", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -644,13 +644,13 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "locator://button[@type='submit']",
-        "evaluate://button[@type='submit']",
+        "click://button[@type='submit']",
       ]),
     );
-    expect(page.events).not.toContain("click://button[@type='submit']");
+    expect(page.events).not.toContain("evaluate://button[@type='submit']");
   });
 
-  test("selects radio targets through locator DOM evaluation", async () => {
+  test("selects radio targets through CloakBrowser check before DOM fallback", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -674,13 +674,43 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "getByTestId:role-admin",
-        "evaluate:testid=role-admin",
+        "check:testid=role-admin",
       ]),
     );
-    expect(page.events).not.toContain("click:testid=role-admin");
+    expect(page.events).not.toContain("evaluate:testid=role-admin");
   });
 
-  test("delegates scroll to the CloakBrowser page wheel input", async () => {
+  test("falls back to DOM radio selection only after native radio paths fail", async () => {
+    const page = new NativeFailingActionPage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("radio", "Radio", {
+            type: "select_radio",
+            config: { xpath: "//label[@for='role-admin']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "check-failed://label[@for='role-admin']",
+        "click-failed://label[@for='role-admin']",
+        "evaluate://label[@for='role-admin']",
+      ]),
+    );
+  });
+
+  test("uses custom human wheel chunks for page scroll because CloakBrowser does not patch wheel", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -703,12 +733,237 @@ describe("BrowserWorkflowRunner", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual([
-      "wheel:0:900",
+    expect(page.events.filter((event) => event.startsWith("wheel:")).length).toBeGreaterThan(1);
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).not.toContain("wheel:0:900");
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "scroll",
+        action_type: "scroll",
+        mode: "assisted_browser",
+      }),
     ]);
   });
 
-  test("dispatches right-click targets through native locator input", async () => {
+  test("scrolls element targets into view through CloakBrowser locator scroll", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "into_view",
+              target: { locators: [{ kind: "test_id", value: "cta" }] },
+              timeout_ms: 4500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "getByTestId:cta",
+        "scrollIntoViewIfNeeded:testid=cta:4500",
+      ]),
+    );
+    expect(page.events.some((event) => event.startsWith("wheel:"))).toBe(false);
+    expect(page.events).not.toContain("evaluate:testid=cta");
+  });
+
+  test("fails targeted scroll modes when no target is configured", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: { mode: "into_view", target: null, xpath: null, timeout_ms: 1000 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "scroll",
+      action_type: "scroll",
+      reason: "Element target is required",
+    });
+  });
+
+  test("waits for until-visible scroll targets inside legacy iframe XPath", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "until_visible",
+              xpath: "//h2[normalize-space(.)='Ready']",
+              iframe_xpath: "//iframe[@id='main']",
+              timeout_ms: 2500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "frameLocator://iframe[@id='main']",
+        "frameLocator.locator://h2[normalize-space(.)='Ready']",
+        "waitFor://h2[normalize-space(.)='Ready']:visible:2500",
+        "scrollIntoViewIfNeeded://h2[normalize-space(.)='Ready']:2500",
+      ]),
+    );
+    expect(page.events.some((event) => event.startsWith("wheel:"))).toBe(false);
+  });
+
+  test("pastes clipboard content by focusing the target and pressing the platform paste shortcut", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("copy", "Copy", {
+            type: "set_clipboard",
+            config: { text: "token-123" },
+          }),
+          step("paste", "Paste", {
+            type: "paste_clipboard",
+            config: { xpath: "//textarea[@name='notes']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "locator://textarea[@name='notes']",
+        "clipboard:token-123",
+        "click://textarea[@name='notes']",
+        `press:${process.platform === "darwin" ? "Meta+V" : "Control+V"}`,
+      ]),
+    );
+    expect(page.events).not.toContain("fill://textarea[@name='notes']:token-123");
+  });
+
+  test("falls back to DOM form submission only after native submit paths fail", async () => {
+    const page = new NativeFailingActionPage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("submit", "Submit", {
+            type: "submit_form",
+            config: { xpath: "//form[@id='login']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "click-failed://form[@id='login']",
+        "locatorPress-failed://form[@id='login']:Enter",
+        "evaluate://form[@id='login']",
+      ]),
+    );
+  });
+
+  test("uses custom key hold timing for untargeted key and hotkey actions", async () => {
+    const page = new FakePage();
+    const sleeps: number[] = [];
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      random: () => 0,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("key", "Key", { type: "press_key", config: { key: "Enter" } }),
+          step("hotkey", "Hotkey", {
+            type: "hotkey",
+            config: { keys: ["Control", "Shift", "P"] },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "down:Enter",
+        "up:Enter",
+        "down:Control",
+        "down:Shift",
+        "down:P",
+        "up:P",
+        "up:Shift",
+        "up:Control",
+      ]),
+    );
+    expect(page.events).not.toContain("press:Enter");
+    expect(page.events).not.toContain("press:Control+Shift+P");
+    expect(sleeps.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("keeps scroll runner free of debug console logging", () => {
+    const runnerSource = readFileSync(
+      path.join(process.cwd(), "electron/backend/runner.ts"),
+      "utf8",
+    );
+
+    expect(runnerSource).not.toMatch(/console\.log\([^)]*scroll/i);
+  });
+
+  test("dispatches right-click targets through custom right-button mouse input", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -732,9 +987,12 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "getByTestId:menu-target",
-        "click:testid=menu-target:right",
+        "scrollIntoViewIfNeeded:testid=menu-target:none",
+        "mouseDown:right",
+        "mouseUp:right",
       ]),
     );
+    expect(page.events).not.toContain("click:testid=menu-target:right");
     expect(page.events).not.toContain("evaluate:testid=menu-target");
   });
 
@@ -2725,6 +2983,10 @@ class FakePage implements BrowserDriverPage {
       this.events.push(`scrollBy:${arg.deltaX}:${arg.deltaY}`);
       return null;
     }
+    if (isClipboardEvaluationArg(arg)) {
+      this.events.push(`clipboard:${arg.text}`);
+      return null;
+    }
     if (isStorageEvaluationArg(arg)) {
       this.events.push(`${arg.storage}Storage:${arg.key}:${arg.value}`);
       return null;
@@ -2749,12 +3011,27 @@ class FakePage implements BrowserDriverPage {
     press: async (key: string) => {
       this.events.push(`press:${key}`);
     },
+    down: async (key: string) => {
+      this.events.push(`down:${key}`);
+    },
+    up: async (key: string) => {
+      this.events.push(`up:${key}`);
+    },
     type: async (text: string) => {
       this.events.push(`keyboard:${text}`);
     },
   };
 
   mouse = {
+    move: async (x: number, y: number) => {
+      this.events.push(`move:${x}:${y}`);
+    },
+    down: async (options?: { button?: string }) => {
+      this.events.push(`mouseDown:${options?.button ?? "left"}`);
+    },
+    up: async (options?: { button?: string }) => {
+      this.events.push(`mouseUp:${options?.button ?? "left"}`);
+    },
     wheel: async (x: number, y: number) => {
       this.events.push(`wheel:${x}:${y}`);
     },
@@ -2763,8 +3040,8 @@ class FakePage implements BrowserDriverPage {
 
 class FakeLocator {
   constructor(
-    private readonly selector: string,
-    private readonly events: string[],
+    protected readonly selector: string,
+    protected readonly events: string[],
   ) {}
 
   async fill(value: string) {
@@ -2806,19 +3083,33 @@ class FakeLocator {
     return null;
   }
 
-  async hover() {}
+  async hover() {
+    this.events.push(`hover:${this.selector}`);
+  }
 
-  async dblclick() {}
+  async dblclick() {
+    this.events.push(`dblclick:${this.selector}`);
+  }
 
-  async check() {}
+  async check() {
+    this.events.push(`check:${this.selector}`);
+  }
 
-  async uncheck() {}
+  async uncheck() {
+    this.events.push(`uncheck:${this.selector}`);
+  }
 
-  async selectOption() {}
+  async selectOption() {
+    this.events.push(`selectOption:${this.selector}`);
+  }
 
-  async setInputFiles() {}
+  async setInputFiles() {
+    this.events.push(`setInputFiles:${this.selector}`);
+  }
 
-  async press() {}
+  async press(key?: string) {
+    this.events.push(`locatorPress:${this.selector}:${key ?? ""}`);
+  }
 
   async textContent() {
     return "Owned Fixture";
@@ -2833,7 +3124,7 @@ class FakeLocator {
   }
 
   async boundingBox() {
-    return { width: 100, height: 40 };
+    return { x: 10, y: 20, width: 100, height: 40 };
   }
 
   async count() {
@@ -2861,6 +3152,12 @@ class FakeLocator {
     );
   }
 
+  async scrollIntoViewIfNeeded(options?: { timeout?: number }) {
+    this.events.push(
+      `scrollIntoViewIfNeeded:${this.selector}:${options?.timeout ?? "none"}`,
+    );
+  }
+
   async dragTo(target: FakeLocator) {
     this.events.push(`dragTo:${this.selector}:${target.selector}`);
   }
@@ -2882,6 +3179,13 @@ class MinimalMethodPage extends FakePage {
   }
 }
 
+class NativeFailingActionPage extends FakePage {
+  override locator(selector: string) {
+    this.events.push(`locator:${selector}`);
+    return new NativeFailingActionLocator(selector, this.events);
+  }
+}
+
 class MinimalMethodLocator {
   constructor(
     private readonly selector: string,
@@ -2896,6 +3200,23 @@ class MinimalMethodLocator {
     this.events.push(
       options?.button ? `click:${this.selector}:${options.button}` : `click:${this.selector}`,
     );
+  }
+}
+
+class NativeFailingActionLocator extends FakeLocator {
+  override async click() {
+    this.events.push(`click-failed:${this.selector}`);
+    throw new Error("native click failed");
+  }
+
+  override async check() {
+    this.events.push(`check-failed:${this.selector}`);
+    throw new Error("native check failed");
+  }
+
+  override async press(key?: string) {
+    this.events.push(`locatorPress-failed:${this.selector}:${key ?? ""}`);
+    throw new Error("native press failed");
   }
 }
 
@@ -2943,6 +3264,15 @@ function isScrollEvaluationArg(value: unknown): value is { deltaX: number; delta
       typeof value === "object" &&
       "deltaX" in value &&
       "deltaY" in value,
+  );
+}
+
+function isClipboardEvaluationArg(value: unknown): value is { text: string } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "text" in value &&
+      typeof (value as { text?: unknown }).text === "string",
   );
 }
 

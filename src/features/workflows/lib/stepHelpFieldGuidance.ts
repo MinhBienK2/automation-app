@@ -631,11 +631,11 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode quyết định ý nghĩa của các field còn lại.",
-      "Khi đổi Mode, hãy đọc lại mô tả XPath vì mỗi mode có thể hiểu XPath khác nhau.",
+      "Page dùng Direction/Pixels; Into View và Until Visible dùng Target locator và Timeout.",
     ],
     Direction: [
       "Down/Up cuộn theo chiều dọc; Left/Right cuộn theo chiều ngang.",
-      "Direction dùng trong Page, Container, và Until Visible.",
+      "Direction chỉ dùng trong Page scroll.",
     ],
     Pixels: [
       "Pixels là khoảng cách cuộn mỗi lần.",
@@ -767,11 +767,11 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode decides how the other fields are interpreted.",
-      "When changing Mode, reread XPath guidance because each mode can use XPath differently.",
+      "Page uses Direction/Pixels; Into View and Until Visible use Target locator and Timeout.",
     ],
     Direction: [
       "Down/Up scroll vertically; Left/Right scroll horizontally.",
-      "Direction is used by Page, Container, and Until Visible.",
+      "Direction is only used by Page scroll.",
     ],
     Pixels: [
       "Pixels is the distance per scroll attempt.",

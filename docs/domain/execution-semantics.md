@@ -30,12 +30,12 @@
 - `while_loop` and `repeat_until` honor configured timeouts as well as max-attempt guards. `repeat_until.timeout_steps` run when the predicate remains false after max attempts or timeout.
 - Browser identity, proxy, user-agent, profile, and download behavior belong in Workflow Settings Browser Launch, not in in-run action nodes.
 - `set_viewport` changes only runtime viewport width and height. Device scale factor, mobile mode, and touch capability are launch-time Browser Launch identity settings.
-- Click supports normal locator clicks. CloakBrowser owns low-level pointer and keyboard humanization.
-- Runner action traces record compact action mode/status metadata; behavior-fidelity execution path gating is not part of the current workflow contract.
-- Select Radio sets the resolved radio target in the browser DOM and dispatches input/change events so radio workflows do not depend on click heuristics.
-- Submit Form with a target submits the resolved element's owning form through the browser DOM so button and form targets do not hang on Playwright click/navigation heuristics; Submit Form without a target presses Enter on the current page.
-- Right Click dispatches a right-button context-menu event sequence at the resolved target, avoiding driver adapters that ignore right-click button options.
-- Scroll delegates to the CloakBrowser page's Playwright-compatible wheel input; `window.scrollBy` is only a fallback for driver adapters without wheel input. Element-targeted actions such as Click use CloakBrowser's humanized element pipeline, including human-like scroll-to-element before pointer movement.
+- Click, double click, hover, fill, select, checkbox, drag/drop, and element-targeted scroll prefer CloakBrowser-patched locator/frame APIs so CloakBrowser owns supported humanization.
+- Runner action traces record compact action mode/status metadata. The runner also keeps an internal interaction capability map: CloakBrowser-native when supported, custom human behavior only for unsupported cases, and direct DOM for read/assert/storage or final fallback paths.
+- Select Radio tries the CloakBrowser locator `check()` path first, then locator click, and only falls back to DOM checked/input/change mutation if the native paths fail.
+- Submit Form with a target tries locator click/press first and only falls back to DOM `requestSubmit`; Submit Form without a target uses custom Enter key hold timing on the page keyboard.
+- Right Click uses custom human movement to the resolved target followed by right-button down/up, avoiding CloakBrowser patched click paths that do not preserve the right-button option.
+- Scroll Page mode uses custom human wheel chunks because CloakBrowser does not patch `page.mouse.wheel` directly; `window.scrollBy` is only a fallback for driver adapters without wheel input. Scroll Into View and Until Visible use the target locator's CloakBrowser/Playwright scroll-to-element path, including legacy `iframe_xpath` resolution when provided.
 - Dialog actions register one-shot browser dialog handlers. `wait_for_download` waits for a real download event and saves the artifact under the current run evidence directory.
 - `extract_table` resolves the target table or nearest owning table and stores rows as arrays of trimmed `th`/`td` cell text.
 - `execute_js` runs script text as a browser-side function body. Scripts may use `return ...`; when `output_name` is set, the returned value is stored in run outputs.

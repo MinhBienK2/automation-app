@@ -85,6 +85,9 @@ export type VariableAssignment = {
   value: string;
 };
 
+export type ScrollMode = "page" | "into_view" | "until_visible";
+export type ScrollDirection = "up" | "down" | "left" | "right";
+
 export type WorkflowSummary = {
   id: string;
   name: string;
@@ -356,9 +359,13 @@ export type ActionConfig =
   | {
       type: "scroll";
       config: {
-        mode?: "page" | null;
-        direction: "up" | "down" | "left" | "right";
-        pixels: number;
+        mode?: ScrollMode | null;
+        direction?: ScrollDirection;
+        pixels?: number;
+        xpath?: string | null;
+        target?: ElementTarget | null;
+        iframe_xpath?: string | null;
+        timeout_ms?: number | null;
       };
     }
   | {

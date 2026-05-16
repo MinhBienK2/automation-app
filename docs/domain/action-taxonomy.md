@@ -56,7 +56,7 @@ Graph-internal action types are not visible in the main action picker. This incl
 - `assert_output`
 - `domain_allowlist`
 
-Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, and clear-method fields. The visible structured target editor defaults its locator kind to XPath while allowing more stable locator kinds when available.
+Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, and clear-method fields. Scroll is the exception that exposes Page pixel distance and element-targeted scroll modes because those are the action's core contract. The visible structured target editor defaults its locator kind to XPath while allowing more stable locator kinds when available.
 
 Removed actions: `open_url`, `sleep`, and `type_text` are not part of the current authoring contract.
 

@@ -414,10 +414,41 @@ function updateScrollConfigField(
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
+  if (field === "mode") {
+    const mode = value === "into_view" || value === "until_visible" ? value : "page";
+    if (mode === "page") {
+      return {
+        type: "scroll",
+        config: {
+          ...config.config,
+          mode,
+          direction: config.config.direction ?? "down",
+          pixels: config.config.pixels ?? 500,
+        },
+      };
+    }
+    return {
+      type: "scroll",
+      config: {
+        ...config.config,
+        mode,
+        target: config.config.target ?? null,
+        timeout_ms: config.config.timeout_ms ?? 5000,
+      },
+    };
+  }
+
   if (field === "pixels") {
     return {
       type: "scroll",
       config: { ...config.config, [field]: Number(value) },
+    };
+  }
+
+  if (field === "timeout_ms") {
+    return {
+      type: "scroll",
+      config: { ...config.config, timeout_ms: Number(value) },
     };
   }
 
