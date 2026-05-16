@@ -74,8 +74,8 @@ function createMainWindow() {
 
 function getAppIconPath() {
   return app.isPackaged
-    ? path.join(app.getAppPath(), "dist/app-logo.svg")
-    : path.join(app.getAppPath(), "public/app-logo.svg");
+    ? path.join(app.getAppPath(), "dist/app-logo.png")
+    : path.join(app.getAppPath(), "public/app-logo.png");
 }
 
 function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {

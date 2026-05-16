@@ -36,8 +36,8 @@ describe("Electron main process", () => {
     const source = await readMainSource();
 
     expect(source).toContain("function getAppIconPath()");
-    expect(source).toContain('path.join(app.getAppPath(), "public/app-logo.svg")');
-    expect(source).toContain('path.join(app.getAppPath(), "dist/app-logo.svg")');
+    expect(source).toContain('path.join(app.getAppPath(), "public/app-logo.png")');
+    expect(source).toContain('path.join(app.getAppPath(), "dist/app-logo.png")');
     expect(source).toContain("app.isPackaged");
     expect(source).toContain("icon: getAppIconPath()");
   });

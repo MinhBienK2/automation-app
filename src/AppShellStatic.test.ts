@@ -11,7 +11,7 @@ describe("app shell static assets", () => {
     expect(existsSync(join(process.cwd(), "src/assets/react.svg"))).toBe(false);
   });
 
-  test("uses the app logo asset for the renderer favicon", () => {
+  test("uses the app logo assets for the renderer and Electron package", () => {
     const indexHtml = readFileSync(join(process.cwd(), "index.html"), "utf8");
     const packageJson = JSON.parse(
       readFileSync(join(process.cwd(), "package.json"), "utf8"),
@@ -19,8 +19,10 @@ describe("app shell static assets", () => {
 
     expect(indexHtml).toContain('rel="icon"');
     expect(indexHtml).toContain('href="./app-logo.svg"');
+    expect(indexHtml).toContain('href="./app-logo.png"');
     expect(existsSync(join(process.cwd(), "public/app-logo.svg"))).toBe(true);
-    expect(packageJson.build?.icon).toBe("public/app-logo.svg");
+    expect(existsSync(join(process.cwd(), "public/app-logo.png"))).toBe(true);
+    expect(packageJson.build?.icon).toBe("public/app-logo.png");
   });
 
   test("does not keep unused Radix tabs primitive or dependency", () => {
