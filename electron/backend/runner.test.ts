@@ -680,11 +680,13 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("click:testid=role-admin");
   });
 
-  test("scrolls pages through browser wheel input", async () => {
+  test("delegates scroll to the CloakBrowser page wheel input", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
     });
 
     const result = await runner.run({
@@ -701,7 +703,9 @@ describe("BrowserWorkflowRunner", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(page.events).toContain("wheel:0:900");
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual([
+      "wheel:0:900",
+    ]);
   });
 
   test("dispatches right-click targets through native locator input", async () => {

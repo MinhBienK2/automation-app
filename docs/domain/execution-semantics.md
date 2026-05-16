@@ -35,7 +35,7 @@
 - Select Radio sets the resolved radio target in the browser DOM and dispatches input/change events so radio workflows do not depend on click heuristics.
 - Submit Form with a target submits the resolved element's owning form through the browser DOM so button and form targets do not hang on Playwright click/navigation heuristics; Submit Form without a target presses Enter on the current page.
 - Right Click dispatches a right-button context-menu event sequence at the resolved target, avoiding driver adapters that ignore right-click button options.
-- Scroll updates page position through browser-side `window.scrollBy` and emits a scroll event before the next action runs.
+- Scroll delegates to the CloakBrowser page's Playwright-compatible wheel input; `window.scrollBy` is only a fallback for driver adapters without wheel input. Element-targeted actions such as Click use CloakBrowser's humanized element pipeline, including human-like scroll-to-element before pointer movement.
 - Dialog actions register one-shot browser dialog handlers. `wait_for_download` waits for a real download event and saves the artifact under the current run evidence directory.
 - `extract_table` resolves the target table or nearest owning table and stores rows as arrays of trimmed `th`/`td` cell text.
 - `execute_js` runs script text as a browser-side function body. Scripts may use `return ...`; when `output_name` is set, the returned value is stored in run outputs.

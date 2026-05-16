@@ -58,7 +58,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 Browser action dispatch lives in `electron/backend/runner.ts` and is grouped by user behavior:
 
 - Pointer: click, hover, double click, right click, and drag/drop dispatch browser-level primitives where possible. CloakBrowser owns low-level interaction humanization.
-- Scroll: page scrolling runs through Playwright-compatible `mouse.wheel`, with a `window.scrollBy` fallback only for driver adapters without mouse wheel support.
+- Scroll: page scrolling delegates to Playwright-compatible `mouse.wheel` on the CloakBrowser page. The runner does not implement its own human-scroll timing; element-targeted actions rely on CloakBrowser's humanized scroll-to-element behavior before pointer movement. `window.scrollBy` is only a fallback for driver adapters without mouse wheel support.
 - Browser context: Set Viewport changes runtime width and height only; device scale factor, mobile mode, and touch capability are Browser Launch identity settings.
 - Wait: duration, page, URL, text, and element waits with cancellation support.
 - Input: text input, clearing input, and contenteditable updates. `Fill Field` uses the browser field-fill primitive; CloakBrowser owns behavior realism.
