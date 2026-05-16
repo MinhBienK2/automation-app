@@ -869,6 +869,8 @@ function workflowSettings(
       proxy_username: null,
       proxy_password: null,
       headless: false,
+      humanize: true,
+      human_preset: "default",
       ...overrides.browser_launch,
     },
     environment: {

@@ -63,6 +63,8 @@ describe("Electron workflow command handlers", () => {
         display_name: "Login flow identity",
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
+        humanize: true,
+        human_preset: "default",
       },
     });
     expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
@@ -96,11 +98,18 @@ describe("Electron workflow command handlers", () => {
         name: "Renamed flow",
         tags: ["qa"],
       },
+      browser_launch: {
+        ...settings.browser_launch,
+        humanize: false,
+        human_preset: "careful",
+      },
     });
 
     expect(saved.general.name).toBe("Renamed flow");
     expect(saved.browser_launch.fingerprint_seed).toBe(initialSeed);
     expect(saved.browser_launch.display_name).toBe("Login flow identity");
+    expect(saved.browser_launch.humanize).toBe(false);
+    expect(saved.browser_launch.human_preset).toBe("careful");
     expect(handlers.listWorkflows()[0]).toMatchObject({
       id: created.id,
       name: "Renamed flow",
@@ -112,6 +121,12 @@ describe("Electron workflow command handlers", () => {
         .get(created.id),
     ).toMatchObject({
       settings_json: expect.stringContaining("Renamed flow"),
+    });
+    expect(JSON.parse(
+      String(database.prepare("SELECT settings_json FROM workflows WHERE id = ?").get(created.id)?.settings_json ?? "{}"),
+    ).browser_launch).toMatchObject({
+      humanize: false,
+      human_preset: "careful",
     });
 
     handlers.deleteWorkflow(created.id);

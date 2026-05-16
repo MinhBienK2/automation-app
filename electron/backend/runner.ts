@@ -1569,8 +1569,8 @@ function buildLaunchOptions(
   ].filter((arg): arg is string => Boolean(arg));
   return {
     headless: browser.headless,
-    humanize: true,
-    humanPreset: "default",
+    humanize: browser.humanize !== false,
+    humanPreset: browser.human_preset === "careful" ? "careful" : "default",
     userAgent: browser.user_agent?.trim() || undefined,
     viewport: {
       width: browser.viewport_width || 1920,
@@ -1658,7 +1658,8 @@ async function browserIdentityEvidence(settings: WorkflowSettings, runId: string
       mobile: browser.mobile,
       touch: browser.touch,
     },
-    humanize: true,
+    humanize: browser.humanize !== false,
+    human_preset: browser.human_preset === "careful" ? "careful" : "default",
     advanced_overrides: activeAdvancedFingerprintOverrides(browser),
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
   };

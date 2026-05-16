@@ -247,6 +247,8 @@ export function defaultWorkflowSettings({
       proxy_username: null,
       proxy_password: null,
       headless: false,
+      humanize: true,
+      human_preset: "default",
       run_from_selected_enabled: false,
     },
     environment: {
@@ -681,6 +683,13 @@ export const workflowSettingsHelp: Record<
             "Prefer seed defaults, and use overrides only when an owned account, proxy inventory, or preflight probe requires a specific coherent device bundle.",
         },
         {
+          name: "Humanize browser input",
+          description:
+            "Launch-level CloakBrowser humanization toggle and preset. The default preset uses normal human-like mouse, keyboard, and scroll timing; careful uses slower, more deliberate movement.",
+          whenToUse:
+            "Keep it enabled for production-like owned tests; choose careful when a workflow should move more slowly and cautiously through sensitive screens.",
+        },
+        {
           name: "Fingerprint preflight",
           description:
             "Optional owned probe gate that launches the resolved browser identity, opens an allowlisted probe, reads a JSON verdict, and blocks graph actions when identity mismatches are reported.",
@@ -830,6 +839,13 @@ export const workflowSettingsHelp: Record<
             "Các override CloakBrowser allowlist, rủi ro cao cho platform, hardware concurrency, device memory, storage quota, và fonts directory managed; raw Chromium args vẫn không được mở.",
           whenToUse:
             "Ưu tiên seed default, chỉ override khi account owned, proxy inventory, hoặc preflight probe yêu cầu một device bundle nhất quán cụ thể.",
+        },
+        {
+          name: "Humanize browser input",
+          description:
+            "Toggle và preset humanization cấp launch của CloakBrowser. Preset default dùng timing chuột, bàn phím, scroll giống người bình thường; careful chậm hơn và thận trọng hơn.",
+          whenToUse:
+            "Giữ bật cho test owned gần production; chọn careful khi workflow cần thao tác chậm và cẩn trọng hơn trên màn hình nhạy cảm.",
         },
         {
           name: "Fingerprint preflight",

@@ -76,6 +76,8 @@ Workflow Settings are persisted separately from graph JSON:
     proxy_username,
     proxy_password,
     headless,
+    humanize,
+    human_preset,
     run_from_selected_enabled
   },
   environment: { initial_variables },
@@ -89,7 +91,7 @@ Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords
 and proxy URL credentials. Advanced fingerprint controls are allowlisted fields
 only; raw Chromium argument text is not part of the public settings contract.
-CloakBrowser humanization is an internal runner default and is not persisted as a user-editable Browser Launch field.
+CloakBrowser humanization defaults to `true` and is persisted as the Browser Launch `humanize` toggle. `human_preset` maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with invalid or missing persisted values normalized to `default`.
 
 Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.

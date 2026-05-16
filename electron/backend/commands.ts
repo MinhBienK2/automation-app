@@ -1906,6 +1906,8 @@ function normalizeSettingsBrowserLaunch(
     preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
       ? browser.preflight_allowed_origins.filter((origin) => typeof origin === "string" && origin.trim())
       : [],
+    humanize: browser.humanize !== false,
+    human_preset: validHumanPreset(browser.human_preset) ? browser.human_preset : "default",
     user_agent: nullableText(browser.user_agent),
     session_mode: browser.session_mode === "persistent_profile"
       ? "persistent_profile"
@@ -1990,6 +1992,8 @@ function createDefaultBrowserIdentity(
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
+  | "humanize"
+  | "human_preset"
   | "user_agent"
 > {
   const identityId = options.randomizeIdentity
@@ -2026,6 +2030,8 @@ function createDefaultBrowserIdentity(
     preflight_probe_url: null,
     preflight_allowed_origins: [],
     user_agent: null,
+    humanize: true,
+    human_preset: "default",
   };
 }
 
@@ -2075,6 +2081,10 @@ function validWebRtcPolicy(value: unknown): value is WorkflowSettingsBrowserLaun
   );
 }
 
+function validHumanPreset(value: unknown): value is WorkflowSettingsBrowserLaunch["human_preset"] {
+  return value === "default" || value === "careful";
+}
+
 function validFingerprintPlatform(
   value: unknown,
 ): value is NonNullable<WorkflowSettingsBrowserLaunch["fingerprint_platform"]> {
@@ -2118,6 +2128,8 @@ function browserIdentityPreferences(
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
+  | "humanize"
+  | "human_preset"
 > {
   return {
     identity_id: browser.identity_id,
@@ -2148,6 +2160,8 @@ function browserIdentityPreferences(
     preflight_enabled: browser.preflight_enabled,
     preflight_probe_url: browser.preflight_probe_url,
     preflight_allowed_origins: browser.preflight_allowed_origins,
+    humanize: browser.humanize,
+    human_preset: browser.human_preset,
   };
 }
 

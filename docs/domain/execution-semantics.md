@@ -61,17 +61,17 @@
 
 ## Browser Sessions
 
-- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` is always enabled internally.
+- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` defaults to enabled and can be disabled from Workflow Settings Browser Launch. The `human_preset` setting maps to CloakBrowser `humanPreset` and supports `default` or `careful`.
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
 - Starting a new run closes retained sessions from previous terminal runs before a new CloakBrowser context launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
 - A run-from-selected run reuses the retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
-- Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, proxy server/bypass/credentials, timezone, locale, GeoIP, viewport/device flags, supported WebRTC policy values, allowlisted advanced fingerprint overrides, and headless mode into CloakBrowser launch options. The runner separately applies internal CloakBrowser humanization defaults.
+- Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, proxy server/bypass/credentials, timezone, locale, GeoIP, viewport/device flags, supported WebRTC policy values, allowlisted advanced fingerprint overrides, humanize toggle/preset, and headless mode into CloakBrowser launch options.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.
 - When enabled, owned fingerprint preflight runs after CloakBrowser launch and initial environment setup, opens the configured allowlisted probe URL, reads a structured verdict, writes sanitized `fingerprint_preflight` output, and stops before graph actions if the verdict fails or is malformed.
-- `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, non-secret proxy metadata, timezone/locale source, GeoIP/supported WebRTC policy, active advanced overrides, and internal humanization status. Package export redacts proxy passwords, proxy URL credentials, and probe URL search/hash values.
+- `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, non-secret proxy metadata, timezone/locale source, GeoIP/supported WebRTC policy, active advanced overrides, and configured humanization status/preset. Package export redacts proxy passwords, proxy URL credentials, and probe URL search/hash values.
 
 ## Cancellation
 

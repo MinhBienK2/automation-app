@@ -625,6 +625,27 @@ function BrowserLaunchSettingsSection({
         />
       </label>
       <SwitchField
+        checked={value.humanize !== false}
+        label="Humanize browser input"
+        onCheckedChange={(checked) => onChange({ ...value, humanize: checked })}
+      />
+      <label className="field">
+        <span>Humanize preset</span>
+        <Select
+          value={value.human_preset ?? "default"}
+          onChange={(event) => {
+            const nextValue = event.currentTarget.value;
+            onChange({
+              ...value,
+              human_preset: nextValue === "careful" ? "careful" : "default",
+            });
+          }}
+        >
+          <option value="default">Default</option>
+          <option value="careful">Careful</option>
+        </Select>
+      </label>
+      <SwitchField
         checked={Boolean(value.preflight_enabled)}
         label="Fingerprint preflight"
         onCheckedChange={(checked) => onChange({ ...value, preflight_enabled: checked })}

@@ -86,7 +86,8 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Device memory GB")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Storage quota MB")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toBeInTheDocument();
-    expect(within(dialog).queryByRole("switch", { name: "Humanize browser input" })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
+    expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Fingerprint preflight" })).toBeInTheDocument();
   });

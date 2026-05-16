@@ -21,7 +21,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings Browser Launch exposes Reset identity and Duplicate identity controls. Reset asks for confirmation, creates a new identity id/profile directory/fingerprint seed, preserves non-storage preferences such as proxy and locale, and disables Run from selected until a fresh retained session exists. Duplicate creates a new identity id/profile directory/fingerprint seed with a copied display name and copied non-storage preferences; it does not copy browser storage.
 - Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses the identity's stable persistent browser profile; turning it off clears `profile_name` so the run uses temporary browser storage while keeping the same identity seed.
 - Workflow Settings Browser Launch exposes an Enable Run from selected checkbox. It can only be enabled when Reuse login session is on and browser retention is `retain`; turning Reuse login session off also disables Run from selected.
-- Workflow Settings Browser Launch exposes proxy URL/credentials/bypass and non-secret proxy metadata, timezone, locale, GeoIP, viewport/device, allowlisted advanced fingerprint overrides, humanization, behavior fidelity, optional owned fingerprint preflight, and headless launch controls. Fingerprint preflight requires an allowlisted probe origin and headed mode.
+- Workflow Settings Browser Launch exposes proxy URL/credentials/bypass and non-secret proxy metadata, timezone, locale, GeoIP, viewport/device, allowlisted advanced fingerprint overrides, a Humanize browser input toggle, a Humanize preset select with `default` and `careful`, optional owned fingerprint preflight, and headless launch controls. Fingerprint preflight requires an allowlisted probe origin and headed mode.
 - Set Viewport is an in-run viewport-size action. Active authoring exposes width and height only; device scale factor, mobile viewport, and touch input are configured in Workflow Settings Browser Launch before Chromium starts.
 - Workflow Settings saves and workflow deletion must reject browser identity profile reset/delete while a retained browser session is still active for that workflow/profile.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and explains each section field in enough detail for an operator to decide what the field controls and when to use it.
@@ -90,7 +90,7 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute the compiled saved graph.
 - Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
-- Full runs use persisted Workflow Settings as the run baseline. Browser Launch identity settings, including profile directory, fingerprint seed, proxy, timezone, locale, viewport/device flags, supported WebRTC IP policy values, advanced fingerprint overrides, preflight, and headless mode, are resolved before browser launch. CloakBrowser humanization is enabled internally by the runner and is not user-configurable. Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
+- Full runs use persisted Workflow Settings as the run baseline. Browser Launch identity settings, including profile directory, fingerprint seed, proxy, timezone, locale, viewport/device flags, supported WebRTC IP policy values, advanced fingerprint overrides, humanize toggle/preset, preflight, and headless mode, are resolved before browser launch. Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
 - Set Viewport updates runtime viewport width and height only.
 - Headed CloakBrowser runs on Linux fail with a clear display prerequisite message when no `DISPLAY` or `WAYLAND_DISPLAY` is configured.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
@@ -101,7 +101,7 @@ Preserve these unless the task explicitly changes them.
 - Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
-- `browser_identity` output evidence includes a fingerprint seed hash, non-secret network metadata, timezone/locale source, supported WebRTC policy, active advanced overrides, internal humanization status, and CloakBrowser wrapper/binary version evidence.
+- `browser_identity` output evidence includes a fingerprint seed hash, non-secret network metadata, timezone/locale source, supported WebRTC policy, active advanced overrides, configured humanization status and preset, and CloakBrowser wrapper/binary version evidence.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 
 ## Persistence

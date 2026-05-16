@@ -78,6 +78,8 @@ describe("BrowserWorkflowRunner", () => {
         device_memory_gb: 16,
         storage_quota_mb: 256,
         webrtc_policy: "auto_proxy_exit_ip",
+        humanize: false,
+        human_preset: "careful",
       },
     });
 
@@ -95,8 +97,8 @@ describe("BrowserWorkflowRunner", () => {
         options: expect.objectContaining({
           userDataDir: path.join(paths.browserProfilesDir, "bi_test_identity"),
           headless: false,
-          humanize: true,
-          humanPreset: "default",
+          humanize: false,
+          humanPreset: "careful",
           userAgent: undefined,
           viewport: { width: 1920, height: 947 },
           timezone: "America/New_York",
@@ -151,7 +153,8 @@ describe("BrowserWorkflowRunner", () => {
         mobile: false,
         touch: false,
       },
-      humanize: true,
+      humanize: false,
+      human_preset: "careful",
       advanced_overrides: [
         "fingerprint_platform",
         "hardware_concurrency",

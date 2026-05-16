@@ -117,6 +117,7 @@ export type WorkflowSettingsSectionId =
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
 export type WorkflowFingerprintPlatform = "windows" | "macos" | "linux";
+export type WorkflowHumanPreset = "default" | "careful";
 export type WorkflowWebRtcPolicy =
   | "default"
   | "auto_proxy_exit_ip"
@@ -171,6 +172,8 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   preflight_probe_url?: string | null;
   preflight_allowed_origins: string[];
   headless: boolean;
+  humanize: boolean;
+  human_preset: WorkflowHumanPreset;
   run_from_selected_enabled: boolean;
 };
 
