@@ -375,7 +375,7 @@
 .graph-handle:hover::after,
 .graph-handle:focus-visible::after {
   opacity: 1;
-  transition-delay: 0.6s;
+  transition-delay: 1s;
   visibility: visible;
 }
 

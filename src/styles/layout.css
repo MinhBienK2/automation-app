@@ -32,17 +32,15 @@
   padding: 0 6px;
 }
 
-.sidebar-mark {
-  display: inline-grid;
+.sidebar-logo {
+  display: block;
   flex: 0 0 auto;
-  place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border: 1px solid rgba(62, 207, 142, 0.48);
   border-radius: 8px;
-  color: #3ecf8e;
-  font-size: 14px;
-  font-weight: 500;
+  background: #171717;
+  object-fit: contain;
 }
 
 .sidebar-title {

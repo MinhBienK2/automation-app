@@ -11,6 +11,18 @@ describe("app shell static assets", () => {
     expect(existsSync(join(process.cwd(), "src/assets/react.svg"))).toBe(false);
   });
 
+  test("uses the app logo asset for the renderer favicon", () => {
+    const indexHtml = readFileSync(join(process.cwd(), "index.html"), "utf8");
+    const packageJson = JSON.parse(
+      readFileSync(join(process.cwd(), "package.json"), "utf8"),
+    ) as { build?: { icon?: string } };
+
+    expect(indexHtml).toContain('rel="icon"');
+    expect(indexHtml).toContain('href="./app-logo.svg"');
+    expect(existsSync(join(process.cwd(), "public/app-logo.svg"))).toBe(true);
+    expect(packageJson.build?.icon).toBe("public/app-logo.svg");
+  });
+
   test("does not keep unused Radix tabs primitive or dependency", () => {
     const packageJson = JSON.parse(
       readFileSync(join(process.cwd(), "package.json"), "utf8"),

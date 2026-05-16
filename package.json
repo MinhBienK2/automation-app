@@ -23,6 +23,7 @@
   "build": {
     "appId": "internal.automation.workflow-manager",
     "productName": "Automation App",
+    "icon": "public/app-logo.svg",
     "directories": {
       "output": "release"
     },

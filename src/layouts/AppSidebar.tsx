@@ -11,6 +11,8 @@ type AppSidebarProps = {
   onToggle: () => void;
 };
 
+const appLogoSrc = `${import.meta.env.BASE_URL}app-logo.svg`;
+
 function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
   return (
     <svg
@@ -53,7 +55,7 @@ export function AppSidebar({
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
-        <span className="sidebar-mark">W</span>
+        <img className="sidebar-logo" src={appLogoSrc} alt="Automation App logo" />
         <span className="sidebar-title">Workflow Manager</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
