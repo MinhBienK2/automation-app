@@ -25,12 +25,11 @@
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
-- `while_loop`, `repeat_until`, and `resume_when_condition` honor configured timeouts as well as max-attempt guards. `repeat_until.timeout_steps` run when the predicate remains false after max attempts or timeout.
-- `run_subworkflow` is preserved as a compatibility action config but fails explicitly at runtime until nested lifecycle, recursion, and evidence ownership are designed.
-- Launch-time-only actions such as profile/proxy/user-agent/download-directory settings are hidden from active action authoring. Legacy graph nodes for profile, proxy, or user-agent fail graph validation with an instruction to move the setting to Workflow Settings before launch; runner dispatch still fails explicitly if such an action reaches runtime.
-- `set_viewport` changes only runtime viewport width and height. Device scale factor, mobile mode, and touch capability are launch-time Browser Launch identity settings; non-default legacy values on Set Viewport fail graph validation and runner execution instead of being evidenced as applied.
-- Click supports normal locator clicks, `force_dom` DOM clicks, optional pre-click `scrollIntoView` alignment, button/click count, and configured click positions or offsets.
-- Runner action traces record an `execution_path` of `humanized`, `browser_api`, `dom_fallback`, or `cdp_sensitive`. Browser Launch `behavior_fidelity: strict_humanized` fails DOM fallback and CDP-sensitive actions before they execute; `balanced` and `deterministic_internal` allow them while preserving trace evidence.
+- `while_loop` and `repeat_until` honor configured timeouts as well as max-attempt guards. `repeat_until.timeout_steps` run when the predicate remains false after max attempts or timeout.
+- Browser identity, proxy, user-agent, profile, and download behavior belong in Workflow Settings Browser Launch, not in in-run action nodes.
+- `set_viewport` changes only runtime viewport width and height. Device scale factor, mobile mode, and touch capability are launch-time Browser Launch identity settings.
+- Click supports normal locator clicks. CloakBrowser owns low-level pointer and keyboard humanization.
+- Runner action traces record compact action mode/status metadata; behavior-fidelity execution path gating is not part of the current workflow contract.
 - Select Radio sets the resolved radio target in the browser DOM and dispatches input/change events so radio workflows do not depend on click heuristics.
 - Submit Form with a target submits the resolved element's owning form through the browser DOM so button and form targets do not hang on Playwright click/navigation heuristics; Submit Form without a target presses Enter on the current page.
 - Right Click dispatches a right-button context-menu event sequence at the resolved target, avoiding driver adapters that ignore right-click button options.
@@ -62,18 +61,17 @@
 
 ## Browser Sessions
 
-- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` is enabled by default and can be changed per browser identity.
+- Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` is always enabled internally.
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
 - Starting a new run closes retained sessions from previous terminal runs before a new CloakBrowser context launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
 - A run-from-selected run reuses the retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
-- Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, proxy server/bypass/credentials, timezone, locale, GeoIP, viewport/device flags, supported WebRTC policy values, allowlisted advanced fingerprint overrides, humanize preset, behavior fidelity, and headless mode into CloakBrowser launch options.
+- Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, proxy server/bypass/credentials, timezone, locale, GeoIP, viewport/device flags, supported WebRTC policy values, allowlisted advanced fingerprint overrides, and headless mode into CloakBrowser launch options. The runner separately applies internal CloakBrowser humanization defaults.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
-- Legacy browser config commands are compatibility wrappers over Workflow Settings Browser Launch.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.
 - When enabled, owned fingerprint preflight runs after CloakBrowser launch and initial environment setup, opens the configured allowlisted probe URL, reads a structured verdict, writes sanitized `fingerprint_preflight` output, and stops before graph actions if the verdict fails or is malformed.
-- `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, non-secret proxy metadata, timezone/locale source, GeoIP/supported WebRTC policy, active advanced overrides, and behavior fidelity. Package export redacts proxy passwords, proxy URL credentials, and probe URL search/hash values.
+- `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, non-secret proxy metadata, timezone/locale source, GeoIP/supported WebRTC policy, active advanced overrides, and internal humanization status. Package export redacts proxy passwords, proxy URL credentials, and probe URL search/hash values.
 
 ## Cancellation
 

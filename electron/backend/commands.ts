@@ -124,8 +124,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   function getSettings(workflowId: string): WorkflowSettings {
     const persisted = repository.getWorkflowSettings(workflowId);
-    if (persisted) return migrateWorkflowSettings(persisted, requireWorkflow(workflowId));
-    return defaultWorkflowSettings(requireWorkflow(workflowId));
+    const workflow = requireWorkflow(workflowId);
+    if (persisted) return normalizeWorkflowSettings(persisted, workflow);
+    return defaultWorkflowSettings(workflow);
   }
 
   function lastRunAtForWorkflow(workflowId: string): string | null {
@@ -201,7 +202,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
-    const activeSettings = stripRemovedWorkflowSettingsSections(settings);
+    const workflow = requireWorkflow(workflowId);
+    const activeSettings = normalizeWorkflowSettings(settings, workflow);
     assertCanChangeBrowserIdentityProfile(workflowId, activeSettings);
     const issues = validateSettings(activeSettings);
     const firstError = issues.find((issue) => issue.level === "error");
@@ -214,7 +216,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       );
     }
 
-    const workflow = requireWorkflow(workflowId);
     const timestamp = new Date().toISOString();
     const normalized: WorkflowSettings = {
       ...activeSettings,
@@ -227,7 +228,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         created_at: activeSettings.general.created_at ?? workflow.created_at,
       },
       browser_launch: normalizeSettingsBrowserLaunch(activeSettings.browser_launch),
-      migration_notes: activeSettings.migration_notes ?? [],
+      migration_notes: activeSettings.migration_notes,
       updated_at: timestamp,
       created_at: activeSettings.created_at ?? workflow.created_at,
     };
@@ -1584,26 +1585,6 @@ async function directorySize(directory: string): Promise<number> {
   return total;
 }
 
-function stripRemovedWorkflowSettingsSections(settings: WorkflowSettings): WorkflowSettings {
-  const legacySettings = settings as WorkflowSettings & { owned_test_gates?: unknown };
-  const { owned_test_gates: removedOwnedTestGates, ...activeSettings } = legacySettings;
-  const migrationNotes = [...(activeSettings.migration_notes ?? [])];
-  if (
-    removedOwnedTestGates !== undefined &&
-    !migrationNotes.some((note) => note.path === "owned_test_gates")
-  ) {
-    migrationNotes.push({
-      path: "owned_test_gates",
-      action: "dropped",
-      message: "Dropped removed Owned Test Gates settings section.",
-    });
-  }
-  return {
-    ...activeSettings,
-    migration_notes: migrationNotes,
-  };
-}
-
 function buildPackageSettings(
   settings: WorkflowSettings,
   sections: WorkflowSettingsSectionId[],
@@ -1754,121 +1735,39 @@ function isCommandError(error: unknown): error is CommandError {
   );
 }
 
-function migrateWorkflowSettings(
+function normalizeWorkflowSettings(
   settings: WorkflowSettings,
   workflow: WorkflowSummary,
 ): WorkflowSettings {
-  if (settings.version === 2 && "run_policy" in settings) {
-    const activeSettings = stripRemovedWorkflowSettingsSections(settings);
-    return {
-      ...activeSettings,
-      browser_launch: normalizeSettingsBrowserLaunch(activeSettings.browser_launch),
-      migration_notes: activeSettings.migration_notes ?? [],
-    };
-  }
-
-  const legacy = settings as unknown as Record<string, any>;
   const base = defaultWorkflowSettings(workflow);
-  const notes = [...base.migration_notes];
-  const converted = (pathValue: string, message: string) => {
-    notes.push({ path: pathValue, action: "converted", message });
-  };
-  const dropped = (pathValue: string, message: string) => {
-    notes.push({ path: pathValue, action: "dropped", message });
-  };
-
-  const legacyExecution = objectRecord(legacy.execution);
-  const legacyBrowser = objectRecord(legacy.browser);
-  const legacyEnvironment = objectRecord(legacy.environment);
-  const legacyInputs = objectRecord(legacy.inputs);
-
-  const profileName = nullableText(legacyBrowser.profile_name);
-  if (profileName) converted("browser.profile_name", "Converted persistent profile into browser_launch.");
-  for (const field of ["proxy_enabled", "proxy_server", "proxy_username", "proxy_password", "headless"]) {
-    if (field in legacyBrowser) converted(`browser.${field}`, "Converted browser launch field.");
-  }
-
-  for (const field of [
-    "default_action_timeout_ms",
-    "default_retry_attempts",
-    "default_retry_interval_ms",
-    "failure_policy",
-    "interaction_fidelity",
-    "direct_dom_fallback",
-    "timing_profile",
-    "wait_between_nodes_enabled",
-    "wait_between_nodes_random",
-    "wait_between_nodes_ms",
-    "wait_between_nodes_min_ms",
-    "wait_between_nodes_max_ms",
-    "output_retention_days",
-  ]) {
-    if (field in legacyExecution) dropped(`execution.${field}`, "Dropped obsolete engine-level run setting.");
-  }
-  for (const field of ["user_agent", "viewport_width", "viewport_height", "mobile", "touch", "challenge_policy"]) {
-    if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped browser emulation or challenge setting.");
-  }
-  for (const field of [
-    "fingerprint_preflight_enabled",
-    "fingerprint_probe_url",
-    "fingerprint_profile_id",
-    "fingerprint_allowed_origins",
-    "fingerprint_proxy_label",
-    "fingerprint_proxy_region",
-  ]) {
-    if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped removed fingerprint preflight setting.");
-  }
-  for (const field of [
-    "geolocation",
-    "permissions",
-    "extra_http_headers",
-    "locale",
-    "timezone",
-    "download_directory",
-    "cookies",
-    "local_storage",
-    "session_storage",
-    "session_restore_ref",
-  ]) {
-    if (field in legacyEnvironment) dropped(`environment.${field}`, "Dropped browser context seeding from Workflow Settings.");
-  }
-  if (Array.isArray(legacyInputs.initial_variables)) {
-    converted("inputs.initial_variables", "Converted initial variables into environment.");
-  }
-
   return {
-    ...base,
-    workflow_id: typeof legacy.workflow_id === "string" ? legacy.workflow_id : workflow.id,
+    workflow_id: settings.workflow_id || workflow.id,
     version: 2,
     general: {
       ...base.general,
-      ...objectRecord(legacy.general),
-      name: String(objectRecord(legacy.general).name ?? workflow.name),
+      ...objectRecord(settings.general),
+      name: String(settings.general?.name ?? workflow.name),
+      tags: Array.isArray(settings.general?.tags) ? settings.general.tags : [],
     },
     run_policy: {
       ...base.run_policy,
-      max_workflow_duration_ms: numericOrNull(legacyExecution.max_workflow_duration_ms),
-      browser_retention: legacyExecution.browser_retention === "close" ? "close" : "retain",
-      batch_concurrency_limit: numericOrNull(legacyExecution.batch_concurrency_limit) ?? 1,
-      batch_headless: Boolean(legacyExecution.batch_headless),
-      batch_stop_on_first_failed_row: Boolean(legacyExecution.batch_stop_on_first_failed_row),
+      ...objectRecord(settings.run_policy),
+      browser_retention: settings.run_policy?.browser_retention === "close" ? "close" : "retain",
+      batch_headless: Boolean(settings.run_policy?.batch_headless),
+      batch_stop_on_first_failed_row: Boolean(settings.run_policy?.batch_stop_on_first_failed_row),
     },
     browser_launch: normalizeSettingsBrowserLaunch({
       ...base.browser_launch,
-      session_mode: profileName ? "persistent_profile" : "temporary",
-      profile_name: profileName,
-      proxy_enabled: Boolean(legacyBrowser.proxy_enabled),
-      proxy_server: nullableText(legacyBrowser.proxy_server),
-      proxy_username: nullableText(legacyBrowser.proxy_username),
-      proxy_password: nullableText(legacyBrowser.proxy_password),
-      headless: Boolean(legacyBrowser.headless),
+      ...objectRecord(settings.browser_launch),
     }),
     environment: {
-      initial_variables: Array.isArray(legacyInputs.initial_variables)
-        ? legacyInputs.initial_variables
+      initial_variables: Array.isArray(settings.environment?.initial_variables)
+        ? settings.environment.initial_variables
         : [],
     },
-    migration_notes: notes,
+    migration_notes: Array.isArray(settings.migration_notes) ? settings.migration_notes : [],
+    created_at: settings.created_at ?? base.created_at,
+    updated_at: settings.updated_at ?? base.updated_at,
   };
 }
 
@@ -2002,11 +1901,6 @@ function normalizeSettingsBrowserLaunch(
     device_memory_gb: positiveOptionalNumber(browser.device_memory_gb),
     fingerprint_fonts_dir: nullableText(browser.fingerprint_fonts_dir),
     storage_quota_mb: positiveOptionalNumber(browser.storage_quota_mb),
-    humanize: browser.humanize !== false,
-    human_preset: browser.human_preset === "careful" ? "careful" : "default",
-    behavior_fidelity: validBehaviorFidelity(browser.behavior_fidelity)
-      ? browser.behavior_fidelity
-      : "balanced",
     preflight_enabled: Boolean(browser.preflight_enabled),
     preflight_probe_url: nullableText(browser.preflight_probe_url),
     preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
@@ -2093,9 +1987,6 @@ function createDefaultBrowserIdentity(
   | "device_memory_gb"
   | "fingerprint_fonts_dir"
   | "storage_quota_mb"
-  | "humanize"
-  | "human_preset"
-  | "behavior_fidelity"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
@@ -2131,9 +2022,6 @@ function createDefaultBrowserIdentity(
     device_memory_gb: null,
     fingerprint_fonts_dir: null,
     storage_quota_mb: null,
-    humanize: true,
-    human_preset: "default",
-    behavior_fidelity: "balanced",
     preflight_enabled: false,
     preflight_probe_url: null,
     preflight_allowed_origins: [],
@@ -2193,16 +2081,6 @@ function validFingerprintPlatform(
   return value === "windows" || value === "macos" || value === "linux";
 }
 
-function validBehaviorFidelity(
-  value: unknown,
-): value is WorkflowSettingsBrowserLaunch["behavior_fidelity"] {
-  return (
-    value === "balanced" ||
-    value === "strict_humanized" ||
-    value === "deterministic_internal"
-  );
-}
-
 function browserProfileKey(settings: WorkflowSettings) {
   if (settings.browser_launch.session_mode !== "persistent_profile") return null;
   return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
@@ -2237,9 +2115,6 @@ function browserIdentityPreferences(
   | "device_memory_gb"
   | "fingerprint_fonts_dir"
   | "storage_quota_mb"
-  | "humanize"
-  | "human_preset"
-  | "behavior_fidelity"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
@@ -2270,9 +2145,6 @@ function browserIdentityPreferences(
     device_memory_gb: browser.device_memory_gb,
     fingerprint_fonts_dir: browser.fingerprint_fonts_dir,
     storage_quota_mb: browser.storage_quota_mb,
-    humanize: browser.humanize,
-    human_preset: browser.human_preset,
-    behavior_fidelity: browser.behavior_fidelity,
     preflight_enabled: browser.preflight_enabled,
     preflight_probe_url: browser.preflight_probe_url,
     preflight_allowed_origins: browser.preflight_allowed_origins,
@@ -2414,8 +2286,4 @@ function objectRecord(value: unknown): Record<string, any> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, any>)
     : {};
-}
-
-function numericOrNull(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

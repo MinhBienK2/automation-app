@@ -27,7 +27,6 @@ const graphInternalActionTypes = [
   "continue_loop",
   "transform_variable",
   "assert_output",
-  "run_subworkflow",
   "domain_allowlist",
 ] as const satisfies readonly ActionType[];
 type GraphInternalActionType = (typeof graphInternalActionTypes)[number];
@@ -60,10 +59,8 @@ type PhaseOneActionType =
   | "open_new_tab"
   | "switch_tab"
   | "close_tab"
-  | "switch_frame"
   | "accept_dialog"
   | "dismiss_dialog"
-  | "set_download_directory"
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
@@ -74,24 +71,12 @@ type PhaseOneActionType =
   | "repeat_for_each"
   | "retry_block"
   | "stop_workflow"
-  | "use_profile"
-  | "save_session"
-  | "load_session"
   | "set_cookie"
   | "clear_cookies"
-  | "set_secret"
-  | "use_proxy"
-  | "set_user_agent"
   | "set_viewport"
   | "set_geolocation"
   | "set_extra_headers"
   | "grant_permission"
-  | "detect_challenge"
-  | "pause_for_human"
-  | "resume_when_condition"
-  | "fallback_selector"
-  | "retry_step"
-  | "checkpoint"
   | "execute_js"
   | "wait_for_request"
   | "wait_for_response"
@@ -384,36 +369,6 @@ const baseStepHelpContent: Record<
       commonMistakes: ["XPath points to an option instead of the select.", "Custom dropdowns that are not select elements need a different step."],
     },
   },
-  set_checkbox: {
-    vi: {
-      title: "Trợ giúp Set Checkbox",
-      summary: "Đặt checkbox về trạng thái checked hoặc unchecked.",
-      useWhen: ["Dùng cho checkbox đồng ý điều khoản, filter, setting bật/tắt.", "Dùng khi muốn trạng thái cuối cùng chắc chắn, không chỉ toggle."],
-      fields: [
-        { name: "XPath", description: "XPath của input type=checkbox." },
-        { name: "Iframe XPath", description: iframeField.vi },
-        { name: "Wait until", description: waitUntilField.vi },
-        { name: "Timeout ms", description: timeoutField.vi },
-        { name: "State", description: "Checked để bật; Unchecked để tắt." },
-      ],
-      examples: ["XPath: //*[@type='checkbox' and @name='terms'], State: Checked"],
-      commonMistakes: ["XPath trỏ vào label thay vì input checkbox thật.", "Nếu checkbox là UI custom không có input checkbox, có thể cần Click."],
-    },
-    en: {
-      title: "Set Checkbox Help",
-      summary: "Set a checkbox to checked or unchecked.",
-      useWhen: ["Use for terms checkboxes, filters, or on/off settings.", "Use when you need a guaranteed final state, not just a toggle."],
-      fields: [
-        { name: "XPath", description: "XPath of the input type=checkbox element." },
-        { name: "Iframe XPath", description: iframeField.en },
-        { name: "Wait until", description: waitUntilField.en },
-        { name: "Timeout ms", description: timeoutField.en },
-        { name: "State", description: "Checked turns it on; Unchecked turns it off." },
-      ],
-      examples: ["XPath: //*[@type='checkbox' and @name='terms'], State: Checked"],
-      commonMistakes: ["XPath points to the label instead of the real checkbox input.", "Custom checkbox UI without an input may need Click instead."],
-    },
-  },
   press_key: {
     vi: {
       title: "Trợ giúp Press Key",
@@ -525,15 +480,8 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   open_new_tab: elementHelp("Open New Tab", "open a new browser tab", "mở tab mới", "tab"),
   switch_tab: elementHelp("Switch Tab", "switch to another browser tab", "chuyển tab", "tab"),
   close_tab: elementHelp("Close Tab", "close a browser tab", "đóng tab", "tab"),
-  switch_frame: elementHelp("Switch Frame", "set the active iframe context", "chọn iframe", "iframe"),
   accept_dialog: elementHelp("Accept Dialog", "accept an alert, confirm, or prompt", "đồng ý dialog", "dialog"),
   dismiss_dialog: elementHelp("Dismiss Dialog", "dismiss an alert, confirm, or prompt", "hủy dialog", "dialog"),
-  set_download_directory: elementHelp(
-    "Set Download Directory",
-    "choose where downloads are saved",
-    "chọn thư mục tải xuống",
-    "download",
-  ),
   wait_for_download: elementHelp(
     "Wait For Download",
     "wait until a new downloaded file exists",
@@ -554,24 +502,12 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   repeat_for_each: elementHelp("Repeat For Each", "repeat steps for each item", "lặp từng item", "loop"),
   retry_block: elementHelp("Retry Block", "retry nested steps after failure", "thử lại block", "retry"),
   stop_workflow: elementHelp("Stop Workflow", "stop the workflow intentionally", "dừng workflow", "stop"),
-  use_profile: elementHelp("Use Profile", "run with a persistent browser profile", "dùng profile", "session"),
-  save_session: elementHelp("Save Session", "save browser storage state", "lưu phiên", "session"),
-  load_session: elementHelp("Load Session", "restore browser storage state", "khôi phục phiên", "session"),
   set_cookie: elementHelp("Set Cookie", "set a visible browser cookie", "đặt cookie", "cookie"),
   clear_cookies: elementHelp("Clear Cookies", "clear visible browser cookies", "xóa cookie", "cookie"),
-  set_secret: elementHelp("Set Secret", "store a redacted secret variable", "lưu secret", "secret"),
-  use_proxy: elementHelp("Use Proxy", "route browser traffic through a proxy", "dùng proxy", "proxy"),
-  set_user_agent: elementHelp("Set User Agent", "override the browser user agent", "đổi user agent", "network"),
   set_viewport: elementHelp("Set Viewport", "set runtime viewport size", "đổi kích thước viewport", "device"),
   set_geolocation: elementHelp("Set Geolocation", "override browser geolocation", "đổi vị trí", "geo"),
   set_extra_headers: elementHelp("Set Extra Headers", "send extra HTTP headers", "thêm header", "headers"),
   grant_permission: elementHelp("Grant Permission", "grant browser permissions", "cấp quyền", "permission"),
-  detect_challenge: elementHelp("Detect Challenge", "detect human verification UI", "phát hiện xác minh", "challenge"),
-  pause_for_human: elementHelp("Pause For Human", "pause for manual verification", "tạm dừng cho người xử lý", "human"),
-  resume_when_condition: elementHelp("Resume When Condition", "resume after a clear condition", "tiếp tục khi đủ điều kiện", "resume"),
-  fallback_selector: elementHelp("Fallback Selector", "choose the first matching selector", "chọn selector dự phòng đầu tiên khớp", "fallback"),
-  retry_step: elementHelp("Retry Step", "retry one flaky step", "thử lại một step dễ lỗi", "retry"),
-  checkpoint: elementHelp("Checkpoint", "mark progress and optionally capture a screenshot", "đánh dấu tiến trình và có thể chụp ảnh", "checkpoint"),
   execute_js: elementHelp("Execute JS", "run advanced JavaScript", "chạy JavaScript nâng cao", "advanced"),
   wait_for_request: elementHelp("Wait For Request", "wait for a network request", "chờ request mạng", "network"),
   wait_for_response: elementHelp("Wait For Response", "wait for a network response", "chờ response mạng", "network"),
@@ -908,11 +844,9 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "click":
       return targetFields;
     case "scroll":
-      return ["Mode", "Direction", "Pixels", ...targetFields, "Behavior"];
+      return ["Direction", "Pixels"];
     case "select_option":
       return [...targetFields, "Match by", "Value"];
-    case "set_checkbox":
-      return [...targetFields, "State"];
     case "press_key":
       return ["Key"];
     case "hotkey":
@@ -961,12 +895,8 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "switch_tab":
     case "close_tab":
       return ["Tab index"];
-    case "switch_frame":
-      return ["XPath"];
     case "accept_dialog":
       return ["Prompt text"];
-    case "set_download_directory":
-      return ["Path"];
     case "wait_for_download":
       return ["Output name", "Timeout ms"];
     case "set_variable":
@@ -1003,25 +933,12 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Source name", "Target name", "Expression"];
     case "assert_output":
       return ["Name", "Match mode", "Value"];
-    case "run_subworkflow":
-      return ["Workflow id", "Input mapping", "Output mapping"];
     case "domain_allowlist":
       return ["Domains"];
-    case "use_profile":
-      return ["Name"];
-    case "save_session":
-    case "load_session":
-      return ["Path"];
     case "set_cookie":
       return ["Name", "Value", "Domain", "Path"];
     case "clear_cookies":
       return ["Domain"];
-    case "set_secret":
-      return ["Name", "Value"];
-    case "use_proxy":
-      return ["Server", "Username", "Password"];
-    case "set_user_agent":
-      return ["User agent"];
     case "set_viewport":
       return ["Width", "Height"];
     case "set_geolocation":
@@ -1030,18 +947,6 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Headers"];
     case "grant_permission":
       return ["Origin", "Permissions"];
-    case "detect_challenge":
-      return ["Output name", "Patterns", "Timeout ms"];
-    case "pause_for_human":
-      return ["Reason", "Timeout ms"];
-    case "resume_when_condition":
-      return ["Timeout ms"];
-    case "fallback_selector":
-      return ["Output name", "XPaths", "Timeout ms"];
-    case "retry_step":
-      return ["Max attempts", "Delay ms"];
-    case "checkpoint":
-      return ["Name", "Screenshot path"];
     case "execute_js":
       return ["Script", "Output name", "Timeout ms"];
     case "wait_for_request":
@@ -1135,7 +1040,7 @@ function fieldRequiredWhen(
         "go_forward:No fields": "This action has no configurable fields.",
         "reload:No fields": "This action has no configurable fields.",
         "dismiss_dialog:No fields": "This action has no configurable fields.",
-        "if_condition:No fields": "This compatibility action has no fields in the current form.",
+        "if_condition:No fields": "This graph-internal action has no fields in the current form.",
       };
 
   if (specific[key]) return specific[key];
@@ -1202,8 +1107,8 @@ function fieldDescription(
   }
   if (isLocatorValueField(fieldName)) {
     return vi
-      ? "Giá trị locator tương ứng với loại đã chọn, ví dụ test id, label hiển thị, CSS selector, hoặc XPath tương thích."
-      : "Locator value matching the selected kind, such as a test id, visible label, CSS selector, or compatibility XPath.";
+      ? "Giá trị locator tương ứng với loại đã chọn, ví dụ test id, label hiển thị, CSS selector, hoặc XPath."
+      : "Locator value matching the selected kind, such as a test id, visible label, CSS selector, or XPath.";
   }
   if (fieldName.endsWith("role")) {
     return vi
@@ -1298,8 +1203,8 @@ function fieldValueGuidance(
   if (fieldName === "No fields") return undefined;
   if (isLocatorTypeField(fieldName)) {
     return vi
-      ? "Mặc định là XPath để tương thích; đổi sang Test ID, Role, Label, hoặc Placeholder khi trang có selector ổn định hơn."
-      : "Defaults to XPath for compatibility; switch to Test ID, Role, Label, or Placeholder when the page exposes a more stable selector.";
+      ? "Mặc định là XPath; đổi sang Test ID, Role, Label, hoặc Placeholder khi trang có selector ổn định hơn."
+      : "Defaults to XPath; switch to Test ID, Role, Label, or Placeholder when the page exposes a more stable selector.";
   }
   if (isLocatorValueField(fieldName)) {
     return vi

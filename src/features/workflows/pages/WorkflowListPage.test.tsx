@@ -14,6 +14,7 @@ import {
 import {
   idleRunState,
   listWorkflowScenario,
+  workflowDetailScenario,
 } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
@@ -24,13 +25,13 @@ describe("Workflow list integration", () => {
     resetWorkflowBridge();
   });
 
-  test("hides legacy step counts and raw updated timestamps from workflow cards", async () => {
+  test("hides step counts and raw updated timestamps from workflow cards", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([
         {
           ...workflow,
           step_count: 1733,
-          updated_at: "1733-legacy-timestamp",
+          updated_at: "1733-raw-timestamp",
         },
       ]),
     });
@@ -42,7 +43,7 @@ describe("Workflow list integration", () => {
     expect(workflowCard).toBeInTheDocument();
     expect(within(workflowCard as HTMLElement).queryByText("1733 steps"))
       .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Updated 1733-legacy-timestamp"))
+    expect(within(workflowCard as HTMLElement).queryByText("Updated 1733-raw-timestamp"))
       .not.toBeInTheDocument();
     expect(screen.queryByText("1733 steps")).not.toBeInTheDocument();
   });
@@ -333,51 +334,14 @@ describe("Workflow list integration", () => {
       },
       get_workflow_graph: workflowPackage.flow,
       get_workflow_settings: {
+        ...workflowDetailScenario([]).get_workflow_settings,
         workflow_id: "workflow-imported",
-        version: 1,
         general: {
+          ...workflowDetailScenario([]).get_workflow_settings.general,
           name: "Imported package (imported)",
           description: "Shared workflow",
-          tags: [],
-          notes: "",
           created_at: "3",
           updated_at: "3",
-        },
-        execution: {
-          browser_retention: "retain",
-          failure_policy: "stop_on_first_failure",
-          batch_headless: false,
-          batch_stop_on_first_failed_row: false,
-        },
-        browser: {
-          proxy_enabled: false,
-          mobile: false,
-          touch: false,
-          challenge_policy: "none",
-          headless: false,
-        },
-        environment: {
-          permissions: [],
-          extra_http_headers: [],
-          cookies: [],
-          local_storage: [],
-          session_storage: [],
-        },
-        inputs: {
-          input_schema: [],
-          initial_variables: [],
-          batch_mapping: [],
-        },
-        triggers: {
-          enabled: false,
-          mode: "manual",
-          missed_run_policy: "skip",
-          concurrency_policy: "skip_if_running",
-        },
-        advanced: {
-          compatibility_warnings: [],
-          debug_logging_level: "off",
-          experimental_flags: [],
         },
       },
     });
@@ -437,81 +401,17 @@ describe("Workflow list integration", () => {
   });
 
   test("opens workflow settings General from the list edit action", async () => {
+    const scenario = workflowDetailScenario([]);
     mockWorkflowBridgeCommands({
+      ...scenario,
       ...listWorkflowScenario([workflow]),
       get_workflow_settings: {
-        workflow_id: "workflow-1",
-        version: 1,
+        ...scenario.get_workflow_settings,
         general: {
-          name: "Login flow",
+          ...scenario.get_workflow_settings.general,
           description: "Signs into the QA account",
           tags: ["qa"],
-          notes: "",
-          created_at: "1",
-          updated_at: "1",
         },
-        execution: {
-          default_action_timeout_ms: null,
-          default_retry_attempts: null,
-          default_retry_interval_ms: null,
-          max_workflow_duration_ms: null,
-          browser_retention: "retain",
-          failure_policy: "stop_on_first_failure",
-          batch_concurrency_limit: null,
-          batch_headless: false,
-          batch_stop_on_first_failed_row: false,
-          output_retention_days: null,
-        },
-        browser: {
-          profile_name: null,
-          proxy_enabled: false,
-          proxy_server: null,
-          proxy_username: null,
-          proxy_password: null,
-          user_agent: null,
-          viewport_width: null,
-          viewport_height: null,
-          mobile: false,
-          touch: false,
-          challenge_policy: "none",
-          headless: false,
-        },
-        environment: {
-          geolocation: null,
-          permissions: [],
-          extra_http_headers: [],
-          locale: null,
-          timezone: null,
-          download_directory: null,
-          cookies: [],
-          local_storage: [],
-          session_storage: [],
-          session_restore_ref: null,
-        },
-        inputs: {
-          input_schema: [],
-          initial_variables: [],
-          batch_mapping: [],
-        },
-        triggers: {
-          enabled: false,
-          mode: "manual",
-          interval_seconds: null,
-          once_at: null,
-          input_source: null,
-          batch_source_ref: null,
-          missed_run_policy: "skip",
-          concurrency_policy: "skip_if_running",
-          last_run_at: null,
-          next_run_at: null,
-        },
-        advanced: {
-          compatibility_warnings: [],
-          debug_logging_level: "off",
-          experimental_flags: [],
-        },
-        created_at: "1",
-        updated_at: "1",
       },
       save_workflow_settings_section: undefined,
     });

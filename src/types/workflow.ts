@@ -7,7 +7,6 @@ export type ActionType =
   | "click"
   | "scroll"
   | "select_option"
-  | "set_checkbox"
   | "press_key"
   | "hotkey"
   | "hover"
@@ -39,10 +38,8 @@ export type ActionType =
   | "open_new_tab"
   | "switch_tab"
   | "close_tab"
-  | "switch_frame"
   | "accept_dialog"
   | "dismiss_dialog"
-  | "set_download_directory"
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
@@ -62,26 +59,13 @@ export type ActionType =
   | "stop_workflow"
   | "transform_variable"
   | "assert_output"
-  | "run_subworkflow"
   | "domain_allowlist"
-  | "use_profile"
-  | "save_session"
-  | "load_session"
   | "set_cookie"
   | "clear_cookies"
-  | "set_secret"
-  | "use_proxy"
-  | "set_user_agent"
   | "set_viewport"
   | "set_geolocation"
   | "set_extra_headers"
   | "grant_permission"
-  | "detect_challenge"
-  | "pause_for_human"
-  | "resume_when_condition"
-  | "fallback_selector"
-  | "retry_step"
-  | "checkpoint"
   | "execute_js"
   | "wait_for_request"
   | "wait_for_response"
@@ -132,11 +116,6 @@ export type WorkflowSettingsSectionId =
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
-export type WorkflowHumanPreset = "default" | "careful";
-export type WorkflowBehaviorFidelity =
-  | "balanced"
-  | "strict_humanized"
-  | "deterministic_internal";
 export type WorkflowFingerprintPlatform = "windows" | "macos" | "linux";
 export type WorkflowWebRtcPolicy =
   | "default"
@@ -188,9 +167,6 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   device_memory_gb?: number | null;
   fingerprint_fonts_dir?: string | null;
   storage_quota_mb?: number | null;
-  humanize: boolean;
-  human_preset: WorkflowHumanPreset;
-  behavior_fidelity: WorkflowBehaviorFidelity;
   preflight_enabled: boolean;
   preflight_probe_url?: string | null;
   preflight_allowed_origins: string[];
@@ -348,8 +324,6 @@ export type ActionConfig =
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
-        typing_mode?: "set_value" | "type" | null;
-        delay_ms?: number | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
@@ -360,7 +334,6 @@ export type ActionConfig =
         xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
-        method?: "select_all" | "backspace" | "dom" | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
@@ -371,42 +344,16 @@ export type ActionConfig =
         xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
-        mode?: "real" | "force_dom" | null;
-        button?: "left" | "right" | "middle" | null;
-        click_count?: number | null;
-        scroll_into_view?: boolean | null;
-        block?: "start" | "center" | "end" | "nearest" | null;
-        inline?: "start" | "center" | "end" | "nearest" | null;
-        position?:
-          | "center"
-          | "top_left"
-          | "top_right"
-          | "bottom_left"
-          | "bottom_right"
-          | "offset"
-          | null;
-        offset_x?: number | null;
-        offset_y?: number | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
-        retry_interval_ms?: number | null;
-        post_click_wait_ms?: number | null;
       };
     }
   | {
       type: "scroll";
       config: {
-        mode?: "page" | "container" | "into_view" | "until_visible";
+        mode?: "page" | null;
         direction: "up" | "down" | "left" | "right";
         pixels: number;
-        xpath?: string | null;
-        target?: ElementTarget | null;
-        iframe_xpath?: string | null;
-        behavior?: "instant" | "smooth" | null;
-        block?: "start" | "center" | "end" | "nearest" | null;
-        inline?: "start" | "center" | "end" | "nearest" | null;
-        max_attempts?: number | null;
-        wait_ms?: number | null;
       };
     }
   | {
@@ -417,17 +364,6 @@ export type ActionConfig =
         iframe_xpath?: string | null;
         match_by: "label" | "value";
         value: string;
-        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
-        timeout_ms?: number | null;
-      };
-    }
-  | {
-      type: "set_checkbox";
-      config: {
-        xpath?: string | null;
-        target?: ElementTarget | null;
-        iframe_xpath?: string | null;
-        state: "checked" | "unchecked";
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
@@ -584,10 +520,8 @@ export type ActionConfig =
   | { type: "open_new_tab"; config: { url?: string | null } }
   | { type: "switch_tab"; config: { index: number } }
   | { type: "close_tab"; config: { index?: number | null } }
-  | { type: "switch_frame"; config: { xpath?: string | null; target?: ElementTarget | null } }
   | { type: "accept_dialog"; config: { prompt_text?: string | null } }
   | { type: "dismiss_dialog"; config: Record<string, never> }
-  | { type: "set_download_directory"; config: { path: string } }
   | {
       type: "wait_for_download";
       config: { output_name: string; timeout_ms?: number | null };
@@ -711,37 +645,17 @@ export type ActionConfig =
       type: "assert_output";
       config: { name: string; match_mode: "contains" | "equals"; value: string };
     }
-  | {
-      type: "run_subworkflow";
-      config: {
-        workflow_id: string;
-        input_mapping: Array<{ source: string; target: string }>;
-        output_mapping: Array<{ source: string; target: string }>;
-      };
-    }
   | { type: "domain_allowlist"; config: { domains: string[] } }
-  | { type: "use_profile"; config: { name: string } }
-  | { type: "save_session"; config: { path: string } }
-  | { type: "load_session"; config: { path: string } }
   | {
       type: "set_cookie";
       config: { name: string; value: string; domain?: string | null; path?: string | null };
     }
   | { type: "clear_cookies"; config: { domain?: string | null } }
-  | { type: "set_secret"; config: { name: string; value: string } }
-  | {
-      type: "use_proxy";
-      config: { server: string; username?: string | null; password?: string | null };
-    }
-  | { type: "set_user_agent"; config: { user_agent: string } }
   | {
       type: "set_viewport";
       config: {
         width: number;
         height: number;
-        device_scale_factor?: number | null;
-        mobile: boolean;
-        touch: boolean;
       };
     }
   | {
@@ -752,30 +666,6 @@ export type ActionConfig =
   | {
       type: "grant_permission";
       config: { origin?: string | null; permissions: string[] };
-    }
-  | {
-      type: "detect_challenge";
-      config: { output_name: string; patterns: string[]; timeout_ms?: number | null };
-    }
-  | {
-      type: "pause_for_human";
-      config: { reason: string; timeout_ms?: number | null };
-    }
-  | {
-      type: "resume_when_condition";
-      config: { condition: WorkflowCondition; timeout_ms?: number | null };
-    }
-  | {
-      type: "fallback_selector";
-      config: { output_name: string; xpaths: string[]; timeout_ms?: number | null };
-    }
-  | {
-      type: "retry_step";
-      config: { max_attempts: number; delay_ms?: number | null; step: ActionConfig };
-    }
-  | {
-      type: "checkpoint";
-      config: { name: string; screenshot_path?: string | null };
     }
   | {
       type: "execute_js";
@@ -902,9 +792,6 @@ export type GraphNodeType =
   | "set_json_variables"
   | "transform_variable"
   | "assert_output"
-  | "run_subworkflow"
-  | "manual_approval"
-  | "rate_limit"
   | "domain_allowlist";
 
 export type GraphPortDirection = "input" | "output";

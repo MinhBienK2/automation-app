@@ -277,58 +277,6 @@ export function NodeConfigFields({
           </Label>
         </div>
       );
-    case "manual_approval":
-      return (
-        <div className="graph-config-fields">
-          <p className="muted">Human checkpoint only; this does not bypass challenges.</p>
-          <Label>
-            Approval reason
-            <Textarea
-              value={stringConfig(node.config, "reason", "Manual approval required")}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  reason: event.currentTarget.value,
-                })
-              }
-            />
-          </Label>
-          <Label>
-            Timeout ms
-            <Input
-              min="0"
-              type="number"
-              value={numberConfig(node.config, "timeout_ms", 0)}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  timeout_ms: Number(event.currentTarget.value) || null,
-                })
-              }
-            />
-          </Label>
-        </div>
-      );
-    case "rate_limit":
-      return (
-        <div className="graph-config-fields">
-          <p className="muted">Adds safe pacing before continuing.</p>
-          <Label>
-            Delay ms
-            <Input
-              min="1"
-              type="number"
-              value={numberConfig(node.config, "delay_ms", 1000)}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  delay_ms: Number(event.currentTarget.value),
-                })
-              }
-            />
-          </Label>
-        </div>
-      );
     case "end_success":
       return (
         <div className="graph-config-fields">
@@ -521,23 +469,6 @@ export function NodeConfigFields({
           </Label>
         </div>
       );
-    case "run_subworkflow":
-      return (
-        <div className="graph-config-fields">
-          <Label>
-            Workflow id
-            <Input
-              value={stringConfig(node.config, "workflow_id", "")}
-              onChange={(event) =>
-                updateConfig({
-                  ...objectConfig(node.config),
-                  workflow_id: event.currentTarget.value,
-                })
-              }
-            />
-          </Label>
-        </div>
-      );
     case "domain_allowlist":
       return (
         <div className="graph-config-fields">
@@ -581,7 +512,7 @@ export function NodeConfigFields({
             onChange={updateActionType}
           />
           {actionConfig && isCompatibilityAction ? (
-            <CompatibilityActionConfigPanel config={actionConfig} />
+            <GraphInternalActionConfigPanel config={actionConfig} />
           ) : actionConfig ? (
             <ActionConfigEditor
               config={actionConfig}
@@ -705,18 +636,18 @@ function ActionTypeDropdown({
   );
 }
 
-function CompatibilityActionConfigPanel({ config }: { config: ActionConfig }) {
+function GraphInternalActionConfigPanel({ config }: { config: ActionConfig }) {
   const actionLabel = actionLabels[config.type] ?? config.type;
 
   return (
-    <div className="graph-compatibility-action">
-      <p className="eyebrow">Compatibility action</p>
+    <div className="graph-internal-action">
+      <p className="eyebrow">Graph-internal action</p>
       <h3>{actionLabel}</h3>
       <p className="muted">
-        Convert this saved action into a graph-native node or replace it with a
-        currently supported action type.
+        Replace this action-node payload with a supported user action, or use
+        the graph-native node for this control-flow behavior.
       </p>
-      <pre aria-label="Compatibility action JSON">
+      <pre aria-label="Graph-internal action JSON">
         {JSON.stringify(config, null, 2)}
       </pre>
     </div>

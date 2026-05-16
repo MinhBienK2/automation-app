@@ -53,12 +53,6 @@ const specificFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldO
       option("DOMContentLoaded", "Chờ HTML được parse xong, không nhất thiết chờ ảnh/tài nguyên phụ.", "Dùng khi cần bắt đầu nhanh và element chính có sớm trong DOM.", "Tránh nếu action sau cần ảnh, font, hoặc widget tải muộn.", "Wait until: DOMContentLoaded", "dom_content_loaded"),
       option("Network idle", "Chờ network tương đối yên trước khi đi tiếp.", "Dùng với trang tải dữ liệu qua API sau khi mở.", "Tránh với trang có polling, analytics, websocket, hoặc request nền liên tục.", "Wait until: Network idle", "network_idle"),
     ],
-    "scroll:Mode": [
-      option("Page", "Cuộn trang chính hoặc document trong iframe nếu có Iframe XPath.", "Dùng khi toàn bộ trang cần cuộn.", "Tránh khi chỉ một div/list bên trong trang có scrollbar riêng.", "Mode: Page", "page"),
-      option("Container", "Cuộn một box có scrollbar riêng; XPath là box đó.", "Dùng cho danh sách, bảng, modal body, hoặc panel có overflow.", "Tránh khi XPath là element đích cần nhìn thấy; khi đó dùng Into View hoặc Until Visible.", "XPath: //*[@id='result-list']", "container"),
-      option("Into View", "Đưa một element cụ thể vào vùng nhìn thấy.", "Dùng trước Click/Hover khi element đã tồn tại nhưng nằm ngoài màn hình.", "Tránh khi element chưa render; hãy Wait trước.", "XPath: //*[@data-row='42']", "into_view"),
-      option("Until Visible", "Cuộn lặp lại cho tới khi element đích visible hoặc hết Max attempts.", "Dùng cho lazy-load/infinite-scroll khi target sẽ xuất hiện sau vài lần cuộn.", "Tránh dùng XPath của scroll box; XPath phải là target cần thấy.", "XPath: //button[text()='Load more']", "until_visible"),
-    ],
     "wait:Condition": [
       option("Duration", "Chờ cố định theo Duration ms.", "Dùng khi không có tín hiệu DOM/URL rõ ràng và chỉ cần nghỉ ngắn.", "Tránh dùng thay cho wait element nếu có thể kiểm tra element.", "Duration ms: 500", "duration"),
       option("Element visible", "Chờ element nhìn thấy được.", "Dùng khi bước sau cần người dùng nhìn/click được element.", "Tránh khi element chỉ cần tồn tại trong DOM.", "XPath: //*[@id='dashboard']", "element_visible"),
@@ -70,10 +64,6 @@ const specificFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldO
       option("Page load", "Chờ tải trang theo trạng thái browser.", "Dùng sau navigate/reload rõ ràng.", "Tránh với trang có request nền chạy liên tục.", undefined, "page_load"),
       option("Element enabled", "Chờ element không còn disabled.", "Dùng trước click/input vào control bị disable tạm thời.", "Tránh nếu chỉ cần element visible.", undefined, "element_enabled"),
       option("Element disabled", "Chờ element chuyển sang disabled.", "Dùng để xác nhận submit đang xử lý hoặc control bị khóa.", "Tránh nếu cần kiểm tra biến mất.", undefined, "element_disabled"),
-    ],
-    "click:Mode": [
-      option("Real click", "Gửi click qua browser giống người dùng hơn.", "Dùng mặc định cho button, link, checkbox, menu.", "Tránh khi website có overlay giả hoặc cần fallback DOM có chủ đích.", undefined, "real"),
-      option("Force DOM click", "Gọi trực tiếp click() trên element.", "Chỉ dùng khi Real click bị UI custom chặn nhưng website vẫn xử lý click() đúng.", "Tránh dùng mặc định vì không giống thao tác người dùng thật.", undefined, "force_dom"),
     ],
     "assert_element:State": [
       option("Visible", "Element phải nhìn thấy được.", "Dùng khi cần xác nhận UI đang hiện cho người dùng.", "Tránh nếu chỉ cần element tồn tại trong DOM.", undefined, "visible"),
@@ -89,12 +79,6 @@ const specificFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldO
       option("DOMContentLoaded", "Waits until the HTML document has been parsed, without waiting for every image or secondary asset.", "Use when the main elements appear early and you want navigation to continue sooner.", "Avoid when the next action needs images, fonts, or late widgets.", "Wait until: DOMContentLoaded", "dom_content_loaded"),
       option("Network idle", "Waits until network activity is relatively quiet before continuing.", "Use when the page fills important data through API requests after opening.", "Avoid pages with polling, analytics, websockets, or continuous background requests.", "Wait until: Network idle", "network_idle"),
     ],
-    "scroll:Mode": [
-      option("Page", "Scrolls the main page or the iframe document when Iframe XPath is set.", "Use for main page scrolling.", "Avoid when only a nested div/list has its own scrollbar.", "Mode: Page", "page"),
-      option("Container", "Scrolls one scrollable box; XPath is that box.", "Use for lists, tables, modal bodies, or panels with overflow.", "Avoid when XPath is the target element; use Into View or Until Visible for target scrolling.", "XPath: //*[@id='result-list']", "container"),
-      option("Into View", "Brings one target element into the viewport.", "Use before Click/Hover when the element exists but is off-screen.", "Avoid when the element has not rendered yet; Wait first.", "XPath: //*[@data-row='42']", "into_view"),
-      option("Until Visible", "Repeatedly scrolls until the target element is visible or Max attempts runs out.", "Use for lazy-load or infinite-scroll pages where the target appears after scrolling.", "Avoid using the scroll box XPath; XPath must be the target to see.", "XPath: //button[text()='Load more']", "until_visible"),
-    ],
     "wait:Condition": [
       option("Duration", "Waits for a fixed Duration ms.", "Use for a fixed short pause when there is no reliable DOM/URL signal.", "Avoid replacing element waits when a target can be checked.", "Duration ms: 500", "duration"),
       option("Element visible", "Waits until an element can be seen.", "Use when the next step needs to see or click the element.", "Avoid when the element only needs to exist in the DOM.", "XPath: //*[@id='dashboard']", "element_visible"),
@@ -106,10 +90,6 @@ const specificFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldO
       option("Page load", "Waits for browser page-load state.", "Use after clear navigate/reload events.", "Avoid pages with continuous background requests.", undefined, "page_load"),
       option("Element enabled", "Waits until an element is no longer disabled.", "Use before clicking or typing into a temporarily disabled control.", "Avoid when visible is enough.", undefined, "element_enabled"),
       option("Element disabled", "Waits until an element becomes disabled.", "Use to confirm submit processing or a locked control.", "Avoid when you need disappearance instead.", undefined, "element_disabled"),
-    ],
-    "click:Mode": [
-      option("Real click", "Sends a browser click that behaves more like a user.", "Use by default for buttons, links, checkboxes, and menus.", "Avoid only when a custom UI intentionally needs the DOM fallback.", undefined, "real"),
-      option("Force DOM click", "Calls click() directly on the element.", "Use only when Real click is blocked by custom UI but the site handles click() correctly.", "Avoid as the default because it is less like a real user action.", undefined, "force_dom"),
     ],
     "assert_element:State": [
       option("Visible", "Element must be visible.", "Use when you need to confirm the UI is shown to the user.", "Avoid when DOM presence is enough.", undefined, "visible"),
@@ -248,7 +228,7 @@ const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOpt
       option("Placeholder", "Finds an input by placeholder.", "Use when a field has no label but a stable placeholder.", "Avoid placeholders that are only temporary hints.", undefined, "placeholder"),
       option("Text", "Finds an element by visible text.", "Use for links, buttons, or stable content.", "Avoid dynamic or localized text.", undefined, "text"),
       option("CSS", "Finds by CSS selector.", "Use for stable ids, classes, or attributes.", "Avoid selectors tied to deep layout structure.", undefined, "css"),
-      option("XPath", "Finds by compatibility XPath.", "Use as the compatibility default or when other selectors are insufficient.", "Avoid long absolute XPath when the page layout changes often.", undefined, "xpath"),
+      option("XPath", "Finds by XPath.", "Use when other selectors are insufficient.", "Avoid long absolute XPath when the page layout changes often.", undefined, "xpath"),
       option("Attribute", "Finds by a specific attribute.", "Use when the page exposes a stable data attribute.", "Avoid attributes that change by session.", undefined, "attribute"),
     ],
     "Target visibility": [
@@ -500,18 +480,13 @@ export function safetyNotes(actionType: ActionType, language: StepHelpLanguage) 
   const vi = language === "vi";
   const advancedActions = new Set<ActionType>([
     "execute_js",
-    "use_proxy",
     "set_extra_headers",
     "wait_for_request",
     "wait_for_response",
     "block_request",
     "mock_response",
   ]);
-  const humanActions = new Set<ActionType>([
-    "detect_challenge",
-    "pause_for_human",
-    "resume_when_condition",
-  ]);
+  const humanActions = new Set<ActionType>();
 
   if (advancedActions.has(actionType)) {
     return [
@@ -546,23 +521,6 @@ export function fieldDetails(
 
 const specificFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
   vi: {
-    "scroll:Mode": [
-      "Page: cuộn trang chính. Nếu có Iframe XPath, app cuộn document bên trong iframe đó.",
-      "Container: XPath là box/thẻ có scrollbar riêng, ví dụ một div danh sách có overflow.",
-      "Into View: XPath là element bạn muốn đưa vào vùng nhìn thấy; mode này không dùng Direction/Pixels.",
-      "Until Visible: XPath là element đích cần thấy. App sẽ cuộn theo Direction/Pixels nhiều lần tới khi element visible hoặc hết Max attempts.",
-    ],
-    "scroll:XPath": [
-      "Với Container, XPath là vùng cần cuộn, ví dụ //*[@id='scroll-box'].",
-      "Với Into View, XPath là element muốn kéo vào màn hình.",
-      "Với Until Visible, XPath là element đích cần thấy, không phải box scroll.",
-      "Nếu đang dùng Iframe XPath, XPath này được lấy bên trong iframe, không phải từ trang cha.",
-    ],
-    "click:Mode": [
-      "Real click tạo mouse event thật hơn, phù hợp với đa số button/link và kiểm tra element có bị che hay không.",
-      "Force DOM click gọi trực tiếp element.click(), có thể hữu ích với UI khó click nhưng kém giống người dùng thật.",
-      "Nên thử Real click trước. Chỉ dùng Force DOM khi bạn hiểu website vẫn xử lý click() trực tiếp.",
-    ],
     "wait:Condition": [
       "Duration chờ theo thời gian cố định bằng mili-giây.",
       "Element visible/hidden kiểm tra element có đang nhìn thấy hay không.",
@@ -571,23 +529,6 @@ const specificFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> =
     ],
   },
   en: {
-    "scroll:Mode": [
-      "Page: scrolls the main page. If Iframe XPath is set, it scrolls the document inside that iframe.",
-      "Container: XPath is the scrollable box, for example a list div with overflow.",
-      "Into View: XPath is the element you want to bring into view; this mode does not use Direction/Pixels.",
-      "Until Visible: XPath is the target element. The app scrolls by Direction/Pixels until it is visible or Max attempts is exhausted.",
-    ],
-    "scroll:XPath": [
-      "For Container, XPath is the scroll area, for example //*[@id='scroll-box'].",
-      "For Into View, XPath is the element to bring into the viewport.",
-      "For Until Visible, XPath is the target element to see, not the scroll box.",
-      "When Iframe XPath is set, this XPath is copied from inside the iframe, not from the parent page.",
-    ],
-    "click:Mode": [
-      "Real click sends browser-like mouse events and checks whether the element can receive the click.",
-      "Force DOM click directly calls element.click(); it can help with difficult UI but is less like a real user.",
-      "Try Real click first. Use Force DOM only when the website handles click() directly.",
-    ],
     "wait:Condition": [
       "Duration waits for a fixed time in milliseconds.",
       "Element visible/hidden checks whether an element can or cannot be seen.",

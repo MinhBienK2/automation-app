@@ -37,7 +37,7 @@ export type WorkflowSettingsHelpContent = {
   }>;
   relatedGraphActions?: Array<{
     action: string;
-    relationship: "default" | "runtime_override" | "compatibility";
+    relationship: "default" | "runtime_override" | "related";
     explanation: string;
   }>;
   safetyNotes?: string[];
@@ -239,9 +239,6 @@ export function defaultWorkflowSettings({
       device_memory_gb: null,
       fingerprint_fonts_dir: null,
       storage_quota_mb: null,
-      humanize: true,
-      human_preset: "default",
-      behavior_fidelity: "balanced",
       preflight_enabled: false,
       preflight_probe_url: null,
       preflight_allowed_origins: [],
@@ -566,7 +563,7 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Browser Identity Settings Help",
       summary:
-        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, viewport, location, network posture, humanized input, and optional owned preflight.",
+        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, viewport, location, network posture, and optional owned preflight.",
       uiLabels: enLabels,
       bestFor: [
         "Making session and network posture repeatable from the first browser request.",
@@ -684,20 +681,6 @@ export const workflowSettingsHelp: Record<
             "Prefer seed defaults, and use overrides only when an owned account, proxy inventory, or preflight probe requires a specific coherent device bundle.",
         },
         {
-          name: "Humanize browser input",
-          description:
-            "Controls CloakBrowser's humanized mouse, keyboard, and scroll behavior. It should remain enabled for realistic workflow evidence unless deterministic internal testing requires otherwise.",
-          whenToUse:
-            "Keep it enabled for production-like probes and owned-system red-team simulation where interaction behavior is part of the defense surface.",
-        },
-        {
-          name: "Behavior fidelity",
-          description:
-            "Selects how strictly run actions must stay on humanized or normal browser APIs. Strict humanized mode blocks DOM fallback and CDP-sensitive actions and records the execution path in run traces.",
-          whenToUse:
-            "Use Balanced for normal probes, Strict humanized when behavior analytics are the target surface, and Deterministic internal for repeatable lab debugging.",
-        },
-        {
           name: "Fingerprint preflight",
           description:
             "Optional owned probe gate that launches the resolved browser identity, opens an allowlisted probe, reads a JSON verdict, and blocks graph actions when identity mismatches are reported.",
@@ -731,7 +714,7 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Browser Identity",
       summary:
-        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, viewport, vị trí, network posture, humanized input, và preflight owned tùy chọn.",
+        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, viewport, vị trí, network posture, và preflight owned tùy chọn.",
       uiLabels: viLabels,
       bestFor: [
         "Giữ session và network posture lặp lại được ngay từ request đầu tiên của browser.",
@@ -847,20 +830,6 @@ export const workflowSettingsHelp: Record<
             "Các override CloakBrowser allowlist, rủi ro cao cho platform, hardware concurrency, device memory, storage quota, và fonts directory managed; raw Chromium args vẫn không được mở.",
           whenToUse:
             "Ưu tiên seed default, chỉ override khi account owned, proxy inventory, hoặc preflight probe yêu cầu một device bundle nhất quán cụ thể.",
-        },
-        {
-          name: "Humanize browser input",
-          description:
-            "Điều khiển hành vi mouse, keyboard, và scroll đã humanize của CloakBrowser. Nên bật cho evidence thực tế trừ khi test nội bộ cần deterministic.",
-          whenToUse:
-            "Giữ bật cho production-like probes và red-team simulation trên hệ thống owned khi behavior là một mặt phòng thủ.",
-        },
-        {
-          name: "Behavior fidelity",
-          description:
-            "Chọn mức workflow phải bám theo hành vi humanized hoặc browser API bình thường. Strict humanized sẽ chặn DOM fallback và action CDP-sensitive, đồng thời ghi execution path trong trace của run.",
-          whenToUse:
-            "Dùng Balanced cho probe thường, Strict humanized khi behavior analytics là bề mặt cần kiểm tra, và Deterministic internal cho debug lab cần lặp lại.",
         },
         {
           name: "Fingerprint preflight",

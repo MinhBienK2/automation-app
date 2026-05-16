@@ -47,24 +47,6 @@ export function FormActionFields({
           </Label>
         </>
       );
-    case "set_checkbox":
-      return (
-        <>
-          <ElementTargetFields config={config} onChange={onChange} />
-          <Label>
-            State
-            <Select
-              value={config.config.state}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "state", event.currentTarget.value))
-              }
-            >
-              <option value="checked">Checked</option>
-              <option value="unchecked">Unchecked</option>
-            </Select>
-          </Label>
-        </>
-      );
     case "press_key":
       return (
         <Label>

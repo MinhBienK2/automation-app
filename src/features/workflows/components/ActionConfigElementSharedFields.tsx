@@ -12,9 +12,7 @@ type TargetableElementConfig = Extract<
       | "wait"
       | "clear_input"
       | "click"
-      | "scroll"
       | "select_option"
-      | "set_checkbox"
       | "hover"
       | "double_click"
       | "right_click"
@@ -113,7 +111,6 @@ function actionSupportsWaitUntil(actionType: ActionConfig["type"]): boolean {
       "clear_input",
       "click",
       "select_option",
-      "set_checkbox",
       "hover",
       "double_click",
       "right_click",

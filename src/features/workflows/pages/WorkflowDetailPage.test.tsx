@@ -229,8 +229,6 @@ describe("Workflow detail integration", () => {
           webrtc_policy: "default",
           webrtc_ip: null,
           storage_quota_mb: null,
-          humanize: true,
-          human_preset: "default",
           preflight_enabled: false,
           preflight_probe_url: null,
           preflight_allowed_origins: [],
@@ -364,7 +362,7 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
-  test("omits legacy trigger and owned test gate settings while showing identity preflight", async () => {
+  test("omits removed trigger settings while showing identity preflight", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
@@ -379,8 +377,6 @@ describe("Workflow detail integration", () => {
     });
 
     expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
-      .not.toBeInTheDocument();
-    expect(within(settingsDialog).queryByRole("tab", { name: "Owned Test Gates" }))
       .not.toBeInTheDocument();
     expect(within(settingsDialog).getByRole("switch", { name: "Fingerprint preflight" }))
       .toBeInTheDocument();

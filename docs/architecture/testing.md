@@ -92,10 +92,10 @@ E2E lanes:
 - `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing and humanized pointer regressions.
 - `npm run test:e2e:staging`: opt-in staging lane. Requires `E2E_STAGING_TARGETS_FILE` and `E2E_STAGING_ACCOUNTS_FILE`; targets must be allowlisted and accounts named. Example schemas live in `tests/e2e/fixtures/staging-targets.example.json` and `tests/e2e/fixtures/staging-accounts.example.json`.
 
-Lower-level or compatibility-only coverage:
+Lower-level coverage:
 
-- Launch-time-only actions such as `use_profile`, `use_proxy`, `set_user_agent`, and `set_download_directory` are hidden from visible in-run authoring and covered by runner/settings tests.
-- Planned or compatibility-hidden actions such as `switch_frame`, `save_session`, `load_session`, `set_secret`, `detect_challenge`, `pause_for_human`, `resume_when_condition`, `try_catch`, `fallback`, and subworkflow/output assertion internals remain outside primary visible-node E2E until they return to the visible authoring surface. `domain_allowlist` has desktop E2E coverage for navigation policy because it is a safety boundary.
+- Graph-internal control-flow action configs remain covered by runner and graph compiler tests while user authoring uses graph-native nodes.
+- Browser identity settings are covered through Workflow Settings and runner launch contracts, not in-run action nodes.
 - Additional wait condition variants and numeric validation edges remain covered in runner, graph compiler, and form validation suites unless a desktop regression exposes a user-facing gap.
 
 ## Policy

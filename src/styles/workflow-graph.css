@@ -494,7 +494,7 @@
   line-height: 1.45;
 }
 
-.graph-compatibility-action {
+.graph-internal-action {
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -503,17 +503,17 @@
   background: #121212;
 }
 
-.graph-compatibility-action .eyebrow {
+.graph-internal-action .eyebrow {
   margin-bottom: 0;
 }
 
-.graph-compatibility-action h3 {
+.graph-internal-action h3 {
   color: #fafafa;
   font-size: 14px;
   font-weight: 400;
 }
 
-.graph-compatibility-action pre {
+.graph-internal-action pre {
   max-height: 220px;
   overflow: auto;
   padding: 8px;

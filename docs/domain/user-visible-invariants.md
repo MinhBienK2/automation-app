@@ -43,10 +43,10 @@ Preserve these unless the task explicitly changes them.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
 - The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. It does not expose Add Output.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
-- Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible; advanced or policy-like logic nodes remain compatible for saved graphs but hidden from the main palette.
+- Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
-- Targetable action editors default Target locator type to XPath for compatibility, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
-- Planned, launch-time, and graph-internal compatibility actions are hidden from primary Add Action authoring. Existing saved configs remain loadable, and legacy launch-time browser identity nodes such as `use_profile`, `use_proxy`, and `set_user_agent` fail graph validation with a Workflow Settings migration message instead of silently no-oping. Legacy graph-internal action configs inside action nodes show a compatibility panel with a read-only JSON preview instead of an empty editor.
+- Targetable action editors default Target locator type to XPath, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
+- Browser identity belongs in Workflow Settings Browser Launch. Launch-time identity settings are not represented as in-run action nodes in the current workflow contract.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum.
 - Selecting a graph link clears node selection and shows link-scoped actions. Selecting a node clears link selection and shows node-scoped inspector content.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.
@@ -55,7 +55,6 @@ Preserve these unless the task explicitly changes them.
 - Dragging empty graph canvas creates a selection box by default. Holding Space temporarily switches the canvas to pan mode, and the toolbar pan hand can keep pan mode active until select mode is chosen again.
 - Selected graph nodes expose detailed schema-backed help from the inspector. Configured action nodes show an action guide popup with a compact header language toggle, minimum setup, detailed field and option explanations grouped by required, optional, and advanced, output guidance, workflow examples, and safety notes when relevant. Graph-native nodes explain purpose, ports and flow before minimum setup, grouped field and option explanations, and workflow examples in the same popup format. Common mistake guidance appears inside relevant field or option details, not as a separate top-level section.
 - `break_loop` and `continue_loop` are only valid when reachable through a loop body branch.
-- Manual approval and rate-limit graph nodes are safe control points; the app must not present them as CAPTCHA, anti-bot, spam, or account-creation bypass tools.
 - Set Variables can write multiple typed values in one node. Duplicate paths are allowed and later rows/nodes overwrite earlier values at the same path.
 - Set Variables remains a tabular row editor; narrow inspectors must contain it without crushing fields.
 - Set JSON Variables requires an object root, flattens nested object fields into dot-path variables, and preserves arrays as arrays at their key.
@@ -65,7 +64,7 @@ Preserve these unless the task explicitly changes them.
 ## UI Behavior
 
 - Workflow list and detail remain separate screens.
-- Workflow list does not expose legacy step counts or raw `updated_at` values; graph editing state belongs in the detail screen.
+- Workflow list does not expose raw `updated_at` values; graph editing state belongs in the detail screen.
 - Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
@@ -91,23 +90,22 @@ Preserve these unless the task explicitly changes them.
 
 - Full runs execute the compiled saved graph.
 - Full runs launch through CloakBrowser/Playwright in the Electron backend, with humanized interaction enabled by default.
-- Full runs use persisted Workflow Settings as the run baseline. Browser Launch identity settings, including profile directory, fingerprint seed, proxy, timezone, locale, viewport/device flags, supported WebRTC IP policy values, advanced fingerprint overrides, humanization, behavior fidelity, preflight, and headless mode, are resolved before browser launch; unsupported WebRTC disable policies are rejected or normalized to `default`; Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
-- Set Viewport updates runtime viewport width and height only; non-default device scale factor, mobile, or touch values in legacy saved configs fail validation/runtime with a Workflow Settings Browser Launch instruction.
+- Full runs use persisted Workflow Settings as the run baseline. Browser Launch identity settings, including profile directory, fingerprint seed, proxy, timezone, locale, viewport/device flags, supported WebRTC IP policy values, advanced fingerprint overrides, preflight, and headless mode, are resolved before browser launch. CloakBrowser humanization is enabled internally by the runner and is not user-configurable. Environment initial variables are applied before the first graph step; Run Policy max duration cancels and fails overlong runs with a timeout reason.
+- Set Viewport updates runtime viewport width and height only.
 - Headed CloakBrowser runs on Linux fail with a clear display prerequisite message when no `DISPLAY` or `WAYLAND_DISPLAY` is configured.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
 - Browser identity profile directories persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without persistent session reuse use temporary browser storage but still keep the configured identity seed unless the operator explicitly resets or duplicates the identity.
-- Missing Workflow Settings rows return lazy v2 defaults. Legacy browser config commands map to `settings.browser_launch`.
+- Missing Workflow Settings rows return lazy v2 defaults.
 - Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
 - Batch runs share active-run ownership with normal runs, can be stopped through Stop, and expose progress/summary in run outputs.
 - Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
-- `browser_identity` output evidence includes a fingerprint seed hash, non-secret network metadata, timezone/locale source, supported WebRTC policy, active advanced overrides, behavior fidelity, and CloakBrowser wrapper/binary version evidence. Action traces include an execution path that distinguishes humanized, browser API, DOM fallback, and CDP-sensitive actions.
+- `browser_identity` output evidence includes a fingerprint seed hash, non-secret network metadata, timezone/locale source, supported WebRTC policy, active advanced overrides, internal humanization status, and CloakBrowser wrapper/binary version evidence.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 
 ## Persistence
 
-- Workflow summaries include the legacy `step_count` field until the summary contract is renamed.
-- Saved workflow graph JSON is keyed by workflow id.
+- Workflow summaries include list metadata only; saved graph JSON is keyed by workflow id.
 - Graph saves touch the parent workflow `updated_at`.
 - Saved Workflow Settings are keyed by workflow id and touch the parent workflow `updated_at`. Saving General also updates the workflow summary name.

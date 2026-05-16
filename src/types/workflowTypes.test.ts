@@ -16,7 +16,6 @@ const graphInternalExecutableTypes: ActionType[] = [
   "stop_workflow",
   "transform_variable",
   "assert_output",
-  "run_subworkflow",
   "domain_allowlist",
 ];
 

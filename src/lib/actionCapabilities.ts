@@ -3,10 +3,7 @@ import type { ActionType } from "../types/workflow.js";
 export type ActionCapability =
   | "implemented"
   | "implemented_partial_requires_validation"
-  | "launch_time_only"
-  | "compatibility_hidden"
-  | "planned_hidden"
-  | "unsupported_visible_error";
+  | "graph_internal";
 
 export const actionCapabilities: Record<ActionType, ActionCapability> = {
   navigate: "implemented",
@@ -17,7 +14,6 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   click: "implemented_partial_requires_validation",
   scroll: "implemented_partial_requires_validation",
   select_option: "implemented_partial_requires_validation",
-  set_checkbox: "compatibility_hidden",
   press_key: "implemented",
   hotkey: "implemented",
   hover: "implemented_partial_requires_validation",
@@ -49,49 +45,34 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   open_new_tab: "implemented",
   switch_tab: "implemented",
   close_tab: "implemented",
-  switch_frame: "planned_hidden",
   accept_dialog: "implemented_partial_requires_validation",
   dismiss_dialog: "implemented_partial_requires_validation",
-  set_download_directory: "launch_time_only",
   wait_for_download: "implemented_partial_requires_validation",
   set_variable: "implemented",
   set_json_variables: "implemented",
   assert_element: "implemented_partial_requires_validation",
   assert_text: "implemented_partial_requires_validation",
-  if_condition: "compatibility_hidden",
-  repeat_times: "compatibility_hidden",
-  repeat_for_each: "compatibility_hidden",
-  retry_block: "compatibility_hidden",
-  switch_condition: "compatibility_hidden",
-  while_loop: "compatibility_hidden",
-  repeat_until: "compatibility_hidden",
-  try_catch: "compatibility_hidden",
-  fallback_block: "compatibility_hidden",
-  break_loop: "compatibility_hidden",
-  continue_loop: "compatibility_hidden",
-  stop_workflow: "compatibility_hidden",
-  transform_variable: "compatibility_hidden",
-  assert_output: "compatibility_hidden",
-  run_subworkflow: "compatibility_hidden",
-  domain_allowlist: "compatibility_hidden",
-  use_profile: "launch_time_only",
-  save_session: "planned_hidden",
-  load_session: "planned_hidden",
+  if_condition: "graph_internal",
+  repeat_times: "graph_internal",
+  repeat_for_each: "graph_internal",
+  retry_block: "graph_internal",
+  switch_condition: "graph_internal",
+  while_loop: "graph_internal",
+  repeat_until: "graph_internal",
+  try_catch: "graph_internal",
+  fallback_block: "graph_internal",
+  break_loop: "graph_internal",
+  continue_loop: "graph_internal",
+  stop_workflow: "graph_internal",
+  transform_variable: "graph_internal",
+  assert_output: "graph_internal",
+  domain_allowlist: "graph_internal",
   set_cookie: "implemented",
   clear_cookies: "implemented",
-  set_secret: "planned_hidden",
-  use_proxy: "launch_time_only",
-  set_user_agent: "launch_time_only",
   set_viewport: "implemented",
   set_geolocation: "implemented",
   set_extra_headers: "implemented",
   grant_permission: "implemented",
-  detect_challenge: "planned_hidden",
-  pause_for_human: "planned_hidden",
-  resume_when_condition: "compatibility_hidden",
-  fallback_selector: "planned_hidden",
-  retry_step: "planned_hidden",
-  checkpoint: "planned_hidden",
   execute_js: "implemented",
   wait_for_request: "implemented",
   wait_for_response: "implemented",
@@ -105,26 +86,5 @@ export const allActionTypes = Object.keys(actionCapabilities) as ActionType[];
 
 export function isActionVisibleInPrimaryPalette(actionType: ActionType) {
   const capability = actionCapabilities[actionType];
-  return (
-    capability === "implemented" ||
-    capability === "implemented_partial_requires_validation" ||
-    capability === "unsupported_visible_error"
-  );
-}
-
-export function unsupportedInRunReason(actionType: ActionType): string | null {
-  const capability = actionCapabilities[actionType];
-  if (capability === "launch_time_only") {
-    return "configure it in Workflow Settings before launch";
-  }
-  if (capability === "planned_hidden") {
-    return "runtime semantics are not implemented yet";
-  }
-  if (capability === "unsupported_visible_error") {
-    return "runtime support is not implemented yet";
-  }
-  if (actionType === "run_subworkflow") {
-    return "subworkflow lifecycle and recursion handling are not implemented yet";
-  }
-  return null;
+  return capability === "implemented" || capability === "implemented_partial_requires_validation";
 }

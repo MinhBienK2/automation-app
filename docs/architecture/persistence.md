@@ -14,9 +14,9 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 
 - Electron app data uses `appData/automation-app`.
 - The current schema creates document-shaped `workflows` plus queryable `runs` and `run_steps`.
-- `listWorkflows` returns workflow summaries with the legacy `step_count` field.
+- `listWorkflows` returns workflow summaries used by the workflow list.
 - Summaries sort by `updated_at DESC`, then name ascending.
-- `getWorkflow` returns workflow metadata plus empty legacy ordered steps for compatibility; product graph authoring data is loaded from `getWorkflowGraph`.
+- `getWorkflow` returns workflow metadata; product graph authoring data is loaded from `getWorkflowGraph`.
 - New workflows create a `Start -> New node` draft workflow graph with an unconfigured action node saved as `config: null`.
 - Workflow graph authoring data is stored in `workflows.graph_json`.
 - Workflow Settings are stored in `workflows.settings_json`.
@@ -35,8 +35,7 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Order index integrity.
 - Serialization/deserialization of stored action config JSON.
 - Serialization/deserialization of stored workflow graph JSON.
-- Persistence of Workflow Settings rows and legacy workflow browser runtime config rows.
-- Compatibility behavior for legacy step rows until that schema is removed.
+- Persistence of Workflow Settings rows.
 
 ## Does Not Belong Here
 
@@ -48,5 +47,5 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 
 - Add a migration for schema changes.
 - Update repository tests.
-- Consider import/export compatibility.
+- Consider import/export contract changes.
 - Preserve existing workflow deserialization unless intentionally resetting the local Electron data format.

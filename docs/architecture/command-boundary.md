@@ -31,7 +31,7 @@ Node/Electron backend.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
-- `run_subworkflow` nodes remain serializable compatibility configs but are not expanded yet; the runner fails them explicitly until nested run lifecycle semantics are implemented.
+- Nested subworkflow nodes are not part of the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the saved workflow graph with saved Workflow Settings as the run baseline. The UI saves the current graph and dirty settings sections before invoking it.
 - Product-facing batch execution shares the same active-run lifecycle lock, stop handling, and persisted run records as normal workflow execution.
 - Workflow package import validates selected sections before creation and wraps workflow, graph, and settings writes in a SQLite transaction.

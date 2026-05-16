@@ -494,10 +494,6 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { item_name: "item", array_variable: null, items: ["item"] };
     case "retry":
       return { max_attempts: 3, delay_ms: 100 };
-    case "manual_approval":
-      return { reason: "Manual approval required", timeout_ms: null };
-    case "rate_limit":
-      return { delay_ms: 1000 };
     case "end_success":
       return { close_browser: false };
     case "end_failure":
@@ -512,8 +508,6 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { source_name: "input", target_name: "output", expression: "" };
     case "assert_output":
       return { name: "output", match: "equals", value: "" };
-    case "run_subworkflow":
-      return { workflow_id: "", input_mapping: [], output_mapping: [] };
     case "domain_allowlist":
       return { domains: [] };
     default:

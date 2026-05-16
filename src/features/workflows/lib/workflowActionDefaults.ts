@@ -44,11 +44,9 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return {
         type: actionType,
         config: {
-          mode: undefined,
+          mode: "page",
           direction: "down",
           pixels: 500,
-          target: null,
-          behavior: null,
         },
       };
     case "select_option":
@@ -58,14 +56,6 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           target: null,
           match_by: "label",
           value: "",
-        },
-      };
-    case "set_checkbox":
-      return {
-        type: actionType,
-        config: {
-          target: null,
-          state: "checked",
         },
       };
     case "press_key":
@@ -161,12 +151,8 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       return { type: actionType, config: { index: 0 } };
     case "close_tab":
       return { type: actionType, config: { index: null } };
-    case "switch_frame":
-      return { type: actionType, config: { xpath: null, target: null } };
     case "accept_dialog":
       return { type: actionType, config: { prompt_text: null } };
-    case "set_download_directory":
-      return { type: actionType, config: { path: "" } };
     case "wait_for_download":
       return { type: actionType, config: { output_name: "download_path" } };
     case "set_variable":
@@ -255,32 +241,16 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { name: "output", match_mode: "equals", value: "" },
       };
-    case "run_subworkflow":
-      return {
-        type: actionType,
-        config: { workflow_id: "", input_mapping: [], output_mapping: [] },
-      };
     case "domain_allowlist":
       return { type: actionType, config: { domains: [] } };
-    case "use_profile":
-      return { type: actionType, config: { name: "default" } };
-    case "save_session":
-    case "load_session":
-      return { type: actionType, config: { path: "" } } as ActionConfig;
     case "set_cookie":
       return { type: actionType, config: { name: "", value: "", domain: null, path: "/" } };
     case "clear_cookies":
       return { type: actionType, config: { domain: null } };
-    case "set_secret":
-      return { type: actionType, config: { name: "secret", value: "" } };
-    case "use_proxy":
-      return { type: actionType, config: { server: "", username: null, password: null } };
-    case "set_user_agent":
-      return { type: actionType, config: { user_agent: "" } };
     case "set_viewport":
       return {
         type: actionType,
-        config: { width: 1280, height: 720, device_scale_factor: 1, mobile: false, touch: false },
+        config: { width: 1280, height: 720 },
       };
     case "set_geolocation":
       return { type: actionType, config: { latitude: 0, longitude: 0, accuracy: 100 } };
@@ -291,41 +261,6 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
       };
     case "grant_permission":
       return { type: actionType, config: { origin: null, permissions: ["geolocation"] } };
-    case "detect_challenge":
-      return {
-        type: actionType,
-        config: {
-          output_name: "challenge_found",
-          patterns: ["captcha", "verify you are human", "challenge"],
-          timeout_ms: 1000,
-        },
-      };
-    case "pause_for_human":
-      return {
-        type: actionType,
-        config: { reason: "Human verification required", timeout_ms: null },
-      };
-    case "resume_when_condition":
-      return {
-        type: actionType,
-        config: { condition: { kind: "text_visible", text: "Welcome" }, timeout_ms: 60000 },
-      };
-    case "fallback_selector":
-      return {
-        type: actionType,
-        config: { output_name: "target_xpath", xpaths: ["//*[@id='target']"], timeout_ms: 1000 },
-      };
-    case "retry_step":
-      return {
-        type: actionType,
-        config: {
-          max_attempts: 3,
-          delay_ms: 100,
-          step: defaultActionConfig("wait"),
-        },
-      };
-    case "checkpoint":
-      return { type: actionType, config: { name: "checkpoint", screenshot_path: null } };
     case "execute_js":
       return {
         type: actionType,

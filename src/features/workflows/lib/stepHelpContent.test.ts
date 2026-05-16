@@ -92,11 +92,7 @@ describe("step help content", () => {
   test("marks advanced and sensitive actions with safety notes", () => {
     for (const actionType of [
       "execute_js",
-      "use_proxy",
       "set_extra_headers",
-      "detect_challenge",
-      "pause_for_human",
-      "resume_when_condition",
     ] as const) {
       expect(stepHelpContent[actionType].en.safetyNotes?.join(" ")).toMatch(
         /authorized|pause|advanced/i,
@@ -127,28 +123,6 @@ describe("step help content", () => {
       expect.arrayContaining([
         expect.objectContaining({ port: "try", required: true }),
         expect.objectContaining({ port: "failed", required: false }),
-      ]),
-    );
-  });
-
-  test("explains every scroll mode in detail", () => {
-    const viMode = stepHelpContent.scroll.vi.fields.find((field) => field.name === "Mode");
-    const enMode = stepHelpContent.scroll.en.fields.find((field) => field.name === "Mode");
-
-    expect(viMode?.details).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("Page"),
-        expect.stringContaining("Container"),
-        expect.stringContaining("Into View"),
-        expect.stringContaining("Until Visible"),
-      ]),
-    );
-    expect(enMode?.details).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("Page"),
-        expect.stringContaining("Container"),
-        expect.stringContaining("Into View"),
-        expect.stringContaining("Until Visible"),
       ]),
     );
   });
@@ -258,14 +232,6 @@ describe("step help content", () => {
         ?.map((option) => option.label),
     ).toEqual(["Any", "Enabled", "Disabled"]);
 
-    expect(stepHelpContent.scroll.en.fieldReference!.find((field) => field.name === "Mode")?.options)
-      .toEqual(expect.arrayContaining([
-        expect.objectContaining({ label: "Page", useWhen: expect.stringContaining("main page") }),
-        expect.objectContaining({ label: "Container", avoidWhen: expect.stringContaining("target") }),
-        expect.objectContaining({ label: "Into View" }),
-        expect.objectContaining({ label: "Until Visible" }),
-      ]));
-
     expect(stepHelpContent.wait.en.fieldReference!.find((field) => field.name === "Condition")?.options)
       .toEqual(expect.arrayContaining([
         expect.objectContaining({ label: "Duration", useWhen: expect.stringContaining("fixed") }),
@@ -284,11 +250,8 @@ describe("step help content", () => {
       { actionType: "input_text", fieldName: "Target visibility", labels: ["Any", "Visible", "Hidden"] },
       { actionType: "input_text", fieldName: "Target enabled", labels: ["Any", "Enabled", "Disabled"] },
       { actionType: "wait", fieldName: "Condition", labels: ["Duration", "Element visible", "Element hidden", "Element attached", "Element detached", "Text visible", "URL contains", "Page load", "Element enabled", "Element disabled"] },
-      { actionType: "scroll", fieldName: "Mode", labels: ["Page", "Container", "Into View", "Until Visible"] },
       { actionType: "scroll", fieldName: "Direction", labels: ["Down", "Up", "Left", "Right"] },
-      { actionType: "scroll", fieldName: "Behavior", labels: ["Instant", "Smooth"] },
       { actionType: "select_option", fieldName: "Match by", labels: ["Label", "Value"] },
-      { actionType: "set_checkbox", fieldName: "State", labels: ["Checked", "Unchecked"] },
       { actionType: "set_contenteditable", fieldName: "Clear before input", labels: ["Yes", "No"] },
       { actionType: "take_screenshot", fieldName: "Full page", labels: ["Yes", "No"] },
       { actionType: "assert_element", fieldName: "State", labels: ["Visible", "Hidden", "Attached", "Enabled", "Disabled"] },
@@ -336,9 +299,6 @@ describe("step help content", () => {
       "set_json_variables",
       "transform_variable",
       "assert_output",
-      "run_subworkflow",
-      "manual_approval",
-      "rate_limit",
       "domain_allowlist",
     ];
 

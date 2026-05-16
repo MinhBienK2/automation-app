@@ -303,32 +303,6 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("Expected value", "Expected value.", ["Check whitespace and letter case."]),
     ], "en"),
   },
-  run_subworkflow: {
-    vi: nodeWithFields("Run Subworkflow", "Chạy một workflow khác từ graph hiện tại.", [
-      field("Workflow id", "ID workflow con cần chạy.", ["Workflow con phải tồn tại và tự validate được."]),
-    ]),
-    en: nodeWithFields("Run Subworkflow", "Run another workflow from this graph.", [
-      field("Workflow id", "Workflow id to run.", ["The child workflow must exist and validate on its own."]),
-    ], "en"),
-  },
-  manual_approval: {
-    vi: nodeWithFields("Manual Approval", "Tạm dừng để người dùng kiểm tra thủ công.", [
-      field("Approval reason", "Nội dung giải thích vì sao cần duyệt.", ["Đây là checkpoint người dùng, không phải cơ chế bypass challenge."]),
-      field("Timeout ms", "Thời gian tối đa chờ người dùng.", ["0 hoặc trống nghĩa là không đặt giới hạn khi được hỗ trợ."]),
-    ]),
-    en: nodeWithFields("Manual Approval", "Pause for a human checkpoint.", [
-      field("Approval reason", "Why approval is needed.", ["This is a user checkpoint, not challenge bypass."]),
-      field("Timeout ms", "Maximum time to wait for the user.", ["0 or blank means no limit when supported."]),
-    ], "en"),
-  },
-  rate_limit: {
-    vi: nodeWithFields("Rate Limit", "Thêm khoảng nghỉ an toàn trước khi đi tiếp.", [
-      field("Delay ms", "Thời gian nghỉ.", ["Dùng để giảm tốc độ thao tác hoặc chờ hệ thống ổn định."]),
-    ]),
-    en: nodeWithFields("Rate Limit", "Add safe pacing before continuing.", [
-      field("Delay ms", "Delay duration.", ["Use to slow actions or let the system settle."]),
-    ], "en"),
-  },
   domain_allowlist: {
     vi: nodeWithFields("Domain Allowlist", "Giới hạn workflow trong các domain được phép.", [
       field("Allowed domains", "Danh sách domain, mỗi dòng một domain.", ["Dùng domain không kèm path, ví dụ example.com.", "Nếu workflow rời khỏi allowlist, run phải bị chặn theo semantics hiện có."]),

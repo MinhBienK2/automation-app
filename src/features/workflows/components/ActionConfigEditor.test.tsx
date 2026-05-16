@@ -141,7 +141,7 @@ describe("ActionConfigEditor", () => {
       <ActionConfigEditor
         config={{
           type: "set_viewport",
-          config: { width: 1280, height: 720, device_scale_factor: 1, mobile: false, touch: false },
+          config: { width: 1280, height: 720 },
         }}
         onChange={vi.fn()}
       />,

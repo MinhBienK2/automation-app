@@ -213,8 +213,8 @@ function collectVariableOptions(graph: WorkflowGraph): VariableOption[] {
           if (name) options.push({ name, source: "Set Variables" });
         }
       }
-      const legacyName = typeof config.name === "string" ? config.name.trim() : "";
-      if (legacyName) options.push({ name: legacyName, source: "Set Variables" });
+      const singleName = typeof config.name === "string" ? config.name.trim() : "";
+      if (singleName) options.push({ name: singleName, source: "Set Variables" });
       for (const name of variableNamesFromSerializedConfig(node.config)) {
         options.push({ name, source: "Set Variables" });
       }

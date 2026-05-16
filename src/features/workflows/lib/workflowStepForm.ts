@@ -3,12 +3,8 @@ import type { ActionConfig } from "../../../types/workflow";
 export type ActionConfigField =
   | "attribute"
   | "array_variable"
-  | "behavior"
-  | "block"
   | "body"
-  | "button"
   | "clear_before_input"
-  | "click_count"
   | "condition"
   | "content_type"
   | "delay_ms"
@@ -18,7 +14,6 @@ export type ActionConfigField =
   | "files"
   | "iframe_xpath"
   | "index"
-  | "inline"
   | "items"
   | "item_name"
   | "json"
@@ -28,24 +23,16 @@ export type ActionConfigField =
   | "match_by"
   | "max_ms"
   | "max_attempts"
-  | "method"
   | "min_ms"
   | "mode"
   | "name"
-  | "offset_x"
-  | "offset_y"
   | "option_text"
   | "origin"
   | "output_name"
   | "path"
-  | "patterns"
   | "pixels"
-  | "position"
-  | "post_click_wait_ms"
   | "prompt_text"
   | "reason"
-  | "retry_interval_ms"
-  | "scroll_into_view"
   | "script"
   | "seconds"
   | "status"
@@ -54,34 +41,24 @@ export type ActionConfigField =
   | "target_xpath"
   | "text"
   | "timeout_ms"
-  | "typing_mode"
   | "url"
   | "url_contains"
   | "url_patterns"
   | "value"
   | "value_type"
-  | "wait_ms"
   | "wait_until"
   | "xpath"
   | "trigger_xpath"
   | "times"
   | "full_page"
   | "accuracy"
-  | "device_scale_factor"
   | "headers"
   | "height"
   | "latitude"
   | "longitude"
-  | "mobile"
-  | "password"
   | "permissions"
-  | "server"
-  | "touch"
-  | "user_agent"
-  | "username"
   | "width"
-  | "xpaths"
-  | "screenshot_path";
+  | "xpaths";
 
 export function updateActionConfigField(
   config: ActionConfig,
@@ -105,8 +82,6 @@ export function updateActionConfigField(
       return updateScrollConfigField(config, field, value);
     case "select_option":
       return updateSelectOptionConfigField(config, field, value);
-    case "set_checkbox":
-      return updateElementConfigField(config, field, value);
     case "press_key":
       return { type: "press_key", config: { key: value } };
     case "hotkey":
@@ -164,14 +139,10 @@ export function updateActionConfigField(
       return { type: "switch_tab", config: { index: Number(value) } };
     case "close_tab":
       return { type: "close_tab", config: { index: value ? Number(value) : null } };
-    case "switch_frame":
-      return { type: "switch_frame", config: { ...config.config, xpath: value || null } };
     case "accept_dialog":
       return { type: "accept_dialog", config: { prompt_text: value || null } };
     case "dismiss_dialog":
       return config;
-    case "set_download_directory":
-      return { type: "set_download_directory", config: { path: value } };
     case "wait_for_download":
       return updateWaitForDownloadConfigField(config, field, value);
     case "set_variable":
@@ -216,12 +187,6 @@ export function updateActionConfigField(
         return { type: "stop_workflow", config: { ...config.config, reason: value || null } };
       }
       return { type: "stop_workflow", config: { ...config.config, [field]: value } };
-    case "use_profile":
-      return { type: "use_profile", config: { name: value } };
-    case "save_session":
-      return { type: "save_session", config: { path: value } };
-    case "load_session":
-      return { type: "load_session", config: { path: value } };
     case "set_cookie":
       if (field === "domain" || field === "path") {
         return { type: "set_cookie", config: { ...config.config, [field]: value || null } };
@@ -229,15 +194,6 @@ export function updateActionConfigField(
       return { type: "set_cookie", config: { ...config.config, [field]: value } };
     case "clear_cookies":
       return { type: "clear_cookies", config: { domain: value || null } };
-    case "set_secret":
-      return { type: "set_secret", config: { ...config.config, [field]: value } };
-    case "use_proxy":
-      if (field === "username" || field === "password") {
-        return { type: "use_proxy", config: { ...config.config, [field]: value || null } };
-      }
-      return { type: "use_proxy", config: { ...config.config, server: value } };
-    case "set_user_agent":
-      return { type: "set_user_agent", config: { user_agent: value } };
     case "set_viewport":
       return updateSetViewportConfigField(config, field, value);
     case "set_geolocation":
@@ -252,63 +208,6 @@ export function updateActionConfigField(
         type: "grant_permission",
         config: { ...config.config, permissions: parseLineList(value) },
       };
-    case "detect_challenge":
-      if (field === "patterns") {
-        return {
-          type: "detect_challenge",
-          config: { ...config.config, patterns: parseLineList(value) },
-        };
-      }
-      if (field === "timeout_ms") {
-        return {
-          type: "detect_challenge",
-          config: { ...config.config, timeout_ms: Number(value) },
-        };
-      }
-      return { type: "detect_challenge", config: { ...config.config, [field]: value } };
-    case "pause_for_human":
-      if (field === "timeout_ms") {
-        return {
-          type: "pause_for_human",
-          config: { ...config.config, timeout_ms: Number(value) },
-        };
-      }
-      return { type: "pause_for_human", config: { ...config.config, reason: value } };
-    case "resume_when_condition":
-      if (field === "timeout_ms") {
-        return {
-          type: "resume_when_condition",
-          config: { ...config.config, timeout_ms: Number(value) },
-        };
-      }
-      return config;
-    case "fallback_selector":
-      if (field === "xpaths") {
-        return {
-          type: "fallback_selector",
-          config: { ...config.config, xpaths: parseLineList(value) },
-        };
-      }
-      if (field === "timeout_ms") {
-        return {
-          type: "fallback_selector",
-          config: { ...config.config, timeout_ms: Number(value) },
-        };
-      }
-      return { type: "fallback_selector", config: { ...config.config, output_name: value } };
-    case "retry_step":
-      if (field === "max_attempts" || field === "delay_ms") {
-        return { type: "retry_step", config: { ...config.config, [field]: Number(value) } };
-      }
-      return config;
-    case "checkpoint":
-      if (field === "screenshot_path") {
-        return {
-          type: "checkpoint",
-          config: { ...config.config, screenshot_path: value || null },
-        };
-      }
-      return { type: "checkpoint", config: { ...config.config, name: value } };
     case "execute_js":
       if (field === "timeout_ms") {
         return { type: "execute_js", config: { ...config.config, timeout_ms: Number(value) } };
@@ -356,7 +255,6 @@ export function updateActionConfigField(
     case "continue_loop":
     case "transform_variable":
     case "assert_output":
-    case "run_subworkflow":
     case "domain_allowlist":
       return config;
   }
@@ -367,12 +265,8 @@ function updateSetViewportConfigField(
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
-  if (field === "width" || field === "height" || field === "device_scale_factor") {
+  if (field === "width" || field === "height") {
     return { type: "set_viewport", config: { ...config.config, [field]: Number(value) } };
-  }
-
-  if (field === "mobile" || field === "touch") {
-    return { type: "set_viewport", config: { ...config.config, [field]: value === "true" } };
   }
 
   return config;
@@ -462,7 +356,7 @@ function updateInputTextConfigField(
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
-  if (field === "delay_ms" || field === "timeout_ms") {
+  if (field === "timeout_ms") {
     return {
       type: "input_text",
       config: { ...config.config, [field]: Number(value) },
@@ -492,12 +386,7 @@ function updateClickConfigField(
   value: string,
 ): ActionConfig {
   if (
-    field === "click_count" ||
-    field === "offset_x" ||
-    field === "offset_y" ||
-    field === "timeout_ms" ||
-    field === "retry_interval_ms" ||
-    field === "post_click_wait_ms"
+    field === "timeout_ms"
   ) {
     return {
       type: "click",
@@ -512,13 +401,6 @@ function updateClickConfigField(
     };
   }
 
-  if (field === "scroll_into_view") {
-    return {
-      type: "click",
-      config: { ...config.config, scroll_into_view: value === "true" },
-    };
-  }
-
   return {
     type: "click",
     config: { ...config.config, [field]: value },
@@ -530,7 +412,7 @@ function updateScrollConfigField(
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
-  if (field === "pixels" || field === "max_attempts" || field === "wait_ms") {
+  if (field === "pixels") {
     return {
       type: "scroll",
       config: { ...config.config, [field]: Number(value) },
@@ -576,7 +458,7 @@ function updateSelectOptionConfigField(
 }
 
 function updateElementConfigField(
-  config: Extract<ActionConfig, { type: "clear_input" | "set_checkbox" | "hover" }>,
+  config: Extract<ActionConfig, { type: "clear_input" | "hover" }>,
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
@@ -589,14 +471,6 @@ function updateElementConfigField(
         return { type: "clear_input", config: { ...config.config, iframe_xpath: value || null } };
       }
       return { type: "clear_input", config: { ...config.config, [field]: value } };
-    case "set_checkbox":
-      if (field === "timeout_ms") {
-        return { type: "set_checkbox", config: { ...config.config, timeout_ms: Number(value) } };
-      }
-      if (field === "iframe_xpath") {
-        return { type: "set_checkbox", config: { ...config.config, iframe_xpath: value || null } };
-      }
-      return { type: "set_checkbox", config: { ...config.config, [field]: value } };
     case "hover":
       if (field === "timeout_ms") {
         return { type: "hover", config: { ...config.config, timeout_ms: Number(value) } };

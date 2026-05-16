@@ -201,10 +201,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "set_json_variables":
     case "transform_variable":
     case "assert_output":
-    case "run_subworkflow":
     case "domain_allowlist":
-    case "manual_approval":
-    case "rate_limit":
       return "out";
     case "if":
     case "switch":

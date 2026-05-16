@@ -29,8 +29,8 @@ SQLite
 ## Runtime State
 
 The renderer command boundary is Electron IPC. The TypeScript backend owns
-workflow CRUD, graph document storage, Workflow Settings, browser-config
-compatibility, package import/export, graph validation/compilation, SQLite
+workflow CRUD, graph document storage, Workflow Settings,
+package import/export, graph validation/compilation, SQLite
 persistence, run orchestration, and CloakBrowser execution.
 
 ## Boundaries

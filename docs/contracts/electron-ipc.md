@@ -87,7 +87,7 @@ workflow still references it and no retained session is active.
 
 Electron main initializes SQLite in app data, and Node command handlers now use
 the TypeScript workflow repository for workflow CRUD, graph documents, Workflow
-Settings, browser-config compatibility, and workflow package import/export.
+Settings and workflow package import/export.
 
 Graph validation/compilation, run orchestration, SQLite persistence, workflow
 package import/export, and CloakBrowser runner execution are owned by the

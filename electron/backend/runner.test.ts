@@ -72,8 +72,6 @@ describe("BrowserWorkflowRunner", () => {
         device_scale_factor: 1,
         mobile: false,
         touch: false,
-        humanize: true,
-        human_preset: "careful",
         geoip: false,
         fingerprint_platform: "windows",
         hardware_concurrency: 8,
@@ -98,7 +96,7 @@ describe("BrowserWorkflowRunner", () => {
           userDataDir: path.join(paths.browserProfilesDir, "bi_test_identity"),
           headless: false,
           humanize: true,
-          humanPreset: "careful",
+          humanPreset: "default",
           userAgent: undefined,
           viewport: { width: 1920, height: 947 },
           timezone: "America/New_York",
@@ -154,8 +152,6 @@ describe("BrowserWorkflowRunner", () => {
         touch: false,
       },
       humanize: true,
-      human_preset: "careful",
-      behavior_fidelity: "balanced",
       advanced_overrides: [
         "fingerprint_platform",
         "hardware_concurrency",
@@ -448,7 +444,6 @@ describe("BrowserWorkflowRunner", () => {
               xpath: "//input[@name='q']",
               text: "lab",
               clear_before_input: true,
-              typing_mode: "type",
             },
           }),
           step("click", "Click", {
@@ -480,31 +475,26 @@ describe("BrowserWorkflowRunner", () => {
         node_id: "open",
         action_type: "navigate",
         mode: "browser",
-        execution_path: "browser_api",
       }),
       expect.objectContaining({
         node_id: "fill",
         action_type: "input_text",
         mode: "browser",
-        execution_path: "humanized",
       }),
       expect.objectContaining({
         node_id: "click",
         action_type: "click",
         mode: "browser",
-        execution_path: "humanized",
       }),
       expect.objectContaining({
         node_id: "extract",
         action_type: "extract_text",
         mode: "observer",
-        execution_path: "browser_api",
       }),
       expect.objectContaining({
         node_id: "script",
         action_type: "execute_js",
         mode: "direct_dom",
-        execution_path: "cdp_sensitive",
       }),
     ]);
     expect(page.events).toEqual(
@@ -512,13 +502,13 @@ describe("BrowserWorkflowRunner", () => {
         "goto:https://owned.test",
         "locator://input[@name='q']",
         "fill://input[@name='q']:",
-        "type://input[@name='q']:lab:0",
+        "fill://input[@name='q']:lab",
         "click://button[@id='go']",
       ]),
     );
   });
 
-  test("strict humanized behavior blocks CDP-sensitive actions", async () => {
+  test("advanced browser actions execute while CloakBrowser owns humanization globally", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext()),
@@ -533,22 +523,17 @@ describe("BrowserWorkflowRunner", () => {
           }),
         ],
       },
-      settings: makeSettings({
-        browser_launch: { behavior_fidelity: "strict_humanized" },
-      }),
+      settings: makeSettings(),
       mode: "run_workflow",
     });
 
-    expect(result.status).toBe("failed");
-    expect(result.error?.reason).toBe(
-      "Action execute_js is cdp_sensitive and is blocked by strict humanized behavior",
-    );
+    expect(result.status).toBe("success");
+    expect(result.outputs?.value).toBeNull();
     expect(result.outputs?.__action_traces).toEqual([
       expect.objectContaining({
         node_id: "script",
         action_type: "execute_js",
-        status: "failed",
-        execution_path: "cdp_sensitive",
+        status: "success",
       }),
     ]);
   });
@@ -662,66 +647,6 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("click://button[@type='submit']");
   });
 
-  test("click force_dom uses a DOM click instead of a pointer click", async () => {
-    const page = new FakePage();
-    const runner = new BrowserWorkflowRunner({
-      appPaths: await createTempAppPaths(),
-      driver: createFakeDriver(new FakeContext(page)),
-    });
-
-    const result = await runner.run({
-      graph: {
-        steps: [
-          step("click", "Click", {
-            type: "click",
-            config: { xpath: "#hard-click", mode: "force_dom" },
-          }),
-        ],
-      },
-      settings: makeSettings(),
-      mode: "run_workflow",
-    });
-
-    expect(result.status).toBe("success");
-    expect(page.events).toContain("evaluate:#hard-click");
-    expect(page.events).not.toContain("click:#hard-click");
-  });
-
-  test("click applies scroll alignment and offset position options", async () => {
-    const page = new FakePage();
-    const runner = new BrowserWorkflowRunner({
-      appPaths: await createTempAppPaths(),
-      driver: createFakeDriver(new FakeContext(page)),
-    });
-
-    const result = await runner.run({
-      graph: {
-        steps: [
-          step("click", "Click", {
-            type: "click",
-            config: {
-              xpath: "#offset-click",
-              scroll_into_view: true,
-              block: "end",
-              inline: "nearest",
-              position: "offset",
-              offset_x: 12,
-              offset_y: 8,
-              button: "middle",
-              click_count: 2,
-            },
-          }),
-        ],
-      },
-      settings: makeSettings(),
-      mode: "run_workflow",
-    });
-
-    expect(result.status).toBe("success");
-    expect(page.events).toContain("scrollIntoView:#offset-click:end:nearest");
-    expect(page.events).toContain("click:#offset-click:middle:2:12:8");
-  });
-
   test("selects radio targets through locator DOM evaluation", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
@@ -752,7 +677,7 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("click:testid=role-admin");
   });
 
-  test("scrolls pages through browser-side DOM evaluation", async () => {
+  test("scrolls pages through browser wheel input", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -773,7 +698,7 @@ describe("BrowserWorkflowRunner", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(page.events).toContain("scrollBy:0:900");
+    expect(page.events).toContain("wheel:0:900");
   });
 
   test("dispatches right-click targets through native locator input", async () => {
@@ -1204,19 +1129,9 @@ describe("BrowserWorkflowRunner", () => {
         reason: "Wait until must be attached, visible, enabled, or clickable",
       },
       {
-        label: "typing_mode",
-        config: { type: "input_text", config: { xpath: "#email", text: "user", typing_mode: "fast" as never } },
-        reason: "Typing mode must be set_value or type",
-      },
-      {
         label: "match_by",
         config: { type: "select_option", config: { xpath: "#country", match_by: "index" as never, value: "1" } },
         reason: "Match by must be label or value",
-      },
-      {
-        label: "checkbox_state",
-        config: { type: "set_checkbox", config: { xpath: "#terms", state: "mixed" as never } },
-        reason: "Checkbox state must be checked or unchecked",
       },
       {
         label: "assert_text_match",
@@ -1659,7 +1574,7 @@ describe("BrowserWorkflowRunner", () => {
     expect(progress.indexOf("true-node")).toBeLessThan(progress.lastIndexOf("done"));
   });
 
-  test("honors loop timeout and resume condition polling semantics", async () => {
+  test("honors loop timeout semantics", async () => {
     let sleepCalls = 0;
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -1689,13 +1604,6 @@ describe("BrowserWorkflowRunner", () => {
               ],
             },
           }),
-          step("resume", "Resume", {
-            type: "resume_when_condition",
-            config: {
-              condition: { kind: "output_equals", name: "timed_out", value: "yes" },
-              timeout_ms: 50,
-            },
-          }),
         ],
       },
       settings: makeSettings(),
@@ -1705,29 +1613,6 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.status).toBe("success");
     expect(result.outputs).toMatchObject({ timed_out: "yes" });
     expect(sleepCalls).toBeGreaterThan(0);
-
-    const timeoutResult = await runner.run({
-      graph: {
-        steps: [
-          step("resume-timeout", "Resume timeout", {
-            type: "resume_when_condition",
-            config: {
-              condition: { kind: "output_equals", name: "missing", value: "yes" },
-              timeout_ms: 1,
-            },
-          }),
-        ],
-      },
-      settings: makeSettings(),
-      mode: "run_workflow",
-    });
-
-    expect(timeoutResult.status).toBe("failed");
-    expect(timeoutResult.error).toMatchObject({
-      step_id: "resume-timeout",
-      action_type: "resume_when_condition",
-      reason: "Resume condition timed out after 1 ms",
-    });
   });
 
   test("fails set-json variables when the rendered JSON root is not an object", async () => {
@@ -2123,7 +2008,7 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
-  test("fails set_viewport device shape changes because they are launch-time identity settings", async () => {
+  test("sets runtime viewport width and height", async () => {
     const page = new FakePage();
     const context = new FakeContext(page);
     const runner = new BrowserWorkflowRunner({
@@ -2136,13 +2021,7 @@ describe("BrowserWorkflowRunner", () => {
         steps: [
           step("viewport", "Viewport", {
             type: "set_viewport",
-            config: {
-              width: 390,
-              height: 844,
-              device_scale_factor: 2,
-              mobile: true,
-              touch: true,
-            },
+            config: { width: 390, height: 844 },
           }),
         ],
       },
@@ -2150,44 +2029,8 @@ describe("BrowserWorkflowRunner", () => {
       mode: "run_workflow",
     });
 
-    expect(result.status).toBe("failed");
-    expect(result.error).toMatchObject({
-      step_id: "viewport",
-      action_type: "set_viewport",
-      reason:
-        "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch",
-    });
-    expect(page.events).not.toContain("viewport:390:844");
-  });
-
-  test("fails stubbed or launch-time actions with explicit unsupported errors", async () => {
-    const runner = new BrowserWorkflowRunner({
-      appPaths: await createTempAppPaths(),
-      driver: createFakeDriver(new FakeContext()),
-    });
-
-    for (const config of [
-      { type: "use_proxy", config: { server: "http://proxy.test:8080" } },
-      { type: "set_user_agent", config: { user_agent: "Agent/1.0" } },
-      { type: "run_subworkflow", config: { workflow_id: "child", input_mapping: [], output_mapping: [] } },
-      { type: "detect_challenge", config: { output_name: "challenge", patterns: [] } },
-      { type: "pause_for_human", config: { reason: "manual checkpoint" } },
-      { type: "checkpoint", config: { name: "checkpoint", screenshot_path: null } },
-      { type: "set_download_directory", config: { path: "/tmp/downloads" } },
-    ] as ActionConfig[]) {
-      const result = await runner.run({
-        graph: { steps: [step(config.type, config.type, config)] },
-        settings: makeSettings(),
-        mode: "run_workflow",
-      });
-
-      expect(result.status).toBe("failed");
-      expect(result.error).toMatchObject({
-        step_id: config.type,
-        action_type: config.type,
-        reason: expect.stringContaining("is not supported as an in-run action"),
-      });
-    }
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("viewport:390:844");
   });
 
   test("executes drag and drop through the driver instead of hover-only success", async () => {
@@ -2456,7 +2299,6 @@ describe("BrowserWorkflowRunner", () => {
               xpath: "#submit",
               wait_until: "clickable",
               timeout_ms: 1200,
-              retry_interval_ms: 25,
             },
           }),
           step("input", "Input", {

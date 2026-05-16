@@ -14,16 +14,12 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
-import { actionCapabilities } from "../../src/lib/actionCapabilities.js";
 import { migrateWorkflowGraph } from "./workflowGraphMigration.js";
 
 type ValidationError = {
   field: string;
   message: string;
 };
-
-const runtimeViewportDeviceShapeMessage =
-  "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch";
 
 const nestedStepKeys = [
   "then_steps",
@@ -435,36 +431,11 @@ function compilePath(
       }));
       compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
       break;
-    case "run_subworkflow":
-      steps.push(step(node, {
-        type: "run_subworkflow",
-        config: {
-          workflow_id: requiredString(node.config, "workflow_id", "Workflow id is required"),
-          input_mapping: variableMappings(node.config, "input_mapping"),
-          output_mapping: variableMappings(node.config, "output_mapping"),
-        },
-      }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
-      break;
     case "domain_allowlist":
       steps.push(step(node, {
         type: "domain_allowlist",
         config: { domains: stringArray(node.config, "domains", "Allowed domains are required") },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
-      break;
-    case "manual_approval":
-      steps.push(step(node, {
-        type: "pause_for_human",
-        config: {
-          reason: stringField(node.config, "reason") ?? "Manual approval required",
-          timeout_ms: optionalPositiveInteger(node.config, "timeout_ms"),
-        },
-      }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
-      break;
-    case "rate_limit":
-      steps.push(step(node, durationWaitAction(optionalPositiveInteger(node.config, "delay_ms") ?? 1000)));
       compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
       break;
     case "start":
@@ -506,16 +477,6 @@ function pushNodeSemanticIssues(
         issues.push(error(node.id, null, "Choose an action type before running this node"));
       } else {
         const actionConfig = node.config as ActionConfig;
-        if (actionCapabilities[actionConfig.type] === "launch_time_only") {
-          issues.push(
-            error(
-              node.id,
-              null,
-              `Node ${node.label} uses a launch-time browser identity setting. Configure it in Workflow Settings before launch.`,
-            ),
-          );
-          break;
-        }
         const validation = validateActionConfig(actionConfig);
         if (validation) {
           issues.push(error(node.id, null, `Node ${node.label} has invalid action config: ${validation.message}`));
@@ -620,24 +581,9 @@ function pushNodeSemanticIssues(
       if (!stringField(node.config, "name")) issues.push(error(node.id, null, "Output name is required"));
       if (!stringField(node.config, "value")) issues.push(error(node.id, null, "Expected output value is required"));
       break;
-    case "run_subworkflow":
-      if (!stringField(node.config, "workflow_id")) issues.push(error(node.id, null, "Workflow id is required"));
-      for (const field of ["input_mapping", "output_mapping"]) {
-        try {
-          variableMappings(node.config, field);
-        } catch (caught) {
-          issues.push(error(node.id, null, serializeValidationError(caught).message));
-        }
-      }
-      break;
     case "domain_allowlist":
       if (stringArrayOrNull(node.config, "domains") == null) {
         issues.push(error(node.id, null, "Allowed domains are required"));
-      }
-      break;
-    case "rate_limit":
-      if (numberField(node.config, "delay_ms") === 0) {
-        issues.push(error(node.id, null, "Rate limit delay must be greater than 0"));
       }
       break;
   }
@@ -709,12 +655,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return firstValidation(
         validateElementTarget(config.config),
         validateElementActionTiming(config.config),
-        validateOptionalEnumValue(
-          config.config.typing_mode,
-          ["set_value", "type"],
-          "typing_mode",
-          "Typing mode must be set_value or type",
-        ),
       );
     case "hover":
     case "double_click":
@@ -738,8 +678,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       }
       return firstValidation(
         positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
-        optionalPositive(config.config.max_attempts, "max_attempts", "Max attempts must be greater than 0"),
-        optionalNonNegative(config.config.wait_ms, "wait_ms", "Wait must be zero or greater"),
       );
     }
     case "select_option":
@@ -751,17 +689,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
           ["label", "value"],
           "match_by",
           "Match by must be label or value",
-        ),
-        validateElementActionTiming(config.config),
-      );
-    case "set_checkbox":
-      return firstValidation(
-        validateElementTarget(config.config),
-        validateRequiredEnumValue(
-          config.config.state,
-          ["checked", "unchecked"],
-          "state",
-          "Checkbox state must be checked or unchecked",
         ),
         validateElementActionTiming(config.config),
       );
@@ -845,10 +772,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return config.config.index == null
         ? null
         : zeroOrPositiveInteger(config.config.index, "index", "Tab index must be zero or greater");
-    case "switch_frame":
-      return config.config.xpath || config.config.target ? validateElementTarget(config.config) : null;
-    case "set_download_directory":
-      return requiredActionString(config.config.path, "path", "Download directory is required");
     case "wait_for_download":
       return firstValidation(
         requiredActionString(config.config.output_name, "output_name", "Download output name is required"),
@@ -972,19 +895,8 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
         ),
         requiredActionString(config.config.value, "value", "Expected output value is required"),
       );
-    case "run_subworkflow":
-      return firstValidation(
-        requiredActionString(config.config.workflow_id, "workflow_id", "Workflow id is required"),
-        validateMappings(config.config.input_mapping, "input_mapping"),
-        validateMappings(config.config.output_mapping, "output_mapping"),
-      );
     case "domain_allowlist":
       return validateStringList(config.config.domains, "domains", "Allowed domains are required");
-    case "use_profile":
-      return requiredActionString(config.config.name, "name", "Profile name is required");
-    case "save_session":
-    case "load_session":
-      return requiredActionString(config.config.path, "path", "Session path is required");
     case "set_cookie":
       return firstValidation(
         requiredActionString(config.config.name, "name", "Cookie name is required"),
@@ -992,21 +904,10 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       );
     case "clear_cookies":
       return null;
-    case "set_secret":
-      return firstValidation(
-        requiredActionString(config.config.name, "name", "Secret name is required"),
-        requiredActionString(config.config.value, "value", "Secret value is required"),
-      );
-    case "use_proxy":
-      return requiredActionString(config.config.server, "server", "Proxy server is required");
-    case "set_user_agent":
-      return requiredActionString(config.config.user_agent, "user_agent", "User agent is required");
     case "set_viewport":
       return firstValidation(
         positiveValue(config.config.width, "width", "Viewport width must be greater than 0"),
         positiveValue(config.config.height, "height", "Viewport height must be greater than 0"),
-        optionalPositive(config.config.device_scale_factor, "device_scale_factor", "Device scale factor must be greater than 0"),
-        runtimeViewportDeviceShapeValidation(config.config),
       );
     case "set_geolocation":
       return firstValidation(
@@ -1018,39 +919,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return validateHeaderPairs(config.config.headers);
     case "grant_permission":
       return validateStringList(config.config.permissions, "permissions", "Permissions are required");
-    case "detect_challenge":
-      return firstValidation(
-        requiredActionString(config.config.output_name, "output_name", "Challenge output name is required"),
-        validateStringList(config.config.patterns, "patterns", "Challenge pattern is required"),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "pause_for_human":
-      return firstValidation(
-        requiredActionString(config.config.reason, "reason", "Pause reason is required"),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "resume_when_condition":
-      return firstValidation(
-        validateConditionConfig(config.config.condition),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "fallback_selector":
-      return firstValidation(
-        requiredActionString(config.config.output_name, "output_name", "Fallback selector output name is required"),
-        validateStringList(config.config.xpaths, "xpaths", "Fallback selector XPath is required"),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "retry_step":
-      return firstValidation(
-        positiveValue(config.config.max_attempts, "max_attempts", "Max attempts must be greater than 0"),
-        optionalNonNegative(config.config.delay_ms, "delay_ms", "Delay must be zero or greater"),
-        validateNestedActionValue(config.config.step, "step"),
-      );
-    case "checkpoint":
-      return firstValidation(
-        requiredActionString(config.config.name, "name", "Checkpoint name is required"),
-        safeArtifactNameValidation(config.config.screenshot_path, "screenshot_path", "Checkpoint screenshot path must be a safe artifact name"),
-      );
     case "execute_js":
       return firstValidation(
         requiredActionString(config.config.script, "script", "Script is required"),
@@ -1106,21 +974,6 @@ function optionalPositive(value: number | null | undefined, field: string, messa
   return value == null ? null : positiveValue(value, field, message);
 }
 
-function runtimeViewportDeviceShapeValidation(
-  config: Extract<ActionConfig, { type: "set_viewport" }>["config"],
-) {
-  if (config.device_scale_factor != null && config.device_scale_factor !== 1) {
-    return validationError("device_scale_factor", runtimeViewportDeviceShapeMessage);
-  }
-  if (config.mobile) {
-    return validationError("mobile", runtimeViewportDeviceShapeMessage);
-  }
-  if (config.touch) {
-    return validationError("touch", runtimeViewportDeviceShapeMessage);
-  }
-  return null;
-}
-
 function optionalNonNegative(value: number | null | undefined, field: string, message: string) {
   return value == null || (typeof value === "number" && Number.isFinite(value) && value >= 0)
     ? null
@@ -1160,8 +1013,6 @@ function validateElementActionTiming(config: unknown) {
       "Wait until must be attached, visible, enabled, or clickable",
     ),
     optionalPositive(record.timeout_ms as number | null | undefined, "timeout_ms", "Timeout must be greater than 0"),
-    optionalNonNegative(record.retry_interval_ms as number | null | undefined, "retry_interval_ms", "Retry interval must be zero or greater"),
-    optionalNonNegative(record.post_click_wait_ms as number | null | undefined, "post_click_wait_ms", "Post-click wait must be zero or greater"),
   );
 }
 
@@ -1284,19 +1135,6 @@ function validateLoopLimit(config: { max_attempts?: number | null; timeout_ms?: 
   return config.max_attempts == null && config.timeout_ms == null
     ? validationError("max_attempts", "Loop actions require max attempts or timeout")
     : null;
-}
-
-function validateMappings(mappings: unknown, field: string) {
-  if (!Array.isArray(mappings)) return validationError(field, "Mappings must be an array");
-  for (let index = 0; index < mappings.length; index += 1) {
-    if (!stringField(mappings[index], "source")) {
-      return validationError(`${field}[${index}].source`, "Mapping source is required");
-    }
-    if (!stringField(mappings[index], "target")) {
-      return validationError(`${field}[${index}].target`, "Mapping target is required");
-    }
-  }
-  return null;
 }
 
 function latitudeValidation(value: number) {
@@ -1588,10 +1426,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "set_json_variables":
     case "transform_variable":
     case "assert_output":
-    case "run_subworkflow":
     case "domain_allowlist":
-    case "manual_approval":
-    case "rate_limit":
       return "out";
     case "if":
     case "switch":
@@ -1798,14 +1633,6 @@ function setVariableActionConfig(node: GraphNode): ActionConfig {
   };
 }
 
-function variableMappings(config: unknown, field: string) {
-  const mappings = arrayField(config, field);
-  return mappings.map((mapping) => ({
-    source: requiredString(mapping, "source", "Mapping source is required"),
-    target: requiredString(mapping, "target", "Mapping target is required"),
-  }));
-}
-
 function requiredString(config: unknown, field: string, message: string) {
   const value = stringField(config, field);
   if (!value) throw validationError(field, message);
@@ -1887,13 +1714,6 @@ function hasStructuredElementTarget(target: unknown): boolean {
       const value = asRecord(locator).value;
       return typeof value === "string" && value.trim();
     });
-}
-
-function durationWaitAction(duration_ms: number): ActionConfig {
-  return {
-    type: "wait",
-    config: { condition: "duration", duration_ms },
-  };
 }
 
 function positive(value: number | null | undefined) {

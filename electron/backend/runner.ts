@@ -12,15 +12,11 @@ import type {
   RunState,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
-import { unsupportedInRunReason } from "../../src/lib/actionCapabilities.js";
 import type { AppPaths } from "./database.js";
 import {
   resolveEvidenceArtifact,
   sanitizePathSegment,
 } from "./evidenceArtifacts.js";
-
-const runtimeViewportDeviceShapeMessage =
-  "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch";
 
 type CloakBrowserModule = {
   launchContext: (options?: BrowserLaunchOptions) => Promise<BrowserDriverContext>;
@@ -194,7 +190,6 @@ type Runtime = {
   runId: string;
   context: BrowserDriverContext;
   page: BrowserDriverPage;
-  behaviorFidelity: WorkflowSettings["browser_launch"]["behavior_fidelity"];
   domainPolicy: { allowed_domains: string[] } | null;
   outputs: Record<string, unknown>;
   traces: ActionTrace[];
@@ -214,20 +209,17 @@ type ActionTrace = {
   action_type: string;
   status: "success" | "failed" | "stopped";
   mode: "browser" | "assisted_browser" | "direct_dom" | "observer" | "manual";
-  execution_path: ActionExecutionPath;
   started_at: string;
   finished_at: string;
   reason?: string;
 };
-
-type ActionExecutionPath = "humanized" | "browser_api" | "dom_fallback" | "cdp_sensitive";
 
 type EvidenceArtifact = {
   run_id: string;
   node_id: string | null;
   step_number: number | null;
   action_type: string;
-  artifact_kind: "screenshot" | "download" | "checkpoint";
+  artifact_kind: "screenshot" | "download";
   path: string;
   created_at: string;
 };
@@ -287,7 +279,6 @@ export class BrowserWorkflowRunner {
       runId: request.runId ?? randomUUID(),
       context: launch.context,
       page: launch.page,
-      behaviorFidelity: request.settings.browser_launch.behavior_fidelity,
       domainPolicy: request.graph.domain_policy ?? null,
       outputs: {},
       traces: [],
@@ -518,7 +509,6 @@ export class BrowserWorkflowRunner {
 
   private async executeStep(runtime: Runtime, step: CompiledGraphStep) {
     const startedAt = new Date().toISOString();
-    const executionPath = actionExecutionPath(step.config);
     try {
       await this.executeAction(runtime, step.config);
       runtime.traces.push({
@@ -527,7 +517,6 @@ export class BrowserWorkflowRunner {
         action_type: step.config.type,
         status: "success",
         mode: actionTraceMode(step.config),
-        execution_path: executionPath,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
       });
@@ -538,7 +527,6 @@ export class BrowserWorkflowRunner {
         action_type: step.config.type,
         status: isAbortError(error) ? "stopped" : "failed",
         mode: actionTraceMode(step.config),
-        execution_path: executionPath,
         started_at: startedAt,
         finished_at: new Date().toISOString(),
         reason: error instanceof Error ? error.message : String(error),
@@ -557,13 +545,6 @@ export class BrowserWorkflowRunner {
 
   private async executeAction(runtime: Runtime, action: ActionConfig): Promise<void> {
     this.throwIfCancelled(runtime.signal);
-    const unsupportedReason = unsupportedInRunReason(action.type);
-    if (unsupportedReason) {
-      throw new Error(
-        `${action.type} is not supported as an in-run action: ${unsupportedReason}`,
-      );
-    }
-    enforceBehaviorFidelity(runtime, action, actionExecutionPath(action));
     switch (action.type) {
       case "navigate": {
         const url = renderTemplate(action.config.url, runtime.outputs);
@@ -585,30 +566,16 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "input_text": {
-        assertOptionalRuntimeEnumValue(
-          action.config.typing_mode,
-          ["set_value", "type"],
-          "Typing mode must be set_value or type",
-        );
         const locator = await this.locatorForAction(runtime, action.config);
         if (action.config.clear_before_input) await locator.fill("");
-        if (action.config.typing_mode === "type" && locator.type) {
-          await locator.type(renderTemplate(action.config.text, runtime.outputs), {
-            delay: action.config.delay_ms ?? 0,
-          });
-        } else {
-          await locator.fill(renderTemplate(action.config.text, runtime.outputs));
-        }
+        await locator.fill(renderTemplate(action.config.text, runtime.outputs));
         return;
       }
       case "clear_input":
         await (await this.locatorForAction(runtime, action.config)).fill("");
         return;
       case "click":
-        await clickTarget(await this.locatorForAction(runtime, action.config), action.config);
-        if (action.config.post_click_wait_ms) {
-          await this.sleep(action.config.post_click_wait_ms, runtime.signal);
-        }
+        await (await this.locatorForAction(runtime, action.config)).click();
         return;
       case "hover":
         await requireLocatorMethod(
@@ -631,27 +598,7 @@ export class BrowserWorkflowRunner {
         await this.executeDragAndDrop(runtime, action);
         return;
       case "scroll":
-        await runtime.page.evaluate(
-          (payload?: { deltaX: number; deltaY: number }) => {
-            const { deltaX, deltaY } = payload ?? { deltaX: 0, deltaY: 0 };
-            window.scrollBy({ left: deltaX, top: deltaY, behavior: "instant" });
-            window.dispatchEvent(new Event("scroll"));
-          },
-          {
-            deltaX:
-              action.config.direction === "left"
-                ? -action.config.pixels
-                : action.config.direction === "right"
-                  ? action.config.pixels
-                  : 0,
-            deltaY:
-              action.config.direction === "up"
-                ? -action.config.pixels
-                : action.config.direction === "down"
-                  ? action.config.pixels
-                  : 0,
-          },
-        );
+        await pageScroll(runtime.page, action.config.direction, action.config.pixels);
         return;
       case "select_option":
         assertRuntimeEnumValue(
@@ -668,26 +615,6 @@ export class BrowserWorkflowRunner {
             ? { label: action.config.value }
             : { value: action.config.value },
         );
-        return;
-      case "set_checkbox":
-        assertRuntimeEnumValue(
-          action.config.state,
-          ["checked", "unchecked"],
-          "Checkbox state must be checked or unchecked",
-        );
-        if (action.config.state === "checked") {
-          await requireLocatorMethod(
-            await this.locatorForAction(runtime, action.config),
-            "check",
-            action.type,
-          )();
-        } else {
-          await requireLocatorMethod(
-            await this.locatorForAction(runtime, action.config),
-            "uncheck",
-            action.type,
-          )();
-        }
         return;
       case "check":
         await requireLocatorMethod(
@@ -852,18 +779,12 @@ export class BrowserWorkflowRunner {
         runtime.page = runtime.context.pages()[0] ?? (await runtime.context.newPage());
         return;
       }
-      case "switch_frame":
-        throw new Error("switch_frame is not supported as an in-run action: use per-target iframe locators");
       case "accept_dialog":
         this.registerDialogHandler(runtime, "accept", action.config.prompt_text ?? undefined);
         return;
       case "dismiss_dialog":
         this.registerDialogHandler(runtime, "dismiss");
         return;
-      case "set_download_directory":
-        throw new Error(
-          "set_download_directory is not supported as an in-run action: configure downloads in Workflow Settings before launch",
-        );
       case "wait_for_download": {
         const artifactPath = await this.waitForDownload(runtime, action.config.output_name, action.config.timeout_ms);
         runtime.outputs[action.config.output_name] = artifactPath;
@@ -1007,9 +928,6 @@ export class BrowserWorkflowRunner {
         }
         return;
       }
-      case "run_subworkflow":
-        runtime.outputs.last_subworkflow_id = action.config.workflow_id;
-        return;
       case "domain_allowlist": {
         const hostname = await currentPageHostname(runtime);
         if (!hostname || !hostnameAllowed(hostname, action.config.domains)) {
@@ -1021,13 +939,6 @@ export class BrowserWorkflowRunner {
         return;
       }
       case "set_viewport":
-        if (
-          (action.config.device_scale_factor != null && action.config.device_scale_factor !== 1) ||
-          action.config.mobile ||
-          action.config.touch
-        ) {
-          throw new Error(runtimeViewportDeviceShapeMessage);
-        }
         await runtime.page.setViewportSize?.({
           width: action.config.width,
           height: action.config.height,
@@ -1074,29 +985,6 @@ export class BrowserWorkflowRunner {
           action.config.domain ? { domain: action.config.domain } : undefined,
         );
         runtime.outputs.last_clear_cookies = action.config;
-        return;
-      case "use_profile":
-      case "save_session":
-      case "load_session":
-      case "set_secret":
-      case "use_proxy":
-      case "set_user_agent":
-        runtime.outputs[`last_${action.type}`] = action.config;
-        return;
-      case "detect_challenge":
-        runtime.outputs[action.config.output_name] = false;
-        return;
-      case "pause_for_human":
-      case "checkpoint":
-        return;
-      case "resume_when_condition":
-        await this.executeResumeWhenCondition(runtime, action);
-        return;
-      case "fallback_selector":
-        runtime.outputs[action.config.output_name] = action.config.xpaths[0] ?? null;
-        return;
-      case "retry_step":
-        await this.executeRetry(runtime, action.config.max_attempts, action.config.delay_ms ?? 0, [action.config.step], []);
         return;
       case "execute_js":
         if (action.config.output_name) {
@@ -1388,7 +1276,6 @@ export class BrowserWorkflowRunner {
       xpath?: string | null;
       wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
       timeout_ms?: number | null;
-      retry_interval_ms?: number | null;
     },
     fallbackXpath = "body",
   ) {
@@ -1398,7 +1285,6 @@ export class BrowserWorkflowRunner {
       config.wait_until ?? null,
       config.timeout_ms,
       runtime.signal,
-      config.retry_interval_ms ?? undefined,
     );
     return locator;
   }
@@ -1479,22 +1365,6 @@ export class BrowserWorkflowRunner {
       if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) return "timeout";
     }
     return "predicate_false";
-  }
-
-  private async executeResumeWhenCondition(
-    runtime: Runtime,
-    action: Extract<ActionConfig, { type: "resume_when_condition" }>,
-  ) {
-    const timeoutMs = action.config.timeout_ms ?? 30_000;
-    const startedAt = Date.now();
-    while (!(await conditionMatches(runtime, action.config.condition))) {
-      this.throwIfCancelled(runtime.signal);
-      const elapsed = Date.now() - startedAt;
-      if (elapsed >= timeoutMs || timeoutMs <= 1) {
-        throw new Error(`Resume condition timed out after ${timeoutMs} ms`);
-      }
-      await this.sleep(Math.min(100, Math.max(1, timeoutMs - elapsed)), runtime.signal);
-    }
   }
 
   private async collectOutputs(runtime: Runtime) {
@@ -1641,78 +1511,25 @@ async function selectRadioTarget(locator: BrowserDriverLocator) {
   await locator.click();
 }
 
-async function clickTarget(
-  locator: BrowserDriverLocator,
-  config: Extract<ActionConfig, { type: "click" }>["config"],
+async function pageScroll(
+  page: BrowserDriverPage,
+  direction: Extract<ActionConfig, { type: "scroll" }>["config"]["direction"],
+  pixels: number,
 ) {
-  if (config.scroll_into_view) {
-    if (!locator.evaluate) {
-      throw new Error("Click scroll_into_view requires locator DOM evaluation support");
-    }
-    await locator.evaluate(
-      (element, options) => {
-        element.scrollIntoView({
-          block: options.block as ScrollLogicalPosition,
-          inline: options.inline as ScrollLogicalPosition,
-        });
-      },
-      {
-        block: config.block ?? "center",
-        inline: config.inline ?? "nearest",
-      },
-    );
-  }
-
-  if (config.mode === "force_dom") {
-    if (!locator.evaluate) {
-      throw new Error("Click force_dom mode requires locator DOM evaluation support");
-    }
-    await locator.evaluate((element) => {
-      if (!(element instanceof HTMLElement)) {
-        throw new Error("Target is not an HTMLElement");
-      }
-      element.click();
-    });
+  const deltaX = direction === "left" ? -pixels : direction === "right" ? pixels : 0;
+  const deltaY = direction === "up" ? -pixels : direction === "down" ? pixels : 0;
+  if (page.mouse?.wheel) {
+    await page.mouse.wheel(deltaX, deltaY);
     return;
   }
-
-  await locator.click({
-    button: config.button ?? undefined,
-    clickCount: config.click_count ?? undefined,
-    position: await clickPosition(locator, config),
-  });
-}
-
-async function clickPosition(
-  locator: BrowserDriverLocator,
-  config: Extract<ActionConfig, { type: "click" }>["config"],
-) {
-  switch (config.position) {
-    case null:
-    case undefined:
-    case "center":
-      return undefined;
-    case "offset":
-      return { x: config.offset_x ?? 0, y: config.offset_y ?? 0 };
-    case "top_left":
-      return { x: 0, y: 0 };
-    case "top_right":
-    case "bottom_left":
-    case "bottom_right": {
-      if (!locator.boundingBox) {
-        throw new Error(`Click position ${config.position} requires locator bounding box support`);
-      }
-      const box = await locator.boundingBox();
-      if (!box) throw new Error("Click target bounding box is unavailable");
-      const x = config.position === "top_right" || config.position === "bottom_right"
-        ? Math.max(0, box.width - 1)
-        : 0;
-      const y = config.position === "bottom_left" || config.position === "bottom_right"
-        ? Math.max(0, box.height - 1)
-        : 0;
-      return { x, y };
-    }
-  }
+  await page.evaluate(
+    (payload?: { deltaX: number; deltaY: number }) => {
+      const { deltaX: x, deltaY: y } = payload ?? { deltaX: 0, deltaY: 0 };
+      window.scrollBy({ left: x, top: y, behavior: "instant" });
+      window.dispatchEvent(new Event("scroll"));
+    },
+    { deltaX, deltaY },
+  );
 }
 
 async function rightClickTarget(locator: BrowserDriverLocator) {
@@ -1752,8 +1569,8 @@ function buildLaunchOptions(
   ].filter((arg): arg is string => Boolean(arg));
   return {
     headless: browser.headless,
-    humanize: browser.humanize !== false,
-    humanPreset: browser.human_preset ?? "default",
+    humanize: true,
+    humanPreset: "default",
     userAgent: browser.user_agent?.trim() || undefined,
     viewport: {
       width: browser.viewport_width || 1920,
@@ -1841,9 +1658,7 @@ async function browserIdentityEvidence(settings: WorkflowSettings, runId: string
       mobile: browser.mobile,
       touch: browser.touch,
     },
-    humanize: browser.humanize,
-    human_preset: browser.human_preset,
-    behavior_fidelity: browser.behavior_fidelity,
+    humanize: true,
     advanced_overrides: activeAdvancedFingerprintOverrides(browser),
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
   };
@@ -2133,15 +1948,6 @@ function cssAttributeValue(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
-function assertOptionalRuntimeEnumValue(
-  value: unknown,
-  allowedValues: readonly string[],
-  message: string,
-) {
-  if (value == null) return;
-  assertRuntimeEnumValue(value, allowedValues, message);
-}
-
 function assertRuntimeEnumValue(
   value: unknown,
   allowedValues: readonly string[],
@@ -2265,76 +2071,7 @@ function actionTraceMode(action: ActionConfig): ActionTrace["mode"] {
   if (action.type === "execute_js" || action.type.includes("storage") || action.type === "set_variable") {
     return "direct_dom";
   }
-  if (action.type === "pause_for_human" || action.type === "checkpoint") return "manual";
-  if (action.type === "click" && action.config.mode === "force_dom") return "assisted_browser";
   return "browser";
-}
-
-function enforceBehaviorFidelity(
-  runtime: Runtime,
-  action: ActionConfig,
-  executionPath: ActionExecutionPath,
-) {
-  if (runtime.behaviorFidelity !== "strict_humanized") return;
-  if (executionPath !== "dom_fallback" && executionPath !== "cdp_sensitive") return;
-  throw new Error(
-    `Action ${action.type} is ${executionPath} and is blocked by strict humanized behavior`,
-  );
-}
-
-function actionExecutionPath(action: ActionConfig): ActionExecutionPath {
-  switch (action.type) {
-    case "input_text":
-      return action.config.typing_mode === "type" ? "humanized" : "dom_fallback";
-    case "click":
-      return action.config.mode === "force_dom" ? "dom_fallback" : "humanized";
-    case "hover":
-    case "double_click":
-    case "right_click":
-    case "drag_and_drop":
-    case "focus_element":
-    case "press_key":
-    case "hotkey":
-    case "type_sequence":
-    case "check":
-    case "uncheck":
-    case "toggle_checkbox":
-    case "set_checkbox":
-      return "humanized";
-    case "execute_js":
-    case "block_request":
-    case "mock_response":
-      return "cdp_sensitive";
-    case "clear_input":
-    case "scroll":
-    case "select_option":
-    case "select_radio":
-    case "select_custom_option":
-    case "set_contenteditable":
-    case "paste_clipboard":
-    case "set_clipboard":
-    case "submit_form":
-    case "set_local_storage":
-    case "set_session_storage":
-    case "set_variable":
-    case "set_json_variables":
-    case "transform_variable":
-    case "use_profile":
-    case "save_session":
-    case "load_session":
-    case "set_secret":
-    case "use_proxy":
-    case "set_user_agent":
-    case "set_viewport":
-    case "set_geolocation":
-    case "set_extra_headers":
-    case "grant_permission":
-    case "set_cookie":
-    case "clear_cookies":
-      return "dom_fallback";
-    default:
-      return "browser_api";
-  }
 }
 
 function setVariables(

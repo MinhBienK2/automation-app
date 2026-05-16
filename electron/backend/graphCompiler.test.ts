@@ -217,35 +217,6 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("blocks launch-time browser identity actions in workflow graphs", async () => {
-    const { handlers } = await createTestHandlers();
-    const graph = graphOf(
-      [
-        graphNode("start", "start"),
-        graphNode("proxy", "action", {
-          config: { type: "use_proxy", config: { server: "http://proxy.test:8080" } },
-        }),
-      ],
-      [edge("start", "out", "proxy", "in")],
-    );
-
-    const issues = handlers.validateWorkflowGraph(graph);
-
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          node_id: "proxy",
-          level: "error",
-          message:
-            "Node Proxy uses a launch-time browser identity setting. Configure it in Workflow Settings before launch.",
-        }),
-      ]),
-    );
-    expect(() => handlers.compileWorkflowGraph(graph)).toThrow(
-      "Node Proxy uses a launch-time browser identity setting",
-    );
-  });
-
   test("preserves graph node identity for nested If branch actions", async () => {
     const { handlers } = await createTestHandlers();
     const graph = graphOf(
@@ -424,7 +395,7 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("compiles environment variables without legacy owned test gate preflight", () => {
+  test("compiles environment variables without settings-driven preflight actions", () => {
     const input = inputTextAction("//input", "hello");
     const click = clickAction("//button");
     const graph = graphOf(
@@ -444,13 +415,7 @@ describe("TypeScript graph compiler parity", () => {
           initial_variables: [{ name: "user.name", value_type: "text", value: "Ada" }],
         },
       }),
-      owned_test_gates: {
-        fingerprint_preflight_enabled: true,
-        fingerprint_probe_url: "https://owned.example.test/fingerprint",
-        fingerprint_profile_id: "owned-profile",
-        fingerprint_allowed_origins: ["https://owned.example.test"],
-      },
-    } as WorkflowSettings;
+    };
 
     const plan = compileWorkflowRunPlan(graph, settings);
 
@@ -593,14 +558,6 @@ describe("TypeScript graph compiler parity", () => {
       },
       {
         config: {
-          type: "input_text",
-          config: { xpath: "//input", target, iframe_xpath: null, text: "x", typing_mode: "fast" as never },
-        },
-        field: "typing_mode",
-        message: "Typing mode must be set_value or type",
-      },
-      {
-        config: {
           type: "click",
           config: { xpath: "//button", target, iframe_xpath: null, wait_until: "ready" as never },
         },
@@ -661,23 +618,9 @@ describe("TypeScript graph compiler parity", () => {
         message: "Match mode must be contains or equals",
       },
       {
-        config: { type: "set_checkbox", config: { xpath: "//input", state: "mixed" as never } },
-        field: "state",
-        message: "Checkbox state must be checked or unchecked",
-      },
-      {
-        config: { type: "set_viewport", config: { width: 0, height: 720, mobile: false, touch: false } },
+        config: { type: "set_viewport", config: { width: 0, height: 720 } },
         field: "width",
         message: "Viewport width must be greater than 0",
-      },
-      {
-        config: {
-          type: "set_viewport",
-          config: { width: 390, height: 844, device_scale_factor: 2, mobile: true, touch: true },
-        },
-        field: "device_scale_factor",
-        message:
-          "Set viewport can only change width and height during a run; configure device scale factor, mobile, and touch in Workflow Settings Browser Launch before launch",
       },
       {
         config: { type: "set_geolocation", config: { latitude: 91, longitude: 0, accuracy: 10 } },
@@ -850,15 +793,11 @@ function inputTextAction(xpath: string, text: string): ActionConfig {
   return {
     type: "input_text",
     config: {
-      xpath,
-      target: null,
-      iframe_xpath: null,
+      target: {
+        locators: [{ kind: "xpath", value: xpath }],
+      },
       text,
       clear_before_input: true,
-      typing_mode: null,
-      delay_ms: null,
-      wait_until: null,
-      timeout_ms: null,
     },
   };
 }

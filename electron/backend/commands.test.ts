@@ -63,7 +63,6 @@ describe("Electron workflow command handlers", () => {
         display_name: "Login flow identity",
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
-        humanize: true,
       },
     });
     expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
@@ -350,10 +349,10 @@ describe("Electron workflow command handlers", () => {
     );
   });
 
-  test("migrates legacy workflow graphs on load and persists the upgraded action contract", async () => {
+  test("preserves workflow graphs on load and persists the current contract", async () => {
     const { handlers, database } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Legacy graph");
-    const legacyGraph: WorkflowGraph = {
+    const graph: WorkflowGraph = {
       version: 1,
       nodes: [
         {
@@ -372,9 +371,9 @@ describe("Electron workflow command handlers", () => {
           config: {
             type: "click",
             config: {
-              xpath: "//*[@id='submit']",
-              timeout_ms: 5000,
-              wait_until: "clickable",
+              target: {
+                locators: [{ kind: "xpath", value: "//*[@id='submit']" }],
+              },
             },
           },
           ports: [
@@ -388,7 +387,7 @@ describe("Electron workflow command handlers", () => {
     };
     database
       .prepare("UPDATE workflows SET graph_json = ? WHERE id = ?")
-      .run(JSON.stringify(legacyGraph), workflow.id);
+      .run(JSON.stringify(graph), workflow.id);
 
     const migrated = handlers.getWorkflowGraph(workflow.id);
 
@@ -407,10 +406,7 @@ describe("Electron workflow command handlers", () => {
           },
         }),
       ],
-      migration_notes: expect.arrayContaining([
-        expect.objectContaining({ path: "nodes.click-submit.config.xpath", action: "converted" }),
-        expect.objectContaining({ path: "nodes.click-submit.config.timeout_ms", action: "dropped" }),
-      ]),
+      migration_notes: [],
     });
     const persisted = JSON.parse(
       String(
@@ -422,8 +418,7 @@ describe("Electron workflow command handlers", () => {
       ),
     );
     expect(persisted.version).toBe(2);
-    expect(persisted.nodes[1].config.config).not.toHaveProperty("xpath");
-    expect(persisted.nodes[1].config.config).not.toHaveProperty("timeout_ms");
+    expect(persisted.nodes[1].config.config).toHaveProperty("target");
   });
 
   test("validates settings and maps browser config through simplified launch section", async () => {
@@ -682,7 +677,6 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id).browser_launch,
         timezone: "America/New_York",
         locale: "en-US",
-        human_preset: "careful",
       },
     });
 
@@ -704,16 +698,13 @@ describe("Electron workflow command handlers", () => {
       proxy_password: "secret",
       timezone: "America/New_York",
       locale: "en-US",
-      human_preset: "careful",
     });
   });
 
-  test("validates run policy numeric ranges and ignores legacy fingerprint gate settings", async () => {
+  test("validates run policy numeric ranges", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Settings validation");
     const settings = handlers.getWorkflowSettings(workflow.id);
-
-    expect(settings).not.toHaveProperty("owned_test_gates");
 
     expect(
       handlers.validateWorkflowSettings({
@@ -731,41 +722,6 @@ describe("Electron workflow command handlers", () => {
           level: "error",
         }),
       ]),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...settings,
-        owned_test_gates: {
-          fingerprint_preflight_enabled: true,
-          fingerprint_probe_url: "https://probe.owned.test/verdict",
-          fingerprint_profile_id: "",
-          fingerprint_allowed_origins: ["https://other.owned.test"],
-        },
-      } as WorkflowSettings),
-    ).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          section: "owned_test_gates",
-        }),
-      ]),
-    );
-
-    handlers.saveWorkflowSettings(workflow.id, {
-      ...settings,
-      owned_test_gates: {
-        fingerprint_preflight_enabled: true,
-        fingerprint_probe_url: "https://probe.owned.test/verdict",
-        fingerprint_profile_id: "owned-profile",
-        fingerprint_allowed_origins: ["https://probe.owned.test"],
-      },
-    } as WorkflowSettings);
-    expect(handlers.getWorkflowSettings(workflow.id)).not.toHaveProperty("owned_test_gates");
-    expect(handlers.getWorkflowSettings(workflow.id).migration_notes).toContainEqual(
-      expect.objectContaining({
-        path: "owned_test_gates",
-        action: "dropped",
-      }),
     );
   });
 
@@ -807,14 +763,11 @@ describe("Electron workflow command handlers", () => {
     expect(
       handlers.previewWorkflowPackage({
         ...packageValue,
-        included_sections: ["settings.general", "settings.owned_test_gates"],
+        included_sections: ["settings.general", "settings.unknown_section"],
         settings: {
           ...packageValue.settings,
-          owned_test_gates: {
-            fingerprint_preflight_enabled: true,
-            fingerprint_probe_url: "https://legacy.example.test/probe",
-            fingerprint_profile_id: "legacy",
-            fingerprint_allowed_origins: ["https://legacy.example.test"],
+          unknown_section: {
+            probe_url: "https://example.test/probe",
           },
         } as WorkflowPackage["settings"],
       }),

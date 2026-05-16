@@ -120,10 +120,6 @@ describe("workflow graph helpers", () => {
       "finally",
       "done",
     ]);
-    expect(nodePorts("manual_approval").map((port) => port.id)).toEqual([
-      "in",
-      "out",
-    ]);
     expect(nodePorts("set_json_variables").map((port) => port.id)).toEqual([
       "in",
       "out",

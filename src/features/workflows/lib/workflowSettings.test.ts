@@ -29,8 +29,9 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.profile_dir).toBe("bi_workflow-1");
     expect(settings.browser_launch.profile_name).toBe("bi_workflow-1");
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
-    expect(settings.browser_launch.humanize).toBe(true);
-    expect(settings.browser_launch.behavior_fidelity).toBe("balanced");
+    expect(settings.browser_launch).not.toHaveProperty("humanize");
+    expect(settings.browser_launch).not.toHaveProperty("human_preset");
+    expect(settings.browser_launch).not.toHaveProperty("behavior_fidelity");
     expect(settings.browser_launch.proxy_provider).toBeNull();
     expect(settings.browser_launch.test_account_binding).toBeNull();
     expect(settings.browser_launch.fingerprint_platform).toBeNull();
@@ -125,8 +126,6 @@ describe("workflow settings model", () => {
       "GeoIP from proxy",
       "Viewport",
       "Advanced fingerprint overrides",
-      "Humanize browser input",
-      "Behavior fidelity",
       "Fingerprint preflight",
       "Headless browser",
     ]);

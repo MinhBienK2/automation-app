@@ -230,7 +230,7 @@ describe("Workflow graph editor integration", () => {
     expect(within(palette).getByRole("button", { name: /Set JSON Variables/ })).toBeInTheDocument();
   });
 
-  test("shows compatibility details for legacy graph-internal action configs", async () => {
+  test("shows graph-internal details for action-node control configs", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       get_workflow_graph: {
@@ -245,9 +245,9 @@ describe("Workflow graph editor integration", () => {
             ports: nodePorts("start"),
           },
           {
-            id: "legacy-loop",
+            id: "internal-loop",
             node_type: "action",
-            label: "Legacy While",
+            label: "Internal While",
             position: { x: 240, y: 0 },
             config: {
               type: "while_loop",
@@ -262,10 +262,10 @@ describe("Workflow graph editor integration", () => {
         ],
         edges: [
           {
-            id: "start-legacy",
+            id: "start-internal",
             source_node_id: "start",
             source_port: "out",
-            target_node_id: "legacy-loop",
+            target_node_id: "internal-loop",
             target_port: "in",
           },
         ],
@@ -277,11 +277,11 @@ describe("Workflow graph editor integration", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
-    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node legacy-loop" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node internal-loop" }));
 
-    expect(within(editor).getByText("Compatibility action")).toBeInTheDocument();
+    expect(within(editor).getByText("Graph-internal action")).toBeInTheDocument();
     expect(within(editor).getByText("While Loop")).toBeInTheDocument();
-    expect(within(editor).getByText(/Convert this saved action into a graph-native node/))
+    expect(within(editor).getByText(/Replace this action-node payload with a supported user action/))
       .toBeInTheDocument();
     expect(within(editor).getByText(/\"type\": \"while_loop\"/)).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "Delete Node" })).toBeInTheDocument();
@@ -1091,7 +1091,7 @@ describe("Workflow graph editor integration", () => {
         expect(logicPalette.querySelector(`[data-value="${value}"]`)).toBeInTheDocument();
       },
     );
-    ["try_catch", "fallback", "stop_workflow", "manual_approval", "rate_limit", "domain_allowlist"].forEach(
+    ["try_catch", "fallback", "stop_workflow", "domain_allowlist"].forEach(
       (value) => {
         expect(logicPalette.querySelector(`[data-value="${value}"]`)).not.toBeInTheDocument();
       },

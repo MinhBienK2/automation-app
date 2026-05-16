@@ -7,17 +7,15 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 ## Core Concepts
 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
-- Legacy workflow step rows have an id, name, workflow id, order index, action type, action-specific config, and timestamps. They remain compatibility data, not the main authoring surface.
-- An action config is the executable behavior produced by graph compilation or legacy compatibility rows.
+- An action config is the executable behavior produced by graph compilation.
 - A run executes compiled graph action configs through the Electron CloakBrowser runner and reports progress to the UI.
-- Test-step mode remains a legacy/internal run-state mode and is not currently registered as a product command.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
-- A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy. Subworkflow nodes remain compatibility placeholders and fail explicitly until nested lifecycle semantics are implemented.
+- A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Graph autosave is an app-level editing preference controlled from Settings.
 - Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, and initial environment variables.
-- The Browser Launch section is identity-oriented even while the tab label remains compatible. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, and fixed CloakBrowser fingerprint seed. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns Run from selected enablement, proxy posture and non-secret proxy metadata, timezone/locale/GeoIP, viewport/device flags, supported WebRTC IP policy values, allowlisted advanced fingerprint overrides, humanization, behavior fidelity, optional owned fingerprint preflight, and headed/headless policy. Legacy browser config commands map to this section for compatibility without changing identity metadata.
+- The Browser Launch section is identity-oriented. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, and fixed CloakBrowser fingerprint seed. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns Run from selected enablement, proxy posture and non-secret proxy metadata, timezone/locale/GeoIP, viewport/device flags, supported WebRTC IP policy values, allowlisted advanced fingerprint overrides, optional owned fingerprint preflight, and headed/headless policy. CloakBrowser humanization is always enabled internally by the runner and is not user-configurable.
 - CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
 - The Run Policy section owns maximum workflow duration, terminal browser retention, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
 - The Environment section owns initial variable rows that are available before graph actions run.
@@ -29,7 +27,6 @@ Users can:
 - Create, rename, open, and delete workflows.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
 - Turn graph autosave on or off from Settings.
-- Use legacy step data through compatibility paths.
 - Run a full workflow.
 - Test a selected step with visible progress.
 - Stop an active run.
@@ -40,7 +37,7 @@ Users can:
 - Export workflow packages containing Flow and selected Workflow Settings sections.
 - Import workflow packages as new workflows without overwriting existing workflows.
 - Duplicate workflows locally while preserving saved graph and full local settings.
-- Configure safe human checkpoints and pacing nodes; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
+- Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 
 ## Current Source Files
 
