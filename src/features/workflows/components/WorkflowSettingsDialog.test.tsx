@@ -86,6 +86,7 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Identity display name").closest("label"))
       .toHaveClass("workflow-settings-identity-name-field");
     expect(within(dialog).queryByLabelText("Profile directory")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Legacy profile key")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");
     expect(within(dialog).getByRole("button", { name: "Show fingerprint seed" })).toBeInTheDocument();

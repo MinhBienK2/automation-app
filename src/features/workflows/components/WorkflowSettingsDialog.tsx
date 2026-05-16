@@ -441,15 +441,6 @@ function BrowserLaunchSettingsSection({
       >
         Duplicate identity
       </Button>
-      {persistent ? (
-        <label className="field">
-          <span>Legacy profile key</span>
-          <Input
-            value={value.profile_name ?? ""}
-            readOnly
-          />
-        </label>
-      ) : null}
       <SwitchField
         checked={Boolean(value.run_from_selected_enabled)}
         disabled={!canEnableRunFromSelected}
