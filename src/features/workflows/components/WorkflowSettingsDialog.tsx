@@ -397,10 +397,6 @@ function BrowserLaunchSettingsSection({
         <Input value={value.identity_id} readOnly />
       </label>
       <label className="field">
-        <span>Profile directory</span>
-        <Input value={value.profile_dir} readOnly />
-      </label>
-      <label className="field">
         <span>Fingerprint seed</span>
         <Input
           type={seedVisible ? "text" : "password"}

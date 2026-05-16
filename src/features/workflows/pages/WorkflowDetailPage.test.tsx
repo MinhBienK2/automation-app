@@ -280,9 +280,11 @@ describe("Workflow detail integration", () => {
     expect(within(settingsDialog).getByLabelText("Identity display name")).toHaveValue(
       "QA Profile identity",
     );
-    expect(within(settingsDialog).getByLabelText("Profile directory")).toHaveValue(
+    expect(within(settingsDialog).getByLabelText("Identity id")).toHaveValue(
       "bi_workflow-1",
     );
+    expect(within(settingsDialog).queryByLabelText("Profile directory"))
+      .not.toBeInTheDocument();
     expect(within(settingsDialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
       .toHaveAttribute("aria-checked", "true");

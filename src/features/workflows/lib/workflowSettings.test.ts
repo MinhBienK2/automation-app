@@ -113,7 +113,6 @@ describe("workflow settings model", () => {
     expect(workflowSettingsHelp.browser_launch.en.fieldGuide.map((field) => field.name)).toEqual([
       "Reuse login session",
       "Identity display name",
-      "Profile directory",
       "Fingerprint seed",
       "Enable Run from selected",
       "Use proxy",

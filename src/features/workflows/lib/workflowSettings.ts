@@ -592,13 +592,6 @@ export const workflowSettingsHelp: Record<
             "Use readable names that describe the approved account, region, or workflow purpose without treating rename as a reset.",
         },
         {
-          name: "Profile directory",
-          description:
-            "Read-only stable storage key used for the persistent CloakBrowser user data directory under app data. It is derived from the identity id rather than the display name.",
-          whenToUse:
-            "Use it for audit and troubleshooting when confirming which on-disk profile belongs to a workflow identity.",
-        },
-        {
           name: "Fingerprint seed",
           description:
             "Stable CloakBrowser fingerprint seed passed at launch so the same identity keeps coherent canvas, WebGL, audio, screen, hardware, and related device signals across runs.",
@@ -748,13 +741,6 @@ export const workflowSettingsHelp: Record<
             "Nhãn operator nhìn thấy cho browser identity. Rename chỉ đổi metadata, không move profile storage và không đổi fingerprint seed.",
           whenToUse:
             "Dùng tên dễ đọc mô tả account, region, hoặc mục đích workflow mà không coi rename là reset identity.",
-        },
-        {
-          name: "Profile directory",
-          description:
-            "Storage key ổn định, read-only, dùng cho CloakBrowser user data directory dưới app data. Giá trị này lấy từ identity id thay vì display name.",
-          whenToUse:
-            "Dùng để audit và troubleshoot khi cần xác nhận profile trên đĩa thuộc browser identity nào.",
         },
         {
           name: "Fingerprint seed",
