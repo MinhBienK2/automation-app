@@ -7,6 +7,7 @@ import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridg
 import { sleepStep } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+import type { GraphNodeType, GraphPort } from "../../../types/workflow";
 import { nodePorts } from "../lib/workflowGraph";
 
 const workflowGraphEditorSource = readFileSync(
@@ -22,6 +23,32 @@ const workflowGraphInspectorSource = readFileSync(
   "utf8",
 );
 const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
+const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
+  start: true,
+  action: true,
+  if: true,
+  switch: true,
+  merge: true,
+  router: true,
+  repeat_times: true,
+  repeat_for_each: true,
+  while: true,
+  repeat_until: true,
+  retry: true,
+  try_catch: true,
+  fallback: true,
+  break_loop: true,
+  continue_loop: true,
+  stop_workflow: true,
+  set_variable: true,
+  set_json_variables: true,
+  transform_variable: true,
+  assert_output: true,
+  domain_allowlist: true,
+  end_success: true,
+  end_failure: true,
+};
+const graphNodeTypes = Object.keys(graphNodeTypeCoverage) as GraphNodeType[];
 
 describe("Workflow graph editor integration", () => {
   beforeEach(() => {
@@ -142,6 +169,63 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).not.toContain("graph-connection-preview");
     expect(workflowGraphCanvasPartsSource).not.toContain("previewEdgePath");
     expect(workflowGraphCanvasPartsSource).not.toContain("graph-edge-arrow");
+  });
+
+  test("explains every graph canvas port with hover tooltip text", async () => {
+    const canvasParts = await import("./WorkflowGraphCanvasParts") as {
+      graphPortTooltip?: (nodeType: GraphNodeType, port: GraphPort) => string;
+    };
+    expect(canvasParts.graphPortTooltip).toBeTypeOf("function");
+
+    for (const nodeType of graphNodeTypes) {
+      for (const port of nodePorts(nodeType)) {
+        const tooltip = canvasParts.graphPortTooltip?.(nodeType, port);
+        expect(tooltip, `${nodeType}.${port.id}`).toEqual(
+          expect.stringContaining(port.label),
+        );
+        expect(tooltip, `${nodeType}.${port.id}`).toEqual(
+          expect.stringMatching(/Nối|Kéo|Nhận|Chạy|Kết thúc/),
+        );
+      }
+    }
+
+    expect(
+      canvasParts.graphPortTooltip?.("merge", { id: "in", label: "In", direction: "input" }),
+    ).toContain("nhiều nhánh");
+    expect(
+      canvasParts.graphPortTooltip?.("try_catch", { id: "finally", label: "Finally", direction: "output" }),
+    ).toContain("luôn chạy");
+  });
+
+  test("renders port tooltip metadata on React Flow handles", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    const startPort = within(editor).getByLabelText("Start Out port");
+    expect(startPort).toHaveAttribute("data-tooltip", expect.stringContaining("Out"));
+    expect(startPort).not.toHaveAttribute("title");
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
+
+    expect(within(editor).getByLabelText("If True port")).toHaveAttribute(
+      "data-tooltip",
+      expect.stringContaining("condition đúng"),
+    );
+    expect(within(editor).getByLabelText("If Done port")).toHaveAttribute(
+      "data-tooltip",
+      expect.stringContaining("flow chính"),
+    );
   });
 
   test("calculates toolbar node positions from the current visible canvas center", async () => {

@@ -166,6 +166,20 @@ describe("App CSS", () => {
     expect(validTargetHandle).toContain("background: #00c573");
   });
 
+  test("keeps graph port tooltips delayed and above neighboring nodes", () => {
+    const tooltipBubble = cssRule(".graph-handle::after");
+    const visibleTooltip = cssRule(
+      ".graph-handle:hover::after,\n.graph-handle:focus-visible::after",
+    );
+    const activeNode = cssRule(
+      ".graph-canvas .react-flow__node:has(.graph-handle:hover),\n.graph-canvas .react-flow__node:has(.graph-handle:focus-visible)",
+    );
+
+    expect(tooltipBubble).toContain("transition-delay: 0ms");
+    expect(visibleTooltip).toContain("transition-delay: 1s");
+    expect(activeNode).toContain("z-index: 1000 !important");
+  });
+
   test("keeps graph error colors dominant when issue or failed items are selected", () => {
     const selectedNode = cssRule(".graph-node-selected");
     const selectedIssueNode = cssRule(".graph-node-has-issue.graph-node-selected");

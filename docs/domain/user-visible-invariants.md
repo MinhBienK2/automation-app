@@ -35,6 +35,7 @@ Preserve these unless the task explicitly changes them.
 - If saving the visible graph fails before a run, the run does not start.
 - If saving dirty Workflow Settings fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
+- Every graph canvas port exposes one custom hover tooltip after a 1 second hover delay. The tooltip names the port, explains its role, tells the user whether to connect into it from a previous output or drag from it to the next input, and must render above neighboring graph nodes.
 - Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge except the explicit Merge `in` port, which accepts multiple branch inputs. Reconnecting a non-Merge input should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
 - Graph control blocks keep branch work separate from continuation work. `If`, `Switch`, and `Try/Catch` continue after branch work through a `done` port.
 - Merge is a graph-native fan-in point, not a synchronization join. The path that reaches Merge continues through `out`; if `out` is unconnected, that path ends successfully.
