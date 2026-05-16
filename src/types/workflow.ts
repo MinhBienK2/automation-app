@@ -45,7 +45,9 @@ export type ActionType =
   | "set_json_variables"
   | "assert_element"
   | "assert_text"
+  | "graph_noop"
   | "if_condition"
+  | "router_condition"
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
@@ -561,11 +563,30 @@ export type ActionConfig =
       };
     }
   | {
+      type: "graph_noop";
+      config: {
+        kind: "merge";
+      };
+    }
+  | {
       type: "if_condition";
       config: {
         condition: WorkflowCondition;
         then_steps: CompiledNestedAction[];
         else_steps: CompiledNestedAction[];
+      };
+    }
+  | {
+      type: "router_condition";
+      config: {
+        mode: "first_match";
+        cases: Array<{
+          id: string;
+          label: string;
+          condition: WorkflowCondition;
+          steps: CompiledNestedAction[];
+        }>;
+        default_steps: CompiledNestedAction[];
       };
     }
   | { type: "repeat_times"; config: { times: number; steps: CompiledNestedAction[] } }
@@ -742,6 +763,18 @@ export type WorkflowCondition =
   | { kind: "url_contains"; value: string }
   | { kind: "element_visible"; xpath?: string | null; target?: ElementTarget | null };
 
+export type RouterGraphCase = {
+  id: string;
+  label: string;
+  condition: WorkflowCondition;
+};
+
+export type RouterGraphConfig = {
+  mode: "first_match";
+  cases: RouterGraphCase[];
+  default_label?: string | null;
+};
+
 type ElementTargetActionConfig = {
   xpath?: string | null;
   target?: ElementTarget | null;
@@ -779,6 +812,8 @@ export type GraphNodeType =
   | "end_success"
   | "end_failure"
   | "action"
+  | "merge"
+  | "router"
   | "if"
   | "switch"
   | "repeat_times"

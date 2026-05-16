@@ -353,6 +353,15 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
     case "end_success":
     case "end_failure":
       return [inputPort("in", "In")];
+    case "merge":
+      return [inputPort("in", "In"), outputPort("out", "Out")];
+    case "router":
+      return [
+        inputPort("in", "In"),
+        outputPort("case_1", "Case 1"),
+        outputPort("default", "Default"),
+        outputPort("done", "Done"),
+      ];
     case "if":
       return [
         inputPort("in", "In"),
@@ -488,6 +497,18 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       };
     case "switch":
       return { expression: "", cases: ["case"] };
+    case "router":
+      return {
+        mode: "first_match",
+        cases: [
+          {
+            id: "1",
+            label: "Case 1",
+            condition: { kind: "output_equals", name: "name", value: "" },
+          },
+        ],
+        default_label: "Default",
+      };
     case "repeat_times":
       return { times: 1 };
     case "repeat_for_each":

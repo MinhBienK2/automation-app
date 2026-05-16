@@ -494,6 +494,34 @@
   line-height: 1.45;
 }
 
+.router-case-table {
+  display: grid;
+  gap: 10px;
+}
+
+.router-case-row {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.router-case-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.router-case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .graph-internal-action {
   display: grid;
   gap: 8px;

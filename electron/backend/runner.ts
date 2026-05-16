@@ -821,6 +821,8 @@ export class BrowserWorkflowRunner {
         }
         return;
       }
+      case "graph_noop":
+        return;
       case "if_condition":
         await this.executeActions(
           runtime,
@@ -828,6 +830,25 @@ export class BrowserWorkflowRunner {
             ? action.config.then_steps
             : action.config.else_steps,
         );
+        return;
+      case "router_condition":
+        for (const caseValue of action.config.cases) {
+          let matched = false;
+          try {
+            matched = await conditionMatches(runtime, caseValue.condition);
+          } catch (error) {
+            throw new Error(
+              `Router ${runtime.currentStepId ?? "unknown"} case "${caseValue.label}" condition failed: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          }
+          if (matched) {
+            await this.executeActions(runtime, caseValue.steps);
+            return;
+          }
+        }
+        await this.executeActions(runtime, action.config.default_steps);
         return;
       case "repeat_times":
         for (let index = 0; index < action.config.times; index += 1) {
@@ -2068,6 +2089,7 @@ function isAbortError(error: unknown) {
 }
 
 function actionTraceMode(action: ActionConfig): ActionTrace["mode"] {
+  if (action.type === "graph_noop" || action.type === "router_condition") return "manual";
   if (action.type.startsWith("extract") || action.type.startsWith("assert")) return "observer";
   if (action.type === "execute_js" || action.type.includes("storage") || action.type === "set_variable") {
     return "direct_dom";

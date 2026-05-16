@@ -155,6 +155,40 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       commonMistakes: ["Leaving a New node unconfigured; the graph can be saved but validate/run will be blocked."],
     },
   },
+  merge: {
+    vi: nodeWithFields("Merge", "Cho nhiều nhánh quay về một luồng chung mà không chờ nhánh khác.", [
+      field("Ports", "Nối nhiều nhánh vào In và một continuation từ Out.", [
+        "Merge không chạy browser action.",
+        "Nhánh nào tới Merge sẽ đi tiếp qua Out; nếu Out bỏ trống thì path kết thúc thành công.",
+      ]),
+    ]),
+    en: nodeWithFields("Merge", "Let multiple branches return to one shared path without waiting for other branches.", [
+      field("Ports", "Connect many branches to In and one continuation from Out.", [
+        "Merge does not run a browser action.",
+        "The branch that reaches Merge continues through Out; when Out is blank, that path ends successfully.",
+      ]),
+    ], "en"),
+  },
+  router: {
+    vi: nodeWithFields("Router", "Chọn case đầu tiên khớp trong bảng điều kiện ưu tiên.", [
+      field("Condition", "Mỗi case có condition riêng và chạy theo thứ tự từ trên xuống.", [
+        "Case đầu tiên khớp sẽ chạy; các case còn lại không chạy.",
+        "Default chạy khi không case nào khớp.",
+      ]),
+      field("Done port", "Continuation sau khi branch được chọn hoàn tất.", [
+        "Done optional; nếu không nối, workflow kết thúc thành công sau Router.",
+      ]),
+    ]),
+    en: nodeWithFields("Router", "Choose the first matching case from a prioritized decision table.", [
+      field("Condition", "Each case has its own condition and runs top to bottom.", [
+        "The first matching case runs; later cases do not run.",
+        "Default runs when no case matches.",
+      ]),
+      field("Done port", "Continuation after the selected branch finishes.", [
+        "Done is optional; when blank, the workflow ends successfully after Router.",
+      ]),
+    ], "en"),
+  },
   if: {
     vi: {
       title: "If Help",
@@ -560,6 +594,18 @@ function graphNodePortSemantics(
         port("case_N", "branch", false, vi ? "Chạy case khớp expression." : "Runs the case that matches the expression."),
         port("default", "branch", false, vi ? "Chạy khi không case nào khớp." : "Runs when no case matches."),
         port("done", "continuation", false, optionalDone),
+      ];
+    case "router":
+      return [
+        port("in", "input", true, input),
+        port("case_<id>", "branch", false, vi ? "Chạy case đầu tiên có condition khớp." : "Runs the first case whose condition matches."),
+        port("default", "branch", false, vi ? "Chạy khi không case nào khớp." : "Runs when no case matches."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    case "merge":
+      return [
+        port("in", "input", true, vi ? "Nhận nhiều nhánh đi vào điểm hội tụ." : "Receives multiple branches at the convergence point."),
+        port("out", "continuation", false, optionalDone),
       ];
     case "repeat_times":
     case "repeat_for_each":

@@ -16,7 +16,7 @@ Domain code defines workflow/action/run types and business validation.
 - Electron IPC-compatible domain types.
 - Action capability classification for active and graph-internal action surfaces.
 - Action config enums and validation.
-- Workflow graph structural and semantic validation, including one-edge-per-port rules, block continuation semantics, required body ports, unreachable nodes, unsupported cycles, unconfigured action drafts, and loop-control context.
+- Workflow graph structural and semantic validation, including one-edge-per-port rules with the explicit Merge fan-in exception, Router stable case ports, block continuation semantics, required body ports, unreachable nodes, unsupported cycles, unconfigured action drafts, and loop-control context.
 - Run status/mode/error types.
 - Orchestration schedule and batch request validation.
 - Builder assist input/output types.

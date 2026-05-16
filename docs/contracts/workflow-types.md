@@ -161,7 +161,7 @@ Workflow graph data is the product authoring surface. New workflows create a v2 
 
 Graph validation issues serialize as `{ level, node_id, edge_id, message }`, where `level` is `error` or `warning`.
 
-Graph links are directed execution edges. The frontend replaces any existing edge that shares the same source output or target input when a port is reconnected. Backend validation is authoritative and rejects self-links, duplicate edges, more than one outgoing edge from the same output port, more than one incoming edge to the same input port, missing ports/nodes, unreachable non-start nodes, unsupported free cycles, and loop-control nodes reachable outside a loop body. Validation may return warnings for optional branches or continuations that are missing but still executable.
+Graph links are directed execution edges. The frontend replaces any existing edge that shares the same source output or target input when a port is reconnected, except Merge `in` keeps multiple incoming branch links. Backend validation is authoritative and rejects self-links, duplicate edges, more than one outgoing edge from the same output port, more than one incoming edge to the same non-Merge input port, missing ports/nodes, unreachable non-start nodes, unsupported free cycles, and loop-control nodes reachable outside a loop body. Validation may return warnings for optional branches or continuations that are missing but still executable.
 
 Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
 
@@ -169,6 +169,8 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 
 - `if` conditions.
 - `switch` expressions and case ports.
+- `router` first-match decision table cases with stable case ids.
+- `merge` explicit fan-in points.
 - `repeat_times` loop counts.
 - `repeat_for_each` item name with either a literal item list or a variable-array source.
 - `while` and `repeat_until` conditions plus loop guard settings.
@@ -178,7 +180,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 
 The main graph toolbar exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End.
 
-The Electron backend compiler currently emits action, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The Electron backend compiler currently emits action, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
 The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
 Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Current owned fingerprint preflight is a Browser Launch identity setting, not a graph prelude action.
@@ -188,6 +190,8 @@ Executable frontend/backend ports must agree:
 - `start`: output `out`
 - `end_success` / `end_failure`: input `in`
 - `action`: input `in`, output `out`; `config: null` is a saveable draft marker but blocks validation/compile/run.
+- `merge`: input `in`, output `out`; input `in` may receive multiple incoming edges and compiles to an internal no-op step.
+- `router`: input `in`, outputs `case_<id>` for each configured stable-id case, `default`, and `done`.
 - `if`: input `in`, outputs `true`, `false`, `done`
 - `switch`: input `in`, outputs `case_N`, `default`, `done`
 - `repeat_times` / `repeat_for_each` / `while`: input `in`, outputs `loop`, `done`
@@ -207,6 +211,20 @@ Action configs use a tagged TypeScript DTO shape:
 ```
 
 The `type` string must match the TypeScript `ActionType` union.
+
+Graph-internal Merge and Router configs use:
+
+```text
+{ type: "graph_noop", config: { kind: "merge" } }
+{
+  type: "router_condition",
+  config: {
+    mode: "first_match",
+    cases: [{ id, label, condition, steps }],
+    default_steps
+  }
+}
+```
 
 `set_variable` remains backward compatible with saved single-value configs:
 

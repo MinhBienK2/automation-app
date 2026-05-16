@@ -35,15 +35,17 @@ Preserve these unless the task explicitly changes them.
 - If saving the visible graph fails before a run, the run does not start.
 - If saving dirty Workflow Settings fails before a run, the run does not start.
 - Graph edges are connected through explicit ports so branch intent is visible.
-- Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge. Reconnecting a port should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
+- Each graph output port can have at most one outgoing edge, and each graph input port can have at most one incoming edge except the explicit Merge `in` port, which accepts multiple branch inputs. Reconnecting a non-Merge input should replace the previous link in the editor; backend validation rejects ambiguous saved graphs.
 - Graph control blocks keep branch work separate from continuation work. `If`, `Switch`, and `Try/Catch` continue after branch work through a `done` port.
+- Merge is a graph-native fan-in point, not a synchronization join. The path that reaches Merge continues through `out`; if `out` is unconnected, that path ends successfully.
+- Router is a graph-native decision table. It evaluates stable-id cases from top to bottom, runs the first matching case branch or default branch, then continues through `done` when connected.
 - Missing optional graph branches are no-ops. Missing continuation ports end that path successfully. Missing recovery branches on retry, try/catch, and fallback preserve failure behavior where specified by the graph semantics.
 - Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
 - The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. It does not expose Add Output.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
-- Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible.
+- Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible. Branching includes If, Switch, Router, and Merge.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
 - Targetable action editors default Target locator type to XPath, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
 - Browser identity belongs in Workflow Settings Browser Launch. Launch-time identity settings are not represented as in-run action nodes in the current workflow contract.

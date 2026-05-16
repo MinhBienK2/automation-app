@@ -22,7 +22,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Command handlers compile the saved graph, pass persisted settings to the runner, and expose the shared run-state shape over Electron IPC. Nested compiled graph actions retain their source graph node ids so runner progress can light up branch/body nodes before the outer control block continues.
 - Command handlers can also compile a selected main-path graph node into a sub-plan and ask the runner to reuse the retained browser session instead of launching a new context.
 - Command handlers own run orchestration around the runner: one active run at a time, begin/finish state transitions, max-duration timeout, SQLite run persistence, and batch row sequencing.
-- Graph-internal action configs execute branch, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, and domain allowlist semantics above the browser action dispatch layer.
+- Graph-internal action configs execute branch, router, switch, loop, retry, try/catch, fallback, break/continue, transform, output assertion, variable mutation, Merge no-op, and domain allowlist semantics above the browser action dispatch layer.
 - Compiled run plans may include `domain_policy`; the runner enforces it before navigation-like actions call Playwright.
 - Variable actions write to the browser session output store. `set_variable` accepts typed rows, renders templates before parsing values, flattens object fields into dotted output keys, and keeps array values whole. `set_json_variables` renders and parses a JSON object before storing flattened keys.
 - `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
@@ -65,7 +65,7 @@ Browser action dispatch lives in `electron/backend/runner.ts` and is grouped by 
 - Forms/keyboard/clipboard: select, checkbox/radio, submit, key presses, hotkeys, in-run clipboard, and paste actions. Select Radio sets the radio target through locator-side DOM evaluation with a click fallback for minimal drivers. Targeted Submit Form resolves the target and submits the owning form through locator-side DOM evaluation, with a click fallback for minimal drivers; no-target Submit Form presses Enter on the page.
 - Target resolution: structured target bundles map to Playwright locators, including ordered locator fallback, role/label/placeholder/text/CSS/XPath/attribute kinds, constraints, and iframe targeting; XPath strings remain supported.
 - Data capture: text, attribute, input value, list/table, screenshot, download, and JavaScript outputs. Extract Table reads table rows and `th`/`td` cells through locator-side DOM evaluation. Execute JavaScript treats the script text as a browser-side function body, so `return ...` scripts can store values through `output_name`. Screenshot and download artifacts are run-scoped.
-- Variables/control flow: variable mutation, loops, branches, retries, try/catch, fallback, stop, output assertions, and domain allowlists.
+- Variables/control flow: variable mutation, loops, branches, router first-match cases, retries, try/catch, fallback, Merge no-op, stop, output assertions, and domain allowlists.
 
 ## Does Not Belong Here
 

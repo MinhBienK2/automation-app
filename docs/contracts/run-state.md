@@ -54,7 +54,7 @@ Run errors include:
 
 - `App.tsx` polls `get_run_state` while status is `running`, including runs started from the workflow list where the detail graph workspace is not open.
 - Run status bar displays terminal and error states.
-- Workflow detail renders `Run from selected` only when the Workflow Settings toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected.
+- Workflow detail renders `Run from selected` only when the Workflow Settings toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Merge is not a supported selected start because it compiles to an internal no-op graph marker.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
 - Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation.
 

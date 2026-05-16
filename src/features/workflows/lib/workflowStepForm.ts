@@ -153,7 +153,9 @@ export function updateActionConfigField(
       return updateAssertElementConfigField(config, field, value);
     case "assert_text":
       return updateAssertTextConfigField(config, field, value);
+    case "graph_noop":
     case "if_condition":
+    case "router_condition":
       return config;
     case "repeat_times":
       return { type: "repeat_times", config: { ...config.config, times: Number(value) } };

@@ -39,6 +39,8 @@ Every serialized `ActionType` has an explicit capability classification:
 Graph-internal action types are not visible in the main action picker. This includes:
 
 - `if_condition`
+- `graph_noop`
+- `router_condition`
 - `repeat_times`
 - `repeat_for_each`
 - `retry_block`

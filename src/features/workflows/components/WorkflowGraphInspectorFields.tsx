@@ -4,6 +4,9 @@ import type {
   ActionType,
   GraphNode,
   GraphPort,
+  RouterGraphCase,
+  RouterGraphConfig,
+  WorkflowCondition,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -35,6 +38,22 @@ function switchPortsForCases(cases: string[]): GraphPort[] {
       direction: "output" as const,
     })),
     { id: "default", label: "Default", direction: "output" },
+    { id: "done", label: "Done", direction: "output" },
+  ];
+}
+
+function routerPortsForCases(
+  cases: RouterGraphCase[],
+  defaultLabel = "Default",
+): GraphPort[] {
+  return [
+    { id: "in", label: "In", direction: "input" },
+    ...cases.map((caseValue) => ({
+      id: `case_${caseValue.id}`,
+      label: caseValue.label.trim() || "Case",
+      direction: "output" as const,
+    })),
+    { id: "default", label: defaultLabel.trim() || "Default", direction: "output" },
     { id: "done", label: "Done", direction: "output" },
   ];
 }
@@ -144,6 +163,138 @@ export function NodeConfigFields({
                   ports: switchPortsForCases(nextCases),
                 });
               }}
+            />
+          </Label>
+        </div>
+      );
+    }
+    case "router": {
+      const routerConfigValue = routerConfig(node.config);
+      const cases = routerConfigValue.cases;
+      function updateRouterConfig(nextConfig: RouterGraphConfig) {
+        onChange({
+          ...node,
+          config: nextConfig,
+          ports: routerPortsForCases(nextConfig.cases, nextConfig.default_label ?? "Default"),
+        });
+      }
+      return (
+        <div className="graph-config-fields">
+          <div className="router-case-table" role="group" aria-label="Router decision table">
+            {cases.map((caseValue, index) => (
+              <div className="router-case-row" key={caseValue.id}>
+                <div className="router-case-header">
+                  <span className="eyebrow">Priority {index + 1}</span>
+                  <div className="router-case-actions">
+                    <Button
+                      aria-label={`Move router case ${caseValue.label || index + 1} up`}
+                      disabled={index === 0}
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        const nextCases = [...cases];
+                        [nextCases[index - 1], nextCases[index]] = [
+                          nextCases[index],
+                          nextCases[index - 1],
+                        ];
+                        updateRouterConfig({ ...routerConfigValue, cases: nextCases });
+                      }}
+                    >
+                      Up
+                    </Button>
+                    <Button
+                      aria-label={`Move router case ${caseValue.label || index + 1} down`}
+                      disabled={index === cases.length - 1}
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        const nextCases = [...cases];
+                        [nextCases[index], nextCases[index + 1]] = [
+                          nextCases[index + 1],
+                          nextCases[index],
+                        ];
+                        updateRouterConfig({ ...routerConfigValue, cases: nextCases });
+                      }}
+                    >
+                      Down
+                    </Button>
+                    <Button
+                      aria-label={`Remove router case ${caseValue.label || index + 1}`}
+                      disabled={cases.length <= 1}
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        updateRouterConfig({
+                          ...routerConfigValue,
+                          cases: cases.filter((item) => item.id !== caseValue.id),
+                        })
+                      }
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+                <Label>
+                  Router case label
+                  <Input
+                    value={caseValue.label}
+                    onChange={(event) =>
+                      updateRouterConfig({
+                        ...routerConfigValue,
+                        cases: cases.map((item) =>
+                          item.id === caseValue.id
+                            ? { ...item, label: event.currentTarget.value }
+                            : item,
+                        ),
+                      })
+                    }
+                  />
+                </Label>
+                <ConditionFields
+                  condition={caseValue.condition}
+                  onChange={(condition) =>
+                    updateRouterConfig({
+                      ...routerConfigValue,
+                      cases: cases.map((item) =>
+                        item.id === caseValue.id ? { ...item, condition } : item,
+                      ),
+                    })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <Button
+            aria-label="Add router case"
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              const nextId = nextRouterCaseId(cases);
+              updateRouterConfig({
+                ...routerConfigValue,
+                cases: [
+                  ...cases,
+                  {
+                    id: nextId,
+                    label: `Case ${cases.length + 1}`,
+                    condition: defaultCondition(),
+                  },
+                ],
+              });
+            }}
+          >
+            Add case
+          </Button>
+          <Label>
+            Default label
+            <Input
+              value={routerConfigValue.default_label ?? "Default"}
+              onChange={(event) =>
+                updateRouterConfig({
+                  ...routerConfigValue,
+                  default_label: event.currentTarget.value,
+                })
+              }
             />
           </Label>
         </div>
@@ -695,6 +846,47 @@ function booleanConfig(config: unknown, key: string, fallback: boolean) {
 function arrayConfig(config: unknown, key: string) {
   const value = objectConfig(config)[key];
   return Array.isArray(value) ? value.map(String) : [];
+}
+
+function routerConfig(config: unknown): RouterGraphConfig {
+  const record = objectConfig(config);
+  const rawCases = Array.isArray(record.cases) ? record.cases : [];
+  const cases = rawCases
+    .map((item, index): RouterGraphCase => {
+      const caseRecord = objectConfig(item);
+      return {
+        id: stringValue(caseRecord.id) || String(index + 1),
+        label: stringValue(caseRecord.label) || `Case ${index + 1}`,
+        condition: isWorkflowCondition(caseRecord.condition)
+          ? caseRecord.condition
+          : defaultCondition(),
+      };
+    });
+  return {
+    mode: "first_match",
+    cases: cases.length ? cases : [{ id: "1", label: "Case 1", condition: defaultCondition() }],
+    default_label: stringValue(record.default_label) || "Default",
+  };
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function defaultCondition(): WorkflowCondition {
+  return { kind: "output_equals", name: "name", value: "" };
+}
+
+function isWorkflowCondition(value: unknown): value is WorkflowCondition {
+  return Boolean(value && typeof value === "object" && "kind" in value);
+}
+
+function nextRouterCaseId(cases: RouterGraphCase[]) {
+  const numericIds = cases
+    .map((caseValue) => Number(caseValue.id))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  if (numericIds.length > 0) return String(Math.max(...numericIds) + 1);
+  return `case_${Date.now()}`;
 }
 
 function CloseBrowserField({

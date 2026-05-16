@@ -172,6 +172,8 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
         type: actionType,
         config: { target: null, text: "", match_mode: "contains" },
       };
+    case "graph_noop":
+      return { type: actionType, config: { kind: "merge" } };
     case "if_condition":
       return {
         type: actionType,
@@ -179,6 +181,22 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           condition: { kind: "output_equals", name: "name", value: "" },
           then_steps: [],
           else_steps: [],
+        },
+      };
+    case "router_condition":
+      return {
+        type: actionType,
+        config: {
+          mode: "first_match",
+          cases: [
+            {
+              id: "1",
+              label: "Case 1",
+              condition: { kind: "output_equals", name: "name", value: "" },
+              steps: [],
+            },
+          ],
+          default_steps: [],
         },
       };
     case "repeat_times":

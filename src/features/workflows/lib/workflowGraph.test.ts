@@ -65,6 +65,8 @@ describe("workflow graph helpers", () => {
     const ifNode = createDefaultGraphNode("if", { x: 10, y: 20 });
     const variablesNode = createDefaultGraphNode("set_variable", { x: 20, y: 30 });
     const jsonVariablesNode = createDefaultGraphNode("set_json_variables", { x: 30, y: 40 });
+    const mergeNode = createDefaultGraphNode("merge", { x: 40, y: 50 });
+    const routerNode = createDefaultGraphNode("router", { x: 50, y: 60 });
 
     expect(ifNode.node_type).toBe("if");
     expect(ifNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
@@ -81,6 +83,27 @@ describe("workflow graph helpers", () => {
     expect(jsonVariablesNode.config).toEqual({
       json: "{\n  \"name\": \"value\"\n}",
     });
+    expect(mergeNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
+      "input:in",
+      "output:out",
+    ]);
+    expect(routerNode.config).toEqual({
+      mode: "first_match",
+      cases: [
+        {
+          id: "1",
+          label: "Case 1",
+          condition: { kind: "output_equals", name: "name", value: "" },
+        },
+      ],
+      default_label: "Default",
+    });
+    expect(routerNode.ports.map((port) => `${port.direction}:${port.id}:${port.label}`)).toEqual([
+      "input:in:In",
+      "output:case_1:Case 1",
+      "output:default:Default",
+      "output:done:Done",
+    ]);
   });
 
   test("returns stable port definitions for graph node types", () => {
@@ -107,6 +130,16 @@ describe("workflow graph helpers", () => {
       "done",
     ]);
     expect(nodePorts("switch").map((port) => port.id)).toEqual([
+      "in",
+      "case_1",
+      "default",
+      "done",
+    ]);
+    expect(nodePorts("merge").map((port) => port.id)).toEqual([
+      "in",
+      "out",
+    ]);
+    expect(nodePorts("router").map((port) => port.id)).toEqual([
       "in",
       "case_1",
       "default",

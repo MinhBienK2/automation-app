@@ -118,12 +118,16 @@ function initialSelectedNodeId(graph: WorkflowGraph) {
   );
 }
 
-function replacePortEdge(
+export function replacePortEdge(
   edges: WorkflowFlowEdge[],
   nextEdge: WorkflowFlowEdge,
+  nodes: WorkflowFlowNode[],
 ): WorkflowFlowEdge[] {
   const sourceHandle = nextEdge.sourceHandle ?? "out";
   const targetHandle = nextEdge.targetHandle ?? "in";
+  const targetNode = nodes.find((node) => node.id === nextEdge.target);
+  const allowsMultipleIncoming =
+    targetNode?.data.nodeType === "merge" && targetHandle === "in";
 
   return [
     ...edges.filter((edge) => {
@@ -133,10 +137,19 @@ function replacePortEdge(
       const sameInput =
         edge.target === nextEdge.target &&
         (edge.targetHandle ?? "in") === targetHandle;
-      return edge.id !== nextEdge.id && !sameOutput && !sameInput;
+      return edge.id !== nextEdge.id && !sameOutput && (allowsMultipleIncoming || !sameInput);
     }),
     nextEdge,
   ];
+}
+
+function edgePortsExist(graph: WorkflowGraph, edge: WorkflowGraph["edges"][number]) {
+  const source = graph.nodes.find((node) => node.id === edge.source_node_id);
+  const target = graph.nodes.find((node) => node.id === edge.target_node_id);
+  return Boolean(
+    source?.ports.some((port) => port.direction === "output" && port.id === edge.source_port) &&
+      target?.ports.some((port) => port.direction === "input" && port.id === edge.target_port),
+  );
 }
 
 function shouldIgnoreGraphShortcut(event: KeyboardEvent) {
@@ -413,7 +426,7 @@ export function WorkflowGraphEditor({
         label: source.portId,
         data: { hasIssue: false, status: "idle" },
       };
-      const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge);
+      const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge, currentFlowGraph.nodes);
       setReactFlowEdges(nextEdges);
       syncFlowGraph(currentFlowGraph.nodes, nextEdges);
     },
@@ -651,10 +664,14 @@ export function WorkflowGraphEditor({
 
   function updateNode(nextNode: GraphNode) {
     const currentGraph = graphRef.current;
+    const nextGraph = {
+      ...currentGraph,
+      nodes: currentGraph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
+    };
     commitGraphChange(
       {
-        ...currentGraph,
-        nodes: currentGraph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
+        ...nextGraph,
+        edges: nextGraph.edges.filter((edge) => edgePortsExist(nextGraph, edge)),
       },
       { nodeIds: [nextNode.id], edgeIds: [] },
     );
@@ -777,7 +794,11 @@ export function WorkflowGraphEditor({
       label: connection.sourceHandle,
       data: { hasIssue: false, status: "idle" },
     };
-    const nextEdges = replacePortEdge(reactFlowEdgesRef.current, nextEdge);
+    const nextEdges = replacePortEdge(
+      reactFlowEdgesRef.current,
+      nextEdge,
+      reactFlowNodesRef.current,
+    );
     setReactFlowEdges(nextEdges);
     syncFlowGraph(reactFlowNodesRef.current, nextEdges);
   }

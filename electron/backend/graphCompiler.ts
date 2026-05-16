@@ -9,6 +9,8 @@ import type {
   GraphPort,
   GraphPortDirection,
   GraphValidationIssue,
+  RouterGraphCase,
+  RouterGraphConfig,
   VariableAssignment,
   WorkflowCondition,
   WorkflowGraph,
@@ -115,7 +117,9 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
     usedOutputPorts.add(outputPortKey);
 
     const inputPortKey = `${edge.target_node_id}\u0000${edge.target_port}`;
-    if (usedInputPorts.has(inputPortKey)) {
+    const targetAllowsMultipleIncoming =
+      target?.node_type === "merge" && edge.target_port === "in";
+    if (!targetAllowsMultipleIncoming && usedInputPorts.has(inputPortKey)) {
       issues.push(error(edge.target_node_id, edge.id, "Only one edge can enter an input port"));
     }
     usedInputPorts.add(inputPortKey);
@@ -199,7 +203,7 @@ export function compileWorkflowGraphFromNode(
   }
 
   const node = normalizedGraph.nodes.find((candidate) => candidate.id === startNodeId);
-  if (!node || node.node_type === "start") {
+  if (!node || node.node_type === "start" || node.node_type === "merge") {
     throw validationError("startNodeId", "Run from selected requires an executable graph node");
   }
 
@@ -261,6 +265,28 @@ function compilePath(
       steps.push(step(node, node.config as ActionConfig));
       compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
       break;
+    case "merge":
+      steps.push(step(node, { type: "graph_noop", config: { kind: "merge" } }));
+      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      break;
+    case "router": {
+      const router = routerGraphConfig(node);
+      steps.push(step(node, {
+        type: "router_condition",
+        config: {
+          mode: "first_match",
+          cases: router.cases.map((caseValue) => ({
+            id: caseValue.id,
+            label: caseValue.label,
+            condition: caseValue.condition,
+            steps: compileNestedConfigs(graph, node.id, `case_${caseValue.id}`, visited),
+          })),
+          default_steps: compileNestedConfigs(graph, node.id, "default", visited),
+        },
+      }));
+      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      break;
+    }
     case "if": {
       const condition = nodeCondition(node);
       steps.push(step(node, {
@@ -499,6 +525,12 @@ function pushNodeSemanticIssues(
       pushStaleSwitchCaseIssues(graph, node, issues);
       warnMissingBranch(graph, node, "default", "Switch default branch is unconnected and will no-op", issues);
       warnMissingContinuation(graph, node, "done", "Switch done continuation is unconnected; workflow ends successfully here", issues);
+      break;
+    case "merge":
+      warnMissingContinuation(graph, node, "out", "Merge out is unconnected; workflow path ends successfully here", issues);
+      break;
+    case "router":
+      pushRouterSemanticIssues(graph, node, issues);
       break;
     case "repeat_times":
       if (!positiveNumberField(node.config, "times")) {
@@ -815,11 +847,26 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
         ),
         optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
       );
+    case "graph_noop":
+      return config.config.kind === "merge"
+        ? null
+        : validationError("kind", "Graph no-op kind is invalid");
     case "if_condition":
       return firstValidation(
         validateConditionConfig(config.config.condition),
         validateNestedActionArray(config.config.then_steps, "then_steps"),
         validateNestedActionArray(config.config.else_steps, "else_steps"),
+      );
+    case "router_condition":
+      return firstValidation(
+        validateRequiredEnumValue(
+          config.config.mode,
+          ["first_match"],
+          "mode",
+          "Router mode must be first_match",
+        ),
+        validateRouterConditionCases(config.config.cases),
+        validateNestedActionArray(config.config.default_steps, "default_steps"),
       );
     case "repeat_times":
       return firstValidation(
@@ -1119,6 +1166,31 @@ function validateSwitchCases(cases: unknown) {
   return null;
 }
 
+function validateRouterConditionCases(cases: unknown) {
+  if (!Array.isArray(cases) || cases.length === 0) {
+    return validationError("cases", "Router cases are required");
+  }
+  const seenIds = new Set<string>();
+  for (let index = 0; index < cases.length; index += 1) {
+    const caseValue = asRecord(cases[index]);
+    const id = stringField(caseValue, "id");
+    if (!id) return validationError(`cases[${index}].id`, "Router case id is required");
+    if (seenIds.has(id)) return validationError("cases", "Router case ids must be unique");
+    seenIds.add(id);
+    if (!stringField(caseValue, "label")) {
+      return validationError(`cases[${index}].label`, "Router case labels are required");
+    }
+    const conditionValidation = validateConditionConfig(
+      caseValue.condition,
+      `cases[${index}].condition`,
+    );
+    if (conditionValidation) return conditionValidation;
+    const stepsValidation = validateNestedActionArray(caseValue.steps, `cases[${index}].steps`);
+    if (stepsValidation) return stepsValidation;
+  }
+  return null;
+}
+
 function validateLoopLimit(config: { max_attempts?: number | null; timeout_ms?: number | null }) {
   const maxAttemptsValidation = optionalPositive(
     config.max_attempts,
@@ -1265,6 +1337,20 @@ function expectedPorts(node: GraphNode): GraphPort[] {
     case "continue_loop":
     case "stop_workflow":
       return [inputPort("in", "In")];
+    case "merge":
+      return [inputPort("in", "In"), outputPort("out", "Out")];
+    case "router": {
+      const router = routerGraphConfigOrNull(node);
+      const cases = router?.cases.length
+        ? router.cases
+        : [{ id: "1", label: "Case 1", condition: { kind: "output_equals", name: "name", value: "" } as const }];
+      return [
+        inputPort("in", "In"),
+        ...cases.map((caseValue) => outputPort(`case_${caseValue.id}`, caseValue.label)),
+        outputPort("default", router?.default_label || "Default"),
+        outputPort("done", "Done"),
+      ];
+    }
     case "if":
       return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False"), outputPort("done", "Done")];
     case "switch": {
@@ -1319,6 +1405,7 @@ function pushBranchContinuationIssues(
     for (const nodeId of branchReachable) {
       if (!continuationReachable.has(nodeId)) continue;
       const shared = nodeById.get(nodeId);
+      if (shared?.node_type === "merge") continue;
       issues.push(error(
         nodeId,
         null,
@@ -1340,6 +1427,16 @@ function branchContinuationSemantics(node: GraphNode): {
       return {
         branchPorts: [
           ...Array.from({ length: caseCount }, (_, index) => `case_${index + 1}`),
+          "default",
+        ],
+        continuationPorts: ["done"],
+      };
+    }
+    case "router": {
+      const router = routerGraphConfigOrNull(node);
+      return {
+        branchPorts: [
+          ...(router?.cases ?? []).map((caseValue) => `case_${caseValue.id}`),
           "default",
         ],
         continuationPorts: ["done"],
@@ -1380,7 +1477,7 @@ function reachableFromPorts(
     if (!nodeId || reachable.has(nodeId)) continue;
     reachable.add(nodeId);
     const node = nodeById.get(nodeId);
-    if (!node || isTerminalBranchBoundary(node.node_type)) continue;
+    if (!node || isTerminalBranchBoundary(node.node_type) || node.node_type === "merge") continue;
     for (const edgeValue of graph.edges.filter((edgeItem) => edgeItem.source_node_id === nodeId)) {
       queue.push(edgeValue.target_node_id);
     }
@@ -1427,9 +1524,11 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "merge":
       return "out";
     case "if":
     case "switch":
+    case "router":
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -1544,6 +1643,66 @@ function pushStaleSwitchCaseIssues(
       `Switch ${edgeValue.source_port} no longer matches a configured case`,
     ));
   }
+}
+
+function pushRouterSemanticIssues(
+  graph: WorkflowGraph,
+  node: GraphNode,
+  issues: GraphValidationIssue[],
+) {
+  const router = routerGraphConfigOrNull(node);
+  if (!router || router.cases.length === 0) {
+    issues.push(error(node.id, null, "Router cases are required"));
+    return;
+  }
+
+  const seenIds = new Set<string>();
+  const duplicateIds = new Set<string>();
+  for (const caseValue of router.cases) {
+    if (seenIds.has(caseValue.id)) duplicateIds.add(caseValue.id);
+    seenIds.add(caseValue.id);
+    if (!caseValue.label.trim()) {
+      issues.push(error(node.id, null, "Router case labels are required"));
+    }
+    try {
+      validateWorkflowCondition(caseValue.condition);
+    } catch (caught) {
+      issues.push(error(node.id, null, serializeValidationError(caught).message));
+    }
+  }
+  if (duplicateIds.size > 0) {
+    issues.push(error(node.id, null, "Router case ids must be unique"));
+  }
+
+  warnMissingBranch(graph, node, "default", "Router default branch is unconnected and will no-op", issues);
+  warnMissingContinuation(graph, node, "done", "Router done continuation is unconnected; workflow ends successfully here", issues);
+}
+
+function routerGraphConfig(node: GraphNode): RouterGraphConfig {
+  const router = routerGraphConfigOrNull(node);
+  if (!router || router.cases.length === 0) {
+    throw validationError("cases", "Router cases are required");
+  }
+  return router;
+}
+
+function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
+  const record = asRecord(node.config);
+  if (record.mode != null && record.mode !== "first_match") return null;
+  const rawCases = Array.isArray(record.cases) ? record.cases : [];
+  const cases = rawCases.map((item): RouterGraphCase => {
+    const caseValue = asRecord(item);
+    return {
+      id: stringField(caseValue, "id") ?? "",
+      label: typeof caseValue.label === "string" ? caseValue.label : "",
+      condition: caseValue.condition as WorkflowCondition,
+    };
+  });
+  return {
+    mode: "first_match",
+    cases,
+    default_label: stringField(record, "default_label") ?? "Default",
+  };
 }
 
 function requireBodyPort(

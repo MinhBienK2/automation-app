@@ -192,6 +192,75 @@ describe("Workflow graph editor integration", () => {
     );
   });
 
+  test("preserves multiple incoming links only for Merge inputs", async () => {
+    const graphEditorModule = await import("./WorkflowGraphEditor");
+    const replacePortEdge = graphEditorModule["replacePortEdge"] as typeof import("./WorkflowGraphEditor").replacePortEdge;
+    const sourceNode = (id: string) => ({
+      id,
+      type: "workflow" as const,
+      position: { x: 0, y: 0 },
+      data: {
+        label: id,
+        nodeType: "action" as const,
+        ports: nodePorts("action"),
+        status: "idle" as const,
+        hasIssue: false,
+      },
+    });
+    const mergeNode = {
+      id: "merge",
+      type: "workflow" as const,
+      position: { x: 0, y: 0 },
+      data: {
+        label: "Merge",
+        nodeType: "merge" as const,
+        ports: nodePorts("merge"),
+        status: "idle" as const,
+        hasIssue: false,
+      },
+    };
+    const actionTarget = {
+      ...sourceNode("target"),
+      data: { ...sourceNode("target").data, label: "Target" },
+    };
+    const existingEdge = {
+      id: "edge-a-out-merge-in",
+      source: "a",
+      sourceHandle: "out",
+      target: "merge",
+      targetHandle: "in",
+      data: { hasIssue: false, status: "idle" as const },
+    };
+    const nextMergeEdge = {
+      id: "edge-b-out-merge-in",
+      source: "b",
+      sourceHandle: "out",
+      target: "merge",
+      targetHandle: "in",
+      data: { hasIssue: false, status: "idle" as const },
+    };
+    const nextNormalEdge = {
+      ...nextMergeEdge,
+      id: "edge-b-out-target-in",
+      target: "target",
+    };
+
+    expect(
+      replacePortEdge(
+        [existingEdge],
+        nextMergeEdge,
+        [sourceNode("a"), sourceNode("b"), mergeNode],
+      ).map((edge) => edge.id),
+    ).toEqual(["edge-a-out-merge-in", "edge-b-out-merge-in"]);
+    expect(
+      replacePortEdge(
+        [{ ...existingEdge, id: "edge-a-out-target-in", target: "target" }],
+        nextNormalEdge,
+        [sourceNode("a"), sourceNode("b"), actionTarget],
+      ).map((edge) => edge.id),
+    ).toEqual(["edge-b-out-target-in"]);
+  });
+
   test("opens graph shortcuts from the toolbar", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
@@ -1086,7 +1155,7 @@ describe("Workflow graph editor integration", () => {
       .not.toBeInTheDocument();
     expect(within(logicPalette).queryByRole("button", { name: "Safety" }))
       .not.toBeInTheDocument();
-    ["switch", "while", "repeat_until", "break_loop", "continue_loop", "retry"].forEach(
+    ["merge", "router", "switch", "while", "repeat_until", "break_loop", "continue_loop", "retry"].forEach(
       (value) => {
         expect(logicPalette.querySelector(`[data-value="${value}"]`)).toBeInTheDocument();
       },
@@ -1099,6 +1168,31 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(logicPalette.querySelector('[data-value="while"]') as HTMLElement);
     expect(within(editor).getByLabelText("Loop max attempts")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Loop timeout ms")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="merge"]') as HTMLElement,
+    );
+    expect(within(editor).getByRole("heading", { name: "Merge" })).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Merge In port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Merge Out port")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="router"]') as HTMLElement,
+    );
+    expect(within(editor).getByRole("heading", { name: "Router" })).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Router case label")).toHaveValue("Case 1");
+    fireEvent.change(within(editor).getByLabelText("Router case label"), {
+      target: { value: "Challenge" },
+    });
+    await userEvent.click(within(editor).getByRole("button", { name: "Add router case" }));
+    expect(within(editor).getAllByLabelText("Router case label")).toHaveLength(2);
+    await userEvent.click(within(editor).getByRole("button", { name: "Move router case Challenge down" }));
+    expect(within(editor).getByLabelText("Router Challenge port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Router Case 2 port")).toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
     await userEvent.click(
@@ -1130,6 +1224,23 @@ describe("Workflow graph editor integration", () => {
         expect.objectContaining({
           graph: expect.objectContaining({
             nodes: expect.arrayContaining([
+              expect.objectContaining({
+                node_type: "merge",
+              }),
+              expect.objectContaining({
+                node_type: "router",
+                config: expect.objectContaining({
+                  mode: "first_match",
+                  cases: [
+                    expect.objectContaining({ id: "2", label: "Case 2" }),
+                    expect.objectContaining({ id: "1", label: "Challenge" }),
+                  ],
+                }),
+                ports: expect.arrayContaining([
+                  expect.objectContaining({ id: "case_1", label: "Challenge" }),
+                  expect.objectContaining({ id: "case_2", label: "Case 2" }),
+                ]),
+              }),
               expect.objectContaining({
                 node_type: "switch",
                 config: {

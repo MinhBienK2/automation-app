@@ -1577,6 +1577,155 @@ describe("BrowserWorkflowRunner", () => {
     expect(progress.indexOf("true-node")).toBeLessThan(progress.lastIndexOf("done"));
   });
 
+  test("runs Router first matching case and then continues after the router step", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("seed", "Seed", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "state", value_type: "text", value: "challenge-visible" }],
+            },
+          }),
+          step("router", "Router", {
+            type: "router_condition",
+            config: {
+              mode: "first_match",
+              cases: [
+                {
+                  id: "expired",
+                  label: "Expired",
+                  condition: { kind: "output_equals", name: "state", value: "expired" },
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "expired" }],
+                      },
+                    },
+                  ],
+                },
+                {
+                  id: "challenge",
+                  label: "Challenge",
+                  condition: { kind: "output_contains", name: "state", value: "challenge" },
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "challenge" }],
+                      },
+                    },
+                  ],
+                },
+              ],
+              default_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [{ name: "branch", value_type: "text", value: "default" }],
+                  },
+                },
+              ],
+            },
+          }),
+          step("done", "Done", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "after_router", value_type: "text", value: "continued" }],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      branch: "challenge",
+      after_router: "continued",
+    });
+  });
+
+  test("runs Router default steps when no case matches", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("router", "Router", {
+            type: "router_condition",
+            config: {
+              mode: "first_match",
+              cases: [
+                {
+                  id: "expired",
+                  label: "Expired",
+                  condition: { kind: "output_equals", name: "state", value: "expired" },
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "expired" }],
+                      },
+                    },
+                  ],
+                },
+              ],
+              default_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [{ name: "branch", value_type: "text", value: "default" }],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.branch).toBe("default");
+  });
+
+  test("executes graph no-op actions without changing browser state or outputs", async () => {
+    const context = new FakeContext();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("merge", "Merge", {
+            type: "graph_noop",
+            config: { kind: "merge" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).not.toHaveProperty("merge");
+    expect(context.pages()[0].events).toEqual([]);
+  });
+
   test("honors loop timeout semantics", async () => {
     let sleepCalls = 0;
     const runner = new BrowserWorkflowRunner({

@@ -18,7 +18,9 @@ import {
   workflowExamples,
 } from "./stepHelpFieldGuidance";
 const graphInternalActionTypes = [
+  "graph_noop",
   "switch_condition",
+  "router_condition",
   "while_loop",
   "repeat_until",
   "try_catch",
@@ -66,7 +68,9 @@ type PhaseOneActionType =
   | "set_json_variables"
   | "assert_element"
   | "assert_text"
+  | "graph_noop"
   | "if_condition"
+  | "router_condition"
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
@@ -497,7 +501,9 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   ),
   assert_element: elementHelp("Assert Element", "require an element state", "kiểm tra element", "assert"),
   assert_text: elementHelp("Assert Text", "require expected text", "kiểm tra text", "assert"),
+  graph_noop: elementHelp("Graph No-op", "mark internal graph flow progress", "đánh dấu luồng graph", "logic"),
   if_condition: elementHelp("If Condition", "run steps when a condition matches", "rẽ nhánh", "logic"),
+  router_condition: elementHelp("Router Condition", "run first matching router case", "router case đầu tiên", "logic"),
   repeat_times: elementHelp("Repeat Times", "repeat nested steps", "lặp số lần", "loop"),
   repeat_for_each: elementHelp("Repeat For Each", "repeat steps for each item", "lặp từng item", "loop"),
   retry_block: elementHelp("Retry Block", "retry nested steps after failure", "thử lại block", "retry"),
@@ -907,8 +913,11 @@ function actualFieldNames(actionType: ActionType): string[] {
       return [...targetFields, "State"];
     case "assert_text":
       return [...targetFields, "Text", "Match mode", "Timeout ms"];
+    case "graph_noop":
     case "if_condition":
       return ["No fields"];
+    case "router_condition":
+      return ["Cases", "Default steps"];
     case "repeat_times":
       return ["Times"];
     case "repeat_for_each":
