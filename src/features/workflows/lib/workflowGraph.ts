@@ -233,37 +233,124 @@ export function toReactFlowGraph(
 
 function graphEdgeOrders(graph: WorkflowGraph) {
   const orders = new Map<string, number>();
-  const edgesBySource = new Map<string, typeof graph.edges>();
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgesBySourcePort = new Map<string, typeof graph.edges>();
   graph.edges.forEach((edge) => {
-    edgesBySource.set(edge.source_node_id, [
-      ...(edgesBySource.get(edge.source_node_id) ?? []),
+    const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
+    edgesBySourcePort.set(key, [
+      ...(edgesBySourcePort.get(key) ?? []),
       edge,
     ]);
   });
 
-  const visitedNodes = new Set<string>();
-  const visitedEdges = new Set<string>();
-  const queue = ["start"];
+  for (const edges of edgesBySourcePort.values()) {
+    edges.sort((left, right) => left.id.localeCompare(right.id));
+  }
+
   let order = 1;
+  const start = graph.nodes.find((node) => node.node_type === "start");
+  if (!start) return orders;
 
-  while (queue.length) {
-    const sourceId = queue.shift();
-    if (!sourceId || visitedNodes.has(sourceId)) continue;
-    visitedNodes.add(sourceId);
+  function visitNode(nodeId: string, path: Set<string>) {
+    if (path.has(nodeId)) return;
+    const node = nodeById.get(nodeId);
+    if (!node) return;
+    path.add(nodeId);
 
-    for (const edge of edgesBySource.get(sourceId) ?? []) {
-      if (!visitedEdges.has(edge.id)) {
-        visitedEdges.add(edge.id);
+    for (const portId of orderedOutputPortIds(node)) {
+      const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
+      if (!edge) continue;
+      if (!orders.has(edge.id)) {
         orders.set(edge.id, order);
         order += 1;
       }
-      if (!visitedNodes.has(edge.target_node_id)) {
-        queue.push(edge.target_node_id);
-      }
+      visitNode(edge.target_node_id, new Set(path));
     }
   }
 
+  visitNode(start.id, new Set());
+
   return orders;
+}
+
+function edgeSourcePortKey(sourceNodeId: string, sourcePort: string) {
+  return `${sourceNodeId}\u0000${sourcePort}`;
+}
+
+function orderedOutputPortIds(node: GraphNode) {
+  const outputPortIds = node.ports
+    .filter((port) => port.direction === "output")
+    .map((port) => port.id);
+  const preferred = preferredOutputPortOrder(node);
+  return [
+    ...preferred.filter((portId) => outputPortIds.includes(portId)),
+    ...outputPortIds.filter((portId) => !preferred.includes(portId)),
+  ];
+}
+
+function preferredOutputPortOrder(node: GraphNode) {
+  switch (node.node_type) {
+    case "start":
+    case "action":
+    case "merge":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "assert_output":
+    case "domain_allowlist":
+      return ["out"];
+    case "if":
+      return ["true", "false", "done"];
+    case "switch":
+      return [
+        ...casePortIds(node),
+        "default",
+        "done",
+      ];
+    case "router":
+      return [
+        ...routerCasePortIds(node),
+        "default",
+        "done",
+      ];
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+      return ["loop", "done"];
+    case "repeat_until":
+      return ["loop", "timeout", "done"];
+    case "retry":
+      return ["try", "failed", "success"];
+    case "try_catch":
+      return ["try", "success", "error", "finally", "done"];
+    case "fallback":
+      return ["primary", "fallback", "done"];
+    default:
+      return [];
+  }
+}
+
+function casePortIds(node: GraphNode) {
+  return node.ports
+    .filter((port) => port.direction === "output" && /^case_\d+$/.test(port.id))
+    .map((port) => port.id)
+    .sort((left, right) => Number(left.slice(5)) - Number(right.slice(5)));
+}
+
+function routerCasePortIds(node: GraphNode) {
+  const cases = Array.isArray((node.config as { cases?: unknown } | null)?.cases)
+    ? ((node.config as { cases: Array<{ id?: unknown }> }).cases)
+    : [];
+  const configured = cases
+    .map((caseValue) => typeof caseValue.id === "string" ? `case_${caseValue.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
 }
 
 export function mergeReactFlowNodeRuntimeState(
@@ -302,19 +389,22 @@ export function fromReactFlowGraph(
       ...node,
       position: nodePositions.get(node.id) ?? node.position,
     })),
-    edges: edges.map((edge) => ({
-      id: edge.id,
-      source_node_id: edge.source,
-      source_port: edge.sourceHandle ?? "out",
-      target_node_id: edge.target,
-      target_port: edge.targetHandle ?? "in",
-      label:
-        typeof edge.label === "string"
-          ? cleanEdgeLabel(edge.label)
-          : edge.sourceHandle ?? null,
-      condition:
-        graph.edges.find((graphEdge) => graphEdge.id === edge.id)?.condition ?? null,
-    })).filter(
+    edges: edges.map((edge) => {
+      const existingEdge = graph.edges.find((graphEdge) => graphEdge.id === edge.id);
+      return {
+        id: edge.id,
+        source_node_id: edge.source,
+        source_port: edge.sourceHandle ?? "out",
+        target_node_id: edge.target,
+        target_port: edge.targetHandle ?? "in",
+        label:
+          existingEdge?.label ??
+          (typeof edge.label === "string"
+            ? cleanEdgeLabel(edge.label)
+            : edge.sourceHandle ?? null),
+        condition: existingEdge?.condition ?? null,
+      };
+    }).filter(
       (edge) =>
         graphNodes.has(edge.source_node_id) &&
         graphNodes.has(edge.target_node_id),

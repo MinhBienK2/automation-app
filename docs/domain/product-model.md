@@ -37,7 +37,7 @@ Users can:
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
 - Export workflow packages containing Flow and selected Workflow Settings sections.
 - Import workflow packages as new workflows without overwriting existing workflows.
-- Duplicate workflows locally while preserving saved graph and full local settings.
+- Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 
 ## Current Source Files

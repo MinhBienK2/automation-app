@@ -40,6 +40,7 @@ import {
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
 import {
+  arrangeWorkflowGraph,
   copyGraphSelection,
   deleteGraphSelection,
   duplicateGraphSelection,
@@ -817,6 +818,13 @@ export function WorkflowGraphEditor({
     );
   }
 
+  function autoArrangeGraph() {
+    if (runState.status === "running") return;
+    const nextGraph = arrangeWorkflowGraph(graphRef.current);
+    commitGraphChange(nextGraph, selectionRef.current);
+    reactFlowInstance?.fitView({ duration: 240 });
+  }
+
   function deleteNode(nodeId: string) {
     const currentGraph = graphRef.current;
     const nodeToDelete = currentGraph.nodes.find((node) => node.id === nodeId);
@@ -908,6 +916,7 @@ export function WorkflowGraphEditor({
         isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
+        onAutoArrange={autoArrangeGraph}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}

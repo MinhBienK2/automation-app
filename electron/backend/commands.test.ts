@@ -154,6 +154,103 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.listWorkflows().map((workflow) => workflow.id)).toEqual(initialIds);
   });
 
+  test("duplicates workflow with a fresh browser identity and session profile", async () => {
+    const { handlers } = await createTestHandlers();
+    const source = handlers.createWorkflow("Source");
+    handlers.saveWorkflowGraph(source.id, runnableGraph());
+    const sourceSettings = handlers.getWorkflowSettings(source.id);
+    handlers.saveWorkflowSettings(source.id, {
+      ...sourceSettings,
+      general: {
+        ...sourceSettings.general,
+        description: "Owned staging login flow",
+        tags: ["staging", "identity"],
+        notes: "Keep local credentials while making a fresh duplicate identity.",
+      },
+      run_policy: {
+        ...sourceSettings.run_policy,
+        browser_retention: "retain",
+        batch_headless: true,
+        batch_stop_on_first_failed_row: true,
+      },
+      browser_launch: {
+        ...sourceSettings.browser_launch,
+        run_from_selected_enabled: true,
+        proxy_enabled: true,
+        proxy_server: "http://proxy.local:8080",
+        proxy_username: "operator",
+        proxy_password: "local-secret",
+        proxy_label: "owned-proxy",
+        locale: "vi-VN",
+        timezone: "Asia/Ho_Chi_Minh",
+        viewport_width: 1366,
+        humanize: false,
+        human_preset: "careful",
+      },
+      environment: {
+        initial_variables: [
+          { name: "account.username", value_type: "text", value: "qa-user" },
+        ],
+      },
+    });
+
+    const duplicated = handlers.duplicateWorkflow(source.id, "Copy of Source").workflow;
+    const copiedSettings = handlers.getWorkflowSettings(duplicated.id);
+    const savedSourceSettings = handlers.getWorkflowSettings(source.id);
+
+    expect(handlers.getWorkflowGraph(duplicated.id)).toMatchObject({
+      version: 2,
+      nodes: runnableGraph().nodes,
+      edges: runnableGraph().edges,
+      viewport: runnableGraph().viewport,
+    });
+    expect(copiedSettings.workflow_id).toBe(duplicated.id);
+    expect(copiedSettings.general).toMatchObject({
+      name: "Copy of Source",
+      description: "Owned staging login flow",
+      tags: ["staging", "identity"],
+      notes: "Keep local credentials while making a fresh duplicate identity.",
+    });
+    expect(copiedSettings.run_policy).toMatchObject({
+      browser_retention: "retain",
+      batch_headless: true,
+      batch_stop_on_first_failed_row: true,
+    });
+    expect(copiedSettings.environment.initial_variables).toEqual([
+      { name: "account.username", value_type: "text", value: "qa-user" },
+    ]);
+    expect(copiedSettings.browser_launch).toMatchObject({
+      session_mode: "persistent_profile",
+      display_name: "Copy of Source identity",
+      profile_name: copiedSettings.browser_launch.profile_dir,
+      run_from_selected_enabled: false,
+      proxy_enabled: true,
+      proxy_server: "http://proxy.local:8080",
+      proxy_username: "operator",
+      proxy_password: "local-secret",
+      proxy_label: "owned-proxy",
+      locale: "vi-VN",
+      timezone: "Asia/Ho_Chi_Minh",
+      viewport_width: 1366,
+      humanize: false,
+      human_preset: "careful",
+    });
+    expect(copiedSettings.browser_launch.identity_id).toMatch(/^bi_/);
+    expect(copiedSettings.browser_launch.identity_id).not.toBe(
+      savedSourceSettings.browser_launch.identity_id,
+    );
+    expect(copiedSettings.browser_launch.profile_dir).not.toBe(
+      savedSourceSettings.browser_launch.profile_dir,
+    );
+    expect(copiedSettings.browser_launch.profile_name).not.toBe(
+      savedSourceSettings.browser_launch.profile_name,
+    );
+    expect(copiedSettings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(copiedSettings.browser_launch.fingerprint_seed).not.toBe(
+      savedSourceSettings.browser_launch.fingerprint_seed,
+    );
+  });
+
   test("deletes private browser profile data only when requested", async () => {
     const { handlers, appPaths } = await createTestHandlers();
     const keptWorkflow = handlers.createWorkflow("Keep profile");

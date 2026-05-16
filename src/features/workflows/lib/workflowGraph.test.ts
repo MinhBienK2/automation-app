@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { WorkflowStep } from "../../../types/workflow";
+import type { WorkflowGraph, WorkflowStep } from "../../../types/workflow";
 import {
   createDefaultGraphNode,
   fromReactFlowGraph,
@@ -241,6 +241,111 @@ describe("workflow graph helpers", () => {
     expect(flow.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 
+  test("orders graph edge labels by execution port traversal instead of edge array order", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: {},
+          ports: nodePorts("start"),
+          group_id: null,
+        },
+        {
+          id: "if-1",
+          node_type: "if",
+          label: "If account is ready",
+          position: { x: 240, y: 0 },
+          config: {
+            condition: { kind: "output_equals", name: "ready", value: "yes" },
+          },
+          ports: nodePorts("if"),
+          group_id: null,
+        },
+        {
+          id: "true-action",
+          node_type: "action",
+          label: "Ready branch",
+          position: { x: 480, y: -120 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 10 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+        {
+          id: "false-action",
+          node_type: "action",
+          label: "Not ready branch",
+          position: { x: 480, y: 0 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 10 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+        {
+          id: "done-action",
+          node_type: "action",
+          label: "Continue",
+          position: { x: 480, y: 120 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 10 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "edge-if-done",
+          source_node_id: "if-1",
+          source_port: "done",
+          target_node_id: "done-action",
+          target_port: "in",
+          label: "done",
+          condition: null,
+        },
+        {
+          id: "edge-if-false",
+          source_node_id: "if-1",
+          source_port: "false",
+          target_node_id: "false-action",
+          target_port: "in",
+          label: "false",
+          condition: null,
+        },
+        {
+          id: "edge-start-if",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "if-1",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+        {
+          id: "edge-if-true",
+          source_node_id: "if-1",
+          source_port: "true",
+          target_node_id: "true-action",
+          target_port: "in",
+          label: "true",
+          condition: null,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const labels = new Map(toReactFlowGraph(graph).edges.map((edge) => [edge.id, edge.label]));
+
+    expect(labels).toEqual(
+      new Map([
+        ["edge-if-done", "4"],
+        ["edge-if-false", "3"],
+        ["edge-start-if", "1"],
+        ["edge-if-true", "2"],
+      ]),
+    );
+  });
+
   test("marks selected graph edges with distinct stroke and marker styling", () => {
     const graph = linearGraphFromSteps([waitStep]);
 
@@ -353,6 +458,24 @@ describe("workflow graph helpers", () => {
         }),
       ]),
     );
+  });
+
+  test("keeps execution order labels as display-only when syncing React Flow edges", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const flow = toReactFlowGraph(graph);
+
+    expect(flow.edges.find((edge) => edge.id === "edge-start-step-wait")?.label)
+      .toBe("1");
+
+    const nextGraph = fromReactFlowGraph(
+      graph,
+      flow.nodes,
+      flow.edges,
+      graph.viewport,
+    );
+
+    expect(nextGraph.edges.find((edge) => edge.id === "edge-start-step-wait")?.label)
+      .toBe("next");
   });
 
   test("preserves React Flow measured node dimensions when graph nodes are remapped", () => {

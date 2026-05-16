@@ -990,7 +990,14 @@ describe("Workflow graph editor integration", () => {
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
 
-    ["Undo", "Redo", "Select canvas mode", "Pan canvas mode", "Fit graph view"].forEach(
+    [
+      "Undo",
+      "Redo",
+      "Select canvas mode",
+      "Pan canvas mode",
+      "Fit graph view",
+      "Auto arrange graph",
+    ].forEach(
       (name) => {
         expect(within(toolbar).getByRole("button", { name })).toBeInTheDocument();
       },
@@ -1001,6 +1008,92 @@ describe("Workflow graph editor integration", () => {
       .toHaveAttribute("aria-pressed", "true");
     expect(within(editor).getByLabelText("Workflow graph canvas"))
       .toHaveClass("graph-canvas-pan-mode");
+  });
+
+  test("auto arranges graph nodes from the toolbar and saves the new positions", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: {
+        version: 2,
+        nodes: [
+          {
+            id: "start",
+            node_type: "start",
+            label: "Start",
+            position: { x: 520, y: 180 },
+            config: {},
+            ports: nodePorts("start"),
+            group_id: null,
+          },
+          {
+            id: "node-a",
+            node_type: "action",
+            label: "A",
+            position: { x: 40, y: 320 },
+            config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+            ports: nodePorts("action"),
+            group_id: null,
+          },
+          {
+            id: "node-b",
+            node_type: "action",
+            label: "B",
+            position: { x: -160, y: -40 },
+            config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+            ports: nodePorts("action"),
+            group_id: null,
+          },
+        ],
+        edges: [
+          {
+            id: "edge-start-a",
+            source_node_id: "start",
+            source_port: "out",
+            target_node_id: "node-a",
+            target_port: "in",
+            label: "next",
+            condition: null,
+          },
+          {
+            id: "edge-a-b",
+            source_node_id: "node-a",
+            source_port: "out",
+            target_node_id: "node-b",
+            target_port: "in",
+            label: "next",
+            condition: null,
+          },
+        ],
+        viewport: { x: -80, y: 40, zoom: 0.75 },
+      },
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Auto arrange graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = workflowCommandCallMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({ id: "start", position: { x: 0, y: 0 } }),
+              expect.objectContaining({ id: "node-a", position: { x: 260, y: 0 } }),
+              expect.objectContaining({ id: "node-b", position: { x: 520, y: 0 } }),
+            ]),
+          }),
+        }),
+      );
+    });
   });
 
   test("keeps toolbar pan mode active after temporary spacebar panning ends", async () => {

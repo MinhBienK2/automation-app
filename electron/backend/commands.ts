@@ -423,14 +423,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         if (graph) repository.saveWorkflowGraph(created.id, graph);
         const settings = repository.getWorkflowSettings(workflowId);
         if (settings) {
-          saveSettings(created.id, {
-            ...structuredClone(settings),
-            workflow_id: created.id,
-            general: {
-              ...settings.general,
-              name: created.name,
-            },
-          });
+          saveSettings(created.id, duplicateWorkflowSettings(settings, created));
         }
         context.database.exec("COMMIT");
         return { workflow: created, steps: [] };
@@ -1085,6 +1078,39 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       }
       return context.saveWorkflowPackageFile(packageValue);
     },
+  };
+}
+
+function duplicateWorkflowSettings(
+  sourceSettings: WorkflowSettings,
+  created: Workflow,
+): WorkflowSettings {
+  const copied = structuredClone(sourceSettings);
+  const freshDefaults = defaultWorkflowSettings(created, { randomizeIdentity: true });
+  const sourceBrowser = copied.browser_launch;
+  const freshBrowser = freshDefaults.browser_launch;
+  const persistent = sourceBrowser.session_mode === "persistent_profile";
+
+  return {
+    ...copied,
+    workflow_id: created.id,
+    general: {
+      ...copied.general,
+      name: created.name,
+      created_at: created.created_at,
+      updated_at: created.updated_at,
+    },
+    browser_launch: {
+      ...sourceBrowser,
+      identity_id: freshBrowser.identity_id,
+      display_name: freshBrowser.display_name,
+      profile_dir: freshBrowser.profile_dir,
+      profile_name: persistent ? freshBrowser.profile_dir : null,
+      fingerprint_seed: freshBrowser.fingerprint_seed,
+      run_from_selected_enabled: false,
+    },
+    created_at: created.created_at,
+    updated_at: created.updated_at,
   };
 }
 

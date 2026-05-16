@@ -36,7 +36,7 @@ Node/Electron backend.
 - Product-facing batch execution shares the same active-run lifecycle lock, stop handling, and persisted run records as normal workflow execution.
 - Workflow package import validates selected sections before creation and wraps workflow, graph, and settings writes in a SQLite transaction.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
-- Product-facing local copy goes through `duplicateWorkflow`, which copies saved graph and full local settings without package-export sanitization.
+- Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.
 - CloakBrowser operational commands stay in the backend: diagnostics report wrapper/binary/cache/display/GeoIP/font/profile metadata plus last smoke/preflight summary fields, install triggers `ensureBinary()`, and orphan cleanup deletes only inactive profile directories that no workflow references.
 - Workflow deletion accepts an explicit profile-data choice from the renderer. It keeps browser profile data by default, deletes only unshared profile directories when requested, and rejects deletion while that workflow's retained browser session still owns the profile.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
