@@ -70,6 +70,21 @@ describe("WorkflowSettingsDialog", () => {
       .not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Identity display name")).toHaveValue("Checkout QA identity");
     expect(within(dialog).getByLabelText("Identity id")).toHaveValue("bi_workflow-1");
+    const identityRow = within(dialog)
+      .getByLabelText("Identity id")
+      .closest(".workflow-settings-identity-row");
+    expect(identityRow).not.toBeNull();
+    expect(within(dialog).getByLabelText("Identity display name").closest(".workflow-settings-identity-row"))
+      .toBe(identityRow);
+    expect(
+      Array.from(identityRow?.querySelectorAll("label") ?? []).map((label) =>
+        label.textContent,
+      ),
+    ).toEqual(["Identity id", "Identity display name"]);
+    expect(within(dialog).getByLabelText("Identity id").closest("label"))
+      .toHaveClass("workflow-settings-identity-id-field");
+    expect(within(dialog).getByLabelText("Identity display name").closest("label"))
+      .toHaveClass("workflow-settings-identity-name-field");
     expect(within(dialog).queryByLabelText("Profile directory")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");

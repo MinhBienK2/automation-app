@@ -385,17 +385,19 @@ function BrowserLaunchSettingsSection({
           })
         }
       />
-      <label className="field">
-        <span>Identity display name</span>
-        <Input
-          value={value.display_name}
-          onChange={(event) => onChange({ ...value, display_name: event.currentTarget.value })}
-        />
-      </label>
-      <label className="field">
-        <span>Identity id</span>
-        <Input value={value.identity_id} readOnly />
-      </label>
+      <div className="workflow-settings-identity-row">
+        <label className="field workflow-settings-identity-id-field">
+          <span>Identity id</span>
+          <Input value={value.identity_id} readOnly />
+        </label>
+        <label className="field workflow-settings-identity-name-field">
+          <span>Identity display name</span>
+          <Input
+            value={value.display_name}
+            onChange={(event) => onChange({ ...value, display_name: event.currentTarget.value })}
+          />
+        </label>
+      </div>
       <label className="field">
         <span>Fingerprint seed</span>
         <Input
