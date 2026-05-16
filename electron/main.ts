@@ -40,6 +40,7 @@ function createMainWindow() {
     height: 820,
     minWidth: 960,
     minHeight: 640,
+    icon: getAppIconPath(),
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -69,6 +70,12 @@ function createMainWindow() {
   } else {
     void mainWindow.loadFile(path.join(currentDir, "../../dist/index.html"));
   }
+}
+
+function getAppIconPath() {
+  return app.isPackaged
+    ? path.join(app.getAppPath(), "dist/app-logo.svg")
+    : path.join(app.getAppPath(), "public/app-logo.svg");
 }
 
 function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {

@@ -32,6 +32,16 @@ describe("Electron main process", () => {
     expect(source).toContain('path.join(currentDir, "preload.cjs")');
   });
 
+  test("uses the app logo for the Electron window icon in dev and production", async () => {
+    const source = await readMainSource();
+
+    expect(source).toContain("function getAppIconPath()");
+    expect(source).toContain('path.join(app.getAppPath(), "public/app-logo.svg")');
+    expect(source).toContain('path.join(app.getAppPath(), "dist/app-logo.svg")');
+    expect(source).toContain("app.isPackaged");
+    expect(source).toContain("icon: getAppIconPath()");
+  });
+
   test("blocks unexpected renderer navigation and new windows", async () => {
     const source = await readMainSource();
 
