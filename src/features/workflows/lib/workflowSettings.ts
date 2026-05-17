@@ -56,9 +56,9 @@ export type WorkflowSettingsLocalizedHelp = Record<
 
 export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
+  { id: "graph_defaults", label: "Graph" },
   { id: "run_policy", label: "Run Policy" },
   { id: "browser_launch", label: "Browser Launch" },
-  { id: "graph_defaults", label: "Graph" },
   { id: "environment", label: "Environment" },
 ];
 

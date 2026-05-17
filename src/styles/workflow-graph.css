@@ -685,6 +685,10 @@
   padding-bottom: 2px;
 }
 
+.settings-field-group-grid > .variable-row-table {
+  grid-column: 1 / -1;
+}
+
 .variable-row-grid {
   display: grid;
   grid-template-columns: minmax(96px, 1fr) 116px minmax(120px, 1.4fr) auto;

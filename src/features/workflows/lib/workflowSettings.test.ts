@@ -55,17 +55,17 @@ describe("workflow settings model", () => {
   test("defines sidebar sections and decision-guide help for each section", () => {
     const visibleSectionIds = [
       "general",
+      "graph_defaults",
       "run_policy",
       "browser_launch",
-      "graph_defaults",
       "environment",
     ];
     expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
     expect(workflowSettingsSections.map((section) => section.label)).toEqual([
       "General",
+      "Graph",
       "Run Policy",
       "Browser Launch",
-      "Graph",
       "Environment",
     ]);
     expect(Object.keys(workflowSettingsHelp).sort()).toEqual([...visibleSectionIds].sort());

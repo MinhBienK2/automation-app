@@ -202,10 +202,12 @@ describe("App CSS", () => {
   test("keeps variable rows tabular while protecting narrow inspectors from overflow", () => {
     const variableTable = cssRule(".variable-row-table");
     const variableGrid = cssRule(".variable-row-grid");
+    const settingsVariableTable = cssRule(".settings-field-group-grid > .variable-row-table");
 
     expect(variableTable).toContain("overflow-x: auto");
     expect(variableGrid).toContain("grid-template-columns: minmax(96px, 1fr) 116px minmax(120px, 1.4fr) auto");
     expect(variableGrid).toContain("min-width: 520px");
+    expect(settingsVariableTable).toContain("grid-column: 1 / -1");
   });
 
   test("groups related workflow settings fields without changing the dark theme", () => {

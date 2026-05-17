@@ -62,9 +62,9 @@ describe("WorkflowSettingsDialog", () => {
     const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
     expect(within(dialog).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "General",
+      "Graph",
       "Run Policy",
       "Browser Launch",
-      "Graph",
       "Environment",
     ]);
     expect(within(dialog).queryByRole("tab", { name: "Owned Test Gates" }))
