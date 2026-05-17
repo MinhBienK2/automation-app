@@ -21,8 +21,10 @@ import type {
 import "@xyflow/react/dist/style.css";
 import type {
   ActionType,
+  GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
+  GraphPosition,
   GraphPort,
   GraphValidationIssue,
   RunState,
@@ -39,6 +41,7 @@ import {
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
 import {
+  arrangeWorkflowGraph,
   copyGraphSelection,
   deleteGraphSelection,
   duplicateGraphSelection,
@@ -81,6 +84,7 @@ type WorkflowGraphEditorProps = {
   onSelectedNodeChange?: (nodeId: string | null) => void;
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
+  defaultEdgeDelay?: GraphEdgeDelay | null;
 };
 
 export type GraphSelectionRequest = {
@@ -95,6 +99,20 @@ type ActivePortConnection = {
   direction: GraphPort["direction"];
 } | null;
 
+type ScreenToFlowPosition = Pick<
+  ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge>,
+  "screenToFlowPosition"
+>;
+
+const graphNodeDimensions = {
+  width: 160,
+  height: 64,
+};
+const visibleNodeStagger = {
+  step: 24,
+  cycle: 5,
+};
+
 function initialSelectedNodeId(graph: WorkflowGraph) {
   return (
     graph.nodes.find((node) => node.node_type !== "start")?.id ??
@@ -103,12 +121,16 @@ function initialSelectedNodeId(graph: WorkflowGraph) {
   );
 }
 
-function replacePortEdge(
+export function replacePortEdge(
   edges: WorkflowFlowEdge[],
   nextEdge: WorkflowFlowEdge,
+  nodes: WorkflowFlowNode[],
 ): WorkflowFlowEdge[] {
   const sourceHandle = nextEdge.sourceHandle ?? "out";
   const targetHandle = nextEdge.targetHandle ?? "in";
+  const targetNode = nodes.find((node) => node.id === nextEdge.target);
+  const allowsMultipleIncoming =
+    targetNode?.data.nodeType === "merge" && targetHandle === "in";
 
   return [
     ...edges.filter((edge) => {
@@ -118,10 +140,19 @@ function replacePortEdge(
       const sameInput =
         edge.target === nextEdge.target &&
         (edge.targetHandle ?? "in") === targetHandle;
-      return edge.id !== nextEdge.id && !sameOutput && !sameInput;
+      return edge.id !== nextEdge.id && !sameOutput && (allowsMultipleIncoming || !sameInput);
     }),
     nextEdge,
   ];
+}
+
+function edgePortsExist(graph: WorkflowGraph, edge: WorkflowGraph["edges"][number]) {
+  const source = graph.nodes.find((node) => node.id === edge.source_node_id);
+  const target = graph.nodes.find((node) => node.id === edge.target_node_id);
+  return Boolean(
+    source?.ports.some((port) => port.direction === "output" && port.id === edge.source_port) &&
+      target?.ports.some((port) => port.direction === "input" && port.id === edge.target_port),
+  );
 }
 
 function shouldIgnoreGraphShortcut(event: KeyboardEvent) {
@@ -141,11 +172,47 @@ function shouldIgnoreGraphShortcut(event: KeyboardEvent) {
   return Boolean(target.closest('[role="dialog"], .action-type-popover'));
 }
 
+function fallbackNodeInsertionPosition(nodeCount: number): GraphPosition {
+  return {
+    x: 120 + nodeCount * 48,
+    y: 120 + nodeCount * 16,
+  };
+}
+
+export function getVisibleNodeInsertionPosition(
+  nodeCount: number,
+  reactFlowInstance: ScreenToFlowPosition | null,
+  canvasElement: Pick<HTMLElement, "getBoundingClientRect"> | null,
+): GraphPosition {
+  const fallbackPosition = fallbackNodeInsertionPosition(nodeCount);
+  if (!reactFlowInstance || !canvasElement) return fallbackPosition;
+
+  const canvasBounds = canvasElement.getBoundingClientRect();
+  if (canvasBounds.width <= 0 || canvasBounds.height <= 0) {
+    return fallbackPosition;
+  }
+
+  const visibleCenter = reactFlowInstance.screenToFlowPosition(
+    {
+      x: canvasBounds.left + canvasBounds.width / 2,
+      y: canvasBounds.top + canvasBounds.height / 2,
+    },
+    { snapToGrid: false },
+  );
+  const stagger = (nodeCount % visibleNodeStagger.cycle) * visibleNodeStagger.step;
+
+  return {
+    x: Math.round(visibleCenter.x - graphNodeDimensions.width / 2 + stagger),
+    y: Math.round(visibleCenter.y - graphNodeDimensions.height / 2 + stagger),
+  };
+}
+
 export function WorkflowGraphEditor({
   graph,
   runState,
   validationIssues,
   selectionRequest,
+  defaultEdgeDelay = null,
   onChange,
   onRunGraph,
   onSelectedNodeChange,
@@ -187,6 +254,7 @@ export function WorkflowGraphEditor({
     useState<ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge> | null>(null);
   const activePortConnectionRef = useRef<ActivePortConnection>(null);
   const editorRef = useRef<HTMLElement | null>(null);
+  const graphCanvasRef = useRef<HTMLDivElement | null>(null);
   const isGraphShortcutActiveRef = useRef(false);
   const graphRef = useRef(graph);
   const selectionRef = useRef(selection);
@@ -360,13 +428,17 @@ export function WorkflowGraphEditor({
         target: nodeId,
         targetHandle: port.id,
         label: source.portId,
-        data: { hasIssue: false, status: "idle" },
+        data: {
+          hasIssue: false,
+          status: "idle",
+          delay: cloneGraphEdgeDelay(defaultEdgeDelay),
+        },
       };
-      const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge);
+      const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge, currentFlowGraph.nodes);
       setReactFlowEdges(nextEdges);
       syncFlowGraph(currentFlowGraph.nodes, nextEdges);
     },
-    [onChange],
+    [defaultEdgeDelay, onChange],
   );
   const clearPreviewConnection = useCallback(() => {
     activePortConnectionRef.current = null;
@@ -542,10 +614,14 @@ export function WorkflowGraphEditor({
 
   function addNode(nodeType: GraphNodeType) {
     const currentGraph = graphRef.current;
-    const node = createDefaultGraphNode(nodeType, {
-      x: 120 + currentGraph.nodes.length * 48,
-      y: 120 + currentGraph.nodes.length * 16,
-    });
+    const node = createDefaultGraphNode(
+      nodeType,
+      getVisibleNodeInsertionPosition(
+        currentGraph.nodes.length,
+        reactFlowInstance,
+        graphCanvasRef.current,
+      ),
+    );
     commitGraphChange(
       { ...currentGraph, nodes: [...currentGraph.nodes, node] },
       { nodeIds: [node.id], edgeIds: [] },
@@ -556,10 +632,14 @@ export function WorkflowGraphEditor({
   function addNewNode() {
     const currentGraph = graphRef.current;
     const node = {
-      ...createDefaultGraphNode("action", {
-        x: 120 + currentGraph.nodes.length * 48,
-        y: 120 + currentGraph.nodes.length * 16,
-      }),
+      ...createDefaultGraphNode(
+        "action",
+        getVisibleNodeInsertionPosition(
+          currentGraph.nodes.length,
+          reactFlowInstance,
+          graphCanvasRef.current,
+        ),
+      ),
       label: "New node",
       config: null,
     };
@@ -572,10 +652,14 @@ export function WorkflowGraphEditor({
   function addActionNode(actionType: ActionType) {
     const currentGraph = graphRef.current;
     const node = {
-      ...createDefaultGraphNode("action", {
-        x: 120 + currentGraph.nodes.length * 48,
-        y: 120 + currentGraph.nodes.length * 16,
-      }),
+      ...createDefaultGraphNode(
+        "action",
+        getVisibleNodeInsertionPosition(
+          currentGraph.nodes.length,
+          reactFlowInstance,
+          graphCanvasRef.current,
+        ),
+      ),
       label: actionLabels[actionType],
       config: defaultActionConfig(actionType),
     };
@@ -588,12 +672,29 @@ export function WorkflowGraphEditor({
 
   function updateNode(nextNode: GraphNode) {
     const currentGraph = graphRef.current;
+    const nextGraph = {
+      ...currentGraph,
+      nodes: currentGraph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
+    };
+    commitGraphChange(
+      {
+        ...nextGraph,
+        edges: nextGraph.edges.filter((edge) => edgePortsExist(nextGraph, edge)),
+      },
+      { nodeIds: [nextNode.id], edgeIds: [] },
+    );
+  }
+
+  function updateEdge(nextEdge: WorkflowGraph["edges"][number]) {
+    const currentGraph = graphRef.current;
     commitGraphChange(
       {
         ...currentGraph,
-        nodes: currentGraph.nodes.map((node) => (node.id === nextNode.id ? nextNode : node)),
+        edges: currentGraph.edges.map((edge) =>
+          edge.id === nextEdge.id ? nextEdge : edge,
+        ),
       },
-      { nodeIds: [nextNode.id], edgeIds: [] },
+      { nodeIds: [], edgeIds: [nextEdge.id] },
     );
   }
 
@@ -712,9 +813,17 @@ export function WorkflowGraphEditor({
       ...connection,
       id: `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
       label: connection.sourceHandle,
-      data: { hasIssue: false, status: "idle" },
+      data: {
+        hasIssue: false,
+        status: "idle",
+        delay: cloneGraphEdgeDelay(defaultEdgeDelay),
+      },
     };
-    const nextEdges = replacePortEdge(reactFlowEdgesRef.current, nextEdge);
+    const nextEdges = replacePortEdge(
+      reactFlowEdgesRef.current,
+      nextEdge,
+      reactFlowNodesRef.current,
+    );
     setReactFlowEdges(nextEdges);
     syncFlowGraph(reactFlowNodesRef.current, nextEdges);
   }
@@ -731,6 +840,13 @@ export function WorkflowGraphEditor({
       node.position.y + 32,
       { zoom: Math.max(graph.viewport.zoom, 0.9), duration: 240 },
     );
+  }
+
+  function autoArrangeGraph() {
+    if (runState.status === "running") return;
+    const nextGraph = arrangeWorkflowGraph(graphRef.current);
+    commitGraphChange(nextGraph, selectionRef.current);
+    reactFlowInstance?.fitView({ duration: 240 });
   }
 
   function deleteNode(nodeId: string) {
@@ -824,6 +940,7 @@ export function WorkflowGraphEditor({
         isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
+        onAutoArrange={autoArrangeGraph}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
         onOpenNodePalette={openNodePalette}
@@ -840,6 +957,7 @@ export function WorkflowGraphEditor({
               .filter(Boolean)
               .join(" ")}
             onPointerUp={clearPreviewConnection}
+            ref={graphCanvasRef}
             role="application"
             aria-label="Workflow graph canvas"
           >
@@ -948,6 +1066,7 @@ export function WorkflowGraphEditor({
           onDuplicateSelection={duplicateSelection}
           onFocusSelectedNode={focusSelectedNode}
           onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
+          onUpdateEdge={updateEdge}
           onUpdateNode={updateNode}
         />
       </div>
@@ -986,4 +1105,8 @@ export function WorkflowGraphEditor({
       </Dialog>
     </section>
   );
+}
+
+export function cloneGraphEdgeDelay(delay: GraphEdgeDelay | null): GraphEdgeDelay | null {
+  return delay ? { ...delay } : null;
 }

@@ -39,6 +39,8 @@ describe("App shell", () => {
 
     expect(await screen.findByRole("complementary", { name: "Application sidebar" }))
       .toBeInTheDocument();
+    const logo = screen.getByRole("img", { name: "Automation App logo" });
+    expect(logo.getAttribute("src")).toContain("app-logo.svg");
     expect(screen.getByRole("button", { name: "Workflows" })).toHaveAttribute(
       "data-slot",
       "button",

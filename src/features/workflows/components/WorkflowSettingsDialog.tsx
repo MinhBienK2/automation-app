@@ -4,6 +4,7 @@ import type {
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsEnvironment,
+  WorkflowSettingsGraphDefaults,
   WorkflowSettingsGeneral,
   WorkflowSettingsRunPolicy,
   WorkflowSettingsSectionId,
@@ -19,6 +20,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
+import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
 import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
@@ -171,6 +173,12 @@ export function WorkflowSettingsDialog({
                     onChange={(value) => updateSection("browser_launch", value)}
                   />
                 ) : null}
+                {activeSection === "graph_defaults" ? (
+                  <GraphDefaultsSettingsSection
+                    value={settings.graph_defaults}
+                    onChange={(value) => updateSection("graph_defaults", value)}
+                  />
+                ) : null}
                 {activeSection === "environment" ? (
                   <EnvironmentSettingsSection
                     value={settings.environment}
@@ -267,7 +275,10 @@ function GeneralSettingsSection({
   onChange: (value: WorkflowSettingsGeneral) => void;
 }) {
   return (
-    <div className="settings-form-grid">
+    <SettingsFieldGroup
+      title="Workflow details"
+      description="Name and describe the workflow so it is easy to find, export, and audit."
+    >
       <label className="field">
         <span>Workflow name</span>
         <Input
@@ -275,7 +286,7 @@ function GeneralSettingsSection({
           onChange={(event) => onChange({ ...value, name: event.currentTarget.value })}
         />
       </label>
-      <label className="field">
+      <label className="field settings-field-group-wide">
         <span>Description</span>
         <Textarea
           value={value.description}
@@ -289,14 +300,14 @@ function GeneralSettingsSection({
           onChange={(event) => onChange({ ...value, tags: tagsFromInput(event.currentTarget.value) })}
         />
       </label>
-      <label className="field">
+      <label className="field settings-field-group-wide">
         <span>Notes</span>
         <Textarea
           value={value.notes}
           onChange={(event) => onChange({ ...value, notes: event.currentTarget.value })}
         />
       </label>
-    </div>
+    </SettingsFieldGroup>
   );
 }
 
@@ -309,49 +320,57 @@ function RunPolicySettingsSection({
 }) {
   return (
     <div className="settings-form-grid">
-      <NumberField
-        label="Max workflow duration ms"
-        value={value.max_workflow_duration_ms}
-        onChange={(next) => onChange({ ...value, max_workflow_duration_ms: next })}
-      />
-      <label className="field">
-        <span>Browser retention</span>
-        <Select
-          value={value.browser_retention}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              browser_retention: event.currentTarget.value === "close" ? "close" : "retain",
-            })
+      <SettingsFieldGroup
+        title="Run lifecycle"
+        description="Limits and browser-session behavior for normal workflow runs."
+      >
+        <NumberField
+          label="Max workflow duration ms"
+          value={value.max_workflow_duration_ms}
+          onChange={(next) => onChange({ ...value, max_workflow_duration_ms: next })}
+        />
+        <label className="field">
+          <span>Browser retention</span>
+          <Select
+            value={value.browser_retention}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                browser_retention: event.currentTarget.value === "close" ? "close" : "retain",
+              })
+            }
+          >
+            <option value="retain">Retain for inspection</option>
+            <option value="close">Close after run</option>
+          </Select>
+        </label>
+      </SettingsFieldGroup>
+      <SettingsFieldGroup
+        title="Batch defaults"
+        description="Saved defaults for future batch runs."
+        footer="Batch controls are paused until Batch Run UI is ready."
+      >
+        <NumberField
+          label="Batch concurrency limit"
+          value={value.batch_concurrency_limit}
+          disabled
+          onChange={(next) => onChange({ ...value, batch_concurrency_limit: next })}
+        />
+        <SwitchField
+          checked={value.batch_headless}
+          disabled
+          label="Batch runs are headless"
+          onCheckedChange={(checked) => onChange({ ...value, batch_headless: checked })}
+        />
+        <SwitchField
+          checked={value.batch_stop_on_first_failed_row}
+          disabled
+          label="Stop batch on first failed row"
+          onCheckedChange={(checked) =>
+            onChange({ ...value, batch_stop_on_first_failed_row: checked })
           }
-        >
-          <option value="retain">Retain for inspection</option>
-          <option value="close">Close after run</option>
-        </Select>
-      </label>
-      <NumberField
-        label="Batch concurrency limit"
-        value={value.batch_concurrency_limit}
-        disabled
-        onChange={(next) => onChange({ ...value, batch_concurrency_limit: next })}
-      />
-      <SwitchField
-        checked={value.batch_headless}
-        disabled
-        label="Batch runs are headless"
-        onCheckedChange={(checked) => onChange({ ...value, batch_headless: checked })}
-      />
-      <SwitchField
-        checked={value.batch_stop_on_first_failed_row}
-        disabled
-        label="Stop batch on first failed row"
-        onCheckedChange={(checked) =>
-          onChange({ ...value, batch_stop_on_first_failed_row: checked })
-        }
-      />
-      <p className="workflow-settings-hint">
-        Batch controls are paused until Batch Run UI is ready.
-      </p>
+        />
+      </SettingsFieldGroup>
     </div>
   );
 }
@@ -371,336 +390,426 @@ function BrowserLaunchSettingsSection({
     persistent && runPolicy.browser_retention === "retain";
   return (
     <div className="settings-form-grid">
-      <SwitchField
-        checked={persistent}
-        label="Reuse login session"
-        onCheckedChange={(checked) =>
-          onChange({
-            ...value,
-            session_mode: checked ? "persistent_profile" : "temporary",
-            profile_name: checked ? value.profile_dir : null,
-            run_from_selected_enabled: checked
-              ? value.run_from_selected_enabled
-              : false,
-          })
-        }
-      />
-      <label className="field">
-        <span>Identity display name</span>
-        <Input
-          value={value.display_name}
-          onChange={(event) => onChange({ ...value, display_name: event.currentTarget.value })}
-        />
-      </label>
-      <label className="field">
-        <span>Identity id</span>
-        <Input value={value.identity_id} readOnly />
-      </label>
-      <label className="field">
-        <span>Profile directory</span>
-        <Input value={value.profile_dir} readOnly />
-      </label>
-      <label className="field">
-        <span>Fingerprint seed</span>
-        <Input
-          type={seedVisible ? "text" : "password"}
-          value={value.fingerprint_seed}
-          onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
-        />
-      </label>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => setSeedVisible((current) => !current)}
+      <SettingsFieldGroup
+        title="Session & identity"
+        description="Persistent storage, browser identity, and operator controls for this workflow."
       >
-        {seedVisible ? "Hide fingerprint seed" : "Show fingerprint seed"}
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => {
-          void navigator.clipboard?.writeText(value.fingerprint_seed);
-        }}
-      >
-        Copy fingerprint seed
-      </Button>
-      <Button
-        type="button"
-        variant="destructive"
-        onClick={() => {
-          if (!window.confirm("Reset this browser identity? This creates a new profile directory and fingerprint seed.")) {
-            return;
-          }
-          onChange(resetBrowserIdentity(value));
-        }}
-      >
-        Reset identity
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => onChange(duplicateBrowserIdentity(value))}
-      >
-        Duplicate identity
-      </Button>
-      {persistent ? (
-        <label className="field">
-          <span>Legacy profile key</span>
-          <Input
-            value={value.profile_name ?? ""}
-            readOnly
-          />
-        </label>
-      ) : null}
-      <SwitchField
-        checked={Boolean(value.run_from_selected_enabled)}
-        disabled={!canEnableRunFromSelected}
-        label="Enable Run from selected"
-        description={
-          canEnableRunFromSelected
-            ? "Show the Run from selected action when a matching browser session is retained."
-            : "Requires Reuse login session and Run Policy browser retention set to retain."
-        }
-        onCheckedChange={(checked) =>
-          onChange({
-            ...value,
-            run_from_selected_enabled: canEnableRunFromSelected ? checked : false,
-          })
-        }
-      />
-      <SwitchField
-        checked={value.proxy_enabled}
-        label="Use proxy"
-        onCheckedChange={(checked) => onChange({ ...value, proxy_enabled: checked })}
-      />
-      {value.proxy_enabled ? (
-        <>
-          <label className="field">
-            <span>Proxy server</span>
-            <Input
-              value={value.proxy_server ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_server: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Proxy username</span>
-            <Input
-              value={value.proxy_username ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_username: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Proxy password</span>
-            <Input
-              type="password"
-              value={value.proxy_password ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_password: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Proxy label</span>
-            <Input
-              value={value.proxy_label ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_label: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Proxy region</span>
-            <Input
-              value={value.proxy_region ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_region: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Proxy provider</span>
-            <Input
-              value={value.proxy_provider ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_provider: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Test account binding</span>
-            <Input
-              value={value.test_account_binding ?? ""}
-              onChange={(event) => onChange({ ...value, test_account_binding: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Proxy bypass</span>
-            <Input
-              placeholder=".internal.test"
-              value={value.proxy_bypass ?? ""}
-              onChange={(event) => onChange({ ...value, proxy_bypass: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-        </>
-      ) : null}
-      <label className="field">
-        <span>Timezone</span>
-        <Input
-          placeholder="America/New_York"
-          value={value.timezone ?? ""}
-          onChange={(event) => onChange({ ...value, timezone: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      <label className="field">
-        <span>Locale</span>
-        <Input
-          placeholder="en-US"
-          value={value.locale ?? ""}
-          onChange={(event) => onChange({ ...value, locale: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      <SwitchField
-        checked={Boolean(value.geoip)}
-        label="GeoIP from proxy"
-        onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
-      />
-      <NumberField
-        label="Viewport width"
-        value={value.viewport_width}
-        onChange={(nextValue) => onChange({ ...value, viewport_width: nextValue ?? 1920 })}
-      />
-      <NumberField
-        label="Viewport height"
-        value={value.viewport_height}
-        onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 947 })}
-      />
-      <NumberField
-        label="Device scale factor"
-        value={value.device_scale_factor}
-        onChange={(nextValue) => onChange({ ...value, device_scale_factor: nextValue ?? 1 })}
-      />
-      <SwitchField
-        checked={Boolean(value.mobile)}
-        label="Mobile viewport"
-        onCheckedChange={(checked) => onChange({ ...value, mobile: checked })}
-      />
-      <SwitchField
-        checked={Boolean(value.touch)}
-        label="Touch input"
-        onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
-      />
-      <label className="field">
-        <span>Fingerprint platform</span>
-        <Select
-          value={value.fingerprint_platform ?? ""}
-          onChange={(event) => {
-            const nextValue = event.currentTarget.value;
+        <SwitchField
+          checked={persistent}
+          label="Reuse login session"
+          onCheckedChange={(checked) =>
             onChange({
               ...value,
-              fingerprint_platform:
-                nextValue === "windows" || nextValue === "macos" || nextValue === "linux"
-                  ? nextValue
-                  : null,
-            });
-          }}
-        >
-          <option value="">Seed default</option>
-          <option value="windows">Windows</option>
-          <option value="macos">macOS</option>
-          <option value="linux">Linux</option>
-        </Select>
-      </label>
-      <NumberField
-        label="Hardware concurrency"
-        value={value.hardware_concurrency ?? null}
-        onChange={(nextValue) => onChange({ ...value, hardware_concurrency: nextValue })}
-      />
-      <NumberField
-        label="Device memory GB"
-        value={value.device_memory_gb ?? null}
-        onChange={(nextValue) => onChange({ ...value, device_memory_gb: nextValue })}
-      />
-      <NumberField
-        label="Storage quota MB"
-        value={value.storage_quota_mb ?? null}
-        onChange={(nextValue) => onChange({ ...value, storage_quota_mb: nextValue })}
-      />
-      <label className="field">
-        <span>Fingerprint fonts directory</span>
-        <Input
-          value={value.fingerprint_fonts_dir ?? ""}
-          onChange={(event) => onChange({ ...value, fingerprint_fonts_dir: nullableText(event.currentTarget.value) })}
-        />
-      </label>
-      <SwitchField
-        checked={value.humanize !== false}
-        label="Humanize browser input"
-        onCheckedChange={(checked) => onChange({ ...value, humanize: checked })}
-      />
-      <label className="field">
-        <span>Humanize preset</span>
-        <Select
-          value={value.human_preset}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              human_preset: event.currentTarget.value === "careful" ? "careful" : "default",
+              session_mode: checked ? "persistent_profile" : "temporary",
+              profile_name: checked ? value.profile_dir : null,
+              run_from_selected_enabled: checked
+                ? value.run_from_selected_enabled
+                : false,
             })
           }
-        >
-          <option value="default">Default</option>
-          <option value="careful">Careful</option>
-        </Select>
-      </label>
-      <label className="field">
-        <span>Behavior fidelity</span>
-        <Select
-          value={value.behavior_fidelity}
-          onChange={(event) => {
-            const nextValue = event.currentTarget.value;
+        />
+        <div className="workflow-settings-identity-row settings-field-group-wide">
+          <label className="field workflow-settings-identity-id-field">
+            <span>Identity id</span>
+            <Input value={value.identity_id} readOnly />
+          </label>
+          <label className="field workflow-settings-identity-name-field">
+            <span>Identity display name</span>
+            <Input
+              value={value.display_name}
+              onChange={(event) => onChange({ ...value, display_name: event.currentTarget.value })}
+            />
+          </label>
+        </div>
+        <label className="field">
+          <span>Fingerprint seed</span>
+          <Input
+            type={seedVisible ? "text" : "password"}
+            value={value.fingerprint_seed}
+            onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
+          />
+        </label>
+        <div className="settings-field-group-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setSeedVisible((current) => !current)}
+          >
+            {seedVisible ? "Hide fingerprint seed" : "Show fingerprint seed"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              void navigator.clipboard?.writeText(value.fingerprint_seed);
+            }}
+          >
+            Copy fingerprint seed
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              if (!window.confirm("Reset this browser identity? This creates a new profile directory and fingerprint seed.")) {
+                return;
+              }
+              onChange(resetBrowserIdentity(value));
+            }}
+          >
+            Reset identity
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onChange(duplicateBrowserIdentity(value))}
+          >
+            Duplicate identity
+          </Button>
+        </div>
+        <SwitchField
+          checked={Boolean(value.run_from_selected_enabled)}
+          disabled={!canEnableRunFromSelected}
+          label="Enable Run from selected"
+          description={
+            canEnableRunFromSelected
+              ? "Show the Run from selected action when a matching browser session is retained."
+              : "Requires Reuse login session and Run Policy browser retention set to retain."
+          }
+          onCheckedChange={(checked) =>
             onChange({
               ...value,
-              behavior_fidelity:
-                nextValue === "strict_humanized" || nextValue === "deterministic_internal"
-                  ? nextValue
-                  : "balanced",
-            });
+              run_from_selected_enabled: canEnableRunFromSelected ? checked : false,
+            })
+          }
+        />
+      </SettingsFieldGroup>
+      <SettingsFieldGroup
+        title="Proxy"
+        description="Network route, credentials, and non-secret metadata used at browser launch."
+      >
+        <SwitchField
+          checked={value.proxy_enabled}
+          label="Use proxy"
+          onCheckedChange={(checked) => onChange({ ...value, proxy_enabled: checked })}
+        />
+        {value.proxy_enabled ? (
+          <>
+            <label className="field">
+              <span>Proxy server</span>
+              <Input
+                value={value.proxy_server ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_server: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Proxy username</span>
+              <Input
+                value={value.proxy_username ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_username: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Proxy password</span>
+              <Input
+                type="password"
+                value={value.proxy_password ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_password: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Proxy label</span>
+              <Input
+                value={value.proxy_label ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_label: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Proxy region</span>
+              <Input
+                value={value.proxy_region ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_region: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Proxy provider</span>
+              <Input
+                value={value.proxy_provider ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_provider: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Test account binding</span>
+              <Input
+                value={value.test_account_binding ?? ""}
+                onChange={(event) => onChange({ ...value, test_account_binding: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Proxy bypass</span>
+              <Input
+                placeholder=".internal.test"
+                value={value.proxy_bypass ?? ""}
+                onChange={(event) => onChange({ ...value, proxy_bypass: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+          </>
+        ) : null}
+      </SettingsFieldGroup>
+      <SettingsFieldGroup
+        title="Location & viewport"
+        description="Locale, proxy-derived geography, viewport size, and device input shape."
+      >
+        <label className="field">
+          <span>Timezone</span>
+          <Input
+            placeholder="America/New_York"
+            value={value.timezone ?? ""}
+            onChange={(event) => onChange({ ...value, timezone: nullableText(event.currentTarget.value) })}
+          />
+        </label>
+        <label className="field">
+          <span>Locale</span>
+          <Input
+            placeholder="en-US"
+            value={value.locale ?? ""}
+            onChange={(event) => onChange({ ...value, locale: nullableText(event.currentTarget.value) })}
+          />
+        </label>
+        <SwitchField
+          checked={Boolean(value.geoip)}
+          label="GeoIP from proxy"
+          onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
+        />
+        <NumberField
+          label="Viewport width"
+          value={value.viewport_width}
+          onChange={(nextValue) => onChange({ ...value, viewport_width: nextValue ?? 1920 })}
+        />
+        <NumberField
+          label="Viewport height"
+          value={value.viewport_height}
+          onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 947 })}
+        />
+        <NumberField
+          label="Device scale factor"
+          value={value.device_scale_factor}
+          onChange={(nextValue) => onChange({ ...value, device_scale_factor: nextValue ?? 1 })}
+        />
+        <SwitchField
+          checked={Boolean(value.mobile)}
+          label="Mobile viewport"
+          onCheckedChange={(checked) => onChange({ ...value, mobile: checked })}
+        />
+        <SwitchField
+          checked={Boolean(value.touch)}
+          label="Touch input"
+          onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
+        />
+      </SettingsFieldGroup>
+      <SettingsFieldGroup
+        title="Fingerprint"
+        description="Optional launch-time fingerprint overrides layered on top of the stable seed."
+      >
+        <label className="field">
+          <span>Fingerprint platform</span>
+          <Select
+            value={value.fingerprint_platform ?? ""}
+            onChange={(event) => {
+              const nextValue = event.currentTarget.value;
+              onChange({
+                ...value,
+                fingerprint_platform:
+                  nextValue === "windows" || nextValue === "macos" || nextValue === "linux"
+                    ? nextValue
+                    : null,
+              });
+            }}
+          >
+            <option value="">Seed default</option>
+            <option value="windows">Windows</option>
+            <option value="macos">macOS</option>
+            <option value="linux">Linux</option>
+          </Select>
+        </label>
+        <NumberField
+          label="Hardware concurrency"
+          value={value.hardware_concurrency ?? null}
+          onChange={(nextValue) => onChange({ ...value, hardware_concurrency: nextValue })}
+        />
+        <NumberField
+          label="Device memory GB"
+          value={value.device_memory_gb ?? null}
+          onChange={(nextValue) => onChange({ ...value, device_memory_gb: nextValue })}
+        />
+        <NumberField
+          label="Storage quota MB"
+          value={value.storage_quota_mb ?? null}
+          onChange={(nextValue) => onChange({ ...value, storage_quota_mb: nextValue })}
+        />
+        <label className="field settings-field-group-wide">
+          <span>Fingerprint fonts directory</span>
+          <Input
+            value={value.fingerprint_fonts_dir ?? ""}
+            onChange={(event) => onChange({ ...value, fingerprint_fonts_dir: nullableText(event.currentTarget.value) })}
+          />
+        </label>
+      </SettingsFieldGroup>
+      <SettingsFieldGroup
+        title="Humanization"
+        description="Controls for browser interaction timing and input behavior."
+      >
+        <SwitchField
+          checked={value.humanize !== false}
+          label="Humanize browser input"
+          onCheckedChange={(checked) => onChange({ ...value, humanize: checked })}
+        />
+        <label className="field">
+          <span>Humanize preset</span>
+          <Select
+            value={value.human_preset ?? "default"}
+            onChange={(event) => {
+              const nextValue = event.currentTarget.value;
+              onChange({
+                ...value,
+                human_preset: nextValue === "careful" ? "careful" : "default",
+              });
+            }}
+          >
+            <option value="default">Default</option>
+            <option value="careful">Careful</option>
+          </Select>
+        </label>
+      </SettingsFieldGroup>
+      <SettingsFieldGroup
+        title="Preflight & launch"
+        description="Optional fingerprint probe and final headed/headless launch mode."
+      >
+        <SwitchField
+          checked={Boolean(value.preflight_enabled)}
+          label="Fingerprint preflight"
+          onCheckedChange={(checked) => onChange({ ...value, preflight_enabled: checked })}
+        />
+        {value.preflight_enabled ? (
+          <>
+            <label className="field">
+              <span>Preflight probe URL</span>
+              <Input
+                value={value.preflight_probe_url ?? ""}
+                onChange={(event) => onChange({ ...value, preflight_probe_url: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <label className="field">
+              <span>Allowed probe origins</span>
+              <Input
+                value={value.preflight_allowed_origins.join(", ")}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    preflight_allowed_origins: event.currentTarget.value
+                      .split(",")
+                      .map((origin) => origin.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </label>
+          </>
+        ) : null}
+        <SwitchField
+          checked={value.headless}
+          label="Headless browser"
+          onCheckedChange={(checked) => onChange({ ...value, headless: checked })}
+        />
+      </SettingsFieldGroup>
+    </div>
+  );
+}
+
+function GraphDefaultsSettingsSection({
+  value,
+  onChange,
+}: {
+  value: WorkflowSettingsGraphDefaults;
+  onChange: (value: WorkflowSettingsGraphDefaults) => void;
+}) {
+  const delay = value.default_edge_delay;
+  const mode = delay?.type ?? "none";
+  return (
+    <SettingsFieldGroup
+      title="New link wait"
+      description="Choose the wait copied to new links after saving."
+      footer="Existing links keep their own wait. Use Wait nodes for page or element conditions."
+    >
+      <label className="field">
+        <span>Mode</span>
+        <Select
+          value={mode}
+          onChange={(event) => {
+            const nextMode = event.currentTarget.value;
+            if (nextMode === "fixed") {
+              onChange({ ...value, default_edge_delay: { type: "fixed", duration_ms: 1000 } });
+              return;
+            }
+            if (nextMode === "random") {
+              onChange({
+                ...value,
+                default_edge_delay: { type: "random", min_ms: 800, max_ms: 1500 },
+              });
+              return;
+            }
+            onChange({ ...value, default_edge_delay: null });
           }}
         >
-          <option value="balanced">Balanced</option>
-          <option value="strict_humanized">Strict humanized</option>
-          <option value="deterministic_internal">Deterministic internal</option>
+          <option value="none">No default wait</option>
+          <option value="fixed">Fixed duration</option>
+          <option value="random">Random range</option>
         </Select>
       </label>
-      <SwitchField
-        checked={Boolean(value.preflight_enabled)}
-        label="Fingerprint preflight"
-        onCheckedChange={(checked) => onChange({ ...value, preflight_enabled: checked })}
-      />
-      {value.preflight_enabled ? (
+      {delay?.type === "fixed" ? (
+        <NumberField
+          label="Duration ms"
+          value={delay.duration_ms}
+          onChange={(next) =>
+            onChange({
+              ...value,
+              default_edge_delay: { type: "fixed", duration_ms: next ?? 1000 },
+            })
+          }
+        />
+      ) : null}
+      {delay?.type === "random" ? (
         <>
-          <label className="field">
-            <span>Preflight probe URL</span>
-            <Input
-              value={value.preflight_probe_url ?? ""}
-              onChange={(event) => onChange({ ...value, preflight_probe_url: nullableText(event.currentTarget.value) })}
-            />
-          </label>
-          <label className="field">
-            <span>Allowed probe origins</span>
-            <Input
-              value={value.preflight_allowed_origins.join(", ")}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  preflight_allowed_origins: event.currentTarget.value
-                    .split(",")
-                    .map((origin) => origin.trim())
-                    .filter(Boolean),
-                })
-              }
-            />
-          </label>
+          <NumberField
+            label="Minimum wait ms"
+            value={delay.min_ms}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                default_edge_delay: {
+                  type: "random",
+                  min_ms: next ?? 800,
+                  max_ms: delay.max_ms,
+                },
+              })
+            }
+          />
+          <NumberField
+            label="Maximum wait ms"
+            value={delay.max_ms}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                default_edge_delay: {
+                  type: "random",
+                  min_ms: delay.min_ms,
+                  max_ms: next ?? 1500,
+                },
+              })
+            }
+          />
         </>
       ) : null}
-      <SwitchField
-        checked={value.headless}
-        label="Headless browser"
-        onCheckedChange={(checked) => onChange({ ...value, headless: checked })}
-      />
-    </div>
+    </SettingsFieldGroup>
   );
 }
 
@@ -712,12 +821,15 @@ function EnvironmentSettingsSection({
   onChange: (value: WorkflowSettingsEnvironment) => void;
 }) {
   return (
-    <div className="settings-form-grid">
+    <SettingsFieldGroup
+      title="Initial variables"
+      description="Typed values available before the graph starts running."
+    >
       <SetVariablesConfigFields
         config={{ variables: value.initial_variables }}
         onChange={(next) => onChange({ ...value, initial_variables: next.variables ?? [] })}
       />
-    </div>
+    </SettingsFieldGroup>
   );
 }
 

@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img">
+  <title>Automation App logo</title>
+  <defs>
+    <linearGradient id="logo-body" x1="118" y1="820" x2="902" y2="202" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5d2fd4" />
+      <stop offset="0.3" stop-color="#a855f7" />
+      <stop offset="0.55" stop-color="#22d3ee" />
+      <stop offset="1" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="logo-core" x1="230" y1="772" x2="795" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#17113f" />
+      <stop offset="0.45" stop-color="#281559" />
+      <stop offset="1" stop-color="#0b3c68" />
+    </linearGradient>
+    <linearGradient id="logo-edge" x1="132" y1="748" x2="866" y2="284" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c084fc" />
+      <stop offset="0.5" stop-color="#f0abfc" />
+      <stop offset="1" stop-color="#67e8f9" />
+    </linearGradient>
+    <linearGradient id="logo-trace-purple" x1="165" y1="760" x2="510" y2="248" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c3aed" />
+      <stop offset="1" stop-color="#d946ef" />
+    </linearGradient>
+    <linearGradient id="logo-trace-cyan" x1="514" y1="274" x2="870" y2="788" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a5f3fc" />
+      <stop offset="0.4" stop-color="#22d3ee" />
+      <stop offset="1" stop-color="#0891b2" />
+    </linearGradient>
+    <linearGradient id="logo-bolt" x1="422" y1="796" x2="672" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b5cf6" />
+      <stop offset="0.44" stop-color="#fafafa" />
+      <stop offset="0.7" stop-color="#67e8f9" />
+      <stop offset="1" stop-color="#22d3ee" />
+    </linearGradient>
+    <filter id="logo-glow" x="-12%" y="-12%" width="124%" height="124%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+      <feColorMatrix
+        in="blur"
+        result="glow"
+        type="matrix"
+        values="0 0 0 0 0.45 0 0 0 0 0.12 0 0 0 0 0.95 0 0 0 0.65 0"
+      />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <clipPath id="logo-a-clip">
+      <path
+        d="M104 820 414 204h196l310 616H728l-60-132H358l-62 132H104Zm320-270h176L512 354 424 550Z"
+        fill-rule="evenodd"
+      />
+    </clipPath>
+  </defs>
+
+  <g filter="url(#logo-glow)">
+    <path
+      d="M104 820 414 204h196l310 616H728l-60-132H358l-62 132H104Zm320-270h176L512 354 424 550Z"
+      fill="url(#logo-body)"
+      fill-rule="evenodd"
+    />
+    <path
+      d="M150 790 436 236h150l286 554H754l-60-132H332l-60 132H150Zm232-210h260L512 286 382 580Z"
+      fill="url(#logo-core)"
+      fill-rule="evenodd"
+      opacity="0.94"
+    />
+    <path
+      d="M104 820 414 204h196l310 616H728l-60-132H358l-62 132H104Zm320-270h176L512 354 424 550Z"
+      fill="none"
+      stroke="url(#logo-edge)"
+      stroke-linejoin="round"
+      stroke-width="15"
+      opacity="0.72"
+    />
+  </g>
+
+  <g clip-path="url(#logo-a-clip)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M182 780 318 508 292 436 400 260h98" stroke="#2a0f57" stroke-width="32" opacity="0.74" />
+    <path d="M762 786 650 548 734 414 604 414 674 236" stroke="#082d54" stroke-width="34" opacity="0.76" />
+    <path d="M196 770 310 544 402 506 452 382 438 328 490 240" stroke="url(#logo-trace-purple)" stroke-width="16" />
+    <path d="M222 706 298 616 430 616" stroke="url(#logo-trace-purple)" stroke-width="13" />
+    <path d="M350 454 424 316 454 316" stroke="url(#logo-trace-purple)" stroke-width="13" />
+    <path d="M376 580 458 580" stroke="#c084fc" stroke-width="13" />
+    <path d="M330 642 264 744" stroke="#7c3aed" stroke-width="13" />
+    <path d="M586 324 646 452 746 452" stroke="url(#logo-trace-cyan)" stroke-width="15" />
+    <path d="M612 548 688 548 760 430 644 430" stroke="url(#logo-trace-cyan)" stroke-width="15" />
+    <path d="M642 640 728 640 760 720 800 760" stroke="url(#logo-trace-cyan)" stroke-width="13" />
+    <path d="M566 596 710 596" stroke="#67e8f9" stroke-width="13" />
+    <path d="M688 316 688 372 748 372" stroke="#67e8f9" stroke-width="13" />
+    <path d="M748 536 800 576 842 576" stroke="#22d3ee" stroke-width="13" />
+
+    <g stroke-width="12">
+      <circle cx="452" cy="382" r="21" fill="#281559" stroke="#c084fc" />
+      <circle cx="430" cy="616" r="21" fill="#281559" stroke="#c084fc" />
+      <circle cx="264" cy="744" r="21" fill="#281559" stroke="#7c3aed" />
+      <circle cx="454" cy="316" r="21" fill="#281559" stroke="#c084fc" />
+      <circle cx="604" cy="596" r="21" fill="#0b3c68" stroke="#67e8f9" />
+      <circle cx="644" cy="430" r="21" fill="#0b3c68" stroke="#67e8f9" />
+      <circle cx="688" cy="316" r="21" fill="#0b3c68" stroke="#67e8f9" />
+      <circle cx="760" cy="720" r="21" fill="#0b3c68" stroke="#0891b2" />
+      <circle cx="748" cy="536" r="21" fill="#0b3c68" stroke="#22d3ee" />
+    </g>
+  </g>
+
+  <path
+    d="M586 208 426 598h102L426 804 724 458H604l112-250H586Z"
+    fill="url(#logo-bolt)"
+    stroke="#fafafa"
+    stroke-linejoin="round"
+    stroke-width="8"
+    opacity="0.96"
+  />
+  <path
+    d="M586 208 426 598h102L426 804 724 458H604l112-250H586Z"
+    fill="none"
+    stroke="#67e8f9"
+    stroke-linejoin="round"
+    stroke-width="18"
+    opacity="0.28"
+  />
+</svg>

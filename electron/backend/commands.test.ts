@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   createWorkflowCommandHandlers,
+  finishRun,
   serializeCommandError,
 } from "./commands";
 import {
@@ -63,6 +64,7 @@ describe("Electron workflow command handlers", () => {
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
         humanize: true,
+        human_preset: "default",
       },
     });
     expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
@@ -96,11 +98,18 @@ describe("Electron workflow command handlers", () => {
         name: "Renamed flow",
         tags: ["qa"],
       },
+      browser_launch: {
+        ...settings.browser_launch,
+        humanize: false,
+        human_preset: "careful",
+      },
     });
 
     expect(saved.general.name).toBe("Renamed flow");
     expect(saved.browser_launch.fingerprint_seed).toBe(initialSeed);
     expect(saved.browser_launch.display_name).toBe("Login flow identity");
+    expect(saved.browser_launch.humanize).toBe(false);
+    expect(saved.browser_launch.human_preset).toBe("careful");
     expect(handlers.listWorkflows()[0]).toMatchObject({
       id: created.id,
       name: "Renamed flow",
@@ -113,9 +122,133 @@ describe("Electron workflow command handlers", () => {
     ).toMatchObject({
       settings_json: expect.stringContaining("Renamed flow"),
     });
+    expect(JSON.parse(
+      String(database.prepare("SELECT settings_json FROM workflows WHERE id = ?").get(created.id)?.settings_json ?? "{}"),
+    ).browser_launch).toMatchObject({
+      humanize: false,
+      human_preset: "careful",
+    });
 
     handlers.deleteWorkflow(created.id);
     expect(handlers.getWorkflow(created.id)).toBeNull();
+  });
+
+  test("rolls back duplicate workflow when copied graph persistence fails", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const source = handlers.createWorkflow("Source");
+    handlers.saveWorkflowGraph(source.id, runnableGraph());
+    const initialIds = handlers.listWorkflows().map((workflow) => workflow.id);
+    database.exec(`
+      CREATE TRIGGER fail_duplicate_graph_copy
+      BEFORE UPDATE OF graph_json ON workflows
+      WHEN OLD.id != '${source.id}'
+      BEGIN
+        SELECT RAISE(ABORT, 'graph copy failed');
+      END;
+    `);
+
+    expect(() => handlers.duplicateWorkflow(source.id, "Copy of Source")).toThrow(
+      "graph copy failed",
+    );
+
+    expect(handlers.listWorkflows().map((workflow) => workflow.id)).toEqual(initialIds);
+  });
+
+  test("duplicates workflow with a fresh browser identity and session profile", async () => {
+    const { handlers } = await createTestHandlers();
+    const source = handlers.createWorkflow("Source");
+    handlers.saveWorkflowGraph(source.id, runnableGraph());
+    const sourceSettings = handlers.getWorkflowSettings(source.id);
+    handlers.saveWorkflowSettings(source.id, {
+      ...sourceSettings,
+      general: {
+        ...sourceSettings.general,
+        description: "Owned staging login flow",
+        tags: ["staging", "identity"],
+        notes: "Keep local credentials while making a fresh duplicate identity.",
+      },
+      run_policy: {
+        ...sourceSettings.run_policy,
+        browser_retention: "retain",
+        batch_headless: true,
+        batch_stop_on_first_failed_row: true,
+      },
+      browser_launch: {
+        ...sourceSettings.browser_launch,
+        run_from_selected_enabled: true,
+        proxy_enabled: true,
+        proxy_server: "http://proxy.local:8080",
+        proxy_username: "operator",
+        proxy_password: "local-secret",
+        proxy_label: "owned-proxy",
+        locale: "vi-VN",
+        timezone: "Asia/Ho_Chi_Minh",
+        viewport_width: 1366,
+        humanize: false,
+        human_preset: "careful",
+      },
+      environment: {
+        initial_variables: [
+          { name: "account.username", value_type: "text", value: "qa-user" },
+        ],
+      },
+    });
+
+    const duplicated = handlers.duplicateWorkflow(source.id, "Copy of Source").workflow;
+    const copiedSettings = handlers.getWorkflowSettings(duplicated.id);
+    const savedSourceSettings = handlers.getWorkflowSettings(source.id);
+
+    expect(handlers.getWorkflowGraph(duplicated.id)).toMatchObject({
+      version: 2,
+      nodes: runnableGraph().nodes,
+      edges: runnableGraph().edges,
+      viewport: runnableGraph().viewport,
+    });
+    expect(copiedSettings.workflow_id).toBe(duplicated.id);
+    expect(copiedSettings.general).toMatchObject({
+      name: "Copy of Source",
+      description: "Owned staging login flow",
+      tags: ["staging", "identity"],
+      notes: "Keep local credentials while making a fresh duplicate identity.",
+    });
+    expect(copiedSettings.run_policy).toMatchObject({
+      browser_retention: "retain",
+      batch_headless: true,
+      batch_stop_on_first_failed_row: true,
+    });
+    expect(copiedSettings.environment.initial_variables).toEqual([
+      { name: "account.username", value_type: "text", value: "qa-user" },
+    ]);
+    expect(copiedSettings.browser_launch).toMatchObject({
+      session_mode: "persistent_profile",
+      display_name: "Copy of Source identity",
+      profile_name: copiedSettings.browser_launch.profile_dir,
+      run_from_selected_enabled: false,
+      proxy_enabled: true,
+      proxy_server: "http://proxy.local:8080",
+      proxy_username: "operator",
+      proxy_password: "local-secret",
+      proxy_label: "owned-proxy",
+      locale: "vi-VN",
+      timezone: "Asia/Ho_Chi_Minh",
+      viewport_width: 1366,
+      humanize: false,
+      human_preset: "careful",
+    });
+    expect(copiedSettings.browser_launch.identity_id).toMatch(/^bi_/);
+    expect(copiedSettings.browser_launch.identity_id).not.toBe(
+      savedSourceSettings.browser_launch.identity_id,
+    );
+    expect(copiedSettings.browser_launch.profile_dir).not.toBe(
+      savedSourceSettings.browser_launch.profile_dir,
+    );
+    expect(copiedSettings.browser_launch.profile_name).not.toBe(
+      savedSourceSettings.browser_launch.profile_name,
+    );
+    expect(copiedSettings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(copiedSettings.browser_launch.fingerprint_seed).not.toBe(
+      savedSourceSettings.browser_launch.fingerprint_seed,
+    );
   });
 
   test("deletes private browser profile data only when requested", async () => {
@@ -328,10 +461,10 @@ describe("Electron workflow command handlers", () => {
     );
   });
 
-  test("migrates legacy workflow graphs on load and persists the upgraded action contract", async () => {
+  test("preserves workflow graphs on load and persists the current contract", async () => {
     const { handlers, database } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Legacy graph");
-    const legacyGraph: WorkflowGraph = {
+    const graph: WorkflowGraph = {
       version: 1,
       nodes: [
         {
@@ -350,9 +483,9 @@ describe("Electron workflow command handlers", () => {
           config: {
             type: "click",
             config: {
-              xpath: "//*[@id='submit']",
-              timeout_ms: 5000,
-              wait_until: "clickable",
+              target: {
+                locators: [{ kind: "xpath", value: "//*[@id='submit']" }],
+              },
             },
           },
           ports: [
@@ -366,7 +499,7 @@ describe("Electron workflow command handlers", () => {
     };
     database
       .prepare("UPDATE workflows SET graph_json = ? WHERE id = ?")
-      .run(JSON.stringify(legacyGraph), workflow.id);
+      .run(JSON.stringify(graph), workflow.id);
 
     const migrated = handlers.getWorkflowGraph(workflow.id);
 
@@ -385,10 +518,7 @@ describe("Electron workflow command handlers", () => {
           },
         }),
       ],
-      migration_notes: expect.arrayContaining([
-        expect.objectContaining({ path: "nodes.click-submit.config.xpath", action: "converted" }),
-        expect.objectContaining({ path: "nodes.click-submit.config.timeout_ms", action: "dropped" }),
-      ]),
+      migration_notes: [],
     });
     const persisted = JSON.parse(
       String(
@@ -400,8 +530,7 @@ describe("Electron workflow command handlers", () => {
       ),
     );
     expect(persisted.version).toBe(2);
-    expect(persisted.nodes[1].config.config).not.toHaveProperty("xpath");
-    expect(persisted.nodes[1].config.config).not.toHaveProperty("timeout_ms");
+    expect(persisted.nodes[1].config.config).toHaveProperty("target");
   });
 
   test("validates settings and maps browser config through simplified launch section", async () => {
@@ -572,6 +701,23 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          webrtc_policy: "disabled_if_supported",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "webrtc_policy",
+        level: "error",
+        message: "Disabled WebRTC policy is not supported by the installed CloakBrowser runtime",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           fingerprint_platform: "plan9" as never,
         },
       }),
@@ -643,7 +789,6 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id).browser_launch,
         timezone: "America/New_York",
         locale: "en-US",
-        human_preset: "careful",
       },
     });
 
@@ -665,16 +810,13 @@ describe("Electron workflow command handlers", () => {
       proxy_password: "secret",
       timezone: "America/New_York",
       locale: "en-US",
-      human_preset: "careful",
     });
   });
 
-  test("validates run policy numeric ranges and ignores legacy fingerprint gate settings", async () => {
+  test("validates run policy numeric ranges", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Settings validation");
     const settings = handlers.getWorkflowSettings(workflow.id);
-
-    expect(settings).not.toHaveProperty("owned_test_gates");
 
     expect(
       handlers.validateWorkflowSettings({
@@ -693,41 +835,32 @@ describe("Electron workflow command handlers", () => {
         }),
       ]),
     );
+  });
+
+  test("labels graph default link wait validation as new link wait", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Settings validation");
+    const settings = handlers.getWorkflowSettings(workflow.id);
 
     expect(
       handlers.validateWorkflowSettings({
         ...settings,
-        owned_test_gates: {
-          fingerprint_preflight_enabled: true,
-          fingerprint_probe_url: "https://probe.owned.test/verdict",
-          fingerprint_profile_id: "",
-          fingerprint_allowed_origins: ["https://other.owned.test"],
+        graph_defaults: {
+          default_edge_delay: {
+            type: "random",
+            min_ms: 5000,
+            max_ms: 3000,
+          },
         },
-      } as WorkflowSettings),
-    ).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          section: "owned_test_gates",
-        }),
-      ]),
-    );
-
-    handlers.saveWorkflowSettings(workflow.id, {
-      ...settings,
-      owned_test_gates: {
-        fingerprint_preflight_enabled: true,
-        fingerprint_probe_url: "https://probe.owned.test/verdict",
-        fingerprint_profile_id: "owned-profile",
-        fingerprint_allowed_origins: ["https://probe.owned.test"],
-      },
-    } as WorkflowSettings);
-    expect(handlers.getWorkflowSettings(workflow.id)).not.toHaveProperty("owned_test_gates");
-    expect(handlers.getWorkflowSettings(workflow.id).migration_notes).toContainEqual(
-      expect.objectContaining({
-        path: "owned_test_gates",
-        action: "dropped",
       }),
-    );
+    ).toEqual([
+      expect.objectContaining({
+        section: "graph_defaults",
+        field: "default_edge_delay",
+        level: "error",
+        message: "New link wait range is invalid",
+      }),
+    ]);
   });
 
   test("exports sanitized packages and imports selected flow/settings as a new workflow", async () => {
@@ -768,14 +901,11 @@ describe("Electron workflow command handlers", () => {
     expect(
       handlers.previewWorkflowPackage({
         ...packageValue,
-        included_sections: ["settings.general", "settings.owned_test_gates"],
+        included_sections: ["settings.general", "settings.unknown_section"],
         settings: {
           ...packageValue.settings,
-          owned_test_gates: {
-            fingerprint_preflight_enabled: true,
-            fingerprint_probe_url: "https://legacy.example.test/probe",
-            fingerprint_profile_id: "legacy",
-            fingerprint_allowed_origins: ["https://legacy.example.test"],
+          unknown_section: {
+            probe_url: "https://example.test/probe",
           },
         } as WorkflowPackage["settings"],
       }),
@@ -873,6 +1003,44 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.listWorkflows()).toHaveLength(initialCount);
   });
 
+  test("rejects malformed workflow package payloads with command errors", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(() =>
+      handlers.previewWorkflowPackage(null as unknown as WorkflowPackage),
+    ).toThrow(expect.objectContaining({
+      message: "Unsupported workflow package",
+      field: "package",
+    }));
+    expect(() =>
+      handlers.previewWorkflowPackage({
+        kind: "workflow_package",
+        version: 2,
+        workflow: null,
+        included_sections: [],
+        omitted_fields: [],
+        flow: null,
+        settings: null,
+      } as unknown as WorkflowPackage),
+    ).toThrow(expect.objectContaining({
+      message: "Workflow package name is required",
+      field: "package.workflow.name",
+    }));
+    expect(() =>
+      handlers.previewWorkflowPackage({
+        kind: "workflow_package",
+        version: 2,
+        workflow: { name: "Package" },
+        omitted_fields: [],
+        flow: null,
+        settings: null,
+      } as unknown as WorkflowPackage),
+    ).toThrow(expect.objectContaining({
+      message: "Workflow package sections are required",
+      field: "package.included_sections",
+    }));
+  });
+
   test("serializes command errors with message and optional field", () => {
     expect(
       serializeCommandError({ message: "Name required", field: "name" }),
@@ -900,13 +1068,44 @@ describe("Electron workflow command handlers", () => {
     ).toThrow("JSON variables must be an object");
   });
 
+  test("escapes selector suggestion attribute values", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(
+      handlers.suggestSelectors({
+        tag: "button",
+        id: "save:primary",
+        test_id: 'save"primary',
+        text: "Save",
+        classes: [],
+        attributes: {},
+      })[0],
+    ).toMatchObject({
+      selector_type: "test_id",
+      selector: '[data-testid="save\\"primary"]',
+    });
+    expect(
+      handlers.suggestSelectors({
+        tag: "button",
+        id: 'save"primary',
+        test_id: null,
+        text: "Save",
+        classes: [],
+        attributes: {},
+      })[0],
+    ).toMatchObject({
+      selector_type: "id",
+      selector: '[id="save\\"primary"]',
+    });
+  });
+
   test("normalizes recorded events into structured target action configs", async () => {
     const { handlers } = await createTestHandlers();
 
     expect(
       handlers.normalizeRecordedEvents([
         { type: "click", xpath: "//*[@data-testid='save']" },
-        { type: "input", xpath: "//*[@name='email']", text: "qa@example.test" },
+        { type: "input_text", xpath: "//*[@name='email']", text: "qa@example.test" },
       ]),
     ).toEqual([
       {
@@ -928,6 +1127,19 @@ describe("Electron workflow command handlers", () => {
         },
       },
     ]);
+  });
+
+  test("rejects unknown recorded event types", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(() =>
+      handlers.normalizeRecordedEvents([
+        { type: "hover", xpath: "//*[@data-testid='save']" },
+      ] as unknown as Parameters<typeof handlers.normalizeRecordedEvents>[0]),
+    ).toThrow(expect.objectContaining({
+      message: "Unsupported recorded event type: hover",
+      field: "events.type",
+    }));
   });
 
   test("runs saved workflow graph through the Electron browser runner", async () => {
@@ -1187,6 +1399,247 @@ describe("Electron workflow command handlers", () => {
     expect(runner.run).not.toHaveBeenCalled();
   });
 
+  test("starts isolated workflow runs concurrently and lists each run snapshot", async () => {
+    const finishByRunId = new Map<string, (state: RunState) => void>();
+    const observedSignals = new Map<string, AbortSignal>();
+    const runRunnerIds: string[] = [];
+    let runRunnerCount = 0;
+    const runner = {
+      run: vi.fn(async () => {
+        throw new Error("workflow runs should use an isolated runner instance");
+      }),
+      createIsolatedRunRunner: vi.fn(() => {
+        runRunnerCount += 1;
+        const runnerId = `runner-${runRunnerCount}`;
+        return {
+          async run(request: {
+            runId?: string | null;
+            settings: WorkflowSettings;
+            signal?: AbortSignal;
+            onProgress?: (state: Partial<RunState>) => void;
+          }): Promise<RunState> {
+            if (!request.runId) throw new Error("run id is required");
+            runRunnerIds.push(runnerId);
+            observedSignals.set(request.runId, request.signal as AbortSignal);
+            request.onProgress?.({
+              current_step_id: "visit",
+              current_step_number: 1,
+              completed_step_ids: [],
+            });
+            return new Promise((resolve) => {
+              finishByRunId.set(request.runId as string, resolve);
+            });
+          },
+        };
+      }),
+    };
+    const { handlers } = await createTestHandlers({
+      runner,
+    });
+    const firstWorkflow = handlers.createWorkflow("Checkout");
+    const secondWorkflow = handlers.createWorkflow("Support");
+    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    makeTemporary(handlers, firstWorkflow.id);
+    makeTemporary(handlers, secondWorkflow.id);
+
+    const first = await handlers.runWorkflow(firstWorkflow.id);
+    const second = await handlers.runWorkflow(secondWorkflow.id);
+
+    expect(first).toMatchObject({
+      workflow_id: firstWorkflow.id,
+      workflow_name: "Checkout",
+      source: "manual",
+      state: {
+        status: "running",
+        current_step_id: "visit",
+      },
+    });
+    expect(second).toMatchObject({
+      workflow_id: secondWorkflow.id,
+      workflow_name: "Support",
+      source: "manual",
+      state: {
+        status: "running",
+      },
+    });
+    expect(handlers.listRunStates()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ run_id: first.run_id, workflow_id: firstWorkflow.id }),
+        expect.objectContaining({ run_id: second.run_id, workflow_id: secondWorkflow.id }),
+      ]),
+    );
+    expect(finishByRunId).toHaveLength(2);
+    expect(runner.run).not.toHaveBeenCalled();
+    expect(runner.createIsolatedRunRunner).toHaveBeenCalledTimes(2);
+    expect(new Set(runRunnerIds)).toHaveLength(2);
+    expect(observedSignals.get(first.run_id)?.aborted).toBe(false);
+    expect(observedSignals.get(second.run_id)?.aborted).toBe(false);
+  });
+
+  test("rejects same-workflow and persistent-profile concurrent run conflicts", async () => {
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: { runId?: string | null }): Promise<RunState> {
+          return new Promise((resolve) => {
+            if (!request.runId) throw new Error("run id is required");
+            setTimeout(() => {
+              resolve({
+                status: "success",
+                mode: "run_workflow",
+                target_step_id: null,
+                current_step_id: null,
+                current_step_number: null,
+                completed_step_ids: ["visit"],
+                outputs: {},
+                error: null,
+              });
+            }, 50);
+          });
+        },
+      },
+    });
+    const firstWorkflow = handlers.createWorkflow("Profile owner");
+    const secondWorkflow = handlers.createWorkflow("Profile shared");
+    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    const firstSettings = handlers.getWorkflowSettings(firstWorkflow.id);
+    const secondSettings = handlers.getWorkflowSettings(secondWorkflow.id);
+    handlers.saveWorkflowSettings(secondWorkflow.id, {
+      ...secondSettings,
+      browser_launch: {
+        ...secondSettings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_dir: firstSettings.browser_launch.profile_dir,
+        profile_name: firstSettings.browser_launch.profile_dir,
+      },
+    });
+
+    await handlers.runWorkflow(firstWorkflow.id);
+
+    await expect(handlers.runWorkflow(firstWorkflow.id)).rejects.toMatchObject({
+      message: "This workflow is already running",
+      field: "workflowId",
+    });
+    await expect(handlers.runWorkflow(secondWorkflow.id)).rejects.toMatchObject({
+      message: "Browser profile is already in use by another active run",
+      field: "browser_launch.profile_name",
+    });
+  });
+
+  test("stops only the targeted run id and persists terminal evidence per run", async () => {
+    const finishByRunId = new Map<string, (state: RunState) => void>();
+    const signals = new Map<string, AbortSignal>();
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        async run(request: {
+          runId?: string | null;
+          signal?: AbortSignal;
+        }): Promise<RunState> {
+          if (!request.runId) throw new Error("run id is required");
+          signals.set(request.runId, request.signal as AbortSignal);
+          return new Promise((resolve) => {
+            finishByRunId.set(request.runId as string, resolve);
+          });
+        },
+      },
+    });
+    const firstWorkflow = handlers.createWorkflow("Checkout");
+    const secondWorkflow = handlers.createWorkflow("Support");
+    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    makeTemporary(handlers, firstWorkflow.id);
+    makeTemporary(handlers, secondWorkflow.id);
+    const first = await handlers.runWorkflow(firstWorkflow.id);
+    const second = await handlers.runWorkflow(secondWorkflow.id);
+
+    const stopped = await handlers.stopRun(first.run_id);
+
+    expect(stopped).toMatchObject({
+      run_id: first.run_id,
+      workflow_id: firstWorkflow.id,
+      state: { status: "stopped" },
+    });
+    expect(signals.get(first.run_id)?.aborted).toBe(true);
+    expect(signals.get(second.run_id)?.aborted).toBe(false);
+    expect(handlers.listRunStates()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          run_id: first.run_id,
+          state: expect.objectContaining({ status: "stopped" }),
+        }),
+        expect.objectContaining({
+          run_id: second.run_id,
+          state: expect.objectContaining({ status: "running" }),
+        }),
+      ]),
+    );
+
+    finishByRunId.get(first.run_id)?.({
+      status: "stopped",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: [],
+      outputs: {
+        stoppedMarker: first.run_id,
+        __action_traces: [
+          {
+            node_id: "visit",
+            action_type: "navigate",
+            status: "stopped",
+            mode: "browser",
+          },
+        ],
+      },
+      error: null,
+    });
+    finishByRunId.get(second.run_id)?.({
+      status: "success",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: ["visit"],
+      outputs: {
+        title: "Support",
+        __action_traces: [
+          {
+            node_id: "visit",
+            action_type: "navigate",
+            status: "success",
+            mode: "browser",
+          },
+        ],
+      },
+      error: null,
+    });
+    await waitForRunSnapshotStatus(handlers, second.run_id, "success");
+
+    const runRows = database
+      .prepare("SELECT id, workflow_id, status, outputs_json FROM runs ORDER BY workflow_id")
+      .all() as Array<Record<string, string | null>>;
+    expect(runRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: first.run_id,
+          workflow_id: firstWorkflow.id,
+          status: "stopped",
+        }),
+        expect.objectContaining({
+          id: second.run_id,
+          workflow_id: secondWorkflow.id,
+          status: "success",
+        }),
+      ]),
+    );
+    expect(JSON.parse(runRows.find((row) => row.id === first.run_id)?.outputs_json ?? "{}"))
+      .toMatchObject({ stoppedMarker: first.run_id });
+    expect(JSON.parse(runRows.find((row) => row.id === second.run_id)?.outputs_json ?? "{}"))
+      .toMatchObject({ title: "Support" });
+  });
+
   test("keeps one active run, exposes running state, and persists terminal evidence", async () => {
     let finishRun: ((state: RunState) => void) | null = null;
     let observedRunId: string | null | undefined = null;
@@ -1212,8 +1665,8 @@ describe("Electron workflow command handlers", () => {
       mode: "run_workflow",
     });
     await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
-      message: "A workflow run is already active",
-      field: "run",
+      message: "This workflow is already running",
+      field: "workflowId",
     });
 
     finishRun?.({
@@ -1290,6 +1743,159 @@ describe("Electron workflow command handlers", () => {
       node_id: "visit",
       action_type: "navigate",
     });
+  });
+
+  test("rolls back terminal run evidence when a step insert fails", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Evidence rollback");
+    const runId = "run-rollback";
+    database
+      .prepare(
+        `INSERT INTO runs (id, workflow_id, status, started_at)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(runId, workflow.id, "running", "1");
+    database.exec(`
+      CREATE TRIGGER fail_second_step_insert
+      BEFORE INSERT ON run_steps
+      WHEN NEW.node_id = 'second'
+      BEGIN
+        SELECT RAISE(ABORT, 'step insert failed');
+      END;
+    `);
+    const graph: CompiledWorkflowGraph = {
+      steps: [
+        {
+          node_id: "first",
+          label: "First",
+          config: { type: "wait", config: { condition: "duration", duration_ms: 1 } },
+        },
+        {
+          node_id: "second",
+          label: "Second",
+          config: { type: "wait", config: { condition: "duration", duration_ms: 1 } },
+        },
+      ],
+    };
+
+    expect(() =>
+      finishRun(database, runId, graph, {
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["first", "second"],
+        outputs: {},
+        error: null,
+      }),
+    ).toThrow("step insert failed");
+
+    expect(
+      database.prepare("SELECT status, finished_at FROM runs WHERE id = ?").get(runId),
+    ).toMatchObject({ status: "running", finished_at: null });
+    expect(database.prepare("SELECT COUNT(*) AS count FROM run_steps WHERE run_id = ?").get(runId))
+      .toMatchObject({ count: 0 });
+  });
+
+  test("does not keep the active-run lock when run persistence fails before launch", async () => {
+    const runner = {
+      run: vi.fn(async (): Promise<RunState> => ({
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["visit"],
+        outputs: {},
+        error: null,
+      })),
+    };
+    const { handlers, database } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Persistence failure");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    database.exec(`
+      CREATE TRIGGER fail_run_insert
+      BEFORE INSERT ON runs
+      BEGIN
+        SELECT RAISE(ABORT, 'run insert failed');
+      END;
+    `);
+
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toThrow("run insert failed");
+    expect(runner.run).not.toHaveBeenCalled();
+
+    database.exec("DROP TRIGGER fail_run_insert");
+    await expect(handlers.runWorkflow(workflow.id)).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+    });
+    expect(runner.run).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not keep the active-run lock when run-from-selected persistence fails before launch", async () => {
+    const runner = {
+      hasReusableRetainedSession: vi.fn(() => true),
+      getRetainedSessionState: vi.fn(() => ({
+        available: true,
+        workflow_id: "workflow-1",
+        profile_name: "qa-profile",
+        reason: null,
+      })),
+      run: vi.fn(async (): Promise<RunState> => ({
+        status: "success",
+        mode: "run_workflow",
+        target_step_id: "visit",
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["visit"],
+        outputs: {},
+        error: null,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      })),
+    };
+    const { handlers, database } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Selected persistence failure");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+        run_from_selected_enabled: true,
+      },
+      run_policy: {
+        ...settings.run_policy,
+        browser_retention: "retain",
+      },
+    });
+    database.exec(`
+      CREATE TRIGGER fail_run_insert
+      BEFORE INSERT ON runs
+      BEGIN
+        SELECT RAISE(ABORT, 'run insert failed');
+      END;
+    `);
+
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toThrow(
+      "run insert failed",
+    );
+    expect(runner.run).not.toHaveBeenCalled();
+
+    database.exec("DROP TRIGGER fail_run_insert");
+    await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).resolves.toMatchObject({
+      status: "running",
+      mode: "run_workflow",
+      target_step_id: "visit",
+    });
+    expect(runner.run).toHaveBeenCalledTimes(1);
   });
 
   test("maps runner progress into getRunState while a run is active", async () => {
@@ -1536,7 +2142,7 @@ describe("Electron workflow command handlers", () => {
       }),
     });
     await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
-      message: "A workflow run is already active",
+      message: "A batch run is already active",
       field: "run",
     });
 
@@ -1552,6 +2158,196 @@ describe("Electron workflow command handlers", () => {
       results: [{ row_index: 0, status: "stopped", error: null }],
     });
     expect(runnerCalls).toHaveLength(1);
+  });
+
+  test("clears batch running state when row persistence fails", async () => {
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        run: vi.fn(),
+      },
+    });
+    const workflow = handlers.createWorkflow("Batch persistence failure");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    database.exec(`
+      CREATE TRIGGER fail_batch_run_insert
+      BEFORE INSERT ON runs
+      BEGIN
+        SELECT RAISE(ABORT, 'run insert failed');
+      END;
+    `);
+
+    await expect(
+      handlers.runBatchWorkflow(workflow.id, {
+        rows: [{ name: "A" }],
+      }),
+    ).rejects.toThrow("run insert failed");
+
+    expect(handlers.getRunState()).toMatchObject({
+      status: "failed",
+      mode: "run_workflow",
+      error: expect.objectContaining({
+        reason: "run insert failed",
+      }),
+    });
+  });
+});
+
+describe("Electron workflow schedule commands", () => {
+  test("creates disabled draft schedules and enables only runnable workflows", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Scheduled workflow");
+
+    const draft = handlers.createSchedule({
+      workflow_id: workflow.id,
+      name: "Hourly",
+      enabled: false,
+      kind: { type: "interval", every_seconds: 3600 },
+    });
+
+    expect(draft).toMatchObject({
+      workflow_id: workflow.id,
+      workflow_name: "Scheduled workflow",
+      name: "Hourly",
+      enabled: false,
+      next_run_at: null,
+    });
+    expect(() => handlers.enableSchedule(draft.id)).toThrow(
+      "Choose an action type before running this node",
+    );
+
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const enabled = await handlers.enableSchedule(draft.id);
+
+    expect(enabled).toMatchObject({
+      id: draft.id,
+      enabled: true,
+      next_run_at: expect.any(String),
+    });
+    expect(handlers.listSchedules()).toEqual([
+      expect.objectContaining({
+        id: draft.id,
+        enabled: true,
+        workflow_name: "Scheduled workflow",
+      }),
+    ]);
+  });
+
+  test("validates schedule config and returns field-addressable issues", async () => {
+    const { handlers } = await createTestHandlers();
+
+    expect(
+      handlers.validateSchedule({
+        workflow_id: "",
+        name: "",
+        enabled: true,
+        kind: { type: "calendar", preset: "weekly", weekdays: [], time: "25:00" },
+      }),
+    ).toEqual([
+      { field: "workflow_id", message: "Workflow is required", level: "error" },
+      { field: "name", message: "Schedule name is required", level: "error" },
+      {
+        field: "kind.weekdays",
+        message: "Select at least one weekday",
+        level: "error",
+      },
+      {
+        field: "kind.time",
+        message: "Use a valid HH:mm time",
+        level: "error",
+      },
+    ]);
+  });
+
+  test("scheduler tick skips profile conflicts but can start isolated workflows", async () => {
+    let activeRunSignal: AbortSignal | null = null;
+    const startedRunSignals: AbortSignal[] = [];
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: { signal?: AbortSignal }): Promise<RunState> {
+          activeRunSignal = request.signal ?? null;
+          startedRunSignals.push(request.signal as AbortSignal);
+          await new Promise<void>((resolve) => {
+            request.signal?.addEventListener("abort", resolve, { once: true });
+          });
+          return {
+            status: "stopped",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: [],
+            outputs: {},
+            error: null,
+          };
+        },
+      },
+    });
+    const runningWorkflow = handlers.createWorkflow("Running workflow");
+    handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
+    const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow");
+    handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
+    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow");
+    handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
+    const schedule = handlers.createSchedule({
+      workflow_id: scheduledWorkflow.id,
+      name: "Once",
+      enabled: true,
+      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+    });
+    const isolatedSchedule = handlers.createSchedule({
+      workflow_id: isolatedWorkflow.id,
+      name: "Isolated",
+      enabled: true,
+      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+    });
+    const runningSettings = handlers.getWorkflowSettings(runningWorkflow.id);
+    const scheduledSettings = handlers.getWorkflowSettings(scheduledWorkflow.id);
+    handlers.saveWorkflowSettings(scheduledWorkflow.id, {
+      ...scheduledSettings,
+      browser_launch: {
+        ...scheduledSettings.browser_launch,
+        profile_dir: runningSettings.browser_launch.profile_dir,
+        profile_name: runningSettings.browser_launch.profile_name,
+      },
+    });
+    makeTemporary(handlers, isolatedWorkflow.id);
+
+    const runPromise = handlers.runWorkflow(runningWorkflow.id);
+    await waitFor(() => activeRunSignal !== null);
+    await handlers.runSchedulerTick(new Date("2026-05-17T09:00:00.000Z"));
+
+    expect(handlers.listScheduleEvents({ schedule_id: schedule.id })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event_type: "skipped",
+          reason: "active_profile",
+          scheduled_for: "2026-05-17T09:00:00.000Z",
+        }),
+        expect.objectContaining({
+          event_type: "disabled",
+          reason: "one_time_elapsed",
+        }),
+      ]),
+    );
+    expect(handlers.getSchedule(schedule.id)).toMatchObject({
+      enabled: false,
+      next_run_at: null,
+      last_status: "disabled",
+    });
+    expect(handlers.listScheduleEvents({ schedule_id: isolatedSchedule.id })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event_type: "started",
+          scheduled_for: "2026-05-17T09:00:00.000Z",
+        }),
+      ]),
+    );
+    expect(startedRunSignals).toHaveLength(2);
+
+    for (const snapshot of handlers.listRunStates().filter((item) => item.state.status === "running")) {
+      await handlers.stopRun(snapshot.run_id);
+    }
+    await runPromise;
   });
 });
 
@@ -1633,10 +2429,38 @@ async function waitForRunStatus(
   throw new Error(`Timed out waiting for run status ${status}`);
 }
 
+async function waitForRunSnapshotStatus(
+  handlers: { listRunStates(): Array<{ run_id: string; state: RunState }> },
+  runId: string,
+  status: RunState["status"],
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const state = handlers.listRunStates().find((snapshot) => snapshot.run_id === runId)?.state;
+    if (state?.status === status) return state;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error(`Timed out waiting for run ${runId} status ${status}`);
+}
+
 async function waitFor(predicate: () => boolean) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     if (predicate()) return;
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   throw new Error("Timed out waiting for predicate");
+}
+
+function makeTemporary(
+  handlers: Awaited<ReturnType<typeof createTestHandlers>>["handlers"],
+  workflowId: string,
+) {
+  const settings = handlers.getWorkflowSettings(workflowId);
+  handlers.saveWorkflowSettings(workflowId, {
+    ...settings,
+    browser_launch: {
+      ...settings.browser_launch,
+      session_mode: "temporary",
+      profile_name: null,
+    },
+  });
 }

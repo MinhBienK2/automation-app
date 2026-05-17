@@ -1,15 +1,19 @@
 import { Button } from "../components/ui/button";
-import { ListTree, Settings } from "lucide-react";
+import { Activity, CalendarClock, ListTree, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "workflows" | "settings";
+type AppSidebarActiveItem = "workflows" | "runs" | "schedules" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
+  onOpenRunCenter: () => void;
+  onOpenSchedules: () => void;
   onOpenSettings: () => void;
   onOpenWorkflows: () => void;
   onToggle: () => void;
 };
+
+const appLogoSrc = `${import.meta.env.BASE_URL}app-logo.svg`;
 
 function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
   return (
@@ -46,6 +50,8 @@ function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
 export function AppSidebar({
   activeItem,
   collapsed,
+  onOpenRunCenter,
+  onOpenSchedules,
   onOpenSettings,
   onOpenWorkflows,
   onToggle,
@@ -53,7 +59,7 @@ export function AppSidebar({
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
-        <span className="sidebar-mark">W</span>
+        <img className="sidebar-logo" src={appLogoSrc} alt="Automation App logo" />
         <span className="sidebar-title">Workflow Manager</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
@@ -69,6 +75,32 @@ export function AppSidebar({
         >
           <ListTree aria-hidden="true" className="sidebar-item-icon" />
           <span>Workflows</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "runs"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenRunCenter}
+        >
+          <Activity aria-hidden="true" className="sidebar-item-icon" />
+          <span>Run Center</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "schedules"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenSchedules}
+        >
+          <CalendarClock aria-hidden="true" className="sidebar-item-icon" />
+          <span>Schedules</span>
         </Button>
         <Button
           className={

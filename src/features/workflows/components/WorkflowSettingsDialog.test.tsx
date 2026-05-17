@@ -62,6 +62,7 @@ describe("WorkflowSettingsDialog", () => {
     const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
     expect(within(dialog).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "General",
+      "Graph",
       "Run Policy",
       "Browser Launch",
       "Environment",
@@ -69,7 +70,24 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByRole("tab", { name: "Owned Test Gates" }))
       .not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Identity display name")).toHaveValue("Checkout QA identity");
-    expect(within(dialog).getByLabelText("Profile directory")).toHaveValue("bi_workflow-1");
+    expect(within(dialog).getByLabelText("Identity id")).toHaveValue("bi_workflow-1");
+    const identityRow = within(dialog)
+      .getByLabelText("Identity id")
+      .closest(".workflow-settings-identity-row");
+    expect(identityRow).not.toBeNull();
+    expect(within(dialog).getByLabelText("Identity display name").closest(".workflow-settings-identity-row"))
+      .toBe(identityRow);
+    expect(
+      Array.from(identityRow?.querySelectorAll("label") ?? []).map((label) =>
+        label.textContent,
+      ),
+    ).toEqual(["Identity id", "Identity display name"]);
+    expect(within(dialog).getByLabelText("Identity id").closest("label"))
+      .toHaveClass("workflow-settings-identity-id-field");
+    expect(within(dialog).getByLabelText("Identity display name").closest("label"))
+      .toHaveClass("workflow-settings-identity-name-field");
+    expect(within(dialog).queryByLabelText("Profile directory")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Legacy profile key")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");
     expect(within(dialog).getByRole("button", { name: "Show fingerprint seed" })).toBeInTheDocument();
@@ -87,8 +105,128 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Storage quota MB")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
-    expect(within(dialog).getByLabelText("Behavior fidelity")).toHaveValue("balanced");
+    expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
+    expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Fingerprint preflight" })).toBeInTheDocument();
+  });
+
+  test("groups graph link wait defaults into a reusable settings field group", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.graph_defaults.default_edge_delay = {
+      type: "random",
+      min_ms: 3000,
+      max_ms: 5000,
+    };
+
+    render(
+      <WorkflowSettingsDialog
+        activeSection="graph_defaults"
+        hasUnsavedChanges={false}
+        open
+        settings={settings}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    expect(within(dialog).getByRole("tab", { name: "Graph" })).toHaveAttribute("data-active", "true");
+    expect(within(dialog).getByRole("heading", { name: "Graph" })).toBeInTheDocument();
+
+    const linkWaitGroup = within(dialog).getByRole("group", { name: "New link wait" });
+    expect(linkWaitGroup).toHaveClass("settings-field-group");
+    expect(within(linkWaitGroup).getByText("Choose the wait copied to new links after saving."))
+      .toBeInTheDocument();
+    expect(within(linkWaitGroup).getByLabelText("Mode")).toHaveValue("random");
+    expect(within(linkWaitGroup).getByLabelText("Minimum wait ms")).toHaveValue(3000);
+    expect(within(linkWaitGroup).getByLabelText("Maximum wait ms")).toHaveValue(5000);
+    expect(within(linkWaitGroup).getByText(/Existing links keep their own wait/i))
+      .toHaveClass("settings-field-group-footer");
+  });
+
+  test("groups workflow settings sections by related controls", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.browser_launch.proxy_enabled = true;
+    settings.browser_launch.preflight_enabled = true;
+
+    const props = {
+      hasUnsavedChanges: false,
+      open: true,
+      settings,
+      onActiveSectionChange: vi.fn(),
+      onDiscardChanges: vi.fn(),
+      onOpenChange: vi.fn(),
+      onSaveSettings: vi.fn(),
+      onSettingsChange: vi.fn(),
+    };
+
+    const { rerender } = render(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="general"
+      />,
+    );
+    let dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const workflowDetails = within(dialog).getByRole("group", { name: "Workflow details" });
+    expect(within(workflowDetails).getByLabelText("Workflow name")).toBeInTheDocument();
+    expect(within(workflowDetails).getByLabelText("Notes")).toBeInTheDocument();
+
+    rerender(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="run_policy"
+      />,
+    );
+    dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const runLifecycle = within(dialog).getByRole("group", { name: "Run lifecycle" });
+    const batchDefaults = within(dialog).getByRole("group", { name: "Batch defaults" });
+    expect(within(runLifecycle).getByLabelText("Max workflow duration ms")).toBeInTheDocument();
+    expect(within(batchDefaults).getByLabelText("Batch concurrency limit")).toBeDisabled();
+    expect(within(batchDefaults).getByText("Batch controls are paused until Batch Run UI is ready."))
+      .toHaveClass("settings-field-group-footer");
+
+    rerender(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="browser_launch"
+      />,
+    );
+    dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const expectedBrowserGroups = [
+      "Session & identity",
+      "Proxy",
+      "Location & viewport",
+      "Fingerprint",
+      "Humanization",
+      "Preflight & launch",
+    ];
+    for (const groupName of expectedBrowserGroups) {
+      expect(within(dialog).getByRole("group", { name: groupName })).toHaveClass("settings-field-group");
+    }
+    expect(within(within(dialog).getByRole("group", { name: "Session & identity" })).getByLabelText("Identity id"))
+      .toBeInTheDocument();
+    expect(within(within(dialog).getByRole("group", { name: "Proxy" })).getByLabelText("Proxy server"))
+      .toBeInTheDocument();
+    expect(within(within(dialog).getByRole("group", { name: "Preflight & launch" })).getByLabelText("Preflight probe URL"))
+      .toBeInTheDocument();
+
+    rerender(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="environment"
+      />,
+    );
+    dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    expect(within(dialog).getByRole("group", { name: "Initial variables" })).toHaveClass("settings-field-group");
   });
 
   test("can reveal and copy the fingerprint seed", async () => {

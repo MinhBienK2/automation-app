@@ -7,7 +7,6 @@ export type ActionType =
   | "click"
   | "scroll"
   | "select_option"
-  | "set_checkbox"
   | "press_key"
   | "hotkey"
   | "hover"
@@ -39,16 +38,16 @@ export type ActionType =
   | "open_new_tab"
   | "switch_tab"
   | "close_tab"
-  | "switch_frame"
   | "accept_dialog"
   | "dismiss_dialog"
-  | "set_download_directory"
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
   | "assert_element"
   | "assert_text"
+  | "graph_noop"
   | "if_condition"
+  | "router_condition"
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
@@ -62,26 +61,13 @@ export type ActionType =
   | "stop_workflow"
   | "transform_variable"
   | "assert_output"
-  | "run_subworkflow"
   | "domain_allowlist"
-  | "use_profile"
-  | "save_session"
-  | "load_session"
   | "set_cookie"
   | "clear_cookies"
-  | "set_secret"
-  | "use_proxy"
-  | "set_user_agent"
   | "set_viewport"
   | "set_geolocation"
   | "set_extra_headers"
   | "grant_permission"
-  | "detect_challenge"
-  | "pause_for_human"
-  | "resume_when_condition"
-  | "fallback_selector"
-  | "retry_step"
-  | "checkpoint"
   | "execute_js"
   | "wait_for_request"
   | "wait_for_response"
@@ -98,6 +84,9 @@ export type VariableAssignment = {
   value_type: VariableValueType;
   value: string;
 };
+
+export type ScrollMode = "page" | "into_view" | "until_visible";
+export type ScrollDirection = "up" | "down" | "left" | "right";
 
 export type WorkflowSummary = {
   id: string;
@@ -128,16 +117,13 @@ export type WorkflowSettingsSectionId =
   | "general"
   | "run_policy"
   | "browser_launch"
+  | "graph_defaults"
   | "environment";
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
-export type WorkflowHumanPreset = "default" | "careful";
-export type WorkflowBehaviorFidelity =
-  | "balanced"
-  | "strict_humanized"
-  | "deterministic_internal";
 export type WorkflowFingerprintPlatform = "windows" | "macos" | "linux";
+export type WorkflowHumanPreset = "default" | "careful";
 export type WorkflowWebRtcPolicy =
   | "default"
   | "auto_proxy_exit_ip"
@@ -188,18 +174,32 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   device_memory_gb?: number | null;
   fingerprint_fonts_dir?: string | null;
   storage_quota_mb?: number | null;
-  humanize: boolean;
-  human_preset: WorkflowHumanPreset;
-  behavior_fidelity: WorkflowBehaviorFidelity;
   preflight_enabled: boolean;
   preflight_probe_url?: string | null;
   preflight_allowed_origins: string[];
   headless: boolean;
+  humanize: boolean;
+  human_preset: WorkflowHumanPreset;
   run_from_selected_enabled: boolean;
 };
 
 export type WorkflowSettingsEnvironment = {
   initial_variables: VariableAssignment[];
+};
+
+export type GraphEdgeDelay =
+  | {
+      type: "fixed";
+      duration_ms: number;
+    }
+  | {
+      type: "random";
+      min_ms: number;
+      max_ms: number;
+    };
+
+export type WorkflowSettingsGraphDefaults = {
+  default_edge_delay: GraphEdgeDelay | null;
 };
 
 export type WorkflowSettingsMigrationNote = {
@@ -220,6 +220,7 @@ export type WorkflowSettings = {
   general: WorkflowSettingsGeneral;
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  graph_defaults: WorkflowSettingsGraphDefaults;
   environment: WorkflowSettingsEnvironment;
   migration_notes: WorkflowSettingsMigrationNote[];
   created_at?: string | null;
@@ -348,8 +349,6 @@ export type ActionConfig =
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
-        typing_mode?: "set_value" | "type" | null;
-        delay_ms?: number | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
@@ -360,7 +359,6 @@ export type ActionConfig =
         xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
-        method?: "select_all" | "backspace" | "dom" | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
@@ -371,42 +369,20 @@ export type ActionConfig =
         xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
-        mode?: "real" | "force_dom" | null;
-        button?: "left" | "right" | "middle" | null;
-        click_count?: number | null;
-        scroll_into_view?: boolean | null;
-        block?: "start" | "center" | "end" | "nearest" | null;
-        inline?: "start" | "center" | "end" | "nearest" | null;
-        position?:
-          | "center"
-          | "top_left"
-          | "top_right"
-          | "bottom_left"
-          | "bottom_right"
-          | "offset"
-          | null;
-        offset_x?: number | null;
-        offset_y?: number | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
-        retry_interval_ms?: number | null;
-        post_click_wait_ms?: number | null;
       };
     }
   | {
       type: "scroll";
       config: {
-        mode?: "page" | "container" | "into_view" | "until_visible";
-        direction: "up" | "down" | "left" | "right";
-        pixels: number;
+        mode?: ScrollMode | null;
+        direction?: ScrollDirection;
+        pixels?: number;
         xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;
-        behavior?: "instant" | "smooth" | null;
-        block?: "start" | "center" | "end" | "nearest" | null;
-        inline?: "start" | "center" | "end" | "nearest" | null;
-        max_attempts?: number | null;
-        wait_ms?: number | null;
+        timeout_ms?: number | null;
       };
     }
   | {
@@ -417,17 +393,6 @@ export type ActionConfig =
         iframe_xpath?: string | null;
         match_by: "label" | "value";
         value: string;
-        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
-        timeout_ms?: number | null;
-      };
-    }
-  | {
-      type: "set_checkbox";
-      config: {
-        xpath?: string | null;
-        target?: ElementTarget | null;
-        iframe_xpath?: string | null;
-        state: "checked" | "unchecked";
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
       };
@@ -584,10 +549,8 @@ export type ActionConfig =
   | { type: "open_new_tab"; config: { url?: string | null } }
   | { type: "switch_tab"; config: { index: number } }
   | { type: "close_tab"; config: { index?: number | null } }
-  | { type: "switch_frame"; config: { xpath?: string | null; target?: ElementTarget | null } }
   | { type: "accept_dialog"; config: { prompt_text?: string | null } }
   | { type: "dismiss_dialog"; config: Record<string, never> }
-  | { type: "set_download_directory"; config: { path: string } }
   | {
       type: "wait_for_download";
       config: { output_name: string; timeout_ms?: number | null };
@@ -624,11 +587,30 @@ export type ActionConfig =
       };
     }
   | {
+      type: "graph_noop";
+      config: {
+        kind: "merge";
+      };
+    }
+  | {
       type: "if_condition";
       config: {
         condition: WorkflowCondition;
         then_steps: CompiledNestedAction[];
         else_steps: CompiledNestedAction[];
+      };
+    }
+  | {
+      type: "router_condition";
+      config: {
+        mode: "first_match";
+        cases: Array<{
+          id: string;
+          label: string;
+          condition: WorkflowCondition;
+          steps: CompiledNestedAction[];
+        }>;
+        default_steps: CompiledNestedAction[];
       };
     }
   | { type: "repeat_times"; config: { times: number; steps: CompiledNestedAction[] } }
@@ -711,37 +693,17 @@ export type ActionConfig =
       type: "assert_output";
       config: { name: string; match_mode: "contains" | "equals"; value: string };
     }
-  | {
-      type: "run_subworkflow";
-      config: {
-        workflow_id: string;
-        input_mapping: Array<{ source: string; target: string }>;
-        output_mapping: Array<{ source: string; target: string }>;
-      };
-    }
   | { type: "domain_allowlist"; config: { domains: string[] } }
-  | { type: "use_profile"; config: { name: string } }
-  | { type: "save_session"; config: { path: string } }
-  | { type: "load_session"; config: { path: string } }
   | {
       type: "set_cookie";
       config: { name: string; value: string; domain?: string | null; path?: string | null };
     }
   | { type: "clear_cookies"; config: { domain?: string | null } }
-  | { type: "set_secret"; config: { name: string; value: string } }
-  | {
-      type: "use_proxy";
-      config: { server: string; username?: string | null; password?: string | null };
-    }
-  | { type: "set_user_agent"; config: { user_agent: string } }
   | {
       type: "set_viewport";
       config: {
         width: number;
         height: number;
-        device_scale_factor?: number | null;
-        mobile: boolean;
-        touch: boolean;
       };
     }
   | {
@@ -752,30 +714,6 @@ export type ActionConfig =
   | {
       type: "grant_permission";
       config: { origin?: string | null; permissions: string[] };
-    }
-  | {
-      type: "detect_challenge";
-      config: { output_name: string; patterns: string[]; timeout_ms?: number | null };
-    }
-  | {
-      type: "pause_for_human";
-      config: { reason: string; timeout_ms?: number | null };
-    }
-  | {
-      type: "resume_when_condition";
-      config: { condition: WorkflowCondition; timeout_ms?: number | null };
-    }
-  | {
-      type: "fallback_selector";
-      config: { output_name: string; xpaths: string[]; timeout_ms?: number | null };
-    }
-  | {
-      type: "retry_step";
-      config: { max_attempts: number; delay_ms?: number | null; step: ActionConfig };
-    }
-  | {
-      type: "checkpoint";
-      config: { name: string; screenshot_path?: string | null };
     }
   | {
       type: "execute_js";
@@ -849,6 +787,18 @@ export type WorkflowCondition =
   | { kind: "url_contains"; value: string }
   | { kind: "element_visible"; xpath?: string | null; target?: ElementTarget | null };
 
+export type RouterGraphCase = {
+  id: string;
+  label: string;
+  condition: WorkflowCondition;
+};
+
+export type RouterGraphConfig = {
+  mode: "first_match";
+  cases: RouterGraphCase[];
+  default_label?: string | null;
+};
+
 type ElementTargetActionConfig = {
   xpath?: string | null;
   target?: ElementTarget | null;
@@ -886,6 +836,8 @@ export type GraphNodeType =
   | "end_success"
   | "end_failure"
   | "action"
+  | "merge"
+  | "router"
   | "if"
   | "switch"
   | "repeat_times"
@@ -902,9 +854,6 @@ export type GraphNodeType =
   | "set_json_variables"
   | "transform_variable"
   | "assert_output"
-  | "run_subworkflow"
-  | "manual_approval"
-  | "rate_limit"
   | "domain_allowlist";
 
 export type GraphPortDirection = "input" | "output";
@@ -945,6 +894,7 @@ export type GraphEdge = {
   target_port: string;
   label?: string | null;
   condition?: WorkflowCondition | null;
+  delay?: GraphEdgeDelay | null;
 };
 
 export type WorkflowGraph = {
@@ -980,15 +930,69 @@ export type CompiledWorkflowGraph = {
   } | null;
 };
 
-export type ScheduleKind =
-  | { kind: "once_at"; timestamp: string }
-  | { kind: "interval"; every_seconds: number };
+export type WorkflowScheduleKind =
+  | { type: "once_at"; timestamp: string }
+  | { type: "interval"; every_seconds: number }
+  | { type: "calendar"; preset: "daily"; time: string }
+  | { type: "calendar"; preset: "weekly"; weekdays: number[]; time: string }
+  | { type: "calendar"; preset: "monthly"; day: number; time: string };
 
-export type OrchestrationSchedule = {
+export type WorkflowScheduleInput = {
   workflow_id: string;
+  name: string;
   enabled: boolean;
-  kind: ScheduleKind;
+  kind: WorkflowScheduleKind;
 };
+
+export type WorkflowScheduleUpdate = Partial<WorkflowScheduleInput>;
+
+export type WorkflowScheduleStatus =
+  | "started"
+  | "skipped"
+  | "missed"
+  | "failed_to_start"
+  | "disabled";
+
+export type WorkflowSchedule = {
+  id: string;
+  workflow_id: string;
+  workflow_name: string;
+  name: string;
+  enabled: boolean;
+  kind: WorkflowScheduleKind;
+  next_run_at: string | null;
+  last_event_at: string | null;
+  last_status: WorkflowScheduleStatus | null;
+  last_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkflowScheduleEvent = {
+  id: string;
+  schedule_id: string;
+  workflow_id: string;
+  event_type: WorkflowScheduleStatus;
+  run_id: string | null;
+  scheduled_for: string;
+  created_at: string;
+  reason: string | null;
+  details_json: string | null;
+};
+
+export type WorkflowScheduleEventFilter = {
+  schedule_id?: string | null;
+  workflow_id?: string | null;
+  limit?: number | null;
+};
+
+export type ScheduleValidationIssue = {
+  field: string;
+  message: string;
+  level: "error" | "warning";
+};
+
+export type OrchestrationSchedule = WorkflowScheduleInput;
 
 export type BatchRunRequest = {
   rows: Array<Record<string, string>>;
@@ -1030,6 +1034,7 @@ export type WorkflowPackageSettings = Partial<{
   general: WorkflowSettingsGeneral;
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  graph_defaults: WorkflowSettingsGraphDefaults;
   environment: WorkflowSettingsEnvironment;
 }>;
 
@@ -1093,6 +1098,17 @@ export type RunState = {
     action_type: string;
     reason: string;
   };
+};
+
+export type WorkflowRunSource = "manual" | "schedule";
+
+export type WorkflowRunSnapshot = RunState & {
+  run_id: string;
+  workflow_id: string;
+  workflow_name: string;
+  source: WorkflowRunSource;
+  started_at: string;
+  state: RunState;
 };
 
 export type CommandError = {

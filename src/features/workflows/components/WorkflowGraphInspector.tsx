@@ -9,6 +9,8 @@ import type {
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
+import { Input } from "../../../components/ui/input";
+import { Select } from "../../../components/ui/select";
 import { graphNodeLabel } from "../lib/workflowGraph";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import { ConnectionSummary } from "./WorkflowGraphPalettes";
@@ -35,6 +37,7 @@ type WorkflowGraphInspectorProps = {
   onDuplicateSelection: () => void;
   onFocusSelectedNode: () => void;
   onOpenSelectedNodeHelp: () => void;
+  onUpdateEdge: (edge: GraphEdge) => void;
   onUpdateNode: (node: GraphNode) => void;
 };
 
@@ -53,6 +56,7 @@ export function WorkflowGraphInspector({
   onDuplicateSelection,
   onFocusSelectedNode,
   onOpenSelectedNodeHelp,
+  onUpdateEdge,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
   const variableOptions = collectVariableOptions(graph);
@@ -89,6 +93,7 @@ export function WorkflowGraphInspector({
             {" -> "}
             {nodeLabels.get(selectedEdge.target_node_id) ?? selectedEdge.target_node_id}
           </p>
+          <LinkWaitFields edge={selectedEdge} onChange={onUpdateEdge} />
           <Button
             type="button"
             variant="destructive"
@@ -187,6 +192,107 @@ export function WorkflowGraphInspector({
   );
 }
 
+function LinkWaitFields({
+  edge,
+  onChange,
+}: {
+  edge: GraphEdge;
+  onChange: (edge: GraphEdge) => void;
+}) {
+  const delay = edge.delay ?? null;
+  const mode = delay?.type ?? "none";
+  return (
+    <div className="settings-form-grid">
+      <label className="field">
+        <span>Link wait</span>
+        <Select
+          value={mode}
+          onChange={(event) => {
+            const nextMode = event.currentTarget.value;
+            if (nextMode === "fixed") {
+              onChange({ ...edge, delay: { type: "fixed", duration_ms: 1000 } });
+              return;
+            }
+            if (nextMode === "random") {
+              onChange({ ...edge, delay: { type: "random", min_ms: 800, max_ms: 1500 } });
+              return;
+            }
+            onChange({ ...edge, delay: null });
+          }}
+        >
+          <option value="none">No wait</option>
+          <option value="fixed">Fixed duration</option>
+          <option value="random">Random range</option>
+        </Select>
+      </label>
+      {delay?.type === "fixed" ? (
+        <label className="field">
+          <span>Fixed duration ms</span>
+          <Input
+            min={1}
+            type="number"
+            value={delay.duration_ms}
+            onChange={(event) =>
+              onChange({
+                ...edge,
+                delay: {
+                  type: "fixed",
+                  duration_ms: numberOrDefault(event.currentTarget.value, 1000),
+                },
+              })
+            }
+          />
+        </label>
+      ) : null}
+      {delay?.type === "random" ? (
+        <>
+          <label className="field">
+            <span>Random min ms</span>
+            <Input
+              min={1}
+              type="number"
+              value={delay.min_ms}
+              onChange={(event) =>
+                onChange({
+                  ...edge,
+                  delay: {
+                    type: "random",
+                    min_ms: numberOrDefault(event.currentTarget.value, 800),
+                    max_ms: delay.max_ms,
+                  },
+                })
+              }
+            />
+          </label>
+          <label className="field">
+            <span>Random max ms</span>
+            <Input
+              min={1}
+              type="number"
+              value={delay.max_ms}
+              onChange={(event) =>
+                onChange({
+                  ...edge,
+                  delay: {
+                    type: "random",
+                    min_ms: delay.min_ms,
+                    max_ms: numberOrDefault(event.currentTarget.value, 1500),
+                  },
+                })
+              }
+            />
+          </label>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function numberOrDefault(value: string, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function summarizeRunError(reason: string) {
   const firstLine = reason
     .split(/\r?\n/)
@@ -213,8 +319,8 @@ function collectVariableOptions(graph: WorkflowGraph): VariableOption[] {
           if (name) options.push({ name, source: "Set Variables" });
         }
       }
-      const legacyName = typeof config.name === "string" ? config.name.trim() : "";
-      if (legacyName) options.push({ name: legacyName, source: "Set Variables" });
+      const singleName = typeof config.name === "string" ? config.name.trim() : "";
+      if (singleName) options.push({ name: singleName, source: "Set Variables" });
       for (const name of variableNamesFromSerializedConfig(node.config)) {
         options.push({ name, source: "Set Variables" });
       }

@@ -30,7 +30,8 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.profile_name).toBe("bi_workflow-1");
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
     expect(settings.browser_launch.humanize).toBe(true);
-    expect(settings.browser_launch.behavior_fidelity).toBe("balanced");
+    expect(settings.browser_launch.human_preset).toBe("default");
+    expect(settings.browser_launch).not.toHaveProperty("behavior_fidelity");
     expect(settings.browser_launch.proxy_provider).toBeNull();
     expect(settings.browser_launch.test_account_binding).toBeNull();
     expect(settings.browser_launch.fingerprint_platform).toBeNull();
@@ -40,6 +41,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.viewport_height).toBe(947);
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
+    expect(settings.graph_defaults.default_edge_delay).toBeNull();
     expect(settings.environment.initial_variables).toEqual([]);
     expect(settings).not.toHaveProperty("owned_test_gates");
     expect(settings.migration_notes).toEqual([]);
@@ -53,11 +55,19 @@ describe("workflow settings model", () => {
   test("defines sidebar sections and decision-guide help for each section", () => {
     const visibleSectionIds = [
       "general",
+      "graph_defaults",
       "run_policy",
       "browser_launch",
       "environment",
     ];
     expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
+    expect(workflowSettingsSections.map((section) => section.label)).toEqual([
+      "General",
+      "Graph",
+      "Run Policy",
+      "Browser Launch",
+      "Environment",
+    ]);
     expect(Object.keys(workflowSettingsHelp).sort()).toEqual([...visibleSectionIds].sort());
 
     for (const section of workflowSettingsSections) {
@@ -87,7 +97,6 @@ describe("workflow settings model", () => {
       "Default action timeout",
       "Default retry attempts",
       "Default retry interval",
-      "Wait between nodes",
       "Device profile",
       "User agent",
       "Mobile viewport",
@@ -112,7 +121,6 @@ describe("workflow settings model", () => {
     expect(workflowSettingsHelp.browser_launch.en.fieldGuide.map((field) => field.name)).toEqual([
       "Reuse login session",
       "Identity display name",
-      "Profile directory",
       "Fingerprint seed",
       "Enable Run from selected",
       "Use proxy",
@@ -126,9 +134,14 @@ describe("workflow settings model", () => {
       "Viewport",
       "Advanced fingerprint overrides",
       "Humanize browser input",
-      "Behavior fidelity",
       "Fingerprint preflight",
       "Headless browser",
+    ]);
+    expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Settings Help");
+    expect(workflowSettingsHelp.graph_defaults.en.fieldGuide.map((field) => field.name)).toEqual([
+      "New link wait",
+      "Duration ms",
+      "Minimum/maximum wait ms",
     ]);
     expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
     expect(helpText).not.toContain("Owned Test Gates");

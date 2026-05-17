@@ -30,6 +30,70 @@ afterEach(async () => {
 });
 
 describe("TypeScript graph compiler parity", () => {
+  test("compiles edge delays as synthetic wait steps before the target node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: clickAction("//first") }),
+        graphNode("second", "action", { config: clickAction("//second") }),
+      ],
+      [
+        edge("start", "out", "first", "in", "edge-start-first"),
+        {
+          ...edge("first", "out", "second", "in", "edge-first-second"),
+          delay: { type: "random" as const, min_ms: 500, max_ms: 1200 },
+        },
+      ],
+    );
+
+    expect(compileWorkflowRunPlan(graph, workflowSettings()).steps.map((step) => ({
+      node_id: step.node_id,
+      label: step.label,
+      config: step.config,
+    }))).toEqual([
+      {
+        node_id: "first",
+        label: "First",
+        config: clickAction("//first"),
+      },
+      {
+        node_id: "__edge_wait:edge-first-second",
+        label: "Wait before Second",
+        config: { type: "random_wait", config: { min_ms: 500, max_ms: 1200 } },
+      },
+      {
+        node_id: "second",
+        label: "Second",
+        config: clickAction("//second"),
+      },
+    ]);
+  });
+
+  test("validates edge delay ranges", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: clickAction("//first") }),
+      ],
+      [
+        {
+          ...edge("start", "out", "first", "in", "edge-start-first"),
+          delay: { type: "random" as const, min_ms: 1200, max_ms: 500 },
+        },
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          edge_id: "edge-start-first",
+          message: "Edge wait range is invalid",
+        }),
+      ]),
+    );
+  });
+
   test("validates structural graph issues and loop-control context", async () => {
     const { handlers } = await createTestHandlers();
     const graph = graphOf(
@@ -177,22 +241,24 @@ describe("TypeScript graph compiler parity", () => {
     ]);
   });
 
-  test("compiles a run plan from a selected main-path node", () => {
+  test("compiles a run plan from a selected main-path node through the end", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
         graphNode("first", "action", { config: waitAction(100) }),
         graphNode("second", "action", { config: clickAction("//continue") }),
+        graphNode("third", "action", { config: waitAction(200) }),
       ],
       [
         edge("start", "out", "first", "in"),
         edge("first", "out", "second", "in"),
+        edge("second", "out", "third", "in"),
       ],
     );
 
     const plan = compileWorkflowGraphFromNode(graph, "second");
 
-    expect(plan.steps.map((step) => step.node_id)).toEqual(["second"]);
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["second", "third"]);
   });
 
   test("rejects selected nodes inside nested branch bodies", () => {
@@ -215,32 +281,21 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("blocks launch-time browser identity actions in workflow graphs", async () => {
-    const { handlers } = await createTestHandlers();
+  test("rejects Merge as a run-from-selected start", () => {
     const graph = graphOf(
       [
         graphNode("start", "start"),
-        graphNode("proxy", "action", {
-          config: { type: "use_proxy", config: { server: "http://proxy.test:8080" } },
-        }),
+        graphNode("merge", "merge"),
+        graphNode("after", "action", { config: waitAction(100) }),
       ],
-      [edge("start", "out", "proxy", "in")],
+      [
+        edge("start", "out", "merge", "in"),
+        edge("merge", "out", "after", "in"),
+      ],
     );
 
-    const issues = handlers.validateWorkflowGraph(graph);
-
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          node_id: "proxy",
-          level: "error",
-          message:
-            "Node Proxy uses a launch-time browser identity setting. Configure it in Workflow Settings before launch.",
-        }),
-      ]),
-    );
-    expect(() => handlers.compileWorkflowGraph(graph)).toThrow(
-      "Node Proxy uses a launch-time browser identity setting",
+    expect(() => compileWorkflowGraphFromNode(graph, "merge")).toThrow(
+      "Run from selected requires an executable graph node",
     );
   });
 
@@ -386,6 +441,192 @@ describe("TypeScript graph compiler parity", () => {
     ]);
   });
 
+  test("allows branch paths to converge through Merge and compiles Merge as a no-op step", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("true-step", "action", { config: waitAction(100) }),
+        graphNode("false-step", "action", { config: waitAction(200) }),
+        graphNode("merge", "merge"),
+        graphNode("after-merge", "action", { config: clickAction("//after") }),
+      ],
+      [
+        edge("start", "out", "if-node", "in"),
+        edge("if-node", "true", "true-step", "in"),
+        edge("if-node", "false", "false-step", "in"),
+        edge("true-step", "out", "merge", "in"),
+        edge("false-step", "out", "merge", "in"),
+        edge("merge", "out", "after-merge", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph).filter((issue) => issue.level === "error")).toEqual([]);
+    expect(handlers.compileWorkflowGraph(graph).steps[0]).toMatchObject({
+      node_id: "if-node",
+      config: {
+        type: "if_condition",
+        config: {
+          then_steps: [
+            expect.objectContaining({ type: "wait", graph_node_id: "true-step" }),
+            expect.objectContaining({ type: "graph_noop", graph_node_id: "merge" }),
+            expect.objectContaining({ type: "click", graph_node_id: "after-merge" }),
+          ],
+          else_steps: [
+            expect.objectContaining({ type: "wait", graph_node_id: "false-step" }),
+            expect.objectContaining({ type: "graph_noop", graph_node_id: "merge" }),
+            expect.objectContaining({ type: "click", graph_node_id: "after-merge" }),
+          ],
+        },
+      },
+    });
+  });
+
+  test("keeps the one incoming edge rule for non-Merge nodes", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("if-node", "if", { config: { condition: outputEqualsCondition() } }),
+        graphNode("left", "action", { config: waitAction(100) }),
+        graphNode("right", "action", { config: waitAction(200) }),
+        graphNode("shared", "action", { config: clickAction("//shared") }),
+      ],
+      [
+        edge("start", "out", "if-node", "in"),
+        edge("if-node", "true", "left", "in"),
+        edge("if-node", "false", "right", "in"),
+        edge("left", "out", "shared", "in"),
+        edge("right", "out", "shared", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph)).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        node_id: "shared",
+        message: "Only one edge can enter an input port",
+      }),
+    );
+  });
+
+  test("compiles Router cases with stable case ids and done continuation", async () => {
+    const { handlers } = await createTestHandlers();
+    const firstCondition = { kind: "output_equals", name: "state", value: "expired" } as const;
+    const secondCondition = { kind: "output_contains", name: "state", value: "challenge" } as const;
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("router", "router", {
+          config: {
+            mode: "first_match",
+            cases: [
+              { id: "expired", label: "Expired session", condition: firstCondition },
+              { id: "challenge", label: "Challenge", condition: secondCondition },
+            ],
+            default_label: "Normal",
+          },
+          ports: [
+            inputPort("in", "In"),
+            outputPort("case_expired", "Expired session"),
+            outputPort("case_challenge", "Challenge"),
+            outputPort("default", "Normal"),
+            outputPort("done", "Done"),
+          ],
+        }),
+        graphNode("relogin", "action", { config: clickAction("//login") }),
+        graphNode("evidence", "action", { config: clickAction("//capture") }),
+        graphNode("normal", "action", { config: waitAction(10) }),
+        graphNode("continue", "action", { config: waitAction(20) }),
+      ],
+      [
+        edge("start", "out", "router", "in"),
+        edge("router", "case_expired", "relogin", "in"),
+        edge("router", "case_challenge", "evidence", "in"),
+        edge("router", "default", "normal", "in"),
+        edge("router", "done", "continue", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph).filter((issue) => issue.level === "error")).toEqual([]);
+    expect(handlers.compileWorkflowGraph(graph).steps).toEqual([
+      {
+        node_id: "router",
+        label: "Router",
+        config: {
+          type: "router_condition",
+          config: {
+            mode: "first_match",
+            cases: [
+              {
+                id: "expired",
+                label: "Expired session",
+                condition: firstCondition,
+                steps: [
+                  expect.objectContaining({ type: "click", graph_node_id: "relogin" }),
+                ],
+              },
+              {
+                id: "challenge",
+                label: "Challenge",
+                condition: secondCondition,
+                steps: [
+                  expect.objectContaining({ type: "click", graph_node_id: "evidence" }),
+                ],
+              },
+            ],
+            default_steps: [
+              expect.objectContaining({ type: "wait", graph_node_id: "normal" }),
+            ],
+          },
+        },
+      },
+      {
+        node_id: "continue",
+        label: "Continue",
+        config: waitAction(20),
+      },
+    ]);
+  });
+
+  test("rejects Router nodes with empty cases, duplicate ids, invalid conditions, and stale ports", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("router", "router", {
+          config: {
+            mode: "first_match",
+            cases: [
+              { id: "same", label: " ", condition: { kind: "output_equals", name: "", value: "" } },
+              { id: "same", label: "Duplicate", condition: outputEqualsCondition() },
+            ],
+          },
+          ports: [
+            inputPort("in", "In"),
+            outputPort("case_removed", "Removed"),
+            outputPort("default", "Default"),
+            outputPort("done", "Done"),
+          ],
+        }),
+        graphNode("removed", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "router", "in"),
+        edge("router", "case_removed", "removed", "in"),
+      ],
+    );
+
+    const messages = handlers.validateWorkflowGraph(graph).map((issue) => issue.message);
+    expect(messages).toEqual(expect.arrayContaining([
+      "Router case ids must be unique",
+      "Router case labels are required",
+      "Condition output name is required",
+      "Edge edge-router-case_removed-removed-in source port does not exist",
+    ]));
+  });
+
   test("rejects switch edges from stale case ports beyond the configured cases", async () => {
     const { handlers } = await createTestHandlers();
     const graph = graphOf(
@@ -422,7 +663,7 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
-  test("compiles environment variables without legacy owned test gate preflight", () => {
+  test("compiles environment variables without settings-driven preflight actions", () => {
     const input = inputTextAction("//input", "hello");
     const click = clickAction("//button");
     const graph = graphOf(
@@ -442,13 +683,7 @@ describe("TypeScript graph compiler parity", () => {
           initial_variables: [{ name: "user.name", value_type: "text", value: "Ada" }],
         },
       }),
-      owned_test_gates: {
-        fingerprint_preflight_enabled: true,
-        fingerprint_probe_url: "https://owned.example.test/fingerprint",
-        fingerprint_profile_id: "owned-profile",
-        fingerprint_allowed_origins: ["https://owned.example.test"],
-      },
-    } as WorkflowSettings;
+    };
 
     const plan = compileWorkflowRunPlan(graph, settings);
 
@@ -521,6 +756,33 @@ describe("TypeScript graph compiler parity", () => {
     );
   });
 
+  test("keeps upstream domain allowlist policy when compiling from a selected node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("allow", "domain_allowlist", {
+          config: { domains: ["owned.test"] },
+        }),
+        graphNode("visit", "action", {
+          config: { type: "navigate", config: { url: "https://owned.test" } },
+        }),
+        graphNode("after", "action", { config: waitAction(100) }),
+      ],
+      [
+        edge("start", "out", "allow", "in"),
+        edge("allow", "out", "visit", "in"),
+        edge("visit", "out", "after", "in"),
+      ],
+    );
+
+    const plan = compileWorkflowGraphFromNode(graph, "visit");
+
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["visit", "after"]);
+    expect(plan.domain_policy).toEqual({
+      allowed_domains: ["owned.test"],
+    });
+  });
+
   test("validates invalid configs across visible action groups", () => {
     const target = elementTarget();
     const invalidCases: Array<{
@@ -553,6 +815,22 @@ describe("TypeScript graph compiler parity", () => {
         },
         field: "value",
         message: "Option value is required",
+      },
+      {
+        config: {
+          type: "select_option",
+          config: { xpath: "//select", target, iframe_xpath: null, match_by: "index" as never, value: "1" },
+        },
+        field: "match_by",
+        message: "Match by must be label or value",
+      },
+      {
+        config: {
+          type: "click",
+          config: { xpath: "//button", target, iframe_xpath: null, wait_until: "ready" as never },
+        },
+        field: "wait_until",
+        message: "Wait until must be attached, visible, enabled, or clickable",
       },
       {
         config: {
@@ -595,7 +873,20 @@ describe("TypeScript graph compiler parity", () => {
         message: "Assertion text is required",
       },
       {
-        config: { type: "set_viewport", config: { width: 0, height: 720, mobile: false, touch: false } },
+        config: {
+          type: "assert_text",
+          config: { xpath: "//body", target, iframe_xpath: null, text: "Ready", match_mode: "regex" as never },
+        },
+        field: "match_mode",
+        message: "Match mode must be contains or equals",
+      },
+      {
+        config: { type: "assert_output", config: { name: "status", match_mode: "regex" as never, value: "Ready" } },
+        field: "match_mode",
+        message: "Match mode must be contains or equals",
+      },
+      {
+        config: { type: "set_viewport", config: { width: 0, height: 720 } },
         field: "width",
         message: "Viewport width must be greater than 0",
       },
@@ -642,6 +933,46 @@ describe("TypeScript graph compiler parity", () => {
         message: invalidCase.message,
       });
     }
+  });
+
+  test("accepts scroll target modes and rejects missing element targets", () => {
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "into_view",
+          target: elementTarget(),
+          timeout_ms: 5000,
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "until_visible",
+          xpath: "//h2[normalize-space(.)='Ready']",
+          iframe_xpath: "//iframe[@id='main']",
+          timeout_ms: 5000,
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "into_view",
+          target: null,
+          xpath: null,
+          timeout_ms: 5000,
+        },
+      }),
+    ).toEqual({
+      field: "xpath",
+      message: "Element target is required",
+    });
   });
 
   test("validates nested action configs recursively", () => {
@@ -770,15 +1101,11 @@ function inputTextAction(xpath: string, text: string): ActionConfig {
   return {
     type: "input_text",
     config: {
-      xpath,
-      target: null,
-      iframe_xpath: null,
+      target: {
+        locators: [{ kind: "xpath", value: xpath }],
+      },
       text,
       clear_before_input: true,
-      typing_mode: null,
-      delay_ms: null,
-      wait_until: null,
-      timeout_ms: null,
     },
   };
 }
@@ -850,11 +1177,16 @@ function workflowSettings(
       proxy_username: null,
       proxy_password: null,
       headless: false,
+      humanize: true,
+      human_preset: "default",
       ...overrides.browser_launch,
     },
     environment: {
       initial_variables: [],
       ...overrides.environment,
+    },
+    graph_defaults: {
+      default_edge_delay: null,
     },
     migration_notes: [],
     created_at: "1",

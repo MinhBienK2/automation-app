@@ -12,11 +12,13 @@ import type {
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
   ElementSnapshot,
+  GraphEdgeDelay,
   GraphValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
   RunState,
   RunValidationIssue,
+  ScheduleValidationIssue,
   SelectorCandidate,
   SettingsValidationIssue,
   Workflow,
@@ -30,6 +32,13 @@ import type {
   WorkflowPackageImportOptions,
   WorkflowPackagePreview,
   WorkflowPackageSettings,
+  WorkflowRunSnapshot,
+  WorkflowRunSource,
+  WorkflowSchedule,
+  WorkflowScheduleEvent,
+  WorkflowScheduleEventFilter,
+  WorkflowScheduleInput,
+  WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsSectionId,
@@ -44,9 +53,15 @@ import {
   validateWorkflowGraph as validateGraph,
 } from "./graphCompiler.js";
 import { BrowserWorkflowRunner } from "./runner.js";
+import {
+  calculateNextRunAt,
+  processDueSchedules,
+  validateScheduleInput,
+} from "./scheduler.js";
 import { sanitizePathSegment } from "./evidenceArtifacts.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./workflowGraphMigration.js";
 import { WorkflowRepository } from "./workflowRepository.js";
+import { WorkflowScheduleRepository } from "./workflowScheduleRepository.js";
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -72,8 +87,10 @@ export type WorkflowCommandHandlers = ReturnType<typeof createWorkflowCommandHan
 type RunnerCommandPort = {
   run: BrowserWorkflowRunner["run"];
   closeRetainedContext?: BrowserWorkflowRunner["closeRetainedContext"];
+  createIsolatedRunRunner?: () => RunnerCommandPort;
   hasReusableRetainedSession?: BrowserWorkflowRunner["hasReusableRetainedSession"];
   getRetainedSessionState?: BrowserWorkflowRunner["getRetainedSessionState"];
+  getRetainedSessionStates?: BrowserWorkflowRunner["getRetainedSessionStates"];
 };
 
 type CommandContext = {
@@ -87,6 +104,7 @@ const workflowSettingsSections: WorkflowSettingsSectionId[] = [
   "general",
   "run_policy",
   "browser_launch",
+  "graph_defaults",
   "environment",
 ];
 
@@ -109,10 +127,23 @@ const idleRunState: RunState = {
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
+  const scheduleRepository = new WorkflowScheduleRepository(context.database);
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
-  let currentRunState = idleRunState;
-  let currentRunAbortController: AbortController | null = null;
-  let currentRunId: string | null = null;
+  const runEntries = new Map<string, {
+    snapshot: WorkflowRunSnapshot;
+    abortController: AbortController;
+    timeoutHandle: ReturnType<typeof setTimeout> | null;
+    compiledGraph: CompiledWorkflowGraph;
+    timedOut: boolean;
+    profileName: string | null;
+  }>();
+  const sessionRunSnapshots = new Map<string, WorkflowRunSnapshot>();
+  const activeWorkflowRuns = new Map<string, string>();
+  const activeProfileRuns = new Map<string, string>();
+  let latestRunSnapshot: WorkflowRunSnapshot | null = null;
+  let currentBatchRunState: RunState | null = null;
+  let currentBatchAbortController: AbortController | null = null;
+  let currentBatchRunId: string | null = null;
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
@@ -124,8 +155,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
   function getSettings(workflowId: string): WorkflowSettings {
     const persisted = repository.getWorkflowSettings(workflowId);
-    if (persisted) return migrateWorkflowSettings(persisted, requireWorkflow(workflowId));
-    return defaultWorkflowSettings(requireWorkflow(workflowId));
+    const workflow = requireWorkflow(workflowId);
+    if (persisted) return normalizeWorkflowSettings(persisted, workflow);
+    return defaultWorkflowSettings(workflow);
   }
 
   function lastRunAtForWorkflow(workflowId: string): string | null {
@@ -141,19 +173,132 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return row?.last_run_at ?? null;
   }
 
-  function retainedProfileName() {
-    return runner.getRetainedSessionState?.()?.profile_name ?? null;
+  function retainedProfileNames() {
+    const names = new Set<string>();
+    for (const state of runner.getRetainedSessionStates?.() ?? []) {
+      if (state.available && state.profile_name) names.add(state.profile_name);
+    }
+    const singleton = runner.getRetainedSessionState?.();
+    if (singleton?.available && singleton.profile_name) names.add(singleton.profile_name);
+    return names;
+  }
+
+  function retainedSessionActiveFor(workflowId: string, profileName: string) {
+    if (runner.hasReusableRetainedSession) {
+      return runner.hasReusableRetainedSession(workflowId, profileName);
+    }
+    const states = runner.getRetainedSessionStates?.() ?? [runner.getRetainedSessionState?.()];
+    return states.some(
+      (state) =>
+        state?.available &&
+        state.workflow_id === workflowId &&
+        state.profile_name === profileName,
+    );
+  }
+
+  function createRunRunner(): RunnerCommandPort {
+    return runner.createIsolatedRunRunner?.() ?? runner;
+  }
+
+  function withRunState(snapshot: WorkflowRunSnapshot, state: RunState): WorkflowRunSnapshot {
+    return {
+      ...state,
+      run_id: snapshot.run_id,
+      workflow_id: snapshot.workflow_id,
+      workflow_name: snapshot.workflow_name,
+      source: snapshot.source,
+      started_at: snapshot.started_at,
+      state,
+    };
+  }
+
+  function createRunSnapshot(args: {
+    runId: string;
+    workflow: WorkflowSummary;
+    source: WorkflowRunSource;
+    startedAt?: string;
+    state: RunState;
+  }): WorkflowRunSnapshot {
+    return withRunState({
+      ...args.state,
+      run_id: args.runId,
+      workflow_id: args.workflow.id,
+      workflow_name: args.workflow.name,
+      source: args.source,
+      started_at: args.startedAt ?? new Date().toISOString(),
+      state: args.state,
+    }, args.state);
+  }
+
+  function rememberSnapshot(snapshot: WorkflowRunSnapshot) {
+    sessionRunSnapshots.set(snapshot.run_id, snapshot);
+    latestRunSnapshot = snapshot;
+  }
+
+  function updateSnapshot(runId: string, state: RunState) {
+    const entry = runEntries.get(runId);
+    const current = entry?.snapshot ?? sessionRunSnapshots.get(runId);
+    if (!current) return null;
+    const snapshot = withRunState(current, state);
+    if (entry) entry.snapshot = snapshot;
+    rememberSnapshot(snapshot);
+    return sessionRunSnapshots.get(runId) ?? snapshot;
+  }
+
+  function listRunSnapshots() {
+    return [...sessionRunSnapshots.values()].sort((left, right) =>
+      left.started_at.localeCompare(right.started_at),
+    );
+  }
+
+  function activeRunConflict(workflowId: string, settings: WorkflowSettings) {
+    if (currentBatchAbortController) {
+      return {
+        reason: "active_batch",
+        message: "A batch run is already active",
+        field: "run",
+      };
+    }
+    if (activeWorkflowRuns.has(workflowId)) {
+      return {
+        reason: "active_workflow",
+        message: "This workflow is already running",
+        field: "workflowId",
+      };
+    }
+    const profileName = browserProfileKey(settings);
+    if (profileName && activeProfileRuns.has(profileName)) {
+      return {
+        reason: "active_profile",
+        message: "Browser profile is already in use by another active run",
+        field: "browser_launch.profile_name",
+      };
+    }
+    return null;
+  }
+
+  function schedulerConflictReason(workflowId: string) {
+    const settings = getSettings(workflowId);
+    return activeRunConflict(workflowId, settings)?.reason ?? null;
+  }
+
+  function releaseRunLocks(workflowId: string, profileName: string | null, runId: string) {
+    if (activeWorkflowRuns.get(workflowId) === runId) {
+      activeWorkflowRuns.delete(workflowId);
+    }
+    if (profileName && activeProfileRuns.get(profileName) === runId) {
+      activeProfileRuns.delete(profileName);
+    }
   }
 
   function assertCanChangeBrowserIdentityProfile(
     workflowId: string,
     nextSettings: WorkflowSettings,
   ) {
-    const activeProfileName = retainedProfileName();
-    if (!activeProfileName) return;
     const currentSettings = getSettings(workflowId);
     const currentProfileKey = browserProfileKey(currentSettings);
-    if (currentProfileKey !== activeProfileName) return;
+    if (!currentProfileKey) return;
+    if (!retainedSessionActiveFor(workflowId, currentProfileKey)) return;
     const nextProfileKey = browserProfileKey(nextSettings);
     const changingIdentityProfile =
       nextProfileKey !== currentProfileKey ||
@@ -167,10 +312,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   function assertProfileNotActiveForWorkflow(workflowId: string) {
-    const activeProfileName = retainedProfileName();
-    if (!activeProfileName) return;
     const currentProfileKey = browserProfileKey(getSettings(workflowId));
-    if (currentProfileKey !== activeProfileName) return;
+    if (!currentProfileKey) return;
+    if (!retainedSessionActiveFor(workflowId, currentProfileKey)) return;
     throw commandError(
       "Close the retained browser session before changing or deleting its identity profile",
       "browser_launch.profile_dir",
@@ -201,7 +345,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
-    const activeSettings = stripRemovedWorkflowSettingsSections(settings);
+    const workflow = requireWorkflow(workflowId);
+    const activeSettings = normalizeWorkflowSettings(settings, workflow);
     assertCanChangeBrowserIdentityProfile(workflowId, activeSettings);
     const issues = validateSettings(activeSettings);
     const firstError = issues.find((issue) => issue.level === "error");
@@ -214,7 +359,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       );
     }
 
-    const workflow = requireWorkflow(workflowId);
     const timestamp = new Date().toISOString();
     const normalized: WorkflowSettings = {
       ...activeSettings,
@@ -227,7 +371,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         created_at: activeSettings.general.created_at ?? workflow.created_at,
       },
       browser_launch: normalizeSettingsBrowserLaunch(activeSettings.browser_launch),
-      migration_notes: activeSettings.migration_notes ?? [],
+      migration_notes: activeSettings.migration_notes,
       updated_at: timestamp,
       created_at: activeSettings.created_at ?? workflow.created_at,
     };
@@ -281,6 +425,163 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         level: issue.level,
       })),
     ];
+  }
+
+  async function startWorkflowRun(
+    workflowId: string,
+    source: WorkflowRunSource = "manual",
+  ): Promise<WorkflowRunSnapshot> {
+    const workflow = requireWorkflow(workflowId);
+    const settings = getSettings(workflowId);
+    const conflict = activeRunConflict(workflowId, settings);
+    if (conflict) {
+      throw commandError(conflict.message, conflict.field);
+    }
+    const graph = getWorkflowGraph(workflowId);
+    const runIssues = validateWorkflowRun(workflowId);
+    const firstError = runIssues.find((issue) => issue.level === "error");
+    if (firstError) {
+      throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
+    }
+    if (compileGraph(graph).steps.length === 0) {
+      throw commandError("Workflow graph has no executable steps", "graph");
+    }
+
+    const compiledGraph = compileWorkflowRunPlan(graph, settings);
+    const abortController = new AbortController();
+    const runId = beginRun(context.database, workflowId, settings, graph);
+    const profileName = browserProfileKey(settings);
+    const runningState: RunState = {
+      ...idleRunState,
+      status: "running",
+      mode: "run_workflow",
+      retained_session: runner.getRetainedSessionState?.(workflowId, profileName) ?? idleRunState.retained_session,
+    };
+    const snapshot = createRunSnapshot({
+      runId,
+      workflow,
+      source,
+      state: runningState,
+    });
+    const entry = {
+      snapshot,
+      abortController,
+      timeoutHandle: null as ReturnType<typeof setTimeout> | null,
+      compiledGraph,
+      timedOut: false,
+      profileName,
+    };
+    runEntries.set(runId, entry);
+    activeWorkflowRuns.set(workflowId, runId);
+    if (profileName) activeProfileRuns.set(profileName, runId);
+    rememberSnapshot(snapshot);
+    const runRunner = createRunRunner();
+    const timeoutMs = settings.run_policy.max_workflow_duration_ms;
+    entry.timeoutHandle = timeoutMs
+      ? setTimeout(() => {
+          entry.timedOut = true;
+          abortController.abort();
+        }, timeoutMs)
+      : null;
+    void (async () => {
+      try {
+        let terminalState = await runRunner.run({
+          runId,
+          graph: compiledGraph,
+          settings,
+          mode: "run_workflow",
+          retainedSessionWorkflowId: workflowId,
+          signal: abortController.signal,
+          onProgress(progress) {
+            const activeEntry = runEntries.get(runId);
+            if (!activeEntry) return;
+            if (abortController.signal.aborted && activeEntry.snapshot.state.status === "stopped") {
+              return;
+            }
+            updateSnapshot(runId, {
+              ...activeEntry.snapshot.state,
+              ...progress,
+              status: "running",
+              mode: "run_workflow",
+            });
+          },
+        });
+        const activeEntry = runEntries.get(runId);
+        if (activeEntry?.timedOut && terminalState.status === "stopped") {
+          terminalState = {
+            ...terminalState,
+            status: "failed",
+            error: {
+              step_id: terminalState.error?.step_id ?? null,
+              step_number: terminalState.error?.step_number ?? 0,
+              step_name: terminalState.error?.step_name ?? null,
+              action_type: terminalState.error?.action_type ?? "workflow",
+              reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
+            },
+          };
+        } else if (
+          abortController.signal.aborted &&
+          activeEntry?.snapshot.state.status === "stopped"
+        ) {
+          terminalState = {
+            ...terminalState,
+            status: "stopped",
+            error: null,
+          };
+        }
+        updateSnapshot(runId, terminalState);
+        finishRun(context.database, runId, compiledGraph, terminalState);
+      } catch (error) {
+        const currentState = runEntries.get(runId)?.snapshot.state ?? runningState;
+        const failedState: RunState = {
+          ...idleRunState,
+          status: "failed",
+          mode: "run_workflow",
+          error: {
+            step_id: currentState.current_step_id,
+            step_number: currentState.current_step_number ?? 0,
+            step_name: null,
+            action_type: "workflow",
+            reason: error instanceof Error ? error.message : String(error),
+          },
+        };
+        updateSnapshot(runId, failedState);
+        finishRun(context.database, runId, compiledGraph, failedState);
+      } finally {
+        const activeEntry = runEntries.get(runId);
+        if (activeEntry?.timeoutHandle) clearTimeout(activeEntry.timeoutHandle);
+        releaseRunLocks(workflowId, profileName, runId);
+        runEntries.delete(runId);
+      }
+    })();
+    return sessionRunSnapshots.get(runId) ?? snapshot;
+  }
+
+  function scheduleInputWithNextRun(input: WorkflowScheduleInput): WorkflowScheduleInput & {
+    next_run_at: string | null;
+  } {
+    const issues = validateScheduleInput(input);
+    const firstError = issues.find((issue) => issue.level === "error");
+    if (firstError) {
+      throw commandError(firstError.message, firstError.field);
+    }
+    if (input.enabled) {
+      const workflowIssues = validateWorkflowRun(input.workflow_id);
+      const firstWorkflowError = workflowIssues.find((issue) => issue.level === "error");
+      if (firstWorkflowError) {
+        throw commandError(
+          firstWorkflowError.message,
+          firstWorkflowError.field ?? firstWorkflowError.node_id ?? "workflow_id",
+        );
+      }
+    } else {
+      requireWorkflow(input.workflow_id);
+    }
+    return {
+      ...input,
+      name: input.name.trim(),
+      next_run_at: input.enabled ? calculateNextRunAt(input.kind, new Date()) : null,
+    };
   }
 
   return {
@@ -342,7 +643,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
-        retainedProfileName: retainedProfileName(),
+        retainedProfileNames: retainedProfileNames(),
       });
     },
 
@@ -355,7 +656,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
-        retainedProfileName: retainedProfileName(),
+        retainedProfileNames: retainedProfileNames(),
       });
     },
 
@@ -366,7 +667,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
-        retainedProfileName: retainedProfileName(),
+        retainedProfileNames: retainedProfileNames(),
       });
       const result: BrowserProfileCleanupResult = {
         deleted_profiles: [],
@@ -415,21 +716,21 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     duplicateWorkflow(workflowId: string, name: string): WorkflowDetail {
       requireWorkflow(workflowId);
-      const created = createWorkflow(name);
-      const graph = repository.getWorkflowGraph(workflowId);
-      if (graph) repository.saveWorkflowGraph(created.id, graph);
-      const settings = repository.getWorkflowSettings(workflowId);
-      if (settings) {
-        saveSettings(created.id, {
-          ...structuredClone(settings),
-          workflow_id: created.id,
-          general: {
-            ...settings.general,
-            name: created.name,
-          },
-        });
+      context.database.exec("BEGIN IMMEDIATE");
+      try {
+        const created = createWorkflow(name);
+        const graph = repository.getWorkflowGraph(workflowId);
+        if (graph) repository.saveWorkflowGraph(created.id, graph);
+        const settings = repository.getWorkflowSettings(workflowId);
+        if (settings) {
+          saveSettings(created.id, duplicateWorkflowSettings(settings, created));
+        }
+        context.database.exec("COMMIT");
+        return { workflow: created, steps: [] };
+      } catch (error) {
+        context.database.exec("ROLLBACK");
+        throw error;
       }
-      return { workflow: created, steps: [] };
     },
 
     getWorkflowGraph(workflowId: string): WorkflowGraph {
@@ -449,118 +750,17 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return compileGraph(migrateWorkflowGraph(graph));
     },
 
-    async runWorkflow(workflowId: string): Promise<RunState> {
-      requireWorkflow(workflowId);
-      if (currentRunAbortController) {
-        throw commandError("A workflow run is already active", "run");
-      }
-      const graph = getWorkflowGraph(workflowId);
-      const runIssues = validateWorkflowRun(workflowId);
-      const firstError = runIssues.find((issue) => issue.level === "error");
-      if (firstError) {
-        throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
-      }
-      if (compileGraph(graph).steps.length === 0) {
-        throw commandError("Workflow graph has no executable steps", "graph");
-      }
-
-      const settings = getSettings(workflowId);
-      const compiledGraph = compileWorkflowRunPlan(graph, settings);
-      currentRunAbortController = new AbortController();
-      currentRunId = beginRun(context.database, workflowId, settings, graph);
-      currentRunState = {
-        ...idleRunState,
-        status: "running",
-        mode: "run_workflow",
-      };
-      let timedOut = false;
-      const abortController = currentRunAbortController;
-      const runId = currentRunId;
-      const timeoutMs = settings.run_policy.max_workflow_duration_ms;
-      const timeoutHandle = timeoutMs
-        ? setTimeout(() => {
-            timedOut = true;
-            abortController.abort();
-          }, timeoutMs)
-        : null;
-      void (async () => {
-        try {
-          let terminalState = await runner.run({
-            runId,
-            graph: compiledGraph,
-            settings,
-            mode: "run_workflow",
-            retainedSessionWorkflowId: workflowId,
-            signal: abortController.signal,
-            onProgress(progress) {
-              if (abortController.signal.aborted && currentRunState.status === "stopped") {
-                return;
-              }
-              currentRunState = {
-                ...currentRunState,
-                ...progress,
-                status: "running",
-                mode: "run_workflow",
-              };
-            },
-          });
-          if (timedOut && terminalState.status === "stopped") {
-            terminalState = {
-              ...terminalState,
-              status: "failed",
-              error: {
-                step_id: terminalState.error?.step_id ?? null,
-                step_number: terminalState.error?.step_number ?? 0,
-                step_name: terminalState.error?.step_name ?? null,
-                action_type: terminalState.error?.action_type ?? "workflow",
-                reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
-              },
-            };
-          } else if (
-            abortController.signal.aborted &&
-            currentRunState.status === "stopped"
-          ) {
-            terminalState = {
-              ...terminalState,
-              status: "stopped",
-              error: null,
-            };
-          }
-          currentRunState = terminalState;
-          finishRun(context.database, runId, compiledGraph, currentRunState);
-        } catch (error) {
-          currentRunState = {
-            ...idleRunState,
-            status: "failed",
-            mode: "run_workflow",
-            error: {
-              step_id: currentRunState.current_step_id,
-              step_number: currentRunState.current_step_number ?? 0,
-              step_name: null,
-              action_type: "workflow",
-              reason: error instanceof Error ? error.message : String(error),
-            },
-          };
-          finishRun(context.database, runId, compiledGraph, currentRunState);
-        } finally {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          if (currentRunAbortController === abortController) {
-            currentRunAbortController = null;
-          }
-          if (currentRunId === runId) {
-            currentRunId = null;
-          }
-        }
-      })();
-      return currentRunState;
+    async runWorkflow(workflowId: string): Promise<WorkflowRunSnapshot> {
+      return startWorkflowRun(workflowId, "manual");
     },
 
-    async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState> {
-      requireWorkflow(workflowId);
-      if (currentRunAbortController) {
-        throw commandError("A workflow run is already active", "run");
-      }
+    async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<WorkflowRunSnapshot> {
+      const workflow = requireWorkflow(workflowId);
       const settings = getSettings(workflowId);
+      const conflict = activeRunConflict(workflowId, settings);
+      if (conflict) {
+        throw commandError(conflict.message, conflict.field);
+      }
       const profileKey = browserProfileKey(settings);
       if (settings.browser_launch.session_mode !== "persistent_profile" || !profileKey) {
         throw commandError(
@@ -581,15 +781,18 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         );
       }
       if (!runner.hasReusableRetainedSession?.(workflowId, profileKey)) {
-        currentRunState = {
-          ...currentRunState,
-          retained_session: runner.getRetainedSessionState?.() ?? {
+        const retained_session = runner.getRetainedSessionState?.(workflowId, profileKey) ?? {
             available: false,
             workflow_id: null,
             profile_name: null,
             reason: "No retained browser session",
-          },
-        };
+          };
+        if (latestRunSnapshot) {
+          updateSnapshot(latestRunSnapshot.run_id, {
+            ...latestRunSnapshot.state,
+            retained_session,
+          });
+        }
         throw commandError(
           "No reusable browser session is available. Run the workflow again to create one.",
           "run",
@@ -602,28 +805,44 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         throw commandError("Selected graph node has no executable steps", "startNodeId");
       }
 
-      currentRunAbortController = new AbortController();
-      currentRunId = beginRun(context.database, workflowId, settings, graph);
-      currentRunState = {
+      const abortController = new AbortController();
+      const runId = beginRun(context.database, workflowId, settings, graph);
+      const runningState: RunState = {
         ...idleRunState,
         status: "running",
         mode: "run_workflow",
         target_step_id: startNodeId,
-        retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
+        retained_session: runner.getRetainedSessionState?.(workflowId, profileKey) ?? idleRunState.retained_session,
       };
-      let timedOut = false;
-      const abortController = currentRunAbortController;
-      const runId = currentRunId;
+      const snapshot = createRunSnapshot({
+        runId,
+        workflow,
+        source: "manual",
+        state: runningState,
+      });
+      const entry = {
+        snapshot,
+        abortController,
+        timeoutHandle: null as ReturnType<typeof setTimeout> | null,
+        compiledGraph,
+        timedOut: false,
+        profileName: profileKey,
+      };
+      runEntries.set(runId, entry);
+      activeWorkflowRuns.set(workflowId, runId);
+      activeProfileRuns.set(profileKey, runId);
+      rememberSnapshot(snapshot);
+      const runRunner = createRunRunner();
       const timeoutMs = settings.run_policy.max_workflow_duration_ms;
-      const timeoutHandle = timeoutMs
+      entry.timeoutHandle = timeoutMs
         ? setTimeout(() => {
-            timedOut = true;
+            entry.timedOut = true;
             abortController.abort();
           }, timeoutMs)
         : null;
       void (async () => {
         try {
-          let terminalState = await runner.run({
+          let terminalState = await runRunner.run({
             runId,
             graph: compiledGraph,
             settings,
@@ -633,19 +852,22 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             retainedSessionWorkflowId: workflowId,
             signal: abortController.signal,
             onProgress(progress) {
-              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+              const activeEntry = runEntries.get(runId);
+              if (!activeEntry) return;
+              if (abortController.signal.aborted && activeEntry.snapshot.state.status === "stopped") {
                 return;
               }
-              currentRunState = {
-                ...currentRunState,
+              updateSnapshot(runId, {
+                ...activeEntry.snapshot.state,
                 ...progress,
                 status: "running",
                 mode: "run_workflow",
                 target_step_id: startNodeId,
-              };
+              });
             },
           });
-          if (timedOut && terminalState.status === "stopped") {
+          const activeEntry = runEntries.get(runId);
+          if (activeEntry?.timedOut && terminalState.status === "stopped") {
             terminalState = {
               ...terminalState,
               status: "failed",
@@ -659,7 +881,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             };
           } else if (
             abortController.signal.aborted &&
-            currentRunState.status === "stopped"
+            activeEntry?.snapshot.state.status === "stopped"
           ) {
             terminalState = {
               ...terminalState,
@@ -667,62 +889,227 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
               error: null,
             };
           }
-          currentRunState = terminalState;
-          finishRun(context.database, runId, compiledGraph, currentRunState);
+          updateSnapshot(runId, terminalState);
+          finishRun(context.database, runId, compiledGraph, terminalState);
         } catch (error) {
-          currentRunState = {
+          const currentState = runEntries.get(runId)?.snapshot.state ?? runningState;
+          const failedState: RunState = {
             ...idleRunState,
             status: "failed",
             mode: "run_workflow",
             target_step_id: startNodeId,
-            retained_session: runner.getRetainedSessionState?.() ?? null,
+            retained_session: runner.getRetainedSessionState?.(workflowId, profileKey) ?? null,
             error: {
-              step_id: currentRunState.current_step_id,
-              step_number: currentRunState.current_step_number ?? 0,
+              step_id: currentState.current_step_id,
+              step_number: currentState.current_step_number ?? 0,
               step_name: null,
               action_type: "workflow",
               reason: error instanceof Error ? error.message : String(error),
             },
           };
-          finishRun(context.database, runId, compiledGraph, currentRunState);
+          updateSnapshot(runId, failedState);
+          finishRun(context.database, runId, compiledGraph, failedState);
         } finally {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          if (currentRunAbortController === abortController) {
-            currentRunAbortController = null;
-          }
-          if (currentRunId === runId) {
-            currentRunId = null;
-          }
+          const activeEntry = runEntries.get(runId);
+          if (activeEntry?.timeoutHandle) clearTimeout(activeEntry.timeoutHandle);
+          releaseRunLocks(workflowId, profileKey, runId);
+          runEntries.delete(runId);
         }
       })();
-      return currentRunState;
+      return sessionRunSnapshots.get(runId) ?? snapshot;
     },
 
-    async stopRun() {
-      currentRunAbortController?.abort();
-      if (!currentRunAbortController) {
-        await runner.closeRetainedContext?.();
+    async stopRun(runId?: string | null): Promise<WorkflowRunSnapshot> {
+      if (!runId && runEntries.size > 1) {
+        throw commandError("Specify a run id to stop when multiple runs are active", "runId");
       }
-      currentRunState = {
-        ...idleRunState,
-        status: "stopped",
-        mode: "run_workflow",
+      const targetRunId = runId ?? [...runEntries.keys()][0] ?? null;
+      if (targetRunId) {
+        const entry = runEntries.get(targetRunId);
+        if (!entry) {
+          throw commandError("Run not found", "runId");
+        }
+        entry.abortController.abort();
+        const stoppedState: RunState = {
+          ...entry.snapshot.state,
+          status: "stopped",
+          mode: "run_workflow",
+          error: null,
+        };
+        return updateSnapshot(targetRunId, stoppedState) ?? entry.snapshot;
+      }
+
+      if (currentBatchAbortController) {
+        currentBatchAbortController.abort();
+        currentBatchRunState = {
+          ...(currentBatchRunState ?? idleRunState),
+          status: "stopped",
+          mode: "run_workflow",
+          error: null,
+        };
+        const workflow = repository.listWorkflows()[0] ?? {
+          id: "batch",
+          name: "Batch run",
+          step_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return createRunSnapshot({
+          runId: currentBatchRunId ?? "batch",
+          workflow,
+          source: "manual",
+          state: currentBatchRunState,
+        });
+      }
+
+      await runner.closeRetainedContext?.();
+      const workflow = repository.listWorkflows()[0] ?? {
+        id: "workflow",
+        name: "Workflow",
+        step_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
-      return currentRunState;
+      return createRunSnapshot({
+        runId: latestRunSnapshot?.run_id ?? "stopped",
+        workflow,
+        source: "manual",
+        state: {
+          ...idleRunState,
+          status: "stopped",
+          mode: "run_workflow",
+        },
+      });
     },
 
     getRunState() {
-      if (currentRunState.status !== "running") {
-        currentRunState = {
-          ...currentRunState,
-          retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
+      if (currentBatchAbortController && currentBatchRunState) {
+        return currentBatchRunState;
+      }
+      const activeSnapshots = [...runEntries.values()].map((entry) => entry.snapshot);
+      if (activeSnapshots.length === 1) {
+        return activeSnapshots[0].state;
+      }
+      if (activeSnapshots.length > 1) {
+        return {
+          ...idleRunState,
+          status: "running",
+          mode: "run_workflow",
         };
       }
-      return currentRunState;
+      if (latestRunSnapshot) {
+        return {
+          ...latestRunSnapshot.state,
+          retained_session: runner.getRetainedSessionState?.(
+            latestRunSnapshot.workflow_id,
+            runEntries.get(latestRunSnapshot.run_id)?.profileName ?? null,
+          ) ?? latestRunSnapshot.state.retained_session,
+        };
+      }
+      if (currentBatchRunState) {
+        return currentBatchRunState;
+      }
+      return {
+        ...idleRunState,
+        retained_session: runner.getRetainedSessionState?.() ?? idleRunState.retained_session,
+      };
     },
 
-    validateSchedule(schedule: OrchestrationSchedule) {
+    listRunStates(): WorkflowRunSnapshot[] {
+      return listRunSnapshots();
+    },
+
+    listSchedules(): WorkflowSchedule[] {
+      return scheduleRepository.listSchedules();
+    },
+
+    getSchedule(scheduleId: string): WorkflowSchedule {
+      const schedule = scheduleRepository.getSchedule(scheduleId);
+      if (!schedule) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
       return schedule;
+    },
+
+    createSchedule(input: WorkflowScheduleInput): WorkflowSchedule {
+      return scheduleRepository.createSchedule(scheduleInputWithNextRun(input));
+    },
+
+    updateSchedule(
+      scheduleId: string,
+      patch: WorkflowScheduleUpdate,
+    ): WorkflowSchedule {
+      const current = scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return scheduleRepository.updateSchedule(
+        scheduleId,
+        scheduleInputWithNextRun({
+          workflow_id: patch.workflow_id ?? current.workflow_id,
+          name: patch.name ?? current.name,
+          enabled: patch.enabled ?? current.enabled,
+          kind: patch.kind ?? current.kind,
+        }),
+      );
+    },
+
+    deleteSchedule(scheduleId: string) {
+      if (!scheduleRepository.getSchedule(scheduleId)) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      scheduleRepository.deleteSchedule(scheduleId);
+    },
+
+    enableSchedule(scheduleId: string): WorkflowSchedule {
+      const current = scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return scheduleRepository.updateSchedule(
+        scheduleId,
+        scheduleInputWithNextRun({
+          workflow_id: current.workflow_id,
+          name: current.name,
+          enabled: true,
+          kind: current.kind,
+        }),
+      );
+    },
+
+    disableSchedule(scheduleId: string): WorkflowSchedule {
+      const current = scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return scheduleRepository.updateSchedule(scheduleId, {
+        workflow_id: current.workflow_id,
+        name: current.name,
+        enabled: false,
+        kind: current.kind,
+        next_run_at: null,
+      });
+    },
+
+    listScheduleEvents(filter: WorkflowScheduleEventFilter = {}): WorkflowScheduleEvent[] {
+      return scheduleRepository.listEvents(filter);
+    },
+
+    validateSchedule(schedule: OrchestrationSchedule): ScheduleValidationIssue[] {
+      return validateScheduleInput(schedule);
+    },
+
+    async runSchedulerTick(now = new Date()) {
+      await processDueSchedules({
+        now,
+        repository: scheduleRepository,
+        getRunConflict: schedulerConflictReason,
+        validateWorkflow: validateWorkflowRun,
+        startWorkflow: async (workflowId) => {
+          const result = await startWorkflowRun(workflowId, "schedule");
+          return { runId: result.run_id };
+        },
+      });
     },
 
     exportWorkflow(workflowId: string): WorkflowExport {
@@ -852,7 +1239,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       request: BatchRunRequest,
     ) {
       requireWorkflow(workflowId);
-      if (currentRunAbortController) {
+      if (currentBatchAbortController || runEntries.size > 0) {
         throw commandError("A workflow run is already active", "run");
       }
       const settings = getSettings(workflowId);
@@ -883,9 +1270,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const results = [];
       let succeeded = 0;
       let failed = 0;
-      currentRunAbortController = new AbortController();
-      const abortController = currentRunAbortController;
-      currentRunState = {
+      currentBatchAbortController = new AbortController();
+      const abortController = currentBatchAbortController;
+      currentBatchRunState = {
         ...idleRunState,
         status: "running",
         mode: "run_workflow",
@@ -899,11 +1286,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       try {
         for (const [rowIndex, row] of request.rows.entries()) {
           if (abortController.signal.aborted) break;
-          currentRunState = {
-            ...currentRunState,
+          currentBatchRunState = {
+            ...(currentBatchRunState ?? idleRunState),
             status: "running",
             outputs: {
-              ...(currentRunState.outputs ?? {}),
+              ...(currentBatchRunState?.outputs ?? {}),
               batch_total: request.rows.length,
               batch_current_row_index: rowIndex,
               batch_succeeded: succeeded,
@@ -912,7 +1299,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           };
           const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
           const runId = beginRun(context.database, workflowId, batchSettings, graph);
-          currentRunId = runId;
+          currentBatchRunId = runId;
           let result = await runner.run({
             runId,
             graph: rowGraph,
@@ -920,16 +1307,16 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             mode: "run_workflow",
             signal: abortController.signal,
             onProgress(progress) {
-              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+              if (abortController.signal.aborted && currentBatchRunState?.status === "stopped") {
                 return;
               }
-              currentRunState = {
-                ...currentRunState,
+              currentBatchRunState = {
+                ...(currentBatchRunState ?? idleRunState),
                 ...progress,
                 status: "running",
                 mode: "run_workflow",
                 outputs: {
-                  ...(currentRunState.outputs ?? {}),
+                  ...(currentBatchRunState?.outputs ?? {}),
                   batch_total: request.rows.length,
                   batch_current_row_index: rowIndex,
                   batch_succeeded: succeeded,
@@ -938,7 +1325,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
               };
             },
           });
-          if (abortController.signal.aborted && currentRunState.status === "stopped") {
+          if (abortController.signal.aborted && currentBatchRunState?.status === "stopped") {
             result = {
               ...result,
               status: "stopped",
@@ -946,7 +1333,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             };
           }
           finishRun(context.database, runId, rowGraph, result);
-          currentRunId = null;
+          currentBatchRunId = null;
           if (result.status === "success") {
             succeeded += 1;
           } else if (result.status === "failed") {
@@ -957,13 +1344,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             status: result.status,
             error: result.error?.reason ?? null,
           });
-          currentRunState = {
-            ...currentRunState,
+          currentBatchRunState = {
+            ...(currentBatchRunState ?? idleRunState),
             status: result.status === "stopped" ? "stopped" : "running",
             current_step_id: null,
             current_step_number: null,
             outputs: {
-              ...(currentRunState.outputs ?? {}),
+              ...(currentBatchRunState?.outputs ?? {}),
               batch_total: request.rows.length,
               batch_current_row_index: rowIndex,
               batch_succeeded: succeeded,
@@ -976,25 +1363,44 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             break;
           }
         }
-        if (currentRunState.status !== "stopped") {
-          currentRunState = {
-            ...currentRunState,
+        if (currentBatchRunState?.status !== "stopped") {
+          currentBatchRunState = {
+            ...(currentBatchRunState ?? idleRunState),
             status: failed > 0 ? "failed" : "success",
             current_step_id: null,
             current_step_number: null,
             outputs: {
-              ...(currentRunState.outputs ?? {}),
+              ...(currentBatchRunState?.outputs ?? {}),
               batch_total: request.rows.length,
               batch_succeeded: succeeded,
               batch_failed: failed,
             },
           };
         }
+      } catch (error) {
+        currentBatchRunState = {
+          ...idleRunState,
+          status: "failed",
+          mode: "run_workflow",
+          outputs: {
+            batch_total: request.rows.length,
+            batch_succeeded: succeeded,
+            batch_failed: failed,
+          },
+          error: {
+            step_id: currentBatchRunState?.current_step_id,
+            step_number: currentBatchRunState?.current_step_number ?? 0,
+            step_name: null,
+            action_type: "workflow",
+            reason: error instanceof Error ? error.message : String(error),
+          },
+        };
+        throw error;
       } finally {
-        if (currentRunAbortController === abortController) {
-          currentRunAbortController = null;
+        if (currentBatchAbortController === abortController) {
+          currentBatchAbortController = null;
         }
-        currentRunId = null;
+        currentBatchRunId = null;
       }
       return {
         total: request.rows.length,
@@ -1006,9 +1412,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     suggestSelectors(snapshot: ElementSnapshot): SelectorCandidate[] {
       const selector = snapshot.test_id
-        ? `[data-testid="${snapshot.test_id}"]`
+        ? cssAttributeSelector("data-testid", snapshot.test_id)
         : snapshot.id
-          ? `#${snapshot.id}`
+          ? cssAttributeSelector("id", snapshot.id)
           : snapshot.tag;
       return [
         {
@@ -1021,23 +1427,30 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     normalizeRecordedEvents(events: RecordedEvent[]): ActionConfig[] {
-      return events.map((event) =>
-        event.type === "click"
-          ? {
-              type: "click",
-              config: {
-                target: elementTargetFromXpath(event.xpath),
-              },
-            }
-          : {
-              type: "input_text",
-              config: {
-                target: elementTargetFromXpath(event.xpath),
-                text: event.text,
-                clear_before_input: true,
-              },
+      return events.map((event) => {
+        if (event.type === "click") {
+          return {
+            type: "click",
+            config: {
+              target: elementTargetFromXpath(event.xpath),
             },
-      ) as ActionConfig[];
+          };
+        }
+        if (event.type === "input_text") {
+          return {
+            type: "input_text",
+            config: {
+              target: elementTargetFromXpath(event.xpath),
+              text: event.text,
+              clear_before_input: true,
+            },
+          };
+        }
+        throw commandError(
+          `Unsupported recorded event type: ${(event as { type?: unknown }).type}`,
+          "events.type",
+        );
+      }) as ActionConfig[];
     },
 
     dryRunValidateConfig(config: ActionConfig) {
@@ -1051,6 +1464,39 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       }
       return context.saveWorkflowPackageFile(packageValue);
     },
+  };
+}
+
+function duplicateWorkflowSettings(
+  sourceSettings: WorkflowSettings,
+  created: Workflow,
+): WorkflowSettings {
+  const copied = structuredClone(sourceSettings);
+  const freshDefaults = defaultWorkflowSettings(created, { randomizeIdentity: true });
+  const sourceBrowser = copied.browser_launch;
+  const freshBrowser = freshDefaults.browser_launch;
+  const persistent = sourceBrowser.session_mode === "persistent_profile";
+
+  return {
+    ...copied,
+    workflow_id: created.id,
+    general: {
+      ...copied.general,
+      name: created.name,
+      created_at: created.created_at,
+      updated_at: created.updated_at,
+    },
+    browser_launch: {
+      ...sourceBrowser,
+      identity_id: freshBrowser.identity_id,
+      display_name: freshBrowser.display_name,
+      profile_dir: freshBrowser.profile_dir,
+      profile_name: persistent ? freshBrowser.profile_dir : null,
+      fingerprint_seed: freshBrowser.fingerprint_seed,
+      run_from_selected_enabled: false,
+    },
+    created_at: created.created_at,
+    updated_at: created.updated_at,
   };
 }
 
@@ -1116,6 +1562,14 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       field: "geoip",
       level: "error",
       message: "GeoIP requires mmdb-lib to be installed",
+    });
+  }
+  if (settings.browser_launch.webrtc_policy === "disabled_if_supported") {
+    issues.push({
+      section: "browser_launch",
+      field: "webrtc_policy",
+      level: "error",
+      message: "Disabled WebRTC policy is not supported by the installed CloakBrowser runtime",
     });
   }
   if (settings.browser_launch.webrtc_policy === "explicit_ip" && !settings.browser_launch.webrtc_ip?.trim()) {
@@ -1251,7 +1705,35 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       });
     }
   }
+  const edgeDelayIssue = validateGraphEdgeDelay(settings.graph_defaults?.default_edge_delay);
+  if (edgeDelayIssue) {
+    issues.push({
+      section: "graph_defaults",
+      field: "default_edge_delay",
+      level: "error",
+      message: edgeDelayIssue,
+    });
+  }
   return issues;
+}
+
+function validateGraphEdgeDelay(delay: GraphEdgeDelay | null | undefined) {
+  if (!delay) return null;
+  if (delay.type === "fixed") {
+    return Number.isFinite(delay.duration_ms) && delay.duration_ms > 0
+      ? null
+      : "New link wait duration must be greater than zero";
+  }
+  if (delay.type === "random") {
+    return Number.isFinite(delay.min_ms) &&
+      Number.isFinite(delay.max_ms) &&
+      delay.min_ms > 0 &&
+      delay.max_ms > 0 &&
+      delay.max_ms >= delay.min_ms
+      ? null
+      : "New link wait range is invalid";
+  }
+  return "New link wait type is invalid";
 }
 
 function isOptionalModuleAvailable(name: string) {
@@ -1261,6 +1743,17 @@ function isOptionalModuleAvailable(name: string) {
   } catch {
     return false;
   }
+}
+
+function cssAttributeSelector(attribute: string, value: string) {
+  return `[${attribute}="${cssStringValue(value)}"]`;
+}
+
+function cssStringValue(value: string) {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\A ");
 }
 
 function originForUrl(value: string) {
@@ -1320,14 +1813,14 @@ async function buildCloakBrowserDiagnostics({
   workflows,
   settingsForWorkflow,
   lastRunAtForWorkflow,
-  retainedProfileName,
+  retainedProfileNames,
 }: {
   appPaths: AppPaths;
   database: DatabaseSync;
   workflows: WorkflowSummary[];
   settingsForWorkflow: (workflowId: string) => WorkflowSettings;
   lastRunAtForWorkflow: (workflowId: string) => string | null;
-  retainedProfileName: string | null;
+  retainedProfileNames: Set<string>;
 }): Promise<CloakBrowserDiagnostics> {
   const binary = await cloakBinaryInfo();
   const identityByProfileDir = new Map<
@@ -1370,7 +1863,7 @@ async function buildCloakBrowserDiagnostics({
     profiles: await browserProfileDiagnostics(
       appPaths.browserProfilesDir,
       identityByProfileDir,
-      retainedProfileName,
+      retainedProfileNames,
     ),
   };
 }
@@ -1488,7 +1981,7 @@ async function browserProfileDiagnostics(
       "identity_id" | "display_name" | "workflow_id" | "workflow_name" | "last_run_at"
     >
   >,
-  retainedProfileName: string | null,
+  retainedProfileNames: Set<string>,
 ): Promise<BrowserProfileDiagnostics[]> {
   let entries: Array<{ name: string; isDirectory(): boolean }>;
   try {
@@ -1512,7 +2005,7 @@ async function browserProfileDiagnostics(
       approximate_size_bytes: await directorySize(fullPath),
       last_modified_at: stat?.mtime ? stat.mtime.toISOString() : null,
       last_run_at: identity?.last_run_at ?? null,
-      active_session: retainedProfileName === profileDir,
+      active_session: retainedProfileNames.has(profileDir),
     });
   }
   return profiles.sort((left, right) => left.profile_dir.localeCompare(right.profile_dir));
@@ -1530,26 +2023,6 @@ async function directorySize(directory: string): Promise<number> {
     }
   }
   return total;
-}
-
-function stripRemovedWorkflowSettingsSections(settings: WorkflowSettings): WorkflowSettings {
-  const legacySettings = settings as WorkflowSettings & { owned_test_gates?: unknown };
-  const { owned_test_gates: removedOwnedTestGates, ...activeSettings } = legacySettings;
-  const migrationNotes = [...(activeSettings.migration_notes ?? [])];
-  if (
-    removedOwnedTestGates !== undefined &&
-    !migrationNotes.some((note) => note.path === "owned_test_gates")
-  ) {
-    migrationNotes.push({
-      path: "owned_test_gates",
-      action: "dropped",
-      message: "Dropped removed Owned Test Gates settings section.",
-    });
-  }
-  return {
-    ...activeSettings,
-    migration_notes: migrationNotes,
-  };
 }
 
 function buildPackageSettings(
@@ -1623,11 +2096,24 @@ function sanitizeUrlSearch(value: string) {
 }
 
 function validateWorkflowPackage(packageValue: WorkflowPackage) {
-  if (packageValue.kind !== "workflow_package" || packageValue.version !== 2) {
+  if (
+    !packageValue ||
+    typeof packageValue !== "object" ||
+    packageValue.kind !== "workflow_package" ||
+    packageValue.version !== 2
+  ) {
     throw commandError("Unsupported workflow package", "package");
   }
-  if (!packageValue.workflow.name.trim()) {
+  if (
+    !packageValue.workflow ||
+    typeof packageValue.workflow !== "object" ||
+    typeof packageValue.workflow.name !== "string" ||
+    !packageValue.workflow.name.trim()
+  ) {
     throw commandError("Workflow package name is required", "package.workflow.name");
+  }
+  if (!Array.isArray(packageValue.included_sections)) {
+    throw commandError("Workflow package sections are required", "package.included_sections");
   }
 }
 
@@ -1689,121 +2175,44 @@ function isCommandError(error: unknown): error is CommandError {
   );
 }
 
-function migrateWorkflowSettings(
+function normalizeWorkflowSettings(
   settings: WorkflowSettings,
   workflow: WorkflowSummary,
 ): WorkflowSettings {
-  if (settings.version === 2 && "run_policy" in settings) {
-    const activeSettings = stripRemovedWorkflowSettingsSections(settings);
-    return {
-      ...activeSettings,
-      browser_launch: normalizeSettingsBrowserLaunch(activeSettings.browser_launch),
-      migration_notes: activeSettings.migration_notes ?? [],
-    };
-  }
-
-  const legacy = settings as unknown as Record<string, any>;
   const base = defaultWorkflowSettings(workflow);
-  const notes = [...base.migration_notes];
-  const converted = (pathValue: string, message: string) => {
-    notes.push({ path: pathValue, action: "converted", message });
-  };
-  const dropped = (pathValue: string, message: string) => {
-    notes.push({ path: pathValue, action: "dropped", message });
-  };
-
-  const legacyExecution = objectRecord(legacy.execution);
-  const legacyBrowser = objectRecord(legacy.browser);
-  const legacyEnvironment = objectRecord(legacy.environment);
-  const legacyInputs = objectRecord(legacy.inputs);
-
-  const profileName = nullableText(legacyBrowser.profile_name);
-  if (profileName) converted("browser.profile_name", "Converted persistent profile into browser_launch.");
-  for (const field of ["proxy_enabled", "proxy_server", "proxy_username", "proxy_password", "headless"]) {
-    if (field in legacyBrowser) converted(`browser.${field}`, "Converted browser launch field.");
-  }
-
-  for (const field of [
-    "default_action_timeout_ms",
-    "default_retry_attempts",
-    "default_retry_interval_ms",
-    "failure_policy",
-    "interaction_fidelity",
-    "direct_dom_fallback",
-    "timing_profile",
-    "wait_between_nodes_enabled",
-    "wait_between_nodes_random",
-    "wait_between_nodes_ms",
-    "wait_between_nodes_min_ms",
-    "wait_between_nodes_max_ms",
-    "output_retention_days",
-  ]) {
-    if (field in legacyExecution) dropped(`execution.${field}`, "Dropped obsolete engine-level run setting.");
-  }
-  for (const field of ["user_agent", "viewport_width", "viewport_height", "mobile", "touch", "challenge_policy"]) {
-    if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped browser emulation or challenge setting.");
-  }
-  for (const field of [
-    "fingerprint_preflight_enabled",
-    "fingerprint_probe_url",
-    "fingerprint_profile_id",
-    "fingerprint_allowed_origins",
-    "fingerprint_proxy_label",
-    "fingerprint_proxy_region",
-  ]) {
-    if (field in legacyBrowser) dropped(`browser.${field}`, "Dropped removed fingerprint preflight setting.");
-  }
-  for (const field of [
-    "geolocation",
-    "permissions",
-    "extra_http_headers",
-    "locale",
-    "timezone",
-    "download_directory",
-    "cookies",
-    "local_storage",
-    "session_storage",
-    "session_restore_ref",
-  ]) {
-    if (field in legacyEnvironment) dropped(`environment.${field}`, "Dropped browser context seeding from Workflow Settings.");
-  }
-  if (Array.isArray(legacyInputs.initial_variables)) {
-    converted("inputs.initial_variables", "Converted initial variables into environment.");
-  }
-
   return {
-    ...base,
-    workflow_id: typeof legacy.workflow_id === "string" ? legacy.workflow_id : workflow.id,
+    workflow_id: settings.workflow_id || workflow.id,
     version: 2,
     general: {
       ...base.general,
-      ...objectRecord(legacy.general),
-      name: String(objectRecord(legacy.general).name ?? workflow.name),
+      ...objectRecord(settings.general),
+      name: String(settings.general?.name ?? workflow.name),
+      tags: Array.isArray(settings.general?.tags) ? settings.general.tags : [],
     },
     run_policy: {
       ...base.run_policy,
-      max_workflow_duration_ms: numericOrNull(legacyExecution.max_workflow_duration_ms),
-      browser_retention: legacyExecution.browser_retention === "close" ? "close" : "retain",
-      batch_concurrency_limit: numericOrNull(legacyExecution.batch_concurrency_limit) ?? 1,
-      batch_headless: Boolean(legacyExecution.batch_headless),
-      batch_stop_on_first_failed_row: Boolean(legacyExecution.batch_stop_on_first_failed_row),
+      ...objectRecord(settings.run_policy),
+      browser_retention: settings.run_policy?.browser_retention === "close" ? "close" : "retain",
+      batch_headless: Boolean(settings.run_policy?.batch_headless),
+      batch_stop_on_first_failed_row: Boolean(settings.run_policy?.batch_stop_on_first_failed_row),
     },
     browser_launch: normalizeSettingsBrowserLaunch({
       ...base.browser_launch,
-      session_mode: profileName ? "persistent_profile" : "temporary",
-      profile_name: profileName,
-      proxy_enabled: Boolean(legacyBrowser.proxy_enabled),
-      proxy_server: nullableText(legacyBrowser.proxy_server),
-      proxy_username: nullableText(legacyBrowser.proxy_username),
-      proxy_password: nullableText(legacyBrowser.proxy_password),
-      headless: Boolean(legacyBrowser.headless),
+      ...objectRecord(settings.browser_launch),
     }),
+    graph_defaults: {
+      default_edge_delay: normalizeGraphEdgeDelay(
+        objectRecord(settings.graph_defaults).default_edge_delay,
+      ),
+    },
     environment: {
-      initial_variables: Array.isArray(legacyInputs.initial_variables)
-        ? legacyInputs.initial_variables
+      initial_variables: Array.isArray(settings.environment?.initial_variables)
+        ? settings.environment.initial_variables
         : [],
     },
-    migration_notes: notes,
+    migration_notes: Array.isArray(settings.migration_notes) ? settings.migration_notes : [],
+    created_at: settings.created_at ?? base.created_at,
+    updated_at: settings.updated_at ?? base.updated_at,
   };
 }
 
@@ -1937,16 +2346,13 @@ function normalizeSettingsBrowserLaunch(
     device_memory_gb: positiveOptionalNumber(browser.device_memory_gb),
     fingerprint_fonts_dir: nullableText(browser.fingerprint_fonts_dir),
     storage_quota_mb: positiveOptionalNumber(browser.storage_quota_mb),
-    humanize: browser.humanize !== false,
-    human_preset: browser.human_preset === "careful" ? "careful" : "default",
-    behavior_fidelity: validBehaviorFidelity(browser.behavior_fidelity)
-      ? browser.behavior_fidelity
-      : "balanced",
     preflight_enabled: Boolean(browser.preflight_enabled),
     preflight_probe_url: nullableText(browser.preflight_probe_url),
     preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
       ? browser.preflight_allowed_origins.filter((origin) => typeof origin === "string" && origin.trim())
       : [],
+    humanize: browser.humanize !== false,
+    human_preset: validHumanPreset(browser.human_preset) ? browser.human_preset : "default",
     user_agent: nullableText(browser.user_agent),
     session_mode: browser.session_mode === "persistent_profile"
       ? "persistent_profile"
@@ -1960,6 +2366,22 @@ function normalizeSettingsBrowserLaunch(
     proxy_username: nullableText(browser.proxy_username),
     proxy_password: nullableText(browser.proxy_password),
   };
+}
+
+function normalizeGraphEdgeDelay(value: unknown): GraphEdgeDelay | null {
+  const delay = objectRecord(value);
+  if (delay.type === "fixed") {
+    const duration = positiveOptionalNumber(delay.duration_ms);
+    return duration == null ? null : { type: "fixed", duration_ms: duration };
+  }
+  if (delay.type === "random") {
+    const min = positiveOptionalNumber(delay.min_ms);
+    const max = positiveOptionalNumber(delay.max_ms);
+    return min == null || max == null || max < min
+      ? null
+      : { type: "random", min_ms: min, max_ms: max };
+  }
+  return null;
 }
 
 export function defaultWorkflowSettings(
@@ -1990,6 +2412,9 @@ export function defaultWorkflowSettings(
       batch_stop_on_first_failed_row: false,
     },
     browser_launch: browserLaunch,
+    graph_defaults: {
+      default_edge_delay: null,
+    },
     environment: {
       initial_variables: [],
     },
@@ -2028,12 +2453,11 @@ function createDefaultBrowserIdentity(
   | "device_memory_gb"
   | "fingerprint_fonts_dir"
   | "storage_quota_mb"
-  | "humanize"
-  | "human_preset"
-  | "behavior_fidelity"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
+  | "humanize"
+  | "human_preset"
   | "user_agent"
 > {
   const identityId = options.randomizeIdentity
@@ -2066,13 +2490,12 @@ function createDefaultBrowserIdentity(
     device_memory_gb: null,
     fingerprint_fonts_dir: null,
     storage_quota_mb: null,
-    humanize: true,
-    human_preset: "default",
-    behavior_fidelity: "balanced",
     preflight_enabled: false,
     preflight_probe_url: null,
     preflight_allowed_origins: [],
     user_agent: null,
+    humanize: true,
+    human_preset: "default",
   };
 }
 
@@ -2118,25 +2541,18 @@ function validWebRtcPolicy(value: unknown): value is WorkflowSettingsBrowserLaun
   return (
     value === "default" ||
     value === "auto_proxy_exit_ip" ||
-    value === "explicit_ip" ||
-    value === "disabled_if_supported"
+    value === "explicit_ip"
   );
+}
+
+function validHumanPreset(value: unknown): value is WorkflowSettingsBrowserLaunch["human_preset"] {
+  return value === "default" || value === "careful";
 }
 
 function validFingerprintPlatform(
   value: unknown,
 ): value is NonNullable<WorkflowSettingsBrowserLaunch["fingerprint_platform"]> {
   return value === "windows" || value === "macos" || value === "linux";
-}
-
-function validBehaviorFidelity(
-  value: unknown,
-): value is WorkflowSettingsBrowserLaunch["behavior_fidelity"] {
-  return (
-    value === "balanced" ||
-    value === "strict_humanized" ||
-    value === "deterministic_internal"
-  );
 }
 
 function browserProfileKey(settings: WorkflowSettings) {
@@ -2173,12 +2589,11 @@ function browserIdentityPreferences(
   | "device_memory_gb"
   | "fingerprint_fonts_dir"
   | "storage_quota_mb"
-  | "humanize"
-  | "human_preset"
-  | "behavior_fidelity"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
+  | "humanize"
+  | "human_preset"
 > {
   return {
     identity_id: browser.identity_id,
@@ -2206,12 +2621,11 @@ function browserIdentityPreferences(
     device_memory_gb: browser.device_memory_gb,
     fingerprint_fonts_dir: browser.fingerprint_fonts_dir,
     storage_quota_mb: browser.storage_quota_mb,
-    humanize: browser.humanize,
-    human_preset: browser.human_preset,
-    behavior_fidelity: browser.behavior_fidelity,
     preflight_enabled: browser.preflight_enabled,
     preflight_probe_url: browser.preflight_probe_url,
     preflight_allowed_origins: browser.preflight_allowed_origins,
+    humanize: browser.humanize,
+    human_preset: browser.human_preset,
   };
 }
 
@@ -2244,61 +2658,68 @@ function beginRun(
   return runId;
 }
 
-function finishRun(
+export function finishRun(
   database: DatabaseSync,
   runId: string | null,
   graph: CompiledWorkflowGraph,
   state: RunState,
 ) {
   if (!runId) return;
-  database
-    .prepare(
-      `UPDATE runs
-       SET status = ?,
-           finished_at = ?,
-           outputs_json = ?,
-           error_json = ?
-       WHERE id = ?`,
-    )
-    .run(
-      state.status,
-      new Date().toISOString(),
-      JSON.stringify(state.outputs ?? {}),
-      state.error ? JSON.stringify(state.error) : null,
-      runId,
-    );
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database
+      .prepare(
+        `UPDATE runs
+         SET status = ?,
+             finished_at = ?,
+             outputs_json = ?,
+             error_json = ?
+         WHERE id = ?`,
+      )
+      .run(
+        state.status,
+        new Date().toISOString(),
+        JSON.stringify(state.outputs ?? {}),
+        state.error ? JSON.stringify(state.error) : null,
+        runId,
+      );
 
-  const traces = Array.isArray(state.outputs?.__action_traces)
-    ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
-    : [];
-  const insertStep = database.prepare(
-    `INSERT INTO run_steps (
-      id,
-      run_id,
-      node_id,
-      step_number,
-      action_type,
-      status,
-      finished_at,
-      trace_json,
-      error_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  for (const [index, step] of graph.steps.entries()) {
-    const trace = traces.find((candidate) => candidate.node_id === step.node_id);
-    const failed = state.error?.step_id === step.node_id;
-    const completed = state.completed_step_ids.includes(step.node_id);
-    insertStep.run(
-      randomUUID(),
-      runId,
-      step.node_id,
-      index + 1,
-      step.config.type,
-      failed ? "failed" : completed ? "success" : "skipped",
-      trace || failed ? new Date().toISOString() : null,
-      trace ? JSON.stringify(trace) : null,
-      failed && state.error ? JSON.stringify(state.error) : null,
+    const traces = Array.isArray(state.outputs?.__action_traces)
+      ? (state.outputs.__action_traces as Array<Record<string, unknown>>)
+      : [];
+    const insertStep = database.prepare(
+      `INSERT INTO run_steps (
+        id,
+        run_id,
+        node_id,
+        step_number,
+        action_type,
+        status,
+        finished_at,
+        trace_json,
+        error_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
+    for (const [index, step] of graph.steps.entries()) {
+      const trace = traces.find((candidate) => candidate.node_id === step.node_id);
+      const failed = state.error?.step_id === step.node_id;
+      const completed = state.completed_step_ids.includes(step.node_id);
+      insertStep.run(
+        randomUUID(),
+        runId,
+        step.node_id,
+        index + 1,
+        step.config.type,
+        failed ? "failed" : completed ? "success" : "skipped",
+        trace || failed ? new Date().toISOString() : null,
+        trace ? JSON.stringify(trace) : null,
+        failed && state.error ? JSON.stringify(state.error) : null,
+      );
+    }
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
   }
 }
 
@@ -2343,8 +2764,4 @@ function objectRecord(value: unknown): Record<string, any> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, any>)
     : {};
-}
-
-function numericOrNull(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

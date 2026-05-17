@@ -1,4 +1,5 @@
 import type {
+  GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
   GraphPort,
@@ -27,6 +28,8 @@ export type WorkflowFlowNodeData = {
 export type WorkflowFlowEdgeData = {
   hasIssue: boolean;
   status: WorkflowFlowEdgeStatus;
+  delay?: GraphEdgeDelay | null;
+  delayLabel?: string | null;
 };
 
 export type WorkflowFlowNode = Node<WorkflowFlowNodeData, "workflow">;
@@ -224,6 +227,8 @@ export function toReactFlowGraph(
         data: {
           hasIssue,
           status,
+          delay: edge.delay ?? null,
+          delayLabel: graphEdgeDelayLabel(edge.delay ?? null),
         },
       };
     }),
@@ -233,37 +238,124 @@ export function toReactFlowGraph(
 
 function graphEdgeOrders(graph: WorkflowGraph) {
   const orders = new Map<string, number>();
-  const edgesBySource = new Map<string, typeof graph.edges>();
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgesBySourcePort = new Map<string, typeof graph.edges>();
   graph.edges.forEach((edge) => {
-    edgesBySource.set(edge.source_node_id, [
-      ...(edgesBySource.get(edge.source_node_id) ?? []),
+    const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
+    edgesBySourcePort.set(key, [
+      ...(edgesBySourcePort.get(key) ?? []),
       edge,
     ]);
   });
 
-  const visitedNodes = new Set<string>();
-  const visitedEdges = new Set<string>();
-  const queue = ["start"];
+  for (const edges of edgesBySourcePort.values()) {
+    edges.sort((left, right) => left.id.localeCompare(right.id));
+  }
+
   let order = 1;
+  const start = graph.nodes.find((node) => node.node_type === "start");
+  if (!start) return orders;
 
-  while (queue.length) {
-    const sourceId = queue.shift();
-    if (!sourceId || visitedNodes.has(sourceId)) continue;
-    visitedNodes.add(sourceId);
+  function visitNode(nodeId: string, path: Set<string>) {
+    if (path.has(nodeId)) return;
+    const node = nodeById.get(nodeId);
+    if (!node) return;
+    path.add(nodeId);
 
-    for (const edge of edgesBySource.get(sourceId) ?? []) {
-      if (!visitedEdges.has(edge.id)) {
-        visitedEdges.add(edge.id);
+    for (const portId of orderedOutputPortIds(node)) {
+      const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
+      if (!edge) continue;
+      if (!orders.has(edge.id)) {
         orders.set(edge.id, order);
         order += 1;
       }
-      if (!visitedNodes.has(edge.target_node_id)) {
-        queue.push(edge.target_node_id);
-      }
+      visitNode(edge.target_node_id, new Set(path));
     }
   }
 
+  visitNode(start.id, new Set());
+
   return orders;
+}
+
+function edgeSourcePortKey(sourceNodeId: string, sourcePort: string) {
+  return `${sourceNodeId}\u0000${sourcePort}`;
+}
+
+function orderedOutputPortIds(node: GraphNode) {
+  const outputPortIds = node.ports
+    .filter((port) => port.direction === "output")
+    .map((port) => port.id);
+  const preferred = preferredOutputPortOrder(node);
+  return [
+    ...preferred.filter((portId) => outputPortIds.includes(portId)),
+    ...outputPortIds.filter((portId) => !preferred.includes(portId)),
+  ];
+}
+
+function preferredOutputPortOrder(node: GraphNode) {
+  switch (node.node_type) {
+    case "start":
+    case "action":
+    case "merge":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "assert_output":
+    case "domain_allowlist":
+      return ["out"];
+    case "if":
+      return ["true", "false", "done"];
+    case "switch":
+      return [
+        ...casePortIds(node),
+        "default",
+        "done",
+      ];
+    case "router":
+      return [
+        ...routerCasePortIds(node),
+        "default",
+        "done",
+      ];
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+      return ["loop", "done"];
+    case "repeat_until":
+      return ["loop", "timeout", "done"];
+    case "retry":
+      return ["try", "failed", "success"];
+    case "try_catch":
+      return ["try", "success", "error", "finally", "done"];
+    case "fallback":
+      return ["primary", "fallback", "done"];
+    default:
+      return [];
+  }
+}
+
+function casePortIds(node: GraphNode) {
+  return node.ports
+    .filter((port) => port.direction === "output" && /^case_\d+$/.test(port.id))
+    .map((port) => port.id)
+    .sort((left, right) => Number(left.slice(5)) - Number(right.slice(5)));
+}
+
+function routerCasePortIds(node: GraphNode) {
+  const cases = Array.isArray((node.config as { cases?: unknown } | null)?.cases)
+    ? ((node.config as { cases: Array<{ id?: unknown }> }).cases)
+    : [];
+  const configured = cases
+    .map((caseValue) => typeof caseValue.id === "string" ? `case_${caseValue.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
 }
 
 export function mergeReactFlowNodeRuntimeState(
@@ -302,19 +394,23 @@ export function fromReactFlowGraph(
       ...node,
       position: nodePositions.get(node.id) ?? node.position,
     })),
-    edges: edges.map((edge) => ({
-      id: edge.id,
-      source_node_id: edge.source,
-      source_port: edge.sourceHandle ?? "out",
-      target_node_id: edge.target,
-      target_port: edge.targetHandle ?? "in",
-      label:
-        typeof edge.label === "string"
-          ? cleanEdgeLabel(edge.label)
-          : edge.sourceHandle ?? null,
-      condition:
-        graph.edges.find((graphEdge) => graphEdge.id === edge.id)?.condition ?? null,
-    })).filter(
+    edges: edges.map((edge) => {
+      const existingEdge = graph.edges.find((graphEdge) => graphEdge.id === edge.id);
+      return {
+        id: edge.id,
+        source_node_id: edge.source,
+        source_port: edge.sourceHandle ?? "out",
+        target_node_id: edge.target,
+        target_port: edge.targetHandle ?? "in",
+        label:
+          existingEdge?.label ??
+          (typeof edge.label === "string"
+            ? cleanEdgeLabel(edge.label)
+            : edge.sourceHandle ?? null),
+        condition: existingEdge?.condition ?? null,
+        delay: existingEdge?.delay ?? graphEdgeDelayFromData(edge.data?.delay),
+      };
+    }).filter(
       (edge) =>
         graphNodes.has(edge.source_node_id) &&
         graphNodes.has(edge.target_node_id),
@@ -325,6 +421,31 @@ export function fromReactFlowGraph(
       zoom: viewport.zoom,
     },
   };
+}
+
+function graphEdgeDelayLabel(delay: GraphEdgeDelay | null) {
+  if (!delay) return null;
+  if (delay.type === "fixed") return `${delay.duration_ms}ms`;
+  return `${delay.min_ms}-${delay.max_ms}ms`;
+}
+
+function graphEdgeDelayFromData(value: unknown): GraphEdgeDelay | null {
+  if (!value || typeof value !== "object") return null;
+  const delay = value as Partial<GraphEdgeDelay>;
+  if (
+    delay.type === "fixed" &&
+    typeof delay.duration_ms === "number"
+  ) {
+    return { type: "fixed", duration_ms: delay.duration_ms };
+  }
+  if (
+    delay.type === "random" &&
+    typeof delay.min_ms === "number" &&
+    typeof delay.max_ms === "number"
+  ) {
+    return { type: "random", min_ms: delay.min_ms, max_ms: delay.max_ms };
+  }
+  return null;
 }
 
 function cleanEdgeLabel(label: string) {
@@ -353,6 +474,15 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
     case "end_success":
     case "end_failure":
       return [inputPort("in", "In")];
+    case "merge":
+      return [inputPort("in", "In"), outputPort("out", "Out")];
+    case "router":
+      return [
+        inputPort("in", "In"),
+        outputPort("case_1", "Case 1"),
+        outputPort("default", "Default"),
+        outputPort("done", "Done"),
+      ];
     case "if":
       return [
         inputPort("in", "In"),
@@ -488,16 +618,24 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       };
     case "switch":
       return { expression: "", cases: ["case"] };
+    case "router":
+      return {
+        mode: "first_match",
+        cases: [
+          {
+            id: "1",
+            label: "Case 1",
+            condition: { kind: "output_equals", name: "name", value: "" },
+          },
+        ],
+        default_label: "Default",
+      };
     case "repeat_times":
       return { times: 1 };
     case "repeat_for_each":
       return { item_name: "item", array_variable: null, items: ["item"] };
     case "retry":
       return { max_attempts: 3, delay_ms: 100 };
-    case "manual_approval":
-      return { reason: "Manual approval required", timeout_ms: null };
-    case "rate_limit":
-      return { delay_ms: 1000 };
     case "end_success":
       return { close_browser: false };
     case "end_failure":
@@ -512,8 +650,6 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { source_name: "input", target_name: "output", expression: "" };
     case "assert_output":
       return { name: "output", match: "equals", value: "" };
-    case "run_subworkflow":
-      return { workflow_id: "", input_mapping: [], output_mapping: [] };
     case "domain_allowlist":
       return { domains: [] };
     default:

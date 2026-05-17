@@ -17,6 +17,7 @@ export function listWorkflowScenario(workflows: WorkflowSummary[] = [workflow]) 
   return {
     list_workflows: workflows,
     get_run_state: idleRunState,
+    list_run_states: [],
   };
 }
 
@@ -78,9 +79,6 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
         device_memory_gb: null,
         fingerprint_fonts_dir: null,
         storage_quota_mb: null,
-        humanize: true,
-        human_preset: "default",
-        behavior_fidelity: "balanced",
         preflight_enabled: false,
         preflight_probe_url: null,
         preflight_allowed_origins: [],
@@ -89,6 +87,8 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
         proxy_username: null,
         proxy_password: null,
         headless: false,
+        humanize: true,
+        human_preset: "default",
         run_from_selected_enabled: false,
       },
       environment: {

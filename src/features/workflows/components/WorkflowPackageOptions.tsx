@@ -69,6 +69,8 @@ export function sectionLabel(section: WorkflowSettingsSectionId) {
       return "Run Policy";
     case "browser_launch":
       return "Browser Launch";
+    case "graph_defaults":
+      return "Graph";
     case "environment":
       return "Environment";
   }

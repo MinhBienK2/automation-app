@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 
@@ -16,31 +15,6 @@ export function SessionActionFields({
   onChange,
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
-    case "use_profile":
-      return (
-        <Label>
-          Name
-          <Input
-            value={config.config.name}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "name", event.currentTarget.value))
-            }
-          />
-        </Label>
-      );
-    case "save_session":
-    case "load_session":
-      return (
-        <Label>
-          Path
-          <Input
-            value={config.config.path}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "path", event.currentTarget.value))
-            }
-          />
-        </Label>
-      );
     case "set_cookie":
       return (
         <>
@@ -96,75 +70,6 @@ export function SessionActionFields({
           />
         </Label>
       );
-    case "set_secret":
-      return (
-        <>
-          <Label>
-            Name
-            <Input
-              value={config.config.name}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "name", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Value
-            <Textarea
-              value={config.config.value}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
-              }
-            />
-          </Label>
-        </>
-      );
-    case "use_proxy":
-      return (
-        <>
-          <Label>
-            Server
-            <Input
-              value={config.config.server}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "server", event.currentTarget.value))
-              }
-              placeholder="http://127.0.0.1:8080"
-            />
-          </Label>
-          <Label>
-            Username
-            <Input
-              value={config.config.username ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "username", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Password
-            <Input
-              value={config.config.password ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "password", event.currentTarget.value))
-              }
-              type="password"
-            />
-          </Label>
-        </>
-      );
-    case "set_user_agent":
-      return (
-        <Label>
-          User agent
-          <Textarea
-            value={config.config.user_agent}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "user_agent", event.currentTarget.value))
-            }
-          />
-        </Label>
-      );
     case "set_viewport":
       return (
         <>
@@ -189,48 +94,6 @@ export function SessionActionFields({
                 onChange(updateActionConfigField(config, "height", event.currentTarget.value))
               }
             />
-          </Label>
-          <Label>
-            Device scale factor
-            <Input
-              min="0.1"
-              step="0.1"
-              type="number"
-              value={config.config.device_scale_factor ?? 1}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "device_scale_factor",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            />
-          </Label>
-          <Label>
-            Mobile
-            <Select
-              value={String(config.config.mobile)}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "mobile", event.currentTarget.value))
-              }
-            >
-              <option value="false">False</option>
-              <option value="true">True</option>
-            </Select>
-          </Label>
-          <Label>
-            Touch
-            <Select
-              value={String(config.config.touch)}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "touch", event.currentTarget.value))
-              }
-            >
-              <option value="false">False</option>
-              <option value="true">True</option>
-            </Select>
           </Label>
         </>
       );

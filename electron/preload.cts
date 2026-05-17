@@ -32,6 +32,15 @@ const workflowIpcChannels = {
   runWorkflowFromNode: "workflow:runWorkflowFromNode",
   stopRun: "workflow:stopRun",
   getRunState: "workflow:getRunState",
+  listRunStates: "workflow:listRunStates",
+  listSchedules: "workflow:listSchedules",
+  getSchedule: "workflow:getSchedule",
+  createSchedule: "workflow:createSchedule",
+  updateSchedule: "workflow:updateSchedule",
+  deleteSchedule: "workflow:deleteSchedule",
+  enableSchedule: "workflow:enableSchedule",
+  disableSchedule: "workflow:disableSchedule",
+  listScheduleEvents: "workflow:listScheduleEvents",
   validateSchedule: "workflow:validateSchedule",
   exportWorkflow: "workflow:exportWorkflow",
   importWorkflow: "workflow:importWorkflow",
@@ -105,8 +114,24 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow(workflowIpcChannels.runWorkflow, workflowId),
   runWorkflowFromNode: (workflowId, startNodeId) =>
     invokeWorkflow(workflowIpcChannels.runWorkflowFromNode, workflowId, startNodeId),
-  stopRun: () => invokeWorkflow(workflowIpcChannels.stopRun),
+  stopRun: (runId) => invokeWorkflow(workflowIpcChannels.stopRun, runId),
   getRunState: () => invokeWorkflow(workflowIpcChannels.getRunState),
+  listRunStates: () => invokeWorkflow(workflowIpcChannels.listRunStates),
+  listSchedules: () => invokeWorkflow(workflowIpcChannels.listSchedules),
+  getSchedule: (scheduleId) =>
+    invokeWorkflow(workflowIpcChannels.getSchedule, scheduleId),
+  createSchedule: (input) =>
+    invokeWorkflow(workflowIpcChannels.createSchedule, input),
+  updateSchedule: (scheduleId, patch) =>
+    invokeWorkflow(workflowIpcChannels.updateSchedule, scheduleId, patch),
+  deleteSchedule: (scheduleId) =>
+    invokeWorkflow(workflowIpcChannels.deleteSchedule, scheduleId),
+  enableSchedule: (scheduleId) =>
+    invokeWorkflow(workflowIpcChannels.enableSchedule, scheduleId),
+  disableSchedule: (scheduleId) =>
+    invokeWorkflow(workflowIpcChannels.disableSchedule, scheduleId),
+  listScheduleEvents: (filter) =>
+    invokeWorkflow(workflowIpcChannels.listScheduleEvents, filter),
   validateSchedule: (schedule) =>
     invokeWorkflow(workflowIpcChannels.validateSchedule, schedule),
   exportWorkflow: (workflowId) =>

@@ -229,8 +229,6 @@ describe("Workflow detail integration", () => {
           webrtc_policy: "default",
           webrtc_ip: null,
           storage_quota_mb: null,
-          humanize: true,
-          human_preset: "default",
           preflight_enabled: false,
           preflight_probe_url: null,
           preflight_allowed_origins: [],
@@ -282,9 +280,11 @@ describe("Workflow detail integration", () => {
     expect(within(settingsDialog).getByLabelText("Identity display name")).toHaveValue(
       "QA Profile identity",
     );
-    expect(within(settingsDialog).getByLabelText("Profile directory")).toHaveValue(
+    expect(within(settingsDialog).getByLabelText("Identity id")).toHaveValue(
       "bi_workflow-1",
     );
+    expect(within(settingsDialog).queryByLabelText("Profile directory"))
+      .not.toBeInTheDocument();
     expect(within(settingsDialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(settingsDialog).getByRole("switch", { name: "Reuse login session" }))
       .toHaveAttribute("aria-checked", "true");
@@ -364,7 +364,7 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
-  test("omits legacy trigger and owned test gate settings while showing identity preflight", async () => {
+  test("omits removed trigger settings while showing identity preflight", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
@@ -379,8 +379,6 @@ describe("Workflow detail integration", () => {
     });
 
     expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
-      .not.toBeInTheDocument();
-    expect(within(settingsDialog).queryByRole("tab", { name: "Owned Test Gates" }))
       .not.toBeInTheDocument();
     expect(within(settingsDialog).getByRole("switch", { name: "Fingerprint preflight" }))
       .toBeInTheDocument();
@@ -553,6 +551,70 @@ describe("Workflow detail integration", () => {
     expect(within(panel).getByText("XPath not found")).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Select failed node" }))
       .toBeInTheDocument();
+  });
+
+  test("keeps detail run controls scoped to the opened workflow", async () => {
+    const supportWorkflow = {
+      id: "workflow-2",
+      name: "Support flow",
+      step_count: 0,
+      created_at: "2",
+      updated_at: "2",
+    };
+    const scenario = workflowDetailScenario([sleepStep]);
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: [workflow, supportWorkflow],
+      get_run_state: {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+      },
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+          },
+        },
+      ],
+      get_workflow: ({ id }: { id: string }) =>
+        id === supportWorkflow.id
+          ? { workflow: supportWorkflow, steps: [sleepStep] }
+          : { workflow, steps: [sleepStep] },
+      get_workflow_settings: ({ workflowId }: { workflowId: string }) => ({
+        ...scenario.get_workflow_settings,
+        workflow_id: workflowId,
+        general: {
+          ...scenario.get_workflow_settings.general,
+          name: workflowId === supportWorkflow.id ? supportWorkflow.name : workflow.name,
+        },
+      }),
+    });
+
+    renderApp();
+
+    const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
+    await userEvent.click(within(supportCard as HTMLElement).getByRole("button", {
+      name: "View Details",
+    }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+
+    expect(within(controlsRow).getByRole("button", { name: "Run" }))
+      .not.toBeDisabled();
+    expect(within(controlsRow).queryByRole("button", { name: "Stop" }))
+      .not.toBeInTheDocument();
   });
 
   test("keeps long runtime errors compact with copyable details in panel and inspector", async () => {

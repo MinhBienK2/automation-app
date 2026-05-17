@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { WorkflowStep } from "../../../types/workflow";
+import type { WorkflowGraph, WorkflowStep } from "../../../types/workflow";
 import {
   createDefaultGraphNode,
   fromReactFlowGraph,
@@ -65,6 +65,8 @@ describe("workflow graph helpers", () => {
     const ifNode = createDefaultGraphNode("if", { x: 10, y: 20 });
     const variablesNode = createDefaultGraphNode("set_variable", { x: 20, y: 30 });
     const jsonVariablesNode = createDefaultGraphNode("set_json_variables", { x: 30, y: 40 });
+    const mergeNode = createDefaultGraphNode("merge", { x: 40, y: 50 });
+    const routerNode = createDefaultGraphNode("router", { x: 50, y: 60 });
 
     expect(ifNode.node_type).toBe("if");
     expect(ifNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
@@ -81,6 +83,27 @@ describe("workflow graph helpers", () => {
     expect(jsonVariablesNode.config).toEqual({
       json: "{\n  \"name\": \"value\"\n}",
     });
+    expect(mergeNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
+      "input:in",
+      "output:out",
+    ]);
+    expect(routerNode.config).toEqual({
+      mode: "first_match",
+      cases: [
+        {
+          id: "1",
+          label: "Case 1",
+          condition: { kind: "output_equals", name: "name", value: "" },
+        },
+      ],
+      default_label: "Default",
+    });
+    expect(routerNode.ports.map((port) => `${port.direction}:${port.id}:${port.label}`)).toEqual([
+      "input:in:In",
+      "output:case_1:Case 1",
+      "output:default:Default",
+      "output:done:Done",
+    ]);
   });
 
   test("returns stable port definitions for graph node types", () => {
@@ -112,6 +135,16 @@ describe("workflow graph helpers", () => {
       "default",
       "done",
     ]);
+    expect(nodePorts("merge").map((port) => port.id)).toEqual([
+      "in",
+      "out",
+    ]);
+    expect(nodePorts("router").map((port) => port.id)).toEqual([
+      "in",
+      "case_1",
+      "default",
+      "done",
+    ]);
     expect(nodePorts("try_catch").map((port) => port.id)).toEqual([
       "in",
       "try",
@@ -119,10 +152,6 @@ describe("workflow graph helpers", () => {
       "error",
       "finally",
       "done",
-    ]);
-    expect(nodePorts("manual_approval").map((port) => port.id)).toEqual([
-      "in",
-      "out",
     ]);
     expect(nodePorts("set_json_variables").map((port) => port.id)).toEqual([
       "in",
@@ -152,6 +181,10 @@ describe("workflow graph helpers", () => {
 
   test("maps persisted workflow graph to React Flow nodes and edges", () => {
     const graph = linearGraphFromSteps([waitStep]);
+    graph.edges[0] = {
+      ...graph.edges[0],
+      delay: { type: "fixed", duration_ms: 750 },
+    };
 
     const flow = toReactFlowGraph(graph, {
       selectedNodeId: "step-wait",
@@ -205,11 +238,117 @@ describe("workflow graph helpers", () => {
           }),
           data: expect.objectContaining({
             hasIssue: true,
+            delayLabel: "750ms",
           }),
         }),
       ]),
     );
     expect(flow.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  test("orders graph edge labels by execution port traversal instead of edge array order", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: {},
+          ports: nodePorts("start"),
+          group_id: null,
+        },
+        {
+          id: "if-1",
+          node_type: "if",
+          label: "If account is ready",
+          position: { x: 240, y: 0 },
+          config: {
+            condition: { kind: "output_equals", name: "ready", value: "yes" },
+          },
+          ports: nodePorts("if"),
+          group_id: null,
+        },
+        {
+          id: "true-action",
+          node_type: "action",
+          label: "Ready branch",
+          position: { x: 480, y: -120 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 10 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+        {
+          id: "false-action",
+          node_type: "action",
+          label: "Not ready branch",
+          position: { x: 480, y: 0 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 10 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+        {
+          id: "done-action",
+          node_type: "action",
+          label: "Continue",
+          position: { x: 480, y: 120 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 10 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "edge-if-done",
+          source_node_id: "if-1",
+          source_port: "done",
+          target_node_id: "done-action",
+          target_port: "in",
+          label: "done",
+          condition: null,
+        },
+        {
+          id: "edge-if-false",
+          source_node_id: "if-1",
+          source_port: "false",
+          target_node_id: "false-action",
+          target_port: "in",
+          label: "false",
+          condition: null,
+        },
+        {
+          id: "edge-start-if",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "if-1",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+        {
+          id: "edge-if-true",
+          source_node_id: "if-1",
+          source_port: "true",
+          target_node_id: "true-action",
+          target_port: "in",
+          label: "true",
+          condition: null,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const labels = new Map(toReactFlowGraph(graph).edges.map((edge) => [edge.id, edge.label]));
+
+    expect(labels).toEqual(
+      new Map([
+        ["edge-if-done", "4"],
+        ["edge-if-false", "3"],
+        ["edge-start-if", "1"],
+        ["edge-if-true", "2"],
+      ]),
+    );
   });
 
   test("marks selected graph edges with distinct stroke and marker styling", () => {
@@ -285,6 +424,10 @@ describe("workflow graph helpers", () => {
 
   test("maps React Flow nodes and edges back to a persisted workflow graph", () => {
     const graph = linearGraphFromSteps([waitStep]);
+    graph.edges[0] = {
+      ...graph.edges[0],
+      delay: { type: "random", min_ms: 500, max_ms: 1200 },
+    };
     const flow = toReactFlowGraph(graph);
     const movedNodes = flow.nodes.map((node) =>
       node.id === "step-wait" ? { ...node, position: { x: 320, y: 80 } } : node,
@@ -322,8 +465,30 @@ describe("workflow graph helpers", () => {
           label: "next",
           condition: null,
         }),
+        expect.objectContaining({
+          id: "edge-start-step-wait",
+          delay: { type: "random", min_ms: 500, max_ms: 1200 },
+        }),
       ]),
     );
+  });
+
+  test("keeps execution order labels as display-only when syncing React Flow edges", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const flow = toReactFlowGraph(graph);
+
+    expect(flow.edges.find((edge) => edge.id === "edge-start-step-wait")?.label)
+      .toBe("1");
+
+    const nextGraph = fromReactFlowGraph(
+      graph,
+      flow.nodes,
+      flow.edges,
+      graph.viewport,
+    );
+
+    expect(nextGraph.edges.find((edge) => edge.id === "edge-start-step-wait")?.label)
+      .toBe("next");
   });
 
   test("preserves React Flow measured node dimensions when graph nodes are remapped", () => {

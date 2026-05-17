@@ -18,7 +18,9 @@ import {
   workflowExamples,
 } from "./stepHelpFieldGuidance";
 const graphInternalActionTypes = [
+  "graph_noop",
   "switch_condition",
+  "router_condition",
   "while_loop",
   "repeat_until",
   "try_catch",
@@ -27,7 +29,6 @@ const graphInternalActionTypes = [
   "continue_loop",
   "transform_variable",
   "assert_output",
-  "run_subworkflow",
   "domain_allowlist",
 ] as const satisfies readonly ActionType[];
 type GraphInternalActionType = (typeof graphInternalActionTypes)[number];
@@ -60,38 +61,26 @@ type PhaseOneActionType =
   | "open_new_tab"
   | "switch_tab"
   | "close_tab"
-  | "switch_frame"
   | "accept_dialog"
   | "dismiss_dialog"
-  | "set_download_directory"
   | "wait_for_download"
   | "set_variable"
   | "set_json_variables"
   | "assert_element"
   | "assert_text"
+  | "graph_noop"
   | "if_condition"
+  | "router_condition"
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
   | "stop_workflow"
-  | "use_profile"
-  | "save_session"
-  | "load_session"
   | "set_cookie"
   | "clear_cookies"
-  | "set_secret"
-  | "use_proxy"
-  | "set_user_agent"
   | "set_viewport"
   | "set_geolocation"
   | "set_extra_headers"
   | "grant_permission"
-  | "detect_challenge"
-  | "pause_for_human"
-  | "resume_when_condition"
-  | "fallback_selector"
-  | "retry_step"
-  | "checkpoint"
   | "execute_js"
   | "wait_for_request"
   | "wait_for_response"
@@ -317,39 +306,33 @@ const baseStepHelpContent: Record<
   scroll: {
     vi: {
       title: "Trợ giúp Scroll",
-      summary: "Cuộn cho đến khi element đích hiện ra, hoặc cuộn trang, iframe, container theo cấu hình.",
-      useWhen: ["Dùng khi element nằm dưới màn hình.", "Dùng để cuộn trong iframe hoặc vùng có scrollbar riêng.", "Dùng Until Visible khi muốn app tự cuộn cho tới khi thấy một element cụ thể."],
+      summary: "Cuộn trang theo pixel hoặc đưa một element đích vào vùng nhìn thấy bằng đường scroll humanized của CloakBrowser.",
+      useWhen: ["Dùng Page khi cần cuộn một lượng pixel cố định.", "Dùng Into View khi element đã có trên trang nhưng nằm ngoài màn hình.", "Dùng Until Visible khi muốn chờ element visible rồi đưa vào màn hình."],
       fields: [
-        { name: "Mode", description: "Page cuộn trang; Container cuộn box có scrollbar; Into View đưa element vào màn hình; Until Visible cuộn lặp tới khi element đích visible." },
-        { name: "Direction", description: "Hướng cuộn: down, up, right, hoặc left." },
-        { name: "Pixels", description: "Số pixel mỗi lần cuộn. Thử 250-800 tùy trang." },
-        { name: "XPath", description: "Với Container: XPath là box scroll. Với Into View/Until Visible: XPath là element đích cần đưa vào vùng nhìn thấy." },
-        { name: "Max attempts", description: "Số lần cuộn tối đa cho Until Visible." },
-        { name: "Wait ms", description: "Thời gian chờ giữa mỗi lần cuộn trong Until Visible." },
-        { name: "Iframe XPath", description: "Chọn iframe trên trang cha. Khi có iframe, XPath được hiểu là element bên trong iframe." },
-        { name: "Behavior", description: "Instant cuộn ngay; Smooth cuộn mượt hơn nhưng có thể chậm hơn." },
-        { name: "Block / Inline", description: "Dùng với Into View để căn element theo chiều dọc/ngang." },
+        { name: "Mode", description: "Page dùng custom human wheel theo pixel; Into View và Until Visible dùng scroll-to-element của CloakBrowser." },
+        { name: "Direction", description: "Hướng cuộn Page: down, up, right, hoặc left." },
+        { name: "Pixels", description: "Số pixel cho Page scroll. Thử 250-800 tùy trang." },
+        { name: "Target locator", description: "Element đích cho Into View hoặc Until Visible." },
+        { name: "Iframe XPath", description: "Chọn iframe trên trang cha nếu target nằm trong iframe legacy XPath." },
+        { name: "Timeout ms", description: timeoutField.vi },
       ],
-      examples: ["Iframe XPath: //*[@id='main']/div[3]/iframe", "Until Visible XPath: //h2[normalize-space(.)='HTML Quiz Test']", "Container XPath: //*[@id='scroll-box']"],
-      commonMistakes: ["Until Visible dùng XPath là element đích cần thấy, không phải box scroll.", "Nếu element nằm trong iframe, cần Iframe XPath của iframe và XPath của element bên trong iframe.", "Dùng /html/body cho Until Visible thường không cuộn vì body đã visible sẵn."],
+      examples: ["Mode: Page, Direction: Down, Pixels: 500", "Mode: Into View, Target locator: //button[@type='submit']", "Mode: Until Visible, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
+      commonMistakes: ["Until Visible cần target là element đích cần thấy, không phải body.", "Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Page scroll là custom human fallback vì CloakBrowser không patch trực tiếp mouse wheel."],
     },
     en: {
       title: "Scroll Help",
-      summary: "Scroll a page, iframe, container, or Scroll until the target element becomes visible.",
-      useWhen: ["Use when an element is below the visible area.", "Use to scroll inside an iframe or a box with its own scrollbar.", "Use Until Visible when you want the app to keep scrolling until a specific element is visible."],
+      summary: "Scroll the page by pixels or bring a target element into view through CloakBrowser's humanized scroll-to-element path.",
+      useWhen: ["Use Page for a fixed pixel-distance scroll.", "Use Into View when the element is already on the page but outside the viewport.", "Use Until Visible when the runner should wait for visibility, then bring the element into view."],
       fields: [
-        { name: "Mode", description: "Page scrolls the page; Container scrolls a scrollable box; Into View brings an element into view; Until Visible keeps scrolling until the target element is visible." },
-        { name: "Direction", description: "Scroll direction: down, up, right, or left." },
-        { name: "Pixels", description: "Pixels per scroll. Try 250-800 depending on the page." },
-        { name: "XPath", description: "For Container, XPath is the scroll box. For Into View/Until Visible, XPath is the target element to bring into view." },
-        { name: "Max attempts", description: "Maximum scroll attempts for Until Visible." },
-        { name: "Wait ms", description: "Delay between scroll attempts in Until Visible." },
-        { name: "Iframe XPath", description: "Selects the iframe on the parent page. With an iframe set, XPath is evaluated inside the iframe." },
-        { name: "Behavior", description: "Instant scrolls immediately; Smooth animates scrolling but can be slower." },
-        { name: "Block / Inline", description: "Used by Into View to align the element vertically and horizontally." },
+        { name: "Mode", description: "Page uses custom human wheel chunks; Into View and Until Visible use CloakBrowser scroll-to-element." },
+        { name: "Direction", description: "Page scroll direction: down, up, right, or left." },
+        { name: "Pixels", description: "Pixel distance for Page scroll. Try 250-800 depending on the page." },
+        { name: "Target locator", description: "Target element for Into View or Until Visible." },
+        { name: "Iframe XPath", description: "Selects the parent-page iframe when the target uses a legacy XPath inside a frame." },
+        { name: "Timeout ms", description: timeoutField.en },
       ],
-      examples: ["Iframe XPath: //*[@id='main']/div[3]/iframe", "Until Visible XPath: //h2[normalize-space(.)='HTML Quiz Test']", "Container XPath: //*[@id='scroll-box']"],
-      commonMistakes: ["Until Visible uses XPath as the target element, not the scroll box.", "If the element is inside an iframe, use Iframe XPath for the iframe and XPath for the element inside it.", "Using /html/body for Until Visible often does not scroll because body is already visible."],
+      examples: ["Mode: Page, Direction: Down, Pixels: 500", "Mode: Into View, Target locator: //button[@type='submit']", "Mode: Until Visible, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
+      commonMistakes: ["Until Visible needs the target element, not body.", "If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Page scroll is a custom human fallback because CloakBrowser does not directly patch mouse wheel."],
     },
   },
   select_option: {
@@ -382,36 +365,6 @@ const baseStepHelpContent: Record<
       ],
       examples: ["XPath: //*[@name='country'], Match by: Label, Value: Vietnam"],
       commonMistakes: ["XPath points to an option instead of the select.", "Custom dropdowns that are not select elements need a different step."],
-    },
-  },
-  set_checkbox: {
-    vi: {
-      title: "Trợ giúp Set Checkbox",
-      summary: "Đặt checkbox về trạng thái checked hoặc unchecked.",
-      useWhen: ["Dùng cho checkbox đồng ý điều khoản, filter, setting bật/tắt.", "Dùng khi muốn trạng thái cuối cùng chắc chắn, không chỉ toggle."],
-      fields: [
-        { name: "XPath", description: "XPath của input type=checkbox." },
-        { name: "Iframe XPath", description: iframeField.vi },
-        { name: "Wait until", description: waitUntilField.vi },
-        { name: "Timeout ms", description: timeoutField.vi },
-        { name: "State", description: "Checked để bật; Unchecked để tắt." },
-      ],
-      examples: ["XPath: //*[@type='checkbox' and @name='terms'], State: Checked"],
-      commonMistakes: ["XPath trỏ vào label thay vì input checkbox thật.", "Nếu checkbox là UI custom không có input checkbox, có thể cần Click."],
-    },
-    en: {
-      title: "Set Checkbox Help",
-      summary: "Set a checkbox to checked or unchecked.",
-      useWhen: ["Use for terms checkboxes, filters, or on/off settings.", "Use when you need a guaranteed final state, not just a toggle."],
-      fields: [
-        { name: "XPath", description: "XPath of the input type=checkbox element." },
-        { name: "Iframe XPath", description: iframeField.en },
-        { name: "Wait until", description: waitUntilField.en },
-        { name: "Timeout ms", description: timeoutField.en },
-        { name: "State", description: "Checked turns it on; Unchecked turns it off." },
-      ],
-      examples: ["XPath: //*[@type='checkbox' and @name='terms'], State: Checked"],
-      commonMistakes: ["XPath points to the label instead of the real checkbox input.", "Custom checkbox UI without an input may need Click instead."],
     },
   },
   press_key: {
@@ -525,15 +478,8 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   open_new_tab: elementHelp("Open New Tab", "open a new browser tab", "mở tab mới", "tab"),
   switch_tab: elementHelp("Switch Tab", "switch to another browser tab", "chuyển tab", "tab"),
   close_tab: elementHelp("Close Tab", "close a browser tab", "đóng tab", "tab"),
-  switch_frame: elementHelp("Switch Frame", "set the active iframe context", "chọn iframe", "iframe"),
   accept_dialog: elementHelp("Accept Dialog", "accept an alert, confirm, or prompt", "đồng ý dialog", "dialog"),
   dismiss_dialog: elementHelp("Dismiss Dialog", "dismiss an alert, confirm, or prompt", "hủy dialog", "dialog"),
-  set_download_directory: elementHelp(
-    "Set Download Directory",
-    "choose where downloads are saved",
-    "chọn thư mục tải xuống",
-    "download",
-  ),
   wait_for_download: elementHelp(
     "Wait For Download",
     "wait until a new downloaded file exists",
@@ -549,29 +495,19 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   ),
   assert_element: elementHelp("Assert Element", "require an element state", "kiểm tra element", "assert"),
   assert_text: elementHelp("Assert Text", "require expected text", "kiểm tra text", "assert"),
+  graph_noop: elementHelp("Graph No-op", "mark internal graph flow progress", "đánh dấu luồng graph", "logic"),
   if_condition: elementHelp("If Condition", "run steps when a condition matches", "rẽ nhánh", "logic"),
+  router_condition: elementHelp("Router Condition", "run first matching router case", "router case đầu tiên", "logic"),
   repeat_times: elementHelp("Repeat Times", "repeat nested steps", "lặp số lần", "loop"),
   repeat_for_each: elementHelp("Repeat For Each", "repeat steps for each item", "lặp từng item", "loop"),
   retry_block: elementHelp("Retry Block", "retry nested steps after failure", "thử lại block", "retry"),
   stop_workflow: elementHelp("Stop Workflow", "stop the workflow intentionally", "dừng workflow", "stop"),
-  use_profile: elementHelp("Use Profile", "run with a persistent browser profile", "dùng profile", "session"),
-  save_session: elementHelp("Save Session", "save browser storage state", "lưu phiên", "session"),
-  load_session: elementHelp("Load Session", "restore browser storage state", "khôi phục phiên", "session"),
   set_cookie: elementHelp("Set Cookie", "set a visible browser cookie", "đặt cookie", "cookie"),
   clear_cookies: elementHelp("Clear Cookies", "clear visible browser cookies", "xóa cookie", "cookie"),
-  set_secret: elementHelp("Set Secret", "store a redacted secret variable", "lưu secret", "secret"),
-  use_proxy: elementHelp("Use Proxy", "route browser traffic through a proxy", "dùng proxy", "proxy"),
-  set_user_agent: elementHelp("Set User Agent", "override the browser user agent", "đổi user agent", "network"),
-  set_viewport: elementHelp("Set Viewport", "emulate viewport and device shape", "đổi viewport", "device"),
+  set_viewport: elementHelp("Set Viewport", "set runtime viewport size", "đổi kích thước viewport", "device"),
   set_geolocation: elementHelp("Set Geolocation", "override browser geolocation", "đổi vị trí", "geo"),
   set_extra_headers: elementHelp("Set Extra Headers", "send extra HTTP headers", "thêm header", "headers"),
   grant_permission: elementHelp("Grant Permission", "grant browser permissions", "cấp quyền", "permission"),
-  detect_challenge: elementHelp("Detect Challenge", "detect human verification UI", "phát hiện xác minh", "challenge"),
-  pause_for_human: elementHelp("Pause For Human", "pause for manual verification", "tạm dừng cho người xử lý", "human"),
-  resume_when_condition: elementHelp("Resume When Condition", "resume after a clear condition", "tiếp tục khi đủ điều kiện", "resume"),
-  fallback_selector: elementHelp("Fallback Selector", "choose the first matching selector", "chọn selector dự phòng đầu tiên khớp", "fallback"),
-  retry_step: elementHelp("Retry Step", "retry one flaky step", "thử lại một step dễ lỗi", "retry"),
-  checkpoint: elementHelp("Checkpoint", "mark progress and optionally capture a screenshot", "đánh dấu tiến trình và có thể chụp ảnh", "checkpoint"),
   execute_js: elementHelp("Execute JS", "run advanced JavaScript", "chạy JavaScript nâng cao", "advanced"),
   wait_for_request: elementHelp("Wait For Request", "wait for a network request", "chờ request mạng", "network"),
   wait_for_response: elementHelp("Wait For Response", "wait for a network response", "chờ response mạng", "network"),
@@ -908,11 +844,9 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "click":
       return targetFields;
     case "scroll":
-      return ["Mode", "Direction", "Pixels", ...targetFields, "Behavior"];
+      return ["Mode", "Direction", "Pixels", ...targetFields, "Iframe XPath", "Timeout ms"];
     case "select_option":
       return [...targetFields, "Match by", "Value"];
-    case "set_checkbox":
-      return [...targetFields, "State"];
     case "press_key":
       return ["Key"];
     case "hotkey":
@@ -961,12 +895,8 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "switch_tab":
     case "close_tab":
       return ["Tab index"];
-    case "switch_frame":
-      return ["XPath"];
     case "accept_dialog":
       return ["Prompt text"];
-    case "set_download_directory":
-      return ["Path"];
     case "wait_for_download":
       return ["Output name", "Timeout ms"];
     case "set_variable":
@@ -977,8 +907,11 @@ function actualFieldNames(actionType: ActionType): string[] {
       return [...targetFields, "State"];
     case "assert_text":
       return [...targetFields, "Text", "Match mode", "Timeout ms"];
+    case "graph_noop":
     case "if_condition":
       return ["No fields"];
+    case "router_condition":
+      return ["Cases", "Default steps"];
     case "repeat_times":
       return ["Times"];
     case "repeat_for_each":
@@ -1003,45 +936,20 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["Source name", "Target name", "Expression"];
     case "assert_output":
       return ["Name", "Match mode", "Value"];
-    case "run_subworkflow":
-      return ["Workflow id", "Input mapping", "Output mapping"];
     case "domain_allowlist":
       return ["Domains"];
-    case "use_profile":
-      return ["Name"];
-    case "save_session":
-    case "load_session":
-      return ["Path"];
     case "set_cookie":
       return ["Name", "Value", "Domain", "Path"];
     case "clear_cookies":
       return ["Domain"];
-    case "set_secret":
-      return ["Name", "Value"];
-    case "use_proxy":
-      return ["Server", "Username", "Password"];
-    case "set_user_agent":
-      return ["User agent"];
     case "set_viewport":
-      return ["Width", "Height", "Device scale factor", "Mobile", "Touch"];
+      return ["Width", "Height"];
     case "set_geolocation":
       return ["Latitude", "Longitude", "Accuracy"];
     case "set_extra_headers":
       return ["Headers"];
     case "grant_permission":
       return ["Origin", "Permissions"];
-    case "detect_challenge":
-      return ["Output name", "Patterns", "Timeout ms"];
-    case "pause_for_human":
-      return ["Reason", "Timeout ms"];
-    case "resume_when_condition":
-      return ["Timeout ms"];
-    case "fallback_selector":
-      return ["Output name", "XPaths", "Timeout ms"];
-    case "retry_step":
-      return ["Max attempts", "Delay ms"];
-    case "checkpoint":
-      return ["Name", "Screenshot path"];
     case "execute_js":
       return ["Script", "Output name", "Timeout ms"];
     case "wait_for_request":
@@ -1114,7 +1022,7 @@ function fieldRequiredWhen(
         "wait:URL contains": "Bắt buộc khi Condition là URL contains.",
         "navigate:URL": "Bắt buộc; đây là trang workflow sẽ mở.",
         "navigate:Wait until": "Tùy chọn; mặc định là Load.",
-        "scroll:XPath": "Bắt buộc với Container, Into View, và Until Visible; không cần với Page.",
+        "scroll:Target locator": "Bắt buộc với Into View và Until Visible; không cần với Page.",
         "click:Offset X / Offset Y": "Chỉ bắt buộc khi Position là Offset.",
         "go_back:No fields": "Action này không có field cấu hình.",
         "go_forward:No fields": "Action này không có field cấu hình.",
@@ -1129,13 +1037,13 @@ function fieldRequiredWhen(
         "wait:URL contains": "Required when Condition is URL contains.",
         "navigate:URL": "Required; this is the page the workflow opens.",
         "navigate:Wait until": "Optional; defaults to Load.",
-        "scroll:XPath": "Required for Container, Into View, and Until Visible; not needed for Page.",
+        "scroll:Target locator": "Required for Into View and Until Visible; not needed for Page.",
         "click:Offset X / Offset Y": "Required only when Position is Offset.",
         "go_back:No fields": "This action has no configurable fields.",
         "go_forward:No fields": "This action has no configurable fields.",
         "reload:No fields": "This action has no configurable fields.",
         "dismiss_dialog:No fields": "This action has no configurable fields.",
-        "if_condition:No fields": "This compatibility action has no fields in the current form.",
+        "if_condition:No fields": "This graph-internal action has no fields in the current form.",
       };
 
   if (specific[key]) return specific[key];
@@ -1202,8 +1110,8 @@ function fieldDescription(
   }
   if (isLocatorValueField(fieldName)) {
     return vi
-      ? "Giá trị locator tương ứng với loại đã chọn, ví dụ test id, label hiển thị, CSS selector, hoặc XPath tương thích."
-      : "Locator value matching the selected kind, such as a test id, visible label, CSS selector, or compatibility XPath.";
+      ? "Giá trị locator tương ứng với loại đã chọn, ví dụ test id, label hiển thị, CSS selector, hoặc XPath."
+      : "Locator value matching the selected kind, such as a test id, visible label, CSS selector, or XPath.";
   }
   if (fieldName.endsWith("role")) {
     return vi
@@ -1298,8 +1206,8 @@ function fieldValueGuidance(
   if (fieldName === "No fields") return undefined;
   if (isLocatorTypeField(fieldName)) {
     return vi
-      ? "Mặc định là XPath để tương thích; đổi sang Test ID, Role, Label, hoặc Placeholder khi trang có selector ổn định hơn."
-      : "Defaults to XPath for compatibility; switch to Test ID, Role, Label, or Placeholder when the page exposes a more stable selector.";
+      ? "Mặc định là XPath; đổi sang Test ID, Role, Label, hoặc Placeholder khi trang có selector ổn định hơn."
+      : "Defaults to XPath; switch to Test ID, Role, Label, or Placeholder when the page exposes a more stable selector.";
   }
   if (isLocatorValueField(fieldName)) {
     return vi

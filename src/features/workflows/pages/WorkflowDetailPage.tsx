@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Save, Settings } from "lucide-react";
 import type {
   GraphValidationIssue,
+  GraphEdgeDelay,
   RunState,
   WorkflowGraph,
   WorkflowDetail,
@@ -26,6 +27,7 @@ type WorkflowDetailPageProps = {
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
   graphIssuesNeedRecheck: boolean;
+  defaultEdgeDelay?: GraphEdgeDelay | null;
   onBack: () => void;
   onOpenWorkflowSettings: () => void;
   onStopRun: () => void;
@@ -49,6 +51,7 @@ export function WorkflowDetailPage({
   workflowGraph,
   graphIssues,
   graphIssuesNeedRecheck,
+  defaultEdgeDelay,
   onBack,
   onOpenWorkflowSettings,
   onStopRun,
@@ -190,6 +193,7 @@ export function WorkflowDetailPage({
           runState={runState}
           validationIssues={graphIssues}
           selectionRequest={selectionRequest}
+          defaultEdgeDelay={defaultEdgeDelay}
           onChange={onGraphChange}
           onRunGraph={onRunGraph}
           onSelectedNodeChange={onSelectedGraphNodeChange}

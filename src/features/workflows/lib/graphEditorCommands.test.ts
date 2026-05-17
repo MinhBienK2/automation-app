@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { WorkflowGraph } from "../../../types/workflow";
 import {
+  arrangeWorkflowGraph,
   copyGraphSelection,
   deleteGraphSelection,
   duplicateGraphSelection,
@@ -208,5 +209,32 @@ describe("graph editor commands", () => {
     const redone = redoGraphHistory(undone);
     expect(redone.present).toBe(third);
     expect(redone.past).toEqual([second]);
+  });
+
+  test("auto arranges graph nodes into stable left-to-right execution columns", () => {
+    const tangledGraph: WorkflowGraph = {
+      ...graph,
+      nodes: graph.nodes.map((node, index) => ({
+        ...node,
+        position: { x: 600 - index * 140, y: 320 - index * 45 },
+      })),
+      viewport: { x: -200, y: 80, zoom: 0.5 },
+    };
+
+    const arranged = arrangeWorkflowGraph(tangledGraph);
+    const positions = new Map(arranged.nodes.map((node) => [node.id, node.position]));
+
+    expect(positions.get("start")).toEqual({ x: 0, y: 0 });
+    expect(positions.get("a")).toEqual({ x: 260, y: 0 });
+    expect(positions.get("b")).toEqual({ x: 520, y: 0 });
+    expect(positions.get("outside")).toEqual({ x: 780, y: 0 });
+    expect(arranged.edges).toEqual(tangledGraph.edges);
+    expect(arranged.viewport).toEqual(tangledGraph.viewport);
+    expect(arranged.nodes.find((node) => node.id === "a")).toEqual(
+      expect.objectContaining({
+        config: graph.nodes.find((node) => node.id === "a")?.config,
+        group_id: "group-1",
+      }),
+    );
   });
 });

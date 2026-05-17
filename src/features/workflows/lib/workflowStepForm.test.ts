@@ -47,40 +47,75 @@ describe("workflow step form config helpers", () => {
     });
   });
 
-  test("updates advanced scroll fields without dropping legacy fields", () => {
+  test("updates page scroll fields", () => {
     const config: ActionConfig = {
       type: "scroll",
       config: { direction: "down", pixels: 300 },
     };
 
-    expect(updateActionConfigField(config, "mode", "until_visible")).toEqual({
+    expect(updateActionConfigField(config, "pixels", "500")).toEqual({
       type: "scroll",
-      config: { mode: "until_visible", direction: "down", pixels: 300 },
-    });
-    expect(updateActionConfigField(config, "xpath", "//*[@id='target']")).toEqual({
-      type: "scroll",
-      config: {
-        direction: "down",
-        pixels: 300,
-        xpath: "//*[@id='target']",
-      },
-    });
-    expect(updateActionConfigField(config, "max_attempts", "5")).toEqual({
-      type: "scroll",
-      config: { direction: "down", pixels: 300, max_attempts: 5 },
+      config: { direction: "down", pixels: 500 },
     });
   });
 
-  test("updates advanced click fields without dropping the xpath", () => {
+  test("updates targeted scroll mode fields without dropping legacy page settings", () => {
+    const config: ActionConfig = {
+      type: "scroll",
+      config: { mode: "page", direction: "down", pixels: 300 },
+    };
+
+    expect(updateActionConfigField(config, "mode", "into_view")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "into_view",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 5000,
+      },
+    });
+
+    const targetedConfig: ActionConfig = {
+      type: "scroll",
+      config: {
+        mode: "until_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 5000,
+      },
+    };
+
+    expect(updateActionConfigField(targetedConfig, "xpath", "//h2")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "until_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        xpath: "//h2",
+        timeout_ms: 5000,
+      },
+    });
+    expect(updateActionConfigField(targetedConfig, "timeout_ms", "9000")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "until_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 9000,
+      },
+    });
+  });
+
+  test("updates click iframe without dropping the xpath", () => {
     const config: ActionConfig = {
       type: "click",
       config: { xpath: "//*[@id='submit']" },
     };
 
-    expect(updateActionConfigField(config, "click_count", "2")).toEqual({
-      type: "click",
-      config: { xpath: "//*[@id='submit']", click_count: 2 },
-    });
     expect(updateActionConfigField(config, "iframe_xpath", "//*[@id='frame']")).toEqual({
       type: "click",
       config: {
@@ -88,21 +123,9 @@ describe("workflow step form config helpers", () => {
         iframe_xpath: "//*[@id='frame']",
       },
     });
-    expect(updateActionConfigField(config, "mode", "force_dom")).toEqual({
-      type: "click",
-      config: { xpath: "//*[@id='submit']", mode: "force_dom" },
-    });
   });
 
   test("updates new taxonomy action fields without dropping existing config", () => {
-    const inputConfig: ActionConfig = {
-      type: "input_text",
-      config: {
-        xpath: "//*[@name='email']",
-        text: "old",
-        clear_before_input: true,
-      },
-    };
     const waitConfig: ActionConfig = {
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
@@ -112,15 +135,6 @@ describe("workflow step form config helpers", () => {
       config: { keys: ["Control"] },
     };
 
-    expect(updateActionConfigField(inputConfig, "typing_mode", "type")).toEqual({
-      type: "input_text",
-      config: {
-        xpath: "//*[@name='email']",
-        text: "old",
-        clear_before_input: true,
-        typing_mode: "type",
-      },
-    });
     expect(updateActionConfigField(waitConfig, "duration_ms", "2500")).toEqual({
       type: "wait",
       config: { condition: "duration", duration_ms: 2500 },
@@ -325,39 +339,19 @@ describe("workflow step form config helpers", () => {
     });
   });
 
-  test("updates phase three frame dialog and download configs with typed values", () => {
-    const frameConfig: ActionConfig = {
-      type: "switch_frame",
-      config: {},
-    };
+  test("updates phase three dialog and download configs with typed values", () => {
     const acceptConfig: ActionConfig = {
       type: "accept_dialog",
       config: {},
-    };
-    const downloadDirConfig: ActionConfig = {
-      type: "set_download_directory",
-      config: { path: "/tmp/old" },
     };
     const waitDownloadConfig: ActionConfig = {
       type: "wait_for_download",
       config: { output_name: "download_path" },
     };
 
-    expect(updateActionConfigField(frameConfig, "xpath", "//*[@id='frame']")).toEqual({
-      type: "switch_frame",
-      config: { xpath: "//*[@id='frame']" },
-    });
-    expect(updateActionConfigField(frameConfig, "xpath", "")).toEqual({
-      type: "switch_frame",
-      config: { xpath: null },
-    });
     expect(updateActionConfigField(acceptConfig, "prompt_text", "approved")).toEqual({
       type: "accept_dialog",
       config: { prompt_text: "approved" },
-    });
-    expect(updateActionConfigField(downloadDirConfig, "path", "/tmp/new")).toEqual({
-      type: "set_download_directory",
-      config: { path: "/tmp/new" },
     });
     expect(updateActionConfigField(waitDownloadConfig, "timeout_ms", "3000")).toEqual({
       type: "wait_for_download",
@@ -409,55 +403,24 @@ describe("workflow step form config helpers", () => {
     });
   });
 
-  test("updates phase six session profile cookie and secret configs with typed values", () => {
-    const profileConfig: ActionConfig = {
-      type: "use_profile",
-      config: { name: "account-a" },
-    };
-    const sessionConfig: ActionConfig = {
-      type: "save_session",
-      config: { path: "/tmp/old.json" },
-    };
+  test("updates phase six cookie configs with typed values", () => {
     const cookieConfig: ActionConfig = {
       type: "set_cookie",
       config: { name: "token", value: "old" },
     };
-    const secretConfig: ActionConfig = {
-      type: "set_secret",
-      config: { name: "password", value: "old" },
-    };
 
-    expect(updateActionConfigField(profileConfig, "name", "account-b")).toEqual({
-      type: "use_profile",
-      config: { name: "account-b" },
-    });
-    expect(updateActionConfigField(sessionConfig, "path", "/tmp/session.json")).toEqual({
-      type: "save_session",
-      config: { path: "/tmp/session.json" },
-    });
     expect(updateActionConfigField(cookieConfig, "domain", "example.com")).toEqual({
       type: "set_cookie",
       config: { name: "token", value: "old", domain: "example.com" },
     });
-    expect(updateActionConfigField(secretConfig, "value", "new-secret")).toEqual({
-      type: "set_secret",
-      config: { name: "password", value: "new-secret" },
-    });
   });
 
   test("updates phase seven network device configs with typed values", () => {
-    const proxyConfig: ActionConfig = {
-      type: "use_proxy",
-      config: { server: "http://old:8080", username: null, password: null },
-    };
     const viewportConfig: ActionConfig = {
       type: "set_viewport",
       config: {
         width: 1280,
         height: 720,
-        device_scale_factor: 1,
-        mobile: false,
-        touch: false,
       },
     };
     const headersConfig: ActionConfig = {
@@ -469,32 +432,11 @@ describe("workflow step form config helpers", () => {
       config: { origin: null, permissions: ["geolocation"] },
     };
 
-    expect(updateActionConfigField(proxyConfig, "server", "socks5://127.0.0.1:9050")).toEqual({
-      type: "use_proxy",
-      config: { server: "socks5://127.0.0.1:9050", username: null, password: null },
-    });
-    expect(updateActionConfigField(proxyConfig, "username", "agent")).toEqual({
-      type: "use_proxy",
-      config: { server: "http://old:8080", username: "agent", password: null },
-    });
     expect(updateActionConfigField(viewportConfig, "width", "390")).toEqual({
       type: "set_viewport",
       config: {
         width: 390,
         height: 720,
-        device_scale_factor: 1,
-        mobile: false,
-        touch: false,
-      },
-    });
-    expect(updateActionConfigField(viewportConfig, "mobile", "true")).toEqual({
-      type: "set_viewport",
-      config: {
-        width: 1280,
-        height: 720,
-        device_scale_factor: 1,
-        mobile: true,
-        touch: false,
       },
     });
     expect(updateActionConfigField(headersConfig, "headers", "X-WAM-Phase: seven")).toEqual({
@@ -504,104 +446,6 @@ describe("workflow step form config helpers", () => {
     expect(updateActionConfigField(permissionConfig, "permissions", "geolocation\nnotifications")).toEqual({
       type: "grant_permission",
       config: { origin: null, permissions: ["geolocation", "notifications"] },
-    });
-  });
-
-  test("updates phase eight human verification configs with typed values", () => {
-    const detectConfig: ActionConfig = {
-      type: "detect_challenge",
-      config: {
-        output_name: "challenge_found",
-        patterns: ["captcha"],
-      },
-    };
-    const pauseConfig: ActionConfig = {
-      type: "pause_for_human",
-      config: { reason: "Solve challenge", timeout_ms: 1000 },
-    };
-    const resumeConfig: ActionConfig = {
-      type: "resume_when_condition",
-      config: {
-        condition: { kind: "text_visible", text: "Welcome" },
-        timeout_ms: 3000,
-      },
-    };
-
-    expect(updateActionConfigField(detectConfig, "patterns", "captcha\nverify you are human")).toEqual({
-      type: "detect_challenge",
-      config: {
-        output_name: "challenge_found",
-        patterns: ["captcha", "verify you are human"],
-      },
-    });
-    expect(updateActionConfigField(detectConfig, "timeout_ms", "1500")).toEqual({
-      type: "detect_challenge",
-      config: {
-        output_name: "challenge_found",
-        patterns: ["captcha"],
-        timeout_ms: 1500,
-      },
-    });
-    expect(updateActionConfigField(pauseConfig, "reason", "Manual verification")).toEqual({
-      type: "pause_for_human",
-      config: { reason: "Manual verification", timeout_ms: 1000 },
-    });
-    expect(updateActionConfigField(resumeConfig, "timeout_ms", "5000")).toEqual({
-      type: "resume_when_condition",
-      config: {
-        condition: { kind: "text_visible", text: "Welcome" },
-        timeout_ms: 5000,
-      },
-    });
-  });
-
-  test("updates phase nine reliability configs with typed values", () => {
-    const fallbackConfig: ActionConfig = {
-      type: "fallback_selector",
-      config: {
-        output_name: "target_xpath",
-        xpaths: ["//*[@id='old']"],
-      },
-    };
-    const retryConfig: ActionConfig = {
-      type: "retry_step",
-      config: {
-        max_attempts: 2,
-        delay_ms: 100,
-        step: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
-      },
-    };
-    const checkpointConfig: ActionConfig = {
-      type: "checkpoint",
-      config: { name: "after_submit", screenshot_path: null },
-    };
-
-    expect(updateActionConfigField(fallbackConfig, "xpaths", "//*[@id='missing']\n//*[@id='real']")).toEqual({
-      type: "fallback_selector",
-      config: {
-        output_name: "target_xpath",
-        xpaths: ["//*[@id='missing']", "//*[@id='real']"],
-      },
-    });
-    expect(updateActionConfigField(fallbackConfig, "timeout_ms", "1500")).toEqual({
-      type: "fallback_selector",
-      config: {
-        output_name: "target_xpath",
-        xpaths: ["//*[@id='old']"],
-        timeout_ms: 1500,
-      },
-    });
-    expect(updateActionConfigField(retryConfig, "max_attempts", "4")).toEqual({
-      type: "retry_step",
-      config: {
-        max_attempts: 4,
-        delay_ms: 100,
-        step: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
-      },
-    });
-    expect(updateActionConfigField(checkpointConfig, "screenshot_path", "/tmp/checkpoint.png")).toEqual({
-      type: "checkpoint",
-      config: { name: "after_submit", screenshot_path: "/tmp/checkpoint.png" },
     });
   });
 

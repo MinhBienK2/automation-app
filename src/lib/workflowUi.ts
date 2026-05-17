@@ -3,6 +3,7 @@ import type {
   CommandError,
   GraphValidationIssue,
   RunState,
+  WorkflowRunSnapshot,
 } from "../types/workflow";
 import { allActionTypes, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
 
@@ -15,7 +16,6 @@ export const actionLabels: Record<ActionType, string> = {
   click: "Click",
   scroll: "Scroll",
   select_option: "Select Option",
-  set_checkbox: "Set Checkbox",
   press_key: "Press Key",
   hotkey: "Hotkey",
   hover: "Hover",
@@ -47,16 +47,16 @@ export const actionLabels: Record<ActionType, string> = {
   open_new_tab: "Open New Tab",
   switch_tab: "Switch Tab",
   close_tab: "Close Tab",
-  switch_frame: "Switch Frame",
   accept_dialog: "Accept Dialog",
   dismiss_dialog: "Dismiss Dialog",
-  set_download_directory: "Choose Download Folder",
   wait_for_download: "Wait For Download",
   set_variable: "Set Variables",
   set_json_variables: "Set JSON Variables",
   assert_element: "Assert Element",
   assert_text: "Assert Text",
+  graph_noop: "Graph No-op",
   if_condition: "If Condition",
+  router_condition: "Router Condition",
   repeat_times: "Repeat Times",
   repeat_for_each: "Repeat For Each",
   retry_block: "Retry Block",
@@ -70,26 +70,13 @@ export const actionLabels: Record<ActionType, string> = {
   stop_workflow: "Stop Workflow",
   transform_variable: "Transform Variable",
   assert_output: "Assert Output",
-  run_subworkflow: "Run Subworkflow",
   domain_allowlist: "Domain Allowlist",
-  use_profile: "Use Profile",
-  save_session: "Save Session",
-  load_session: "Load Session",
   set_cookie: "Set Cookie",
   clear_cookies: "Clear Cookies",
-  set_secret: "Set Secret",
-  use_proxy: "Set Proxy",
-  set_user_agent: "Set User Agent",
   set_viewport: "Set Viewport",
   set_geolocation: "Set Geolocation",
   set_extra_headers: "Set Request Headers",
   grant_permission: "Grant Permission",
-  detect_challenge: "Detect Challenge",
-  pause_for_human: "Pause For Human",
-  resume_when_condition: "Resume When Condition",
-  fallback_selector: "Fallback Selector",
-  retry_step: "Retry Step",
-  checkpoint: "Checkpoint",
   execute_js: "Run JavaScript",
   wait_for_request: "Wait For Request",
   wait_for_response: "Wait For Response",
@@ -170,14 +157,11 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Browser Context",
     actions: [
-      "switch_frame",
       "accept_dialog",
       "dismiss_dialog",
-      "set_download_directory",
       "set_viewport",
       "set_geolocation",
       "grant_permission",
-      "set_user_agent",
     ],
   },
   {
@@ -187,12 +171,8 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Session & Storage",
     actions: [
-      "use_profile",
-      "save_session",
-      "load_session",
       "set_cookie",
       "clear_cookies",
-      "set_secret",
       "set_local_storage",
       "set_session_storage",
     ],
@@ -200,7 +180,6 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
   {
     label: "Network",
     actions: [
-      "use_proxy",
       "set_extra_headers",
       "wait_for_request",
       "wait_for_response",
@@ -265,6 +244,19 @@ export function normalizeRunState(state: RunState): RunState {
     outputs: state.outputs ?? {},
     retained_session: state.retained_session ?? null,
     error: state.error ?? null,
+  };
+}
+
+export function normalizeRunSnapshot(snapshot: WorkflowRunSnapshot): WorkflowRunSnapshot {
+  const state = normalizeRunState(snapshot.state ?? snapshot);
+  return {
+    ...state,
+    run_id: snapshot.run_id,
+    workflow_id: snapshot.workflow_id,
+    workflow_name: snapshot.workflow_name,
+    source: snapshot.source,
+    started_at: snapshot.started_at,
+    state,
   };
 }
 

@@ -155,6 +155,40 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       commonMistakes: ["Leaving a New node unconfigured; the graph can be saved but validate/run will be blocked."],
     },
   },
+  merge: {
+    vi: nodeWithFields("Merge", "Cho nhiều nhánh quay về một luồng chung mà không chờ nhánh khác.", [
+      field("Ports", "Nối nhiều nhánh vào In và một continuation từ Out.", [
+        "Merge không chạy browser action.",
+        "Nhánh nào tới Merge sẽ đi tiếp qua Out; nếu Out bỏ trống thì path kết thúc thành công.",
+      ]),
+    ]),
+    en: nodeWithFields("Merge", "Let multiple branches return to one shared path without waiting for other branches.", [
+      field("Ports", "Connect many branches to In and one continuation from Out.", [
+        "Merge does not run a browser action.",
+        "The branch that reaches Merge continues through Out; when Out is blank, that path ends successfully.",
+      ]),
+    ], "en"),
+  },
+  router: {
+    vi: nodeWithFields("Router", "Chọn case đầu tiên khớp trong bảng điều kiện ưu tiên.", [
+      field("Condition", "Mỗi case có condition riêng và chạy theo thứ tự từ trên xuống.", [
+        "Case đầu tiên khớp sẽ chạy; các case còn lại không chạy.",
+        "Default chạy khi không case nào khớp.",
+      ]),
+      field("Done port", "Continuation sau khi branch được chọn hoàn tất.", [
+        "Done optional; nếu không nối, workflow kết thúc thành công sau Router.",
+      ]),
+    ]),
+    en: nodeWithFields("Router", "Choose the first matching case from a prioritized decision table.", [
+      field("Condition", "Each case has its own condition and runs top to bottom.", [
+        "The first matching case runs; later cases do not run.",
+        "Default runs when no case matches.",
+      ]),
+      field("Done port", "Continuation after the selected branch finishes.", [
+        "Done is optional; when blank, the workflow ends successfully after Router.",
+      ]),
+    ], "en"),
+  },
   if: {
     vi: {
       title: "If Help",
@@ -301,32 +335,6 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       field("Output name", "Output to check.", ["The output must exist before assertion."]),
       field("Match", "Equals matches exactly; Contains accepts a substring.", ["Use Contains for longer or slightly changing text."]),
       field("Expected value", "Expected value.", ["Check whitespace and letter case."]),
-    ], "en"),
-  },
-  run_subworkflow: {
-    vi: nodeWithFields("Run Subworkflow", "Chạy một workflow khác từ graph hiện tại.", [
-      field("Workflow id", "ID workflow con cần chạy.", ["Workflow con phải tồn tại và tự validate được."]),
-    ]),
-    en: nodeWithFields("Run Subworkflow", "Run another workflow from this graph.", [
-      field("Workflow id", "Workflow id to run.", ["The child workflow must exist and validate on its own."]),
-    ], "en"),
-  },
-  manual_approval: {
-    vi: nodeWithFields("Manual Approval", "Tạm dừng để người dùng kiểm tra thủ công.", [
-      field("Approval reason", "Nội dung giải thích vì sao cần duyệt.", ["Đây là checkpoint người dùng, không phải cơ chế bypass challenge."]),
-      field("Timeout ms", "Thời gian tối đa chờ người dùng.", ["0 hoặc trống nghĩa là không đặt giới hạn khi được hỗ trợ."]),
-    ]),
-    en: nodeWithFields("Manual Approval", "Pause for a human checkpoint.", [
-      field("Approval reason", "Why approval is needed.", ["This is a user checkpoint, not challenge bypass."]),
-      field("Timeout ms", "Maximum time to wait for the user.", ["0 or blank means no limit when supported."]),
-    ], "en"),
-  },
-  rate_limit: {
-    vi: nodeWithFields("Rate Limit", "Thêm khoảng nghỉ an toàn trước khi đi tiếp.", [
-      field("Delay ms", "Thời gian nghỉ.", ["Dùng để giảm tốc độ thao tác hoặc chờ hệ thống ổn định."]),
-    ]),
-    en: nodeWithFields("Rate Limit", "Add safe pacing before continuing.", [
-      field("Delay ms", "Delay duration.", ["Use to slow actions or let the system settle."]),
     ], "en"),
   },
   domain_allowlist: {
@@ -586,6 +594,18 @@ function graphNodePortSemantics(
         port("case_N", "branch", false, vi ? "Chạy case khớp expression." : "Runs the case that matches the expression."),
         port("default", "branch", false, vi ? "Chạy khi không case nào khớp." : "Runs when no case matches."),
         port("done", "continuation", false, optionalDone),
+      ];
+    case "router":
+      return [
+        port("in", "input", true, input),
+        port("case_<id>", "branch", false, vi ? "Chạy case đầu tiên có condition khớp." : "Runs the first case whose condition matches."),
+        port("default", "branch", false, vi ? "Chạy khi không case nào khớp." : "Runs when no case matches."),
+        port("done", "continuation", false, optionalDone),
+      ];
+    case "merge":
+      return [
+        port("in", "input", true, vi ? "Nhận nhiều nhánh đi vào điểm hội tụ." : "Receives multiple branches at the convergence point."),
+        port("out", "continuation", false, optionalDone),
       ];
     case "repeat_times":
     case "repeat_for_each":

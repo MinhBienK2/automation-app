@@ -26,23 +26,19 @@ Every user-addable action type must have:
 - Backend validation when fields have constraints.
 - Runner execution or an explicit unsupported error. Silent success for stubbed actions is not allowed.
 
-Launch-time browser identity actions such as `use_profile`, `use_proxy`, `set_user_agent`, and `set_download_directory` are not user-addable in the primary action palette. Browser identity belongs in Workflow Settings Browser Launch. Existing serialized configs remain DTO-compatible, but graph validation blocks legacy launch-time nodes with an instruction to move the setting to Workflow Settings before launch; the runner also fails explicitly if one reaches runtime.
+Browser identity actions such as profile, proxy, user-agent, and download-directory settings are not part of the in-run action contract. Browser identity belongs in Workflow Settings Browser Launch.
 
-Runner traces classify every top-level executed action with an execution path:
-`humanized`, `browser_api`, `dom_fallback`, or `cdp_sensitive`. This is evidence
-metadata, not an action config field. Browser Launch `behavior_fidelity:
-strict_humanized` blocks actions classified as `dom_fallback` or
-`cdp_sensitive`; authors should switch to humanized-capable actions or choose a
-less strict identity policy for deterministic internal workflows.
+Runner traces classify every top-level executed action with compact mode/status metadata. The runner's CloakBrowser-native/custom-human/direct-DOM capability map is internal execution policy, not a serialized action config field.
 
-Graph-internal executable configs such as `if_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, `run_subworkflow`, and `domain_allowlist` are TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Legacy action nodes that contain graph-internal configs render a compatibility panel with the action label, read-only JSON, and replacement/delete affordances instead of an empty editor. Variable configs include backward-compatible `set_variable`, multi-row `set_variable`, and `set_json_variables`. Hidden compatibility actions such as `set_checkbox`, reliability actions, and human checkpoint actions remain loadable when present in existing workflows, but are not visible in the main Add Action picker. They still require DTO compatibility, validation, and runner or command-layer execution semantics.
+Graph-internal executable configs such as `graph_noop`, `if_condition`, `router_condition`, `repeat_times`, `repeat_for_each`, `retry_block`, `switch_condition`, `while_loop`, `repeat_until`, `try_catch`, `fallback_block`, `break_loop`, `continue_loop`, `stop_workflow`, `transform_variable`, `assert_output`, and `domain_allowlist` are TypeScript `ActionConfig` variants used by graph compilation and runner orchestration. They are intentionally included in TypeScript `ActionType` for DTO safety, but hidden from the main Add Action picker. Graph-native nodes are the user-facing control-flow authoring surface. Variable configs include multi-row `set_variable` and `set_json_variables`.
+
+Merge nodes compile to `{ type: "graph_noop", config: { kind: "merge" } }` and have no browser, output, session, or network side effects. Router nodes compile to `router_condition` with `mode: "first_match"`, stable case ids/labels/conditions, nested case steps, and `default_steps`.
 
 Terminal graph nodes can compile to `stop_workflow` with `close_browser: true`. When `close_browser` is missing or false, terminal runs keep retaining the browser session. When true, the runner still captures outputs first and then closes the browser instead of retaining the session.
 
 Variable config rules:
 
-- Legacy `set_variable` `{ name, value }` must still deserialize and run.
-- New `set_variable` rows use `{ name, value_type, value }`, where `value_type` is `text`, `json`, `number`, or `boolean`.
+- `set_variable` rows use `{ name, value_type, value }`, where `value_type` is `text`, `json`, `number`, or `boolean`.
 - `set_json_variables` requires a JSON object root.
 - Dot-path names are valid variable paths.
 - Object values flatten into dot-path outputs; arrays stay whole at their path.
@@ -52,19 +48,20 @@ Variable config rules:
 Element target config rules:
 
 - User-authored element-facing actions use `target`, a structured locator bundle with ordered locators (`test_id`, `role`, `label`, `placeholder`, `text`, `css`, `xpath`, or `attribute`) plus optional constraints (`visible`, `enabled`, `contains_text`, `index`) and optional iframe target.
-- Legacy `xpath` and `iframe_xpath` fields remain accepted for saved workflow compatibility and migration paths, but visible action defaults and editor fields no longer create them.
 - Drag/drop uses `source_target` and `target_target`; custom select uses `trigger_target`.
-- Graph v1 migration rewrites legacy XPath selector fields into those target fields and records converted/dropped field notes on `WorkflowGraph.migration_notes`.
-- Backend validation accepts either a non-empty legacy XPath or a valid structured target for required element actions.
+- Backend validation requires a valid structured target for required element actions.
 - The runner resolves structured targets at runtime through ordered locators, supports role/label/placeholder/text/CSS/XPath/attribute locator kinds, applies supported constraints, and reuses the frame-aware action path.
-- Visible action defaults no longer include action-level `wait_until`, `timeout_ms`, typing fidelity, retry interval, post-click wait, click positioning, clear-field method, or scroll tuning fields. Those fields may still appear in compatibility-loaded configs until the migration layer rewrites or drops them.
+- Scroll config supports `mode: "page" | "into_view" | "until_visible"`. Missing `mode` remains compatible with legacy Page scroll and requires `direction` plus positive `pixels`. `into_view` and `until_visible` require `target` or legacy `xpath`, may include `iframe_xpath`, and may set positive `timeout_ms`.
+- Visible action defaults no longer include action-level typing fidelity, retry interval, post-click wait, click positioning, or clear-field method fields. Scroll exposes only mode-specific fields: Page shows direction/pixels, while element-targeted modes show target and timeout.
+- Backend validation rejects unsupported enum values for preserved element/form/assertion fields such as readiness wait mode, select matching mode, checkbox state, and assertion match mode; the runner keeps matching defensive guards for direct execution inputs.
+- Runner interaction dispatch uses an internal capability map: CloakBrowser-native paths are preferred for supported element/page/frame APIs, custom human behavior is isolated to unsupported cases such as page pixel scroll, untargeted key chords, paste shortcut orchestration, and right-click button preservation, and direct DOM is used for read/assert/storage actions or final fallbacks only.
 
 Evidence config rules:
 
 - `take_screenshot.path` is an artifact name, not a filesystem path.
-- Screenshot/checkpoint artifact names must be relative names without `file:`, absolute paths, path separators, or parent traversal.
+- Screenshot artifact names must be relative names without `file:`, absolute paths, path separators, or parent traversal.
 - Generated screenshot and download paths are stored under `evidence/runs/<run_id>/...`.
-- `__evidence` contains structured artifact metadata; compact output paths remain for compatibility.
+- `__evidence` contains structured artifact metadata; compact output paths remain for existing output consumers.
 
 Recovery config semantics must preserve failure behavior when recovery branches are absent:
 
@@ -80,15 +77,17 @@ Recovery config semantics must preserve failure behavior when recovery branches 
 - `dry_run_validate_config` exposes backend validation for builder assist.
 - Backend action validation covers visible action families, nested graph-internal action arrays, safe evidence names, geolocation and viewport ranges, network status ranges, required output names, and storage/header/permission lists.
 
+Set Viewport is a runtime viewport-size action. Active authoring exposes only `width` and `height`. Device scale factor, mobile mode, and touch capability belong in Workflow Settings Browser Launch before Chromium starts.
+
 ## Persistence
 
-Configs persist as JSON inside `workflows.graph_json` and workflow package `flow` payloads. Legacy `WorkflowStep.config` remains a DTO/import-export compatibility shape.
+Configs persist as JSON inside `workflows.graph_json` and workflow package `flow` payloads.
 
-Preserve JSON compatibility for existing configs unless a migration or import/export compatibility path is intentionally added.
+Preserve the current v2 graph JSON contract unless a schema change is intentionally designed.
 
-## Removed Legacy Actions
+## Removed Actions
 
-`open_url`, `sleep`, and `type_text` are not part of the current action type set. Existing persisted configs are migrated or normalized as follows:
+`open_url`, `sleep`, and `type_text` are not part of the current action type set.
 
 - `open_url` -> `navigate`
 - `sleep` -> `wait` with `condition: "duration"` and `duration_ms`

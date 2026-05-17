@@ -35,7 +35,7 @@ export const logicNodeGroups: Array<{
   label: string;
   nodes: GraphNodeType[];
 }> = [
-  { label: "Branching", nodes: ["if", "switch"] },
+  { label: "Branching", nodes: ["if", "switch", "router", "merge"] },
   {
     label: "Loops",
     nodes: [
@@ -60,6 +60,8 @@ export const endNodeGroups = [
 
 const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   action: "Run a browser, data, session, network, or advanced action.",
+  merge: "Let multiple branch paths continue into one shared path.",
+  router: "Evaluate prioritized cases and run the first matching branch.",
   if: "Branch the workflow into True and False paths.",
   switch: "Route execution to a matching case or a default path.",
   repeat_times: "Run a loop path a fixed number of times.",
@@ -72,13 +74,10 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   break_loop: "Exit the current loop and continue after it.",
   continue_loop: "Skip the rest of the loop body and move to the next iteration.",
   stop_workflow: "Stop execution with a success or failure status.",
-  manual_approval: "Pause for a human checkpoint.",
-  rate_limit: "Add safe pacing before continuing.",
   set_variable: "Store multiple workflow values.",
   set_json_variables: "Store structured JSON values.",
   transform_variable: "Create an output from an existing value.",
   assert_output: "Require an output value to match an expectation.",
-  run_subworkflow: "Run another workflow from this graph.",
   domain_allowlist: "Restrict navigation to allowed domains.",
   end_success: "End the graph successfully.",
   end_failure: "End the graph as a failure.",
@@ -587,7 +586,9 @@ type ActionNodePaletteProps = {
 };
 
 const hiddenActionPickerTypes = new Set<ActionType>([
+  "graph_noop",
   "if_condition",
+  "router_condition",
   "repeat_times",
   "repeat_for_each",
   "retry_block",
@@ -601,7 +602,6 @@ const hiddenActionPickerTypes = new Set<ActionType>([
   "stop_workflow",
   "transform_variable",
   "assert_output",
-  "run_subworkflow",
   "domain_allowlist",
 ]);
 
@@ -633,7 +633,6 @@ export const actionDescriptions: Record<ActionType, string> = {
   click: "Click an element",
   scroll: "Move the page or an element",
   select_option: "Choose a native select option",
-  set_checkbox: "Set checkbox state",
   press_key: "Press one key",
   hotkey: "Press a keyboard shortcut",
   hover: "Move over an element",
@@ -665,16 +664,16 @@ export const actionDescriptions: Record<ActionType, string> = {
   open_new_tab: "Open a browser tab",
   switch_tab: "Change the active tab",
   close_tab: "Close a browser tab",
-  switch_frame: "Target an iframe",
   accept_dialog: "Accept a browser dialog",
   dismiss_dialog: "Dismiss a browser dialog",
-  set_download_directory: "Choose download location",
   wait_for_download: "Wait for a download",
   set_variable: "Store workflow values",
   set_json_variables: "Store JSON values",
   assert_element: "Require an element state",
   assert_text: "Require matching text",
+  graph_noop: "Mark graph control flow progress",
   if_condition: "Run steps conditionally",
+  router_condition: "Run the first matching router case",
   repeat_times: "Repeat nested steps",
   repeat_for_each: "Repeat for each item",
   retry_block: "Retry a group of steps",
@@ -688,26 +687,13 @@ export const actionDescriptions: Record<ActionType, string> = {
   stop_workflow: "Stop execution",
   transform_variable: "Map one variable to another",
   assert_output: "Require an output value",
-  run_subworkflow: "Run another saved workflow",
   domain_allowlist: "Restrict allowed domains",
-  use_profile: "Use a browser profile",
-  save_session: "Save browser session",
-  load_session: "Load browser session",
   set_cookie: "Set a browser cookie",
   clear_cookies: "Clear browser cookies",
-  set_secret: "Store a secret value",
-  use_proxy: "Route traffic through a proxy",
-  set_user_agent: "Set user agent string",
   set_viewport: "Set viewport size",
   set_geolocation: "Set location data",
   set_extra_headers: "Attach request headers",
   grant_permission: "Grant browser permission",
-  detect_challenge: "Detect human verification",
-  pause_for_human: "Pause for manual action",
-  resume_when_condition: "Resume after a condition",
-  fallback_selector: "Use a fallback selector",
-  retry_step: "Retry one flaky step",
-  checkpoint: "Save a recovery point",
   execute_js: "Run JavaScript",
   wait_for_request: "Wait for a request",
   wait_for_response: "Wait for a response",

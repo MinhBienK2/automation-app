@@ -166,6 +166,20 @@ describe("App CSS", () => {
     expect(validTargetHandle).toContain("background: #00c573");
   });
 
+  test("keeps graph port tooltips delayed and above neighboring nodes", () => {
+    const tooltipBubble = cssRule(".graph-handle::after");
+    const visibleTooltip = cssRule(
+      ".graph-handle:hover::after,\n.graph-handle:focus-visible::after",
+    );
+    const activeNode = cssRule(
+      ".graph-canvas .react-flow__node:has(.graph-handle:hover),\n.graph-canvas .react-flow__node:has(.graph-handle:focus-visible)",
+    );
+
+    expect(tooltipBubble).toContain("transition-delay: 0ms");
+    expect(visibleTooltip).toContain("transition-delay: 1s");
+    expect(activeNode).toContain("z-index: 1000 !important");
+  });
+
   test("keeps graph error colors dominant when issue or failed items are selected", () => {
     const selectedNode = cssRule(".graph-node-selected");
     const selectedIssueNode = cssRule(".graph-node-has-issue.graph-node-selected");
@@ -188,9 +202,27 @@ describe("App CSS", () => {
   test("keeps variable rows tabular while protecting narrow inspectors from overflow", () => {
     const variableTable = cssRule(".variable-row-table");
     const variableGrid = cssRule(".variable-row-grid");
+    const settingsVariableTable = cssRule(".settings-field-group-grid > .variable-row-table");
 
     expect(variableTable).toContain("overflow-x: auto");
     expect(variableGrid).toContain("grid-template-columns: minmax(96px, 1fr) 116px minmax(120px, 1.4fr) auto");
     expect(variableGrid).toContain("min-width: 520px");
+    expect(settingsVariableTable).toContain("grid-column: 1 / -1");
+  });
+
+  test("groups related workflow settings fields without changing the dark theme", () => {
+    const fieldGroup = cssRule(".settings-field-group");
+    const fieldGroupHeader = cssRule(".settings-field-group-header");
+    const fieldGroupGrid = cssRule(".settings-field-group-grid");
+    const fieldGroupFooter = cssRule(".settings-field-group-footer");
+
+    expect(fieldGroup).toContain("border: 1px solid #2e2e2e");
+    expect(fieldGroup).toContain("border-radius: 8px");
+    expect(fieldGroup).toContain("background: #0f0f0f");
+    expect(fieldGroupHeader).toContain("border-bottom: 1px solid #242424");
+    expect(fieldGroupGrid).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(fieldGroupFooter).toContain("color: #898989");
+    expect(cssRule(".settings-field-group-wide")).toContain("grid-column: 1 / -1");
+    expect(cssRule(".settings-field-group-actions")).toContain("flex-wrap: wrap");
   });
 });

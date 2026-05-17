@@ -81,6 +81,16 @@ Checks: `npm test -- electron/backend/commands.test.ts`, `npm run build:electron
 
 Update docs: persistence architecture, workflow types, workflow lifecycle.
 
+## Change Workflow Scheduling
+
+Read: `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/frontend.md`, `architecture/persistence.md`, `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`, `domain/execution-semantics.md`
+
+Verify: `src/App.tsx`, `src/layouts/`, `src/features/schedules/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/main.ts`, `electron/backend/database.ts`, `electron/backend/workflowScheduleRepository.ts`, `electron/backend/scheduler.ts`, `electron/backend/commands.ts`
+
+Checks: `npm test -- electron/backend/scheduler.test.ts`, `npm test -- electron/backend/workflowScheduleRepository.test.ts`, `npm test -- electron/backend/commands.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- src/features/schedules/pages/SchedulesPage.test.tsx`, `npx tsc --noEmit`, `npm run build:electron`
+
+Update docs: workflow lifecycle, user-visible invariants, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, execution semantics, and this route when ownership or checks change.
+
 ## Change Runner Behavior
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
@@ -95,9 +105,9 @@ Update docs: execution semantics, runner architecture, run-state contract, impac
 
 Read: `domain/execution-semantics.md`, `architecture/frontend.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/App.tsx`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runner.ts`
+Verify: `src/App.tsx`, `src/features/runs/`, `src/features/workflows/pages/`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runner.ts`
 
-Checks: `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- electron/backend/commands.test.ts`
+Checks: `npm test -- src/features/workflows/pages/WorkflowListPage.test.tsx src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/commands.test.ts`
 
 Update docs: run-state contract, execution semantics, frontend/runner docs.
 
@@ -130,6 +140,21 @@ Verify: test fixtures under `src/tests/` or `electron/backend/`; source behavior
 Checks: focused test command for the edited test.
 
 Update docs: testing architecture or route checks only if verification expectations changed.
+
+## Change Desktop Packaging Or CI/CD
+
+Use when changing Electron package targets, release artifacts, GitHub Actions,
+or release verification.
+
+Read: `architecture/overview.md`, `architecture/testing.md`
+
+Verify: `package.json`, `package-lock.json`, `.github/workflows/`, `README.md`
+
+Checks: `npm test -- ci-cd.test.ts`, `npm run build`, and a focused package
+command such as `npm run electron:pack:linux` when the local OS supports it.
+
+Update docs: README development commands, this route, and any release or
+verification notes affected by the packaging workflow.
 
 Common E2E commands:
 

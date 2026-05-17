@@ -36,9 +36,6 @@ const allGraphNodeTypes: GraphNodeType[] = [
   "set_json_variables",
   "transform_variable",
   "assert_output",
-  "run_subworkflow",
-  "manual_approval",
-  "rate_limit",
   "domain_allowlist",
 ];
 
@@ -46,8 +43,7 @@ test.describe("desktop E2E coverage matrix", () => {
   test("covers every visible implemented action with local desktop E2E", () => {
     const visibleImplementedActions = allActionTypes.filter(
       (actionType) =>
-        isActionVisibleInPrimaryPalette(actionType) &&
-        actionCapabilities[actionType] !== "unsupported_visible_error",
+        isActionVisibleInPrimaryPalette(actionType),
     );
 
     expectMissingCoverage(
@@ -65,7 +61,7 @@ test.describe("desktop E2E coverage matrix", () => {
     expectMissingCoverage(hiddenActions, hiddenActionCoverage, "hidden action");
   });
 
-  test("covers every graph node type with E2E or explicit compatibility coverage", () => {
+  test("covers every graph node type with E2E or explicit backend coverage", () => {
     expectMissingCoverage(allGraphNodeTypes, graphNodeCoverage, "graph node");
   });
 

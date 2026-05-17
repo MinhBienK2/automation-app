@@ -40,6 +40,7 @@ function createMainWindow() {
     height: 820,
     minWidth: 960,
     minHeight: 640,
+    icon: getAppIconPath(),
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -54,6 +55,13 @@ function createMainWindow() {
   });
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    if (!isAllowedRendererUrl(targetUrl, devServerUrl)) {
+      event.preventDefault();
+    }
+  });
+
   if (devServerUrl) {
     void mainWindow.loadURL(devServerUrl);
     if (process.env.ELECTRON_OPEN_DEVTOOLS === "1") {
@@ -62,6 +70,12 @@ function createMainWindow() {
   } else {
     void mainWindow.loadFile(path.join(currentDir, "../../dist/index.html"));
   }
+}
+
+function getAppIconPath() {
+  return app.isPackaged
+    ? path.join(app.getAppPath(), "dist/app-logo.png")
+    : path.join(app.getAppPath(), "public/app-logo.png");
 }
 
 function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
@@ -83,26 +97,31 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
 app.whenReady().then(() => {
   const appPaths = createAppPaths(app.getPath("appData"));
   const database = initializeDatabase(appPaths);
-  registerWorkflowIpc(
-    createWorkflowCommandHandlers({
-      appPaths,
-      database,
-      async saveWorkflowPackageFile(packageValue) {
-        const { canceled, filePath } = await dialog.showSaveDialog({
-          defaultPath: path.join(
-            appPaths.rootDir,
-            `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
-          ),
-          filters: [{ name: "Workflow package", extensions: ["json"] }],
-          title: "Export Workflow",
-        });
-        if (canceled || !filePath) return null;
+  const handlers = createWorkflowCommandHandlers({
+    appPaths,
+    database,
+    async saveWorkflowPackageFile(packageValue) {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        defaultPath: path.join(
+          appPaths.rootDir,
+          `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
+        ),
+        filters: [{ name: "Workflow package", extensions: ["json"] }],
+        title: "Export Workflow",
+      });
+      if (canceled || !filePath) return null;
 
-        await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
-        return filePath;
-      },
-    }),
-  );
+      await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
+      return filePath;
+    },
+  });
+  registerWorkflowIpc(handlers);
+  const schedulerInterval = setInterval(() => {
+    void handlers.runSchedulerTick().catch((error) => {
+      console.error("Workflow scheduler tick failed", error);
+    });
+  }, 30_000);
+  app.once("before-quit", () => clearInterval(schedulerInterval));
   createMainWindow();
 
   app.on("activate", () => {
@@ -125,4 +144,16 @@ function filenameFromWorkflowName(name: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return normalized || "workflow";
+}
+
+function isAllowedRendererUrl(targetUrl: string, devServerUrl?: string) {
+  try {
+    const parsedTarget = new URL(targetUrl);
+    if (devServerUrl) {
+      return parsedTarget.origin === new URL(devServerUrl).origin;
+    }
+    return parsedTarget.protocol === "file:";
+  } catch {
+    return false;
+  }
 }

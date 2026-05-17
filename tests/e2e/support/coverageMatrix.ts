@@ -4,7 +4,7 @@ export type CoverageDepth =
   | "desktop_e2e"
   | "desktop_e2e_and_backend"
   | "backend_contract"
-  | "compatibility_guard"
+  | "backend_guard"
   | "staging_opt_in";
 
 export type CoverageEntry = {
@@ -96,9 +96,6 @@ export const actionCoverage = {
 } satisfies Partial<Record<ActionType, CoverageEntry>>;
 
 export const hiddenActionCoverage = {
-  set_checkbox: compatibility("covered by migration/compatibility tests; hidden from primary authoring"),
-  switch_frame: compatibility("planned hidden; explicit unsupported behavior remains outside visible-node E2E"),
-  set_download_directory: launchTime("covered through Workflow Settings and runner launch contracts"),
   if_condition: graphInternal(controlFlow),
   repeat_times: graphInternal(controlFlow),
   repeat_for_each: graphInternal(controlFlow),
@@ -106,27 +103,14 @@ export const hiddenActionCoverage = {
   switch_condition: graphInternal(controlFlow),
   while_loop: graphInternal(controlFlow),
   repeat_until: graphInternal(controlFlow),
-  try_catch: compatibility("hidden graph-internal compatibility action; backend runner tests cover semantics"),
-  fallback_block: compatibility("hidden graph-internal compatibility action; backend runner tests cover semantics"),
+  try_catch: backendGuard("hidden graph-internal action; backend runner tests cover semantics"),
+  fallback_block: backendGuard("hidden graph-internal action; backend runner tests cover semantics"),
   break_loop: graphInternal(controlFlow),
   continue_loop: graphInternal(controlFlow),
   stop_workflow: graphInternal(controlFlow),
-  transform_variable: compatibility("hidden compatibility action; backend runner tests cover transformation"),
-  assert_output: compatibility("hidden compatibility action; backend runner tests cover output assertion"),
-  run_subworkflow: compatibility("hidden placeholder; runner tests assert explicit unsupported failure"),
-  domain_allowlist: entry([...runValidation, "electron/backend/runner.test.ts"], "desktop_e2e_and_backend", "Hidden compatibility node; E2E verifies navigation policy."),
-  use_profile: launchTime("covered through Workflow Settings browser launch tests"),
-  save_session: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  load_session: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  set_secret: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  use_proxy: launchTime("covered through Workflow Settings browser launch tests"),
-  set_user_agent: launchTime("covered through launch-time unsupported guard"),
-  detect_challenge: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  pause_for_human: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  resume_when_condition: compatibility("hidden compatibility action; backend runner tests cover polling semantics"),
-  fallback_selector: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  retry_step: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
-  checkpoint: compatibility("planned hidden; runner tests assert unsupported in-run failure"),
+  transform_variable: backendGuard("hidden graph-internal action; backend runner tests cover transformation"),
+  assert_output: backendGuard("hidden graph-internal action; backend runner tests cover output assertion"),
+  domain_allowlist: entry([...runValidation, "electron/backend/runner.test.ts"], "desktop_e2e_and_backend", "Hidden graph-internal node; E2E verifies navigation policy."),
 } satisfies Partial<Record<ActionType, CoverageEntry>>;
 
 export const graphNodeCoverage = {
@@ -150,18 +134,15 @@ export const graphNodeCoverage = {
   repeat_until: entry(controlFlow),
   while: entry(controlFlow),
   retry: entry(controlFlow),
-  try_catch: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
-  fallback: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
+  try_catch: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
+  fallback: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
   break_loop: entry(controlFlow),
   continue_loop: entry(controlFlow),
   stop_workflow: entry(controlFlow),
   set_variable: entry(controlFlow),
   set_json_variables: entry(controlFlow),
-  transform_variable: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Compatibility graph node covered below desktop visible-node level."),
-  assert_output: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Compatibility graph node covered below desktop visible-node level."),
-  run_subworkflow: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Placeholder graph node fails explicitly until nested lifecycle support exists."),
-  manual_approval: entry(["electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Hidden safe checkpoint node compiles to planned pause_for_human guard."),
-  rate_limit: entry(["electron/backend/graphCompiler.test.ts"], "compatibility_guard", "Hidden pacing node compiles to wait semantics below desktop visible-node level."),
+  transform_variable: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Graph node covered below desktop visible-node level."),
+  assert_output: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Graph node covered below desktop visible-node level."),
   domain_allowlist: entry([...runValidation, "electron/backend/runner.test.ts"], "desktop_e2e_and_backend", "Safety boundary covered by E2E navigation policy."),
 } satisfies Partial<Record<GraphNodeType, CoverageEntry>>;
 
@@ -217,10 +198,6 @@ function graphInternal(files: string[]): CoverageEntry {
   return entry(files, "desktop_e2e", "Covered through graph-native node execution.");
 }
 
-function compatibility(notes: string): CoverageEntry {
-  return entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "compatibility_guard", notes);
-}
-
-function launchTime(notes: string): CoverageEntry {
-  return entry(["electron/backend/runner.test.ts", "src/features/workflows/pages/WorkflowDetailPage.test.tsx"], "backend_contract", notes);
+function backendGuard(notes: string): CoverageEntry {
+  return entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", notes);
 }

@@ -2,6 +2,8 @@
   "name": "workflow-automation-manager",
   "private": true,
   "version": "0.1.0",
+  "description": "Electron desktop app for authorized internal browser automation workflows.",
+  "author": "Internal Automation Lab <automation-lab@example.invalid>",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -10,7 +12,11 @@
     "build:renderer": "tsc -b && vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "electron:dev": "node scripts/electron-dev.mjs",
-    "electron:pack": "npm run build && electron-builder --linux dir",
+    "electron:pack": "npm run electron:pack:linux",
+    "electron:pack:dir": "npm run build && electron-builder --linux dir --publish never",
+    "electron:pack:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
+    "electron:pack:win": "npm run build && electron-builder --win nsis zip --publish never",
+    "electron:pack:mac": "npm run build && electron-builder --mac dmg zip --publish never",
     "test": "vitest run",
     "test:e2e": "npm run test:e2e:full",
     "test:e2e:smoke": "npm run build:electron && playwright test tests/e2e/electron-isolation.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/workflow-user-journeys.e2e.ts tests/e2e/coverage-matrix.e2e.ts",
@@ -23,17 +29,39 @@
   "build": {
     "appId": "internal.automation.workflow-manager",
     "productName": "Automation App",
+    "icon": "public/app-logo.png",
     "directories": {
       "output": "release"
     },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
       "package.json"
     ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
     "linux": {
       "target": [
-        "dir"
+        "AppImage",
+        "deb",
+        "tar.gz"
       ],
       "category": "Development"
     }
@@ -46,7 +74,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@xyflow/react": "^12.10.2",
     "class-variance-authority": "^0.7.1",
-    "cloakbrowser": "^0.3.27",
+    "cloakbrowser": "^0.3.28",
     "clsx": "^2.1.1",
     "lucide-react": "^1.11.0",
     "playwright-core": "^1.59.1",
@@ -66,6 +94,7 @@
     "@vitejs/plugin-react": "^4.6.0",
     "electron": "^42.0.1",
     "electron-builder": "^26.8.1",
+    "js-yaml": "^4.1.1",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4.2.4",
     "typescript": "~5.8.3",

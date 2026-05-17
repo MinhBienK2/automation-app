@@ -28,6 +28,55 @@ export type GraphHistoryState = {
 };
 
 const defaultOffset: GraphPosition = { x: 48, y: 48 };
+const arrangeColumnGap = 260;
+const arrangeRowGap = 120;
+
+export function arrangeWorkflowGraph(graph: WorkflowGraph): WorkflowGraph {
+  const orderedNodeIds = graphExecutionNodeOrder(graph);
+  const orderedNodeIdSet = new Set(orderedNodeIds);
+  const nodeOrder = [
+    ...orderedNodeIds,
+    ...graph.nodes
+      .map((node) => node.id)
+      .filter((nodeId) => !orderedNodeIdSet.has(nodeId)),
+  ];
+  const nodeOrderIndex = new Map(nodeOrder.map((nodeId, index) => [nodeId, index]));
+  const depths = graphNodeDepths(graph, nodeOrder);
+  const columns = new Map<number, string[]>();
+
+  for (const nodeId of nodeOrder) {
+    const column = depths.get(nodeId) ?? 0;
+    columns.set(column, [...(columns.get(column) ?? []), nodeId]);
+  }
+
+  for (const [column, nodeIds] of columns) {
+    columns.set(
+      column,
+      [...nodeIds].sort(
+        (left, right) =>
+          (nodeOrderIndex.get(left) ?? 0) - (nodeOrderIndex.get(right) ?? 0),
+      ),
+    );
+  }
+
+  const positions = new Map<string, GraphPosition>();
+  for (const [column, nodeIds] of columns) {
+    nodeIds.forEach((nodeId, row) => {
+      positions.set(nodeId, {
+        x: column * arrangeColumnGap,
+        y: row * arrangeRowGap,
+      });
+    });
+  }
+
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node) => ({
+      ...node,
+      position: positions.get(node.id) ?? node.position,
+    })),
+  };
+}
 
 export function deleteGraphSelection(
   graph: WorkflowGraph,
@@ -251,6 +300,149 @@ function edgeId(
   targetPort: string,
 ) {
   return `edge-${sourceNodeId}-${sourcePort}-${targetNodeId}-${targetPort}`;
+}
+
+function graphExecutionNodeOrder(graph: WorkflowGraph) {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgesBySourcePort = new Map<string, GraphEdge[]>();
+  const orderedNodeIds: string[] = [];
+  const seenNodeIds = new Set<string>();
+  const start = graph.nodes.find((node) => node.node_type === "start");
+  if (!start) return orderedNodeIds;
+
+  for (const edge of graph.edges) {
+    const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
+    edgesBySourcePort.set(key, [...(edgesBySourcePort.get(key) ?? []), edge]);
+  }
+  for (const edges of edgesBySourcePort.values()) {
+    edges.sort((left, right) => left.id.localeCompare(right.id));
+  }
+
+  function visitNode(nodeId: string, path: Set<string>) {
+    if (path.has(nodeId)) return;
+    const node = nodeById.get(nodeId);
+    if (!node) return;
+    if (!seenNodeIds.has(node.id)) {
+      seenNodeIds.add(node.id);
+      orderedNodeIds.push(node.id);
+    }
+    path.add(node.id);
+    for (const portId of orderedOutputPortIds(node)) {
+      const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
+      if (edge) visitNode(edge.target_node_id, new Set(path));
+    }
+  }
+
+  visitNode(start.id, new Set());
+  return orderedNodeIds;
+}
+
+function graphNodeDepths(graph: WorkflowGraph, orderedNodeIds: string[]) {
+  const depths = new Map<string, number>();
+  const start = graph.nodes.find((node) => node.node_type === "start");
+  if (start) depths.set(start.id, 0);
+
+  for (let pass = 0; pass < graph.nodes.length; pass += 1) {
+    let changed = false;
+    for (const edge of graph.edges) {
+      const sourceDepth = depths.get(edge.source_node_id);
+      if (sourceDepth == null) continue;
+      const nextDepth = sourceDepth + 1;
+      if ((depths.get(edge.target_node_id) ?? -1) < nextDepth) {
+        depths.set(edge.target_node_id, nextDepth);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  const maxReachableDepth = Math.max(0, ...depths.values());
+  orderedNodeIds.forEach((nodeId, index) => {
+    if (!depths.has(nodeId)) {
+      depths.set(nodeId, maxReachableDepth + 1 + index);
+    }
+  });
+  return depths;
+}
+
+function edgeSourcePortKey(sourceNodeId: string, sourcePort: string) {
+  return `${sourceNodeId}\u0000${sourcePort}`;
+}
+
+function orderedOutputPortIds(node: GraphNode) {
+  const outputPortIds = node.ports
+    .filter((port) => port.direction === "output")
+    .map((port) => port.id);
+  const preferred = preferredOutputPortOrder(node);
+  return [
+    ...preferred.filter((portId) => outputPortIds.includes(portId)),
+    ...outputPortIds.filter((portId) => !preferred.includes(portId)),
+  ];
+}
+
+function preferredOutputPortOrder(node: GraphNode) {
+  switch (node.node_type) {
+    case "start":
+    case "action":
+    case "merge":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "assert_output":
+    case "domain_allowlist":
+      return ["out"];
+    case "if":
+      return ["true", "false", "done"];
+    case "switch":
+      return [
+        ...casePortIds(node),
+        "default",
+        "done",
+      ];
+    case "router":
+      return [
+        ...routerCasePortIds(node),
+        "default",
+        "done",
+      ];
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+      return ["loop", "done"];
+    case "repeat_until":
+      return ["loop", "timeout", "done"];
+    case "retry":
+      return ["try", "failed", "success"];
+    case "try_catch":
+      return ["try", "success", "error", "finally", "done"];
+    case "fallback":
+      return ["primary", "fallback", "done"];
+    default:
+      return [];
+  }
+}
+
+function casePortIds(node: GraphNode) {
+  return node.ports
+    .filter((port) => port.direction === "output" && /^case_\d+$/.test(port.id))
+    .map((port) => port.id)
+    .sort((left, right) => Number(left.slice(5)) - Number(right.slice(5)));
+}
+
+function routerCasePortIds(node: GraphNode) {
+  const cases = Array.isArray((node.config as { cases?: unknown } | null)?.cases)
+    ? ((node.config as { cases: Array<{ id?: unknown }> }).cases)
+    : [];
+  const configured = cases
+    .map((caseValue) => typeof caseValue.id === "string" ? `case_${caseValue.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
 }
 
 function uniqueId(requestedId: string, existingIds: Set<string>) {

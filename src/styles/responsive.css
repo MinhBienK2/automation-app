@@ -28,6 +28,8 @@
   .graph-shortcut-guide,
   .workflow-settings-body,
   .workflow-settings-grid,
+  .settings-field-group-grid,
+  .workflow-settings-identity-row,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
   }

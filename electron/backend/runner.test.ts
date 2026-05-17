@@ -72,14 +72,14 @@ describe("BrowserWorkflowRunner", () => {
         device_scale_factor: 1,
         mobile: false,
         touch: false,
-        humanize: true,
-        human_preset: "careful",
         geoip: false,
         fingerprint_platform: "windows",
         hardware_concurrency: 8,
         device_memory_gb: 16,
         storage_quota_mb: 256,
         webrtc_policy: "auto_proxy_exit_ip",
+        humanize: false,
+        human_preset: "careful",
       },
     });
 
@@ -97,7 +97,7 @@ describe("BrowserWorkflowRunner", () => {
         options: expect.objectContaining({
           userDataDir: path.join(paths.browserProfilesDir, "bi_test_identity"),
           headless: false,
-          humanize: true,
+          humanize: false,
           humanPreset: "careful",
           userAgent: undefined,
           viewport: { width: 1920, height: 947 },
@@ -153,9 +153,8 @@ describe("BrowserWorkflowRunner", () => {
         mobile: false,
         touch: false,
       },
-      humanize: true,
+      humanize: false,
       human_preset: "careful",
-      behavior_fidelity: "balanced",
       advanced_overrides: [
         "fingerprint_platform",
         "hardware_concurrency",
@@ -170,6 +169,59 @@ describe("BrowserWorkflowRunner", () => {
       },
     });
     expect(context.closed).toBe(false);
+  });
+
+  test("maps supported WebRTC policies to launch args and browser identity evidence", async () => {
+    const cases = [
+      {
+        policy: "default" as const,
+        ip: null,
+        expectedArg: null,
+      },
+      {
+        policy: "auto_proxy_exit_ip" as const,
+        ip: null,
+        expectedArg: "--fingerprint-webrtc-ip=auto",
+      },
+      {
+        policy: "explicit_ip" as const,
+        ip: "203.0.113.10",
+        expectedArg: "--fingerprint-webrtc-ip=203.0.113.10",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const context = new FakeContext();
+      const driver = createFakeDriver(context);
+      const runner = new BrowserWorkflowRunner({
+        appPaths: await createTempAppPaths(),
+        driver,
+      });
+
+      const result = await runner.run({
+        graph: { steps: [] },
+        settings: makeSettings({
+          browser_launch: {
+            webrtc_policy: testCase.policy,
+            webrtc_ip: testCase.ip,
+          },
+          run_policy: { browser_retention: "close" },
+        }),
+        mode: "run_workflow",
+        runId: `run-webrtc-${testCase.policy}`,
+      });
+
+      const args = driver.launches[0].options.args as string[];
+      if (testCase.expectedArg) {
+        expect(args).toContain(testCase.expectedArg);
+      } else {
+        expect(args.some((arg) => arg.startsWith("--fingerprint-webrtc-ip="))).toBe(false);
+      }
+      expect(result.outputs?.browser_identity).toMatchObject({
+        webrtc_policy: testCase.policy,
+        webrtc_ip: testCase.policy === "explicit_ip" ? testCase.ip : null,
+      });
+    }
   });
 
   test("normalizes proxy URL credentials into Playwright proxy fields", async () => {
@@ -395,7 +447,6 @@ describe("BrowserWorkflowRunner", () => {
               xpath: "//input[@name='q']",
               text: "lab",
               clear_before_input: true,
-              typing_mode: "type",
             },
           }),
           step("click", "Click", {
@@ -427,31 +478,26 @@ describe("BrowserWorkflowRunner", () => {
         node_id: "open",
         action_type: "navigate",
         mode: "browser",
-        execution_path: "browser_api",
       }),
       expect.objectContaining({
         node_id: "fill",
         action_type: "input_text",
         mode: "browser",
-        execution_path: "humanized",
       }),
       expect.objectContaining({
         node_id: "click",
         action_type: "click",
         mode: "browser",
-        execution_path: "humanized",
       }),
       expect.objectContaining({
         node_id: "extract",
         action_type: "extract_text",
         mode: "observer",
-        execution_path: "browser_api",
       }),
       expect.objectContaining({
         node_id: "script",
         action_type: "execute_js",
         mode: "direct_dom",
-        execution_path: "cdp_sensitive",
       }),
     ]);
     expect(page.events).toEqual(
@@ -459,13 +505,13 @@ describe("BrowserWorkflowRunner", () => {
         "goto:https://owned.test",
         "locator://input[@name='q']",
         "fill://input[@name='q']:",
-        "type://input[@name='q']:lab:0",
+        "fill://input[@name='q']:lab",
         "click://button[@id='go']",
       ]),
     );
   });
 
-  test("strict humanized behavior blocks CDP-sensitive actions", async () => {
+  test("advanced browser actions execute while CloakBrowser owns humanization globally", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext()),
@@ -480,27 +526,101 @@ describe("BrowserWorkflowRunner", () => {
           }),
         ],
       },
-      settings: makeSettings({
-        browser_launch: { behavior_fidelity: "strict_humanized" },
-      }),
+      settings: makeSettings(),
       mode: "run_workflow",
     });
 
-    expect(result.status).toBe("failed");
-    expect(result.error?.reason).toBe(
-      "Action execute_js is cdp_sensitive and is blocked by strict humanized behavior",
-    );
+    expect(result.status).toBe("success");
+    expect(result.outputs?.value).toBeNull();
     expect(result.outputs?.__action_traces).toEqual([
       expect.objectContaining({
         node_id: "script",
         action_type: "execute_js",
-        status: "failed",
-        execution_path: "cdp_sensitive",
+        status: "success",
       }),
     ]);
   });
 
-  test("submits targeted forms through locator DOM evaluation", async () => {
+  test("times out execute_js when timeout_ms elapses before evaluation resolves", async () => {
+    class SlowEvaluatePage extends FakePage {
+      override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+        if (typeof pageFunction === "string" && pageFunction.includes("__slow_execute_js__")) {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          return "late";
+        }
+        return super.evaluate(pageFunction, arg);
+      }
+    }
+
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(new SlowEvaluatePage())),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("script", "Script", {
+            type: "execute_js",
+            config: {
+              script: "return '__slow_execute_js__'",
+              output_name: "value",
+              timeout_ms: 1,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "script",
+      action_type: "execute_js",
+      reason: "Execute JavaScript timed out after 1 ms",
+    });
+    expect(result.outputs?.value).toBeUndefined();
+  });
+
+  test("mock_response matches url_contains by substring before fulfilling a response", async () => {
+    const context = new FakeContext();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("mock", "Mock API", {
+            type: "mock_response",
+            config: {
+              url_contains: "/api/mock",
+              status: 201,
+              body: "{\"ok\":true}",
+              content_type: "application/json",
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    const mockedResponse = await context.triggerRoute(
+      "https://fixture.owned.test/api/mock?source=default",
+    );
+
+    expect(result.status).toBe("success");
+    expect(mockedResponse).toEqual({
+      status: 201,
+      body: "{\"ok\":true}",
+      contentType: "application/json",
+    });
+  });
+
+  test("submits targeted forms through CloakBrowser locator input before DOM fallback", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -524,13 +644,13 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "locator://button[@type='submit']",
-        "evaluate://button[@type='submit']",
+        "click://button[@type='submit']",
       ]),
     );
-    expect(page.events).not.toContain("click://button[@type='submit']");
+    expect(page.events).not.toContain("evaluate://button[@type='submit']");
   });
 
-  test("selects radio targets through locator DOM evaluation", async () => {
+  test("selects radio targets through CloakBrowser check before DOM fallback", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -554,17 +674,49 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "getByTestId:role-admin",
-        "evaluate:testid=role-admin",
+        "check:testid=role-admin",
       ]),
     );
-    expect(page.events).not.toContain("click:testid=role-admin");
+    expect(page.events).not.toContain("evaluate:testid=role-admin");
   });
 
-  test("scrolls pages through browser-side DOM evaluation", async () => {
+  test("falls back to DOM radio selection only after native radio paths fail", async () => {
+    const page = new NativeFailingActionPage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("radio", "Radio", {
+            type: "select_radio",
+            config: { xpath: "//label[@for='role-admin']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "check-failed://label[@for='role-admin']",
+        "click-failed://label[@for='role-admin']",
+        "evaluate://label[@for='role-admin']",
+      ]),
+    );
+  });
+
+  test("uses custom human wheel chunks for page scroll because CloakBrowser does not patch wheel", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
     });
 
     const result = await runner.run({
@@ -581,10 +733,237 @@ describe("BrowserWorkflowRunner", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(page.events).toContain("scrollBy:0:900");
+    expect(page.events.filter((event) => event.startsWith("wheel:")).length).toBeGreaterThan(1);
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).not.toContain("wheel:0:900");
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "scroll",
+        action_type: "scroll",
+        mode: "assisted_browser",
+      }),
+    ]);
   });
 
-  test("dispatches right-click targets through native locator input", async () => {
+  test("scrolls element targets into view through CloakBrowser locator scroll", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "into_view",
+              target: { locators: [{ kind: "test_id", value: "cta" }] },
+              timeout_ms: 4500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "getByTestId:cta",
+        "scrollIntoViewIfNeeded:testid=cta:4500",
+      ]),
+    );
+    expect(page.events.some((event) => event.startsWith("wheel:"))).toBe(false);
+    expect(page.events).not.toContain("evaluate:testid=cta");
+  });
+
+  test("fails targeted scroll modes when no target is configured", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: { mode: "into_view", target: null, xpath: null, timeout_ms: 1000 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "scroll",
+      action_type: "scroll",
+      reason: "Element target is required",
+    });
+  });
+
+  test("waits for until-visible scroll targets inside legacy iframe XPath", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "until_visible",
+              xpath: "//h2[normalize-space(.)='Ready']",
+              iframe_xpath: "//iframe[@id='main']",
+              timeout_ms: 2500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "frameLocator://iframe[@id='main']",
+        "frameLocator.locator://h2[normalize-space(.)='Ready']",
+        "waitFor://h2[normalize-space(.)='Ready']:visible:2500",
+        "scrollIntoViewIfNeeded://h2[normalize-space(.)='Ready']:2500",
+      ]),
+    );
+    expect(page.events.some((event) => event.startsWith("wheel:"))).toBe(false);
+  });
+
+  test("pastes clipboard content by focusing the target and pressing the platform paste shortcut", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("copy", "Copy", {
+            type: "set_clipboard",
+            config: { text: "token-123" },
+          }),
+          step("paste", "Paste", {
+            type: "paste_clipboard",
+            config: { xpath: "//textarea[@name='notes']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "locator://textarea[@name='notes']",
+        "clipboard:token-123",
+        "click://textarea[@name='notes']",
+        `press:${process.platform === "darwin" ? "Meta+V" : "Control+V"}`,
+      ]),
+    );
+    expect(page.events).not.toContain("fill://textarea[@name='notes']:token-123");
+  });
+
+  test("falls back to DOM form submission only after native submit paths fail", async () => {
+    const page = new NativeFailingActionPage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("submit", "Submit", {
+            type: "submit_form",
+            config: { xpath: "//form[@id='login']" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "click-failed://form[@id='login']",
+        "locatorPress-failed://form[@id='login']:Enter",
+        "evaluate://form[@id='login']",
+      ]),
+    );
+  });
+
+  test("uses custom key hold timing for untargeted key and hotkey actions", async () => {
+    const page = new FakePage();
+    const sleeps: number[] = [];
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      random: () => 0,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("key", "Key", { type: "press_key", config: { key: "Enter" } }),
+          step("hotkey", "Hotkey", {
+            type: "hotkey",
+            config: { keys: ["Control", "Shift", "P"] },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "down:Enter",
+        "up:Enter",
+        "down:Control",
+        "down:Shift",
+        "down:P",
+        "up:P",
+        "up:Shift",
+        "up:Control",
+      ]),
+    );
+    expect(page.events).not.toContain("press:Enter");
+    expect(page.events).not.toContain("press:Control+Shift+P");
+    expect(sleeps.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("keeps scroll runner free of debug console logging", () => {
+    const runnerSource = readFileSync(
+      path.join(process.cwd(), "electron/backend/runner.ts"),
+      "utf8",
+    );
+
+    expect(runnerSource).not.toMatch(/console\.log\([^)]*scroll/i);
+  });
+
+  test("dispatches right-click targets through custom right-button mouse input", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -608,9 +987,12 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toEqual(
       expect.arrayContaining([
         "getByTestId:menu-target",
-        "click:testid=menu-target:right",
+        "scrollIntoViewIfNeeded:testid=menu-target:none",
+        "mouseDown:right",
+        "mouseUp:right",
       ]),
     );
+    expect(page.events).not.toContain("click:testid=menu-target:right");
     expect(page.events).not.toContain("evaluate:testid=menu-target");
   });
 
@@ -752,6 +1134,118 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(false);
   });
 
+  test("retains browser sessions per workflow/profile instead of closing another workflow", async () => {
+    const firstContext = new FakeContext();
+    const secondContext = new FakeContext();
+    const contexts = [firstContext, secondContext];
+    const launches: Array<{ kind: "temporary" | "persistent"; options: Record<string, unknown> }> = [];
+    const driver: BrowserDriver = {
+      async launch(options) {
+        launches.push({ kind: "temporary", options });
+        return contexts[launches.length - 1];
+      },
+      async launchPersistent(options) {
+        launches.push({ kind: "persistent", options });
+        return contexts[launches.length - 1];
+      },
+    };
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    const firstSettings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_dir: "profile-a",
+        profile_name: "profile-a",
+      },
+      run_policy: { browser_retention: "retain" },
+    });
+    const secondSettings: WorkflowSettings = {
+      ...makeSettings({
+        browser_launch: {
+          session_mode: "persistent_profile",
+          profile_dir: "profile-b",
+          profile_name: "profile-b",
+        },
+        run_policy: { browser_retention: "retain" },
+      }),
+      workflow_id: "workflow-2",
+    };
+
+    await runner.run({
+      graph: { steps: [] },
+      settings: firstSettings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-1",
+    });
+    await runner.run({
+      graph: { steps: [] },
+      settings: secondSettings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-2",
+    });
+
+    expect(firstContext.closed).toBe(false);
+    expect(secondContext.closed).toBe(false);
+    expect(runner.hasReusableRetainedSession("workflow-1", "profile-a")).toBe(true);
+    expect(runner.hasReusableRetainedSession("workflow-2", "profile-b")).toBe(true);
+  });
+
+  test("continues after the selected node when reusing a retained browser session", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+      },
+      run_policy: { browser_retention: "retain" },
+    });
+
+    await runner.run({
+      graph: {
+        steps: [
+          step("first", "First", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("second", "Second", {
+            type: "set_variable",
+            config: { name: "second", value: "done", value_type: "text" },
+          }),
+          step("third", "Third", {
+            type: "set_variable",
+            config: { name: "third", value: "done", value_type: "text" },
+          }),
+        ],
+      },
+      settings,
+      mode: "run_workflow",
+      targetStepId: "second",
+      reuseRetainedSession: true,
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.completed_step_ids).toEqual(["second", "third"]);
+    expect(result.outputs).toMatchObject({ second: "done", third: "done" });
+  });
+
   test("clears stale retained session state when the retained browser was closed manually", async () => {
     const context = new FakeContext();
     const runner = new BrowserWorkflowRunner({
@@ -850,6 +1344,148 @@ describe("BrowserWorkflowRunner", () => {
         "isEnabled:#blocked",
       ]),
     );
+  });
+
+  test("asserts element states using visibility, attachment, and enabled checks", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("visible", "Visible", {
+            type: "assert_element",
+            config: { xpath: "#ready", state: "visible", timeout_ms: 500 },
+          }),
+          step("hidden", "Hidden", {
+            type: "assert_element",
+            config: { xpath: "#hidden", state: "hidden", timeout_ms: 600 },
+          }),
+          step("attached", "Attached", {
+            type: "assert_element",
+            config: { xpath: "#panel", state: "attached", timeout_ms: 700 },
+          }),
+          step("enabled", "Enabled", {
+            type: "assert_element",
+            config: { xpath: "#submit", state: "enabled", timeout_ms: 800 },
+          }),
+          step("disabled", "Disabled", {
+            type: "assert_element",
+            config: { xpath: "#blocked", state: "disabled", timeout_ms: 900 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "waitFor:#ready:visible:500",
+        "isVisible:#ready",
+        "waitFor:#hidden:hidden:600",
+        "isVisible:#hidden",
+        "waitFor:#panel:attached:700",
+        "count:#panel",
+        "waitFor:#submit:visible:800",
+        "isEnabled:#submit",
+        "waitFor:#blocked:visible:900",
+        "isEnabled:#blocked",
+      ]),
+    );
+  });
+
+  test("fails assert_element when the requested state is false", async () => {
+    const cases: Array<{
+      state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
+      xpath: string;
+      reason: string;
+    }> = [
+      { state: "visible", xpath: "#hidden", reason: "Element is not visible" },
+      { state: "hidden", xpath: "#ready", reason: "Element is not hidden" },
+      { state: "attached", xpath: "#missing", reason: "Element is not attached" },
+      { state: "enabled", xpath: "#blocked", reason: "Element is not enabled" },
+      { state: "disabled", xpath: "#submit", reason: "Element is not disabled" },
+    ];
+
+    for (const testCase of cases) {
+      const runner = new BrowserWorkflowRunner({
+        appPaths: await createTempAppPaths(),
+        driver: createFakeDriver(new FakeContext(new FakePage())),
+      });
+
+      const result = await runner.run({
+        graph: {
+          steps: [
+            step("assert", "Assert", {
+              type: "assert_element",
+              config: { xpath: testCase.xpath, state: testCase.state, timeout_ms: 500 },
+            }),
+          ],
+        },
+        settings: makeSettings(),
+        mode: "run_workflow",
+      });
+
+      expect(result.status, testCase.state).toBe("failed");
+      expect(result.error).toMatchObject({
+        step_id: "assert",
+        action_type: "assert_element",
+        reason: testCase.reason,
+      });
+    }
+  });
+
+  test("fails malformed enum fields defensively if invalid configs reach the runner", async () => {
+    const cases: Array<{
+      label: string;
+      config: ActionConfig;
+      reason: string;
+    }> = [
+      {
+        label: "wait_until",
+        config: { type: "click", config: { xpath: "#button", wait_until: "ready" as never } },
+        reason: "Wait until must be attached, visible, enabled, or clickable",
+      },
+      {
+        label: "match_by",
+        config: { type: "select_option", config: { xpath: "#country", match_by: "index" as never, value: "1" } },
+        reason: "Match by must be label or value",
+      },
+      {
+        label: "assert_text_match",
+        config: { type: "assert_text", config: { xpath: "#status", text: "Ready", match_mode: "regex" as never } },
+        reason: "Match mode must be contains or equals",
+      },
+      {
+        label: "assert_output_match",
+        config: { type: "assert_output", config: { name: "status", match_mode: "regex" as never, value: "Ready" } },
+        reason: "Match mode must be contains or equals",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const runner = new BrowserWorkflowRunner({
+        appPaths: await createTempAppPaths(),
+        driver: createFakeDriver(new FakeContext(new FakePage())),
+      });
+
+      const result = await runner.run({
+        graph: { steps: [step(testCase.label, testCase.label, testCase.config)] },
+        settings: makeSettings(),
+        mode: "run_workflow",
+      });
+
+      expect(result.status, testCase.label).toBe("failed");
+      expect(result.error).toMatchObject({
+        step_id: testCase.label,
+        reason: testCase.reason,
+      });
+    }
   });
 
   test("writes local and session storage actions into the browser page", async () => {
@@ -1261,7 +1897,156 @@ describe("BrowserWorkflowRunner", () => {
     expect(progress.indexOf("true-node")).toBeLessThan(progress.lastIndexOf("done"));
   });
 
-  test("honors loop timeout and resume condition polling semantics", async () => {
+  test("runs Router first matching case and then continues after the router step", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("seed", "Seed", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "state", value_type: "text", value: "challenge-visible" }],
+            },
+          }),
+          step("router", "Router", {
+            type: "router_condition",
+            config: {
+              mode: "first_match",
+              cases: [
+                {
+                  id: "expired",
+                  label: "Expired",
+                  condition: { kind: "output_equals", name: "state", value: "expired" },
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "expired" }],
+                      },
+                    },
+                  ],
+                },
+                {
+                  id: "challenge",
+                  label: "Challenge",
+                  condition: { kind: "output_contains", name: "state", value: "challenge" },
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "challenge" }],
+                      },
+                    },
+                  ],
+                },
+              ],
+              default_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [{ name: "branch", value_type: "text", value: "default" }],
+                  },
+                },
+              ],
+            },
+          }),
+          step("done", "Done", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "after_router", value_type: "text", value: "continued" }],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      branch: "challenge",
+      after_router: "continued",
+    });
+  });
+
+  test("runs Router default steps when no case matches", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("router", "Router", {
+            type: "router_condition",
+            config: {
+              mode: "first_match",
+              cases: [
+                {
+                  id: "expired",
+                  label: "Expired",
+                  condition: { kind: "output_equals", name: "state", value: "expired" },
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "expired" }],
+                      },
+                    },
+                  ],
+                },
+              ],
+              default_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [{ name: "branch", value_type: "text", value: "default" }],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.branch).toBe("default");
+  });
+
+  test("executes graph no-op actions without changing browser state or outputs", async () => {
+    const context = new FakeContext();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("merge", "Merge", {
+            type: "graph_noop",
+            config: { kind: "merge" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).not.toHaveProperty("merge");
+    expect(context.pages()[0].events).toEqual([]);
+  });
+
+  test("honors loop timeout semantics", async () => {
     let sleepCalls = 0;
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -1291,13 +2076,6 @@ describe("BrowserWorkflowRunner", () => {
               ],
             },
           }),
-          step("resume", "Resume", {
-            type: "resume_when_condition",
-            config: {
-              condition: { kind: "output_equals", name: "timed_out", value: "yes" },
-              timeout_ms: 50,
-            },
-          }),
         ],
       },
       settings: makeSettings(),
@@ -1307,29 +2085,6 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.status).toBe("success");
     expect(result.outputs).toMatchObject({ timed_out: "yes" });
     expect(sleepCalls).toBeGreaterThan(0);
-
-    const timeoutResult = await runner.run({
-      graph: {
-        steps: [
-          step("resume-timeout", "Resume timeout", {
-            type: "resume_when_condition",
-            config: {
-              condition: { kind: "output_equals", name: "missing", value: "yes" },
-              timeout_ms: 1,
-            },
-          }),
-        ],
-      },
-      settings: makeSettings(),
-      mode: "run_workflow",
-    });
-
-    expect(timeoutResult.status).toBe("failed");
-    expect(timeoutResult.error).toMatchObject({
-      step_id: "resume-timeout",
-      action_type: "resume_when_condition",
-      reason: "Resume condition timed out after 1 ms",
-    });
   });
 
   test("fails set-json variables when the rendered JSON root is not an object", async () => {
@@ -1453,6 +2208,60 @@ describe("BrowserWorkflowRunner", () => {
 
     expect(allowed.status).toBe("success");
     expect(page.events).toContain("goto:https://app.owned.test/dashboard");
+  });
+
+  test("fails when switching to a missing tab index", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("switch-missing", "Switch missing", {
+            type: "switch_tab",
+            config: { index: 2 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "switch-missing",
+      action_type: "switch_tab",
+      reason: "Tab index 2 does not exist",
+    });
+  });
+
+  test("fails when closing a missing tab index", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("close-missing", "Close missing", {
+            type: "close_tab",
+            config: { index: 3 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "close-missing",
+      action_type: "close_tab",
+      reason: "Tab index 3 does not exist",
+    });
   });
 
   test("rejects screenshot paths outside run evidence", async () => {
@@ -1614,9 +2423,9 @@ describe("BrowserWorkflowRunner", () => {
             config: {
               width: 390,
               height: 844,
-              device_scale_factor: 2,
-              mobile: true,
-              touch: true,
+              device_scale_factor: 1,
+              mobile: false,
+              touch: false,
             },
           }),
         ],
@@ -1635,34 +2444,65 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).toContain("viewport:390:844");
   });
 
-  test("fails stubbed or launch-time actions with explicit unsupported errors", async () => {
+  test("infers the current page host for set_cookie when domain is blank", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
-      driver: createFakeDriver(new FakeContext()),
+      driver: createFakeDriver(context),
     });
 
-    for (const config of [
-      { type: "use_proxy", config: { server: "http://proxy.test:8080" } },
-      { type: "set_user_agent", config: { user_agent: "Agent/1.0" } },
-      { type: "run_subworkflow", config: { workflow_id: "child", input_mapping: [], output_mapping: [] } },
-      { type: "detect_challenge", config: { output_name: "challenge", patterns: [] } },
-      { type: "pause_for_human", config: { reason: "manual checkpoint" } },
-      { type: "checkpoint", config: { name: "checkpoint", screenshot_path: null } },
-      { type: "set_download_directory", config: { path: "/tmp/downloads" } },
-    ] as ActionConfig[]) {
-      const result = await runner.run({
-        graph: { steps: [step(config.type, config.type, config)] },
-        settings: makeSettings(),
-        mode: "run_workflow",
-      });
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://owned.test/account" },
+          }),
+          step("cookie", "Cookie", {
+            type: "set_cookie",
+            config: { name: "sid", value: "123", domain: null, path: "/" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
 
-      expect(result.status).toBe("failed");
-      expect(result.error).toMatchObject({
-        step_id: config.type,
-        action_type: config.type,
-        reason: expect.stringContaining("is not supported as an in-run action"),
-      });
-    }
+    expect(result.status).toBe("success");
+    expect(context.addedCookies).toContainEqual(
+      expect.objectContaining({
+        name: "sid",
+        value: "123",
+        domain: "owned.test",
+        path: "/",
+      }),
+    );
+  });
+
+  test("sets runtime viewport width and height", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(context),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("viewport", "Viewport", {
+            type: "set_viewport",
+            config: { width: 390, height: 844 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("viewport:390:844");
   });
 
   test("executes drag and drop through the driver instead of hover-only success", async () => {
@@ -1931,7 +2771,6 @@ describe("BrowserWorkflowRunner", () => {
               xpath: "#submit",
               wait_until: "clickable",
               timeout_ms: 1200,
-              retry_interval_ms: 25,
             },
           }),
           step("input", "Input", {
@@ -2032,6 +2871,11 @@ function createFakeDriver(context: FakeContext) {
 class FakeContext implements BrowserDriverContext {
   closed = false;
   events: string[] = [];
+  addedCookies: Array<Record<string, unknown>> = [];
+  routes: Array<{
+    matcher: string | RegExp | ((url: URL) => boolean);
+    handler: (route: FakeRoute) => Promise<void> | void;
+  }> = [];
   readonly page: FakePage;
 
   constructor(page = new FakePage()) {
@@ -2051,6 +2895,7 @@ class FakeContext implements BrowserDriverContext {
   }
 
   async addCookies(cookies: Array<Record<string, unknown>>) {
+    this.addedCookies.push(...cookies);
     this.events.push(
       `cookies:${cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(",")}`,
     );
@@ -2070,7 +2915,37 @@ class FakeContext implements BrowserDriverContext {
     );
   }
 
-  async route() {}
+  async route(
+    matcher: string | RegExp | ((url: URL) => boolean),
+    handler: (route: FakeRoute) => Promise<void> | void,
+  ) {
+    this.routes.push({ matcher, handler });
+  }
+
+  async triggerRoute(url: string) {
+    const matchedRoute = this.routes.find((route) => {
+      if (typeof route.matcher === "function") return route.matcher(new URL(url));
+      if (typeof route.matcher === "string") return route.matcher === url;
+      return route.matcher.test(url);
+    });
+    if (!matchedRoute) return null;
+
+    const route = new FakeRoute();
+    await matchedRoute.handler(route);
+    return route.fulfilledResponse;
+  }
+}
+
+class FakeRoute {
+  fulfilledResponse: Record<string, unknown> | null = null;
+
+  async abort() {}
+
+  async fulfill(response: Record<string, unknown>) {
+    this.fulfilledResponse = response;
+  }
+
+  async continue() {}
 }
 
 class FakePage implements BrowserDriverPage {
@@ -2166,6 +3041,10 @@ class FakePage implements BrowserDriverPage {
       this.events.push(`scrollBy:${arg.deltaX}:${arg.deltaY}`);
       return null;
     }
+    if (isClipboardEvaluationArg(arg)) {
+      this.events.push(`clipboard:${arg.text}`);
+      return null;
+    }
     if (isStorageEvaluationArg(arg)) {
       this.events.push(`${arg.storage}Storage:${arg.key}:${arg.value}`);
       return null;
@@ -2190,12 +3069,27 @@ class FakePage implements BrowserDriverPage {
     press: async (key: string) => {
       this.events.push(`press:${key}`);
     },
+    down: async (key: string) => {
+      this.events.push(`down:${key}`);
+    },
+    up: async (key: string) => {
+      this.events.push(`up:${key}`);
+    },
     type: async (text: string) => {
       this.events.push(`keyboard:${text}`);
     },
   };
 
   mouse = {
+    move: async (x: number, y: number) => {
+      this.events.push(`move:${x}:${y}`);
+    },
+    down: async (options?: { button?: string }) => {
+      this.events.push(`mouseDown:${options?.button ?? "left"}`);
+    },
+    up: async (options?: { button?: string }) => {
+      this.events.push(`mouseUp:${options?.button ?? "left"}`);
+    },
     wheel: async (x: number, y: number) => {
       this.events.push(`wheel:${x}:${y}`);
     },
@@ -2204,8 +3098,8 @@ class FakePage implements BrowserDriverPage {
 
 class FakeLocator {
   constructor(
-    private readonly selector: string,
-    private readonly events: string[],
+    protected readonly selector: string,
+    protected readonly events: string[],
   ) {}
 
   async fill(value: string) {
@@ -2216,13 +3110,27 @@ class FakeLocator {
     this.events.push(`type:${this.selector}:${value}:${options?.delay ?? 0}`);
   }
 
-  async click(options?: { button?: string }) {
+  async click(options?: {
+    button?: string;
+    clickCount?: number;
+    position?: { x: number; y: number };
+  }) {
+    if (options?.position || options?.clickCount) {
+      this.events.push(
+        `click:${this.selector}:${options.button ?? "left"}:${options.clickCount ?? 1}:${options.position?.x ?? "center"}:${options.position?.y ?? "center"}`,
+      );
+      return;
+    }
     this.events.push(
       options?.button ? `click:${this.selector}:${options.button}` : `click:${this.selector}`,
     );
   }
 
-  async evaluate() {
+  async evaluate(_pageFunction?: unknown, arg?: unknown) {
+    if (isScrollIntoViewArg(arg)) {
+      this.events.push(`scrollIntoView:${this.selector}:${arg.block}:${arg.inline}`);
+      return null;
+    }
     this.events.push(`evaluate:${this.selector}`);
     if (this.selector.includes("table")) {
       return [
@@ -2233,19 +3141,33 @@ class FakeLocator {
     return null;
   }
 
-  async hover() {}
+  async hover() {
+    this.events.push(`hover:${this.selector}`);
+  }
 
-  async dblclick() {}
+  async dblclick() {
+    this.events.push(`dblclick:${this.selector}`);
+  }
 
-  async check() {}
+  async check() {
+    this.events.push(`check:${this.selector}`);
+  }
 
-  async uncheck() {}
+  async uncheck() {
+    this.events.push(`uncheck:${this.selector}`);
+  }
 
-  async selectOption() {}
+  async selectOption() {
+    this.events.push(`selectOption:${this.selector}`);
+  }
 
-  async setInputFiles() {}
+  async setInputFiles() {
+    this.events.push(`setInputFiles:${this.selector}`);
+  }
 
-  async press() {}
+  async press(key?: string) {
+    this.events.push(`locatorPress:${this.selector}:${key ?? ""}`);
+  }
 
   async textContent() {
     return "Owned Fixture";
@@ -2259,8 +3181,13 @@ class FakeLocator {
     return "input";
   }
 
+  async boundingBox() {
+    return { x: 10, y: 20, width: 100, height: 40 };
+  }
+
   async count() {
-    return 1;
+    this.events.push(`count:${this.selector}`);
+    return this.selector === "#missing" ? 0 : 1;
   }
 
   nth() {
@@ -2280,6 +3207,12 @@ class FakeLocator {
   async waitFor(options?: { state?: string; timeout?: number }) {
     this.events.push(
       `waitFor:${this.selector}:${options?.state ?? "visible"}:${options?.timeout ?? "none"}`,
+    );
+  }
+
+  async scrollIntoViewIfNeeded(options?: { timeout?: number }) {
+    this.events.push(
+      `scrollIntoViewIfNeeded:${this.selector}:${options?.timeout ?? "none"}`,
     );
   }
 
@@ -2304,6 +3237,13 @@ class MinimalMethodPage extends FakePage {
   }
 }
 
+class NativeFailingActionPage extends FakePage {
+  override locator(selector: string) {
+    this.events.push(`locator:${selector}`);
+    return new NativeFailingActionLocator(selector, this.events);
+  }
+}
+
 class MinimalMethodLocator {
   constructor(
     private readonly selector: string,
@@ -2318,6 +3258,23 @@ class MinimalMethodLocator {
     this.events.push(
       options?.button ? `click:${this.selector}:${options.button}` : `click:${this.selector}`,
     );
+  }
+}
+
+class NativeFailingActionLocator extends FakeLocator {
+  override async click() {
+    this.events.push(`click-failed:${this.selector}`);
+    throw new Error("native click failed");
+  }
+
+  override async check() {
+    this.events.push(`check-failed:${this.selector}`);
+    throw new Error("native check failed");
+  }
+
+  override async press(key?: string) {
+    this.events.push(`locatorPress-failed:${this.selector}:${key ?? ""}`);
+    throw new Error("native press failed");
   }
 }
 
@@ -2365,5 +3322,25 @@ function isScrollEvaluationArg(value: unknown): value is { deltaX: number; delta
       typeof value === "object" &&
       "deltaX" in value &&
       "deltaY" in value,
+  );
+}
+
+function isClipboardEvaluationArg(value: unknown): value is { text: string } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "text" in value &&
+      typeof (value as { text?: unknown }).text === "string",
+  );
+}
+
+function isScrollIntoViewArg(
+  value: unknown,
+): value is { block: string; inline: string } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "block" in value &&
+      "inline" in value,
   );
 }

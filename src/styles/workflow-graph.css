@@ -347,12 +347,62 @@
   cursor: crosshair;
 }
 
+.graph-handle::after {
+  position: absolute;
+  z-index: 80;
+  top: 50%;
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border: 1px solid #363636;
+  border-radius: 6px;
+  background: #0f0f0f;
+  color: #fafafa;
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translateY(-50%);
+  transition: opacity 120ms ease;
+  transition-delay: 0ms;
+  visibility: hidden;
+  white-space: normal;
+}
+
+.graph-handle:hover::after,
+.graph-handle:focus-visible::after {
+  opacity: 1;
+  transition-delay: 1s;
+  visibility: visible;
+}
+
+.graph-canvas .react-flow__node:has(.graph-handle:hover),
+.graph-canvas .react-flow__node:has(.graph-handle:focus-visible) {
+  z-index: 1000 !important;
+}
+
+.graph-handle:hover,
+.graph-handle:focus-visible {
+  z-index: 80;
+}
+
 .graph-handle-input {
   left: -8px;
 }
 
+.graph-handle-input::after {
+  right: calc(100% + 10px);
+}
+
 .graph-handle-output {
   right: -8px;
+}
+
+.graph-handle-output::after {
+  left: calc(100% + 10px);
 }
 
 .graph-canvas .react-flow__handle.connectingfrom {
@@ -494,7 +544,35 @@
   line-height: 1.45;
 }
 
-.graph-compatibility-action {
+.router-case-table {
+  display: grid;
+  gap: 10px;
+}
+
+.router-case-row {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.router-case-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.router-case-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.graph-internal-action {
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -503,17 +581,17 @@
   background: #121212;
 }
 
-.graph-compatibility-action .eyebrow {
+.graph-internal-action .eyebrow {
   margin-bottom: 0;
 }
 
-.graph-compatibility-action h3 {
+.graph-internal-action h3 {
   color: #fafafa;
   font-size: 14px;
   font-weight: 400;
 }
 
-.graph-compatibility-action pre {
+.graph-internal-action pre {
   max-height: 220px;
   overflow: auto;
   padding: 8px;
@@ -605,6 +683,10 @@
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+
+.settings-field-group-grid > .variable-row-table {
+  grid-column: 1 / -1;
 }
 
 .variable-row-grid {

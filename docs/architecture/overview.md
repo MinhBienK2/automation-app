@@ -19,18 +19,22 @@ Electron main
 Node/TypeScript backend
   -> electron/backend/commands.ts command handlers
   -> electron/backend/workflowRepository.ts workflow repository
+  -> electron/backend/workflowScheduleRepository.ts schedule repository
+  -> electron/backend/scheduler.ts in-app schedule engine
   -> electron/backend/database.ts SQLite bootstrap
 SQLite
   -> workflows
   -> runs
   -> run_steps
+  -> workflow_schedules
+  -> workflow_schedule_events
 ```
 
 ## Runtime State
 
 The renderer command boundary is Electron IPC. The TypeScript backend owns
-workflow CRUD, graph document storage, Workflow Settings, browser-config
-compatibility, package import/export, graph validation/compilation, SQLite
+workflow CRUD, graph document storage, Workflow Settings,
+package import/export, graph validation/compilation, workflow scheduling, SQLite
 persistence, run orchestration, and CloakBrowser execution.
 
 ## Boundaries
@@ -41,6 +45,7 @@ persistence, run orchestration, and CloakBrowser execution.
 - Electron main owns app lifecycle, app data paths, native dialogs, and IPC registration.
 - Node backend commands own validation before persistence or execution.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
+- Schedule repository/engine code owns schedule SQL, next-run calculation, due-schedule scanning, and schedule event audit history.
 - Runner code owns CloakBrowser/Playwright execution.
 
 ## Read By Task

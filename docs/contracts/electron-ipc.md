@@ -55,6 +55,15 @@ failed calls. This preserves the command-facing error shape used by
 - `runWorkflowFromNode`
 - `stopRun`
 - `getRunState`
+- `listRunStates`
+- `listSchedules`
+- `getSchedule`
+- `createSchedule`
+- `updateSchedule`
+- `deleteSchedule`
+- `enableSchedule`
+- `disableSchedule`
+- `listScheduleEvents`
 - `validateSchedule`
 - `exportWorkflow`
 - `importWorkflow`
@@ -72,6 +81,12 @@ payload. The default is to keep browser profile data; when true, the backend
 deletes the workflow's private browser profile directory only if no other
 workflow still references it and no retained session is active.
 
+`runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
+new `run_id`, workflow metadata, source, start time, and nested run state.
+`stopRun` accepts an optional run id and returns the stopped snapshot; omitting
+the run id is valid only when exactly one workflow run is active. `listRunStates`
+returns the current app-session run snapshots for multi-run monitoring.
+
 ## Payload Rules
 
 - Renderer wrapper names remain camelCase.
@@ -87,11 +102,16 @@ workflow still references it and no retained session is active.
 
 Electron main initializes SQLite in app data, and Node command handlers now use
 the TypeScript workflow repository for workflow CRUD, graph documents, Workflow
-Settings, browser-config compatibility, and workflow package import/export.
+Settings and workflow package import/export.
 
 Graph validation/compilation, run orchestration, SQLite persistence, workflow
 package import/export, and CloakBrowser runner execution are owned by the
 Electron backend.
+
+Workflow schedule CRUD, schedule validation, enable-time workflow readiness
+checks, schedule event history, and the in-app scheduler tick are owned by the
+Electron backend. The renderer manages schedule form state and calls the typed
+bridge; it does not own timers or schedule SQL.
 
 CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit

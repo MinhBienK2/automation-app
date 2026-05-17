@@ -3,7 +3,7 @@ import path from "node:path";
 export type EvidenceArtifactInput = {
   evidenceDir: string;
   runId: string;
-  kind: "screenshots" | "downloads" | "checkpoints";
+  kind: "screenshots" | "downloads";
   stepNumber: number | null;
   nodeId: string | null;
   requestedName: string | null | undefined;

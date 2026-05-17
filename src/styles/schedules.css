@@ -1,0 +1,157 @@
+.schedules-screen {
+  align-content: start;
+}
+
+.schedule-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.schedule-table-wrap {
+  overflow-x: auto;
+}
+
+.schedule-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--app-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.schedule-table th {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.schedule-table td {
+  color: var(--app-text);
+  font-size: 14px;
+}
+
+.schedule-table td strong,
+.schedule-table td small {
+  display: block;
+}
+
+.schedule-table td small {
+  margin-top: 4px;
+  color: var(--app-text-muted);
+}
+
+.status-pill {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-pill);
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.status-pill-on {
+  border-color: var(--app-accent-border);
+  color: var(--app-accent);
+}
+
+.schedule-row-actions {
+  grid-template-columns: minmax(92px, auto) repeat(3, 40px);
+  align-items: center;
+}
+
+.schedule-dialog {
+  width: min(560px, calc(100vw - 48px));
+}
+
+.schedule-inline-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 12px;
+}
+
+.weekday-toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.schedule-history-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface);
+}
+
+.schedule-history-item span,
+.schedule-history-item small {
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.run-center-screen {
+  align-content: start;
+}
+
+.run-center-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.run-center-table-wrap {
+  overflow-x: auto;
+}
+
+.run-center-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.run-center-table th,
+.run-center-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--app-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.run-center-table th {
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.run-center-table td {
+  color: var(--app-text);
+  font-size: 14px;
+}
+
+.run-center-table td strong,
+.run-center-table td small {
+  display: block;
+}
+
+.run-center-table td small {
+  margin-top: 4px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}

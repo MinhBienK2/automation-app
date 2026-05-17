@@ -11,6 +11,20 @@ describe("app shell static assets", () => {
     expect(existsSync(join(process.cwd(), "src/assets/react.svg"))).toBe(false);
   });
 
+  test("uses the app logo assets for the renderer and Electron package", () => {
+    const indexHtml = readFileSync(join(process.cwd(), "index.html"), "utf8");
+    const packageJson = JSON.parse(
+      readFileSync(join(process.cwd(), "package.json"), "utf8"),
+    ) as { build?: { icon?: string } };
+
+    expect(indexHtml).toContain('rel="icon"');
+    expect(indexHtml).toContain('href="./app-logo.svg"');
+    expect(indexHtml).toContain('href="./app-logo.png"');
+    expect(existsSync(join(process.cwd(), "public/app-logo.svg"))).toBe(true);
+    expect(existsSync(join(process.cwd(), "public/app-logo.png"))).toBe(true);
+    expect(packageJson.build?.icon).toBe("public/app-logo.png");
+  });
+
   test("does not keep unused Radix tabs primitive or dependency", () => {
     const packageJson = JSON.parse(
       readFileSync(join(process.cwd(), "package.json"), "utf8"),

@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
+import { RunCenterPage } from "./features/runs/pages/RunCenterPage";
+import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
+  createSchedule,
   deleteWorkflow as deleteWorkflowCommand,
+  deleteSchedule,
+  disableSchedule,
   duplicateWorkflow as duplicateWorkflowCommand,
+  enableSchedule,
   exportWorkflowPackage,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
   importWorkflowPackage,
+  listRunStates,
+  listScheduleEvents,
+  listSchedules,
   listWorkflows,
   previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
@@ -22,12 +31,14 @@ import {
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
   stopRun as stopRunCommand,
+  updateSchedule,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import {
   commandMessage,
   initialRunState,
+  normalizeRunSnapshot,
   normalizeRunState,
 } from "./lib/workflowUi";
 import {
@@ -56,13 +67,17 @@ import type {
   WorkflowDetail,
   WorkflowPackage,
   WorkflowPackagePreview,
+  WorkflowRunSnapshot,
+  WorkflowSchedule,
+  WorkflowScheduleEvent,
+  WorkflowScheduleInput,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "list" | "detail" | "settings";
+type AppScreen = "list" | "detail" | "settings" | "schedules" | "runs";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -72,6 +87,7 @@ const workflowPackageSections: WorkflowSettingsSectionId[] = [
   "general",
   "run_policy",
   "browser_launch",
+  "graph_defaults",
   "environment",
 ];
 const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
@@ -201,10 +217,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "set_json_variables":
     case "transform_variable":
     case "assert_output":
-    case "run_subworkflow":
     case "domain_allowlist":
-    case "manual_approval":
-    case "rate_limit":
       return "out";
     case "if":
     case "switch":
@@ -237,10 +250,28 @@ function graphSaveStatusLabel(status: GraphSaveStatus) {
   }
 }
 
+function latestRunSnapshot(snapshots: WorkflowRunSnapshot[]) {
+  return [...snapshots].sort((left, right) =>
+    right.started_at.localeCompare(left.started_at),
+  )[0] ?? null;
+}
+
+function latestRunForWorkflow(
+  snapshots: WorkflowRunSnapshot[],
+  workflowId: string,
+) {
+  return latestRunSnapshot(
+    snapshots.filter((snapshot) => snapshot.workflow_id === workflowId),
+  );
+}
+
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
+  const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -270,6 +301,7 @@ function App() {
   const [graphIssuesNeedRecheck, setGraphIssuesNeedRecheck] = useState(false);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
   const [runState, setRunState] = useState<RunState>(initialRunState);
+  const [runSnapshots, setRunSnapshots] = useState<WorkflowRunSnapshot[]>([]);
   const [activeRunWorkflowName, setActiveRunWorkflowName] =
     useState<string | null>(null);
   const [workflowDialogMode, setWorkflowDialogMode] =
@@ -305,18 +337,19 @@ function App() {
 
   useEffect(() => {
     void loadWorkflows();
-    void refreshRunState();
+    void loadSchedules();
+    void refreshRunStates();
   }, []);
 
   useEffect(() => {
-    if (runState.status !== "running") return;
+    if (!runSnapshots.some((snapshot) => snapshot.state.status === "running")) return;
 
     const intervalId = window.setInterval(() => {
-      void refreshRunState();
+      void refreshRunStates();
     }, 250);
 
     return () => window.clearInterval(intervalId);
-  }, [runState.status]);
+  }, [runSnapshots]);
 
   useEffect(() => {
     if (
@@ -365,9 +398,45 @@ function App() {
     setWorkflows(items);
   }
 
-  async function refreshRunState() {
+  async function loadSchedules() {
+    setSchedulesLoading(true);
+    try {
+      setSchedules(await listSchedules());
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setSchedulesLoading(false);
+    }
+  }
+
+  async function refreshRunStates() {
+    try {
+      const snapshots = (await listRunStates()).map(normalizeRunSnapshot);
+      setRunSnapshots(snapshots);
+      const selectedSnapshot = selectedWorkflowId
+        ? latestRunForWorkflow(snapshots, selectedWorkflowId)
+        : latestRunSnapshot(snapshots);
+      if (selectedSnapshot) {
+        setRunState(selectedSnapshot.state);
+        setActiveRunWorkflowName(selectedSnapshot.workflow_name);
+        return;
+      }
+    } catch {
+      // Fall back to the legacy single-run state when older test bridges omit listRunStates.
+    }
     const state = await getRunState();
     setRunState(normalizeRunState(state));
+  }
+
+  function upsertRunSnapshot(snapshot: WorkflowRunSnapshot) {
+    const normalized = normalizeRunSnapshot(snapshot);
+    setRunSnapshots((current) => [
+      ...current.filter((item) => item.run_id !== normalized.run_id),
+      normalized,
+    ]);
+    setRunState(normalized.state);
+    setActiveRunWorkflowName(normalized.workflow_name);
+    return normalized;
   }
 
   async function openWorkflow(id: string) {
@@ -397,8 +466,14 @@ function App() {
       }
       try {
         const loadedSettings = await getWorkflowSettings(id);
-        setWorkflowSettings(loadedSettings);
-        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
+        const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+          workflowId: id,
+          workflowName: loaded.workflow.name,
+          createdAt: loaded.workflow.created_at,
+          updatedAt: loaded.workflow.updated_at,
+        });
+        setWorkflowSettings(normalizedSettings);
+        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(normalizedSettings));
       } catch {
         const fallbackSettings = defaultWorkflowSettings({
           workflowId: id,
@@ -417,9 +492,10 @@ function App() {
       setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
+      const workflowRun = latestRunForWorkflow(runSnapshots, id);
       setRunState((current) =>
-        current.status === "running"
-          ? current
+        workflowRun
+          ? workflowRun.state
           : { ...initialRunState, retained_session: current.retained_session },
       );
       setSelectedGraphNodeId(null);
@@ -701,10 +777,10 @@ function App() {
       const settingsSaved = await persistDirtyWorkflowSettings();
       if (!settingsSaved) return;
       setActiveRunWorkflowName(detail.workflow.name);
-      const state = await runWorkflowCommand(detail.workflow.id);
+      const snapshot = await runWorkflowCommand(detail.workflow.id);
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
-      setRunState(normalizeRunState(state));
+      upsertRunSnapshot(snapshot);
     } catch (error) {
       setAppError(commandMessage(error));
       if (workflowGraph) {
@@ -724,7 +800,7 @@ function App() {
 
     try {
       const state = await runWorkflowCommand(workflow.id);
-      setRunState(normalizeRunState(state));
+      upsertRunSnapshot(state);
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -746,7 +822,7 @@ function App() {
       );
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
-      setRunState(normalizeRunState(state));
+      upsertRunSnapshot(state);
     } catch (error) {
       setAppError(commandMessage(error));
       if (workflowGraph) {
@@ -776,12 +852,12 @@ function App() {
     await persistCurrentGraph();
   }
 
-  async function stopRun() {
+  async function stopRun(runId?: string | null) {
     setAppError("");
 
     try {
-      const state = await stopRunCommand();
-      setRunState(normalizeRunState(state));
+      const snapshot = await stopRunCommand(runId);
+      upsertRunSnapshot(snapshot);
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -796,6 +872,65 @@ function App() {
   function openSettings() {
     setScreen("settings");
     setAppError("");
+  }
+
+  function openSchedules() {
+    setScreen("schedules");
+    setAppError("");
+    void loadSchedules();
+  }
+
+  function openRunCenter() {
+    setScreen("runs");
+    setAppError("");
+    void refreshRunStates();
+  }
+
+  async function submitCreateSchedule(input: WorkflowScheduleInput) {
+    await createSchedule(input);
+    await loadSchedules();
+  }
+
+  async function submitUpdateSchedule(
+    scheduleId: string,
+    input: WorkflowScheduleInput,
+  ) {
+    await updateSchedule(scheduleId, input);
+    await loadSchedules();
+  }
+
+  async function removeSchedule(scheduleId: string) {
+    setAppError("");
+    try {
+      await deleteSchedule(scheduleId);
+      await loadSchedules();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function toggleSchedule(scheduleId: string, enabled: boolean) {
+    setAppError("");
+    try {
+      if (enabled) {
+        await enableSchedule(scheduleId);
+      } else {
+        await disableSchedule(scheduleId);
+      }
+      await loadSchedules();
+    } catch (error) {
+      setAppError(commandMessage(error));
+      throw error;
+    }
+  }
+
+  async function loadScheduleHistory(scheduleId: string) {
+    setAppError("");
+    try {
+      setScheduleEvents(await listScheduleEvents({ schedule_id: scheduleId }));
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
   }
 
   function updateGraphAutosaveEnabled(enabled: boolean) {
@@ -842,8 +977,14 @@ function App() {
 
     try {
       const loadedSettings = await getWorkflowSettings(workflow.id);
-      setWorkflowSettings(loadedSettings);
-      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
+      const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        createdAt: workflow.created_at,
+        updatedAt: workflow.updated_at,
+      });
+      setWorkflowSettings(normalizedSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(normalizedSettings));
     } catch {
       const fallbackSettings = defaultWorkflowSettings({
         workflowId: workflow.id,
@@ -908,21 +1049,35 @@ function App() {
     );
   }
 
-  const isRunning = runState.status === "running";
+  const detailRunSnapshot = detail
+    ? latestRunForWorkflow(runSnapshots, detail.workflow.id)
+    : null;
+  const detailRunState = detailRunSnapshot?.state ?? runState;
+  const isRunning = detailRunState.status === "running";
   const runFromSelectedAvailability = workflowGraph
     ? runFromSelectedState({
         graph: workflowGraph,
         selectedNodeId: selectedGraphNodeId,
         settings: workflowSettings,
-        runState,
+        runState: detailRunState,
         isRunning,
       })
     : { enabled: false, reason: "No workflow graph is loaded.", visible: false };
 
   return (
     <AppShell
-      activeItem={screen === "settings" ? "settings" : "workflows"}
+      activeItem={
+        screen === "settings"
+          ? "settings"
+          : screen === "schedules"
+            ? "schedules"
+            : screen === "runs"
+              ? "runs"
+            : "workflows"
+      }
       sidebarCollapsed={sidebarCollapsed}
+      onOpenSchedules={openSchedules}
+      onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
       onOpenWorkflows={backToList}
       onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
@@ -932,6 +1087,25 @@ function App() {
           graphAutosaveEnabled={graphAutosaveEnabled}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
         />
+      ) : screen === "schedules" ? (
+        <SchedulesPage
+          schedules={schedules}
+          workflows={workflows}
+          events={scheduleEvents}
+          loading={schedulesLoading}
+          error={appError}
+          onCreateSchedule={submitCreateSchedule}
+          onUpdateSchedule={submitUpdateSchedule}
+          onDeleteSchedule={removeSchedule}
+          onToggleSchedule={toggleSchedule}
+          onLoadEvents={loadScheduleHistory}
+        />
+      ) : screen === "runs" ? (
+        <RunCenterPage
+          runSnapshots={runSnapshots}
+          error={appError}
+          onStopRun={(runId) => stopRun(runId)}
+        />
       ) : screen === "detail" && detail ? (
         <>
           <WorkflowDetailPage
@@ -939,13 +1113,14 @@ function App() {
             isRunning={isRunning}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
-            runState={runState}
+            runState={detailRunState}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
+            defaultEdgeDelay={workflowSettings?.graph_defaults?.default_edge_delay ?? null}
             onBack={backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
-            onStopRun={stopRun}
+            onStopRun={() => stopRun(detailRunSnapshot?.run_id ?? null)}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
             onRunGraphFromSelected={runGraphFromSelectedNode}
@@ -964,6 +1139,7 @@ function App() {
           workflowNameDraft={workflowNameDraft}
           appError={appError}
           runState={runState}
+          runSnapshots={runSnapshots}
           activeRunWorkflowName={activeRunWorkflowName}
           onWorkflowNameDraftChange={setWorkflowNameDraft}
           onSubmitWorkflowDialog={submitWorkflowDialog}
@@ -971,6 +1147,7 @@ function App() {
           onOpenEditWorkflow={openEditWorkflowDialog}
           onDuplicateWorkflow={duplicateWorkflow}
           onRunWorkflow={runSavedWorkflow}
+          onStopRun={(runId) => stopRun(runId)}
           onOpenExportWorkflow={openExportPackageDialog}
           onImportWorkflowPackageFile={importWorkflowPackageFile}
           onCloseWorkflowDialog={closeWorkflowDialog}
@@ -1176,12 +1353,34 @@ function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     general: status,
     run_policy: status,
     browser_launch: status,
+    graph_defaults: status,
     environment: status,
   };
 }
 
 function cloneWorkflowSettings(settings: WorkflowSettings) {
   return JSON.parse(JSON.stringify(settings)) as WorkflowSettings;
+}
+
+function withWorkflowSettingsDefaults(
+  settings: WorkflowSettings,
+  workflow: {
+    workflowId: string;
+    workflowName: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  },
+) {
+  const defaults = defaultWorkflowSettings(workflow);
+  return {
+    ...defaults,
+    ...settings,
+    general: { ...defaults.general, ...settings.general },
+    run_policy: { ...defaults.run_policy, ...settings.run_policy },
+    browser_launch: { ...defaults.browser_launch, ...settings.browser_launch },
+    graph_defaults: { ...defaults.graph_defaults, ...settings.graph_defaults },
+    environment: { ...defaults.environment, ...settings.environment },
+  };
 }
 
 function isWorkflowSettings(value: unknown): value is WorkflowSettings {

@@ -4,17 +4,19 @@ import type {
   CompiledGraphStep,
   CompiledNestedAction,
   CompiledWorkflowGraph,
+  GraphEdge,
   GraphNode,
   GraphNodeType,
   GraphPort,
   GraphPortDirection,
   GraphValidationIssue,
+  RouterGraphCase,
+  RouterGraphConfig,
   VariableAssignment,
   WorkflowCondition,
   WorkflowGraph,
   WorkflowSettings,
 } from "../../src/types/workflow.js";
-import { actionCapabilities } from "../../src/lib/actionCapabilities.js";
 import { migrateWorkflowGraph } from "./workflowGraphMigration.js";
 
 type ValidationError = {
@@ -76,6 +78,10 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
     if (edge.source_node_id === edge.target_node_id) {
       issues.push(error(edge.source_node_id, edge.id, "Self-links are not allowed"));
     }
+    const edgeDelayMessage = validateGraphEdgeDelay(edge.delay);
+    if (edgeDelayMessage) {
+      issues.push(error(edge.source_node_id, edge.id, edgeDelayMessage));
+    }
 
     const source = nodeById.get(edge.source_node_id);
     if (!source) {
@@ -116,7 +122,9 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
     usedOutputPorts.add(outputPortKey);
 
     const inputPortKey = `${edge.target_node_id}\u0000${edge.target_port}`;
-    if (usedInputPorts.has(inputPortKey)) {
+    const targetAllowsMultipleIncoming =
+      target?.node_type === "merge" && edge.target_port === "in";
+    if (!targetAllowsMultipleIncoming && usedInputPorts.has(inputPortKey)) {
       issues.push(error(edge.target_node_id, edge.id, "Only one edge can enter an input port"));
     }
     usedInputPorts.add(inputPortKey);
@@ -165,7 +173,7 @@ export function compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGrap
   }
 
   const steps: CompiledGraphStep[] = [];
-  compilePath(normalizedGraph, nextTarget(normalizedGraph, start.id, "out"), new Set(), steps);
+  compileTransition(normalizedGraph, nextTransition(normalizedGraph, start.id, "out"), new Set(), steps);
   return { steps };
 }
 
@@ -200,7 +208,7 @@ export function compileWorkflowGraphFromNode(
   }
 
   const node = normalizedGraph.nodes.find((candidate) => candidate.id === startNodeId);
-  if (!node || node.node_type === "start") {
+  if (!node || node.node_type === "start" || node.node_type === "merge") {
     throw validationError("startNodeId", "Run from selected requires an executable graph node");
   }
 
@@ -211,9 +219,14 @@ export function compileWorkflowGraphFromNode(
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
   }));
   const withWaits = insertWaitBetweenGraphNodes(compiled);
+  const fullCompiled = compileWorkflowGraph(normalizedGraph).steps.map((stepValue) => ({
+    ...stepValue,
+    config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
+  }));
+  const fullWithWaits = insertWaitBetweenGraphNodes(fullCompiled);
   return {
     steps: withWaits,
-    domain_policy: domainPolicyFromSteps(withWaits),
+    domain_policy: domainPolicyFromSteps(fullWithWaits),
   };
 }
 
@@ -255,8 +268,30 @@ function compilePath(
       return;
     case "action":
       steps.push(step(node, node.config as ActionConfig));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
+    case "merge":
+      steps.push(step(node, { type: "graph_noop", config: { kind: "merge" } }));
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      break;
+    case "router": {
+      const router = routerGraphConfig(node);
+      steps.push(step(node, {
+        type: "router_condition",
+        config: {
+          mode: "first_match",
+          cases: router.cases.map((caseValue) => ({
+            id: caseValue.id,
+            label: caseValue.label,
+            condition: caseValue.condition,
+            steps: compileNestedConfigs(graph, node.id, `case_${caseValue.id}`, visited),
+          })),
+          default_steps: compileNestedConfigs(graph, node.id, "default", visited),
+        },
+      }));
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      break;
+    }
     case "if": {
       const condition = nodeCondition(node);
       steps.push(step(node, {
@@ -267,7 +302,7 @@ function compilePath(
           else_steps: compileNestedConfigs(graph, node.id, "false", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "switch": {
@@ -284,7 +319,7 @@ function compilePath(
           default_steps: compileNestedConfigs(graph, node.id, "default", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "repeat_times": {
@@ -295,7 +330,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "repeat_for_each": {
@@ -311,7 +346,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "while": {
@@ -324,7 +359,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "repeat_until": {
@@ -338,7 +373,7 @@ function compilePath(
           timeout_steps: compileNestedConfigs(graph, node.id, "timeout", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "retry": {
@@ -351,7 +386,7 @@ function compilePath(
           failed_steps: compileNestedConfigs(graph, node.id, "failed", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "success"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "success"), visited, steps);
       break;
     }
     case "try_catch": {
@@ -364,7 +399,7 @@ function compilePath(
           finally_steps: compileNestedConfigs(graph, node.id, "finally", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "fallback": {
@@ -375,7 +410,7 @@ function compilePath(
           fallback_steps: compileNestedConfigs(graph, node.id, "fallback", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "break_loop":
@@ -396,14 +431,14 @@ function compilePath(
       return;
     case "set_variable":
       steps.push(step(node, setVariableActionConfig(node)));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "set_json_variables":
       steps.push(step(node, {
         type: "set_json_variables",
         config: { json: requiredString(node.config, "json", "JSON variables are required") },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "transform_variable":
       steps.push(step(node, {
@@ -414,7 +449,7 @@ function compilePath(
           expression: stringField(node.config, "expression") ?? "",
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "assert_output":
       steps.push(step(node, {
@@ -425,46 +460,67 @@ function compilePath(
           value: requiredString(node.config, "value", "Expected output value is required"),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
-      break;
-    case "run_subworkflow":
-      steps.push(step(node, {
-        type: "run_subworkflow",
-        config: {
-          workflow_id: requiredString(node.config, "workflow_id", "Workflow id is required"),
-          input_mapping: variableMappings(node.config, "input_mapping"),
-          output_mapping: variableMappings(node.config, "output_mapping"),
-        },
-      }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "domain_allowlist":
       steps.push(step(node, {
         type: "domain_allowlist",
         config: { domains: stringArray(node.config, "domains", "Allowed domains are required") },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
-      break;
-    case "manual_approval":
-      steps.push(step(node, {
-        type: "pause_for_human",
-        config: {
-          reason: stringField(node.config, "reason") ?? "Manual approval required",
-          timeout_ms: optionalPositiveInteger(node.config, "timeout_ms"),
-        },
-      }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
-      break;
-    case "rate_limit":
-      steps.push(step(node, durationWaitAction(optionalPositiveInteger(node.config, "delay_ms") ?? 1000)));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "start":
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
   }
 
   visited.delete(nodeId);
+}
+
+type GraphTransition = {
+  edge: GraphEdge;
+  targetNodeId: string;
+} | null;
+
+function compileTransition(
+  graph: WorkflowGraph,
+  transition: GraphTransition,
+  visited: Set<string>,
+  steps: CompiledGraphStep[],
+) {
+  if (!transition) return;
+  pushEdgeDelayStep(graph, transition.edge, transition.targetNodeId, steps);
+  compilePath(graph, transition.targetNodeId, visited, steps);
+}
+
+function pushEdgeDelayStep(
+  graph: WorkflowGraph,
+  edge: GraphEdge,
+  targetNodeId: string,
+  steps: CompiledGraphStep[],
+) {
+  const delay = edge.delay;
+  if (!delay) return;
+  const target = graph.nodes.find((node) => node.id === targetNodeId);
+  if (delay.type === "fixed") {
+    steps.push({
+      node_id: `__edge_wait:${edge.id}`,
+      label: `Wait before ${target?.label ?? targetNodeId}`,
+      config: {
+        type: "wait",
+        config: {
+          condition: "duration",
+          duration_ms: delay.duration_ms,
+        },
+      },
+    });
+    return;
+  }
+  steps.push({
+    node_id: `__edge_wait:${edge.id}`,
+    label: `Wait before ${target?.label ?? targetNodeId}`,
+    config: { type: "random_wait", config: { min_ms: delay.min_ms, max_ms: delay.max_ms } },
+  });
 }
 
 function compileNestedConfigs(
@@ -474,7 +530,7 @@ function compileNestedConfigs(
   visited: Set<string>,
 ): CompiledNestedAction[] {
   const nestedSteps: CompiledGraphStep[] = [];
-  compilePath(graph, nextTarget(graph, sourceNodeId, sourcePort), new Set(visited), nestedSteps);
+  compileTransition(graph, nextTransition(graph, sourceNodeId, sourcePort), new Set(visited), nestedSteps);
   return nestedSteps.map((compiledStep) => ({
     ...compiledStep.config,
     graph_node_id: compiledStep.node_id,
@@ -498,16 +554,6 @@ function pushNodeSemanticIssues(
         issues.push(error(node.id, null, "Choose an action type before running this node"));
       } else {
         const actionConfig = node.config as ActionConfig;
-        if (actionCapabilities[actionConfig.type] === "launch_time_only") {
-          issues.push(
-            error(
-              node.id,
-              null,
-              `Node ${node.label} uses a launch-time browser identity setting. Configure it in Workflow Settings before launch.`,
-            ),
-          );
-          break;
-        }
         const validation = validateActionConfig(actionConfig);
         if (validation) {
           issues.push(error(node.id, null, `Node ${node.label} has invalid action config: ${validation.message}`));
@@ -530,6 +576,12 @@ function pushNodeSemanticIssues(
       pushStaleSwitchCaseIssues(graph, node, issues);
       warnMissingBranch(graph, node, "default", "Switch default branch is unconnected and will no-op", issues);
       warnMissingContinuation(graph, node, "done", "Switch done continuation is unconnected; workflow ends successfully here", issues);
+      break;
+    case "merge":
+      warnMissingContinuation(graph, node, "out", "Merge out is unconnected; workflow path ends successfully here", issues);
+      break;
+    case "router":
+      pushRouterSemanticIssues(graph, node, issues);
       break;
     case "repeat_times":
       if (!positiveNumberField(node.config, "times")) {
@@ -612,24 +664,9 @@ function pushNodeSemanticIssues(
       if (!stringField(node.config, "name")) issues.push(error(node.id, null, "Output name is required"));
       if (!stringField(node.config, "value")) issues.push(error(node.id, null, "Expected output value is required"));
       break;
-    case "run_subworkflow":
-      if (!stringField(node.config, "workflow_id")) issues.push(error(node.id, null, "Workflow id is required"));
-      for (const field of ["input_mapping", "output_mapping"]) {
-        try {
-          variableMappings(node.config, field);
-        } catch (caught) {
-          issues.push(error(node.id, null, serializeValidationError(caught).message));
-        }
-      }
-      break;
     case "domain_allowlist":
       if (stringArrayOrNull(node.config, "domains") == null) {
         issues.push(error(node.id, null, "Allowed domains are required"));
-      }
-      break;
-    case "rate_limit":
-      if (numberField(node.config, "delay_ms") === 0) {
-        issues.push(error(node.id, null, "Rate limit delay must be greater than 0"));
       }
       break;
   }
@@ -692,8 +729,12 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       }
       return null;
     case "click":
-    case "input_text":
     case "clear_input":
+      return firstValidation(
+        validateElementTarget(config.config),
+        validateElementActionTiming(config.config),
+      );
+    case "input_text":
       return firstValidation(
         validateElementTarget(config.config),
         validateElementActionTiming(config.config),
@@ -715,19 +756,40 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       );
     case "scroll": {
       const mode = config.config.mode ?? "page";
-      if (mode !== "page") {
-        return validationError("mode", "Only page scroll is currently supported");
+      const modeValidation = validateRequiredEnumValue(
+        mode,
+        ["page", "into_view", "until_visible"],
+        "mode",
+        "Scroll mode must be page, into_view, or until_visible",
+      );
+      if (modeValidation) return modeValidation;
+
+      if (mode === "page") {
+        return firstValidation(
+          validateRequiredEnumValue(
+            config.config.direction,
+            ["up", "down", "left", "right"],
+            "direction",
+            "Scroll direction must be up, down, left, or right",
+          ),
+          positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
+        );
       }
       return firstValidation(
-        positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
-        optionalPositive(config.config.max_attempts, "max_attempts", "Max attempts must be greater than 0"),
-        optionalNonNegative(config.config.wait_ms, "wait_ms", "Wait must be zero or greater"),
+        validateElementTarget(config.config),
+        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
       );
     }
     case "select_option":
       return firstValidation(
         validateElementTarget(config.config),
         requiredActionString(config.config.value, "value", "Option value is required"),
+        validateRequiredEnumValue(
+          config.config.match_by,
+          ["label", "value"],
+          "match_by",
+          "Match by must be label or value",
+        ),
         validateElementActionTiming(config.config),
       );
     case "press_key":
@@ -810,10 +872,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return config.config.index == null
         ? null
         : zeroOrPositiveInteger(config.config.index, "index", "Tab index must be zero or greater");
-    case "switch_frame":
-      return config.config.xpath || config.config.target ? validateElementTarget(config.config) : null;
-    case "set_download_directory":
-      return requiredActionString(config.config.path, "path", "Download directory is required");
     case "wait_for_download":
       return firstValidation(
         requiredActionString(config.config.output_name, "output_name", "Download output name is required"),
@@ -849,13 +907,34 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return firstValidation(
         validateElementTarget(config.config),
         requiredActionString(config.config.text, "text", "Assertion text is required"),
+        validateRequiredEnumValue(
+          config.config.match_mode,
+          ["contains", "equals"],
+          "match_mode",
+          "Match mode must be contains or equals",
+        ),
         optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
       );
+    case "graph_noop":
+      return config.config.kind === "merge"
+        ? null
+        : validationError("kind", "Graph no-op kind is invalid");
     case "if_condition":
       return firstValidation(
         validateConditionConfig(config.config.condition),
         validateNestedActionArray(config.config.then_steps, "then_steps"),
         validateNestedActionArray(config.config.else_steps, "else_steps"),
+      );
+    case "router_condition":
+      return firstValidation(
+        validateRequiredEnumValue(
+          config.config.mode,
+          ["first_match"],
+          "mode",
+          "Router mode must be first_match",
+        ),
+        validateRouterConditionCases(config.config.cases),
+        validateNestedActionArray(config.config.default_steps, "default_steps"),
       );
     case "repeat_times":
       return firstValidation(
@@ -923,21 +1002,16 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
     case "assert_output":
       return firstValidation(
         requiredActionString(config.config.name, "name", "Output name is required"),
+        validateRequiredEnumValue(
+          config.config.match_mode,
+          ["contains", "equals"],
+          "match_mode",
+          "Match mode must be contains or equals",
+        ),
         requiredActionString(config.config.value, "value", "Expected output value is required"),
-      );
-    case "run_subworkflow":
-      return firstValidation(
-        requiredActionString(config.config.workflow_id, "workflow_id", "Workflow id is required"),
-        validateMappings(config.config.input_mapping, "input_mapping"),
-        validateMappings(config.config.output_mapping, "output_mapping"),
       );
     case "domain_allowlist":
       return validateStringList(config.config.domains, "domains", "Allowed domains are required");
-    case "use_profile":
-      return requiredActionString(config.config.name, "name", "Profile name is required");
-    case "save_session":
-    case "load_session":
-      return requiredActionString(config.config.path, "path", "Session path is required");
     case "set_cookie":
       return firstValidation(
         requiredActionString(config.config.name, "name", "Cookie name is required"),
@@ -945,20 +1019,10 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       );
     case "clear_cookies":
       return null;
-    case "set_secret":
-      return firstValidation(
-        requiredActionString(config.config.name, "name", "Secret name is required"),
-        requiredActionString(config.config.value, "value", "Secret value is required"),
-      );
-    case "use_proxy":
-      return requiredActionString(config.config.server, "server", "Proxy server is required");
-    case "set_user_agent":
-      return requiredActionString(config.config.user_agent, "user_agent", "User agent is required");
     case "set_viewport":
       return firstValidation(
         positiveValue(config.config.width, "width", "Viewport width must be greater than 0"),
         positiveValue(config.config.height, "height", "Viewport height must be greater than 0"),
-        optionalPositive(config.config.device_scale_factor, "device_scale_factor", "Device scale factor must be greater than 0"),
       );
     case "set_geolocation":
       return firstValidation(
@@ -970,39 +1034,6 @@ export function validateActionConfig(config: ActionConfig): ValidationError | nu
       return validateHeaderPairs(config.config.headers);
     case "grant_permission":
       return validateStringList(config.config.permissions, "permissions", "Permissions are required");
-    case "detect_challenge":
-      return firstValidation(
-        requiredActionString(config.config.output_name, "output_name", "Challenge output name is required"),
-        validateStringList(config.config.patterns, "patterns", "Challenge pattern is required"),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "pause_for_human":
-      return firstValidation(
-        requiredActionString(config.config.reason, "reason", "Pause reason is required"),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "resume_when_condition":
-      return firstValidation(
-        validateConditionConfig(config.config.condition),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "fallback_selector":
-      return firstValidation(
-        requiredActionString(config.config.output_name, "output_name", "Fallback selector output name is required"),
-        validateStringList(config.config.xpaths, "xpaths", "Fallback selector XPath is required"),
-        optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
-      );
-    case "retry_step":
-      return firstValidation(
-        positiveValue(config.config.max_attempts, "max_attempts", "Max attempts must be greater than 0"),
-        optionalNonNegative(config.config.delay_ms, "delay_ms", "Delay must be zero or greater"),
-        validateNestedActionValue(config.config.step, "step"),
-      );
-    case "checkpoint":
-      return firstValidation(
-        requiredActionString(config.config.name, "name", "Checkpoint name is required"),
-        safeArtifactNameValidation(config.config.screenshot_path, "screenshot_path", "Checkpoint screenshot path must be a safe artifact name"),
-      );
     case "execute_js":
       return firstValidation(
         requiredActionString(config.config.script, "script", "Script is required"),
@@ -1090,10 +1121,49 @@ function validateElementTarget(
 function validateElementActionTiming(config: unknown) {
   const record = asRecord(config);
   return firstValidation(
+    validateOptionalEnumValue(
+      record.wait_until,
+      ["attached", "visible", "enabled", "clickable"],
+      "wait_until",
+      "Wait until must be attached, visible, enabled, or clickable",
+    ),
     optionalPositive(record.timeout_ms as number | null | undefined, "timeout_ms", "Timeout must be greater than 0"),
-    optionalNonNegative(record.retry_interval_ms as number | null | undefined, "retry_interval_ms", "Retry interval must be zero or greater"),
-    optionalNonNegative(record.post_click_wait_ms as number | null | undefined, "post_click_wait_ms", "Post-click wait must be zero or greater"),
   );
+}
+
+function validateOptionalEnumValue(
+  value: unknown,
+  allowedValues: readonly string[],
+  field: string,
+  message: string,
+) {
+  return value == null || (typeof value === "string" && allowedValues.includes(value))
+    ? null
+    : validationError(field, message);
+}
+
+function validateRequiredEnumValue(
+  value: unknown,
+  allowedValues: readonly string[],
+  field: string,
+  message: string,
+) {
+  return typeof value === "string" && allowedValues.includes(value)
+    ? null
+    : validationError(field, message);
+}
+
+function validateGraphEdgeDelay(delay: GraphEdge["delay"]) {
+  if (!delay) return null;
+  if (delay.type === "fixed") {
+    return positive(delay.duration_ms) ? null : "Edge wait duration must be greater than 0";
+  }
+  if (delay.type === "random") {
+    return positive(delay.min_ms) && positive(delay.max_ms) && delay.max_ms >= delay.min_ms
+      ? null
+      : "Edge wait range is invalid";
+  }
+  return "Edge wait type is invalid";
 }
 
 function validateDataCaptureConfig(config: {
@@ -1177,6 +1247,31 @@ function validateSwitchCases(cases: unknown) {
   return null;
 }
 
+function validateRouterConditionCases(cases: unknown) {
+  if (!Array.isArray(cases) || cases.length === 0) {
+    return validationError("cases", "Router cases are required");
+  }
+  const seenIds = new Set<string>();
+  for (let index = 0; index < cases.length; index += 1) {
+    const caseValue = asRecord(cases[index]);
+    const id = stringField(caseValue, "id");
+    if (!id) return validationError(`cases[${index}].id`, "Router case id is required");
+    if (seenIds.has(id)) return validationError("cases", "Router case ids must be unique");
+    seenIds.add(id);
+    if (!stringField(caseValue, "label")) {
+      return validationError(`cases[${index}].label`, "Router case labels are required");
+    }
+    const conditionValidation = validateConditionConfig(
+      caseValue.condition,
+      `cases[${index}].condition`,
+    );
+    if (conditionValidation) return conditionValidation;
+    const stepsValidation = validateNestedActionArray(caseValue.steps, `cases[${index}].steps`);
+    if (stepsValidation) return stepsValidation;
+  }
+  return null;
+}
+
 function validateLoopLimit(config: { max_attempts?: number | null; timeout_ms?: number | null }) {
   const maxAttemptsValidation = optionalPositive(
     config.max_attempts,
@@ -1193,19 +1288,6 @@ function validateLoopLimit(config: { max_attempts?: number | null; timeout_ms?: 
   return config.max_attempts == null && config.timeout_ms == null
     ? validationError("max_attempts", "Loop actions require max attempts or timeout")
     : null;
-}
-
-function validateMappings(mappings: unknown, field: string) {
-  if (!Array.isArray(mappings)) return validationError(field, "Mappings must be an array");
-  for (let index = 0; index < mappings.length; index += 1) {
-    if (!stringField(mappings[index], "source")) {
-      return validationError(`${field}[${index}].source`, "Mapping source is required");
-    }
-    if (!stringField(mappings[index], "target")) {
-      return validationError(`${field}[${index}].target`, "Mapping target is required");
-    }
-  }
-  return null;
 }
 
 function latitudeValidation(value: number) {
@@ -1336,6 +1418,20 @@ function expectedPorts(node: GraphNode): GraphPort[] {
     case "continue_loop":
     case "stop_workflow":
       return [inputPort("in", "In")];
+    case "merge":
+      return [inputPort("in", "In"), outputPort("out", "Out")];
+    case "router": {
+      const router = routerGraphConfigOrNull(node);
+      const cases = router?.cases.length
+        ? router.cases
+        : [{ id: "1", label: "Case 1", condition: { kind: "output_equals", name: "name", value: "" } as const }];
+      return [
+        inputPort("in", "In"),
+        ...cases.map((caseValue) => outputPort(`case_${caseValue.id}`, caseValue.label)),
+        outputPort("default", router?.default_label || "Default"),
+        outputPort("done", "Done"),
+      ];
+    }
     case "if":
       return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False"), outputPort("done", "Done")];
     case "switch": {
@@ -1390,6 +1486,7 @@ function pushBranchContinuationIssues(
     for (const nodeId of branchReachable) {
       if (!continuationReachable.has(nodeId)) continue;
       const shared = nodeById.get(nodeId);
+      if (shared?.node_type === "merge") continue;
       issues.push(error(
         nodeId,
         null,
@@ -1411,6 +1508,16 @@ function branchContinuationSemantics(node: GraphNode): {
       return {
         branchPorts: [
           ...Array.from({ length: caseCount }, (_, index) => `case_${index + 1}`),
+          "default",
+        ],
+        continuationPorts: ["done"],
+      };
+    }
+    case "router": {
+      const router = routerGraphConfigOrNull(node);
+      return {
+        branchPorts: [
+          ...(router?.cases ?? []).map((caseValue) => `case_${caseValue.id}`),
           "default",
         ],
         continuationPorts: ["done"],
@@ -1451,7 +1558,7 @@ function reachableFromPorts(
     if (!nodeId || reachable.has(nodeId)) continue;
     reachable.add(nodeId);
     const node = nodeById.get(nodeId);
-    if (!node || isTerminalBranchBoundary(node.node_type)) continue;
+    if (!node || isTerminalBranchBoundary(node.node_type) || node.node_type === "merge") continue;
     for (const edgeValue of graph.edges.filter((edgeItem) => edgeItem.source_node_id === nodeId)) {
       queue.push(edgeValue.target_node_id);
     }
@@ -1465,9 +1572,18 @@ function isTerminalBranchBoundary(nodeType: GraphNodeType): boolean {
 }
 
 function nextTarget(graph: WorkflowGraph, sourceNodeId: string, sourcePort: string): string | null {
-  return [...graph.edges]
+  return nextTransition(graph, sourceNodeId, sourcePort)?.targetNodeId ?? null;
+}
+
+function nextTransition(
+  graph: WorkflowGraph,
+  sourceNodeId: string,
+  sourcePort: string,
+): GraphTransition {
+  const edge = [...graph.edges]
     .filter((edgeValue) => edgeValue.source_node_id === sourceNodeId && edgeValue.source_port === sourcePort)
-    .sort((left, right) => left.id.localeCompare(right.id))[0]?.target_node_id ?? null;
+    .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null;
+  return edge ? { edge, targetNodeId: edge.target_node_id } : null;
 }
 
 function mainPathNodeIds(graph: WorkflowGraph) {
@@ -1497,13 +1613,12 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "set_json_variables":
     case "transform_variable":
     case "assert_output":
-    case "run_subworkflow":
     case "domain_allowlist":
-    case "manual_approval":
-    case "rate_limit":
+    case "merge":
       return "out";
     case "if":
     case "switch":
+    case "router":
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -1620,6 +1735,66 @@ function pushStaleSwitchCaseIssues(
   }
 }
 
+function pushRouterSemanticIssues(
+  graph: WorkflowGraph,
+  node: GraphNode,
+  issues: GraphValidationIssue[],
+) {
+  const router = routerGraphConfigOrNull(node);
+  if (!router || router.cases.length === 0) {
+    issues.push(error(node.id, null, "Router cases are required"));
+    return;
+  }
+
+  const seenIds = new Set<string>();
+  const duplicateIds = new Set<string>();
+  for (const caseValue of router.cases) {
+    if (seenIds.has(caseValue.id)) duplicateIds.add(caseValue.id);
+    seenIds.add(caseValue.id);
+    if (!caseValue.label.trim()) {
+      issues.push(error(node.id, null, "Router case labels are required"));
+    }
+    try {
+      validateWorkflowCondition(caseValue.condition);
+    } catch (caught) {
+      issues.push(error(node.id, null, serializeValidationError(caught).message));
+    }
+  }
+  if (duplicateIds.size > 0) {
+    issues.push(error(node.id, null, "Router case ids must be unique"));
+  }
+
+  warnMissingBranch(graph, node, "default", "Router default branch is unconnected and will no-op", issues);
+  warnMissingContinuation(graph, node, "done", "Router done continuation is unconnected; workflow ends successfully here", issues);
+}
+
+function routerGraphConfig(node: GraphNode): RouterGraphConfig {
+  const router = routerGraphConfigOrNull(node);
+  if (!router || router.cases.length === 0) {
+    throw validationError("cases", "Router cases are required");
+  }
+  return router;
+}
+
+function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
+  const record = asRecord(node.config);
+  if (record.mode != null && record.mode !== "first_match") return null;
+  const rawCases = Array.isArray(record.cases) ? record.cases : [];
+  const cases = rawCases.map((item): RouterGraphCase => {
+    const caseValue = asRecord(item);
+    return {
+      id: stringField(caseValue, "id") ?? "",
+      label: typeof caseValue.label === "string" ? caseValue.label : "",
+      condition: caseValue.condition as WorkflowCondition,
+    };
+  });
+  return {
+    mode: "first_match",
+    cases,
+    default_label: stringField(record, "default_label") ?? "Default",
+  };
+}
+
 function requireBodyPort(
   graph: WorkflowGraph,
   node: GraphNode,
@@ -1707,14 +1882,6 @@ function setVariableActionConfig(node: GraphNode): ActionConfig {
   };
 }
 
-function variableMappings(config: unknown, field: string) {
-  const mappings = arrayField(config, field);
-  return mappings.map((mapping) => ({
-    source: requiredString(mapping, "source", "Mapping source is required"),
-    target: requiredString(mapping, "target", "Mapping target is required"),
-  }));
-}
-
 function requiredString(config: unknown, field: string, message: string) {
   const value = stringField(config, field);
   if (!value) throw validationError(field, message);
@@ -1796,13 +1963,6 @@ function hasStructuredElementTarget(target: unknown): boolean {
       const value = asRecord(locator).value;
       return typeof value === "string" && value.trim();
     });
-}
-
-function durationWaitAction(duration_ms: number): ActionConfig {
-  return {
-    type: "wait",
-    config: { condition: "duration", duration_ms },
-  };
 }
 
 function positive(value: number | null | undefined) {

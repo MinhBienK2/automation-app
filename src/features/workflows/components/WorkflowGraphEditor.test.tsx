@@ -7,6 +7,7 @@ import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridg
 import { sleepStep } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+import type { GraphNodeType, GraphPort } from "../../../types/workflow";
 import { nodePorts } from "../lib/workflowGraph";
 
 const workflowGraphEditorSource = readFileSync(
@@ -22,6 +23,32 @@ const workflowGraphInspectorSource = readFileSync(
   "utf8",
 );
 const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
+const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
+  start: true,
+  action: true,
+  if: true,
+  switch: true,
+  merge: true,
+  router: true,
+  repeat_times: true,
+  repeat_for_each: true,
+  while: true,
+  repeat_until: true,
+  retry: true,
+  try_catch: true,
+  fallback: true,
+  break_loop: true,
+  continue_loop: true,
+  stop_workflow: true,
+  set_variable: true,
+  set_json_variables: true,
+  transform_variable: true,
+  assert_output: true,
+  domain_allowlist: true,
+  end_success: true,
+  end_failure: true,
+};
+const graphNodeTypes = Object.keys(graphNodeTypeCoverage) as GraphNodeType[];
 
 describe("Workflow graph editor integration", () => {
   beforeEach(() => {
@@ -144,6 +171,195 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphCanvasPartsSource).not.toContain("graph-edge-arrow");
   });
 
+  test("explains every graph canvas port with hover tooltip text", async () => {
+    const canvasParts = await import("./WorkflowGraphCanvasParts") as {
+      graphPortTooltip?: (nodeType: GraphNodeType, port: GraphPort) => string;
+    };
+    expect(canvasParts.graphPortTooltip).toBeTypeOf("function");
+
+    for (const nodeType of graphNodeTypes) {
+      for (const port of nodePorts(nodeType)) {
+        const tooltip = canvasParts.graphPortTooltip?.(nodeType, port);
+        expect(tooltip, `${nodeType}.${port.id}`).toEqual(
+          expect.stringContaining(port.label),
+        );
+        expect(tooltip, `${nodeType}.${port.id}`).toEqual(
+          expect.stringMatching(/Nối|Kéo|Nhận|Chạy|Kết thúc/),
+        );
+      }
+    }
+
+    expect(
+      canvasParts.graphPortTooltip?.("merge", { id: "in", label: "In", direction: "input" }),
+    ).toContain("nhiều nhánh");
+    expect(
+      canvasParts.graphPortTooltip?.("try_catch", { id: "finally", label: "Finally", direction: "output" }),
+    ).toContain("luôn chạy");
+  });
+
+  test("renders port tooltip metadata on React Flow handles", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    const startPort = within(editor).getByLabelText("Start Out port");
+    expect(startPort).toHaveAttribute("data-tooltip", expect.stringContaining("Out"));
+    expect(startPort).not.toHaveAttribute("title");
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
+
+    expect(within(editor).getByLabelText("If True port")).toHaveAttribute(
+      "data-tooltip",
+      expect.stringContaining("condition đúng"),
+    );
+    expect(within(editor).getByLabelText("If Done port")).toHaveAttribute(
+      "data-tooltip",
+      expect.stringContaining("flow chính"),
+    );
+  });
+
+  test("calculates toolbar node positions from the current visible canvas center", async () => {
+    expect(
+      workflowGraphEditorSource.match(
+        /getVisibleNodeInsertionPosition\(\s*currentGraph\.nodes\.length,/g,
+      ),
+    ).toHaveLength(3);
+    expect(workflowGraphEditorSource).not.toContain(
+      "x: 120 + currentGraph.nodes.length * 48",
+    );
+
+    const graphEditorModule = await import("./WorkflowGraphEditor");
+    expect(graphEditorModule).toHaveProperty("getVisibleNodeInsertionPosition");
+
+    const getVisibleNodeInsertionPosition = graphEditorModule[
+      "getVisibleNodeInsertionPosition"
+    ] as (
+      nodeCount: number,
+      reactFlowInstance: {
+        screenToFlowPosition: (
+          position: { x: number; y: number },
+          options?: { snapToGrid?: boolean },
+        ) => { x: number; y: number };
+      } | null,
+      canvasElement: { getBoundingClientRect: () => DOMRect },
+    ) => { x: number; y: number };
+    const screenToFlowPosition = vi.fn(({ x, y }: { x: number; y: number }) => ({
+      x: x + 1000,
+      y: y + 2000,
+    }));
+    const canvasElement = {
+      getBoundingClientRect: () =>
+        ({
+          left: 40,
+          top: 80,
+          width: 800,
+          height: 600,
+        }) as DOMRect,
+    };
+
+    expect(
+      getVisibleNodeInsertionPosition(3, { screenToFlowPosition }, canvasElement),
+    ).toEqual({ x: 1432, y: 2420 });
+    expect(screenToFlowPosition).toHaveBeenCalledWith(
+      { x: 440, y: 380 },
+      { snapToGrid: false },
+    );
+  });
+
+  test("preserves multiple incoming links only for Merge inputs", async () => {
+    const graphEditorModule = await import("./WorkflowGraphEditor");
+    const replacePortEdge = graphEditorModule["replacePortEdge"] as typeof import("./WorkflowGraphEditor").replacePortEdge;
+    const sourceNode = (id: string) => ({
+      id,
+      type: "workflow" as const,
+      position: { x: 0, y: 0 },
+      data: {
+        label: id,
+        nodeType: "action" as const,
+        ports: nodePorts("action"),
+        status: "idle" as const,
+        hasIssue: false,
+      },
+    });
+    const mergeNode = {
+      id: "merge",
+      type: "workflow" as const,
+      position: { x: 0, y: 0 },
+      data: {
+        label: "Merge",
+        nodeType: "merge" as const,
+        ports: nodePorts("merge"),
+        status: "idle" as const,
+        hasIssue: false,
+      },
+    };
+    const actionTarget = {
+      ...sourceNode("target"),
+      data: { ...sourceNode("target").data, label: "Target" },
+    };
+    const existingEdge = {
+      id: "edge-a-out-merge-in",
+      source: "a",
+      sourceHandle: "out",
+      target: "merge",
+      targetHandle: "in",
+      data: { hasIssue: false, status: "idle" as const },
+    };
+    const nextMergeEdge = {
+      id: "edge-b-out-merge-in",
+      source: "b",
+      sourceHandle: "out",
+      target: "merge",
+      targetHandle: "in",
+      data: { hasIssue: false, status: "idle" as const },
+    };
+    const nextNormalEdge = {
+      ...nextMergeEdge,
+      id: "edge-b-out-target-in",
+      target: "target",
+    };
+
+    expect(
+      replacePortEdge(
+        [existingEdge],
+        nextMergeEdge,
+        [sourceNode("a"), sourceNode("b"), mergeNode],
+      ).map((edge) => edge.id),
+    ).toEqual(["edge-a-out-merge-in", "edge-b-out-merge-in"]);
+    expect(
+      replacePortEdge(
+        [{ ...existingEdge, id: "edge-a-out-target-in", target: "target" }],
+        nextNormalEdge,
+        [sourceNode("a"), sourceNode("b"), actionTarget],
+      ).map((edge) => edge.id),
+    ).toEqual(["edge-b-out-target-in"]);
+  });
+
+  test("adds the workflow default link wait to newly connected graph edges", () => {
+    expect(workflowGraphEditorSource).toContain("defaultEdgeDelay");
+    expect(workflowGraphEditorSource).toContain("cloneGraphEdgeDelay(defaultEdgeDelay)");
+    expect(appSource).toContain("workflowSettings?.graph_defaults?.default_edge_delay");
+    expect(appSource).toContain("defaultEdgeDelay={");
+  });
+
+  test("exposes link wait editing from the selected edge inspector", () => {
+    expect(workflowGraphInspectorSource).toContain("Link wait");
+    expect(workflowGraphInspectorSource).toContain("Fixed duration ms");
+    expect(workflowGraphInspectorSource).toContain("Random min ms");
+    expect(workflowGraphEditorSource).toContain("function updateEdge");
+    expect(workflowGraphEditorSource).toContain("onUpdateEdge={updateEdge}");
+  });
+
   test("opens graph shortcuts from the toolbar", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
@@ -182,7 +398,7 @@ describe("Workflow graph editor integration", () => {
     expect(within(palette).getByRole("button", { name: /Set JSON Variables/ })).toBeInTheDocument();
   });
 
-  test("shows compatibility details for legacy graph-internal action configs", async () => {
+  test("shows graph-internal details for action-node control configs", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       get_workflow_graph: {
@@ -197,9 +413,9 @@ describe("Workflow graph editor integration", () => {
             ports: nodePorts("start"),
           },
           {
-            id: "legacy-loop",
+            id: "internal-loop",
             node_type: "action",
-            label: "Legacy While",
+            label: "Internal While",
             position: { x: 240, y: 0 },
             config: {
               type: "while_loop",
@@ -214,10 +430,10 @@ describe("Workflow graph editor integration", () => {
         ],
         edges: [
           {
-            id: "start-legacy",
+            id: "start-internal",
             source_node_id: "start",
             source_port: "out",
-            target_node_id: "legacy-loop",
+            target_node_id: "internal-loop",
             target_port: "in",
           },
         ],
@@ -229,11 +445,11 @@ describe("Workflow graph editor integration", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
-    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node legacy-loop" }));
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node internal-loop" }));
 
-    expect(within(editor).getByText("Compatibility action")).toBeInTheDocument();
+    expect(within(editor).getByText("Graph-internal action")).toBeInTheDocument();
     expect(within(editor).getByText("While Loop")).toBeInTheDocument();
-    expect(within(editor).getByText(/Convert this saved action into a graph-native node/))
+    expect(within(editor).getByText(/Replace this action-node payload with a supported user action/))
       .toBeInTheDocument();
     expect(within(editor).getByText(/\"type\": \"while_loop\"/)).toBeInTheDocument();
     expect(within(editor).getByRole("button", { name: "Delete Node" })).toBeInTheDocument();
@@ -873,7 +1089,14 @@ describe("Workflow graph editor integration", () => {
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
 
-    ["Undo", "Redo", "Select canvas mode", "Pan canvas mode", "Fit graph view"].forEach(
+    [
+      "Undo",
+      "Redo",
+      "Select canvas mode",
+      "Pan canvas mode",
+      "Fit graph view",
+      "Auto arrange graph",
+    ].forEach(
       (name) => {
         expect(within(toolbar).getByRole("button", { name })).toBeInTheDocument();
       },
@@ -884,6 +1107,92 @@ describe("Workflow graph editor integration", () => {
       .toHaveAttribute("aria-pressed", "true");
     expect(within(editor).getByLabelText("Workflow graph canvas"))
       .toHaveClass("graph-canvas-pan-mode");
+  });
+
+  test("auto arranges graph nodes from the toolbar and saves the new positions", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: {
+        version: 2,
+        nodes: [
+          {
+            id: "start",
+            node_type: "start",
+            label: "Start",
+            position: { x: 520, y: 180 },
+            config: {},
+            ports: nodePorts("start"),
+            group_id: null,
+          },
+          {
+            id: "node-a",
+            node_type: "action",
+            label: "A",
+            position: { x: 40, y: 320 },
+            config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+            ports: nodePorts("action"),
+            group_id: null,
+          },
+          {
+            id: "node-b",
+            node_type: "action",
+            label: "B",
+            position: { x: -160, y: -40 },
+            config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+            ports: nodePorts("action"),
+            group_id: null,
+          },
+        ],
+        edges: [
+          {
+            id: "edge-start-a",
+            source_node_id: "start",
+            source_port: "out",
+            target_node_id: "node-a",
+            target_port: "in",
+            label: "next",
+            condition: null,
+          },
+          {
+            id: "edge-a-b",
+            source_node_id: "node-a",
+            source_port: "out",
+            target_node_id: "node-b",
+            target_port: "in",
+            label: "next",
+            condition: null,
+          },
+        ],
+        viewport: { x: -80, y: 40, zoom: 0.75 },
+      },
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
+
+    await userEvent.click(within(toolbar).getByRole("button", { name: "Auto arrange graph" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = workflowCommandCallMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({ id: "start", position: { x: 0, y: 0 } }),
+              expect.objectContaining({ id: "node-a", position: { x: 260, y: 0 } }),
+              expect.objectContaining({ id: "node-b", position: { x: 520, y: 0 } }),
+            ]),
+          }),
+        }),
+      );
+    });
   });
 
   test("keeps toolbar pan mode active after temporary spacebar panning ends", async () => {
@@ -1038,12 +1347,12 @@ describe("Workflow graph editor integration", () => {
       .not.toBeInTheDocument();
     expect(within(logicPalette).queryByRole("button", { name: "Safety" }))
       .not.toBeInTheDocument();
-    ["switch", "while", "repeat_until", "break_loop", "continue_loop", "retry"].forEach(
+    ["merge", "router", "switch", "while", "repeat_until", "break_loop", "continue_loop", "retry"].forEach(
       (value) => {
         expect(logicPalette.querySelector(`[data-value="${value}"]`)).toBeInTheDocument();
       },
     );
-    ["try_catch", "fallback", "stop_workflow", "manual_approval", "rate_limit", "domain_allowlist"].forEach(
+    ["try_catch", "fallback", "stop_workflow", "domain_allowlist"].forEach(
       (value) => {
         expect(logicPalette.querySelector(`[data-value="${value}"]`)).not.toBeInTheDocument();
       },
@@ -1051,6 +1360,31 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(logicPalette.querySelector('[data-value="while"]') as HTMLElement);
     expect(within(editor).getByLabelText("Loop max attempts")).toBeInTheDocument();
     expect(within(editor).getByLabelText("Loop timeout ms")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="merge"]') as HTMLElement,
+    );
+    expect(within(editor).getByRole("heading", { name: "Merge" })).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Merge In port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Merge Out port")).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="router"]') as HTMLElement,
+    );
+    expect(within(editor).getByRole("heading", { name: "Router" })).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Router case label")).toHaveValue("Case 1");
+    fireEvent.change(within(editor).getByLabelText("Router case label"), {
+      target: { value: "Challenge" },
+    });
+    await userEvent.click(within(editor).getByRole("button", { name: "Add router case" }));
+    expect(within(editor).getAllByLabelText("Router case label")).toHaveLength(2);
+    await userEvent.click(within(editor).getByRole("button", { name: "Move router case Challenge down" }));
+    expect(within(editor).getByLabelText("Router Challenge port")).toBeInTheDocument();
+    expect(within(editor).getByLabelText("Router Case 2 port")).toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
     await userEvent.click(
@@ -1082,6 +1416,23 @@ describe("Workflow graph editor integration", () => {
         expect.objectContaining({
           graph: expect.objectContaining({
             nodes: expect.arrayContaining([
+              expect.objectContaining({
+                node_type: "merge",
+              }),
+              expect.objectContaining({
+                node_type: "router",
+                config: expect.objectContaining({
+                  mode: "first_match",
+                  cases: [
+                    expect.objectContaining({ id: "2", label: "Case 2" }),
+                    expect.objectContaining({ id: "1", label: "Challenge" }),
+                  ],
+                }),
+                ports: expect.arrayContaining([
+                  expect.objectContaining({ id: "case_1", label: "Challenge" }),
+                  expect.objectContaining({ id: "case_2", label: "Case 2" }),
+                ]),
+              }),
               expect.objectContaining({
                 node_type: "switch",
                 config: {

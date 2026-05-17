@@ -135,4 +135,67 @@ describe("ActionConfigEditor", () => {
 
     expect(screen.queryByLabelText("Method")).not.toBeInTheDocument();
   });
+
+  test("Scroll editor shows fields for the selected scroll mode", async () => {
+    const onChange = vi.fn();
+    const config: ActionConfig = {
+      type: "scroll",
+      config: { mode: "page", direction: "down", pixels: 500 },
+    };
+
+    function Harness() {
+      const [currentConfig, setCurrentConfig] = useState(config);
+      return (
+        <ActionConfigEditor
+          config={currentConfig}
+          onChange={(nextConfig) => {
+            setCurrentConfig(nextConfig);
+            onChange(nextConfig);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    expect(screen.getByLabelText("Mode")).toHaveValue("page");
+    expect(screen.getByLabelText("Direction")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pixels")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText("Mode"), "into_view");
+
+    expect(screen.getByLabelText("Target locator")).toBeInTheDocument();
+    expect(screen.getByLabelText("Timeout ms")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Direction")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Pixels")).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "scroll",
+      config: {
+        mode: "into_view",
+        direction: "down",
+        pixels: 500,
+        target: null,
+        timeout_ms: 5000,
+      },
+    });
+  });
+
+  test("Set Viewport editor omits launch-time device shape controls", () => {
+    render(
+      <ActionConfigEditor
+        config={{
+          type: "set_viewport",
+          config: { width: 1280, height: 720 },
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Width")).toBeInTheDocument();
+    expect(screen.getByLabelText("Height")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Device scale factor")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Mobile")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Touch")).not.toBeInTheDocument();
+  });
 });

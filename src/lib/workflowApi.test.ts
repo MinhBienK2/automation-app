@@ -5,13 +5,19 @@ import {
 } from "../tests/mocks/electron";
 import {
   cleanupOrphanedBrowserProfiles,
+  createSchedule,
   deleteWorkflow,
+  deleteSchedule,
+  disableSchedule,
+  enableSchedule,
   exportWorkflow,
   exportWorkflowPackage,
   duplicateWorkflow,
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  listScheduleEvents,
+  listSchedules,
   getCloakBrowserDiagnostics,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
@@ -20,12 +26,14 @@ import {
   normalizeRecordedEvents,
   runWorkflow,
   runWorkflowFromNode,
+  listRunStates,
   saveWorkflowSettings,
   installCloakBrowserBinary,
   saveWorkflowSettingsSection,
   saveWorkflowBrowserConfig,
   saveWorkflowGraph,
   runBatchWorkflow,
+  stopRun,
   suggestSelectors,
   validateWorkflowSettings,
   validateWorkflowGraph,
@@ -56,6 +64,12 @@ describe("workflow API phase ten commands", () => {
     };
 
     workflowBridgeMock.validateSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.listSchedules.mockResolvedValue(undefined);
+    workflowBridgeMock.createSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.enableSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.disableSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.listScheduleEvents.mockResolvedValue(undefined);
     workflowBridgeMock.duplicateWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.exportWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.importWorkflow.mockResolvedValue(undefined);
@@ -66,9 +80,21 @@ describe("workflow API phase ten commands", () => {
 
     await validateSchedule({
       workflow_id: "workflow-1",
+      name: "Hourly",
       enabled: true,
-      kind: { kind: "interval", every_seconds: 60 },
+      kind: { type: "interval", every_seconds: 60 },
     });
+    await listSchedules();
+    await createSchedule({
+      workflow_id: "workflow-1",
+      name: "Hourly",
+      enabled: false,
+      kind: { type: "interval", every_seconds: 60 },
+    });
+    await enableSchedule("schedule-1");
+    await disableSchedule("schedule-1");
+    await deleteSchedule("schedule-1");
+    await listScheduleEvents({ schedule_id: "schedule-1" });
     await duplicateWorkflow("workflow-1", "Copy of Export me");
     await exportWorkflow("workflow-1");
     await importWorkflow(exported);
@@ -97,8 +123,22 @@ describe("workflow API phase ten commands", () => {
 
     expect(workflowBridgeMock.validateSchedule).toHaveBeenCalledWith({
       workflow_id: "workflow-1",
+      name: "Hourly",
       enabled: true,
-      kind: { kind: "interval", every_seconds: 60 },
+      kind: { type: "interval", every_seconds: 60 },
+    });
+    expect(workflowBridgeMock.listSchedules).toHaveBeenCalled();
+    expect(workflowBridgeMock.createSchedule).toHaveBeenCalledWith({
+      workflow_id: "workflow-1",
+      name: "Hourly",
+      enabled: false,
+      kind: { type: "interval", every_seconds: 60 },
+    });
+    expect(workflowBridgeMock.enableSchedule).toHaveBeenCalledWith("schedule-1");
+    expect(workflowBridgeMock.disableSchedule).toHaveBeenCalledWith("schedule-1");
+    expect(workflowBridgeMock.deleteSchedule).toHaveBeenCalledWith("schedule-1");
+    expect(workflowBridgeMock.listScheduleEvents).toHaveBeenCalledWith({
+      schedule_id: "schedule-1",
     });
     expect(workflowBridgeMock.duplicateWorkflow).toHaveBeenCalledWith(
       "workflow-1",
@@ -213,6 +253,8 @@ describe("workflow API graph commands", () => {
     workflowBridgeMock.compileWorkflowGraph.mockResolvedValue(undefined);
     workflowBridgeMock.runWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.runWorkflowFromNode.mockResolvedValue(undefined);
+    workflowBridgeMock.listRunStates.mockResolvedValue(undefined);
+    workflowBridgeMock.stopRun.mockResolvedValue(undefined);
 
     await getWorkflowGraph("workflow-1");
     await saveWorkflowGraph("workflow-1", graph);
@@ -220,6 +262,8 @@ describe("workflow API graph commands", () => {
     await compileWorkflowGraph(graph);
     await runWorkflow("workflow-1");
     await runWorkflowFromNode("workflow-1", "step-1");
+    await listRunStates();
+    await stopRun("run-1");
 
     expect(workflowBridgeMock.getWorkflowGraph).toHaveBeenCalledWith("workflow-1");
     expect(workflowBridgeMock.saveWorkflowGraph).toHaveBeenCalledWith(
@@ -233,6 +277,8 @@ describe("workflow API graph commands", () => {
       "workflow-1",
       "step-1",
     );
+    expect(workflowBridgeMock.listRunStates).toHaveBeenCalled();
+    expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
   });
 });
 
@@ -251,7 +297,7 @@ describe("workflow API browser config commands", () => {
       viewport_height: 720,
       mobile: false,
       touch: false,
-      challenge_policy: "pause_for_human" as const,
+      challenge_policy: "none",
     };
 
     workflowBridgeMock.getWorkflowBrowserConfig.mockResolvedValue(undefined);
@@ -292,6 +338,9 @@ describe("workflow API settings commands", () => {
         batch_stop_on_first_failed_row: false,
       },
       browser_launch: browserLaunchSettings(),
+      graph_defaults: {
+        default_edge_delay: null,
+      },
       environment: {
         initial_variables: [],
       },
@@ -362,9 +411,6 @@ function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
     device_memory_gb: null,
     fingerprint_fonts_dir: null,
     storage_quota_mb: null,
-    humanize: true,
-    human_preset: "default",
-    behavior_fidelity: "balanced",
     preflight_enabled: false,
     preflight_probe_url: null,
     preflight_allowed_origins: [],
@@ -373,6 +419,8 @@ function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
     proxy_username: null,
     proxy_password: null,
     headless: false,
+    humanize: true,
+    human_preset: "default",
     run_from_selected_enabled: false,
   };
 }

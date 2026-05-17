@@ -37,7 +37,7 @@ export type WorkflowSettingsHelpContent = {
   }>;
   relatedGraphActions?: Array<{
     action: string;
-    relationship: "default" | "runtime_override" | "compatibility";
+    relationship: "default" | "runtime_override" | "related";
     explanation: string;
   }>;
   safetyNotes?: string[];
@@ -56,6 +56,7 @@ export type WorkflowSettingsLocalizedHelp = Record<
 
 export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
+  { id: "graph_defaults", label: "Graph" },
   { id: "run_policy", label: "Run Policy" },
   { id: "browser_launch", label: "Browser Launch" },
   { id: "environment", label: "Environment" },
@@ -239,9 +240,6 @@ export function defaultWorkflowSettings({
       device_memory_gb: null,
       fingerprint_fonts_dir: null,
       storage_quota_mb: null,
-      humanize: true,
-      human_preset: "default",
-      behavior_fidelity: "balanced",
       preflight_enabled: false,
       preflight_probe_url: null,
       preflight_allowed_origins: [],
@@ -250,7 +248,12 @@ export function defaultWorkflowSettings({
       proxy_username: null,
       proxy_password: null,
       headless: false,
+      humanize: true,
+      human_preset: "default",
       run_from_selected_enabled: false,
+    },
+    graph_defaults: {
+      default_edge_delay: null,
     },
     environment: {
       initial_variables: [],
@@ -566,7 +569,7 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Browser Identity Settings Help",
       summary:
-        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, viewport, location, network posture, humanized input, and optional owned preflight.",
+        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, viewport, location, network posture, and optional owned preflight.",
       uiLabels: enLabels,
       bestFor: [
         "Making session and network posture repeatable from the first browser request.",
@@ -591,13 +594,6 @@ export const workflowSettingsHelp: Record<
             "Operator-facing label for the browser identity. Renaming it changes only metadata and never moves profile storage or changes the fingerprint seed.",
           whenToUse:
             "Use readable names that describe the approved account, region, or workflow purpose without treating rename as a reset.",
-        },
-        {
-          name: "Profile directory",
-          description:
-            "Read-only stable storage key used for the persistent CloakBrowser user data directory under app data. It is derived from the identity id rather than the display name.",
-          whenToUse:
-            "Use it for audit and troubleshooting when confirming which on-disk profile belongs to a workflow identity.",
         },
         {
           name: "Fingerprint seed",
@@ -686,16 +682,9 @@ export const workflowSettingsHelp: Record<
         {
           name: "Humanize browser input",
           description:
-            "Controls CloakBrowser's humanized mouse, keyboard, and scroll behavior. It should remain enabled for realistic workflow evidence unless deterministic internal testing requires otherwise.",
+            "Launch-level CloakBrowser humanization toggle and preset. The default preset uses normal human-like mouse, keyboard, and scroll timing; careful uses slower, more deliberate movement.",
           whenToUse:
-            "Keep it enabled for production-like probes and owned-system red-team simulation where interaction behavior is part of the defense surface.",
-        },
-        {
-          name: "Behavior fidelity",
-          description:
-            "Selects how strictly run actions must stay on humanized or normal browser APIs. Strict humanized mode blocks DOM fallback and CDP-sensitive actions and records the execution path in run traces.",
-          whenToUse:
-            "Use Balanced for normal probes, Strict humanized when behavior analytics are the target surface, and Deterministic internal for repeatable lab debugging.",
+            "Keep it enabled for production-like owned tests; choose careful when a workflow should move more slowly and cautiously through sensitive screens.",
         },
         {
           name: "Fingerprint preflight",
@@ -731,7 +720,7 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Browser Identity",
       summary:
-        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, viewport, vị trí, network posture, humanized input, và preflight owned tùy chọn.",
+        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, viewport, vị trí, network posture, và preflight owned tùy chọn.",
       uiLabels: viLabels,
       bestFor: [
         "Giữ session và network posture lặp lại được ngay từ request đầu tiên của browser.",
@@ -756,13 +745,6 @@ export const workflowSettingsHelp: Record<
             "Nhãn operator nhìn thấy cho browser identity. Rename chỉ đổi metadata, không move profile storage và không đổi fingerprint seed.",
           whenToUse:
             "Dùng tên dễ đọc mô tả account, region, hoặc mục đích workflow mà không coi rename là reset identity.",
-        },
-        {
-          name: "Profile directory",
-          description:
-            "Storage key ổn định, read-only, dùng cho CloakBrowser user data directory dưới app data. Giá trị này lấy từ identity id thay vì display name.",
-          whenToUse:
-            "Dùng để audit và troubleshoot khi cần xác nhận profile trên đĩa thuộc browser identity nào.",
         },
         {
           name: "Fingerprint seed",
@@ -851,16 +833,9 @@ export const workflowSettingsHelp: Record<
         {
           name: "Humanize browser input",
           description:
-            "Điều khiển hành vi mouse, keyboard, và scroll đã humanize của CloakBrowser. Nên bật cho evidence thực tế trừ khi test nội bộ cần deterministic.",
+            "Toggle và preset humanization cấp launch của CloakBrowser. Preset default dùng timing chuột, bàn phím, scroll giống người bình thường; careful chậm hơn và thận trọng hơn.",
           whenToUse:
-            "Giữ bật cho production-like probes và red-team simulation trên hệ thống owned khi behavior là một mặt phòng thủ.",
-        },
-        {
-          name: "Behavior fidelity",
-          description:
-            "Chọn mức workflow phải bám theo hành vi humanized hoặc browser API bình thường. Strict humanized sẽ chặn DOM fallback và action CDP-sensitive, đồng thời ghi execution path trong trace của run.",
-          whenToUse:
-            "Dùng Balanced cho probe thường, Strict humanized khi behavior analytics là bề mặt cần kiểm tra, và Deterministic internal cho debug lab cần lặp lại.",
+            "Giữ bật cho test owned gần production; chọn careful khi workflow cần thao tác chậm và cẩn trọng hơn trên màn hình nhạy cảm.",
         },
         {
           name: "Fingerprint preflight",
@@ -890,6 +865,140 @@ export const workflowSettingsHelp: Record<
         {
           mistake: "Đổi proxy khi browser đang chạy.",
           fix: "Save Browser Launch settings và bắt đầu run mới vì launch-level values được áp dụng trước khi Chromium mở.",
+        },
+      ],
+    },
+  },
+  graph_defaults: {
+    en: {
+      title: "Graph Settings Help",
+      summary:
+        "Graph settings control authoring conveniences for new links in this workflow. They do not rewrite existing links and they do not replace explicit Wait or Random Wait nodes.",
+      uiLabels: enLabels,
+      bestFor: [
+        "Use it when most transitions in one workflow should pause briefly before the next node starts.",
+        "Use it to keep visual graphs compact when the pause is only transition timing, not a named workflow step.",
+      ],
+      notFor: [
+        "Do not use it for waiting on page state, visible elements, text, URLs, downloads, or business checkpoints.",
+      ],
+      fieldGuide: [
+        {
+          name: "New link wait",
+          description:
+            "Chooses whether newly created graph links start with no wait, a fixed duration wait, or a randomized duration wait that compiles before the target node.",
+          whenToUse:
+            "Turn it on when the workflow needs a consistent human-paced pause between most connected nodes.",
+        },
+        {
+          name: "Duration ms",
+          description:
+            "Stores a single millisecond duration on each new link, producing a simple duration wait before the linked target node executes.",
+          whenToUse:
+            "Use fixed duration when repeatability matters more than variation during local debugging and evidence capture.",
+        },
+        {
+          name: "Minimum/maximum wait ms",
+          description:
+            "Stores a minimum and maximum millisecond range on each new link, producing a randomized wait before the linked target node executes.",
+          whenToUse:
+            "Use random duration when a workflow should avoid identical transition timing while staying inside operator-approved bounds.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Human-paced form flow",
+          steps: [
+            "Set default link wait to a small random range",
+            "Connect form actions normally",
+            "Use explicit Wait nodes only for page or element readiness",
+          ],
+        },
+      ],
+      relatedGraphActions: [
+        {
+          action: "Wait",
+          relationship: "related",
+          explanation:
+            "Use a Wait node when the pause has business meaning or waits for a specific browser/page condition.",
+        },
+        {
+          action: "Random Wait",
+          relationship: "related",
+          explanation:
+            "Use a Random Wait node when the randomized pause should appear as a named workflow step.",
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Expecting this setting to update links that already exist.",
+          fix: "Change existing links directly or reconnect them after choosing the new default.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Graph",
+      summary:
+        "Graph settings là tiện ích khi author workflow: link mới có thể tự mang wait mặc định. Setting này không sửa link cũ và không thay thế Wait node rõ nghĩa.",
+      uiLabels: viLabels,
+      bestFor: [
+        "Dùng khi phần lớn transition trong workflow cần dừng nhẹ trước khi node kế tiếp chạy.",
+        "Dùng để graph gọn hơn khi khoảng chờ chỉ là timing giữa hai node, không phải một bước nghiệp vụ.",
+      ],
+      notFor: [
+        "Không dùng để chờ trạng thái page, element visible, text, URL, download, hoặc checkpoint cần đặt tên.",
+      ],
+      fieldGuide: [
+        {
+          name: "New link wait",
+          description:
+            "Chọn link mới sẽ không có wait, có fixed wait, hoặc random wait; wait này được compile trước node đích của link.",
+          whenToUse:
+            "Bật khi workflow cần nhịp chờ nhất quán giữa phần lớn các node vừa được nối.",
+        },
+        {
+          name: "Duration ms",
+          description:
+            "Lưu một thời lượng millisecond trên mỗi link mới, tạo duration wait đơn giản trước khi node đích chạy.",
+          whenToUse:
+            "Dùng fixed duration khi cần kết quả dễ lặp lại lúc debug hoặc thu evidence.",
+        },
+        {
+          name: "Minimum/maximum wait ms",
+          description:
+            "Lưu khoảng min và max millisecond trên mỗi link mới, tạo random wait trước khi node đích chạy.",
+          whenToUse:
+            "Dùng random duration khi workflow cần tránh timing giống hệt nhau nhưng vẫn trong giới hạn operator duyệt.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Form flow có nhịp người dùng",
+          steps: [
+            "Đặt default link wait thành random range nhỏ",
+            "Nối các action form như bình thường",
+            "Chỉ dùng Wait node rõ ràng cho page hoặc element readiness",
+          ],
+        },
+      ],
+      relatedGraphActions: [
+        {
+          action: "Wait",
+          relationship: "related",
+          explanation:
+            "Dùng Wait node khi khoảng chờ có ý nghĩa nghiệp vụ hoặc cần chờ một điều kiện browser/page cụ thể.",
+        },
+        {
+          action: "Random Wait",
+          relationship: "related",
+          explanation:
+            "Dùng Random Wait node khi random pause cần hiện thành một bước workflow có tên.",
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Nghĩ setting này sẽ tự sửa các link đã tồn tại.",
+          fix: "Sửa trực tiếp link cũ hoặc nối lại link sau khi chọn default mới.",
         },
       ],
     },

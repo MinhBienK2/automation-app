@@ -1,4 +1,12 @@
-import { Hand, Maximize, MousePointer2, Redo2, Undo2, Keyboard } from "lucide-react";
+import {
+  Hand,
+  Keyboard,
+  Maximize,
+  MousePointer2,
+  Redo2,
+  Undo2,
+  Workflow,
+} from "lucide-react";
 import type { GraphNodeType } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -14,6 +22,7 @@ type WorkflowGraphToolbarProps = {
   isPanMode: boolean;
   onAddAction: () => void;
   onAddNewNode: () => void;
+  onAutoArrange: () => void;
   onFitView: () => void;
   onOpenShortcuts: () => void;
   onOpenNodePalette: (
@@ -32,6 +41,7 @@ export function WorkflowGraphToolbar({
   isPanMode,
   onAddAction,
   onAddNewNode,
+  onAutoArrange,
   onFitView,
   onOpenShortcuts,
   onOpenNodePalette,
@@ -84,6 +94,14 @@ export function WorkflowGraphToolbar({
           onClick={onFitView}
         >
           <Maximize aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          label="Auto arrange graph"
+          type="button"
+          variant="ghost"
+          onClick={onAutoArrange}
+        >
+          <Workflow aria-hidden="true" />
         </IconButton>
       </div>
       <Button type="button" variant="secondary" onClick={onAddNewNode}>
