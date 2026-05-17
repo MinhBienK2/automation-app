@@ -5,13 +5,19 @@ import {
 } from "../tests/mocks/electron";
 import {
   cleanupOrphanedBrowserProfiles,
+  createSchedule,
   deleteWorkflow,
+  deleteSchedule,
+  disableSchedule,
+  enableSchedule,
   exportWorkflow,
   exportWorkflowPackage,
   duplicateWorkflow,
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  listScheduleEvents,
+  listSchedules,
   getCloakBrowserDiagnostics,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
@@ -56,6 +62,12 @@ describe("workflow API phase ten commands", () => {
     };
 
     workflowBridgeMock.validateSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.listSchedules.mockResolvedValue(undefined);
+    workflowBridgeMock.createSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.enableSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.disableSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteSchedule.mockResolvedValue(undefined);
+    workflowBridgeMock.listScheduleEvents.mockResolvedValue(undefined);
     workflowBridgeMock.duplicateWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.exportWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.importWorkflow.mockResolvedValue(undefined);
@@ -66,9 +78,21 @@ describe("workflow API phase ten commands", () => {
 
     await validateSchedule({
       workflow_id: "workflow-1",
+      name: "Hourly",
       enabled: true,
-      kind: { kind: "interval", every_seconds: 60 },
+      kind: { type: "interval", every_seconds: 60 },
     });
+    await listSchedules();
+    await createSchedule({
+      workflow_id: "workflow-1",
+      name: "Hourly",
+      enabled: false,
+      kind: { type: "interval", every_seconds: 60 },
+    });
+    await enableSchedule("schedule-1");
+    await disableSchedule("schedule-1");
+    await deleteSchedule("schedule-1");
+    await listScheduleEvents({ schedule_id: "schedule-1" });
     await duplicateWorkflow("workflow-1", "Copy of Export me");
     await exportWorkflow("workflow-1");
     await importWorkflow(exported);
@@ -97,8 +121,22 @@ describe("workflow API phase ten commands", () => {
 
     expect(workflowBridgeMock.validateSchedule).toHaveBeenCalledWith({
       workflow_id: "workflow-1",
+      name: "Hourly",
       enabled: true,
-      kind: { kind: "interval", every_seconds: 60 },
+      kind: { type: "interval", every_seconds: 60 },
+    });
+    expect(workflowBridgeMock.listSchedules).toHaveBeenCalled();
+    expect(workflowBridgeMock.createSchedule).toHaveBeenCalledWith({
+      workflow_id: "workflow-1",
+      name: "Hourly",
+      enabled: false,
+      kind: { type: "interval", every_seconds: 60 },
+    });
+    expect(workflowBridgeMock.enableSchedule).toHaveBeenCalledWith("schedule-1");
+    expect(workflowBridgeMock.disableSchedule).toHaveBeenCalledWith("schedule-1");
+    expect(workflowBridgeMock.deleteSchedule).toHaveBeenCalledWith("schedule-1");
+    expect(workflowBridgeMock.listScheduleEvents).toHaveBeenCalledWith({
+      schedule_id: "schedule-1",
     });
     expect(workflowBridgeMock.duplicateWorkflow).toHaveBeenCalledWith(
       "workflow-1",

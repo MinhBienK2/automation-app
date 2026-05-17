@@ -23,6 +23,8 @@ Frontend and backend must agree on:
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
 - `RunState.retained_session`: optional retained browser session availability metadata used by debug run-from-selected UI.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
+- `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
+- `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
 
 ## Workflow Settings Shape
 
@@ -154,6 +156,50 @@ Local workflow duplication is not a workflow package export. The `duplicate_work
 
 When `concurrency_limit` or `headless` is omitted, the backend uses Workflow Settings Run Policy defaults. Concurrency values above 1 are rejected until rows can run in isolated browser/session contexts.
 Those Run Policy defaults are still honored by `run_batch_workflow`; the current Settings UI shows them as paused, read-only controls rather than editable Run Policy fields.
+
+## Schedule Shape
+
+`WorkflowScheduleInput` serializes as:
+
+```text
+{
+  workflow_id: string,
+  name: string,
+  enabled: boolean,
+  kind:
+    | { type: "once_at", timestamp: string }
+    | { type: "interval", every_seconds: number }
+    | { type: "calendar", preset: "daily", time: "HH:mm" }
+    | { type: "calendar", preset: "weekly", weekdays: number[], time: "HH:mm" }
+    | { type: "calendar", preset: "monthly", day: number, time: "HH:mm" }
+}
+```
+
+`WorkflowSchedule` adds `id`, `workflow_name`, `next_run_at`,
+`last_event_at`, `last_status`, `last_reason`, `created_at`, and `updated_at`.
+`next_run_at` and event timestamps are ISO strings; UI displays them in local
+time.
+
+`WorkflowScheduleEvent` serializes scheduler decisions as:
+
+```text
+{
+  id: string,
+  schedule_id: string,
+  workflow_id: string,
+  event_type: "started" | "skipped" | "missed" | "failed_to_start" | "disabled",
+  run_id: string | null,
+  scheduled_for: string,
+  created_at: string,
+  reason: string | null,
+  details_json: string | null
+}
+```
+
+Schedule validation issues serialize as `{ field, message, level }`.
+Enabled schedules must have valid schedule config and a currently runnable
+saved workflow. Disabled draft schedules can be saved without requiring the
+workflow graph/settings to be runnable.
 
 ## Graph Shape
 

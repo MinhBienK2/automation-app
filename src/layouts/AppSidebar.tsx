@@ -1,11 +1,12 @@
 import { Button } from "../components/ui/button";
-import { ListTree, Settings } from "lucide-react";
+import { CalendarClock, ListTree, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "workflows" | "settings";
+type AppSidebarActiveItem = "workflows" | "schedules" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
+  onOpenSchedules: () => void;
   onOpenSettings: () => void;
   onOpenWorkflows: () => void;
   onToggle: () => void;
@@ -48,6 +49,7 @@ function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
 export function AppSidebar({
   activeItem,
   collapsed,
+  onOpenSchedules,
   onOpenSettings,
   onOpenWorkflows,
   onToggle,
@@ -71,6 +73,19 @@ export function AppSidebar({
         >
           <ListTree aria-hidden="true" className="sidebar-item-icon" />
           <span>Workflows</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "schedules"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenSchedules}
+        >
+          <CalendarClock aria-hidden="true" className="sidebar-item-icon" />
+          <span>Schedules</span>
         </Button>
         <Button
           className={

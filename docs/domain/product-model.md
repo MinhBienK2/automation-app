@@ -9,6 +9,7 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
 - An action config is the executable behavior produced by graph compilation.
 - A run executes compiled graph action configs through the Electron CloakBrowser runner and reports progress to the UI.
+- A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy.
@@ -39,6 +40,7 @@ Users can:
 - Import workflow packages as new workflows without overwriting existing workflows.
 - Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
+- Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
 
 ## Current Source Files
 
@@ -52,6 +54,7 @@ Users can:
 - CloakBrowser runner: `electron/backend/runner.ts`
 - SQLite bootstrap: `electron/backend/database.ts`
 - Workflow repository: `electron/backend/workflowRepository.ts`
+- Schedule repository and engine: `electron/backend/workflowScheduleRepository.ts`, `electron/backend/scheduler.ts`
 
 ## Invariant
 

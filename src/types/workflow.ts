@@ -912,15 +912,69 @@ export type CompiledWorkflowGraph = {
   } | null;
 };
 
-export type ScheduleKind =
-  | { kind: "once_at"; timestamp: string }
-  | { kind: "interval"; every_seconds: number };
+export type WorkflowScheduleKind =
+  | { type: "once_at"; timestamp: string }
+  | { type: "interval"; every_seconds: number }
+  | { type: "calendar"; preset: "daily"; time: string }
+  | { type: "calendar"; preset: "weekly"; weekdays: number[]; time: string }
+  | { type: "calendar"; preset: "monthly"; day: number; time: string };
 
-export type OrchestrationSchedule = {
+export type WorkflowScheduleInput = {
   workflow_id: string;
+  name: string;
   enabled: boolean;
-  kind: ScheduleKind;
+  kind: WorkflowScheduleKind;
 };
+
+export type WorkflowScheduleUpdate = Partial<WorkflowScheduleInput>;
+
+export type WorkflowScheduleStatus =
+  | "started"
+  | "skipped"
+  | "missed"
+  | "failed_to_start"
+  | "disabled";
+
+export type WorkflowSchedule = {
+  id: string;
+  workflow_id: string;
+  workflow_name: string;
+  name: string;
+  enabled: boolean;
+  kind: WorkflowScheduleKind;
+  next_run_at: string | null;
+  last_event_at: string | null;
+  last_status: WorkflowScheduleStatus | null;
+  last_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkflowScheduleEvent = {
+  id: string;
+  schedule_id: string;
+  workflow_id: string;
+  event_type: WorkflowScheduleStatus;
+  run_id: string | null;
+  scheduled_for: string;
+  created_at: string;
+  reason: string | null;
+  details_json: string | null;
+};
+
+export type WorkflowScheduleEventFilter = {
+  schedule_id?: string | null;
+  workflow_id?: string | null;
+  limit?: number | null;
+};
+
+export type ScheduleValidationIssue = {
+  field: string;
+  message: string;
+  level: "error" | "warning";
+};
+
+export type OrchestrationSchedule = WorkflowScheduleInput;
 
 export type BatchRunRequest = {
   rows: Array<Record<string, string>>;

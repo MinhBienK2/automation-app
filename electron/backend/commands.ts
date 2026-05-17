@@ -17,6 +17,7 @@ import type {
   RecordedEvent,
   RunState,
   RunValidationIssue,
+  ScheduleValidationIssue,
   SelectorCandidate,
   SettingsValidationIssue,
   Workflow,
@@ -30,6 +31,11 @@ import type {
   WorkflowPackageImportOptions,
   WorkflowPackagePreview,
   WorkflowPackageSettings,
+  WorkflowSchedule,
+  WorkflowScheduleEvent,
+  WorkflowScheduleEventFilter,
+  WorkflowScheduleInput,
+  WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsSectionId,
@@ -44,9 +50,15 @@ import {
   validateWorkflowGraph as validateGraph,
 } from "./graphCompiler.js";
 import { BrowserWorkflowRunner } from "./runner.js";
+import {
+  calculateNextRunAt,
+  processDueSchedules,
+  validateScheduleInput,
+} from "./scheduler.js";
 import { sanitizePathSegment } from "./evidenceArtifacts.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./workflowGraphMigration.js";
 import { WorkflowRepository } from "./workflowRepository.js";
+import { WorkflowScheduleRepository } from "./workflowScheduleRepository.js";
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -109,6 +121,7 @@ const idleRunState: RunState = {
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
+  const scheduleRepository = new WorkflowScheduleRepository(context.database);
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   let currentRunState = idleRunState;
   let currentRunAbortController: AbortController | null = null;
@@ -284,6 +297,142 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ];
   }
 
+  async function startWorkflowRun(workflowId: string): Promise<{
+    state: RunState;
+    runId: string;
+  }> {
+    requireWorkflow(workflowId);
+    if (currentRunAbortController) {
+      throw commandError("A workflow run is already active", "run");
+    }
+    const graph = getWorkflowGraph(workflowId);
+    const runIssues = validateWorkflowRun(workflowId);
+    const firstError = runIssues.find((issue) => issue.level === "error");
+    if (firstError) {
+      throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
+    }
+    if (compileGraph(graph).steps.length === 0) {
+      throw commandError("Workflow graph has no executable steps", "graph");
+    }
+
+    const settings = getSettings(workflowId);
+    const compiledGraph = compileWorkflowRunPlan(graph, settings);
+    const abortController = new AbortController();
+    const runId = beginRun(context.database, workflowId, settings, graph);
+    currentRunAbortController = abortController;
+    currentRunId = runId;
+    currentRunState = {
+      ...idleRunState,
+      status: "running",
+      mode: "run_workflow",
+    };
+    let timedOut = false;
+    const timeoutMs = settings.run_policy.max_workflow_duration_ms;
+    const timeoutHandle = timeoutMs
+      ? setTimeout(() => {
+          timedOut = true;
+          abortController.abort();
+        }, timeoutMs)
+      : null;
+    void (async () => {
+      try {
+        let terminalState = await runner.run({
+          runId,
+          graph: compiledGraph,
+          settings,
+          mode: "run_workflow",
+          retainedSessionWorkflowId: workflowId,
+          signal: abortController.signal,
+          onProgress(progress) {
+            if (abortController.signal.aborted && currentRunState.status === "stopped") {
+              return;
+            }
+            currentRunState = {
+              ...currentRunState,
+              ...progress,
+              status: "running",
+              mode: "run_workflow",
+            };
+          },
+        });
+        if (timedOut && terminalState.status === "stopped") {
+          terminalState = {
+            ...terminalState,
+            status: "failed",
+            error: {
+              step_id: terminalState.error?.step_id ?? null,
+              step_number: terminalState.error?.step_number ?? 0,
+              step_name: terminalState.error?.step_name ?? null,
+              action_type: terminalState.error?.action_type ?? "workflow",
+              reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
+            },
+          };
+        } else if (
+          abortController.signal.aborted &&
+          currentRunState.status === "stopped"
+        ) {
+          terminalState = {
+            ...terminalState,
+            status: "stopped",
+            error: null,
+          };
+        }
+        currentRunState = terminalState;
+        finishRun(context.database, runId, compiledGraph, currentRunState);
+      } catch (error) {
+        currentRunState = {
+          ...idleRunState,
+          status: "failed",
+          mode: "run_workflow",
+          error: {
+            step_id: currentRunState.current_step_id,
+            step_number: currentRunState.current_step_number ?? 0,
+            step_name: null,
+            action_type: "workflow",
+            reason: error instanceof Error ? error.message : String(error),
+          },
+        };
+        finishRun(context.database, runId, compiledGraph, currentRunState);
+      } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+        if (currentRunAbortController === abortController) {
+          currentRunAbortController = null;
+        }
+        if (currentRunId === runId) {
+          currentRunId = null;
+        }
+      }
+    })();
+    return { state: currentRunState, runId };
+  }
+
+  function scheduleInputWithNextRun(input: WorkflowScheduleInput): WorkflowScheduleInput & {
+    next_run_at: string | null;
+  } {
+    const issues = validateScheduleInput(input);
+    const firstError = issues.find((issue) => issue.level === "error");
+    if (firstError) {
+      throw commandError(firstError.message, firstError.field);
+    }
+    if (input.enabled) {
+      const workflowIssues = validateWorkflowRun(input.workflow_id);
+      const firstWorkflowError = workflowIssues.find((issue) => issue.level === "error");
+      if (firstWorkflowError) {
+        throw commandError(
+          firstWorkflowError.message,
+          firstWorkflowError.field ?? firstWorkflowError.node_id ?? "workflow_id",
+        );
+      }
+    } else {
+      requireWorkflow(input.workflow_id);
+    }
+    return {
+      ...input,
+      name: input.name.trim(),
+      next_run_at: input.enabled ? calculateNextRunAt(input.kind, new Date()) : null,
+    };
+  }
+
   return {
     listWorkflows() {
       return repository.listWorkflows();
@@ -451,109 +600,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     async runWorkflow(workflowId: string): Promise<RunState> {
-      requireWorkflow(workflowId);
-      if (currentRunAbortController) {
-        throw commandError("A workflow run is already active", "run");
-      }
-      const graph = getWorkflowGraph(workflowId);
-      const runIssues = validateWorkflowRun(workflowId);
-      const firstError = runIssues.find((issue) => issue.level === "error");
-      if (firstError) {
-        throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
-      }
-      if (compileGraph(graph).steps.length === 0) {
-        throw commandError("Workflow graph has no executable steps", "graph");
-      }
-
-      const settings = getSettings(workflowId);
-      const compiledGraph = compileWorkflowRunPlan(graph, settings);
-      const abortController = new AbortController();
-      const runId = beginRun(context.database, workflowId, settings, graph);
-      currentRunAbortController = abortController;
-      currentRunId = runId;
-      currentRunState = {
-        ...idleRunState,
-        status: "running",
-        mode: "run_workflow",
-      };
-      let timedOut = false;
-      const timeoutMs = settings.run_policy.max_workflow_duration_ms;
-      const timeoutHandle = timeoutMs
-        ? setTimeout(() => {
-            timedOut = true;
-            abortController.abort();
-          }, timeoutMs)
-        : null;
-      void (async () => {
-        try {
-          let terminalState = await runner.run({
-            runId,
-            graph: compiledGraph,
-            settings,
-            mode: "run_workflow",
-            retainedSessionWorkflowId: workflowId,
-            signal: abortController.signal,
-            onProgress(progress) {
-              if (abortController.signal.aborted && currentRunState.status === "stopped") {
-                return;
-              }
-              currentRunState = {
-                ...currentRunState,
-                ...progress,
-                status: "running",
-                mode: "run_workflow",
-              };
-            },
-          });
-          if (timedOut && terminalState.status === "stopped") {
-            terminalState = {
-              ...terminalState,
-              status: "failed",
-              error: {
-                step_id: terminalState.error?.step_id ?? null,
-                step_number: terminalState.error?.step_number ?? 0,
-                step_name: terminalState.error?.step_name ?? null,
-                action_type: terminalState.error?.action_type ?? "workflow",
-                reason: `Workflow exceeded maximum duration of ${timeoutMs} ms`,
-              },
-            };
-          } else if (
-            abortController.signal.aborted &&
-            currentRunState.status === "stopped"
-          ) {
-            terminalState = {
-              ...terminalState,
-              status: "stopped",
-              error: null,
-            };
-          }
-          currentRunState = terminalState;
-          finishRun(context.database, runId, compiledGraph, currentRunState);
-        } catch (error) {
-          currentRunState = {
-            ...idleRunState,
-            status: "failed",
-            mode: "run_workflow",
-            error: {
-              step_id: currentRunState.current_step_id,
-              step_number: currentRunState.current_step_number ?? 0,
-              step_name: null,
-              action_type: "workflow",
-              reason: error instanceof Error ? error.message : String(error),
-            },
-          };
-          finishRun(context.database, runId, compiledGraph, currentRunState);
-        } finally {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          if (currentRunAbortController === abortController) {
-            currentRunAbortController = null;
-          }
-          if (currentRunId === runId) {
-            currentRunId = null;
-          }
-        }
-      })();
-      return currentRunState;
+      return (await startWorkflowRun(workflowId)).state;
     },
 
     async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState> {
@@ -722,8 +769,97 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return currentRunState;
     },
 
-    validateSchedule(schedule: OrchestrationSchedule) {
+    listSchedules(): WorkflowSchedule[] {
+      return scheduleRepository.listSchedules();
+    },
+
+    getSchedule(scheduleId: string): WorkflowSchedule {
+      const schedule = scheduleRepository.getSchedule(scheduleId);
+      if (!schedule) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
       return schedule;
+    },
+
+    createSchedule(input: WorkflowScheduleInput): WorkflowSchedule {
+      return scheduleRepository.createSchedule(scheduleInputWithNextRun(input));
+    },
+
+    updateSchedule(
+      scheduleId: string,
+      patch: WorkflowScheduleUpdate,
+    ): WorkflowSchedule {
+      const current = scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return scheduleRepository.updateSchedule(
+        scheduleId,
+        scheduleInputWithNextRun({
+          workflow_id: patch.workflow_id ?? current.workflow_id,
+          name: patch.name ?? current.name,
+          enabled: patch.enabled ?? current.enabled,
+          kind: patch.kind ?? current.kind,
+        }),
+      );
+    },
+
+    deleteSchedule(scheduleId: string) {
+      if (!scheduleRepository.getSchedule(scheduleId)) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      scheduleRepository.deleteSchedule(scheduleId);
+    },
+
+    enableSchedule(scheduleId: string): WorkflowSchedule {
+      const current = scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return scheduleRepository.updateSchedule(
+        scheduleId,
+        scheduleInputWithNextRun({
+          workflow_id: current.workflow_id,
+          name: current.name,
+          enabled: true,
+          kind: current.kind,
+        }),
+      );
+    },
+
+    disableSchedule(scheduleId: string): WorkflowSchedule {
+      const current = scheduleRepository.getSchedule(scheduleId);
+      if (!current) {
+        throw commandError("Schedule not found", "scheduleId");
+      }
+      return scheduleRepository.updateSchedule(scheduleId, {
+        workflow_id: current.workflow_id,
+        name: current.name,
+        enabled: false,
+        kind: current.kind,
+        next_run_at: null,
+      });
+    },
+
+    listScheduleEvents(filter: WorkflowScheduleEventFilter = {}): WorkflowScheduleEvent[] {
+      return scheduleRepository.listEvents(filter);
+    },
+
+    validateSchedule(schedule: OrchestrationSchedule): ScheduleValidationIssue[] {
+      return validateScheduleInput(schedule);
+    },
+
+    async runSchedulerTick(now = new Date()) {
+      await processDueSchedules({
+        now,
+        repository: scheduleRepository,
+        hasActiveRun: () => Boolean(currentRunAbortController),
+        validateWorkflow: validateWorkflowRun,
+        startWorkflow: async (workflowId) => {
+          const result = await startWorkflowRun(workflowId);
+          return { runId: result.runId };
+        },
+      });
     },
 
     exportWorkflow(workflowId: string): WorkflowExport {

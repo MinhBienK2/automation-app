@@ -97,26 +97,31 @@ function registerWorkflowIpc(handlers: WorkflowCommandHandlers) {
 app.whenReady().then(() => {
   const appPaths = createAppPaths(app.getPath("appData"));
   const database = initializeDatabase(appPaths);
-  registerWorkflowIpc(
-    createWorkflowCommandHandlers({
-      appPaths,
-      database,
-      async saveWorkflowPackageFile(packageValue) {
-        const { canceled, filePath } = await dialog.showSaveDialog({
-          defaultPath: path.join(
-            appPaths.rootDir,
-            `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
-          ),
-          filters: [{ name: "Workflow package", extensions: ["json"] }],
-          title: "Export Workflow",
-        });
-        if (canceled || !filePath) return null;
+  const handlers = createWorkflowCommandHandlers({
+    appPaths,
+    database,
+    async saveWorkflowPackageFile(packageValue) {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        defaultPath: path.join(
+          appPaths.rootDir,
+          `${filenameFromWorkflowName(packageValue.workflow.name)}.workflow.json`,
+        ),
+        filters: [{ name: "Workflow package", extensions: ["json"] }],
+        title: "Export Workflow",
+      });
+      if (canceled || !filePath) return null;
 
-        await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
-        return filePath;
-      },
-    }),
-  );
+      await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
+      return filePath;
+    },
+  });
+  registerWorkflowIpc(handlers);
+  const schedulerInterval = setInterval(() => {
+    void handlers.runSchedulerTick().catch((error) => {
+      console.error("Workflow scheduler tick failed", error);
+    });
+  }, 30_000);
+  app.once("before-quit", () => clearInterval(schedulerInterval));
   createMainWindow();
 
   app.on("activate", () => {

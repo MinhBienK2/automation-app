@@ -81,6 +81,16 @@ Checks: `npm test -- electron/backend/commands.test.ts`, `npm run build:electron
 
 Update docs: persistence architecture, workflow types, workflow lifecycle.
 
+## Change Workflow Scheduling
+
+Read: `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/frontend.md`, `architecture/persistence.md`, `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`, `domain/execution-semantics.md`
+
+Verify: `src/App.tsx`, `src/layouts/`, `src/features/schedules/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/main.ts`, `electron/backend/database.ts`, `electron/backend/workflowScheduleRepository.ts`, `electron/backend/scheduler.ts`, `electron/backend/commands.ts`
+
+Checks: `npm test -- electron/backend/scheduler.test.ts`, `npm test -- electron/backend/workflowScheduleRepository.test.ts`, `npm test -- electron/backend/commands.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- src/features/schedules/pages/SchedulesPage.test.tsx`, `npx tsc --noEmit`, `npm run build:electron`
+
+Update docs: workflow lifecycle, user-visible invariants, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, execution semantics, and this route when ownership or checks change.
+
 ## Change Runner Behavior
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`

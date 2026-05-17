@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
+import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { AppShell } from "./layouts/AppShell";
 import {
   createWorkflow as createWorkflowCommand,
+  createSchedule,
   deleteWorkflow as deleteWorkflowCommand,
+  deleteSchedule,
+  disableSchedule,
   duplicateWorkflow as duplicateWorkflowCommand,
+  enableSchedule,
   exportWorkflowPackage,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
   importWorkflowPackage,
+  listScheduleEvents,
+  listSchedules,
   listWorkflows,
   previewWorkflowPackage,
   renameWorkflow as renameWorkflowCommand,
@@ -22,6 +29,7 @@ import {
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
   stopRun as stopRunCommand,
+  updateSchedule,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
@@ -56,13 +64,16 @@ import type {
   WorkflowDetail,
   WorkflowPackage,
   WorkflowPackagePreview,
+  WorkflowSchedule,
+  WorkflowScheduleEvent,
+  WorkflowScheduleInput,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "list" | "detail" | "settings";
+type AppScreen = "list" | "detail" | "settings" | "schedules";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -238,6 +249,9 @@ function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
+  const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -302,6 +316,7 @@ function App() {
 
   useEffect(() => {
     void loadWorkflows();
+    void loadSchedules();
     void refreshRunState();
   }, []);
 
@@ -360,6 +375,17 @@ function App() {
   async function loadWorkflows() {
     const items = await listWorkflows();
     setWorkflows(items);
+  }
+
+  async function loadSchedules() {
+    setSchedulesLoading(true);
+    try {
+      setSchedules(await listSchedules());
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setSchedulesLoading(false);
+    }
   }
 
   async function refreshRunState() {
@@ -795,6 +821,59 @@ function App() {
     setAppError("");
   }
 
+  function openSchedules() {
+    setScreen("schedules");
+    setAppError("");
+    void loadSchedules();
+  }
+
+  async function submitCreateSchedule(input: WorkflowScheduleInput) {
+    await createSchedule(input);
+    await loadSchedules();
+  }
+
+  async function submitUpdateSchedule(
+    scheduleId: string,
+    input: WorkflowScheduleInput,
+  ) {
+    await updateSchedule(scheduleId, input);
+    await loadSchedules();
+  }
+
+  async function removeSchedule(scheduleId: string) {
+    setAppError("");
+    try {
+      await deleteSchedule(scheduleId);
+      await loadSchedules();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function toggleSchedule(scheduleId: string, enabled: boolean) {
+    setAppError("");
+    try {
+      if (enabled) {
+        await enableSchedule(scheduleId);
+      } else {
+        await disableSchedule(scheduleId);
+      }
+      await loadSchedules();
+    } catch (error) {
+      setAppError(commandMessage(error));
+      throw error;
+    }
+  }
+
+  async function loadScheduleHistory(scheduleId: string) {
+    setAppError("");
+    try {
+      setScheduleEvents(await listScheduleEvents({ schedule_id: scheduleId }));
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
   function updateGraphAutosaveEnabled(enabled: boolean) {
     setGraphAutosaveEnabled(enabled);
     writeGraphAutosaveEnabled(enabled);
@@ -918,8 +997,15 @@ function App() {
 
   return (
     <AppShell
-      activeItem={screen === "settings" ? "settings" : "workflows"}
+      activeItem={
+        screen === "settings"
+          ? "settings"
+          : screen === "schedules"
+            ? "schedules"
+            : "workflows"
+      }
       sidebarCollapsed={sidebarCollapsed}
+      onOpenSchedules={openSchedules}
       onOpenSettings={openSettings}
       onOpenWorkflows={backToList}
       onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
@@ -928,6 +1014,19 @@ function App() {
         <SettingsPage
           graphAutosaveEnabled={graphAutosaveEnabled}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
+        />
+      ) : screen === "schedules" ? (
+        <SchedulesPage
+          schedules={schedules}
+          workflows={workflows}
+          events={scheduleEvents}
+          loading={schedulesLoading}
+          error={appError}
+          onCreateSchedule={submitCreateSchedule}
+          onUpdateSchedule={submitUpdateSchedule}
+          onDeleteSchedule={removeSchedule}
+          onToggleSchedule={toggleSchedule}
+          onLoadEvents={loadScheduleHistory}
         />
       ) : screen === "detail" && detail ? (
         <>

@@ -45,6 +45,16 @@
 - `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects a second active run, creates a SQLite run record, and starts the Electron CloakBrowser runner.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 
+## Schedule Workflow
+
+- The Schedules sidebar page lists all workflow schedules with workflow name, enabled state, schedule summary, next run time, last status, and last reason.
+- Users can create disabled draft schedules, edit schedules, delete schedules, enable or disable schedules, and inspect schedule event history.
+- Schedule kinds are one-time `once_at`, repeating `interval`, and friendly calendar presets for daily, weekly, and monthly local-time runs.
+- Enabling a schedule validates the schedule config and the current saved workflow run readiness. Invalid saved graph/settings block enablement with a command-facing error.
+- The Electron backend scheduler runs while the app process is open. It scans enabled schedules for `next_run_at <= now`, processes due schedules in chronological order, and writes audit events for starts, skips, missed windows, failed validation/start, and automatic one-time disablement.
+- Scheduled runs call the same saved-workflow backend path as `run_workflow`; they do not save or run unsaved detail-page drafts.
+- If the active-run lock is owned by a normal run or batch run at the scheduled time, the occurrence is skipped and not queued.
+
 ## Run Full Workflow
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.

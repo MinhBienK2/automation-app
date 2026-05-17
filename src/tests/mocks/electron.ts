@@ -33,6 +33,14 @@ const methodNames: BridgeMethodName[] = [
   "runWorkflowFromNode",
   "stopRun",
   "getRunState",
+  "listSchedules",
+  "getSchedule",
+  "createSchedule",
+  "updateSchedule",
+  "deleteSchedule",
+  "enableSchedule",
+  "disableSchedule",
+  "listScheduleEvents",
   "validateSchedule",
   "exportWorkflow",
   "importWorkflow",
@@ -161,6 +169,31 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getRunState.mockImplementation(() =>
     resolveCommand(commands, "get_run_state", undefined),
+  );
+  workflowBridgeMock.listSchedules.mockImplementation(() =>
+    resolveCommand(commands, "list_schedules", undefined),
+  );
+  workflowBridgeMock.getSchedule.mockImplementation((scheduleId: string) =>
+    resolveCommand(commands, "get_schedule", { scheduleId }),
+  );
+  workflowBridgeMock.createSchedule.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "create_schedule", { input }),
+  );
+  workflowBridgeMock.updateSchedule.mockImplementation(
+    (scheduleId: string, patch: unknown) =>
+      resolveCommand(commands, "update_schedule", { scheduleId, patch }),
+  );
+  workflowBridgeMock.deleteSchedule.mockImplementation((scheduleId: string) =>
+    resolveCommand(commands, "delete_schedule", { scheduleId }),
+  );
+  workflowBridgeMock.enableSchedule.mockImplementation((scheduleId: string) =>
+    resolveCommand(commands, "enable_schedule", { scheduleId }),
+  );
+  workflowBridgeMock.disableSchedule.mockImplementation((scheduleId: string) =>
+    resolveCommand(commands, "disable_schedule", { scheduleId }),
+  );
+  workflowBridgeMock.listScheduleEvents.mockImplementation((filter: unknown) =>
+    resolveCommand(commands, "list_schedule_events", { filter }),
   );
   workflowBridgeMock.validateSchedule.mockImplementation((schedule: unknown) =>
     resolveCommand(commands, "validate_schedule", { schedule }),

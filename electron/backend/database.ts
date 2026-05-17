@@ -80,6 +80,35 @@ export function initializeDatabase(paths: AppPaths) {
       error_json TEXT,
       FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS workflow_schedules (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      enabled INTEGER NOT NULL,
+      kind_json TEXT NOT NULL,
+      next_run_at TEXT,
+      last_event_at TEXT,
+      last_status TEXT,
+      last_reason TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS workflow_schedule_events (
+      id TEXT PRIMARY KEY,
+      schedule_id TEXT NOT NULL,
+      workflow_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      run_id TEXT,
+      scheduled_for TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      reason TEXT,
+      details_json TEXT,
+      FOREIGN KEY (schedule_id) REFERENCES workflow_schedules(id) ON DELETE CASCADE,
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
   `);
   migrateWorkflowSchema(database);
 

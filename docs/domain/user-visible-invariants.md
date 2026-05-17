@@ -12,6 +12,12 @@ Preserve these unless the task explicitly changes them.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Keeping profile data is the default. Deleting profile data removes only unshared inactive profile directories.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run buttons are disabled while any workflow run is active, and list-started runs keep polling run state until terminal status.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
+- Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
+- Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
+- Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
+- If a schedule fires while a normal workflow run or batch run is active, that occurrence is skipped with reason `active_run`; one-time schedules are disabled after the skipped opportunity.
+- Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
+- Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and secret search/hash portions of fingerprint preflight probe URLs.
 - Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. Run is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
 - Workflow Settings contains General, Run Policy, Browser Launch, and Environment sections. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
@@ -72,6 +78,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
+- Schedules is a separate app screen reachable from the sidebar.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.

@@ -27,6 +27,7 @@ Node/Electron backend.
 - Workflow Settings load/save/section-save commands, run validation, and validation before persistence or execution.
 - Legacy workflow browser runtime config commands map to Workflow Settings Browser.
 - Import/export, duplicate, batch run, builder assist command logic.
+- Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
@@ -34,6 +35,7 @@ Node/Electron backend.
 - Nested subworkflow nodes are not part of the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the saved workflow graph with saved Workflow Settings as the run baseline. The UI saves the current graph and dirty settings sections before invoking it.
 - Product-facing batch execution shares the same active-run lifecycle lock, stop handling, and persisted run records as normal workflow execution.
+- Product-facing scheduled execution uses the same saved-workflow run path as manual `runWorkflow`, shares the active-run lifecycle lock, and records skipped/missed/failed scheduler decisions in schedule events.
 - Workflow package import validates selected sections before creation and wraps workflow, graph, and settings writes in a SQLite transaction.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.

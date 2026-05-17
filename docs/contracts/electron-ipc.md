@@ -55,6 +55,14 @@ failed calls. This preserves the command-facing error shape used by
 - `runWorkflowFromNode`
 - `stopRun`
 - `getRunState`
+- `listSchedules`
+- `getSchedule`
+- `createSchedule`
+- `updateSchedule`
+- `deleteSchedule`
+- `enableSchedule`
+- `disableSchedule`
+- `listScheduleEvents`
 - `validateSchedule`
 - `exportWorkflow`
 - `importWorkflow`
@@ -92,6 +100,11 @@ Settings and workflow package import/export.
 Graph validation/compilation, run orchestration, SQLite persistence, workflow
 package import/export, and CloakBrowser runner execution are owned by the
 Electron backend.
+
+Workflow schedule CRUD, schedule validation, enable-time workflow readiness
+checks, schedule event history, and the in-app scheduler tick are owned by the
+Electron backend. The renderer manages schedule form state and calls the typed
+bridge; it does not own timers or schedule SQL.
 
 CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit

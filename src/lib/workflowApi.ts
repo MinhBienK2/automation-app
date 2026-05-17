@@ -11,6 +11,9 @@ import type {
   WorkflowPackage,
   WorkflowPackageExportOptions,
   WorkflowPackageImportOptions,
+  WorkflowScheduleEventFilter,
+  WorkflowScheduleInput,
+  WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsSectionId,
 } from "../types/workflow";
@@ -129,6 +132,41 @@ export function stopRun() {
 
 export function getRunState() {
   return bridge().getRunState();
+}
+
+export function listSchedules() {
+  return bridge().listSchedules();
+}
+
+export function getSchedule(scheduleId: string) {
+  return bridge().getSchedule(scheduleId);
+}
+
+export function createSchedule(input: WorkflowScheduleInput) {
+  return bridge().createSchedule(input);
+}
+
+export function updateSchedule(
+  scheduleId: string,
+  patch: WorkflowScheduleUpdate,
+) {
+  return bridge().updateSchedule(scheduleId, patch);
+}
+
+export function deleteSchedule(scheduleId: string) {
+  return bridge().deleteSchedule(scheduleId);
+}
+
+export function enableSchedule(scheduleId: string) {
+  return bridge().enableSchedule(scheduleId);
+}
+
+export function disableSchedule(scheduleId: string) {
+  return bridge().disableSchedule(scheduleId);
+}
+
+export function listScheduleEvents(filter?: WorkflowScheduleEventFilter) {
+  return bridge().listScheduleEvents(filter);
 }
 
 export function validateSchedule(schedule: OrchestrationSchedule) {

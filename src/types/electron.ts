@@ -9,6 +9,7 @@ import type {
   RecordedEvent,
   RunState,
   RunValidationIssue,
+  ScheduleValidationIssue,
   SelectorCandidate,
   SettingsValidationIssue,
   BrowserProfileCleanupResult,
@@ -23,6 +24,11 @@ import type {
   WorkflowPackageExportOptions,
   WorkflowPackageImportOptions,
   WorkflowPackagePreview,
+  WorkflowSchedule,
+  WorkflowScheduleEvent,
+  WorkflowScheduleEventFilter,
+  WorkflowScheduleInput,
+  WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
@@ -65,9 +71,22 @@ export type WorkflowElectronBridge = {
   runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState>;
   stopRun(): Promise<RunState>;
   getRunState(): Promise<RunState>;
+  listSchedules(): Promise<WorkflowSchedule[]>;
+  getSchedule(scheduleId: string): Promise<WorkflowSchedule>;
+  createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule>;
+  updateSchedule(
+    scheduleId: string,
+    patch: WorkflowScheduleUpdate,
+  ): Promise<WorkflowSchedule>;
+  deleteSchedule(scheduleId: string): Promise<void>;
+  enableSchedule(scheduleId: string): Promise<WorkflowSchedule>;
+  disableSchedule(scheduleId: string): Promise<WorkflowSchedule>;
+  listScheduleEvents(
+    filter?: WorkflowScheduleEventFilter,
+  ): Promise<WorkflowScheduleEvent[]>;
   validateSchedule(
     schedule: OrchestrationSchedule,
-  ): Promise<OrchestrationSchedule>;
+  ): Promise<ScheduleValidationIssue[]>;
   exportWorkflow(workflowId: string): Promise<WorkflowExport>;
   importWorkflow(exported: WorkflowExport): Promise<WorkflowDetail>;
   exportWorkflowPackage(
