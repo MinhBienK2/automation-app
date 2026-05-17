@@ -270,12 +270,13 @@ export function SchedulesPage({
               <Select
                 id="schedule-workflow"
                 value={form.workflowId}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
                   setForm((current) => ({
                     ...current,
-                    workflowId: event.currentTarget.value,
-                  }))
-                }
+                    workflowId: value,
+                  }));
+                }}
               >
                 {workflows.map((workflow) => (
                   <option key={workflow.id} value={workflow.id}>
@@ -288,9 +289,10 @@ export function SchedulesPage({
               <Input
                 id="schedule-name"
                 value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.currentTarget.value }))
-                }
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  setForm((current) => ({ ...current, name: value }));
+                }}
               />
 
               <SegmentedControl
@@ -315,12 +317,13 @@ export function SchedulesPage({
                     id="schedule-once-at"
                     type="datetime-local"
                     value={form.onceAt}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
                       setForm((current) => ({
                         ...current,
-                        onceAt: event.currentTarget.value,
-                      }))
-                    }
+                        onceAt: value,
+                      }));
+                    }}
                   />
                 </>
               ) : null}
@@ -334,12 +337,13 @@ export function SchedulesPage({
                       type="number"
                       min="1"
                       value={form.intervalEvery}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
                         setForm((current) => ({
                           ...current,
-                          intervalEvery: event.currentTarget.value,
-                        }))
-                      }
+                          intervalEvery: value,
+                        }));
+                      }}
                     />
                   </div>
                   <div>
@@ -347,12 +351,13 @@ export function SchedulesPage({
                     <Select
                       id="schedule-interval-unit"
                       value={form.intervalUnit}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const value = event.currentTarget.value as IntervalUnit;
                         setForm((current) => ({
                           ...current,
-                          intervalUnit: event.currentTarget.value as IntervalUnit,
-                        }))
-                      }
+                          intervalUnit: value,
+                        }));
+                      }}
                     >
                       <option value="minutes">Minutes</option>
                       <option value="hours">Hours</option>
@@ -369,12 +374,13 @@ export function SchedulesPage({
                     id="schedule-calendar-time"
                     type="time"
                     value={form.calendarTime}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
                       setForm((current) => ({
                         ...current,
-                        calendarTime: event.currentTarget.value,
-                      }))
-                    }
+                        calendarTime: value,
+                      }));
+                    }}
                   />
                 </>
               ) : null}
@@ -412,12 +418,13 @@ export function SchedulesPage({
                     min="1"
                     max="31"
                     value={form.monthDay}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
                       setForm((current) => ({
                         ...current,
-                        monthDay: event.currentTarget.value,
-                      }))
-                    }
+                        monthDay: value,
+                      }));
+                    }}
                   />
                 </>
               ) : null}

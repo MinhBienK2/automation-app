@@ -1,5 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import { SchedulesPage } from "./SchedulesPage";
 import type {
@@ -9,6 +11,15 @@ import type {
 } from "../../../types/workflow";
 
 describe("SchedulesPage", () => {
+  test("captures form field values before scheduling state updates", () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), "src/features/schedules/pages/SchedulesPage.tsx"),
+      "utf8",
+    );
+
+    expect(source).not.toMatch(/setForm\(\([^)]*\) =>[\s\S]{0,180}event\.currentTarget\.value/);
+  });
+
   test("renders schedules with actions and event history", async () => {
     const onToggleSchedule = vi.fn();
     render(
