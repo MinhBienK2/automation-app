@@ -35,7 +35,7 @@
 - Control blocks treat branch ports as work inside the block and continuation ports as work after the block. `If`, `Switch`, and `Try/Catch` expose `done` continuation ports; loop and fallback blocks continue through their existing `done` ports, and retry continues through `success`.
 - Missing optional branch ports are allowed and compile as no-op paths. Missing continuation ports end the current path successfully. Required body ports such as loop body, retry try, try/catch try, and fallback primary block validation/run.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
-- `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header and saves dirty sections through that section command. General updates workflow summary metadata.
+- `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header, groups related controls inside each settings section, and saves dirty sections through that section command. General updates workflow summary metadata.
 - Workflow Settings Run Policy keeps batch defaults visible, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
 - Workflow Settings Graph owns the default duration-only wait copied onto newly created graph links. Changing it does not rewrite existing graph links.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.

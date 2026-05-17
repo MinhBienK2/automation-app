@@ -220,5 +220,7 @@ describe("App CSS", () => {
     expect(fieldGroupHeader).toContain("border-bottom: 1px solid #242424");
     expect(fieldGroupGrid).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(fieldGroupFooter).toContain("color: #898989");
+    expect(cssRule(".settings-field-group-wide")).toContain("grid-column: 1 / -1");
+    expect(cssRule(".settings-field-group-actions")).toContain("flex-wrap: wrap");
   });
 });

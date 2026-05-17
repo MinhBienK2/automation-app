@@ -150,6 +150,85 @@ describe("WorkflowSettingsDialog", () => {
       .toHaveClass("settings-field-group-footer");
   });
 
+  test("groups workflow settings sections by related controls", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.browser_launch.proxy_enabled = true;
+    settings.browser_launch.preflight_enabled = true;
+
+    const props = {
+      hasUnsavedChanges: false,
+      open: true,
+      settings,
+      onActiveSectionChange: vi.fn(),
+      onDiscardChanges: vi.fn(),
+      onOpenChange: vi.fn(),
+      onSaveSettings: vi.fn(),
+      onSettingsChange: vi.fn(),
+    };
+
+    const { rerender } = render(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="general"
+      />,
+    );
+    let dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const workflowDetails = within(dialog).getByRole("group", { name: "Workflow details" });
+    expect(within(workflowDetails).getByLabelText("Workflow name")).toBeInTheDocument();
+    expect(within(workflowDetails).getByLabelText("Notes")).toBeInTheDocument();
+
+    rerender(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="run_policy"
+      />,
+    );
+    dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const runLifecycle = within(dialog).getByRole("group", { name: "Run lifecycle" });
+    const batchDefaults = within(dialog).getByRole("group", { name: "Batch defaults" });
+    expect(within(runLifecycle).getByLabelText("Max workflow duration ms")).toBeInTheDocument();
+    expect(within(batchDefaults).getByLabelText("Batch concurrency limit")).toBeDisabled();
+    expect(within(batchDefaults).getByText("Batch controls are paused until Batch Run UI is ready."))
+      .toHaveClass("settings-field-group-footer");
+
+    rerender(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="browser_launch"
+      />,
+    );
+    dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const expectedBrowserGroups = [
+      "Session & identity",
+      "Proxy",
+      "Location & viewport",
+      "Fingerprint",
+      "Humanization",
+      "Preflight & launch",
+    ];
+    for (const groupName of expectedBrowserGroups) {
+      expect(within(dialog).getByRole("group", { name: groupName })).toHaveClass("settings-field-group");
+    }
+    expect(within(within(dialog).getByRole("group", { name: "Session & identity" })).getByLabelText("Identity id"))
+      .toBeInTheDocument();
+    expect(within(within(dialog).getByRole("group", { name: "Proxy" })).getByLabelText("Proxy server"))
+      .toBeInTheDocument();
+    expect(within(within(dialog).getByRole("group", { name: "Preflight & launch" })).getByLabelText("Preflight probe URL"))
+      .toBeInTheDocument();
+
+    rerender(
+      <WorkflowSettingsDialog
+        {...props}
+        activeSection="environment"
+      />,
+    );
+    dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    expect(within(dialog).getByRole("group", { name: "Initial variables" })).toHaveClass("settings-field-group");
+  });
+
   test("can reveal and copy the fingerprint seed", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
