@@ -837,6 +837,32 @@ describe("Electron workflow command handlers", () => {
     );
   });
 
+  test("labels graph default link wait validation as new link wait", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Settings validation");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...settings,
+        graph_defaults: {
+          default_edge_delay: {
+            type: "random",
+            min_ms: 5000,
+            max_ms: 3000,
+          },
+        },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        section: "graph_defaults",
+        field: "default_edge_delay",
+        level: "error",
+        message: "New link wait range is invalid",
+      }),
+    ]);
+  });
+
   test("exports sanitized packages and imports selected flow/settings as a new workflow", async () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Export me");

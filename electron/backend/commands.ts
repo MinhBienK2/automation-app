@@ -1474,7 +1474,7 @@ function validateGraphEdgeDelay(delay: GraphEdgeDelay | null | undefined) {
   if (delay.type === "fixed") {
     return Number.isFinite(delay.duration_ms) && delay.duration_ms > 0
       ? null
-      : "Default link wait duration must be greater than zero";
+      : "New link wait duration must be greater than zero";
   }
   if (delay.type === "random") {
     return Number.isFinite(delay.min_ms) &&
@@ -1483,9 +1483,9 @@ function validateGraphEdgeDelay(delay: GraphEdgeDelay | null | undefined) {
       delay.max_ms > 0 &&
       delay.max_ms >= delay.min_ms
       ? null
-      : "Default link wait range is invalid";
+      : "New link wait range is invalid";
   }
-  return "Default link wait type is invalid";
+  return "New link wait type is invalid";
 }
 
 function isOptionalModuleAvailable(name: string) {

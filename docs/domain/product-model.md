@@ -20,7 +20,7 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - The Browser Launch section is identity-oriented. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, and fixed CloakBrowser fingerprint seed. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns Run from selected enablement, proxy posture and non-secret proxy metadata, timezone/locale/GeoIP, viewport/device flags, supported WebRTC IP policy values, allowlisted advanced fingerprint overrides, the humanize toggle and `default`/`careful` preset, optional owned fingerprint preflight, and headed/headless policy.
 - CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
 - The Run Policy section owns maximum workflow duration, terminal browser retention, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
-- The Graph Defaults section owns the default duration-only wait copied onto newly created graph links.
+- The Graph section owns the default duration-only wait copied onto newly created graph links.
 - The Environment section owns initial variable rows that are available before graph actions run.
 
 ## User Workflows

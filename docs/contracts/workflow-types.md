@@ -104,7 +104,7 @@ Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings are valid flow-only packages.
 Run Policy batch fields remain part of the current contract for backend batch execution, but Workflow Settings currently renders those batch controls as visible, disabled values until Batch Run UI is ready.
-Graph Defaults default link wait is an authoring default only. It is copied onto newly created graph links and does not rewrite existing links.
+Graph default link wait is an authoring default only. It is copied onto newly created graph links and does not rewrite existing links.
 
 ## Workflow Package Shape
 
@@ -313,7 +313,7 @@ New variable authoring stores multiple rows:
 
 Terminal End Success, End Failure, and Stop Workflow graph nodes can carry `close_browser: true` in their node config. The compiler maps that to executable `stop_workflow` configs so the runner closes the browser after outputs are captured. Missing or false keeps the browser session retained.
 
-Graph Defaults can apply duration-only waits to newly created links. Authors still use explicit `wait` and `random_wait` graph nodes when a pause has business meaning or waits for page/browser state.
+Graph settings can apply duration-only waits to newly created links. Authors still use explicit `wait` and `random_wait` graph nodes when a pause has business meaning or waits for page/browser state.
 
 ## Change Checklist
 

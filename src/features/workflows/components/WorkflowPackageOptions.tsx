@@ -70,7 +70,7 @@ export function sectionLabel(section: WorkflowSettingsSectionId) {
     case "browser_launch":
       return "Browser Launch";
     case "graph_defaults":
-      return "Graph Defaults";
+      return "Graph";
     case "environment":
       return "Environment";
   }

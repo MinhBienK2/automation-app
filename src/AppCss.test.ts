@@ -207,4 +207,18 @@ describe("App CSS", () => {
     expect(variableGrid).toContain("grid-template-columns: minmax(96px, 1fr) 116px minmax(120px, 1.4fr) auto");
     expect(variableGrid).toContain("min-width: 520px");
   });
+
+  test("groups related workflow settings fields without changing the dark theme", () => {
+    const fieldGroup = cssRule(".settings-field-group");
+    const fieldGroupHeader = cssRule(".settings-field-group-header");
+    const fieldGroupGrid = cssRule(".settings-field-group-grid");
+    const fieldGroupFooter = cssRule(".settings-field-group-footer");
+
+    expect(fieldGroup).toContain("border: 1px solid #2e2e2e");
+    expect(fieldGroup).toContain("border-radius: 8px");
+    expect(fieldGroup).toContain("background: #0f0f0f");
+    expect(fieldGroupHeader).toContain("border-bottom: 1px solid #242424");
+    expect(fieldGroupGrid).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(fieldGroupFooter).toContain("color: #898989");
+  });
 });

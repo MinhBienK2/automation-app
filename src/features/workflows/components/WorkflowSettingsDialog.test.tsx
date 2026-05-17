@@ -64,6 +64,7 @@ describe("WorkflowSettingsDialog", () => {
       "General",
       "Run Policy",
       "Browser Launch",
+      "Graph",
       "Environment",
     ]);
     expect(within(dialog).queryByRole("tab", { name: "Owned Test Gates" }))
@@ -107,6 +108,46 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Fingerprint preflight" })).toBeInTheDocument();
+  });
+
+  test("groups graph link wait defaults into a reusable settings field group", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.graph_defaults.default_edge_delay = {
+      type: "random",
+      min_ms: 3000,
+      max_ms: 5000,
+    };
+
+    render(
+      <WorkflowSettingsDialog
+        activeSection="graph_defaults"
+        hasUnsavedChanges={false}
+        open
+        settings={settings}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    expect(within(dialog).getByRole("tab", { name: "Graph" })).toHaveAttribute("data-active", "true");
+    expect(within(dialog).getByRole("heading", { name: "Graph" })).toBeInTheDocument();
+
+    const linkWaitGroup = within(dialog).getByRole("group", { name: "New link wait" });
+    expect(linkWaitGroup).toHaveClass("settings-field-group");
+    expect(within(linkWaitGroup).getByText("Choose the wait copied to new links after saving."))
+      .toBeInTheDocument();
+    expect(within(linkWaitGroup).getByLabelText("Mode")).toHaveValue("random");
+    expect(within(linkWaitGroup).getByLabelText("Minimum wait ms")).toHaveValue(3000);
+    expect(within(linkWaitGroup).getByLabelText("Maximum wait ms")).toHaveValue(5000);
+    expect(within(linkWaitGroup).getByText(/Existing links keep their own wait/i))
+      .toHaveClass("settings-field-group-footer");
   });
 
   test("can reveal and copy the fingerprint seed", async () => {

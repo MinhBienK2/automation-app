@@ -20,6 +20,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
+import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
 import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
@@ -691,9 +692,13 @@ function GraphDefaultsSettingsSection({
   const delay = value.default_edge_delay;
   const mode = delay?.type ?? "none";
   return (
-    <div className="settings-form-grid">
+    <SettingsFieldGroup
+      title="New link wait"
+      description="Choose the wait copied to new links after saving."
+      footer="Existing links keep their own wait. Use Wait nodes for page or element conditions."
+    >
       <label className="field">
-        <span>Default link wait</span>
+        <span>Mode</span>
         <Select
           value={mode}
           onChange={(event) => {
@@ -719,7 +724,7 @@ function GraphDefaultsSettingsSection({
       </label>
       {delay?.type === "fixed" ? (
         <NumberField
-          label="Fixed duration ms"
+          label="Duration ms"
           value={delay.duration_ms}
           onChange={(next) =>
             onChange({
@@ -732,7 +737,7 @@ function GraphDefaultsSettingsSection({
       {delay?.type === "random" ? (
         <>
           <NumberField
-            label="Random min ms"
+            label="Minimum wait ms"
             value={delay.min_ms}
             onChange={(next) =>
               onChange({
@@ -746,7 +751,7 @@ function GraphDefaultsSettingsSection({
             }
           />
           <NumberField
-            label="Random max ms"
+            label="Maximum wait ms"
             value={delay.max_ms}
             onChange={(next) =>
               onChange({
@@ -761,10 +766,7 @@ function GraphDefaultsSettingsSection({
           />
         </>
       ) : null}
-      <p className="workflow-settings-hint">
-        This applies only to links created after the setting is saved. Use Wait nodes for page or element conditions.
-      </p>
-    </div>
+    </SettingsFieldGroup>
   );
 }
 

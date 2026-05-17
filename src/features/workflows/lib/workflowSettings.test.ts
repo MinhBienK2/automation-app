@@ -61,6 +61,13 @@ describe("workflow settings model", () => {
       "environment",
     ];
     expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
+    expect(workflowSettingsSections.map((section) => section.label)).toEqual([
+      "General",
+      "Run Policy",
+      "Browser Launch",
+      "Graph",
+      "Environment",
+    ]);
     expect(Object.keys(workflowSettingsHelp).sort()).toEqual([...visibleSectionIds].sort());
 
     for (const section of workflowSettingsSections) {
@@ -130,11 +137,11 @@ describe("workflow settings model", () => {
       "Fingerprint preflight",
       "Headless browser",
     ]);
-    expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Defaults Settings Help");
+    expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Settings Help");
     expect(workflowSettingsHelp.graph_defaults.en.fieldGuide.map((field) => field.name)).toEqual([
-      "Default link wait",
-      "Fixed duration ms",
-      "Random min/max ms",
+      "New link wait",
+      "Duration ms",
+      "Minimum/maximum wait ms",
     ]);
     expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
     expect(helpText).not.toContain("Owned Test Gates");

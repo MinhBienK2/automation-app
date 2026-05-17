@@ -58,7 +58,7 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
   { id: "run_policy", label: "Run Policy" },
   { id: "browser_launch", label: "Browser Launch" },
-  { id: "graph_defaults", label: "Graph Defaults" },
+  { id: "graph_defaults", label: "Graph" },
   { id: "environment", label: "Environment" },
 ];
 
@@ -871,9 +871,9 @@ export const workflowSettingsHelp: Record<
   },
   graph_defaults: {
     en: {
-      title: "Graph Defaults Settings Help",
+      title: "Graph Settings Help",
       summary:
-        "Graph defaults control authoring conveniences for new links in this workflow. They do not rewrite existing links and they do not replace explicit Wait or Random Wait nodes.",
+        "Graph settings control authoring conveniences for new links in this workflow. They do not rewrite existing links and they do not replace explicit Wait or Random Wait nodes.",
       uiLabels: enLabels,
       bestFor: [
         "Use it when most transitions in one workflow should pause briefly before the next node starts.",
@@ -884,21 +884,21 @@ export const workflowSettingsHelp: Record<
       ],
       fieldGuide: [
         {
-          name: "Default link wait",
+          name: "New link wait",
           description:
             "Chooses whether newly created graph links start with no wait, a fixed duration wait, or a randomized duration wait that compiles before the target node.",
           whenToUse:
             "Turn it on when the workflow needs a consistent human-paced pause between most connected nodes.",
         },
         {
-          name: "Fixed duration ms",
+          name: "Duration ms",
           description:
             "Stores a single millisecond duration on each new link, producing a simple duration wait before the linked target node executes.",
           whenToUse:
             "Use fixed duration when repeatability matters more than variation during local debugging and evidence capture.",
         },
         {
-          name: "Random min/max ms",
+          name: "Minimum/maximum wait ms",
           description:
             "Stores a minimum and maximum millisecond range on each new link, producing a randomized wait before the linked target node executes.",
           whenToUse:
@@ -937,9 +937,9 @@ export const workflowSettingsHelp: Record<
       ],
     },
     vi: {
-      title: "Trợ giúp Graph Defaults",
+      title: "Trợ giúp Graph",
       summary:
-        "Graph defaults là tiện ích khi author workflow: link mới có thể tự mang wait mặc định. Setting này không sửa link cũ và không thay thế Wait node rõ nghĩa.",
+        "Graph settings là tiện ích khi author workflow: link mới có thể tự mang wait mặc định. Setting này không sửa link cũ và không thay thế Wait node rõ nghĩa.",
       uiLabels: viLabels,
       bestFor: [
         "Dùng khi phần lớn transition trong workflow cần dừng nhẹ trước khi node kế tiếp chạy.",
@@ -950,21 +950,21 @@ export const workflowSettingsHelp: Record<
       ],
       fieldGuide: [
         {
-          name: "Default link wait",
+          name: "New link wait",
           description:
             "Chọn link mới sẽ không có wait, có fixed wait, hoặc random wait; wait này được compile trước node đích của link.",
           whenToUse:
             "Bật khi workflow cần nhịp chờ nhất quán giữa phần lớn các node vừa được nối.",
         },
         {
-          name: "Fixed duration ms",
+          name: "Duration ms",
           description:
             "Lưu một thời lượng millisecond trên mỗi link mới, tạo duration wait đơn giản trước khi node đích chạy.",
           whenToUse:
             "Dùng fixed duration khi cần kết quả dễ lặp lại lúc debug hoặc thu evidence.",
         },
         {
-          name: "Random min/max ms",
+          name: "Minimum/maximum wait ms",
           description:
             "Lưu khoảng min và max millisecond trên mỗi link mới, tạo random wait trước khi node đích chạy.",
           whenToUse:

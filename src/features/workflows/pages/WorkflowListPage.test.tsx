@@ -275,6 +275,7 @@ describe("Workflow list integration", () => {
             "general",
             "run_policy",
             "browser_launch",
+            "graph_defaults",
             "environment",
           ],
         },
