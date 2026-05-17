@@ -94,6 +94,75 @@ describe("SchedulesPage", () => {
     expect(await within(dialog).findByText("Interval must be at least 60 seconds"))
       .toBeInTheDocument();
   });
+
+  test("edits a schedule name without crashing the dialog", async () => {
+    const onUpdateSchedule = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SchedulesPage
+        schedules={[schedule({ name: "Old schedule" })]}
+        workflows={[workflow()]}
+        events={[]}
+        loading={false}
+        error=""
+        onCreateSchedule={vi.fn()}
+        onUpdateSchedule={onUpdateSchedule}
+        onDeleteSchedule={vi.fn()}
+        onToggleSchedule={vi.fn()}
+        onLoadEvents={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /Old schedule Login flow/i });
+    await userEvent.click(within(row).getByRole("button", { name: "Edit Old schedule" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Edit Schedule" });
+    const nameInput = within(dialog).getByLabelText("Schedule name");
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "New schedule");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Schedule" }));
+
+    await waitFor(() => {
+      expect(onUpdateSchedule).toHaveBeenCalledWith("schedule-1", {
+        workflow_id: "workflow-1",
+        name: "New schedule",
+        enabled: true,
+        kind: { type: "interval", every_seconds: 3600 },
+      });
+    });
+  });
+
+  test("keeps one-time edit errors inside the dialog when the datetime is invalid", async () => {
+    render(
+      <SchedulesPage
+        schedules={[
+          schedule({
+            name: "One-time",
+            kind: { type: "once_at", timestamp: "" },
+          }),
+        ]}
+        workflows={[workflow()]}
+        events={[]}
+        loading={false}
+        error=""
+        onCreateSchedule={vi.fn()}
+        onUpdateSchedule={vi.fn()}
+        onDeleteSchedule={vi.fn()}
+        onToggleSchedule={vi.fn()}
+        onLoadEvents={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /One-time Login flow/i });
+    await userEvent.click(within(row).getByRole("button", { name: "Edit One-time" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Edit Schedule" });
+    await userEvent.clear(within(dialog).getByLabelText("Schedule name"));
+    await userEvent.type(within(dialog).getByLabelText("Schedule name"), "Renamed one-time");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Schedule" }));
+
+    expect(await within(dialog).findByText("Use a valid date and time"))
+      .toBeInTheDocument();
+  });
 });
 
 function workflow(overrides: Partial<WorkflowSummary> = {}): WorkflowSummary {

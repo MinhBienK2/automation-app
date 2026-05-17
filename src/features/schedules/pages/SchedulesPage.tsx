@@ -112,14 +112,14 @@ export function SchedulesPage({
   async function submitSchedule(event: React.FormEvent) {
     event.preventDefault();
     setFormError("");
-    const input: WorkflowScheduleInput = {
-      workflow_id: form.workflowId,
-      name: form.name,
-      enabled: form.enabled,
-      kind: kindFromForm(form),
-    };
 
     try {
+      const input: WorkflowScheduleInput = {
+        workflow_id: form.workflowId,
+        name: form.name,
+        enabled: form.enabled,
+        kind: kindFromForm(form),
+      };
       if (dialogMode === "edit" && editingScheduleId) {
         await onUpdateSchedule(editingScheduleId, input);
       } else {
@@ -541,7 +541,7 @@ function formFromSchedule(schedule: WorkflowSchedule): ScheduleFormState {
 
 function kindFromForm(form: ScheduleFormState): WorkflowScheduleKind {
   if (form.kind === "once_at") {
-    return { type: "once_at", timestamp: new Date(form.onceAt).toISOString() };
+    return { type: "once_at", timestamp: parseDatetimeLocal(form.onceAt) };
   }
   if (form.kind === "interval") {
     const multiplier =
@@ -614,9 +614,18 @@ function formatDateTime(value: string | null) {
 
 function toDatetimeLocal(value: string) {
   const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
   const offset = date.getTimezoneOffset();
   const local = new Date(date.getTime() - offset * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function parseDatetimeLocal(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Use a valid date and time");
+  }
+  return date.toISOString();
 }
 
 function commandMessage(error: unknown) {
