@@ -2288,17 +2288,18 @@ describe("Electron workflow schedule commands", () => {
     handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
     const isolatedWorkflow = handlers.createWorkflow("Isolated workflow");
     handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
+    const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const schedule = handlers.createSchedule({
       workflow_id: scheduledWorkflow.id,
       name: "Once",
       enabled: true,
-      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+      kind: { type: "once_at", timestamp: dueAt },
     });
     const isolatedSchedule = handlers.createSchedule({
       workflow_id: isolatedWorkflow.id,
       name: "Isolated",
       enabled: true,
-      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+      kind: { type: "once_at", timestamp: dueAt },
     });
     const runningSettings = handlers.getWorkflowSettings(runningWorkflow.id);
     const scheduledSettings = handlers.getWorkflowSettings(scheduledWorkflow.id);
@@ -2314,14 +2315,14 @@ describe("Electron workflow schedule commands", () => {
 
     const runPromise = handlers.runWorkflow(runningWorkflow.id);
     await waitFor(() => activeRunSignal !== null);
-    await handlers.runSchedulerTick(new Date("2026-05-17T09:00:00.000Z"));
+    await handlers.runSchedulerTick(new Date(dueAt));
 
     expect(handlers.listScheduleEvents({ schedule_id: schedule.id })).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "skipped",
           reason: "active_profile",
-          scheduled_for: "2026-05-17T09:00:00.000Z",
+          scheduled_for: dueAt,
         }),
         expect.objectContaining({
           event_type: "disabled",
@@ -2338,7 +2339,7 @@ describe("Electron workflow schedule commands", () => {
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "started",
-          scheduled_for: "2026-05-17T09:00:00.000Z",
+          scheduled_for: dueAt,
         }),
       ]),
     );
