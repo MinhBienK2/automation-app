@@ -141,6 +141,21 @@ Checks: focused test command for the edited test.
 
 Update docs: testing architecture or route checks only if verification expectations changed.
 
+## Change Desktop Packaging Or CI/CD
+
+Use when changing Electron package targets, release artifacts, GitHub Actions,
+or release verification.
+
+Read: `architecture/overview.md`, `architecture/testing.md`
+
+Verify: `package.json`, `package-lock.json`, `.github/workflows/`, `README.md`
+
+Checks: `npm test -- ci-cd.test.ts`, `npm run build`, and a focused package
+command such as `npm run electron:pack:linux` when the local OS supports it.
+
+Update docs: README development commands, this route, and any release or
+verification notes affected by the packaging workflow.
+
 Common E2E commands:
 
 - Smoke: `npm run test:e2e:smoke`

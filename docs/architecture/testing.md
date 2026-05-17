@@ -98,6 +98,20 @@ Lower-level coverage:
 - Browser identity settings are covered through Workflow Settings and runner launch contracts, not in-run action nodes.
 - Additional wait condition variants and numeric validation edges remain covered in runner, graph compiler, and form validation suites unless a desktop regression exposes a user-facing gap.
 
+## Packaging And CI Tests
+
+- `ci-cd.test.ts` guards the GitHub Actions desktop packaging workflow and
+  electron-builder targets.
+- The workflow must run on pushes to `main`, keep a manual dispatch path,
+  execute quality gates before packaging, and upload macOS, Windows, and
+  Ubuntu/Linux artifacts.
+
+Focused commands:
+
+- `npm test -- ci-cd.test.ts`
+- `npm run build`
+- `npm run electron:pack:linux` on Linux packaging machines
+
 ## Policy
 
 - Use TDD for behavior changes.

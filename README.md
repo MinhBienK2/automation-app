@@ -24,10 +24,24 @@ Build the renderer and Electron main/preload:
 npm run build
 ```
 
-Package a Linux Electron directory build:
+Package Linux/Ubuntu Electron distributables:
 
 ```bash
 npm run electron:pack
+```
+
+Package a local Linux directory build for quick inspection:
+
+```bash
+npm run electron:pack:dir
+```
+
+Package platform-specific desktop builds:
+
+```bash
+npm run electron:pack:mac
+npm run electron:pack:win
+npm run electron:pack:linux
 ```
 
 Run frontend tests:
@@ -125,6 +139,17 @@ Build only the Electron main/preload code:
 ```bash
 npm run build:electron
 ```
+
+## Desktop CI/CD
+
+GitHub Actions workflow `.github/workflows/desktop-release.yml` runs on every
+push to `main` and on manual dispatch. It runs `npm ci`, `npx tsc --noEmit`,
+`npm test`, and `npm run build:electron` on Ubuntu before packaging.
+
+After quality gates pass, the workflow packages and uploads artifacts for
+macOS (`dmg`, `zip`), Windows (`nsis`, `zip`), and Ubuntu/Linux (`AppImage`,
+`deb`, `tar.gz`). Builds are unsigned by default; add platform signing secrets
+before distributing outside the controlled internal lab.
 
 ## MVP Smoke Checklist
 
