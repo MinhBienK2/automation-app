@@ -158,6 +158,35 @@ describe("desktop CI/CD", () => {
     expect(publishRuns.some((command) => typeof command === "string" && command.includes("gh release upload"))).toBe(true);
   });
 
+  test("uses OS-specific attestation subjects so missing platform files do not fail packaging", async () => {
+    const workflow = await readYamlFile(releaseWorkflowPath);
+    const jobs = getRecord(workflow.jobs);
+    const packageJob = getRecord(jobs.package);
+    const strategy = getRecord(packageJob.strategy);
+    const matrix = getRecord(strategy.matrix);
+    const include = getArray(matrix.include).map((entry) => getRecord(entry));
+    const mac = getRecord(include.find((entry) => entry.label === "macOS"));
+    const windows = getRecord(include.find((entry) => entry.label === "Windows"));
+    const linux = getRecord(include.find((entry) => entry.label === "Ubuntu Linux"));
+    const steps = getArray(packageJob.steps).map((step) => getRecord(step));
+    const provenanceStep = getRecord(
+      steps.find((step) => typeof step.uses === "string" && step.uses.includes("actions/attest-build-provenance@")),
+    );
+    const sbomStep = getRecord(steps.find((step) => typeof step.uses === "string" && step.uses.includes("actions/attest-sbom@")));
+
+    expect(mac.release_subject_paths).toContain("release/*.dmg");
+    expect(mac.release_subject_paths).not.toContain("release/*.deb");
+    expect(mac.release_subject_paths).not.toContain("release/*.exe");
+    expect(windows.release_subject_paths).toContain("release/*.exe");
+    expect(windows.release_subject_paths).not.toContain("release/*.dmg");
+    expect(windows.release_subject_paths).not.toContain("release/*.AppImage");
+    expect(linux.release_subject_paths).toContain("release/*.AppImage");
+    expect(linux.release_subject_paths).toContain("release/*.deb");
+    expect(linux.release_subject_paths).toContain("release/*.tar.gz");
+    expect(getRecord(provenanceStep.with)["subject-path"]).toBe("${{ matrix.release_subject_paths }}");
+    expect(getRecord(sbomStep.with)["subject-path"]).toBe("${{ matrix.artifact_subject_paths }}");
+  });
+
   test("does not block macOS or Windows packaging when signing secrets are absent", async () => {
     const workflow = await readYamlFile(releaseWorkflowPath);
     const jobs = getRecord(workflow.jobs);

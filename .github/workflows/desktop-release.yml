@@ -65,14 +65,44 @@ jobs:
             os: macos-latest
             package_script: electron:pack:mac
             artifact_name: automation-app-macos
+            artifact_subject_paths: |
+              release/*.dmg
+              release/*.zip
+            release_subject_paths: |
+              release/*.dmg
+              release/*.zip
+              release/SHA256SUMS
+              release/release-manifest.json
+              release/sbom.cyclonedx.json
           - label: Windows
             os: windows-latest
             package_script: electron:pack:win
             artifact_name: automation-app-windows
+            artifact_subject_paths: |
+              release/*.exe
+              release/*.zip
+            release_subject_paths: |
+              release/*.exe
+              release/*.zip
+              release/SHA256SUMS
+              release/release-manifest.json
+              release/sbom.cyclonedx.json
           - label: Ubuntu Linux
             os: ubuntu-latest
             package_script: electron:pack:linux
             artifact_name: automation-app-ubuntu-linux
+            artifact_subject_paths: |
+              release/*.AppImage
+              release/*.deb
+              release/*.tar.gz
+            release_subject_paths: |
+              release/*.AppImage
+              release/*.deb
+              release/*.tar.gz
+              release/latest*.yml
+              release/SHA256SUMS
+              release/release-manifest.json
+              release/sbom.cyclonedx.json
 
     steps:
       - name: Checkout
@@ -151,28 +181,12 @@ jobs:
       - name: Attest release artifact provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
         with:
-          subject-path: |
-            release/*.AppImage
-            release/*.deb
-            release/*.dmg
-            release/*.exe
-            release/*.tar.gz
-            release/*.zip
-            release/latest*.yml
-            release/SHA256SUMS
-            release/release-manifest.json
-            release/sbom.cyclonedx.json
+          subject-path: ${{ matrix.release_subject_paths }}
 
       - name: Attest release SBOM
         uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
         with:
-          subject-path: |
-            release/*.AppImage
-            release/*.deb
-            release/*.dmg
-            release/*.exe
-            release/*.tar.gz
-            release/*.zip
+          subject-path: ${{ matrix.artifact_subject_paths }}
           sbom-path: release/sbom.cyclonedx.json
 
       - name: Upload desktop artifacts
