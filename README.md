@@ -162,8 +162,9 @@ creates artifact attestations, uploads workflow artifacts, and publishes assets
 to the GitHub release.
 
 Repository owners must configure branch protection, required release reviewers,
-secret scanning, push protection, CodeQL, Dependabot alerts, and signing secrets
-as described in `docs/release-governance.md`.
+secret scanning, push protection, CodeQL, and Dependabot alerts as described in
+`docs/release-governance.md`. Signing secrets are optional for unsigned internal
+artifacts and required only when publishing signed/notarized builds.
 
 ## MVP Smoke Checklist
 

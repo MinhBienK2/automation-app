@@ -29,7 +29,11 @@ Enable repository security controls:
 - Enable Dependabot alerts.
 - Enable CodeQL code scanning.
 
-## Required Release Secrets
+## Optional Release Signing Secrets
+
+The release workflow can produce unsigned internal artifacts when signing
+secrets are not configured. Add the secrets below when the release should be
+signed and notarized for broader distribution.
 
 macOS signing and notarization:
 

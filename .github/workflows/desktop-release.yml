@@ -93,7 +93,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate signing secrets
+      - name: Configure optional signing environment
         shell: bash
         env:
           MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -104,24 +104,42 @@ jobs:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: |
+          write_env() {
+            local name="$1"
+            local value="$2"
+            local delimiter="__${name}_EOF__"
+            {
+              echo "${name}<<${delimiter}"
+              echo "${value}"
+              echo "${delimiter}"
+            } >> "$GITHUB_ENV"
+          }
+
           if [[ "${{ runner.os }}" == "macOS" ]]; then
-            test -n "$MAC_CSC_LINK"
-            test -n "$MAC_CSC_KEY_PASSWORD"
-            test -n "$APPLE_ID"
-            test -n "$APPLE_APP_SPECIFIC_PASSWORD"
-            test -n "$APPLE_TEAM_ID"
+            if [[ -n "$MAC_CSC_LINK" && -n "$MAC_CSC_KEY_PASSWORD" ]]; then
+              write_env "CSC_LINK" "$MAC_CSC_LINK"
+              write_env "CSC_KEY_PASSWORD" "$MAC_CSC_KEY_PASSWORD"
+            else
+              echo "macOS signing secrets are not configured; building an unsigned internal artifact."
+            fi
+
+            if [[ -n "$APPLE_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
+              write_env "APPLE_ID" "$APPLE_ID"
+              write_env "APPLE_APP_SPECIFIC_PASSWORD" "$APPLE_APP_SPECIFIC_PASSWORD"
+              write_env "APPLE_TEAM_ID" "$APPLE_TEAM_ID"
+            else
+              echo "Apple notarization secrets are not configured; skipping notarization."
+            fi
           elif [[ "${{ runner.os }}" == "Windows" ]]; then
-            test -n "$WIN_CSC_LINK"
-            test -n "$WIN_CSC_KEY_PASSWORD"
+            if [[ -n "$WIN_CSC_LINK" && -n "$WIN_CSC_KEY_PASSWORD" ]]; then
+              write_env "CSC_LINK" "$WIN_CSC_LINK"
+              write_env "CSC_KEY_PASSWORD" "$WIN_CSC_KEY_PASSWORD"
+            else
+              echo "Windows signing secrets are not configured; building an unsigned internal artifact."
+            fi
           fi
 
       - name: Package desktop app
-        env:
-          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || secrets.WIN_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run ${{ matrix.package_script }}
 
       - name: Generate release SBOM

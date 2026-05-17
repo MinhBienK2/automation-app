@@ -158,6 +158,22 @@ describe("desktop CI/CD", () => {
     expect(publishRuns.some((command) => typeof command === "string" && command.includes("gh release upload"))).toBe(true);
   });
 
+  test("does not block macOS or Windows packaging when signing secrets are absent", async () => {
+    const workflow = await readYamlFile(releaseWorkflowPath);
+    const jobs = getRecord(workflow.jobs);
+    const packageJob = getRecord(jobs.package);
+    const steps = getArray(packageJob.steps).map((step) => getRecord(step));
+    const stepNames = steps.map((step) => step.name);
+    const runCommands = steps.map((step) => step.run).filter(Boolean);
+    const packageStep = getRecord(steps.find((step) => step.name === "Package desktop app"));
+
+    expect(stepNames).not.toContain("Validate signing secrets");
+    expect(stepNames).toContain("Configure optional signing environment");
+    expect(runCommands.join("\n")).not.toContain("test -n \"$MAC_CSC_LINK\"");
+    expect(runCommands.join("\n")).not.toContain("test -n \"$WIN_CSC_LINK\"");
+    expect(packageStep).not.toHaveProperty("env");
+  });
+
   test("pins every GitHub Action to an immutable commit SHA", async () => {
     const workflows = [
       await readYamlFile(ciWorkflowPath),
