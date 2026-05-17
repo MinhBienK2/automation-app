@@ -61,7 +61,37 @@ function collectUses(value: unknown): string[] {
   return ownUses.concat(Object.values(record).flatMap((entry) => collectUses(entry)));
 }
 
+function collectSetupNodeVersions(value: unknown): unknown[] {
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectSetupNodeVersions(entry));
+  }
+
+  const record = value as Record<string, unknown>;
+  const ownVersion =
+    typeof record.uses === "string" && record.uses.startsWith("actions/setup-node@")
+      ? [getRecord(record.with)["node-version"]]
+      : [];
+
+  return ownVersion.concat(Object.values(record).flatMap((entry) => collectSetupNodeVersions(entry)));
+}
+
 describe("desktop CI/CD", () => {
+  test("runs GitHub Actions quality gates on Node.js 24", async () => {
+    const workflows = [
+      await readYamlFile(ciWorkflowPath),
+      await readYamlFile(releaseWorkflowPath),
+      await readYamlFile(codeqlWorkflowPath),
+    ];
+    const nodeVersions = workflows.flatMap((workflow) => collectSetupNodeVersions(workflow));
+
+    expect(nodeVersions).toHaveLength(4);
+    expect(nodeVersions).toEqual(nodeVersions.map(() => 24));
+  });
+
   test("checks main and pull requests without producing release artifacts", async () => {
     const workflow = await readYamlFile(ciWorkflowPath);
     const triggers = getWorkflowTriggers(workflow);

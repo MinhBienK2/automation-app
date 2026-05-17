@@ -102,6 +102,8 @@ Lower-level coverage:
 
 - `ci-cd.test.ts` guards the GitHub Actions desktop packaging workflow and
   electron-builder targets.
+- GitHub Actions quality gates run on Node.js 24 across Desktop CI, Desktop
+  Release, and CodeQL.
 - Desktop CI must run on pull requests and pushes to `main` without producing
   release artifacts.
 - Desktop Release must run on `v*` tags or manual dispatch, use the

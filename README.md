@@ -149,9 +149,10 @@ npm run build:electron
 
 ## Desktop CI/CD
 
-GitHub Actions workflow `.github/workflows/desktop-ci.yml` runs on pull requests
-and pushes to `main`. It runs `npm ci`, `npx tsc --noEmit`, `npm test`, and
-`npm run build` without producing release artifacts.
+GitHub Actions workflows use Node.js 24. Workflow
+`.github/workflows/desktop-ci.yml` runs on pull requests and pushes to `main`.
+It runs `npm ci`, `npx tsc --noEmit`, `npm test`, and `npm run build` without
+producing release artifacts.
 
 GitHub Actions workflow `.github/workflows/desktop-release.yml` runs on tags
 matching `v*` or manual dispatch. After quality gates pass, it waits on the

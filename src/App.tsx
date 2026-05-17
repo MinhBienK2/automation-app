@@ -265,6 +265,14 @@ function latestRunForWorkflow(
   );
 }
 
+function idleRunStateWithRetainedSession(state: RunState): RunState {
+  return { ...initialRunState, retained_session: state.retained_session };
+}
+
+function legacyRunId(workflowId: string | null) {
+  return `legacy-${workflowId ?? "run"}`;
+}
+
 function App() {
   const [screen, setScreen] = useState<AppScreen>("list");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -425,11 +433,49 @@ function App() {
       // Fall back to the legacy single-run state when older test bridges omit listRunStates.
     }
     const state = await getRunState();
-    setRunState(normalizeRunState(state));
+    const normalizedState = normalizeRunState(state);
+    setRunState(normalizedState);
+    if (selectedWorkflowId) {
+      setRunSnapshots((current) =>
+        current.map((snapshot) =>
+          snapshot.run_id === legacyRunId(selectedWorkflowId)
+            ? normalizeRunSnapshot({
+                ...snapshot,
+                state: normalizedState,
+              })
+            : snapshot,
+        ),
+      );
+    }
   }
 
-  function upsertRunSnapshot(snapshot: WorkflowRunSnapshot) {
-    const normalized = normalizeRunSnapshot(snapshot);
+  function upsertRunSnapshot(
+    snapshot: WorkflowRunSnapshot | RunState,
+    context?: { workflowId: string; workflowName: string },
+  ) {
+    const fallbackWorkflowId =
+      "workflow_id" in snapshot && snapshot.workflow_id
+        ? snapshot.workflow_id
+        : (context?.workflowId ?? selectedWorkflowId ?? detail?.workflow.id ?? null);
+    const fallbackWorkflowName =
+      "workflow_name" in snapshot && snapshot.workflow_name
+        ? snapshot.workflow_name
+        : (context?.workflowName ?? detail?.workflow.name ?? activeRunWorkflowName ?? "");
+    const normalized = normalizeRunSnapshot({
+      ...snapshot,
+      run_id:
+        "run_id" in snapshot && snapshot.run_id
+          ? snapshot.run_id
+          : legacyRunId(fallbackWorkflowId),
+      workflow_id: fallbackWorkflowId,
+      workflow_name: fallbackWorkflowName,
+      source: "source" in snapshot && snapshot.source ? snapshot.source : "manual",
+      started_at:
+        "started_at" in snapshot && snapshot.started_at
+          ? snapshot.started_at
+          : new Date().toISOString(),
+      state: "state" in snapshot && snapshot.state ? snapshot.state : snapshot,
+    } as WorkflowRunSnapshot);
     setRunSnapshots((current) => [
       ...current.filter((item) => item.run_id !== normalized.run_id),
       normalized,
@@ -496,7 +542,7 @@ function App() {
       setRunState((current) =>
         workflowRun
           ? workflowRun.state
-          : { ...initialRunState, retained_session: current.retained_session },
+          : idleRunStateWithRetainedSession(current),
       );
       setSelectedGraphNodeId(null);
       setScreen("detail");
@@ -780,7 +826,10 @@ function App() {
       const snapshot = await runWorkflowCommand(detail.workflow.id);
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
-      upsertRunSnapshot(snapshot);
+      upsertRunSnapshot(snapshot, {
+        workflowId: detail.workflow.id,
+        workflowName: detail.workflow.name,
+      });
     } catch (error) {
       setAppError(commandMessage(error));
       if (workflowGraph) {
@@ -800,7 +849,10 @@ function App() {
 
     try {
       const state = await runWorkflowCommand(workflow.id);
-      upsertRunSnapshot(state);
+      upsertRunSnapshot(state, {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+      });
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -822,7 +874,10 @@ function App() {
       );
       setGraphIssues([]);
       setGraphIssuesNeedRecheck(false);
-      upsertRunSnapshot(state);
+      upsertRunSnapshot(state, {
+        workflowId: detail.workflow.id,
+        workflowName: detail.workflow.name,
+      });
     } catch (error) {
       setAppError(commandMessage(error));
       if (workflowGraph) {
@@ -1052,7 +1107,9 @@ function App() {
   const detailRunSnapshot = detail
     ? latestRunForWorkflow(runSnapshots, detail.workflow.id)
     : null;
-  const detailRunState = detailRunSnapshot?.state ?? runState;
+  const detailRunState = detail
+    ? (detailRunSnapshot?.state ?? idleRunStateWithRetainedSession(runState))
+    : runState;
   const isRunning = detailRunState.status === "running";
   const runFromSelectedAvailability = workflowGraph
     ? runFromSelectedState({
