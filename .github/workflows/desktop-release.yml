@@ -1,22 +1,30 @@
-name: Desktop CI/CD
+name: Desktop Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - v*
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag to publish when running this workflow manually, for example v0.1.0-internal.1
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
+  attestations: write
 
 concurrency:
-  group: desktop-release-${{ github.ref }}
+  group: desktop-release-${{ github.ref_name || inputs.release_tag }}
   cancel-in-progress: true
 
 env:
   CSC_IDENTITY_AUTO_DISCOVERY: "false"
   ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
   ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
 jobs:
   quality:
@@ -24,10 +32,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: npm
@@ -48,6 +56,7 @@ jobs:
     name: Package ${{ matrix.label }}
     needs: quality
     runs-on: ${{ matrix.os }}
+    environment: internal-release
     strategy:
       fail-fast: false
       matrix:
@@ -67,10 +76,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: npm
@@ -84,17 +93,111 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate signing secrets
+        shell: bash
+        env:
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            test -n "$MAC_CSC_LINK"
+            test -n "$MAC_CSC_KEY_PASSWORD"
+            test -n "$APPLE_ID"
+            test -n "$APPLE_APP_SPECIFIC_PASSWORD"
+            test -n "$APPLE_TEAM_ID"
+          elif [[ "${{ runner.os }}" == "Windows" ]]; then
+            test -n "$WIN_CSC_LINK"
+            test -n "$WIN_CSC_KEY_PASSWORD"
+          fi
+
       - name: Package desktop app
+        env:
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || secrets.WIN_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run ${{ matrix.package_script }}
 
+      - name: Generate release SBOM
+        run: npm run release:sbom
+
+      - name: Generate checksum manifest
+        run: npm run release:manifest
+
+      - name: Attest release artifact provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        with:
+          subject-path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+            release/*.tar.gz
+            release/*.zip
+            release/latest*.yml
+            release/SHA256SUMS
+            release/release-manifest.json
+            release/sbom.cyclonedx.json
+
+      - name: Attest release SBOM
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        with:
+          subject-path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+            release/*.tar.gz
+            release/*.zip
+          sbom-path: release/sbom.cyclonedx.json
+
       - name: Upload desktop artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ matrix.artifact_name }}
           path: |
             release/**/*
             !release/**/*.blockmap
+            !release/*-unpacked/**
             !release/builder-debug.yml
             !release/builder-effective-config.yaml
           if-no-files-found: error
           retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    needs: package
+    runs-on: ubuntu-latest
+    environment: internal-release
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: artifacts
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          cat > release-notes.md <<EOF
+          Internal desktop release ${RELEASE_TAG}
+
+          This release was built by GitHub Actions from ${GITHUB_SHA}.
+          Verify the attached SHA256SUMS files and release-manifest.json files before installation.
+          EOF
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --notes-file release-notes.md
+          else
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
+          fi
+
+          mapfile -d '' files < <(find artifacts -type f -print0)
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber

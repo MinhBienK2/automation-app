@@ -102,14 +102,22 @@ Lower-level coverage:
 
 - `ci-cd.test.ts` guards the GitHub Actions desktop packaging workflow and
   electron-builder targets.
-- The workflow must run on pushes to `main`, keep a manual dispatch path,
-  execute quality gates before packaging, and upload macOS, Windows, and
-  Ubuntu/Linux artifacts.
+- Desktop CI must run on pull requests and pushes to `main` without producing
+  release artifacts.
+- Desktop Release must run on `v*` tags or manual dispatch, use the
+  `internal-release` environment, execute quality gates before packaging, and
+  upload macOS, Windows, and Ubuntu/Linux artifacts.
+- Release artifacts must include a CycloneDX SBOM, SHA-256 checksum manifest,
+  JSON release manifest, and GitHub artifact attestation.
+- CodeQL, Dependabot, immutable action pinning, and repository-governance docs
+  are part of release verification.
 
 Focused commands:
 
 - `npm test -- ci-cd.test.ts`
 - `npm run build`
+- `npm run release:sbom`
+- `npm run release:manifest`
 - `npm run electron:pack:linux` on Linux packaging machines
 
 ## Policy

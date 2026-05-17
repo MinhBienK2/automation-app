@@ -44,6 +44,13 @@ npm run electron:pack:win
 npm run electron:pack:linux
 ```
 
+Generate release SBOM and checksums for existing files in `release/`:
+
+```bash
+npm run release:sbom
+npm run release:manifest
+```
+
 Run frontend tests:
 
 ```bash
@@ -142,14 +149,21 @@ npm run build:electron
 
 ## Desktop CI/CD
 
-GitHub Actions workflow `.github/workflows/desktop-release.yml` runs on every
-push to `main` and on manual dispatch. It runs `npm ci`, `npx tsc --noEmit`,
-`npm test`, and `npm run build:electron` on Ubuntu before packaging.
+GitHub Actions workflow `.github/workflows/desktop-ci.yml` runs on pull requests
+and pushes to `main`. It runs `npm ci`, `npx tsc --noEmit`, `npm test`, and
+`npm run build` without producing release artifacts.
 
-After quality gates pass, the workflow packages and uploads artifacts for
-macOS (`dmg`, `zip`), Windows (`nsis`, `zip`), and Ubuntu/Linux (`AppImage`,
-`deb`, `tar.gz`). Builds are unsigned by default; add platform signing secrets
-before distributing outside the controlled internal lab.
+GitHub Actions workflow `.github/workflows/desktop-release.yml` runs on tags
+matching `v*` or manual dispatch. After quality gates pass, it waits on the
+`internal-release` environment, packages artifacts for macOS (`dmg`, `zip`),
+Windows (`nsis`, `zip`), and Ubuntu/Linux (`AppImage`, `deb`, `tar.gz`),
+generates `sbom.cyclonedx.json`, `SHA256SUMS`, and `release-manifest.json`,
+creates artifact attestations, uploads workflow artifacts, and publishes assets
+to the GitHub release.
+
+Repository owners must configure branch protection, required release reviewers,
+secret scanning, push protection, CodeQL, Dependabot alerts, and signing secrets
+as described in `docs/release-governance.md`.
 
 ## MVP Smoke Checklist
 

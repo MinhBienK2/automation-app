@@ -148,10 +148,12 @@ or release verification.
 
 Read: `architecture/overview.md`, `architecture/testing.md`
 
-Verify: `package.json`, `package-lock.json`, `.github/workflows/`, `README.md`
+Verify: `package.json`, `package-lock.json`, `.github/`, `README.md`,
+`docs/release-governance.md`
 
-Checks: `npm test -- ci-cd.test.ts`, `npm run build`, and a focused package
-command such as `npm run electron:pack:linux` when the local OS supports it.
+Checks: `npm test -- ci-cd.test.ts`, `npm run build`, `npm run release:sbom`,
+`npm run release:manifest`, and a focused package command such as
+`npm run electron:pack:linux` when the local OS supports it.
 
 Update docs: README development commands, this route, and any release or
 verification notes affected by the packaging workflow.

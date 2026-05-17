@@ -17,6 +17,8 @@
     "electron:pack:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
     "electron:pack:win": "npm run build && electron-builder --win nsis zip --publish never",
     "electron:pack:mac": "npm run build && electron-builder --mac dmg zip --publish never",
+    "release:sbom": "node scripts/generate-release-sbom.mjs release/sbom.cyclonedx.json",
+    "release:manifest": "node scripts/generate-release-manifest.mjs release",
     "test": "vitest run",
     "test:e2e": "npm run test:e2e:full",
     "test:e2e:smoke": "npm run build:electron && playwright test tests/e2e/electron-isolation.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/workflow-user-journeys.e2e.ts tests/e2e/coverage-matrix.e2e.ts",
@@ -44,6 +46,10 @@
         "dmg",
         "zip"
       ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "category": "public.app-category.developer-tools"
     },
     "win": {
