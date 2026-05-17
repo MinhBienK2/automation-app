@@ -34,8 +34,8 @@ Node/Electron backend.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
 - Nested subworkflow nodes are not part of the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the saved workflow graph with saved Workflow Settings as the run baseline. The UI saves the current graph and dirty settings sections before invoking it.
-- Product-facing batch execution shares the same active-run lifecycle lock, stop handling, and persisted run records as normal workflow execution.
-- Product-facing scheduled execution uses the same saved-workflow run path as manual `runWorkflow`, shares the active-run lifecycle lock, and records skipped/missed/failed scheduler decisions in schedule events.
+- Product-facing batch execution remains globally exclusive with normal workflow execution, shares stop handling and persisted run records, and rejects starts while any normal run is active.
+- Product-facing scheduled execution uses the same saved-workflow run path as manual `runWorkflow`, uses workflow/profile/batch conflict checks instead of a global normal-run lock, and records skipped/missed/failed scheduler decisions in schedule events.
 - Workflow package import validates selected sections before creation and wraps workflow, graph, and settings writes in a SQLite transaction.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.

@@ -24,6 +24,7 @@ import type {
   WorkflowPackageExportOptions,
   WorkflowPackageImportOptions,
   WorkflowPackagePreview,
+  WorkflowRunSnapshot,
   WorkflowSchedule,
   WorkflowScheduleEvent,
   WorkflowScheduleEventFilter,
@@ -67,10 +68,11 @@ export type WorkflowElectronBridge = {
   saveWorkflowGraph(workflowId: string, graph: WorkflowGraph): Promise<void>;
   validateWorkflowGraph(graph: WorkflowGraph): Promise<GraphValidationIssue[]>;
   compileWorkflowGraph(graph: WorkflowGraph): Promise<CompiledWorkflowGraph>;
-  runWorkflow(workflowId: string): Promise<RunState>;
-  runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState>;
-  stopRun(): Promise<RunState>;
+  runWorkflow(workflowId: string): Promise<WorkflowRunSnapshot>;
+  runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<WorkflowRunSnapshot>;
+  stopRun(runId?: string | null): Promise<WorkflowRunSnapshot>;
   getRunState(): Promise<RunState>;
+  listRunStates(): Promise<WorkflowRunSnapshot[]>;
   listSchedules(): Promise<WorkflowSchedule[]>;
   getSchedule(scheduleId: string): Promise<WorkflowSchedule>;
   createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule>;

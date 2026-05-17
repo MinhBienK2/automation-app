@@ -168,23 +168,38 @@ describe("App settings and graph autosave", () => {
 
   test("polls run state for a workflow started from the list", async () => {
     let runStateCalls = 0;
+    let runSnapshotCalls = 0;
+    const runningSnapshot = {
+      run_id: "run-1",
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+      source: "manual" as const,
+      started_at: "2026-05-17T06:00:00.000Z",
+      state: {
+        ...idleRunState,
+        status: "running" as const,
+        mode: "run_workflow" as const,
+      },
+    };
+    const successSnapshot = {
+      ...runningSnapshot,
+      state: {
+        ...runningSnapshot.state,
+        status: "success" as const,
+      },
+    };
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
+      list_run_states: () => {
+        runSnapshotCalls += 1;
+        if (runSnapshotCalls === 1) return [];
+        return runSnapshotCalls === 2 ? [runningSnapshot] : [successSnapshot];
+      },
       get_run_state: () => {
         runStateCalls += 1;
-        return runStateCalls === 1
-          ? idleRunState
-          : {
-              ...idleRunState,
-              status: "success",
-              mode: "run_workflow",
-            };
+        return idleRunState;
       },
-      run_workflow: {
-        ...idleRunState,
-        status: "running",
-        mode: "run_workflow",
-      },
+      run_workflow: runningSnapshot,
     });
 
     renderApp();
@@ -194,9 +209,10 @@ describe("App settings and graph autosave", () => {
     await waitFor(() => {
       expect(workflowBridgeMock.runWorkflow).toHaveBeenCalledWith("workflow-1");
     });
-    expect(await screen.findByText("Running: Login flow")).toBeInTheDocument();
+    expect(await screen.findByText("Running")).toBeInTheDocument();
 
     expect(await screen.findByText("Run succeeded: Login flow")).toBeInTheDocument();
-    expect(runStateCalls).toBeGreaterThan(1);
+    expect(runSnapshotCalls).toBeGreaterThan(1);
+    expect(runStateCalls).toBeGreaterThanOrEqual(1);
   });
 });

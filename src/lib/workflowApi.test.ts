@@ -26,12 +26,14 @@ import {
   normalizeRecordedEvents,
   runWorkflow,
   runWorkflowFromNode,
+  listRunStates,
   saveWorkflowSettings,
   installCloakBrowserBinary,
   saveWorkflowSettingsSection,
   saveWorkflowBrowserConfig,
   saveWorkflowGraph,
   runBatchWorkflow,
+  stopRun,
   suggestSelectors,
   validateWorkflowSettings,
   validateWorkflowGraph,
@@ -251,6 +253,8 @@ describe("workflow API graph commands", () => {
     workflowBridgeMock.compileWorkflowGraph.mockResolvedValue(undefined);
     workflowBridgeMock.runWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.runWorkflowFromNode.mockResolvedValue(undefined);
+    workflowBridgeMock.listRunStates.mockResolvedValue(undefined);
+    workflowBridgeMock.stopRun.mockResolvedValue(undefined);
 
     await getWorkflowGraph("workflow-1");
     await saveWorkflowGraph("workflow-1", graph);
@@ -258,6 +262,8 @@ describe("workflow API graph commands", () => {
     await compileWorkflowGraph(graph);
     await runWorkflow("workflow-1");
     await runWorkflowFromNode("workflow-1", "step-1");
+    await listRunStates();
+    await stopRun("run-1");
 
     expect(workflowBridgeMock.getWorkflowGraph).toHaveBeenCalledWith("workflow-1");
     expect(workflowBridgeMock.saveWorkflowGraph).toHaveBeenCalledWith(
@@ -271,6 +277,8 @@ describe("workflow API graph commands", () => {
       "workflow-1",
       "step-1",
     );
+    expect(workflowBridgeMock.listRunStates).toHaveBeenCalled();
+    expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
   });
 });
 

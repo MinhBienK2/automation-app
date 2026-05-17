@@ -126,12 +126,16 @@ export function runWorkflowFromNode(workflowId: string, startNodeId: string) {
   return bridge().runWorkflowFromNode(workflowId, startNodeId);
 }
 
-export function stopRun() {
-  return bridge().stopRun();
+export function stopRun(runId?: string | null) {
+  return bridge().stopRun(runId);
 }
 
 export function getRunState() {
   return bridge().getRunState();
+}
+
+export function listRunStates() {
+  return bridge().listRunStates();
 }
 
 export function listSchedules() {

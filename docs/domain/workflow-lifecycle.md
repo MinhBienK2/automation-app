@@ -43,7 +43,7 @@
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
 - Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
-- `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects a second active run, creates a SQLite run record, and starts the Electron CloakBrowser runner.
+- `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects same-workflow/profile/batch conflicts, creates a run-id scoped SQLite run record, and starts the Electron CloakBrowser runner.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 
 ## Schedule Workflow
@@ -54,7 +54,7 @@
 - Enabling a schedule validates the schedule config and the current saved workflow run readiness. Invalid saved graph/settings block enablement with a command-facing error.
 - The Electron backend scheduler runs while the app process is open. It scans enabled schedules for `next_run_at <= now`, processes due schedules in chronological order, and writes audit events for starts, skips, missed windows, failed validation/start, and automatic one-time disablement.
 - Scheduled runs call the same saved-workflow backend path as `run_workflow`; they do not save or run unsaved detail-page drafts.
-- If the active-run lock is owned by a normal run or batch run at the scheduled time, the occurrence is skipped and not queued.
+- If the scheduled workflow conflicts with an active run for the same workflow, an active run using the same persistent browser profile, or an active batch at the scheduled time, the occurrence is skipped and not queued. Due schedules for isolated workflows can start concurrently in the same tick.
 
 ## Run Full Workflow
 
@@ -64,14 +64,14 @@
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
-- UI polls `get_run_state` while status is `running`, regardless of whether the run was started from the workflow detail workspace or directly from the workflow list.
-- Graph runs share the same run-state lifecycle as full workflow runs.
+- UI polls `list_run_states` while any run snapshot is `running`, regardless of whether the run was started from the workflow detail workspace, directly from the workflow list, or by the scheduler. `get_run_state` remains a compatibility/latest-state view.
+- Graph runs share the same run-state lifecycle as full workflow runs, with each active workflow run tracked by its run id.
 - Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`.
 - End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Run Policy browser retention decides whether terminal runs retain or close the browser session.
 
 ## Batch Workflow
 
-- `run_batch_workflow` uses the same active-run lifecycle lock as normal runs, compiles the saved graph, prepends each row's values as runtime variables after settings setup actions, applies Browser Launch settings and Run Policy batch headless defaults, runs rows sequentially, persists each executed row as a run with step evidence, closes each row browser session, and returns per-row status.
+- `run_batch_workflow` remains globally exclusive with normal runs, compiles the saved graph, prepends each row's values as runtime variables after settings setup actions, applies Browser Launch settings and Run Policy batch headless defaults, runs rows sequentially, persists each executed row as a run with step evidence, closes each row browser session, and returns per-row status.
 - `batch_concurrency_limit` values above 1 are rejected until isolated browser sessions support safe parallel rows.
 - `batch_stop_on_first_failed_row` stops scheduling additional rows after the first failed row.
 - Backend batch defaults remain active even though the Workflow Settings UI currently shows the batch defaults as paused, read-only controls.
@@ -79,7 +79,7 @@
 
 ## Stop
 
-- `stop_run` cancels the active run and immediately returns a stopped state.
+- `stop_run(runId)` cancels the targeted workflow run and immediately returns that stopped snapshot. Omitting `runId` is accepted only when one active run exists. Batch stop remains available through `stop_run`.
 - Runner cancellation must remain responsive.
 
 ## Delete Workflow

@@ -32,6 +32,8 @@ import type {
   WorkflowPackageImportOptions,
   WorkflowPackagePreview,
   WorkflowPackageSettings,
+  WorkflowRunSnapshot,
+  WorkflowRunSource,
   WorkflowSchedule,
   WorkflowScheduleEvent,
   WorkflowScheduleEventFilter,
@@ -85,8 +87,10 @@ export type WorkflowCommandHandlers = ReturnType<typeof createWorkflowCommandHan
 type RunnerCommandPort = {
   run: BrowserWorkflowRunner["run"];
   closeRetainedContext?: BrowserWorkflowRunner["closeRetainedContext"];
+  createIsolatedRunRunner?: () => RunnerCommandPort;
   hasReusableRetainedSession?: BrowserWorkflowRunner["hasReusableRetainedSession"];
   getRetainedSessionState?: BrowserWorkflowRunner["getRetainedSessionState"];
+  getRetainedSessionStates?: BrowserWorkflowRunner["getRetainedSessionStates"];
 };
 
 type CommandContext = {
@@ -125,9 +129,21 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
   const scheduleRepository = new WorkflowScheduleRepository(context.database);
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
-  let currentRunState = idleRunState;
-  let currentRunAbortController: AbortController | null = null;
-  let currentRunId: string | null = null;
+  const runEntries = new Map<string, {
+    snapshot: WorkflowRunSnapshot;
+    abortController: AbortController;
+    timeoutHandle: ReturnType<typeof setTimeout> | null;
+    compiledGraph: CompiledWorkflowGraph;
+    timedOut: boolean;
+    profileName: string | null;
+  }>();
+  const sessionRunSnapshots = new Map<string, WorkflowRunSnapshot>();
+  const activeWorkflowRuns = new Map<string, string>();
+  const activeProfileRuns = new Map<string, string>();
+  let latestRunSnapshot: WorkflowRunSnapshot | null = null;
+  let currentBatchRunState: RunState | null = null;
+  let currentBatchAbortController: AbortController | null = null;
+  let currentBatchRunId: string | null = null;
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
@@ -157,19 +173,132 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return row?.last_run_at ?? null;
   }
 
-  function retainedProfileName() {
-    return runner.getRetainedSessionState?.()?.profile_name ?? null;
+  function retainedProfileNames() {
+    const names = new Set<string>();
+    for (const state of runner.getRetainedSessionStates?.() ?? []) {
+      if (state.available && state.profile_name) names.add(state.profile_name);
+    }
+    const singleton = runner.getRetainedSessionState?.();
+    if (singleton?.available && singleton.profile_name) names.add(singleton.profile_name);
+    return names;
+  }
+
+  function retainedSessionActiveFor(workflowId: string, profileName: string) {
+    if (runner.hasReusableRetainedSession) {
+      return runner.hasReusableRetainedSession(workflowId, profileName);
+    }
+    const states = runner.getRetainedSessionStates?.() ?? [runner.getRetainedSessionState?.()];
+    return states.some(
+      (state) =>
+        state?.available &&
+        state.workflow_id === workflowId &&
+        state.profile_name === profileName,
+    );
+  }
+
+  function createRunRunner(): RunnerCommandPort {
+    return runner.createIsolatedRunRunner?.() ?? runner;
+  }
+
+  function withRunState(snapshot: WorkflowRunSnapshot, state: RunState): WorkflowRunSnapshot {
+    return {
+      ...state,
+      run_id: snapshot.run_id,
+      workflow_id: snapshot.workflow_id,
+      workflow_name: snapshot.workflow_name,
+      source: snapshot.source,
+      started_at: snapshot.started_at,
+      state,
+    };
+  }
+
+  function createRunSnapshot(args: {
+    runId: string;
+    workflow: WorkflowSummary;
+    source: WorkflowRunSource;
+    startedAt?: string;
+    state: RunState;
+  }): WorkflowRunSnapshot {
+    return withRunState({
+      ...args.state,
+      run_id: args.runId,
+      workflow_id: args.workflow.id,
+      workflow_name: args.workflow.name,
+      source: args.source,
+      started_at: args.startedAt ?? new Date().toISOString(),
+      state: args.state,
+    }, args.state);
+  }
+
+  function rememberSnapshot(snapshot: WorkflowRunSnapshot) {
+    sessionRunSnapshots.set(snapshot.run_id, snapshot);
+    latestRunSnapshot = snapshot;
+  }
+
+  function updateSnapshot(runId: string, state: RunState) {
+    const entry = runEntries.get(runId);
+    const current = entry?.snapshot ?? sessionRunSnapshots.get(runId);
+    if (!current) return null;
+    const snapshot = withRunState(current, state);
+    if (entry) entry.snapshot = snapshot;
+    rememberSnapshot(snapshot);
+    return sessionRunSnapshots.get(runId) ?? snapshot;
+  }
+
+  function listRunSnapshots() {
+    return [...sessionRunSnapshots.values()].sort((left, right) =>
+      left.started_at.localeCompare(right.started_at),
+    );
+  }
+
+  function activeRunConflict(workflowId: string, settings: WorkflowSettings) {
+    if (currentBatchAbortController) {
+      return {
+        reason: "active_batch",
+        message: "A batch run is already active",
+        field: "run",
+      };
+    }
+    if (activeWorkflowRuns.has(workflowId)) {
+      return {
+        reason: "active_workflow",
+        message: "This workflow is already running",
+        field: "workflowId",
+      };
+    }
+    const profileName = browserProfileKey(settings);
+    if (profileName && activeProfileRuns.has(profileName)) {
+      return {
+        reason: "active_profile",
+        message: "Browser profile is already in use by another active run",
+        field: "browser_launch.profile_name",
+      };
+    }
+    return null;
+  }
+
+  function schedulerConflictReason(workflowId: string) {
+    const settings = getSettings(workflowId);
+    return activeRunConflict(workflowId, settings)?.reason ?? null;
+  }
+
+  function releaseRunLocks(workflowId: string, profileName: string | null, runId: string) {
+    if (activeWorkflowRuns.get(workflowId) === runId) {
+      activeWorkflowRuns.delete(workflowId);
+    }
+    if (profileName && activeProfileRuns.get(profileName) === runId) {
+      activeProfileRuns.delete(profileName);
+    }
   }
 
   function assertCanChangeBrowserIdentityProfile(
     workflowId: string,
     nextSettings: WorkflowSettings,
   ) {
-    const activeProfileName = retainedProfileName();
-    if (!activeProfileName) return;
     const currentSettings = getSettings(workflowId);
     const currentProfileKey = browserProfileKey(currentSettings);
-    if (currentProfileKey !== activeProfileName) return;
+    if (!currentProfileKey) return;
+    if (!retainedSessionActiveFor(workflowId, currentProfileKey)) return;
     const nextProfileKey = browserProfileKey(nextSettings);
     const changingIdentityProfile =
       nextProfileKey !== currentProfileKey ||
@@ -183,10 +312,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   function assertProfileNotActiveForWorkflow(workflowId: string) {
-    const activeProfileName = retainedProfileName();
-    if (!activeProfileName) return;
     const currentProfileKey = browserProfileKey(getSettings(workflowId));
-    if (currentProfileKey !== activeProfileName) return;
+    if (!currentProfileKey) return;
+    if (!retainedSessionActiveFor(workflowId, currentProfileKey)) return;
     throw commandError(
       "Close the retained browser session before changing or deleting its identity profile",
       "browser_launch.profile_dir",
@@ -299,13 +427,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ];
   }
 
-  async function startWorkflowRun(workflowId: string): Promise<{
-    state: RunState;
-    runId: string;
-  }> {
-    requireWorkflow(workflowId);
-    if (currentRunAbortController) {
-      throw commandError("A workflow run is already active", "run");
+  async function startWorkflowRun(
+    workflowId: string,
+    source: WorkflowRunSource = "manual",
+  ): Promise<WorkflowRunSnapshot> {
+    const workflow = requireWorkflow(workflowId);
+    const settings = getSettings(workflowId);
+    const conflict = activeRunConflict(workflowId, settings);
+    if (conflict) {
+      throw commandError(conflict.message, conflict.field);
     }
     const graph = getWorkflowGraph(workflowId);
     const runIssues = validateWorkflowRun(workflowId);
@@ -317,28 +447,45 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       throw commandError("Workflow graph has no executable steps", "graph");
     }
 
-    const settings = getSettings(workflowId);
     const compiledGraph = compileWorkflowRunPlan(graph, settings);
     const abortController = new AbortController();
     const runId = beginRun(context.database, workflowId, settings, graph);
-    currentRunAbortController = abortController;
-    currentRunId = runId;
-    currentRunState = {
+    const profileName = browserProfileKey(settings);
+    const runningState: RunState = {
       ...idleRunState,
       status: "running",
       mode: "run_workflow",
+      retained_session: runner.getRetainedSessionState?.(workflowId, profileName) ?? idleRunState.retained_session,
     };
-    let timedOut = false;
+    const snapshot = createRunSnapshot({
+      runId,
+      workflow,
+      source,
+      state: runningState,
+    });
+    const entry = {
+      snapshot,
+      abortController,
+      timeoutHandle: null as ReturnType<typeof setTimeout> | null,
+      compiledGraph,
+      timedOut: false,
+      profileName,
+    };
+    runEntries.set(runId, entry);
+    activeWorkflowRuns.set(workflowId, runId);
+    if (profileName) activeProfileRuns.set(profileName, runId);
+    rememberSnapshot(snapshot);
+    const runRunner = createRunRunner();
     const timeoutMs = settings.run_policy.max_workflow_duration_ms;
-    const timeoutHandle = timeoutMs
+    entry.timeoutHandle = timeoutMs
       ? setTimeout(() => {
-          timedOut = true;
+          entry.timedOut = true;
           abortController.abort();
         }, timeoutMs)
       : null;
     void (async () => {
       try {
-        let terminalState = await runner.run({
+        let terminalState = await runRunner.run({
           runId,
           graph: compiledGraph,
           settings,
@@ -346,18 +493,21 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           retainedSessionWorkflowId: workflowId,
           signal: abortController.signal,
           onProgress(progress) {
-            if (abortController.signal.aborted && currentRunState.status === "stopped") {
+            const activeEntry = runEntries.get(runId);
+            if (!activeEntry) return;
+            if (abortController.signal.aborted && activeEntry.snapshot.state.status === "stopped") {
               return;
             }
-            currentRunState = {
-              ...currentRunState,
+            updateSnapshot(runId, {
+              ...activeEntry.snapshot.state,
               ...progress,
               status: "running",
               mode: "run_workflow",
-            };
+            });
           },
         });
-        if (timedOut && terminalState.status === "stopped") {
+        const activeEntry = runEntries.get(runId);
+        if (activeEntry?.timedOut && terminalState.status === "stopped") {
           terminalState = {
             ...terminalState,
             status: "failed",
@@ -371,7 +521,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           };
         } else if (
           abortController.signal.aborted &&
-          currentRunState.status === "stopped"
+          activeEntry?.snapshot.state.status === "stopped"
         ) {
           terminalState = {
             ...terminalState,
@@ -379,33 +529,32 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             error: null,
           };
         }
-        currentRunState = terminalState;
-        finishRun(context.database, runId, compiledGraph, currentRunState);
+        updateSnapshot(runId, terminalState);
+        finishRun(context.database, runId, compiledGraph, terminalState);
       } catch (error) {
-        currentRunState = {
+        const currentState = runEntries.get(runId)?.snapshot.state ?? runningState;
+        const failedState: RunState = {
           ...idleRunState,
           status: "failed",
           mode: "run_workflow",
           error: {
-            step_id: currentRunState.current_step_id,
-            step_number: currentRunState.current_step_number ?? 0,
+            step_id: currentState.current_step_id,
+            step_number: currentState.current_step_number ?? 0,
             step_name: null,
             action_type: "workflow",
             reason: error instanceof Error ? error.message : String(error),
           },
         };
-        finishRun(context.database, runId, compiledGraph, currentRunState);
+        updateSnapshot(runId, failedState);
+        finishRun(context.database, runId, compiledGraph, failedState);
       } finally {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        if (currentRunAbortController === abortController) {
-          currentRunAbortController = null;
-        }
-        if (currentRunId === runId) {
-          currentRunId = null;
-        }
+        const activeEntry = runEntries.get(runId);
+        if (activeEntry?.timeoutHandle) clearTimeout(activeEntry.timeoutHandle);
+        releaseRunLocks(workflowId, profileName, runId);
+        runEntries.delete(runId);
       }
     })();
-    return { state: currentRunState, runId };
+    return sessionRunSnapshots.get(runId) ?? snapshot;
   }
 
   function scheduleInputWithNextRun(input: WorkflowScheduleInput): WorkflowScheduleInput & {
@@ -494,7 +643,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
-        retainedProfileName: retainedProfileName(),
+        retainedProfileNames: retainedProfileNames(),
       });
     },
 
@@ -507,7 +656,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
-        retainedProfileName: retainedProfileName(),
+        retainedProfileNames: retainedProfileNames(),
       });
     },
 
@@ -518,7 +667,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
-        retainedProfileName: retainedProfileName(),
+        retainedProfileNames: retainedProfileNames(),
       });
       const result: BrowserProfileCleanupResult = {
         deleted_profiles: [],
@@ -601,16 +750,17 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return compileGraph(migrateWorkflowGraph(graph));
     },
 
-    async runWorkflow(workflowId: string): Promise<RunState> {
-      return (await startWorkflowRun(workflowId)).state;
+    async runWorkflow(workflowId: string): Promise<WorkflowRunSnapshot> {
+      return startWorkflowRun(workflowId, "manual");
     },
 
-    async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<RunState> {
-      requireWorkflow(workflowId);
-      if (currentRunAbortController) {
-        throw commandError("A workflow run is already active", "run");
-      }
+    async runWorkflowFromNode(workflowId: string, startNodeId: string): Promise<WorkflowRunSnapshot> {
+      const workflow = requireWorkflow(workflowId);
       const settings = getSettings(workflowId);
+      const conflict = activeRunConflict(workflowId, settings);
+      if (conflict) {
+        throw commandError(conflict.message, conflict.field);
+      }
       const profileKey = browserProfileKey(settings);
       if (settings.browser_launch.session_mode !== "persistent_profile" || !profileKey) {
         throw commandError(
@@ -631,15 +781,18 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         );
       }
       if (!runner.hasReusableRetainedSession?.(workflowId, profileKey)) {
-        currentRunState = {
-          ...currentRunState,
-          retained_session: runner.getRetainedSessionState?.() ?? {
+        const retained_session = runner.getRetainedSessionState?.(workflowId, profileKey) ?? {
             available: false,
             workflow_id: null,
             profile_name: null,
             reason: "No retained browser session",
-          },
-        };
+          };
+        if (latestRunSnapshot) {
+          updateSnapshot(latestRunSnapshot.run_id, {
+            ...latestRunSnapshot.state,
+            retained_session,
+          });
+        }
         throw commandError(
           "No reusable browser session is available. Run the workflow again to create one.",
           "run",
@@ -654,26 +807,42 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
       const abortController = new AbortController();
       const runId = beginRun(context.database, workflowId, settings, graph);
-      currentRunAbortController = abortController;
-      currentRunId = runId;
-      currentRunState = {
+      const runningState: RunState = {
         ...idleRunState,
         status: "running",
         mode: "run_workflow",
         target_step_id: startNodeId,
-        retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
+        retained_session: runner.getRetainedSessionState?.(workflowId, profileKey) ?? idleRunState.retained_session,
       };
-      let timedOut = false;
+      const snapshot = createRunSnapshot({
+        runId,
+        workflow,
+        source: "manual",
+        state: runningState,
+      });
+      const entry = {
+        snapshot,
+        abortController,
+        timeoutHandle: null as ReturnType<typeof setTimeout> | null,
+        compiledGraph,
+        timedOut: false,
+        profileName: profileKey,
+      };
+      runEntries.set(runId, entry);
+      activeWorkflowRuns.set(workflowId, runId);
+      activeProfileRuns.set(profileKey, runId);
+      rememberSnapshot(snapshot);
+      const runRunner = createRunRunner();
       const timeoutMs = settings.run_policy.max_workflow_duration_ms;
-      const timeoutHandle = timeoutMs
+      entry.timeoutHandle = timeoutMs
         ? setTimeout(() => {
-            timedOut = true;
+            entry.timedOut = true;
             abortController.abort();
           }, timeoutMs)
         : null;
       void (async () => {
         try {
-          let terminalState = await runner.run({
+          let terminalState = await runRunner.run({
             runId,
             graph: compiledGraph,
             settings,
@@ -683,19 +852,22 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             retainedSessionWorkflowId: workflowId,
             signal: abortController.signal,
             onProgress(progress) {
-              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+              const activeEntry = runEntries.get(runId);
+              if (!activeEntry) return;
+              if (abortController.signal.aborted && activeEntry.snapshot.state.status === "stopped") {
                 return;
               }
-              currentRunState = {
-                ...currentRunState,
+              updateSnapshot(runId, {
+                ...activeEntry.snapshot.state,
                 ...progress,
                 status: "running",
                 mode: "run_workflow",
                 target_step_id: startNodeId,
-              };
+              });
             },
           });
-          if (timedOut && terminalState.status === "stopped") {
+          const activeEntry = runEntries.get(runId);
+          if (activeEntry?.timedOut && terminalState.status === "stopped") {
             terminalState = {
               ...terminalState,
               status: "failed",
@@ -709,7 +881,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             };
           } else if (
             abortController.signal.aborted &&
-            currentRunState.status === "stopped"
+            activeEntry?.snapshot.state.status === "stopped"
           ) {
             terminalState = {
               ...terminalState,
@@ -717,58 +889,134 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
               error: null,
             };
           }
-          currentRunState = terminalState;
-          finishRun(context.database, runId, compiledGraph, currentRunState);
+          updateSnapshot(runId, terminalState);
+          finishRun(context.database, runId, compiledGraph, terminalState);
         } catch (error) {
-          currentRunState = {
+          const currentState = runEntries.get(runId)?.snapshot.state ?? runningState;
+          const failedState: RunState = {
             ...idleRunState,
             status: "failed",
             mode: "run_workflow",
             target_step_id: startNodeId,
-            retained_session: runner.getRetainedSessionState?.() ?? null,
+            retained_session: runner.getRetainedSessionState?.(workflowId, profileKey) ?? null,
             error: {
-              step_id: currentRunState.current_step_id,
-              step_number: currentRunState.current_step_number ?? 0,
+              step_id: currentState.current_step_id,
+              step_number: currentState.current_step_number ?? 0,
               step_name: null,
               action_type: "workflow",
               reason: error instanceof Error ? error.message : String(error),
             },
           };
-          finishRun(context.database, runId, compiledGraph, currentRunState);
+          updateSnapshot(runId, failedState);
+          finishRun(context.database, runId, compiledGraph, failedState);
         } finally {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          if (currentRunAbortController === abortController) {
-            currentRunAbortController = null;
-          }
-          if (currentRunId === runId) {
-            currentRunId = null;
-          }
+          const activeEntry = runEntries.get(runId);
+          if (activeEntry?.timeoutHandle) clearTimeout(activeEntry.timeoutHandle);
+          releaseRunLocks(workflowId, profileKey, runId);
+          runEntries.delete(runId);
         }
       })();
-      return currentRunState;
+      return sessionRunSnapshots.get(runId) ?? snapshot;
     },
 
-    async stopRun() {
-      currentRunAbortController?.abort();
-      if (!currentRunAbortController) {
-        await runner.closeRetainedContext?.();
+    async stopRun(runId?: string | null): Promise<WorkflowRunSnapshot> {
+      if (!runId && runEntries.size > 1) {
+        throw commandError("Specify a run id to stop when multiple runs are active", "runId");
       }
-      currentRunState = {
-        ...idleRunState,
-        status: "stopped",
-        mode: "run_workflow",
+      const targetRunId = runId ?? [...runEntries.keys()][0] ?? null;
+      if (targetRunId) {
+        const entry = runEntries.get(targetRunId);
+        if (!entry) {
+          throw commandError("Run not found", "runId");
+        }
+        entry.abortController.abort();
+        const stoppedState: RunState = {
+          ...entry.snapshot.state,
+          status: "stopped",
+          mode: "run_workflow",
+          error: null,
+        };
+        return updateSnapshot(targetRunId, stoppedState) ?? entry.snapshot;
+      }
+
+      if (currentBatchAbortController) {
+        currentBatchAbortController.abort();
+        currentBatchRunState = {
+          ...(currentBatchRunState ?? idleRunState),
+          status: "stopped",
+          mode: "run_workflow",
+          error: null,
+        };
+        const workflow = repository.listWorkflows()[0] ?? {
+          id: "batch",
+          name: "Batch run",
+          step_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return createRunSnapshot({
+          runId: currentBatchRunId ?? "batch",
+          workflow,
+          source: "manual",
+          state: currentBatchRunState,
+        });
+      }
+
+      await runner.closeRetainedContext?.();
+      const workflow = repository.listWorkflows()[0] ?? {
+        id: "workflow",
+        name: "Workflow",
+        step_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
-      return currentRunState;
+      return createRunSnapshot({
+        runId: latestRunSnapshot?.run_id ?? "stopped",
+        workflow,
+        source: "manual",
+        state: {
+          ...idleRunState,
+          status: "stopped",
+          mode: "run_workflow",
+        },
+      });
     },
 
     getRunState() {
-      if (currentRunState.status !== "running") {
-        currentRunState = {
-          ...currentRunState,
-          retained_session: runner.getRetainedSessionState?.() ?? currentRunState.retained_session,
+      if (currentBatchAbortController && currentBatchRunState) {
+        return currentBatchRunState;
+      }
+      const activeSnapshots = [...runEntries.values()].map((entry) => entry.snapshot);
+      if (activeSnapshots.length === 1) {
+        return activeSnapshots[0].state;
+      }
+      if (activeSnapshots.length > 1) {
+        return {
+          ...idleRunState,
+          status: "running",
+          mode: "run_workflow",
         };
       }
-      return currentRunState;
+      if (latestRunSnapshot) {
+        return {
+          ...latestRunSnapshot.state,
+          retained_session: runner.getRetainedSessionState?.(
+            latestRunSnapshot.workflow_id,
+            runEntries.get(latestRunSnapshot.run_id)?.profileName ?? null,
+          ) ?? latestRunSnapshot.state.retained_session,
+        };
+      }
+      if (currentBatchRunState) {
+        return currentBatchRunState;
+      }
+      return {
+        ...idleRunState,
+        retained_session: runner.getRetainedSessionState?.() ?? idleRunState.retained_session,
+      };
+    },
+
+    listRunStates(): WorkflowRunSnapshot[] {
+      return listRunSnapshots();
     },
 
     listSchedules(): WorkflowSchedule[] {
@@ -855,11 +1103,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       await processDueSchedules({
         now,
         repository: scheduleRepository,
-        hasActiveRun: () => Boolean(currentRunAbortController),
+        getRunConflict: schedulerConflictReason,
         validateWorkflow: validateWorkflowRun,
         startWorkflow: async (workflowId) => {
-          const result = await startWorkflowRun(workflowId);
-          return { runId: result.runId };
+          const result = await startWorkflowRun(workflowId, "schedule");
+          return { runId: result.run_id };
         },
       });
     },
@@ -991,7 +1239,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       request: BatchRunRequest,
     ) {
       requireWorkflow(workflowId);
-      if (currentRunAbortController) {
+      if (currentBatchAbortController || runEntries.size > 0) {
         throw commandError("A workflow run is already active", "run");
       }
       const settings = getSettings(workflowId);
@@ -1022,9 +1270,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const results = [];
       let succeeded = 0;
       let failed = 0;
-      currentRunAbortController = new AbortController();
-      const abortController = currentRunAbortController;
-      currentRunState = {
+      currentBatchAbortController = new AbortController();
+      const abortController = currentBatchAbortController;
+      currentBatchRunState = {
         ...idleRunState,
         status: "running",
         mode: "run_workflow",
@@ -1038,11 +1286,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       try {
         for (const [rowIndex, row] of request.rows.entries()) {
           if (abortController.signal.aborted) break;
-          currentRunState = {
-            ...currentRunState,
+          currentBatchRunState = {
+            ...(currentBatchRunState ?? idleRunState),
             status: "running",
             outputs: {
-              ...(currentRunState.outputs ?? {}),
+              ...(currentBatchRunState?.outputs ?? {}),
               batch_total: request.rows.length,
               batch_current_row_index: rowIndex,
               batch_succeeded: succeeded,
@@ -1051,7 +1299,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           };
           const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
           const runId = beginRun(context.database, workflowId, batchSettings, graph);
-          currentRunId = runId;
+          currentBatchRunId = runId;
           let result = await runner.run({
             runId,
             graph: rowGraph,
@@ -1059,16 +1307,16 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             mode: "run_workflow",
             signal: abortController.signal,
             onProgress(progress) {
-              if (abortController.signal.aborted && currentRunState.status === "stopped") {
+              if (abortController.signal.aborted && currentBatchRunState?.status === "stopped") {
                 return;
               }
-              currentRunState = {
-                ...currentRunState,
+              currentBatchRunState = {
+                ...(currentBatchRunState ?? idleRunState),
                 ...progress,
                 status: "running",
                 mode: "run_workflow",
                 outputs: {
-                  ...(currentRunState.outputs ?? {}),
+                  ...(currentBatchRunState?.outputs ?? {}),
                   batch_total: request.rows.length,
                   batch_current_row_index: rowIndex,
                   batch_succeeded: succeeded,
@@ -1077,7 +1325,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
               };
             },
           });
-          if (abortController.signal.aborted && currentRunState.status === "stopped") {
+          if (abortController.signal.aborted && currentBatchRunState?.status === "stopped") {
             result = {
               ...result,
               status: "stopped",
@@ -1085,7 +1333,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             };
           }
           finishRun(context.database, runId, rowGraph, result);
-          currentRunId = null;
+          currentBatchRunId = null;
           if (result.status === "success") {
             succeeded += 1;
           } else if (result.status === "failed") {
@@ -1096,13 +1344,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             status: result.status,
             error: result.error?.reason ?? null,
           });
-          currentRunState = {
-            ...currentRunState,
+          currentBatchRunState = {
+            ...(currentBatchRunState ?? idleRunState),
             status: result.status === "stopped" ? "stopped" : "running",
             current_step_id: null,
             current_step_number: null,
             outputs: {
-              ...(currentRunState.outputs ?? {}),
+              ...(currentBatchRunState?.outputs ?? {}),
               batch_total: request.rows.length,
               batch_current_row_index: rowIndex,
               batch_succeeded: succeeded,
@@ -1115,14 +1363,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             break;
           }
         }
-        if (currentRunState.status !== "stopped") {
-          currentRunState = {
-            ...currentRunState,
+        if (currentBatchRunState?.status !== "stopped") {
+          currentBatchRunState = {
+            ...(currentBatchRunState ?? idleRunState),
             status: failed > 0 ? "failed" : "success",
             current_step_id: null,
             current_step_number: null,
             outputs: {
-              ...(currentRunState.outputs ?? {}),
+              ...(currentBatchRunState?.outputs ?? {}),
               batch_total: request.rows.length,
               batch_succeeded: succeeded,
               batch_failed: failed,
@@ -1130,7 +1378,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           };
         }
       } catch (error) {
-        currentRunState = {
+        currentBatchRunState = {
           ...idleRunState,
           status: "failed",
           mode: "run_workflow",
@@ -1140,8 +1388,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             batch_failed: failed,
           },
           error: {
-            step_id: currentRunState.current_step_id,
-            step_number: currentRunState.current_step_number ?? 0,
+            step_id: currentBatchRunState?.current_step_id,
+            step_number: currentBatchRunState?.current_step_number ?? 0,
             step_name: null,
             action_type: "workflow",
             reason: error instanceof Error ? error.message : String(error),
@@ -1149,10 +1397,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         };
         throw error;
       } finally {
-        if (currentRunAbortController === abortController) {
-          currentRunAbortController = null;
+        if (currentBatchAbortController === abortController) {
+          currentBatchAbortController = null;
         }
-        currentRunId = null;
+        currentBatchRunId = null;
       }
       return {
         total: request.rows.length,
@@ -1565,14 +1813,14 @@ async function buildCloakBrowserDiagnostics({
   workflows,
   settingsForWorkflow,
   lastRunAtForWorkflow,
-  retainedProfileName,
+  retainedProfileNames,
 }: {
   appPaths: AppPaths;
   database: DatabaseSync;
   workflows: WorkflowSummary[];
   settingsForWorkflow: (workflowId: string) => WorkflowSettings;
   lastRunAtForWorkflow: (workflowId: string) => string | null;
-  retainedProfileName: string | null;
+  retainedProfileNames: Set<string>;
 }): Promise<CloakBrowserDiagnostics> {
   const binary = await cloakBinaryInfo();
   const identityByProfileDir = new Map<
@@ -1615,7 +1863,7 @@ async function buildCloakBrowserDiagnostics({
     profiles: await browserProfileDiagnostics(
       appPaths.browserProfilesDir,
       identityByProfileDir,
-      retainedProfileName,
+      retainedProfileNames,
     ),
   };
 }
@@ -1733,7 +1981,7 @@ async function browserProfileDiagnostics(
       "identity_id" | "display_name" | "workflow_id" | "workflow_name" | "last_run_at"
     >
   >,
-  retainedProfileName: string | null,
+  retainedProfileNames: Set<string>,
 ): Promise<BrowserProfileDiagnostics[]> {
   let entries: Array<{ name: string; isDirectory(): boolean }>;
   try {
@@ -1757,7 +2005,7 @@ async function browserProfileDiagnostics(
       approximate_size_bytes: await directorySize(fullPath),
       last_modified_at: stat?.mtime ? stat.mtime.toISOString() : null,
       last_run_at: identity?.last_run_at ?? null,
-      active_session: retainedProfileName === profileDir,
+      active_session: retainedProfileNames.has(profileDir),
     });
   }
   return profiles.sort((left, right) => left.profile_dir.localeCompare(right.profile_dir));

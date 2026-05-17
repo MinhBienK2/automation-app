@@ -55,6 +55,7 @@ failed calls. This preserves the command-facing error shape used by
 - `runWorkflowFromNode`
 - `stopRun`
 - `getRunState`
+- `listRunStates`
 - `listSchedules`
 - `getSchedule`
 - `createSchedule`
@@ -79,6 +80,12 @@ failed calls. This preserves the command-facing error shape used by
 payload. The default is to keep browser profile data; when true, the backend
 deletes the workflow's private browser profile directory only if no other
 workflow still references it and no retained session is active.
+
+`runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
+new `run_id`, workflow metadata, source, start time, and nested run state.
+`stopRun` accepts an optional run id and returns the stopped snapshot; omitting
+the run id is valid only when exactly one workflow run is active. `listRunStates`
+returns the current app-session run snapshots for multi-run monitoring.
 
 ## Payload Rules
 

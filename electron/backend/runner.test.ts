@@ -1134,6 +1134,64 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(false);
   });
 
+  test("retains browser sessions per workflow/profile instead of closing another workflow", async () => {
+    const firstContext = new FakeContext();
+    const secondContext = new FakeContext();
+    const contexts = [firstContext, secondContext];
+    const launches: Array<{ kind: "temporary" | "persistent"; options: Record<string, unknown> }> = [];
+    const driver: BrowserDriver = {
+      async launch(options) {
+        launches.push({ kind: "temporary", options });
+        return contexts[launches.length - 1];
+      },
+      async launchPersistent(options) {
+        launches.push({ kind: "persistent", options });
+        return contexts[launches.length - 1];
+      },
+    };
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    const firstSettings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_dir: "profile-a",
+        profile_name: "profile-a",
+      },
+      run_policy: { browser_retention: "retain" },
+    });
+    const secondSettings: WorkflowSettings = {
+      ...makeSettings({
+        browser_launch: {
+          session_mode: "persistent_profile",
+          profile_dir: "profile-b",
+          profile_name: "profile-b",
+        },
+        run_policy: { browser_retention: "retain" },
+      }),
+      workflow_id: "workflow-2",
+    };
+
+    await runner.run({
+      graph: { steps: [] },
+      settings: firstSettings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-1",
+    });
+    await runner.run({
+      graph: { steps: [] },
+      settings: secondSettings,
+      mode: "run_workflow",
+      retainedSessionWorkflowId: "workflow-2",
+    });
+
+    expect(firstContext.closed).toBe(false);
+    expect(secondContext.closed).toBe(false);
+    expect(runner.hasReusableRetainedSession("workflow-1", "profile-a")).toBe(true);
+    expect(runner.hasReusableRetainedSession("workflow-2", "profile-b")).toBe(true);
+  });
+
   test("continues after the selected node when reusing a retained browser session", async () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);

@@ -553,6 +553,70 @@ describe("Workflow detail integration", () => {
       .toBeInTheDocument();
   });
 
+  test("keeps detail run controls scoped to the opened workflow", async () => {
+    const supportWorkflow = {
+      id: "workflow-2",
+      name: "Support flow",
+      step_count: 0,
+      created_at: "2",
+      updated_at: "2",
+    };
+    const scenario = workflowDetailScenario([sleepStep]);
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_workflows: [workflow, supportWorkflow],
+      get_run_state: {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+      },
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+          },
+        },
+      ],
+      get_workflow: ({ id }: { id: string }) =>
+        id === supportWorkflow.id
+          ? { workflow: supportWorkflow, steps: [sleepStep] }
+          : { workflow, steps: [sleepStep] },
+      get_workflow_settings: ({ workflowId }: { workflowId: string }) => ({
+        ...scenario.get_workflow_settings,
+        workflow_id: workflowId,
+        general: {
+          ...scenario.get_workflow_settings.general,
+          name: workflowId === supportWorkflow.id ? supportWorkflow.name : workflow.name,
+        },
+      }),
+    });
+
+    renderApp();
+
+    const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
+    await userEvent.click(within(supportCard as HTMLElement).getByRole("button", {
+      name: "View Details",
+    }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+
+    expect(within(controlsRow).getByRole("button", { name: "Run" }))
+      .not.toBeDisabled();
+    expect(within(controlsRow).queryByRole("button", { name: "Stop" }))
+      .not.toBeInTheDocument();
+  });
+
   test("keeps long runtime errors compact with copyable details in panel and inspector", async () => {
     const longReason = [
       "page.goto: net::ERR_NAME_NOT_RESOLVED at https://owned.example.test/path/with/a/very/long/token/abcdefghijklmnopqrstuvwxyz0123456789",

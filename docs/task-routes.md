@@ -105,9 +105,9 @@ Update docs: execution semantics, runner architecture, run-state contract, impac
 
 Read: `domain/execution-semantics.md`, `architecture/frontend.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/App.tsx`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runner.ts`
+Verify: `src/App.tsx`, `src/features/runs/`, `src/features/workflows/pages/`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runner.ts`
 
-Checks: `npm test -- src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- electron/backend/commands.test.ts`
+Checks: `npm test -- src/features/workflows/pages/WorkflowListPage.test.tsx src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/commands.test.ts`
 
 Update docs: run-state contract, execution semantics, frontend/runner docs.
 

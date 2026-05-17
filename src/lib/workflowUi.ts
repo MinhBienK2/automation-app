@@ -3,6 +3,7 @@ import type {
   CommandError,
   GraphValidationIssue,
   RunState,
+  WorkflowRunSnapshot,
 } from "../types/workflow";
 import { allActionTypes, isActionVisibleInPrimaryPalette } from "./actionCapabilities";
 
@@ -243,6 +244,19 @@ export function normalizeRunState(state: RunState): RunState {
     outputs: state.outputs ?? {},
     retained_session: state.retained_session ?? null,
     error: state.error ?? null,
+  };
+}
+
+export function normalizeRunSnapshot(snapshot: WorkflowRunSnapshot): WorkflowRunSnapshot {
+  const state = normalizeRunState(snapshot.state ?? snapshot);
+  return {
+    ...state,
+    run_id: snapshot.run_id,
+    workflow_id: snapshot.workflow_id,
+    workflow_name: snapshot.workflow_name,
+    source: snapshot.source,
+    started_at: snapshot.started_at,
+    state,
   };
 }
 

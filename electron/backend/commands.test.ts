@@ -1399,6 +1399,247 @@ describe("Electron workflow command handlers", () => {
     expect(runner.run).not.toHaveBeenCalled();
   });
 
+  test("starts isolated workflow runs concurrently and lists each run snapshot", async () => {
+    const finishByRunId = new Map<string, (state: RunState) => void>();
+    const observedSignals = new Map<string, AbortSignal>();
+    const runRunnerIds: string[] = [];
+    let runRunnerCount = 0;
+    const runner = {
+      run: vi.fn(async () => {
+        throw new Error("workflow runs should use an isolated runner instance");
+      }),
+      createIsolatedRunRunner: vi.fn(() => {
+        runRunnerCount += 1;
+        const runnerId = `runner-${runRunnerCount}`;
+        return {
+          async run(request: {
+            runId?: string | null;
+            settings: WorkflowSettings;
+            signal?: AbortSignal;
+            onProgress?: (state: Partial<RunState>) => void;
+          }): Promise<RunState> {
+            if (!request.runId) throw new Error("run id is required");
+            runRunnerIds.push(runnerId);
+            observedSignals.set(request.runId, request.signal as AbortSignal);
+            request.onProgress?.({
+              current_step_id: "visit",
+              current_step_number: 1,
+              completed_step_ids: [],
+            });
+            return new Promise((resolve) => {
+              finishByRunId.set(request.runId as string, resolve);
+            });
+          },
+        };
+      }),
+    };
+    const { handlers } = await createTestHandlers({
+      runner,
+    });
+    const firstWorkflow = handlers.createWorkflow("Checkout");
+    const secondWorkflow = handlers.createWorkflow("Support");
+    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    makeTemporary(handlers, firstWorkflow.id);
+    makeTemporary(handlers, secondWorkflow.id);
+
+    const first = await handlers.runWorkflow(firstWorkflow.id);
+    const second = await handlers.runWorkflow(secondWorkflow.id);
+
+    expect(first).toMatchObject({
+      workflow_id: firstWorkflow.id,
+      workflow_name: "Checkout",
+      source: "manual",
+      state: {
+        status: "running",
+        current_step_id: "visit",
+      },
+    });
+    expect(second).toMatchObject({
+      workflow_id: secondWorkflow.id,
+      workflow_name: "Support",
+      source: "manual",
+      state: {
+        status: "running",
+      },
+    });
+    expect(handlers.listRunStates()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ run_id: first.run_id, workflow_id: firstWorkflow.id }),
+        expect.objectContaining({ run_id: second.run_id, workflow_id: secondWorkflow.id }),
+      ]),
+    );
+    expect(finishByRunId).toHaveLength(2);
+    expect(runner.run).not.toHaveBeenCalled();
+    expect(runner.createIsolatedRunRunner).toHaveBeenCalledTimes(2);
+    expect(new Set(runRunnerIds)).toHaveLength(2);
+    expect(observedSignals.get(first.run_id)?.aborted).toBe(false);
+    expect(observedSignals.get(second.run_id)?.aborted).toBe(false);
+  });
+
+  test("rejects same-workflow and persistent-profile concurrent run conflicts", async () => {
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: { runId?: string | null }): Promise<RunState> {
+          return new Promise((resolve) => {
+            if (!request.runId) throw new Error("run id is required");
+            setTimeout(() => {
+              resolve({
+                status: "success",
+                mode: "run_workflow",
+                target_step_id: null,
+                current_step_id: null,
+                current_step_number: null,
+                completed_step_ids: ["visit"],
+                outputs: {},
+                error: null,
+              });
+            }, 50);
+          });
+        },
+      },
+    });
+    const firstWorkflow = handlers.createWorkflow("Profile owner");
+    const secondWorkflow = handlers.createWorkflow("Profile shared");
+    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    const firstSettings = handlers.getWorkflowSettings(firstWorkflow.id);
+    const secondSettings = handlers.getWorkflowSettings(secondWorkflow.id);
+    handlers.saveWorkflowSettings(secondWorkflow.id, {
+      ...secondSettings,
+      browser_launch: {
+        ...secondSettings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_dir: firstSettings.browser_launch.profile_dir,
+        profile_name: firstSettings.browser_launch.profile_dir,
+      },
+    });
+
+    await handlers.runWorkflow(firstWorkflow.id);
+
+    await expect(handlers.runWorkflow(firstWorkflow.id)).rejects.toMatchObject({
+      message: "This workflow is already running",
+      field: "workflowId",
+    });
+    await expect(handlers.runWorkflow(secondWorkflow.id)).rejects.toMatchObject({
+      message: "Browser profile is already in use by another active run",
+      field: "browser_launch.profile_name",
+    });
+  });
+
+  test("stops only the targeted run id and persists terminal evidence per run", async () => {
+    const finishByRunId = new Map<string, (state: RunState) => void>();
+    const signals = new Map<string, AbortSignal>();
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        async run(request: {
+          runId?: string | null;
+          signal?: AbortSignal;
+        }): Promise<RunState> {
+          if (!request.runId) throw new Error("run id is required");
+          signals.set(request.runId, request.signal as AbortSignal);
+          return new Promise((resolve) => {
+            finishByRunId.set(request.runId as string, resolve);
+          });
+        },
+      },
+    });
+    const firstWorkflow = handlers.createWorkflow("Checkout");
+    const secondWorkflow = handlers.createWorkflow("Support");
+    handlers.saveWorkflowGraph(firstWorkflow.id, runnableGraph());
+    handlers.saveWorkflowGraph(secondWorkflow.id, runnableGraph());
+    makeTemporary(handlers, firstWorkflow.id);
+    makeTemporary(handlers, secondWorkflow.id);
+    const first = await handlers.runWorkflow(firstWorkflow.id);
+    const second = await handlers.runWorkflow(secondWorkflow.id);
+
+    const stopped = await handlers.stopRun(first.run_id);
+
+    expect(stopped).toMatchObject({
+      run_id: first.run_id,
+      workflow_id: firstWorkflow.id,
+      state: { status: "stopped" },
+    });
+    expect(signals.get(first.run_id)?.aborted).toBe(true);
+    expect(signals.get(second.run_id)?.aborted).toBe(false);
+    expect(handlers.listRunStates()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          run_id: first.run_id,
+          state: expect.objectContaining({ status: "stopped" }),
+        }),
+        expect.objectContaining({
+          run_id: second.run_id,
+          state: expect.objectContaining({ status: "running" }),
+        }),
+      ]),
+    );
+
+    finishByRunId.get(first.run_id)?.({
+      status: "stopped",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: [],
+      outputs: {
+        stoppedMarker: first.run_id,
+        __action_traces: [
+          {
+            node_id: "visit",
+            action_type: "navigate",
+            status: "stopped",
+            mode: "browser",
+          },
+        ],
+      },
+      error: null,
+    });
+    finishByRunId.get(second.run_id)?.({
+      status: "success",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: ["visit"],
+      outputs: {
+        title: "Support",
+        __action_traces: [
+          {
+            node_id: "visit",
+            action_type: "navigate",
+            status: "success",
+            mode: "browser",
+          },
+        ],
+      },
+      error: null,
+    });
+    await waitForRunSnapshotStatus(handlers, second.run_id, "success");
+
+    const runRows = database
+      .prepare("SELECT id, workflow_id, status, outputs_json FROM runs ORDER BY workflow_id")
+      .all() as Array<Record<string, string | null>>;
+    expect(runRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: first.run_id,
+          workflow_id: firstWorkflow.id,
+          status: "stopped",
+        }),
+        expect.objectContaining({
+          id: second.run_id,
+          workflow_id: secondWorkflow.id,
+          status: "success",
+        }),
+      ]),
+    );
+    expect(JSON.parse(runRows.find((row) => row.id === first.run_id)?.outputs_json ?? "{}"))
+      .toMatchObject({ stoppedMarker: first.run_id });
+    expect(JSON.parse(runRows.find((row) => row.id === second.run_id)?.outputs_json ?? "{}"))
+      .toMatchObject({ title: "Support" });
+  });
+
   test("keeps one active run, exposes running state, and persists terminal evidence", async () => {
     let finishRun: ((state: RunState) => void) | null = null;
     let observedRunId: string | null | undefined = null;
@@ -1424,8 +1665,8 @@ describe("Electron workflow command handlers", () => {
       mode: "run_workflow",
     });
     await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
-      message: "A workflow run is already active",
-      field: "run",
+      message: "This workflow is already running",
+      field: "workflowId",
     });
 
     finishRun?.({
@@ -1901,7 +2142,7 @@ describe("Electron workflow command handlers", () => {
       }),
     });
     await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
-      message: "A workflow run is already active",
+      message: "A batch run is already active",
       field: "run",
     });
 
@@ -2017,12 +2258,14 @@ describe("Electron workflow schedule commands", () => {
     ]);
   });
 
-  test("scheduler tick records skipped active-run events", async () => {
+  test("scheduler tick skips profile conflicts but can start isolated workflows", async () => {
     let activeRunSignal: AbortSignal | null = null;
+    const startedRunSignals: AbortSignal[] = [];
     const { handlers } = await createTestHandlers({
       runner: {
         async run(request: { signal?: AbortSignal }): Promise<RunState> {
           activeRunSignal = request.signal ?? null;
+          startedRunSignals.push(request.signal as AbortSignal);
           await new Promise<void>((resolve) => {
             request.signal?.addEventListener("abort", resolve, { once: true });
           });
@@ -2043,12 +2286,31 @@ describe("Electron workflow schedule commands", () => {
     handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
     const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow");
     handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
+    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow");
+    handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
     const schedule = handlers.createSchedule({
       workflow_id: scheduledWorkflow.id,
       name: "Once",
       enabled: true,
       kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
     });
+    const isolatedSchedule = handlers.createSchedule({
+      workflow_id: isolatedWorkflow.id,
+      name: "Isolated",
+      enabled: true,
+      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+    });
+    const runningSettings = handlers.getWorkflowSettings(runningWorkflow.id);
+    const scheduledSettings = handlers.getWorkflowSettings(scheduledWorkflow.id);
+    handlers.saveWorkflowSettings(scheduledWorkflow.id, {
+      ...scheduledSettings,
+      browser_launch: {
+        ...scheduledSettings.browser_launch,
+        profile_dir: runningSettings.browser_launch.profile_dir,
+        profile_name: runningSettings.browser_launch.profile_name,
+      },
+    });
+    makeTemporary(handlers, isolatedWorkflow.id);
 
     const runPromise = handlers.runWorkflow(runningWorkflow.id);
     await waitFor(() => activeRunSignal !== null);
@@ -2058,7 +2320,7 @@ describe("Electron workflow schedule commands", () => {
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "skipped",
-          reason: "active_run",
+          reason: "active_profile",
           scheduled_for: "2026-05-17T09:00:00.000Z",
         }),
         expect.objectContaining({
@@ -2072,8 +2334,19 @@ describe("Electron workflow schedule commands", () => {
       next_run_at: null,
       last_status: "disabled",
     });
+    expect(handlers.listScheduleEvents({ schedule_id: isolatedSchedule.id })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event_type: "started",
+          scheduled_for: "2026-05-17T09:00:00.000Z",
+        }),
+      ]),
+    );
+    expect(startedRunSignals).toHaveLength(2);
 
-    await handlers.stopRun();
+    for (const snapshot of handlers.listRunStates().filter((item) => item.state.status === "running")) {
+      await handlers.stopRun(snapshot.run_id);
+    }
     await runPromise;
   });
 });
@@ -2156,10 +2429,38 @@ async function waitForRunStatus(
   throw new Error(`Timed out waiting for run status ${status}`);
 }
 
+async function waitForRunSnapshotStatus(
+  handlers: { listRunStates(): Array<{ run_id: string; state: RunState }> },
+  runId: string,
+  status: RunState["status"],
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const state = handlers.listRunStates().find((snapshot) => snapshot.run_id === runId)?.state;
+    if (state?.status === status) return state;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error(`Timed out waiting for run ${runId} status ${status}`);
+}
+
 async function waitFor(predicate: () => boolean) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     if (predicate()) return;
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   throw new Error("Timed out waiting for predicate");
+}
+
+function makeTemporary(
+  handlers: Awaited<ReturnType<typeof createTestHandlers>>["handlers"],
+  workflowId: string,
+) {
+  const settings = handlers.getWorkflowSettings(workflowId);
+  handlers.saveWorkflowSettings(workflowId, {
+    ...settings,
+    browser_launch: {
+      ...settings.browser_launch,
+      session_mode: "temporary",
+      profile_name: null,
+    },
+  });
 }

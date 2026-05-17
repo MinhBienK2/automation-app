@@ -32,7 +32,7 @@ Users can:
 - Turn graph autosave on or off from Settings.
 - Run a full workflow.
 - Test a selected step with visible progress.
-- Stop an active run.
+- Stop an active run, including a selected run from Run Center when multiple isolated workflows are active.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
 - Configure the workflow's browser identity and launch behavior before running it.
@@ -42,6 +42,7 @@ Users can:
 - Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
+- Open Run Center to monitor concurrent workflow run snapshots and stop a selected active run by run id.
 
 ## Current Source Files
 

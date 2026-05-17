@@ -27,7 +27,7 @@ type ProcessDueSchedulesOptions = {
   now: Date;
   missedWindowMs?: number;
   repository: ScheduleRepositoryPort;
-  hasActiveRun: () => boolean;
+  getRunConflict: (workflowId: string) => string | null;
   validateWorkflow: (workflowId: string) => RunValidationIssue[];
   startWorkflow: (workflowId: string) => Promise<{ runId?: string | null } | void>;
 };
@@ -166,7 +166,7 @@ export async function processDueSchedules({
   now,
   missedWindowMs = defaultMissedWindowMs,
   repository,
-  hasActiveRun,
+  getRunConflict,
   validateWorkflow,
   startWorkflow,
 }: ProcessDueSchedulesOptions) {
@@ -188,16 +188,17 @@ export async function processDueSchedules({
       continue;
     }
 
-    if (hasActiveRun()) {
+    const conflictReason = getRunConflict(schedule.workflow_id);
+    if (conflictReason) {
       recordEvent(repository, schedule, "skipped", scheduledFor, now, {
-        reason: "active_run",
+        reason: conflictReason,
       });
       if (isOneTime) {
         disableOneTime(repository, schedule, scheduledFor, now);
       } else {
         updateAfterOccurrence(repository, schedule, scheduledDate, now, {
           status: "skipped",
-          reason: "active_run",
+          reason: conflictReason,
         });
       }
       continue;

@@ -32,6 +32,7 @@ const workflowIpcChannels = {
   runWorkflowFromNode: "workflow:runWorkflowFromNode",
   stopRun: "workflow:stopRun",
   getRunState: "workflow:getRunState",
+  listRunStates: "workflow:listRunStates",
   listSchedules: "workflow:listSchedules",
   getSchedule: "workflow:getSchedule",
   createSchedule: "workflow:createSchedule",
@@ -113,8 +114,9 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow(workflowIpcChannels.runWorkflow, workflowId),
   runWorkflowFromNode: (workflowId, startNodeId) =>
     invokeWorkflow(workflowIpcChannels.runWorkflowFromNode, workflowId, startNodeId),
-  stopRun: () => invokeWorkflow(workflowIpcChannels.stopRun),
+  stopRun: (runId) => invokeWorkflow(workflowIpcChannels.stopRun, runId),
   getRunState: () => invokeWorkflow(workflowIpcChannels.getRunState),
+  listRunStates: () => invokeWorkflow(workflowIpcChannels.listRunStates),
   listSchedules: () => invokeWorkflow(workflowIpcChannels.listSchedules),
   getSchedule: (scheduleId) =>
     invokeWorkflow(workflowIpcChannels.getSchedule, scheduleId),

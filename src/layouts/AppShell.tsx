@@ -3,8 +3,9 @@ import { AppSidebar } from "./AppSidebar";
 
 type AppShellProps = {
   children: ReactNode;
-  activeItem: "workflows" | "schedules" | "settings";
+  activeItem: "workflows" | "runs" | "schedules" | "settings";
   sidebarCollapsed: boolean;
+  onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
   onOpenWorkflows: () => void;
@@ -16,6 +17,7 @@ export function AppShell({
   children,
   sidebarCollapsed,
   onOpenSchedules,
+  onOpenRunCenter,
   onOpenSettings,
   onOpenWorkflows,
   onToggleSidebar,
@@ -26,6 +28,7 @@ export function AppShell({
         activeItem={activeItem}
         collapsed={sidebarCollapsed}
         onOpenSchedules={onOpenSchedules}
+        onOpenRunCenter={onOpenRunCenter}
         onOpenSettings={onOpenSettings}
         onOpenWorkflows={onOpenWorkflows}
         onToggle={onToggleSidebar}

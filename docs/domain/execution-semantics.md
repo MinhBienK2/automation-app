@@ -18,8 +18,8 @@
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
 - Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
-- Command handlers reject a second active run, persist begin/finish records to SQLite `runs`, persist compiled step evidence to `run_steps`, and update live run state from runner progress callbacks.
-- Scheduled runs start through the same saved-workflow command path as manual full runs. If another normal run or batch run owns the active-run lock when a schedule fires, the scheduler skips that occurrence instead of queueing it.
+- Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled step evidence to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
+- Scheduled runs start through the same saved-workflow command path as manual full runs. If the scheduled workflow conflicts with an active workflow, active persistent profile, or active batch, the scheduler records a skipped occurrence instead of queueing it; isolated due schedules can start in the same scheduler tick.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup actions before graph actions.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
@@ -56,7 +56,7 @@
 ## Batch Execution
 
 - `run_batch_workflow` uses the same saved graph/settings plan as `run_workflow`.
-- Batch execution shares the active-run lifecycle lock with normal runs. Starting a normal run while a batch is active, or a batch while another run is active, fails with a command error.
+- Batch execution is globally exclusive with normal runs. Starting a normal run while a batch is active, or a batch while any normal run is active, fails with a command error.
 - `stop_run` aborts an active batch before the next row and terminal state reports the stopped batch summary.
 - Each row is inserted as a `set_variable` setup action after persisted settings setup actions and before graph actions.
 - Request `headless` overrides `run_policy.batch_headless`; omitted request values use settings defaults.
@@ -70,8 +70,8 @@
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
 - Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
-- Starting a new run closes retained sessions from previous terminal runs before a new CloakBrowser context launches, releasing persistent profile locks while preserving post-run inspection until the next run starts.
-- A run-from-selected run reuses the retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
+- Retained browser sessions are keyed by workflow/profile so multiple isolated workflows can retain inspectable browsers at the same time. Starting a fresh run closes only the retained session that would conflict with that workflow/profile before a new CloakBrowser context launches, releasing that persistent profile lock while preserving unrelated retained sessions.
+- A run-from-selected run reuses the matching retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
 - Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, proxy server/bypass/credentials, timezone, locale, GeoIP, viewport/device flags, supported WebRTC policy values, allowlisted advanced fingerprint overrides, humanize toggle/preset, and headless mode into CloakBrowser launch options.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.
@@ -80,8 +80,8 @@
 
 ## Cancellation
 
-- `stop_run` cancels the active run through `RunnerCancellation`.
-- App state immediately reflects `stopped`.
+- `stop_run(runId)` cancels the targeted run through its `RunnerCancellation`; omitting `runId` is valid only when one active run exists. Batch stop uses the same command path.
+- App state immediately reflects `stopped` for the targeted run snapshot.
 - Runner loops check cancellation between steps and action code must preserve responsive cancellation for long operations.
 - In the Electron runner, cancellation is carried by an `AbortSignal`; long waits listen to the signal and command state returns `stopped` promptly while the runner finishes cleanup.
 

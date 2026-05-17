@@ -1,5 +1,5 @@
-import { Copy, Download, Eye, Pencil, Play, Trash2, Upload } from "lucide-react";
-import type { RunState, WorkflowSummary } from "../../../types/workflow";
+import { Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
+import type { RunState, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
@@ -21,6 +21,7 @@ type WorkflowListPageProps = {
   workflowNameDraft: string;
   appError: string;
   runState: RunState;
+  runSnapshots: WorkflowRunSnapshot[];
   activeRunWorkflowName?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
@@ -28,6 +29,7 @@ type WorkflowListPageProps = {
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
   onDuplicateWorkflow: (workflow: WorkflowSummary) => void;
   onRunWorkflow: (workflow: WorkflowSummary) => void;
+  onStopRun: (runId: string) => void;
   onOpenExportWorkflow: (workflow: WorkflowSummary) => void;
   onImportWorkflowPackageFile: (file: File | null) => void;
   onCloseWorkflowDialog: () => void;
@@ -41,6 +43,7 @@ export function WorkflowListPage({
   workflowNameDraft,
   appError,
   runState,
+  runSnapshots,
   activeRunWorkflowName,
   onWorkflowNameDraftChange,
   onSubmitWorkflowDialog,
@@ -48,6 +51,7 @@ export function WorkflowListPage({
   onOpenEditWorkflow,
   onDuplicateWorkflow,
   onRunWorkflow,
+  onStopRun,
   onOpenExportWorkflow,
   onImportWorkflowPackageFile,
   onCloseWorkflowDialog,
@@ -62,7 +66,11 @@ export function WorkflowListPage({
       : "Rename the workflow without changing its graph.";
   const workflowNameLabel =
     workflowDialogMode === "create" ? "New workflow name" : "Workflow name";
-  const isRunning = runState.status === "running";
+  const activeRunsByWorkflow = new Map(
+    runSnapshots
+      .filter((snapshot) => snapshot.state.status === "running")
+      .map((snapshot) => [snapshot.workflow_id, snapshot]),
+  );
   const runStatusText =
     runState.status === "idle"
       ? null
@@ -121,6 +129,11 @@ export function WorkflowListPage({
               <div className="workflow-card-main">
                 <div>
                   <h2>{workflow.name}</h2>
+                  {activeRunsByWorkflow.get(workflow.id) ? (
+                    <p className="muted workflow-row-run-status" role="status">
+                      {runStatusLabel(activeRunsByWorkflow.get(workflow.id)!.state)}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="row-actions">
@@ -135,11 +148,21 @@ export function WorkflowListPage({
                   label={`Run ${workflow.name}`}
                   type="button"
                   variant="secondary"
-                  disabled={isRunning}
+                  disabled={Boolean(activeRunsByWorkflow.get(workflow.id))}
                   onClick={() => onRunWorkflow(workflow)}
                 >
                   <Play aria-hidden="true" />
                 </IconButton>
+                {activeRunsByWorkflow.get(workflow.id) ? (
+                  <IconButton
+                    label={`Stop ${workflow.name}`}
+                    type="button"
+                    variant="destructive"
+                    onClick={() => onStopRun(activeRunsByWorkflow.get(workflow.id)!.run_id)}
+                  >
+                    <Square aria-hidden="true" />
+                  </IconButton>
+                ) : null}
                 <IconButton
                   variant="secondary"
                   type="button"

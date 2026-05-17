@@ -1100,6 +1100,17 @@ export type RunState = {
   };
 };
 
+export type WorkflowRunSource = "manual" | "schedule";
+
+export type WorkflowRunSnapshot = RunState & {
+  run_id: string;
+  workflow_id: string;
+  workflow_name: string;
+  source: WorkflowRunSource;
+  started_at: string;
+  state: RunState;
+};
+
 export type CommandError = {
   message: string;
   field?: string | null;

@@ -22,6 +22,7 @@ Frontend and backend must agree on:
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`, optional `delay`.
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
 - `RunState.retained_session`: optional retained browser session availability metadata used by debug run-from-selected UI.
+- `WorkflowRunSnapshot`: run-id scoped status wrapper with `run_id`, `workflow_id`, `workflow_name`, `source` (`manual` or `schedule`), `started_at`, and nested `state: RunState`, plus mirrored top-level run-state fields for compatibility.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
@@ -207,6 +208,9 @@ Schedule validation issues serialize as `{ field, message, level }`.
 Enabled schedules must have valid schedule config and a currently runnable
 saved workflow. Disabled draft schedules can be saved without requiring the
 workflow graph/settings to be runnable.
+Scheduler skip reasons include workflow/profile/batch run conflicts such as
+`active_workflow`, `active_profile`, and `active_batch`; isolated due schedules
+can start concurrently and each started event records its run id.
 
 ## Graph Shape
 

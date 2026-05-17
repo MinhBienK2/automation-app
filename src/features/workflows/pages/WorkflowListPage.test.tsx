@@ -120,6 +120,11 @@ describe("Workflow list integration", () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       run_workflow: {
+        run_id: "run-1",
+        workflow_id: workflow.id,
+        workflow_name: workflow.name,
+        source: "manual",
+        started_at: "2026-05-17T09:00:00.000Z",
         status: "running",
         mode: "run_workflow",
         target_step_id: null,
@@ -128,6 +133,11 @@ describe("Workflow list integration", () => {
         completed_step_ids: [],
         outputs: {},
         error: null,
+        state: {
+          ...idleRunState,
+          status: "running",
+          mode: "run_workflow",
+        },
       },
     });
 
@@ -143,24 +153,141 @@ describe("Workflow list integration", () => {
     expect(workflowBridgeMock.getWorkflow).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Back to Workflows" }))
       .not.toBeInTheDocument();
-    expect(await screen.findByText("Running: Login flow")).toBeInTheDocument();
+    expect(await screen.findByText("Running")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Run Login flow" })).toBeDisabled();
   });
 
   test("disables list run buttons while a run is already active", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
-      get_run_state: {
-        ...idleRunState,
-        status: "running",
-        mode: "run_workflow",
-      },
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+          },
+        },
+      ],
     });
 
     renderApp();
 
     expect(await screen.findByRole("button", { name: "Run Login flow" }))
       .toBeDisabled();
+  });
+
+  test("scopes running status and stop controls to the active workflow row", async () => {
+    const secondWorkflow = {
+      id: "workflow-2",
+      name: "Support flow",
+      step_count: 0,
+      created_at: "2",
+      updated_at: "2",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow, secondWorkflow]),
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+            current_step_number: 1,
+          },
+        },
+      ],
+      stop_run: { ...idleRunState, status: "stopped" },
+    });
+
+    renderApp();
+
+    const loginCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
+    const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
+
+    expect(within(loginCard as HTMLElement).getByRole("button", {
+      name: "Run Login flow",
+    })).toBeDisabled();
+    expect(within(loginCard as HTMLElement).getByText("Running step 1"))
+      .toBeInTheDocument();
+    await userEvent.click(within(loginCard as HTMLElement).getByRole("button", {
+      name: "Stop Login flow",
+    }));
+
+    expect(within(supportCard as HTMLElement).getByRole("button", {
+      name: "Run Support flow",
+    })).not.toBeDisabled();
+    expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
+  });
+
+  test("Run Center renders multiple active runs and stops the selected run", async () => {
+    const secondWorkflow = {
+      id: "workflow-2",
+      name: "Support flow",
+      step_count: 0,
+      created_at: "2",
+      updated_at: "2",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow, secondWorkflow]),
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+            current_step_number: 1,
+          },
+        },
+        {
+          run_id: "run-2",
+          workflow_id: secondWorkflow.id,
+          workflow_name: secondWorkflow.name,
+          source: "schedule",
+          started_at: "2026-05-17T09:00:05.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+            error: null,
+          },
+        },
+      ],
+      stop_run: { ...idleRunState, status: "stopped" },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Run Center" }));
+
+    const runCenter = await screen.findByRole("region", { name: "Run Center" });
+    expect(within(runCenter).getByRole("heading", { name: "Run Center" }))
+      .toBeInTheDocument();
+    expect(within(runCenter).getByText("Login flow")).toBeInTheDocument();
+    expect(within(runCenter).getByText("Support flow")).toBeInTheDocument();
+    expect(within(runCenter).getByText("schedule")).toBeInTheDocument();
+
+    const supportRow = within(runCenter).getByText("Support flow").closest("tr");
+    await userEvent.click(within(supportRow as HTMLElement).getByRole("button", {
+      name: "Stop Support flow run",
+    }));
+
+    expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-2");
   });
 
   test("confirms deletion in an app dialog instead of using the browser confirm", async () => {

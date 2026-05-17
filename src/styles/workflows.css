@@ -130,7 +130,9 @@
 }
 
 .workflow-card .row-actions {
-  grid-template-columns: repeat(6, 40px);
+  grid-auto-flow: column;
+  grid-auto-columns: 40px;
+  grid-template-columns: none;
   width: auto;
 }
 

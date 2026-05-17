@@ -10,12 +10,12 @@ Preserve these unless the task explicitly changes them.
 - Workflow list `Edit` opens Workflow Settings at General.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph and non-storage copied settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint, and disables Run from selected for the copy.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Keeping profile data is the default. Deleting profile data removes only unshared inactive profile directories.
-- Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run buttons are disabled while any workflow run is active, and list-started runs keep polling run state until terminal status.
+- Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
 - Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
-- If a schedule fires while a normal workflow run or batch run is active, that occurrence is skipped with reason `active_run`; one-time schedules are disabled after the skipped opportunity.
+- If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
 - Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
 - Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and secret search/hash portions of fingerprint preflight probe URLs.
@@ -81,6 +81,7 @@ Preserve these unless the task explicitly changes them.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
+- Run Center is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
@@ -109,8 +110,9 @@ Preserve these unless the task explicitly changes them.
 - Domain allowlist graph nodes become a run-scope navigation policy. Disallowed Navigate/Open New Tab URLs fail after template rendering and before browser navigation.
 - Browser identity profile directories persist Chromium user data under the user's app data directory so login/session state can survive app and OS temp cleanup. Runs without persistent session reuse use temporary browser storage but still keep the configured identity seed unless the operator explicitly resets or duplicates the identity.
 - Missing Workflow Settings rows return lazy v2 defaults.
-- Stop returns a stopped state immediately; active-run ownership clears after the runner finishes cancellation.
-- Batch runs share active-run ownership with normal runs, can be stopped through Stop, and expose progress/summary in run outputs.
+- Stop returns a stopped state immediately for the targeted run id; active workflow/profile ownership clears after the runner finishes cancellation.
+- Different workflows can run concurrently when they do not share a persistent browser profile. Same-workflow runs, shared persistent-profile runs, and batch conflicts are rejected with readable command errors.
+- Batch runs remain globally exclusive with normal runs, can be stopped through Stop, and expose progress/summary in run outputs.
 - Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.

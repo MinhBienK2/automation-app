@@ -83,7 +83,7 @@ describe("workflow scheduler engine", () => {
     await processDueSchedules({
       now: new Date("2026-05-17T09:00:00.000Z"),
       repository,
-      hasActiveRun: () => false,
+      getRunConflict: () => null,
       validateWorkflow: () => [],
       startWorkflow,
     });
@@ -104,7 +104,7 @@ describe("workflow scheduler engine", () => {
     });
   });
 
-  test("skips active-run conflicts and disables one-time schedules", async () => {
+  test("skips active workflow conflicts and disables one-time schedules", async () => {
     const repository = memoryScheduleRepository([
       schedule({
         kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
@@ -115,7 +115,7 @@ describe("workflow scheduler engine", () => {
     await processDueSchedules({
       now: new Date("2026-05-17T09:00:00.000Z"),
       repository,
-      hasActiveRun: () => true,
+      getRunConflict: () => "active_workflow",
       validateWorkflow: () => [],
       startWorkflow: vi.fn(),
     });
@@ -123,7 +123,7 @@ describe("workflow scheduler engine", () => {
     expect(repository.events).toMatchObject([
       {
         event_type: "skipped",
-        reason: "active_run",
+        reason: "active_workflow",
         scheduled_for: "2026-05-17T09:00:00.000Z",
       },
       {
@@ -148,7 +148,7 @@ describe("workflow scheduler engine", () => {
       now: new Date("2026-05-17T09:10:01.000Z"),
       missedWindowMs: 5 * 60 * 1000,
       repository,
-      hasActiveRun: () => false,
+      getRunConflict: () => null,
       validateWorkflow: () => [],
       startWorkflow: vi.fn(),
     });
@@ -171,7 +171,7 @@ describe("workflow scheduler engine", () => {
     await processDueSchedules({
       now: new Date("2026-05-17T09:00:00.000Z"),
       repository,
-      hasActiveRun: () => false,
+      getRunConflict: () => null,
       validateWorkflow: () => [
         { source: "graph", level: "error", message: "Select an action type" },
       ],
@@ -186,6 +186,107 @@ describe("workflow scheduler engine", () => {
       },
     ]);
     expect(repository.events[0]?.details_json).toContain("Select an action type");
+  });
+
+  test("starts multiple due schedules for isolated workflows in one tick", async () => {
+    const repository = memoryScheduleRepository([
+      schedule({
+        id: "schedule-1",
+        workflow_id: "workflow-1",
+        workflow_name: "Workflow 1",
+        next_run_at: "2026-05-17T09:00:00.000Z",
+      }),
+      schedule({
+        id: "schedule-2",
+        workflow_id: "workflow-2",
+        workflow_name: "Workflow 2",
+        next_run_at: "2026-05-17T09:00:00.000Z",
+      }),
+    ]);
+    const startWorkflow = vi.fn(async (workflowId: string) => ({
+      runId: `run-${workflowId}`,
+    }));
+
+    await processDueSchedules({
+      now: new Date("2026-05-17T09:00:00.000Z"),
+      repository,
+      getRunConflict: () => null,
+      validateWorkflow: () => [],
+      startWorkflow,
+    });
+
+    expect(startWorkflow).toHaveBeenCalledTimes(2);
+    expect(startWorkflow).toHaveBeenNthCalledWith(1, "workflow-1");
+    expect(startWorkflow).toHaveBeenNthCalledWith(2, "workflow-2");
+    expect(repository.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schedule_id: "schedule-1",
+          event_type: "started",
+          run_id: "run-workflow-1",
+        }),
+        expect.objectContaining({
+          schedule_id: "schedule-2",
+          event_type: "started",
+          run_id: "run-workflow-2",
+        }),
+      ]),
+    );
+  });
+
+  test("skips only conflicting scheduled workflows with explicit reasons", async () => {
+    const activeWorkflows = new Set<string>();
+    const repository = memoryScheduleRepository([
+      schedule({
+        id: "schedule-1",
+        workflow_id: "workflow-1",
+        next_run_at: "2026-05-17T09:00:00.000Z",
+      }),
+      schedule({
+        id: "schedule-2",
+        workflow_id: "workflow-1",
+        next_run_at: "2026-05-17T09:00:00.000Z",
+      }),
+      schedule({
+        id: "schedule-3",
+        workflow_id: "workflow-3",
+        next_run_at: "2026-05-17T09:00:00.000Z",
+      }),
+    ]);
+
+    await processDueSchedules({
+      now: new Date("2026-05-17T09:00:00.000Z"),
+      repository,
+      getRunConflict: (workflowId) => {
+        if (activeWorkflows.has(workflowId)) return "active_workflow";
+        if (workflowId === "workflow-3") return "active_profile";
+        return null;
+      },
+      validateWorkflow: () => [],
+      startWorkflow: vi.fn(async (workflowId: string) => {
+        activeWorkflows.add(workflowId);
+        return { runId: `run-${workflowId}` };
+      }),
+    });
+
+    expect(repository.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schedule_id: "schedule-1",
+          event_type: "started",
+        }),
+        expect.objectContaining({
+          schedule_id: "schedule-2",
+          event_type: "skipped",
+          reason: "active_workflow",
+        }),
+        expect.objectContaining({
+          schedule_id: "schedule-3",
+          event_type: "skipped",
+          reason: "active_profile",
+        }),
+      ]),
+    );
   });
 });
 
