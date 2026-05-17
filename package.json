@@ -17,6 +17,7 @@
     "electron:pack:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
     "electron:pack:win": "npm run build && electron-builder --win nsis zip --publish never",
     "electron:pack:mac": "npm run build && electron-builder --mac dmg zip --publish never",
+    "deploy": "node scripts/deploy-release.mjs",
     "release:sbom": "node scripts/generate-release-sbom.mjs release/sbom.cyclonedx.json",
     "release:manifest": "node scripts/generate-release-manifest.mjs release",
     "test": "vitest run",

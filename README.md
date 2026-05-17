@@ -147,6 +147,17 @@ Build only the Electron main/preload code:
 npm run build:electron
 ```
 
+Deploy a new tag-backed desktop release. A real deploy requires a clean
+worktree, runs tests and build, bumps the package version, commits, creates a
+`v*` tag, pushes the branch, and pushes the tag to trigger Desktop Release:
+
+```bash
+npm run deploy
+npm run deploy -- --minor
+npm run deploy -- --major
+npm run deploy -- --dry-run
+```
+
 ## Desktop CI/CD
 
 GitHub Actions workflows use Node.js 24. Workflow

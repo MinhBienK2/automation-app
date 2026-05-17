@@ -111,12 +111,16 @@ Lower-level coverage:
   upload macOS, Windows, and Ubuntu/Linux artifacts.
 - Release artifacts must include a CycloneDX SBOM, SHA-256 checksum manifest,
   JSON release manifest, and GitHub artifact attestation.
+- `npm run deploy` is the local release helper. Real deploys require a clean
+  worktree, run tests/build, bump the package version, commit, create a `v*`
+  tag, and push the branch and tag.
 - CodeQL, Dependabot, immutable action pinning, and repository-governance docs
   are part of release verification.
 
 Focused commands:
 
 - `npm test -- ci-cd.test.ts`
+- `npm test -- scripts/deploy-release.test.mjs`
 - `npm run build`
 - `npm run release:sbom`
 - `npm run release:manifest`

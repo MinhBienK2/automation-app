@@ -285,6 +285,7 @@ describe("desktop CI/CD", () => {
     expect(packageJson.scripts["electron:pack:linux"]).toContain("--linux");
     expect(packageJson.scripts["release:sbom"]).toContain("generate-release-sbom.mjs");
     expect(packageJson.scripts["release:manifest"]).toContain("generate-release-manifest.mjs");
+    expect(packageJson.scripts.deploy).toBe("node scripts/deploy-release.mjs");
     expect(packageJson.build.mac?.target).toEqual(expect.arrayContaining(["dmg", "zip"]));
     expect(packageJson.build.mac?.hardenedRuntime).toBe(true);
     expect(packageJson.build.win?.target).toEqual(expect.arrayContaining(["nsis", "zip"]));

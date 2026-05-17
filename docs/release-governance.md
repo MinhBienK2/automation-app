@@ -55,7 +55,12 @@ supported by electron-builder. Keep signing credentials scoped to
 ## Release Flow
 
 1. Merge code through protected PRs after required checks pass.
-2. Create a release tag such as `v0.1.0`.
+2. Run `npm run deploy` from a clean worktree to run local tests/build, bump the
+   patch version, commit the version change, create the matching `v*` tag, push
+   the branch, and push the tag. Use `npm run deploy -- --minor` or
+   `npm run deploy -- --major` when the release needs a larger version bump, and
+   `npm run deploy -- --dry-run` to preview the command plan without changing
+   git state.
 3. The Desktop Release workflow runs quality gates, waits for the
    `internal-release` environment approval, packages macOS, Windows, and
    Ubuntu/Linux artifacts, signs supported platforms with environment secrets,
