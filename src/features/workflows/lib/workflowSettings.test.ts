@@ -41,6 +41,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.viewport_height).toBe(947);
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
+    expect(settings.graph_defaults.default_edge_delay).toBeNull();
     expect(settings.environment.initial_variables).toEqual([]);
     expect(settings).not.toHaveProperty("owned_test_gates");
     expect(settings.migration_notes).toEqual([]);
@@ -56,6 +57,7 @@ describe("workflow settings model", () => {
       "general",
       "run_policy",
       "browser_launch",
+      "graph_defaults",
       "environment",
     ];
     expect(workflowSettingsSections.map((section) => section.id)).toEqual(visibleSectionIds);
@@ -88,7 +90,6 @@ describe("workflow settings model", () => {
       "Default action timeout",
       "Default retry attempts",
       "Default retry interval",
-      "Wait between nodes",
       "Device profile",
       "User agent",
       "Mobile viewport",
@@ -128,6 +129,12 @@ describe("workflow settings model", () => {
       "Humanize browser input",
       "Fingerprint preflight",
       "Headless browser",
+    ]);
+    expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Defaults Settings Help");
+    expect(workflowSettingsHelp.graph_defaults.en.fieldGuide.map((field) => field.name)).toEqual([
+      "Default link wait",
+      "Fixed duration ms",
+      "Random min/max ms",
     ]);
     expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
     expect(helpText).not.toContain("Owned Test Gates");

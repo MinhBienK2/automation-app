@@ -83,6 +83,7 @@ const workflowPackageSections: WorkflowSettingsSectionId[] = [
   "general",
   "run_policy",
   "browser_launch",
+  "graph_defaults",
   "environment",
 ];
 const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
@@ -420,8 +421,14 @@ function App() {
       }
       try {
         const loadedSettings = await getWorkflowSettings(id);
-        setWorkflowSettings(loadedSettings);
-        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
+        const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+          workflowId: id,
+          workflowName: loaded.workflow.name,
+          createdAt: loaded.workflow.created_at,
+          updatedAt: loaded.workflow.updated_at,
+        });
+        setWorkflowSettings(normalizedSettings);
+        setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(normalizedSettings));
       } catch {
         const fallbackSettings = defaultWorkflowSettings({
           workflowId: id,
@@ -918,8 +925,14 @@ function App() {
 
     try {
       const loadedSettings = await getWorkflowSettings(workflow.id);
-      setWorkflowSettings(loadedSettings);
-      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(loadedSettings));
+      const normalizedSettings = withWorkflowSettingsDefaults(loadedSettings, {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        createdAt: workflow.created_at,
+        updatedAt: workflow.updated_at,
+      });
+      setWorkflowSettings(normalizedSettings);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(normalizedSettings));
     } catch {
       const fallbackSettings = defaultWorkflowSettings({
         workflowId: workflow.id,
@@ -1039,6 +1052,7 @@ function App() {
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
+            defaultEdgeDelay={workflowSettings?.graph_defaults?.default_edge_delay ?? null}
             onBack={backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={stopRun}
@@ -1272,12 +1286,34 @@ function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
     general: status,
     run_policy: status,
     browser_launch: status,
+    graph_defaults: status,
     environment: status,
   };
 }
 
 function cloneWorkflowSettings(settings: WorkflowSettings) {
   return JSON.parse(JSON.stringify(settings)) as WorkflowSettings;
+}
+
+function withWorkflowSettingsDefaults(
+  settings: WorkflowSettings,
+  workflow: {
+    workflowId: string;
+    workflowName: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  },
+) {
+  const defaults = defaultWorkflowSettings(workflow);
+  return {
+    ...defaults,
+    ...settings,
+    general: { ...defaults.general, ...settings.general },
+    run_policy: { ...defaults.run_policy, ...settings.run_policy },
+    browser_launch: { ...defaults.browser_launch, ...settings.browser_launch },
+    graph_defaults: { ...defaults.graph_defaults, ...settings.graph_defaults },
+    environment: { ...defaults.environment, ...settings.environment },
+  };
 }
 
 function isWorkflowSettings(value: unknown): value is WorkflowSettings {

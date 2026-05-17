@@ -330,6 +330,9 @@ describe("workflow API settings commands", () => {
         batch_stop_on_first_failed_row: false,
       },
       browser_launch: browserLaunchSettings(),
+      graph_defaults: {
+        default_edge_delay: null,
+      },
       environment: {
         initial_variables: [],
       },

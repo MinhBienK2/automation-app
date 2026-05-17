@@ -30,6 +30,70 @@ afterEach(async () => {
 });
 
 describe("TypeScript graph compiler parity", () => {
+  test("compiles edge delays as synthetic wait steps before the target node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: clickAction("//first") }),
+        graphNode("second", "action", { config: clickAction("//second") }),
+      ],
+      [
+        edge("start", "out", "first", "in", "edge-start-first"),
+        {
+          ...edge("first", "out", "second", "in", "edge-first-second"),
+          delay: { type: "random" as const, min_ms: 500, max_ms: 1200 },
+        },
+      ],
+    );
+
+    expect(compileWorkflowRunPlan(graph, workflowSettings()).steps.map((step) => ({
+      node_id: step.node_id,
+      label: step.label,
+      config: step.config,
+    }))).toEqual([
+      {
+        node_id: "first",
+        label: "First",
+        config: clickAction("//first"),
+      },
+      {
+        node_id: "__edge_wait:edge-first-second",
+        label: "Wait before Second",
+        config: { type: "random_wait", config: { min_ms: 500, max_ms: 1200 } },
+      },
+      {
+        node_id: "second",
+        label: "Second",
+        config: clickAction("//second"),
+      },
+    ]);
+  });
+
+  test("validates edge delay ranges", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: clickAction("//first") }),
+      ],
+      [
+        {
+          ...edge("start", "out", "first", "in", "edge-start-first"),
+          delay: { type: "random" as const, min_ms: 1200, max_ms: 500 },
+        },
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          edge_id: "edge-start-first",
+          message: "Edge wait range is invalid",
+        }),
+      ]),
+    );
+  });
+
   test("validates structural graph issues and loop-control context", async () => {
     const { handlers } = await createTestHandlers();
     const graph = graphOf(
@@ -1120,6 +1184,9 @@ function workflowSettings(
     environment: {
       initial_variables: [],
       ...overrides.environment,
+    },
+    graph_defaults: {
+      default_edge_delay: null,
     },
     migration_notes: [],
     created_at: "1",

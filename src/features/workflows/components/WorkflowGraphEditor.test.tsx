@@ -345,6 +345,21 @@ describe("Workflow graph editor integration", () => {
     ).toEqual(["edge-b-out-target-in"]);
   });
 
+  test("adds the workflow default link wait to newly connected graph edges", () => {
+    expect(workflowGraphEditorSource).toContain("defaultEdgeDelay");
+    expect(workflowGraphEditorSource).toContain("cloneGraphEdgeDelay(defaultEdgeDelay)");
+    expect(appSource).toContain("workflowSettings?.graph_defaults?.default_edge_delay");
+    expect(appSource).toContain("defaultEdgeDelay={");
+  });
+
+  test("exposes link wait editing from the selected edge inspector", () => {
+    expect(workflowGraphInspectorSource).toContain("Link wait");
+    expect(workflowGraphInspectorSource).toContain("Fixed duration ms");
+    expect(workflowGraphInspectorSource).toContain("Random min ms");
+    expect(workflowGraphEditorSource).toContain("function updateEdge");
+    expect(workflowGraphEditorSource).toContain("onUpdateEdge={updateEdge}");
+  });
+
   test("opens graph shortcuts from the toolbar", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),

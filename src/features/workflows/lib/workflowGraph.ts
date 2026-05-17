@@ -1,4 +1,5 @@
 import type {
+  GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
   GraphPort,
@@ -27,6 +28,8 @@ export type WorkflowFlowNodeData = {
 export type WorkflowFlowEdgeData = {
   hasIssue: boolean;
   status: WorkflowFlowEdgeStatus;
+  delay?: GraphEdgeDelay | null;
+  delayLabel?: string | null;
 };
 
 export type WorkflowFlowNode = Node<WorkflowFlowNodeData, "workflow">;
@@ -224,6 +227,8 @@ export function toReactFlowGraph(
         data: {
           hasIssue,
           status,
+          delay: edge.delay ?? null,
+          delayLabel: graphEdgeDelayLabel(edge.delay ?? null),
         },
       };
     }),
@@ -403,6 +408,7 @@ export function fromReactFlowGraph(
             ? cleanEdgeLabel(edge.label)
             : edge.sourceHandle ?? null),
         condition: existingEdge?.condition ?? null,
+        delay: existingEdge?.delay ?? graphEdgeDelayFromData(edge.data?.delay),
       };
     }).filter(
       (edge) =>
@@ -415,6 +421,31 @@ export function fromReactFlowGraph(
       zoom: viewport.zoom,
     },
   };
+}
+
+function graphEdgeDelayLabel(delay: GraphEdgeDelay | null) {
+  if (!delay) return null;
+  if (delay.type === "fixed") return `${delay.duration_ms}ms`;
+  return `${delay.min_ms}-${delay.max_ms}ms`;
+}
+
+function graphEdgeDelayFromData(value: unknown): GraphEdgeDelay | null {
+  if (!value || typeof value !== "object") return null;
+  const delay = value as Partial<GraphEdgeDelay>;
+  if (
+    delay.type === "fixed" &&
+    typeof delay.duration_ms === "number"
+  ) {
+    return { type: "fixed", duration_ms: delay.duration_ms };
+  }
+  if (
+    delay.type === "random" &&
+    typeof delay.min_ms === "number" &&
+    typeof delay.max_ms === "number"
+  ) {
+    return { type: "random", min_ms: delay.min_ms, max_ms: delay.max_ms };
+  }
+  return null;
 }
 
 function cleanEdgeLabel(label: string) {

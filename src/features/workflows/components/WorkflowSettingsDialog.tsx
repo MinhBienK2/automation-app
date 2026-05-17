@@ -4,6 +4,7 @@ import type {
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsEnvironment,
+  WorkflowSettingsGraphDefaults,
   WorkflowSettingsGeneral,
   WorkflowSettingsRunPolicy,
   WorkflowSettingsSectionId,
@@ -169,6 +170,12 @@ export function WorkflowSettingsDialog({
                     runPolicy={settings.run_policy}
                     value={settings.browser_launch}
                     onChange={(value) => updateSection("browser_launch", value)}
+                  />
+                ) : null}
+                {activeSection === "graph_defaults" ? (
+                  <GraphDefaultsSettingsSection
+                    value={settings.graph_defaults}
+                    onChange={(value) => updateSection("graph_defaults", value)}
                   />
                 ) : null}
                 {activeSection === "environment" ? (
@@ -670,6 +677,93 @@ function BrowserLaunchSettingsSection({
         label="Headless browser"
         onCheckedChange={(checked) => onChange({ ...value, headless: checked })}
       />
+    </div>
+  );
+}
+
+function GraphDefaultsSettingsSection({
+  value,
+  onChange,
+}: {
+  value: WorkflowSettingsGraphDefaults;
+  onChange: (value: WorkflowSettingsGraphDefaults) => void;
+}) {
+  const delay = value.default_edge_delay;
+  const mode = delay?.type ?? "none";
+  return (
+    <div className="settings-form-grid">
+      <label className="field">
+        <span>Default link wait</span>
+        <Select
+          value={mode}
+          onChange={(event) => {
+            const nextMode = event.currentTarget.value;
+            if (nextMode === "fixed") {
+              onChange({ ...value, default_edge_delay: { type: "fixed", duration_ms: 1000 } });
+              return;
+            }
+            if (nextMode === "random") {
+              onChange({
+                ...value,
+                default_edge_delay: { type: "random", min_ms: 800, max_ms: 1500 },
+              });
+              return;
+            }
+            onChange({ ...value, default_edge_delay: null });
+          }}
+        >
+          <option value="none">No default wait</option>
+          <option value="fixed">Fixed duration</option>
+          <option value="random">Random range</option>
+        </Select>
+      </label>
+      {delay?.type === "fixed" ? (
+        <NumberField
+          label="Fixed duration ms"
+          value={delay.duration_ms}
+          onChange={(next) =>
+            onChange({
+              ...value,
+              default_edge_delay: { type: "fixed", duration_ms: next ?? 1000 },
+            })
+          }
+        />
+      ) : null}
+      {delay?.type === "random" ? (
+        <>
+          <NumberField
+            label="Random min ms"
+            value={delay.min_ms}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                default_edge_delay: {
+                  type: "random",
+                  min_ms: next ?? 800,
+                  max_ms: delay.max_ms,
+                },
+              })
+            }
+          />
+          <NumberField
+            label="Random max ms"
+            value={delay.max_ms}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                default_edge_delay: {
+                  type: "random",
+                  min_ms: delay.min_ms,
+                  max_ms: next ?? 1500,
+                },
+              })
+            }
+          />
+        </>
+      ) : null}
+      <p className="workflow-settings-hint">
+        This applies only to links created after the setting is saved. Use Wait nodes for page or element conditions.
+      </p>
     </div>
   );
 }

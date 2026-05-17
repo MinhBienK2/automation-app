@@ -12,6 +12,7 @@ import type {
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
   ElementSnapshot,
+  GraphEdgeDelay,
   GraphValidationIssue,
   OrchestrationSchedule,
   RecordedEvent,
@@ -99,6 +100,7 @@ const workflowSettingsSections: WorkflowSettingsSectionId[] = [
   "general",
   "run_policy",
   "browser_launch",
+  "graph_defaults",
   "environment",
 ];
 
@@ -1455,7 +1457,35 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       });
     }
   }
+  const edgeDelayIssue = validateGraphEdgeDelay(settings.graph_defaults?.default_edge_delay);
+  if (edgeDelayIssue) {
+    issues.push({
+      section: "graph_defaults",
+      field: "default_edge_delay",
+      level: "error",
+      message: edgeDelayIssue,
+    });
+  }
   return issues;
+}
+
+function validateGraphEdgeDelay(delay: GraphEdgeDelay | null | undefined) {
+  if (!delay) return null;
+  if (delay.type === "fixed") {
+    return Number.isFinite(delay.duration_ms) && delay.duration_ms > 0
+      ? null
+      : "Default link wait duration must be greater than zero";
+  }
+  if (delay.type === "random") {
+    return Number.isFinite(delay.min_ms) &&
+      Number.isFinite(delay.max_ms) &&
+      delay.min_ms > 0 &&
+      delay.max_ms > 0 &&
+      delay.max_ms >= delay.min_ms
+      ? null
+      : "Default link wait range is invalid";
+  }
+  return "Default link wait type is invalid";
 }
 
 function isOptionalModuleAvailable(name: string) {
@@ -1922,6 +1952,11 @@ function normalizeWorkflowSettings(
       ...base.browser_launch,
       ...objectRecord(settings.browser_launch),
     }),
+    graph_defaults: {
+      default_edge_delay: normalizeGraphEdgeDelay(
+        objectRecord(settings.graph_defaults).default_edge_delay,
+      ),
+    },
     environment: {
       initial_variables: Array.isArray(settings.environment?.initial_variables)
         ? settings.environment.initial_variables
@@ -2085,6 +2120,22 @@ function normalizeSettingsBrowserLaunch(
   };
 }
 
+function normalizeGraphEdgeDelay(value: unknown): GraphEdgeDelay | null {
+  const delay = objectRecord(value);
+  if (delay.type === "fixed") {
+    const duration = positiveOptionalNumber(delay.duration_ms);
+    return duration == null ? null : { type: "fixed", duration_ms: duration };
+  }
+  if (delay.type === "random") {
+    const min = positiveOptionalNumber(delay.min_ms);
+    const max = positiveOptionalNumber(delay.max_ms);
+    return min == null || max == null || max < min
+      ? null
+      : { type: "random", min_ms: min, max_ms: max };
+  }
+  return null;
+}
+
 export function defaultWorkflowSettings(
   workflow: Pick<WorkflowSummary, "id" | "name" | "created_at" | "updated_at"> &
     Partial<Pick<WorkflowSummary, "step_count">>,
@@ -2113,6 +2164,9 @@ export function defaultWorkflowSettings(
       batch_stop_on_first_failed_row: false,
     },
     browser_launch: browserLaunch,
+    graph_defaults: {
+      default_edge_delay: null,
+    },
     environment: {
       initial_variables: [],
     },

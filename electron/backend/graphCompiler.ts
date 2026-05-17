@@ -4,6 +4,7 @@ import type {
   CompiledGraphStep,
   CompiledNestedAction,
   CompiledWorkflowGraph,
+  GraphEdge,
   GraphNode,
   GraphNodeType,
   GraphPort,
@@ -76,6 +77,10 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
   for (const edge of graphToValidate.edges) {
     if (edge.source_node_id === edge.target_node_id) {
       issues.push(error(edge.source_node_id, edge.id, "Self-links are not allowed"));
+    }
+    const edgeDelayMessage = validateGraphEdgeDelay(edge.delay);
+    if (edgeDelayMessage) {
+      issues.push(error(edge.source_node_id, edge.id, edgeDelayMessage));
     }
 
     const source = nodeById.get(edge.source_node_id);
@@ -168,7 +173,7 @@ export function compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGrap
   }
 
   const steps: CompiledGraphStep[] = [];
-  compilePath(normalizedGraph, nextTarget(normalizedGraph, start.id, "out"), new Set(), steps);
+  compileTransition(normalizedGraph, nextTransition(normalizedGraph, start.id, "out"), new Set(), steps);
   return { steps };
 }
 
@@ -263,11 +268,11 @@ function compilePath(
       return;
     case "action":
       steps.push(step(node, node.config as ActionConfig));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "merge":
       steps.push(step(node, { type: "graph_noop", config: { kind: "merge" } }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "router": {
       const router = routerGraphConfig(node);
@@ -284,7 +289,7 @@ function compilePath(
           default_steps: compileNestedConfigs(graph, node.id, "default", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "if": {
@@ -297,7 +302,7 @@ function compilePath(
           else_steps: compileNestedConfigs(graph, node.id, "false", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "switch": {
@@ -314,7 +319,7 @@ function compilePath(
           default_steps: compileNestedConfigs(graph, node.id, "default", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "repeat_times": {
@@ -325,7 +330,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "repeat_for_each": {
@@ -341,7 +346,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "while": {
@@ -354,7 +359,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "repeat_until": {
@@ -368,7 +373,7 @@ function compilePath(
           timeout_steps: compileNestedConfigs(graph, node.id, "timeout", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "retry": {
@@ -381,7 +386,7 @@ function compilePath(
           failed_steps: compileNestedConfigs(graph, node.id, "failed", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "success"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "success"), visited, steps);
       break;
     }
     case "try_catch": {
@@ -394,7 +399,7 @@ function compilePath(
           finally_steps: compileNestedConfigs(graph, node.id, "finally", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "fallback": {
@@ -405,7 +410,7 @@ function compilePath(
           fallback_steps: compileNestedConfigs(graph, node.id, "fallback", visited),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "done"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
       break;
     }
     case "break_loop":
@@ -426,14 +431,14 @@ function compilePath(
       return;
     case "set_variable":
       steps.push(step(node, setVariableActionConfig(node)));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "set_json_variables":
       steps.push(step(node, {
         type: "set_json_variables",
         config: { json: requiredString(node.config, "json", "JSON variables are required") },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "transform_variable":
       steps.push(step(node, {
@@ -444,7 +449,7 @@ function compilePath(
           expression: stringField(node.config, "expression") ?? "",
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "assert_output":
       steps.push(step(node, {
@@ -455,21 +460,67 @@ function compilePath(
           value: requiredString(node.config, "value", "Expected output value is required"),
         },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "domain_allowlist":
       steps.push(step(node, {
         type: "domain_allowlist",
         config: { domains: stringArray(node.config, "domains", "Allowed domains are required") },
       }));
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
     case "start":
-      compilePath(graph, nextTarget(graph, node.id, "out"), visited, steps);
+      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
       break;
   }
 
   visited.delete(nodeId);
+}
+
+type GraphTransition = {
+  edge: GraphEdge;
+  targetNodeId: string;
+} | null;
+
+function compileTransition(
+  graph: WorkflowGraph,
+  transition: GraphTransition,
+  visited: Set<string>,
+  steps: CompiledGraphStep[],
+) {
+  if (!transition) return;
+  pushEdgeDelayStep(graph, transition.edge, transition.targetNodeId, steps);
+  compilePath(graph, transition.targetNodeId, visited, steps);
+}
+
+function pushEdgeDelayStep(
+  graph: WorkflowGraph,
+  edge: GraphEdge,
+  targetNodeId: string,
+  steps: CompiledGraphStep[],
+) {
+  const delay = edge.delay;
+  if (!delay) return;
+  const target = graph.nodes.find((node) => node.id === targetNodeId);
+  if (delay.type === "fixed") {
+    steps.push({
+      node_id: `__edge_wait:${edge.id}`,
+      label: `Wait before ${target?.label ?? targetNodeId}`,
+      config: {
+        type: "wait",
+        config: {
+          condition: "duration",
+          duration_ms: delay.duration_ms,
+        },
+      },
+    });
+    return;
+  }
+  steps.push({
+    node_id: `__edge_wait:${edge.id}`,
+    label: `Wait before ${target?.label ?? targetNodeId}`,
+    config: { type: "random_wait", config: { min_ms: delay.min_ms, max_ms: delay.max_ms } },
+  });
 }
 
 function compileNestedConfigs(
@@ -479,7 +530,7 @@ function compileNestedConfigs(
   visited: Set<string>,
 ): CompiledNestedAction[] {
   const nestedSteps: CompiledGraphStep[] = [];
-  compilePath(graph, nextTarget(graph, sourceNodeId, sourcePort), new Set(visited), nestedSteps);
+  compileTransition(graph, nextTransition(graph, sourceNodeId, sourcePort), new Set(visited), nestedSteps);
   return nestedSteps.map((compiledStep) => ({
     ...compiledStep.config,
     graph_node_id: compiledStep.node_id,
@@ -1102,6 +1153,19 @@ function validateRequiredEnumValue(
     : validationError(field, message);
 }
 
+function validateGraphEdgeDelay(delay: GraphEdge["delay"]) {
+  if (!delay) return null;
+  if (delay.type === "fixed") {
+    return positive(delay.duration_ms) ? null : "Edge wait duration must be greater than 0";
+  }
+  if (delay.type === "random") {
+    return positive(delay.min_ms) && positive(delay.max_ms) && delay.max_ms >= delay.min_ms
+      ? null
+      : "Edge wait range is invalid";
+  }
+  return "Edge wait type is invalid";
+}
+
 function validateDataCaptureConfig(config: {
   xpath?: string | null;
   target?: unknown;
@@ -1508,9 +1572,18 @@ function isTerminalBranchBoundary(nodeType: GraphNodeType): boolean {
 }
 
 function nextTarget(graph: WorkflowGraph, sourceNodeId: string, sourcePort: string): string | null {
-  return [...graph.edges]
+  return nextTransition(graph, sourceNodeId, sourcePort)?.targetNodeId ?? null;
+}
+
+function nextTransition(
+  graph: WorkflowGraph,
+  sourceNodeId: string,
+  sourcePort: string,
+): GraphTransition {
+  const edge = [...graph.edges]
     .filter((edgeValue) => edgeValue.source_node_id === sourceNodeId && edgeValue.source_port === sourcePort)
-    .sort((left, right) => left.id.localeCompare(right.id))[0]?.target_node_id ?? null;
+    .sort((left, right) => left.id.localeCompare(right.id))[0] ?? null;
+  return edge ? { edge, targetNodeId: edge.target_node_id } : null;
 }
 
 function mainPathNodeIds(graph: WorkflowGraph) {

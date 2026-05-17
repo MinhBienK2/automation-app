@@ -58,6 +58,7 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "general", label: "General" },
   { id: "run_policy", label: "Run Policy" },
   { id: "browser_launch", label: "Browser Launch" },
+  { id: "graph_defaults", label: "Graph Defaults" },
   { id: "environment", label: "Environment" },
 ];
 
@@ -250,6 +251,9 @@ export function defaultWorkflowSettings({
       humanize: true,
       human_preset: "default",
       run_from_selected_enabled: false,
+    },
+    graph_defaults: {
+      default_edge_delay: null,
     },
     environment: {
       initial_variables: [],
@@ -861,6 +865,140 @@ export const workflowSettingsHelp: Record<
         {
           mistake: "Đổi proxy khi browser đang chạy.",
           fix: "Save Browser Launch settings và bắt đầu run mới vì launch-level values được áp dụng trước khi Chromium mở.",
+        },
+      ],
+    },
+  },
+  graph_defaults: {
+    en: {
+      title: "Graph Defaults Settings Help",
+      summary:
+        "Graph defaults control authoring conveniences for new links in this workflow. They do not rewrite existing links and they do not replace explicit Wait or Random Wait nodes.",
+      uiLabels: enLabels,
+      bestFor: [
+        "Use it when most transitions in one workflow should pause briefly before the next node starts.",
+        "Use it to keep visual graphs compact when the pause is only transition timing, not a named workflow step.",
+      ],
+      notFor: [
+        "Do not use it for waiting on page state, visible elements, text, URLs, downloads, or business checkpoints.",
+      ],
+      fieldGuide: [
+        {
+          name: "Default link wait",
+          description:
+            "Chooses whether newly created graph links start with no wait, a fixed duration wait, or a randomized duration wait that compiles before the target node.",
+          whenToUse:
+            "Turn it on when the workflow needs a consistent human-paced pause between most connected nodes.",
+        },
+        {
+          name: "Fixed duration ms",
+          description:
+            "Stores a single millisecond duration on each new link, producing a simple duration wait before the linked target node executes.",
+          whenToUse:
+            "Use fixed duration when repeatability matters more than variation during local debugging and evidence capture.",
+        },
+        {
+          name: "Random min/max ms",
+          description:
+            "Stores a minimum and maximum millisecond range on each new link, producing a randomized wait before the linked target node executes.",
+          whenToUse:
+            "Use random duration when a workflow should avoid identical transition timing while staying inside operator-approved bounds.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Human-paced form flow",
+          steps: [
+            "Set default link wait to a small random range",
+            "Connect form actions normally",
+            "Use explicit Wait nodes only for page or element readiness",
+          ],
+        },
+      ],
+      relatedGraphActions: [
+        {
+          action: "Wait",
+          relationship: "related",
+          explanation:
+            "Use a Wait node when the pause has business meaning or waits for a specific browser/page condition.",
+        },
+        {
+          action: "Random Wait",
+          relationship: "related",
+          explanation:
+            "Use a Random Wait node when the randomized pause should appear as a named workflow step.",
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Expecting this setting to update links that already exist.",
+          fix: "Change existing links directly or reconnect them after choosing the new default.",
+        },
+      ],
+    },
+    vi: {
+      title: "Trợ giúp Graph Defaults",
+      summary:
+        "Graph defaults là tiện ích khi author workflow: link mới có thể tự mang wait mặc định. Setting này không sửa link cũ và không thay thế Wait node rõ nghĩa.",
+      uiLabels: viLabels,
+      bestFor: [
+        "Dùng khi phần lớn transition trong workflow cần dừng nhẹ trước khi node kế tiếp chạy.",
+        "Dùng để graph gọn hơn khi khoảng chờ chỉ là timing giữa hai node, không phải một bước nghiệp vụ.",
+      ],
+      notFor: [
+        "Không dùng để chờ trạng thái page, element visible, text, URL, download, hoặc checkpoint cần đặt tên.",
+      ],
+      fieldGuide: [
+        {
+          name: "Default link wait",
+          description:
+            "Chọn link mới sẽ không có wait, có fixed wait, hoặc random wait; wait này được compile trước node đích của link.",
+          whenToUse:
+            "Bật khi workflow cần nhịp chờ nhất quán giữa phần lớn các node vừa được nối.",
+        },
+        {
+          name: "Fixed duration ms",
+          description:
+            "Lưu một thời lượng millisecond trên mỗi link mới, tạo duration wait đơn giản trước khi node đích chạy.",
+          whenToUse:
+            "Dùng fixed duration khi cần kết quả dễ lặp lại lúc debug hoặc thu evidence.",
+        },
+        {
+          name: "Random min/max ms",
+          description:
+            "Lưu khoảng min và max millisecond trên mỗi link mới, tạo random wait trước khi node đích chạy.",
+          whenToUse:
+            "Dùng random duration khi workflow cần tránh timing giống hệt nhau nhưng vẫn trong giới hạn operator duyệt.",
+        },
+      ],
+      workflowExamples: [
+        {
+          title: "Form flow có nhịp người dùng",
+          steps: [
+            "Đặt default link wait thành random range nhỏ",
+            "Nối các action form như bình thường",
+            "Chỉ dùng Wait node rõ ràng cho page hoặc element readiness",
+          ],
+        },
+      ],
+      relatedGraphActions: [
+        {
+          action: "Wait",
+          relationship: "related",
+          explanation:
+            "Dùng Wait node khi khoảng chờ có ý nghĩa nghiệp vụ hoặc cần chờ một điều kiện browser/page cụ thể.",
+        },
+        {
+          action: "Random Wait",
+          relationship: "related",
+          explanation:
+            "Dùng Random Wait node khi random pause cần hiện thành một bước workflow có tên.",
+        },
+      ],
+      commonMistakes: [
+        {
+          mistake: "Nghĩ setting này sẽ tự sửa các link đã tồn tại.",
+          fix: "Sửa trực tiếp link cũ hoặc nối lại link sau khi chọn default mới.",
         },
       ],
     },

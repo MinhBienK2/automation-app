@@ -117,6 +117,7 @@ export type WorkflowSettingsSectionId =
   | "general"
   | "run_policy"
   | "browser_launch"
+  | "graph_defaults"
   | "environment";
 
 export type WorkflowBrowserRetention = "retain" | "close";
@@ -186,6 +187,21 @@ export type WorkflowSettingsEnvironment = {
   initial_variables: VariableAssignment[];
 };
 
+export type GraphEdgeDelay =
+  | {
+      type: "fixed";
+      duration_ms: number;
+    }
+  | {
+      type: "random";
+      min_ms: number;
+      max_ms: number;
+    };
+
+export type WorkflowSettingsGraphDefaults = {
+  default_edge_delay: GraphEdgeDelay | null;
+};
+
 export type WorkflowSettingsMigrationNote = {
   path: string;
   action: "converted" | "dropped" | "review";
@@ -204,6 +220,7 @@ export type WorkflowSettings = {
   general: WorkflowSettingsGeneral;
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  graph_defaults: WorkflowSettingsGraphDefaults;
   environment: WorkflowSettingsEnvironment;
   migration_notes: WorkflowSettingsMigrationNote[];
   created_at?: string | null;
@@ -877,6 +894,7 @@ export type GraphEdge = {
   target_port: string;
   label?: string | null;
   condition?: WorkflowCondition | null;
+  delay?: GraphEdgeDelay | null;
 };
 
 export type WorkflowGraph = {
@@ -1016,6 +1034,7 @@ export type WorkflowPackageSettings = Partial<{
   general: WorkflowSettingsGeneral;
   run_policy: WorkflowSettingsRunPolicy;
   browser_launch: WorkflowSettingsBrowserLaunch;
+  graph_defaults: WorkflowSettingsGraphDefaults;
   environment: WorkflowSettingsEnvironment;
 }>;
 

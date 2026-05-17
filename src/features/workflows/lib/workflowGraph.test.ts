@@ -181,6 +181,10 @@ describe("workflow graph helpers", () => {
 
   test("maps persisted workflow graph to React Flow nodes and edges", () => {
     const graph = linearGraphFromSteps([waitStep]);
+    graph.edges[0] = {
+      ...graph.edges[0],
+      delay: { type: "fixed", duration_ms: 750 },
+    };
 
     const flow = toReactFlowGraph(graph, {
       selectedNodeId: "step-wait",
@@ -234,6 +238,7 @@ describe("workflow graph helpers", () => {
           }),
           data: expect.objectContaining({
             hasIssue: true,
+            delayLabel: "750ms",
           }),
         }),
       ]),
@@ -419,6 +424,10 @@ describe("workflow graph helpers", () => {
 
   test("maps React Flow nodes and edges back to a persisted workflow graph", () => {
     const graph = linearGraphFromSteps([waitStep]);
+    graph.edges[0] = {
+      ...graph.edges[0],
+      delay: { type: "random", min_ms: 500, max_ms: 1200 },
+    };
     const flow = toReactFlowGraph(graph);
     const movedNodes = flow.nodes.map((node) =>
       node.id === "step-wait" ? { ...node, position: { x: 320, y: 80 } } : node,
@@ -455,6 +464,10 @@ describe("workflow graph helpers", () => {
           target_port: "in",
           label: "next",
           condition: null,
+        }),
+        expect.objectContaining({
+          id: "edge-start-step-wait",
+          delay: { type: "random", min_ms: 500, max_ms: 1200 },
         }),
       ]),
     );

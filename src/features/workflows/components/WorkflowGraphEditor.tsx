@@ -21,6 +21,7 @@ import type {
 import "@xyflow/react/dist/style.css";
 import type {
   ActionType,
+  GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
   GraphPosition,
@@ -83,6 +84,7 @@ type WorkflowGraphEditorProps = {
   onSelectedNodeChange?: (nodeId: string | null) => void;
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
+  defaultEdgeDelay?: GraphEdgeDelay | null;
 };
 
 export type GraphSelectionRequest = {
@@ -210,6 +212,7 @@ export function WorkflowGraphEditor({
   runState,
   validationIssues,
   selectionRequest,
+  defaultEdgeDelay = null,
   onChange,
   onRunGraph,
   onSelectedNodeChange,
@@ -425,13 +428,17 @@ export function WorkflowGraphEditor({
         target: nodeId,
         targetHandle: port.id,
         label: source.portId,
-        data: { hasIssue: false, status: "idle" },
+        data: {
+          hasIssue: false,
+          status: "idle",
+          delay: cloneGraphEdgeDelay(defaultEdgeDelay),
+        },
       };
       const nextEdges = replacePortEdge(currentFlowGraph.edges, nextEdge, currentFlowGraph.nodes);
       setReactFlowEdges(nextEdges);
       syncFlowGraph(currentFlowGraph.nodes, nextEdges);
     },
-    [onChange],
+    [defaultEdgeDelay, onChange],
   );
   const clearPreviewConnection = useCallback(() => {
     activePortConnectionRef.current = null;
@@ -678,6 +685,19 @@ export function WorkflowGraphEditor({
     );
   }
 
+  function updateEdge(nextEdge: WorkflowGraph["edges"][number]) {
+    const currentGraph = graphRef.current;
+    commitGraphChange(
+      {
+        ...currentGraph,
+        edges: currentGraph.edges.map((edge) =>
+          edge.id === nextEdge.id ? nextEdge : edge,
+        ),
+      },
+      { nodeIds: [], edgeIds: [nextEdge.id] },
+    );
+  }
+
   function deleteSelectedNode() {
     if (!selectedNode || selectedNode.node_type === "start") return;
     deleteNode(selectedNode.id);
@@ -793,7 +813,11 @@ export function WorkflowGraphEditor({
       ...connection,
       id: `edge-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
       label: connection.sourceHandle,
-      data: { hasIssue: false, status: "idle" },
+      data: {
+        hasIssue: false,
+        status: "idle",
+        delay: cloneGraphEdgeDelay(defaultEdgeDelay),
+      },
     };
     const nextEdges = replacePortEdge(
       reactFlowEdgesRef.current,
@@ -1042,6 +1066,7 @@ export function WorkflowGraphEditor({
           onDuplicateSelection={duplicateSelection}
           onFocusSelectedNode={focusSelectedNode}
           onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
+          onUpdateEdge={updateEdge}
           onUpdateNode={updateNode}
         />
       </div>
@@ -1080,4 +1105,8 @@ export function WorkflowGraphEditor({
       </Dialog>
     </section>
   );
+}
+
+export function cloneGraphEdgeDelay(delay: GraphEdgeDelay | null): GraphEdgeDelay | null {
+  return delay ? { ...delay } : null;
 }

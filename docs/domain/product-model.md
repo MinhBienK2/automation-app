@@ -16,10 +16,11 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.
-- Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, and initial environment variables.
+- Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, graph authoring defaults, and initial environment variables.
 - The Browser Launch section is identity-oriented. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, and fixed CloakBrowser fingerprint seed. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns Run from selected enablement, proxy posture and non-secret proxy metadata, timezone/locale/GeoIP, viewport/device flags, supported WebRTC IP policy values, allowlisted advanced fingerprint overrides, the humanize toggle and `default`/`careful` preset, optional owned fingerprint preflight, and headed/headless policy.
 - CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
 - The Run Policy section owns maximum workflow duration, terminal browser retention, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
+- The Graph Defaults section owns the default duration-only wait copied onto newly created graph links.
 - The Environment section owns initial variable rows that are available before graph actions run.
 
 ## User Workflows
