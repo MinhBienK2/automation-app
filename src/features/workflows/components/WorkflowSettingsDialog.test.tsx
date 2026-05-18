@@ -99,11 +99,12 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "GeoIP from proxy" })).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint platform")).toHaveValue("");
-    expect(within(dialog).getByLabelText("Hardware concurrency")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Device memory GB")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Storage quota MB")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toBeInTheDocument();
+    expect(within(dialog).getByRole("switch", { name: "Custom fingerprint overrides" })).not.toBeChecked();
+    expect(within(dialog).queryByLabelText("Fingerprint platform")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Hardware concurrency")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Device memory GB")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Storage quota MB")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Fingerprint fonts directory")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
     expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
@@ -204,8 +205,8 @@ describe("WorkflowSettingsDialog", () => {
     const expectedBrowserGroups = [
       "Session & identity",
       "Proxy",
-      "Location & viewport",
-      "Fingerprint",
+      "Location",
+      "Custom fingerprint overrides",
       "Humanization",
       "Preflight & launch",
     ];
@@ -216,6 +217,8 @@ describe("WorkflowSettingsDialog", () => {
       .toBeInTheDocument();
     expect(within(within(dialog).getByRole("group", { name: "Proxy" })).getByLabelText("Proxy server"))
       .toBeInTheDocument();
+    expect(within(within(dialog).getByRole("group", { name: "Custom fingerprint overrides" })).getByRole("switch", { name: "Custom fingerprint overrides" }))
+      .not.toBeChecked();
     expect(within(within(dialog).getByRole("group", { name: "Preflight & launch" })).getByLabelText("Preflight probe URL"))
       .toBeInTheDocument();
 
@@ -227,6 +230,66 @@ describe("WorkflowSettingsDialog", () => {
     );
     dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
     expect(within(dialog).getByRole("group", { name: "Initial variables" })).toHaveClass("settings-field-group");
+  });
+
+  test("reveals fingerprint override fields only when enabled", async () => {
+    const user = userEvent.setup();
+    const onSettingsChange = vi.fn();
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+
+    const { rerender } = render(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        hasUnsavedChanges={false}
+        open
+        settings={settings}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={onSettingsChange}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    expect(within(dialog).queryByLabelText("Viewport width")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("User agent")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("switch", { name: "Custom fingerprint overrides" }));
+
+    expect(onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        browser_launch: expect.objectContaining({
+          fingerprint_overrides_enabled: true,
+        }),
+      }),
+    );
+
+    rerender(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        hasUnsavedChanges={false}
+        open
+        settings={{
+          ...settings,
+          browser_launch: {
+            ...settings.browser_launch,
+            fingerprint_overrides_enabled: true,
+          },
+        }}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={onSettingsChange}
+      />,
+    );
+
+    expect(within(dialog).getByLabelText("Viewport width")).toHaveValue(1920);
+    expect(within(dialog).getByLabelText("User agent")).toBeInTheDocument();
   });
 
   test("can reveal and copy the fingerprint seed", async () => {

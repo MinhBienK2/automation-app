@@ -55,6 +55,7 @@ describe("BrowserWorkflowRunner", () => {
         display_name: "QA Profile Display",
         profile_dir: "bi_test_identity",
         fingerprint_seed: "38291",
+        fingerprint_overrides_enabled: true,
         headless: false,
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
@@ -80,7 +81,7 @@ describe("BrowserWorkflowRunner", () => {
         webrtc_policy: "auto_proxy_exit_ip",
         humanize: false,
         human_preset: "careful",
-      },
+      } as Partial<WorkflowSettings["browser_launch"]>,
     });
 
     const runner = new BrowserWorkflowRunner({ appPaths: paths, driver });
@@ -99,7 +100,6 @@ describe("BrowserWorkflowRunner", () => {
           headless: false,
           humanize: false,
           humanPreset: "careful",
-          userAgent: undefined,
           viewport: { width: 1920, height: 947 },
           timezone: "America/New_York",
           locale: "en-US",
@@ -146,6 +146,7 @@ describe("BrowserWorkflowRunner", () => {
       geoip: false,
       webrtc_policy: "auto_proxy_exit_ip",
       webrtc_ip: null,
+      fingerprint_overrides_enabled: true,
       viewport: {
         width: 1920,
         height: 947,
@@ -169,6 +170,48 @@ describe("BrowserWorkflowRunner", () => {
       },
     });
     expect(context.closed).toBe(false);
+  });
+
+  test("uses CloakBrowser seed defaults until custom fingerprint overrides are enabled", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const paths = await createTempAppPaths();
+    const settings = makeSettings({
+      browser_launch: {
+        fingerprint_seed: "38291",
+        fingerprint_overrides_enabled: false,
+        user_agent: "Custom UA",
+        viewport_width: 390,
+        viewport_height: 844,
+        device_scale_factor: 3,
+        mobile: true,
+        touch: true,
+        fingerprint_platform: "windows",
+        hardware_concurrency: 12,
+        device_memory_gb: 24,
+        storage_quota_mb: 2048,
+        fingerprint_fonts_dir: "/tmp/fonts",
+      } as Partial<WorkflowSettings["browser_launch"]>,
+    });
+
+    const runner = new BrowserWorkflowRunner({ appPaths: paths, driver });
+    await runner.run({
+      graph: { steps: [] },
+      settings,
+      mode: "run_workflow",
+      runId: "run-auto-fingerprint-1",
+    });
+
+    const launch = driver.launches[0]?.options;
+    expect(launch).toEqual(expect.objectContaining({
+      args: ["--fingerprint=38291"],
+      contextOptions: {
+        acceptDownloads: true,
+        downloadsPath: paths.downloadsDir,
+      },
+    }));
+    expect(launch).not.toHaveProperty("userAgent");
+    expect(launch).not.toHaveProperty("viewport");
   });
 
   test("maps supported WebRTC policies to launch args and browser identity evidence", async () => {

@@ -153,6 +153,7 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   display_name: string;
   profile_dir: string;
   fingerprint_seed: string;
+  fingerprint_overrides_enabled?: boolean;
   user_agent?: string | null;
   viewport_width: number;
   viewport_height: number;

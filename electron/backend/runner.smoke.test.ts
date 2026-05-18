@@ -45,6 +45,7 @@ describeSmoke("CloakBrowser smoke", () => {
           profile_dir: "smoke-identity",
           profile_name: "smoke-identity",
           fingerprint_seed: "38291",
+          fingerprint_overrides_enabled: true,
           timezone: "America/New_York",
           locale: "en-US",
           viewport_width: 1280,

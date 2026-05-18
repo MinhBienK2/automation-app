@@ -718,6 +718,7 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_overrides_enabled: true,
           fingerprint_platform: "plan9" as never,
         },
       }),
@@ -735,6 +736,7 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_overrides_enabled: true,
           hardware_concurrency: 0,
         },
       }),
@@ -752,6 +754,7 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_overrides_enabled: true,
           fingerprint_fonts_dir: "/path/that/does/not/exist",
         },
       }),
@@ -769,6 +772,7 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_overrides_enabled: true,
           user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148",
           mobile: false,
           touch: false,

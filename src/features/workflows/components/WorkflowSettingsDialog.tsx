@@ -556,8 +556,8 @@ function BrowserLaunchSettingsSection({
         ) : null}
       </SettingsFieldGroup>
       <SettingsFieldGroup
-        title="Location & viewport"
-        description="Locale, proxy-derived geography, viewport size, and device input shape."
+        title="Location"
+        description="Locale and proxy-derived geography used at browser launch."
       >
         <label className="field">
           <span>Timezone</span>
@@ -580,79 +580,96 @@ function BrowserLaunchSettingsSection({
           label="GeoIP from proxy"
           onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
         />
-        <NumberField
-          label="Viewport width"
-          value={value.viewport_width}
-          onChange={(nextValue) => onChange({ ...value, viewport_width: nextValue ?? 1920 })}
-        />
-        <NumberField
-          label="Viewport height"
-          value={value.viewport_height}
-          onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 947 })}
-        />
-        <NumberField
-          label="Device scale factor"
-          value={value.device_scale_factor}
-          onChange={(nextValue) => onChange({ ...value, device_scale_factor: nextValue ?? 1 })}
-        />
-        <SwitchField
-          checked={Boolean(value.mobile)}
-          label="Mobile viewport"
-          onCheckedChange={(checked) => onChange({ ...value, mobile: checked })}
-        />
-        <SwitchField
-          checked={Boolean(value.touch)}
-          label="Touch input"
-          onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
-        />
       </SettingsFieldGroup>
       <SettingsFieldGroup
-        title="Fingerprint"
-        description="Optional launch-time fingerprint overrides layered on top of the stable seed."
+        title="Custom fingerprint overrides"
+        description="Leave disabled to let CloakBrowser derive coherent device signals from the fingerprint seed."
       >
-        <label className="field">
-          <span>Fingerprint platform</span>
-          <Select
-            value={value.fingerprint_platform ?? ""}
-            onChange={(event) => {
-              const nextValue = event.currentTarget.value;
-              onChange({
-                ...value,
-                fingerprint_platform:
-                  nextValue === "windows" || nextValue === "macos" || nextValue === "linux"
-                    ? nextValue
-                    : null,
-              });
-            }}
-          >
-            <option value="">Seed default</option>
-            <option value="windows">Windows</option>
-            <option value="macos">macOS</option>
-            <option value="linux">Linux</option>
-          </Select>
-        </label>
-        <NumberField
-          label="Hardware concurrency"
-          value={value.hardware_concurrency ?? null}
-          onChange={(nextValue) => onChange({ ...value, hardware_concurrency: nextValue })}
+        <SwitchField
+          checked={Boolean(value.fingerprint_overrides_enabled)}
+          label="Custom fingerprint overrides"
+          description="Enable only when a tested device bundle needs to override CloakBrowser seed defaults."
+          onCheckedChange={(checked) => onChange({ ...value, fingerprint_overrides_enabled: checked })}
         />
-        <NumberField
-          label="Device memory GB"
-          value={value.device_memory_gb ?? null}
-          onChange={(nextValue) => onChange({ ...value, device_memory_gb: nextValue })}
-        />
-        <NumberField
-          label="Storage quota MB"
-          value={value.storage_quota_mb ?? null}
-          onChange={(nextValue) => onChange({ ...value, storage_quota_mb: nextValue })}
-        />
-        <label className="field settings-field-group-wide">
-          <span>Fingerprint fonts directory</span>
-          <Input
-            value={value.fingerprint_fonts_dir ?? ""}
-            onChange={(event) => onChange({ ...value, fingerprint_fonts_dir: nullableText(event.currentTarget.value) })}
-          />
-        </label>
+        {value.fingerprint_overrides_enabled ? (
+          <>
+            <label className="field settings-field-group-wide">
+              <span>User agent</span>
+              <Input
+                value={value.user_agent ?? ""}
+                onChange={(event) => onChange({ ...value, user_agent: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+            <NumberField
+              label="Viewport width"
+              value={value.viewport_width}
+              onChange={(nextValue) => onChange({ ...value, viewport_width: nextValue ?? 1920 })}
+            />
+            <NumberField
+              label="Viewport height"
+              value={value.viewport_height}
+              onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 947 })}
+            />
+            <NumberField
+              label="Device scale factor"
+              value={value.device_scale_factor}
+              onChange={(nextValue) => onChange({ ...value, device_scale_factor: nextValue ?? 1 })}
+            />
+            <SwitchField
+              checked={Boolean(value.mobile)}
+              label="Mobile viewport"
+              onCheckedChange={(checked) => onChange({ ...value, mobile: checked })}
+            />
+            <SwitchField
+              checked={Boolean(value.touch)}
+              label="Touch input"
+              onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
+            />
+            <label className="field">
+              <span>Fingerprint platform</span>
+              <Select
+                value={value.fingerprint_platform ?? ""}
+                onChange={(event) => {
+                  const nextValue = event.currentTarget.value;
+                  onChange({
+                    ...value,
+                    fingerprint_platform:
+                      nextValue === "windows" || nextValue === "macos" || nextValue === "linux"
+                        ? nextValue
+                        : null,
+                  });
+                }}
+              >
+                <option value="">Seed default</option>
+                <option value="windows">Windows</option>
+                <option value="macos">macOS</option>
+                <option value="linux">Linux</option>
+              </Select>
+            </label>
+            <NumberField
+              label="Hardware concurrency"
+              value={value.hardware_concurrency ?? null}
+              onChange={(nextValue) => onChange({ ...value, hardware_concurrency: nextValue })}
+            />
+            <NumberField
+              label="Device memory GB"
+              value={value.device_memory_gb ?? null}
+              onChange={(nextValue) => onChange({ ...value, device_memory_gb: nextValue })}
+            />
+            <NumberField
+              label="Storage quota MB"
+              value={value.storage_quota_mb ?? null}
+              onChange={(nextValue) => onChange({ ...value, storage_quota_mb: nextValue })}
+            />
+            <label className="field settings-field-group-wide">
+              <span>Fingerprint fonts directory</span>
+              <Input
+                value={value.fingerprint_fonts_dir ?? ""}
+                onChange={(event) => onChange({ ...value, fingerprint_fonts_dir: nullableText(event.currentTarget.value) })}
+              />
+            </label>
+          </>
+        ) : null}
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Humanization"

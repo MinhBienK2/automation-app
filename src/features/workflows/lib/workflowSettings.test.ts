@@ -31,6 +31,10 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
     expect(settings.browser_launch.humanize).toBe(true);
     expect(settings.browser_launch.human_preset).toBe("default");
+    expect(
+      (settings.browser_launch as { fingerprint_overrides_enabled?: boolean })
+        .fingerprint_overrides_enabled,
+    ).toBe(false);
     expect(settings.browser_launch).not.toHaveProperty("behavior_fidelity");
     expect(settings.browser_launch.proxy_provider).toBeNull();
     expect(settings.browser_launch.test_account_binding).toBeNull();
@@ -98,9 +102,6 @@ describe("workflow settings model", () => {
       "Default retry attempts",
       "Default retry interval",
       "Device profile",
-      "User agent",
-      "Mobile viewport",
-      "Touch input",
       "Challenge policy",
       "Triggers Settings Help",
       "Advanced Settings Help",
@@ -131,8 +132,7 @@ describe("workflow settings model", () => {
       "Timezone",
       "Locale",
       "GeoIP from proxy",
-      "Viewport",
-      "Advanced fingerprint overrides",
+      "Custom fingerprint overrides",
       "Humanize browser input",
       "Fingerprint preflight",
       "Headless browser",

@@ -1564,6 +1564,7 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "GeoIP requires mmdb-lib to be installed",
     });
   }
+  const fingerprintOverridesEnabled = Boolean(settings.browser_launch.fingerprint_overrides_enabled);
   if (settings.browser_launch.webrtc_policy === "disabled_if_supported") {
     issues.push({
       section: "browser_launch",
@@ -1604,6 +1605,7 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     });
   }
   if (
+    fingerprintOverridesEnabled &&
     settings.browser_launch.user_agent &&
     /mobile|iphone|android/i.test(settings.browser_launch.user_agent) &&
     (!settings.browser_launch.mobile || !settings.browser_launch.touch)
@@ -1616,6 +1618,7 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     });
   }
   if (
+    fingerprintOverridesEnabled &&
     settings.browser_launch.fingerprint_platform &&
     !validFingerprintPlatform(settings.browser_launch.fingerprint_platform)
   ) {
@@ -1627,6 +1630,7 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     });
   }
   if (
+    fingerprintOverridesEnabled &&
     settings.browser_launch.hardware_concurrency != null &&
     (!Number.isInteger(settings.browser_launch.hardware_concurrency) ||
       settings.browser_launch.hardware_concurrency < 1 ||
@@ -1640,6 +1644,7 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     });
   }
   if (
+    fingerprintOverridesEnabled &&
     settings.browser_launch.device_memory_gb != null &&
     (!Number.isFinite(settings.browser_launch.device_memory_gb) ||
       settings.browser_launch.device_memory_gb <= 0 ||
@@ -1652,7 +1657,7 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Device memory must be greater than 0 and no more than 128 GB",
     });
   }
-  if (settings.browser_launch.fingerprint_fonts_dir?.trim()) {
+  if (fingerprintOverridesEnabled && settings.browser_launch.fingerprint_fonts_dir?.trim()) {
     const fontsDir = settings.browser_launch.fingerprint_fonts_dir.trim();
     if (!directoryReadable(fontsDir)) {
       issues.push({
@@ -2316,12 +2321,17 @@ function normalizeSettingsBrowserLaunch(
   const identityId = nullableText(browser.identity_id) ?? createStableBrowserIdentityId(profileName ?? "workflow");
   const profileDir = nullableText(browser.profile_dir) ?? identityId;
   const fingerprintSeed = nullableText(browser.fingerprint_seed) ?? stableFingerprintSeed(identityId);
+  const fingerprintOverridesEnabled =
+    typeof browser.fingerprint_overrides_enabled === "boolean"
+      ? browser.fingerprint_overrides_enabled
+      : hasLegacyCustomFingerprintOverrides(browser);
   return {
     ...browser,
     identity_id: identityId,
     display_name: nullableText(browser.display_name) ?? `${profileName ?? "Workflow"} identity`,
     profile_dir: profileDir,
     fingerprint_seed: fingerprintSeed,
+    fingerprint_overrides_enabled: fingerprintOverridesEnabled,
     viewport_width: positiveNumberOrDefault(browser.viewport_width, 1920),
     viewport_height: positiveNumberOrDefault(browser.viewport_height, 947),
     device_scale_factor: positiveNumberOrDefault(browser.device_scale_factor, 1),
@@ -2366,6 +2376,22 @@ function normalizeSettingsBrowserLaunch(
     proxy_username: nullableText(browser.proxy_username),
     proxy_password: nullableText(browser.proxy_password),
   };
+}
+
+function hasLegacyCustomFingerprintOverrides(browser: WorkflowSettingsBrowserLaunch) {
+  return Boolean(
+    nullableText(browser.user_agent) ||
+      positiveNumberOrDefault(browser.viewport_width, 1920) !== 1920 ||
+      positiveNumberOrDefault(browser.viewport_height, 947) !== 947 ||
+      positiveNumberOrDefault(browser.device_scale_factor, 1) !== 1 ||
+      browser.mobile ||
+      browser.touch ||
+      validFingerprintPlatform(browser.fingerprint_platform) ||
+      positiveIntegerOptionalNumber(browser.hardware_concurrency) != null ||
+      positiveOptionalNumber(browser.device_memory_gb) != null ||
+      nullableText(browser.fingerprint_fonts_dir) ||
+      positiveOptionalNumber(browser.storage_quota_mb) != null,
+  );
 }
 
 function normalizeGraphEdgeDelay(value: unknown): GraphEdgeDelay | null {
@@ -2433,6 +2459,7 @@ function createDefaultBrowserIdentity(
   | "display_name"
   | "profile_dir"
   | "fingerprint_seed"
+  | "fingerprint_overrides_enabled"
   | "viewport_width"
   | "viewport_height"
   | "device_scale_factor"
@@ -2470,6 +2497,7 @@ function createDefaultBrowserIdentity(
     fingerprint_seed: options.randomizeIdentity
       ? String(10000 + Math.floor(Math.random() * 90000))
       : stableFingerprintSeed(identityId),
+    fingerprint_overrides_enabled: false,
     viewport_width: 1920,
     viewport_height: 947,
     device_scale_factor: 1,
@@ -2568,6 +2596,7 @@ function browserIdentityPreferences(
   | "display_name"
   | "profile_dir"
   | "fingerprint_seed"
+  | "fingerprint_overrides_enabled"
   | "user_agent"
   | "viewport_width"
   | "viewport_height"
@@ -2600,6 +2629,7 @@ function browserIdentityPreferences(
     display_name: browser.display_name,
     profile_dir: browser.profile_dir,
     fingerprint_seed: browser.fingerprint_seed,
+    fingerprint_overrides_enabled: Boolean(browser.fingerprint_overrides_enabled),
     user_agent: browser.user_agent,
     viewport_width: browser.viewport_width,
     viewport_height: browser.viewport_height,
