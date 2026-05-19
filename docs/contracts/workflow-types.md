@@ -148,7 +148,7 @@ status, and the latest persisted `fingerprint_preflight` verdict summary when a
 run has produced one.
 
 `WorkflowDeleteOptions` serializes as `{ deleteBrowserProfile?: boolean }`.
-Deletion keeps profile data by default. When `deleteBrowserProfile` is true, the
+If `deleteBrowserProfile` is omitted, deletion keeps profile data. When `deleteBrowserProfile` is true, the
 backend removes only the deleting workflow's private profile directory; shared
 or active-session profile directories are retained.
 

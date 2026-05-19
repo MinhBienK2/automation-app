@@ -600,7 +600,7 @@ function App() {
 
   function deleteWorkflow(id: string) {
     setAppError("");
-    setDeleteBrowserProfileData(false);
+    setDeleteBrowserProfileData(true);
     setDeleteWorkflowCandidate(
       workflows.find((workflow) => workflow.id === id) ?? null,
     );

@@ -303,12 +303,11 @@ describe("Workflow list integration", () => {
     const profileDataCheckbox = within(dialog).getByRole("checkbox", {
       name: "Delete private browser profile data",
     });
-    expect(profileDataCheckbox).not.toBeChecked();
+    expect(profileDataCheckbox).toBeChecked();
     expect(within(dialog).getByText(/Keep it when you want retained login state/i))
       .toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
 
-    await userEvent.click(profileDataCheckbox);
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete Workflow" }));
 
     await waitFor(() => {

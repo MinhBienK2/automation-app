@@ -77,7 +77,7 @@ failed calls. This preserves the command-facing error shape used by
 - `dryRunValidateConfig`
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
-payload. The default is to keep browser profile data; when true, the backend
+payload. If the option is omitted, the backend keeps browser profile data; when true, the backend
 deletes the workflow's private browser profile directory only if no other
 workflow still references it and no retained session is active.
 

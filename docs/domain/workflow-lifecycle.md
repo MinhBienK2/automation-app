@@ -85,8 +85,9 @@
 ## Delete Workflow
 
 - UI confirms with the user before calling `delete_workflow`.
-- The confirmation includes a profile-data choice. Keeping private browser
-  profile data is the default; deleting profile data is explicit and only
+- The confirmation includes a profile-data choice. Deleting private browser
+  profile data is selected by default; operators can clear it to keep retained
+  login state for manual recovery or later cleanup. Profile deletion only
   removes unshared inactive profile directories.
 - Deleting the selected workflow returns the UI to the list screen.
 

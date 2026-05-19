@@ -40,7 +40,7 @@ Node/Electron backend.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.
 - CloakBrowser operational commands stay in the backend: diagnostics report wrapper/binary/cache/display/GeoIP/font/profile metadata plus last smoke/preflight summary fields, install triggers `ensureBinary()`, and orphan cleanup deletes only inactive profile directories that no workflow references.
-- Workflow deletion accepts an explicit profile-data choice from the renderer. It keeps browser profile data by default, deletes only unshared profile directories when requested, and rejects deletion while that workflow's retained browser session still owns the profile.
+- Workflow deletion accepts an explicit profile-data choice from the renderer. The UI selects profile deletion by default, while the backend keeps browser profile data if the option is omitted. When deletion is requested, the backend deletes only unshared profile directories and rejects deletion while that workflow's retained browser session still owns the profile.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.
 - List-step authoring commands remain retired from the production command surface.
