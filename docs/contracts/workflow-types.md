@@ -96,6 +96,10 @@ Workflow Settings are persisted separately from graph JSON:
 
 `identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets or duplicates the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs.
 
+New workflow and browser identity defaults initialize `timezone` and `locale`
+from the app runtime. Operators may clear either field to persist `null` and
+let CloakBrowser/runtime defaults or GeoIP behavior apply.
+
 Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords
 and proxy URL credentials. `fingerprint_overrides_enabled` defaults to false,

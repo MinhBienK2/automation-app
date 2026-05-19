@@ -226,8 +226,8 @@ export function defaultWorkflowSettings({
       device_scale_factor: 1,
       mobile: false,
       touch: false,
-      timezone: null,
-      locale: null,
+      timezone: defaultRuntimeTimezone(),
+      locale: defaultRuntimeLocale(),
       geoip: false,
       proxy_label: null,
       proxy_region: null,
@@ -263,6 +263,16 @@ export function defaultWorkflowSettings({
     created_at: createdAt,
     updated_at: updatedAt,
   };
+}
+
+function defaultRuntimeTimezone() {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone?.trim();
+  return timezone || null;
+}
+
+function defaultRuntimeLocale() {
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale?.trim();
+  return locale || null;
 }
 
 function createDefaultBrowserIdentityId(seed: string) {

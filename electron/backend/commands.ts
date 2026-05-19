@@ -2503,8 +2503,8 @@ function createDefaultBrowserIdentity(
     device_scale_factor: 1,
     mobile: false,
     touch: false,
-    timezone: null,
-    locale: null,
+    timezone: defaultRuntimeTimezone(),
+    locale: defaultRuntimeLocale(),
     geoip: false,
     proxy_label: null,
     proxy_region: null,
@@ -2525,6 +2525,16 @@ function createDefaultBrowserIdentity(
     humanize: true,
     human_preset: "default",
   };
+}
+
+function defaultRuntimeTimezone() {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone?.trim();
+  return timezone || null;
+}
+
+function defaultRuntimeLocale() {
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale?.trim();
+  return locale || null;
 }
 
 function createStableBrowserIdentityId(seed: string) {

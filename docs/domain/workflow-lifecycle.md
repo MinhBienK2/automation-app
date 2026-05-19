@@ -4,7 +4,7 @@
 
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
-- Repository trims and stores the workflow with timestamps, creates a `Start -> New node` draft graph, and persists default Workflow Settings with a browser identity. `New node` is an unconfigured action node with `config: null`.
+- Repository trims and stores the workflow with timestamps, creates a `Start -> New node` draft graph, and persists default Workflow Settings with a browser identity whose timezone and locale are initialized from the app runtime. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.

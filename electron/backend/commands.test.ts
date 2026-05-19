@@ -63,6 +63,8 @@ describe("Electron workflow command handlers", () => {
         display_name: "Login flow identity",
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
+        timezone: defaultRuntimeTimezone(),
+        locale: defaultRuntimeLocale(),
         humanize: true,
         human_preset: "default",
       },
@@ -2468,4 +2470,12 @@ function makeTemporary(
       profile_name: null,
     },
   });
+}
+
+function defaultRuntimeTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+}
+
+function defaultRuntimeLocale() {
+  return Intl.DateTimeFormat().resolvedOptions().locale ?? null;
 }
