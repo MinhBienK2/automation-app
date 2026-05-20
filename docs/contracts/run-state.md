@@ -55,7 +55,15 @@ older UI helpers that expect a direct `RunState`.
 - Multiple different workflows can run concurrently when they do not share a persistent browser profile. A second run for the same workflow fails with a workflow conflict, and a second run that would reuse the same persistent browser profile fails with a profile conflict.
 - `run_batch_workflow` remains globally exclusive. A batch blocks normal runs while active, normal runs block a batch start, batch reports progress through the same state shape, and it can be stopped through `stop_run`.
 - `stop_run(runId)` sets the targeted run status to `stopped` and clears error. Omitting `runId` is allowed only when there is exactly one active run; omitting it while multiple runs are active fails with a command error. Batch stopping remains supported through the same command.
-- Runner completion clears active run, clears current step, captures `window.__wamOutputs` from the browser session when present, sets terminal status, and either retains or closes the CloakBrowser context according to the resolved terminal/browser-retention policy.
+- Runner completion clears active run, clears current step, returns runner-owned
+  outputs, sets terminal status, and either retains or closes the CloakBrowser
+  context according to the resolved terminal/browser-retention policy. Legacy
+  page-side `window.__wamOutputs` is captured only when an executed script
+  explicitly referenced that store.
+- Passive navigation-only completions include `outputs.passive_browser` with the
+  opened URL, `cdp_attached: false`, and the fingerprint flag source. These
+  sessions are process-backed and closable by the runner, but they are not
+  reusable for run-from-selected DOM continuation.
 - If the operator manually closes the retained browser, the next retained-session check marks `retained_session.available` false and run-from-selected fails with a readable error instead of relaunching from the selected node.
 - Terminal runs are persisted to SQLite `runs`; compiled graph steps are persisted to `run_steps` with action type, status, trace JSON, and error JSON when available.
 - Infrastructure failure sets status to `failed` without retained session.

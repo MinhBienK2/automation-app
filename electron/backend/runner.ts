@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
+import { spawn, type ChildProcess } from "node:child_process";
 import type {
   ActionConfig,
   ActionType,
@@ -24,6 +25,7 @@ type CloakBrowserModule = {
   launchPersistentContext: (
     options: BrowserLaunchOptions & { userDataDir: string },
   ) => Promise<BrowserDriverContext>;
+  ensureBinary?: () => Promise<string>;
   binaryInfo?: () => {
     version?: string;
     platform?: string;
@@ -171,11 +173,18 @@ type BrowserResponse = {
 type RunnerOptions = {
   appPaths: AppPaths;
   driver?: BrowserDriver;
+  passiveLauncher?: PassiveBrowserLauncher;
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   random?: () => number;
   retainedSessions?: Map<string, RetainedSession>;
   usesDefaultDriver?: boolean;
 };
+
+type PassiveBrowserLauncher = (
+  url: string,
+  settings: WorkflowSettings,
+  appPaths: AppPaths,
+) => Promise<{ context: BrowserDriverContext; page: BrowserDriverPage }>;
 
 export type RunnerRunRequest = {
   runId?: string | null;
@@ -204,6 +213,7 @@ type Runtime = {
   outputs: Record<string, unknown>;
   traces: ActionTrace[];
   evidence: EvidenceArtifact[];
+  collectPageOutputs: boolean;
   clipboard: string;
   currentStepId: string | null;
   currentStepNumber: number | null;
@@ -288,11 +298,13 @@ export class BrowserWorkflowRunner {
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
   private readonly usesDefaultDriver: boolean;
+  private readonly passiveLauncher?: PassiveBrowserLauncher;
   private retainedSessions: Map<string, RetainedSession>;
 
   constructor(options: RunnerOptions) {
     this.appPaths = options.appPaths;
     this.driver = options.driver ?? createCloakBrowserDriver();
+    this.passiveLauncher = options.passiveLauncher;
     this.usesDefaultDriver = options.usesDefaultDriver ?? !options.driver;
     this.sleep = options.sleep ?? sleep;
     this.random = options.random ?? Math.random;
@@ -303,6 +315,7 @@ export class BrowserWorkflowRunner {
     return new BrowserWorkflowRunner({
       appPaths: this.appPaths,
       driver: this.driver,
+      passiveLauncher: this.passiveLauncher,
       sleep: this.sleep,
       random: this.random,
       retainedSessions: this.retainedSessions,
@@ -311,6 +324,11 @@ export class BrowserWorkflowRunner {
   }
 
   async run(request: RunnerRunRequest): Promise<RunState> {
+    const passiveNavigationUrl = this.passiveNavigationUrl(request);
+    if (passiveNavigationUrl) {
+      return this.runPassiveNavigationOnly(request, passiveNavigationUrl);
+    }
+
     const launch = request.reuseRetainedSession
       ? await this.reuseRetainedSession(request)
       : await this.launchFreshSession(request);
@@ -335,6 +353,7 @@ export class BrowserWorkflowRunner {
       outputs: {},
       traces: [],
       evidence: [],
+      collectPageOutputs: false,
       clipboard: "",
       currentStepId: null,
       currentStepNumber: null,
@@ -431,6 +450,177 @@ export class BrowserWorkflowRunner {
     }
 
     return state;
+  }
+
+  private passiveNavigationUrl(request: RunnerRunRequest) {
+    if (!this.usesDefaultDriver && !this.passiveLauncher) return null;
+    if (request.mode !== "run_workflow") return null;
+    if (request.reuseRetainedSession || request.targetStepId) return null;
+    const browser = request.settings.browser_launch;
+    if (browser.session_mode !== "persistent_profile") return null;
+    if (browser.headless) return null;
+    if (browser.proxy_enabled) return null;
+    if (browser.fingerprint_overrides_enabled) return null;
+    if (browser.preflight_enabled) return null;
+    if (browser.timezone?.trim() || browser.locale?.trim() || browser.geoip) return null;
+    if (browser.webrtc_policy !== "default") return null;
+    if (request.settings.environment.initial_variables.length > 0) return null;
+
+    const [firstStep, ...restSteps] = request.graph.steps;
+    if (!firstStep || firstStep.config.type !== "navigate") return null;
+    if (firstStep.config.config.url.includes("{{")) return null;
+    const waitsOnly = restSteps.every((step) => {
+      if (step.config.type === "random_wait") return true;
+      return step.config.type === "wait" && step.config.config.condition === "duration";
+    });
+    if (!waitsOnly) return null;
+
+    const url = firstStep.config.config.url.trim();
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      const allowedDomains = request.graph.domain_policy?.allowed_domains ?? [];
+      if (allowedDomains.length > 0 && !hostnameAllowed(parsed.hostname.toLowerCase(), allowedDomains)) {
+        return null;
+      }
+      return parsed.href;
+    } catch {
+      return null;
+    }
+  }
+
+  private async runPassiveNavigationOnly(
+    request: RunnerRunRequest,
+    url: string,
+  ): Promise<RunState> {
+    const retainedWorkflowId = request.retainedSessionWorkflowId ?? null;
+    const retainedProfileName = retainedProfileKey(request.settings);
+    const state: RunState = {
+      status: "running",
+      mode: request.mode,
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: [],
+      outputs: {},
+      retained_session: this.retainedSessionState(retainedWorkflowId, retainedProfileName),
+      error: null,
+    };
+    const runtimeOutputs: Record<string, unknown> = {
+      browser_identity: await browserIdentityEvidence(request.settings, request.runId ?? randomUUID()),
+      passive_browser: {
+        mode: "navigation_only",
+        url,
+        cdp_attached: false,
+        fingerprint_flags: "browser_default",
+      },
+    };
+    const traces: ActionTrace[] = [];
+    let context: BrowserDriverContext | null = null;
+    let page: BrowserDriverPage | null = null;
+    const closeBrowser = request.settings.run_policy.browser_retention === "close";
+
+    try {
+      if (request.retainedSessionWorkflowId !== undefined) {
+        await this.closeRetainedSession(retainedWorkflowId, retainedProfileName);
+      } else {
+        await this.closeRetainedContext();
+      }
+      const launched = await (this.passiveLauncher ?? launchPassiveCloakBrowser)(
+        url,
+        request.settings,
+        this.appPaths,
+      );
+      context = launched.context;
+      page = launched.page;
+
+      let stepNumber = 0;
+      for (const step of request.graph.steps) {
+        stepNumber += 1;
+        this.throwIfCancelled(request.signal);
+        state.current_step_id = step.node_id;
+        state.current_step_number = stepNumber;
+        this.reportPassiveProgress(state, request.onProgress);
+        const startedAt = new Date().toISOString();
+        await this.executePassiveStep(step, request.signal);
+        traces.push({
+          node_id: step.node_id,
+          label: step.label,
+          action_type: step.config.type,
+          status: "success",
+          mode: actionTraceMode(step.config),
+          started_at: startedAt,
+          finished_at: new Date().toISOString(),
+        });
+        state.completed_step_ids.push(step.node_id);
+        this.reportPassiveProgress(state, request.onProgress);
+      }
+      state.status = "success";
+    } catch (error) {
+      if (isAbortError(error)) {
+        state.status = "stopped";
+      } else {
+        state.status = "failed";
+        state.error = {
+          step_id: state.current_step_id,
+          step_number: state.current_step_number ?? 0,
+          step_name: null,
+          action_type: "workflow",
+          reason: error instanceof Error ? error.message : String(error),
+        };
+      }
+    } finally {
+      runtimeOutputs.__action_traces = traces;
+      state.outputs = runtimeOutputs;
+      state.current_step_id = null;
+      state.current_step_number = null;
+
+      if (context && page) {
+        if (closeBrowser) {
+          await context.close();
+        } else {
+          this.retainSession(context, page, retainedWorkflowId, retainedProfileName);
+        }
+      }
+      state.retained_session = this.retainedSessionState(retainedWorkflowId, retainedProfileName);
+    }
+
+    return state;
+  }
+
+  private async executePassiveStep(
+    step: CompiledGraphStep,
+    signal?: AbortSignal,
+  ) {
+    switch (step.config.type) {
+      case "navigate":
+        return;
+      case "wait":
+        await this.sleep(step.config.config.duration_ms ?? 1000, signal);
+        return;
+      case "random_wait": {
+        const waitMs =
+          step.config.config.min_ms +
+          Math.floor(
+            this.random() * (step.config.config.max_ms - step.config.config.min_ms + 1),
+          );
+        await this.sleep(waitMs, signal);
+        return;
+      }
+      default:
+        throw new Error(`Passive navigation cannot execute ${step.config.type}`);
+    }
+  }
+
+  private reportPassiveProgress(
+    state: RunState,
+    onProgress?: (state: Partial<RunState>) => void,
+  ) {
+    onProgress?.({
+      current_step_id: state.current_step_id,
+      current_step_number: state.current_step_number,
+      completed_step_ids: [...state.completed_step_ids],
+    });
   }
 
   async closeRetainedContext() {
@@ -1136,6 +1326,9 @@ export class BrowserWorkflowRunner {
         runtime.outputs.last_clear_cookies = action.config;
         return;
       case "execute_js":
+        if (action.config.script.includes("__wamOutputs")) {
+          runtime.collectPageOutputs = true;
+        }
         if (action.config.output_name) {
           runtime.outputs[action.config.output_name] = await withActionTimeout(
             runtime.page.evaluate(executableJavaScript(action.config.script)),
@@ -1605,6 +1798,9 @@ export class BrowserWorkflowRunner {
   }
 
   private async collectOutputs(runtime: Runtime) {
+    if (!runtime.collectPageOutputs) {
+      return runtime.outputs;
+    }
     try {
       const pageOutputs = await runtime.page.evaluate<Record<string, unknown>>(
         "() => globalThis.window?.__wamOutputs ?? {}",
@@ -1679,6 +1875,117 @@ export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): B
       return cloakbrowser.launchPersistentContext(options);
     },
   };
+}
+
+async function launchPassiveCloakBrowser(
+  url: string,
+  settings: WorkflowSettings,
+  appPaths: AppPaths,
+) {
+  assertHeadedDisplayAvailable(settings);
+  const cloakbrowser = await loadCloakBrowserModule();
+  const binaryPath =
+    process.env.CLOAKBROWSER_BINARY_PATH ||
+    (cloakbrowser.ensureBinary ? await cloakbrowser.ensureBinary() : null);
+  if (!binaryPath) {
+    throw new Error("CloakBrowser binary resolver is unavailable");
+  }
+  const profileName = retainedProfileKey(settings);
+  if (!profileName) {
+    throw new Error("Passive CloakBrowser launch requires a persistent profile");
+  }
+  const profileDir = path.join(appPaths.browserProfilesDir, sanitizePathSegment(profileName));
+  const args = passiveCloakBrowserArgs(url, profileDir, {
+    noSandbox: !process.env.CLOAKBROWSER_BINARY_PATH,
+  });
+  const child = spawn(binaryPath, args, { stdio: "ignore" });
+  const page = new PassiveBrowserPage(child);
+  const context = new PassiveBrowserContext(child, page);
+  return { context, page };
+}
+
+function passiveCloakBrowserArgs(
+  url: string,
+  userDataDir: string,
+  options: { noSandbox: boolean },
+) {
+  return [
+    `--user-data-dir=${userDataDir}`,
+    "--no-first-run",
+    "--no-default-browser-check",
+    options.noSandbox ? "--no-sandbox" : null,
+    "--window-position=0,0",
+    "--window-size=1920,1080",
+    `--app=${url}`,
+  ].filter((arg): arg is string => Boolean(arg));
+}
+
+class PassiveBrowserContext implements BrowserDriverContext {
+  closed = false;
+  private readonly closeHandlers = new Set<() => void>();
+
+  constructor(
+    private readonly child: ChildProcess,
+    private readonly page: PassiveBrowserPage,
+  ) {
+    this.child.once("exit", () => {
+      this.markClosed();
+    });
+  }
+
+  pages() {
+    return [this.page];
+  }
+
+  async newPage() {
+    return this.page;
+  }
+
+  async close() {
+    if (this.closed) return;
+    this.child.kill("SIGTERM");
+    setTimeout(() => {
+      if (!this.closed) this.child.kill("SIGKILL");
+    }, 1500).unref();
+    this.markClosed();
+  }
+
+  on(eventName: "close", handler: () => void) {
+    if (eventName !== "close") return;
+    this.closeHandlers.add(handler);
+  }
+
+  private markClosed() {
+    if (this.closed) return;
+    this.closed = true;
+    for (const handler of this.closeHandlers) handler();
+  }
+}
+
+class PassiveBrowserPage implements BrowserDriverPage {
+  constructor(private readonly child: ChildProcess) {}
+
+  async goto() {
+    return null;
+  }
+
+  locator(): BrowserDriverLocator {
+    throw new Error("Passive browser pages do not support DOM locators");
+  }
+
+  async evaluate<R = unknown>(): Promise<R> {
+    throw new Error("Passive browser pages do not support page evaluation");
+  }
+
+  async close() {
+    this.child.kill("SIGTERM");
+  }
+
+  isClosed() {
+    return this.child.exitCode !== null || this.child.signalCode !== null;
+  }
+
+  async bringToFront() {}
 }
 
 function assertHeadedDisplayAvailable(settings: WorkflowSettings) {

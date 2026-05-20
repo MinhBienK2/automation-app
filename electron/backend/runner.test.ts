@@ -554,6 +554,104 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("does not evaluate page outputs for runs without page-side outputs", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://owned.test" },
+          }),
+          step("wait", "Wait", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).not.toContain("evaluate:outputs");
+    expect(result.outputs).not.toHaveProperty("legacy_page_output");
+  });
+
+  test("uses passive persistent launch for navigation-only fingerprint probes", async () => {
+    const page = new FakePage();
+    const context = new FakeContext(page);
+    const driver = createFakeDriver(new FakeContext());
+    const passiveLauncher = vi.fn(async () => ({ context, page }));
+    const paths = await createTempAppPaths();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: paths,
+      driver,
+      passiveLauncher,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("open", "Open", {
+            type: "navigate",
+            config: { url: "https://demo.fingerprint.com/playground" },
+          }),
+          step("wait", "Wait", {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1 },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        browser_launch: {
+          session_mode: "persistent_profile",
+          profile_dir: "fp-profile",
+          profile_name: "fp-profile",
+          fingerprint_overrides_enabled: false,
+          proxy_enabled: false,
+          timezone: null,
+          locale: null,
+          geoip: false,
+          webrtc_policy: "default",
+          preflight_enabled: false,
+          headless: false,
+        },
+      }),
+      mode: "run_workflow",
+      runId: "run-passive-fingerprint",
+      retainedSessionWorkflowId: "workflow-fingerprint",
+    });
+
+    expect(result.status).toBe("success");
+    expect(passiveLauncher).toHaveBeenCalledWith(
+      "https://demo.fingerprint.com/playground",
+      expect.objectContaining({
+        browser_launch: expect.objectContaining({ profile_dir: "fp-profile" }),
+      }),
+      paths,
+    );
+    expect(driver.launches).toHaveLength(0);
+    expect(result.outputs.passive_browser).toEqual({
+      mode: "navigation_only",
+      url: "https://demo.fingerprint.com/playground",
+      cdp_attached: false,
+      fingerprint_flags: "browser_default",
+    });
+    expect(result.retained_session).toEqual(
+      expect.objectContaining({
+        available: true,
+        workflow_id: "workflow-fingerprint",
+        profile_name: "fp-profile",
+      }),
+    );
+  });
+
   test("advanced browser actions execute while CloakBrowser owns humanization globally", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -3073,6 +3171,10 @@ class FakePage implements BrowserDriverPage {
   }
 
   async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+    if (typeof pageFunction === "string" && pageFunction.includes("__wamOutputs")) {
+      this.events.push("evaluate:outputs");
+      return { legacy_page_output: "from-window" };
+    }
     if (this.evaluateResult != null) {
       this.events.push("evaluate:preflight");
       return this.evaluateResult;

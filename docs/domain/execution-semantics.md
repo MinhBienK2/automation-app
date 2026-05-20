@@ -48,7 +48,10 @@
 - Status values are `idle`, `running`, `success`, `failed`, and `stopped`.
 - Mode values are `none`, `run_workflow`, and `test_step`.
 - Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run.
-- Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
+- Terminal run state includes runner-owned outputs. The runner reads legacy page-side
+  `window.__wamOutputs` only after an `execute_js` action explicitly references
+  that store, avoiding an unconditional terminal page evaluation on workflows
+  that only navigate, wait, or interact.
 - Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
@@ -68,10 +71,11 @@
 
 - Runner launches CloakBrowser Chromium through `BrowserWorkflowRunner`; `humanize` defaults to enabled and can be disabled from Workflow Settings Browser Launch. The `human_preset` setting maps to CloakBrowser `humanPreset` and supports `default` or `careful`.
 - A startup `about:blank` page is reused for the first new-tab navigation when possible.
+- Navigation-only headed runs with a persistent profile, no proxy, no preflight, default WebRTC, no explicit timezone/locale/GeoIP, and no Custom fingerprint overrides may use a passive browser process instead of Playwright/CDP. The passive path opens the target URL directly, executes only fixed or random wait steps in the runner, and records `passive_browser` evidence with `cdp_attached: false`.
 - Browser sessions are retained after success, failure, and stop by the Electron runner unless retention settings or terminal configs request closure.
-- The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
+- The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions. It does not probe the page for legacy `window.__wamOutputs` unless the workflow executed script code that referenced that store.
 - Retained browser sessions are keyed by workflow/profile so multiple isolated workflows can retain inspectable browsers at the same time. Starting a fresh run closes only the retained session that would conflict with that workflow/profile before a new CloakBrowser context launches, releasing that persistent profile lock while preserving unrelated retained sessions.
-- A run-from-selected run reuses the matching retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
+- A run-from-selected run reuses the matching retained context/page instead of closing and relaunching. Passive retained sessions do not support run-from-selected because the runner intentionally has no DOM/CDP handle. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
 - Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, proxy server/bypass/credentials, timezone, locale, GeoIP, supported WebRTC policy values, optional Custom fingerprint overrides, humanize toggle/preset, and headless mode into CloakBrowser launch options. When Custom fingerprint overrides are disabled, CloakBrowser derives user-agent/device/hardware signals from the seed and the runner does not pass those override values.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.
