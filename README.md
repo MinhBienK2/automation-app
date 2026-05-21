@@ -102,6 +102,7 @@ Prepare a lab machine with:
 
 ```bash
 npm install
+npm run cloakbrowser:fonts:setup
 npx cloakbrowser install
 npx cloakbrowser info
 npm run test:smoke
@@ -134,7 +135,14 @@ Linux headed runs require a real display. Use a desktop session or `xvfb-run`
 for headed identities; otherwise set Browser Launch headless mode. Install
 Playwright/Chromium system dependencies where the OS requires shared libraries,
 and keep normal desktop fonts plus emoji/extended fonts available on lab
-machines. GeoIP mode uses the installed `mmdb-lib` package and may download its
+machines. To avoid installing the recommended Linux font packages system-wide,
+run `npm run cloakbrowser:fonts:setup`; it downloads and extracts the
+CloakBrowser-recommended Ubuntu font packages into the gitignored repo-local
+directory `.local/cloakbrowser-fonts/linux`, refreshes fontconfig for that
+directory when `fc-cache` is available, and prints the absolute path to copy into
+Workflow Settings -> Browser Launch -> Fingerprint fonts directory. The generated
+font files and downloaded `.deb` packages are local machine output and should not
+be committed. GeoIP mode uses the installed `mmdb-lib` package and may download its
 GeoIP database on first use; prefer explicit timezone/locale when proxy
 inventory already supplies region metadata. Workflow Settings validation warns
 when an enabled proxy has no explicit timezone/locale and GeoIP is off, when a
