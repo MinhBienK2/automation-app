@@ -217,7 +217,7 @@ describe("Workflow detail integration", () => {
           profile_name: "bi_workflow-1",
           user_agent: null,
           viewport_width: 1920,
-          viewport_height: 947,
+          viewport_height: 1080,
           device_scale_factor: 1,
           mobile: false,
           touch: false,

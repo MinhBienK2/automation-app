@@ -356,7 +356,7 @@ describe("Electron workflow command handlers", () => {
     expect(diagnostics.binary.platform).toBeTruthy();
     expect(typeof diagnostics.binary.installed).toBe("boolean");
     expect(diagnostics.profile_root).toBe(appPaths.browserProfilesDir);
-    expect(diagnostics.geoip_available).toBe(false);
+    expect(diagnostics.geoip_available).toBe(true);
     expect(diagnostics.font_checklist).toEqual({
       status: "not_checked",
       reason: "Font coverage detection is not implemented",
@@ -612,6 +612,27 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          proxy_enabled: true,
+          proxy_server: "http://proxy.local:8080",
+          timezone: null,
+          locale: null,
+          geoip: false,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "timezone",
+        level: "warning",
+        message: "Proxy identities should define explicit timezone and locale or enable GeoIP so browser signals match the proxy region",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           fingerprint_seed: "",
         },
       }),
@@ -632,7 +653,7 @@ describe("Electron workflow command handlers", () => {
           geoip: true,
         },
       }),
-    ).toContainEqual(
+    ).not.toContainEqual(
       expect.objectContaining({
         section: "browser_launch",
         field: "geoip",
@@ -764,6 +785,25 @@ describe("Electron workflow command handlers", () => {
       }),
     );
 
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "automation-fonts-"));
+    tempRoots.push(fontsDir);
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_fonts_dir: fontsDir,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_fonts_dir",
+        level: "warning",
+        message: "Using the same fingerprint fonts directory across identities can create a stable font hash; validate it with owned preflight",
+      }),
+    );
+
     expect(
       handlers.validateWorkflowSettings({
         ...handlers.getWorkflowSettings(workflow.id),
@@ -780,6 +820,40 @@ describe("Electron workflow command handlers", () => {
         field: "mobile",
         level: "warning",
         message: "Mobile user agents should use mobile viewport and touch settings",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "user_agent",
+        level: "warning",
+        message: "Custom user agents can diverge from navigator.userAgentData; prefer CloakBrowser defaults unless owned preflight validates UA-CH consistency",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_platform: "macos",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_platform",
+        level: "warning",
+        message: "macOS fingerprint profiles have known upstream canvas/audio/WebGL and viewport caveats; require owned preflight before production-like runs",
       }),
     );
 
@@ -2259,6 +2333,7 @@ describe("Electron workflow schedule commands", () => {
   });
 
   test("scheduler tick skips profile conflicts but can start isolated workflows", async () => {
+    const scheduledAt = "2099-05-17T09:00:00.000Z";
     let activeRunSignal: AbortSignal | null = null;
     const startedRunSignals: AbortSignal[] = [];
     const { handlers } = await createTestHandlers({
@@ -2292,13 +2367,13 @@ describe("Electron workflow schedule commands", () => {
       workflow_id: scheduledWorkflow.id,
       name: "Once",
       enabled: true,
-      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+      kind: { type: "once_at", timestamp: scheduledAt },
     });
     const isolatedSchedule = handlers.createSchedule({
       workflow_id: isolatedWorkflow.id,
       name: "Isolated",
       enabled: true,
-      kind: { type: "once_at", timestamp: "2026-05-17T09:00:00.000Z" },
+      kind: { type: "once_at", timestamp: scheduledAt },
     });
     const runningSettings = handlers.getWorkflowSettings(runningWorkflow.id);
     const scheduledSettings = handlers.getWorkflowSettings(scheduledWorkflow.id);
@@ -2314,14 +2389,14 @@ describe("Electron workflow schedule commands", () => {
 
     const runPromise = handlers.runWorkflow(runningWorkflow.id);
     await waitFor(() => activeRunSignal !== null);
-    await handlers.runSchedulerTick(new Date("2026-05-17T09:00:00.000Z"));
+    await handlers.runSchedulerTick(new Date(scheduledAt));
 
     expect(handlers.listScheduleEvents({ schedule_id: schedule.id })).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "skipped",
           reason: "active_profile",
-          scheduled_for: "2026-05-17T09:00:00.000Z",
+          scheduled_for: scheduledAt,
         }),
         expect.objectContaining({
           event_type: "disabled",
@@ -2338,7 +2413,7 @@ describe("Electron workflow schedule commands", () => {
       expect.arrayContaining([
         expect.objectContaining({
           event_type: "started",
-          scheduled_for: "2026-05-17T09:00:00.000Z",
+          scheduled_for: scheduledAt,
         }),
       ]),
     );

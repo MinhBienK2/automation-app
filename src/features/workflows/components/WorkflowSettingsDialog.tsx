@@ -588,7 +588,7 @@ function BrowserLaunchSettingsSection({
         <NumberField
           label="Viewport height"
           value={value.viewport_height}
-          onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 947 })}
+          onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 1080 })}
         />
         <NumberField
           label="Device scale factor"

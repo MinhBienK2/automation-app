@@ -38,7 +38,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.hardware_concurrency).toBeNull();
     expect(settings.browser_launch.device_memory_gb).toBeNull();
     expect(settings.browser_launch.viewport_width).toBe(1920);
-    expect(settings.browser_launch.viewport_height).toBe(947);
+    expect(settings.browser_launch.viewport_height).toBe(1080);
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.graph_defaults.default_edge_delay).toBeNull();

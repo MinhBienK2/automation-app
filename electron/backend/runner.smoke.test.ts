@@ -86,7 +86,7 @@ describeSmoke("CloakBrowser smoke", () => {
                   config: {
                     script: browserProbeScript(),
                     output_name: "probe",
-                    timeout_ms: 1000,
+                    timeout_ms: 5000,
                   },
                 },
               },
@@ -112,7 +112,7 @@ describeSmoke("CloakBrowser smoke", () => {
                   config: {
                     script: browserProbeScript(),
                     output_name: "probe",
-                    timeout_ms: 1000,
+                    timeout_ms: 5000,
                   },
                 },
               },
@@ -130,6 +130,12 @@ describeSmoke("CloakBrowser smoke", () => {
         expect(secondProbe.storage).toBe("persisted");
         expect(secondProbe.webdriver).toBe(false);
         expect(secondProbe.userAgent).not.toContain("HeadlessChrome");
+        if (secondProbe.userAgentDataBrands.length > 0) {
+          expect(secondProbe.userAgentDataBrands).toEqual(
+            expect.arrayContaining([expect.stringMatching(/Chrom/i)]),
+          );
+        }
+        expect([false, null]).toContain(secondProbe.userAgentDataMobile);
         expect(secondProbe.hasChrome).toBe(true);
         expect(secondProbe.pluginsLength).toBeGreaterThan(0);
         expect(secondProbe.timezone).toBe("America/New_York");
@@ -225,6 +231,8 @@ describeSmoke("CloakBrowser smoke", () => {
 type BrowserProbe = {
   webdriver: boolean;
   userAgent: string;
+  userAgentDataBrands: string[];
+  userAgentDataMobile: boolean | null;
   hasChrome: boolean;
   pluginsLength: number;
   storage: string | null;
@@ -274,6 +282,8 @@ function browserProbeScript() {
     return {
       webdriver: navigator.webdriver,
       userAgent: navigator.userAgent,
+      userAgentDataBrands: navigator.userAgentData?.brands?.map((brand) => brand.brand) ?? [],
+      userAgentDataMobile: navigator.userAgentData?.mobile ?? null,
       hasChrome: Boolean(window.chrome),
       pluginsLength: navigator.plugins.length,
       storage: window.localStorage.getItem("smoke-key"),

@@ -94,9 +94,11 @@ npm run test:smoke
 
 ## CloakBrowser Operations
 
-CloakBrowser is a pinned npm dependency through `package-lock.json`, while its
-patched Chromium binary is managed by CloakBrowser's own cache. Prepare a lab
-machine with:
+CloakBrowser is an exact-pinned npm dependency through `package.json` and
+`package-lock.json`, while its patched Chromium binary is managed by
+CloakBrowser's own cache. The app also installs CloakBrowser's optional
+`mmdb-lib` peer so GeoIP mode is available consistently on lab machines.
+Prepare a lab machine with:
 
 ```bash
 npm install
@@ -132,8 +134,14 @@ Linux headed runs require a real display. Use a desktop session or `xvfb-run`
 for headed identities; otherwise set Browser Launch headless mode. Install
 Playwright/Chromium system dependencies where the OS requires shared libraries,
 and keep normal desktop fonts plus emoji/extended fonts available on lab
-machines. GeoIP mode requires `npm install mmdb-lib`; prefer explicit
-timezone/locale when proxy inventory already supplies region metadata.
+machines. GeoIP mode uses the installed `mmdb-lib` package and may download its
+GeoIP database on first use; prefer explicit timezone/locale when proxy
+inventory already supplies region metadata. Workflow Settings validation warns
+when an enabled proxy has no explicit timezone/locale and GeoIP is off, when a
+custom user agent may drift from UA Client Hints, when a shared
+`fingerprint_fonts_dir` can create a stable font hash, or when macOS fingerprint
+profiles require extra owned preflight due to upstream canvas/audio/WebGL and
+viewport caveats.
 
 Typecheck the renderer:
 
@@ -198,7 +206,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 14. Generate selector suggestions from an element snapshot, normalize recorded click/input_text events, dry-run validate a config, and in a debug build generate a local fixture HTML file from a single `.html` filename.
 15. Move graph nodes, reopen the workflow, and confirm node positions persist.
 16. Save Workflow Settings, save the graph, and run the graph workflow.
-17. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, applies the selected human preset, passes the stable fingerprint seed, uses headed/headless according to Workflow Settings, reports wrapper/binary evidence, keeps `navigator.webdriver === false`, omits `HeadlessChrome` from UA, exposes baseline `window.chrome`/plugins, reflects timezone/locale/viewport, keeps fixed-seed canvas output stable across two launches, and stores persistent localStorage under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
+17. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, applies the selected human preset, passes the stable fingerprint seed, uses headed/headless according to Workflow Settings, reports wrapper/binary evidence, keeps `navigator.webdriver === false`, omits `HeadlessChrome` from UA, keeps Chromium UA Client Hints coherent when exposed, exposes baseline `window.chrome`/plugins, reflects timezone/locale/viewport, keeps fixed-seed canvas output stable across two launches, and stores persistent localStorage under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
 17. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
 17. Confirm runner evidence outputs include `__action_traces` and run-scoped `__evidence` metadata when screenshot or download artifacts are produced.
 18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.

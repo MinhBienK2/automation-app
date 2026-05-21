@@ -1544,6 +1544,18 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
         message: "Proxy credentials must be configured either in the proxy URL or the username/password fields, not both",
       });
     }
+    if (
+      parsedProxy.valid &&
+      !settings.browser_launch.geoip &&
+      (!settings.browser_launch.timezone?.trim() || !settings.browser_launch.locale?.trim())
+    ) {
+      issues.push({
+        section: "browser_launch",
+        field: "timezone",
+        level: "warning",
+        message: "Proxy identities should define explicit timezone and locale or enable GeoIP so browser signals match the proxy region",
+      });
+    }
   }
   if (
     settings.browser_launch.session_mode === "persistent_profile" &&
@@ -1615,6 +1627,14 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Mobile user agents should use mobile viewport and touch settings",
     });
   }
+  if (settings.browser_launch.user_agent?.trim()) {
+    issues.push({
+      section: "browser_launch",
+      field: "user_agent",
+      level: "warning",
+      message: "Custom user agents can diverge from navigator.userAgentData; prefer CloakBrowser defaults unless owned preflight validates UA-CH consistency",
+    });
+  }
   if (
     settings.browser_launch.fingerprint_platform &&
     !validFingerprintPlatform(settings.browser_launch.fingerprint_platform)
@@ -1624,6 +1644,14 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       field: "fingerprint_platform",
       level: "error",
       message: "Fingerprint platform must be windows, macos, or linux",
+    });
+  }
+  if (settings.browser_launch.fingerprint_platform === "macos") {
+    issues.push({
+      section: "browser_launch",
+      field: "fingerprint_platform",
+      level: "warning",
+      message: "macOS fingerprint profiles have known upstream canvas/audio/WebGL and viewport caveats; require owned preflight before production-like runs",
     });
   }
   if (
@@ -1660,6 +1688,13 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
         field: "fingerprint_fonts_dir",
         level: "error",
         message: "Fingerprint fonts directory must be readable",
+      });
+    } else {
+      issues.push({
+        section: "browser_launch",
+        field: "fingerprint_fonts_dir",
+        level: "warning",
+        message: "Using the same fingerprint fonts directory across identities can create a stable font hash; validate it with owned preflight",
       });
     }
   }
@@ -2323,7 +2358,7 @@ function normalizeSettingsBrowserLaunch(
     profile_dir: profileDir,
     fingerprint_seed: fingerprintSeed,
     viewport_width: positiveNumberOrDefault(browser.viewport_width, 1920),
-    viewport_height: positiveNumberOrDefault(browser.viewport_height, 947),
+    viewport_height: positiveNumberOrDefault(browser.viewport_height, 1080),
     device_scale_factor: positiveNumberOrDefault(browser.device_scale_factor, 1),
     mobile: Boolean(browser.mobile),
     touch: Boolean(browser.touch),
@@ -2471,7 +2506,7 @@ function createDefaultBrowserIdentity(
       ? String(10000 + Math.floor(Math.random() * 90000))
       : stableFingerprintSeed(identityId),
     viewport_width: 1920,
-    viewport_height: 947,
+    viewport_height: 1080,
     device_scale_factor: 1,
     mobile: false,
     touch: false,

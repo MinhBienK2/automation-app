@@ -22,6 +22,7 @@ const codeqlWorkflowPath = path.join(workflowsDir, "codeql.yml");
 const dependabotPath = path.join(currentDir, ".github/dependabot.yml");
 const releaseGovernancePath = path.join(currentDir, "docs/release-governance.md");
 const packageJsonPath = path.join(currentDir, "package.json");
+const packageLockPath = path.join(currentDir, "package-lock.json");
 const releaseManifestScriptPath = path.join(currentDir, "scripts/generate-release-manifest.mjs");
 
 async function readYamlFile(filePath: string) {
@@ -80,6 +81,20 @@ function collectSetupNodeVersions(value: unknown): unknown[] {
 }
 
 describe("desktop CI/CD", () => {
+  test("pins the audited CloakBrowser wrapper exactly in package metadata", async () => {
+    const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
+      dependencies?: Record<string, string>;
+    };
+    const packageLock = JSON.parse(await readFile(packageLockPath, "utf8")) as {
+      packages?: Record<string, { version?: string; dependencies?: Record<string, string> }>;
+    };
+    const auditedVersion = "0.3.30";
+
+    expect(packageJson.dependencies?.cloakbrowser).toBe(auditedVersion);
+    expect(packageLock.packages?.[""]?.dependencies?.cloakbrowser).toBe(auditedVersion);
+    expect(packageLock.packages?.["node_modules/cloakbrowser"]?.version).toBe(auditedVersion);
+  });
+
   test("runs GitHub Actions quality gates on Node.js 24", async () => {
     const workflows = [
       await readYamlFile(ciWorkflowPath),

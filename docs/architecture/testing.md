@@ -32,11 +32,12 @@ Focused commands:
 
 `npm run test:smoke` launches the real CloakBrowser binary against a local
 fixture, so it is intentionally separate from the normal unit suite. It verifies
-`navigator.webdriver === false`, UA/headless masking, `window.chrome` and plugin
-baseline signals, persistent localStorage across two launches of the same
-profile, fixed-seed canvas stability, timezone/locale, viewport/screen
-coherence, and CloakBrowser wrapper/binary evidence. A fresh machine may download
-the CloakBrowser binary before the smoke test runs.
+`navigator.webdriver === false`, UA/headless masking, coherent Chromium UA
+Client Hints when the runtime exposes them, `window.chrome` and plugin baseline signals,
+persistent localStorage across two launches of the same profile, fixed-seed
+canvas stability, timezone/locale, viewport/screen coherence, and CloakBrowser
+wrapper/binary evidence. A fresh machine may download the CloakBrowser binary
+before the smoke test runs.
 
 ## Desktop E2E Tests
 
@@ -116,6 +117,9 @@ Lower-level coverage:
   tag, and push the branch and tag.
 - CodeQL, Dependabot, immutable action pinning, and repository-governance docs
   are part of release verification.
+- `ci-cd.test.ts` also verifies the audited CloakBrowser wrapper is exact-pinned
+  in `package.json` and `package-lock.json` so browser wrapper drift is caught
+  before release.
 
 Focused commands:
 

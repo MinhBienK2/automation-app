@@ -1950,6 +1950,10 @@ function buildLaunchOptions(
 ): BrowserLaunchOptions {
   const browser = settings.browser_launch;
   const proxy = buildProxyLaunchOptions(browser);
+  const viewport = {
+    width: browser.viewport_width || 1920,
+    height: browser.viewport_height || 1080,
+  };
   const args = [
     browser.fingerprint_seed?.trim()
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
@@ -1974,16 +1978,14 @@ function buildLaunchOptions(
       : browser.webrtc_policy === "explicit_ip" && browser.webrtc_ip?.trim()
         ? `--fingerprint-webrtc-ip=${browser.webrtc_ip.trim()}`
         : null,
+    browser.headless ? null : `--window-size=${viewport.width},${viewport.height}`,
   ].filter((arg): arg is string => Boolean(arg));
   return {
     headless: browser.headless,
     humanize: browser.humanize !== false,
     humanPreset: browser.human_preset === "careful" ? "careful" : "default",
     userAgent: browser.user_agent?.trim() || undefined,
-    viewport: {
-      width: browser.viewport_width || 1920,
-      height: browser.viewport_height || 947,
-    },
+    viewport,
     timezone: browser.timezone?.trim() || undefined,
     locale: browser.locale?.trim() || undefined,
     geoip: Boolean(browser.geoip),
