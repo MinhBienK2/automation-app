@@ -231,7 +231,7 @@ describe("Electron workflow command handlers", () => {
       proxy_label: "owned-proxy",
       locale: "vi-VN",
       timezone: "Asia/Ho_Chi_Minh",
-      viewport_width: 1366,
+      viewport_width: 1920,
       humanize: false,
       human_preset: "careful",
     });
@@ -713,56 +713,35 @@ describe("Electron workflow command handlers", () => {
       }),
     );
 
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          fingerprint_platform: "plan9" as never,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "fingerprint_platform",
-        level: "error",
-        message: "Fingerprint platform must be windows, macos, or linux",
-      }),
-    );
+    const normalized = handlers.saveWorkflowSettings(workflow.id, {
+      ...handlers.getWorkflowSettings(workflow.id),
+      browser_launch: {
+        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        viewport_width: 1366,
+        viewport_height: 768,
+        device_scale_factor: 2,
+        mobile: true,
+        touch: true,
+        fingerprint_platform: "windows",
+        hardware_concurrency: 16,
+        device_memory_gb: 32,
+        fingerprint_fonts_dir: "/path/that/does/not/exist",
+        storage_quota_mb: 512,
+      },
+    });
 
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          hardware_concurrency: 0,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "hardware_concurrency",
-        level: "error",
-        message: "Hardware concurrency must be an integer between 1 and 64",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          fingerprint_fonts_dir: "/path/that/does/not/exist",
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "fingerprint_fonts_dir",
-        level: "error",
-        message: "Fingerprint fonts directory must be readable",
-      }),
-    );
+    expect(normalized.browser_launch).toMatchObject({
+      viewport_width: 1920,
+      viewport_height: 947,
+      device_scale_factor: 1,
+      mobile: false,
+      touch: false,
+      fingerprint_platform: null,
+      hardware_concurrency: null,
+      device_memory_gb: null,
+      fingerprint_fonts_dir: null,
+      storage_quota_mb: null,
+    });
 
     expect(
       handlers.validateWorkflowSettings({
@@ -770,18 +749,9 @@ describe("Electron workflow command handlers", () => {
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148",
-          mobile: false,
-          touch: false,
         },
       }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "mobile",
-        level: "warning",
-        message: "Mobile user agents should use mobile viewport and touch settings",
-      }),
-    );
+    ).not.toContainEqual(expect.objectContaining({ field: "mobile" }));
 
     handlers.saveWorkflowSettings(workflow.id, {
       ...handlers.getWorkflowSettings(workflow.id),

@@ -1603,66 +1603,6 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Auto WebRTC proxy IP policy requires an enabled proxy",
     });
   }
-  if (
-    settings.browser_launch.user_agent &&
-    /mobile|iphone|android/i.test(settings.browser_launch.user_agent) &&
-    (!settings.browser_launch.mobile || !settings.browser_launch.touch)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "mobile",
-      level: "warning",
-      message: "Mobile user agents should use mobile viewport and touch settings",
-    });
-  }
-  if (
-    settings.browser_launch.fingerprint_platform &&
-    !validFingerprintPlatform(settings.browser_launch.fingerprint_platform)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "fingerprint_platform",
-      level: "error",
-      message: "Fingerprint platform must be windows, macos, or linux",
-    });
-  }
-  if (
-    settings.browser_launch.hardware_concurrency != null &&
-    (!Number.isInteger(settings.browser_launch.hardware_concurrency) ||
-      settings.browser_launch.hardware_concurrency < 1 ||
-      settings.browser_launch.hardware_concurrency > 64)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "hardware_concurrency",
-      level: "error",
-      message: "Hardware concurrency must be an integer between 1 and 64",
-    });
-  }
-  if (
-    settings.browser_launch.device_memory_gb != null &&
-    (!Number.isFinite(settings.browser_launch.device_memory_gb) ||
-      settings.browser_launch.device_memory_gb <= 0 ||
-      settings.browser_launch.device_memory_gb > 128)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "device_memory_gb",
-      level: "error",
-      message: "Device memory must be greater than 0 and no more than 128 GB",
-    });
-  }
-  if (settings.browser_launch.fingerprint_fonts_dir?.trim()) {
-    const fontsDir = settings.browser_launch.fingerprint_fonts_dir.trim();
-    if (!directoryReadable(fontsDir)) {
-      issues.push({
-        section: "browser_launch",
-        field: "fingerprint_fonts_dir",
-        level: "error",
-        message: "Fingerprint fonts directory must be readable",
-      });
-    }
-  }
   if (settings.browser_launch.preflight_enabled) {
     const probeUrl = settings.browser_launch.preflight_probe_url?.trim();
     if (!probeUrl) {
@@ -1794,17 +1734,6 @@ function validIpAddress(value: string) {
       .every((part) => Number(part) >= 0 && Number(part) <= 255);
   }
   return /^[0-9a-f:]+$/i.test(candidate) && candidate.includes(":");
-}
-
-function directoryReadable(value: string) {
-  try {
-    const stat = nodeFs.statSync(value);
-    if (!stat.isDirectory()) return false;
-    nodeFs.accessSync(value, nodeFs.constants.R_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function buildCloakBrowserDiagnostics({
@@ -2322,11 +2251,11 @@ function normalizeSettingsBrowserLaunch(
     display_name: nullableText(browser.display_name) ?? `${profileName ?? "Workflow"} identity`,
     profile_dir: profileDir,
     fingerprint_seed: fingerprintSeed,
-    viewport_width: positiveNumberOrDefault(browser.viewport_width, 1920),
-    viewport_height: positiveNumberOrDefault(browser.viewport_height, 947),
-    device_scale_factor: positiveNumberOrDefault(browser.device_scale_factor, 1),
-    mobile: Boolean(browser.mobile),
-    touch: Boolean(browser.touch),
+    viewport_width: 1920,
+    viewport_height: 947,
+    device_scale_factor: 1,
+    mobile: false,
+    touch: false,
     timezone: nullableText(browser.timezone),
     locale: nullableText(browser.locale),
     geoip: Boolean(browser.geoip),
@@ -2339,13 +2268,11 @@ function normalizeSettingsBrowserLaunch(
       ? browser.webrtc_policy
       : "default",
     webrtc_ip: nullableText(browser.webrtc_ip),
-    fingerprint_platform: validFingerprintPlatform(browser.fingerprint_platform)
-      ? browser.fingerprint_platform
-      : null,
-    hardware_concurrency: positiveIntegerOptionalNumber(browser.hardware_concurrency),
-    device_memory_gb: positiveOptionalNumber(browser.device_memory_gb),
-    fingerprint_fonts_dir: nullableText(browser.fingerprint_fonts_dir),
-    storage_quota_mb: positiveOptionalNumber(browser.storage_quota_mb),
+    fingerprint_platform: null,
+    hardware_concurrency: null,
+    device_memory_gb: null,
+    fingerprint_fonts_dir: null,
+    storage_quota_mb: null,
     preflight_enabled: Boolean(browser.preflight_enabled),
     preflight_probe_url: nullableText(browser.preflight_probe_url),
     preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
@@ -2519,21 +2446,9 @@ function stableFingerprintSeed(seed: string) {
   return String(10000 + hash).padStart(5, "0");
 }
 
-function positiveNumberOrDefault(value: unknown, defaultValue: number) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : defaultValue;
-}
-
 function positiveOptionalNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
-    : null;
-}
-
-function positiveIntegerOptionalNumber(value: unknown) {
-  return Number.isInteger(value) && Number(value) > 0
-    ? Number(value)
     : null;
 }
 
@@ -2547,12 +2462,6 @@ function validWebRtcPolicy(value: unknown): value is WorkflowSettingsBrowserLaun
 
 function validHumanPreset(value: unknown): value is WorkflowSettingsBrowserLaunch["human_preset"] {
   return value === "default" || value === "careful";
-}
-
-function validFingerprintPlatform(
-  value: unknown,
-): value is NonNullable<WorkflowSettingsBrowserLaunch["fingerprint_platform"]> {
-  return value === "windows" || value === "macos" || value === "linux";
 }
 
 function browserProfileKey(settings: WorkflowSettings) {

@@ -97,8 +97,10 @@ Workflow Settings are persisted separately from graph JSON:
 
 Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords
-and proxy URL credentials. Advanced fingerprint controls are allowlisted fields
-only; raw Chromium argument text is not part of the public settings contract.
+and proxy URL credentials. Legacy low-level fingerprint override fields are
+normalized back to CloakBrowser seed-derived defaults and are not rendered as
+editable Settings controls; raw Chromium argument text is not part of the
+public settings contract.
 CloakBrowser humanization defaults to `true` and is persisted as the Browser Launch `humanize` toggle. `human_preset` maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with invalid or missing persisted values normalized to `default`.
 
 Settings validation issues serialize as `{ section, field, message, level }`.

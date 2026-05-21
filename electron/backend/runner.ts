@@ -585,7 +585,7 @@ export class BrowserWorkflowRunner {
 
   private async launch(settings: WorkflowSettings) {
     if (this.usesDefaultDriver) assertHeadedDisplayAvailable(settings);
-    const options = buildLaunchOptions(settings, this.appPaths);
+    const options = buildLaunchOptions(settings);
     const profileDir = retainedProfileKey(settings);
     const context = profileDir
       ? await this.driver.launchPersistent({
@@ -1944,30 +1944,12 @@ function firstActionFailure(failures: unknown[], fallbackMessage: string) {
   return firstFailure instanceof Error ? firstFailure : new Error(fallbackMessage);
 }
 
-function buildLaunchOptions(
-  settings: WorkflowSettings,
-  appPaths: AppPaths,
-): BrowserLaunchOptions {
+function buildLaunchOptions(settings: WorkflowSettings): BrowserLaunchOptions {
   const browser = settings.browser_launch;
   const proxy = buildProxyLaunchOptions(browser);
   const args = [
     browser.fingerprint_seed?.trim()
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
-      : null,
-    browser.fingerprint_platform?.trim()
-      ? `--fingerprint-platform=${browser.fingerprint_platform.trim()}`
-      : null,
-    browser.hardware_concurrency
-      ? `--fingerprint-hardware-concurrency=${browser.hardware_concurrency}`
-      : null,
-    browser.device_memory_gb
-      ? `--fingerprint-device-memory=${browser.device_memory_gb}`
-      : null,
-    browser.fingerprint_fonts_dir?.trim()
-      ? `--fingerprint-fonts-dir=${browser.fingerprint_fonts_dir.trim()}`
-      : null,
-    browser.storage_quota_mb
-      ? `--fingerprint-storage-quota=${browser.storage_quota_mb}`
       : null,
     browser.webrtc_policy === "auto_proxy_exit_ip"
       ? "--fingerprint-webrtc-ip=auto"
@@ -1989,13 +1971,6 @@ function buildLaunchOptions(
     geoip: Boolean(browser.geoip),
     args,
     proxy,
-    contextOptions: {
-      acceptDownloads: true,
-      downloadsPath: appPaths.downloadsDir,
-      deviceScaleFactor: browser.device_scale_factor || 1,
-      isMobile: Boolean(browser.mobile),
-      hasTouch: Boolean(browser.touch),
-    },
   };
 }
 
@@ -2077,14 +2052,8 @@ async function browserIdentityEvidence(settings: WorkflowSettings, runId: string
   };
 }
 
-function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {
-  return [
-    browser.fingerprint_platform ? "fingerprint_platform" : null,
-    browser.hardware_concurrency ? "hardware_concurrency" : null,
-    browser.device_memory_gb ? "device_memory_gb" : null,
-    browser.fingerprint_fonts_dir ? "fingerprint_fonts_dir" : null,
-    browser.storage_quota_mb ? "storage_quota_mb" : null,
-  ].filter((field): field is string => Boolean(field));
+function activeAdvancedFingerprintOverrides(_browser: WorkflowSettings["browser_launch"]) {
+  return [];
 }
 
 async function cloakBrowserRuntimeEvidence() {

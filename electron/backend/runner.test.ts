@@ -106,10 +106,6 @@ describe("BrowserWorkflowRunner", () => {
           geoip: false,
           args: [
             "--fingerprint=38291",
-            "--fingerprint-platform=windows",
-            "--fingerprint-hardware-concurrency=8",
-            "--fingerprint-device-memory=16",
-            "--fingerprint-storage-quota=256",
             "--fingerprint-webrtc-ip=auto",
           ],
           proxy: {
@@ -118,16 +114,10 @@ describe("BrowserWorkflowRunner", () => {
             username: "agent",
             password: "secret",
           },
-          contextOptions: expect.objectContaining({
-            acceptDownloads: true,
-            downloadsPath: paths.downloadsDir,
-            deviceScaleFactor: 1,
-            isMobile: false,
-            hasTouch: false,
-          }),
         }),
       },
     ]);
+    expect(driver.launches[0]?.options).not.toHaveProperty("contextOptions");
     expect(result.outputs?.browser_identity).toEqual({
       run_id: "run-identity-1",
       identity_id: "bi_test_identity",
@@ -156,10 +146,6 @@ describe("BrowserWorkflowRunner", () => {
       humanize: false,
       human_preset: "careful",
       advanced_overrides: [
-        "fingerprint_platform",
-        "hardware_concurrency",
-        "device_memory_gb",
-        "storage_quota_mb",
       ],
       cloakbrowser: {
         wrapper_version: expect.stringMatching(/^\d+\.\d+\.\d+/),

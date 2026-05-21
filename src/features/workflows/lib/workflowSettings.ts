@@ -666,18 +666,11 @@ export const workflowSettingsHelp: Record<
             "Use it when proxy inventory does not already provide explicit timezone and locale values, and validate the result with owned preflight.",
         },
         {
-          name: "Viewport",
+          name: "CloakBrowser seed defaults",
           description:
-            "Launch-time viewport and device-class values used to keep screen, window, device scale factor, mobile, and touch settings coherent for the identity.",
+            "CloakBrowser derives platform, hardware, memory, storage, screen, viewport, GPU, and related fingerprint values from the stable seed instead of exposing manual per-field overrides.",
           whenToUse:
-            "Use stable desktop defaults for most owned workflows; only change mobile or touch settings as part of a complete matching identity.",
-        },
-        {
-          name: "Advanced fingerprint overrides",
-          description:
-            "Allowlisted high-risk CloakBrowser overrides for platform, hardware concurrency, device memory, storage quota, and a managed fonts directory; raw Chromium args stay unavailable.",
-          whenToUse:
-            "Prefer seed defaults, and use overrides only when an owned account, proxy inventory, or preflight probe requires a specific coherent device bundle.",
+            "Use Reset identity when a workflow needs a fresh generated browser persona rather than editing low-level fingerprint values directly.",
         },
         {
           name: "Humanize browser input",
@@ -817,18 +810,11 @@ export const workflowSettingsHelp: Record<
             "Dùng khi proxy inventory chưa có timezone và locale rõ ràng, rồi xác nhận kết quả bằng owned preflight.",
         },
         {
-          name: "Viewport",
+          name: "CloakBrowser seed defaults",
           description:
-            "Viewport và device-class lúc launch để giữ screen, window, device scale factor, mobile, và touch settings nhất quán cho identity.",
+            "CloakBrowser suy ra platform, hardware, memory, storage, screen, viewport, GPU, và các giá trị fingerprint liên quan từ seed ổn định thay vì mở từng override thủ công.",
           whenToUse:
-            "Giữ desktop default ổn định cho đa số workflow owned; chỉ đổi mobile hoặc touch khi có identity tương ứng đầy đủ.",
-        },
-        {
-          name: "Advanced fingerprint overrides",
-          description:
-            "Các override CloakBrowser allowlist, rủi ro cao cho platform, hardware concurrency, device memory, storage quota, và fonts directory managed; raw Chromium args vẫn không được mở.",
-          whenToUse:
-            "Ưu tiên seed default, chỉ override khi account owned, proxy inventory, hoặc preflight probe yêu cầu một device bundle nhất quán cụ thể.",
+            "Dùng Reset identity khi workflow cần browser persona mới được sinh lại, thay vì chỉnh trực tiếp các giá trị fingerprint cấp thấp.",
         },
         {
           name: "Humanize browser input",

@@ -90,6 +90,7 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByLabelText("Legacy profile key")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");
+    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("readonly");
     expect(within(dialog).getByRole("button", { name: "Show fingerprint seed" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Copy fingerprint seed" })).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Proxy label")).toBeInTheDocument();
@@ -99,11 +100,17 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "GeoIP from proxy" })).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint platform")).toHaveValue("");
-    expect(within(dialog).getByLabelText("Hardware concurrency")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Device memory GB")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Storage quota MB")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Viewport width")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Viewport height")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Device scale factor")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Mobile viewport" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Touch input" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("group", { name: "Fingerprint" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Fingerprint platform")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Hardware concurrency")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Device memory GB")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Storage quota MB")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Fingerprint fonts directory")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
     expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
@@ -204,8 +211,7 @@ describe("WorkflowSettingsDialog", () => {
     const expectedBrowserGroups = [
       "Session & identity",
       "Proxy",
-      "Location & viewport",
-      "Fingerprint",
+      "Location",
       "Humanization",
       "Preflight & launch",
     ];
