@@ -73,6 +73,7 @@ describe("BrowserWorkflowRunner", () => {
         mobile: false,
         touch: false,
         geoip: false,
+        browser_brand: "microsoft_edge",
         fingerprint_platform: "windows",
         hardware_concurrency: 8,
         device_memory_gb: 16,
@@ -106,6 +107,7 @@ describe("BrowserWorkflowRunner", () => {
           geoip: false,
           args: [
             "--fingerprint=38291",
+            "--fingerprint-brand=Edge",
             "--fingerprint-platform=windows",
             "--fingerprint-hardware-concurrency=8",
             "--fingerprint-device-memory=16",
@@ -147,6 +149,7 @@ describe("BrowserWorkflowRunner", () => {
       geoip: false,
       webrtc_policy: "auto_proxy_exit_ip",
       webrtc_ip: null,
+      browser_brand: "microsoft_edge",
       viewport: {
         width: 1920,
         height: 1080,

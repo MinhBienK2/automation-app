@@ -1958,6 +1958,7 @@ function buildLaunchOptions(
     browser.fingerprint_seed?.trim()
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
       : null,
+    browserBrandLaunchArg(browser.browser_brand),
     browser.fingerprint_platform?.trim()
       ? `--fingerprint-platform=${browser.fingerprint_platform.trim()}`
       : null,
@@ -2065,6 +2066,7 @@ async function browserIdentityEvidence(settings: WorkflowSettings, runId: string
     geoip: browser.geoip,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_policy === "explicit_ip" ? browser.webrtc_ip ?? null : null,
+    browser_brand: browser.browser_brand ?? "chrome",
     viewport: {
       width: browser.viewport_width,
       height: browser.viewport_height,
@@ -2077,6 +2079,11 @@ async function browserIdentityEvidence(settings: WorkflowSettings, runId: string
     advanced_overrides: activeAdvancedFingerprintOverrides(browser),
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
   };
+}
+
+function browserBrandLaunchArg(brand: WorkflowSettings["browser_launch"]["browser_brand"]) {
+  if (brand === "microsoft_edge") return "--fingerprint-brand=Edge";
+  return null;
 }
 
 function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {

@@ -218,6 +218,7 @@ export function defaultWorkflowSettings({
       display_name: `${workflowName} identity`,
       profile_dir: createDefaultBrowserIdentityId(workflowId),
       fingerprint_seed: stableFingerprintSeed(createDefaultBrowserIdentityId(workflowId)),
+      browser_brand: "chrome",
       profile_name: createDefaultBrowserIdentityId(workflowId),
       user_agent: null,
       viewport_width: 1920,
@@ -603,6 +604,13 @@ export const workflowSettingsHelp: Record<
             "Keep it fixed for persistent login identities; reset the identity explicitly when the test needs a new device persona.",
         },
         {
+          name: "Browser brand",
+          description:
+            "CloakBrowser Chromium brand requested for the launch identity. Chrome uses CloakBrowser's default Chromium-compatible brand, Microsoft Edge maps to the supported upstream Edge brand flag, and Firefox is shown for planning but remains Chrome-compatible until upstream supports Firefox on the Chromium core.",
+          whenToUse:
+            "Use Chrome for the baseline CloakBrowser path, Edge when an owned test identity needs Edge-style Chromium brand signals, and avoid Firefox for production-like probes unless preflight accepts the mismatch.",
+        },
+        {
           name: "Enable Run from selected",
           description:
             "Shows the Run from selected workflow action when the workflow uses a retained persistent browser session.",
@@ -752,6 +760,13 @@ export const workflowSettingsHelp: Record<
             "Seed CloakBrowser ổn định được truyền lúc launch để cùng identity giữ canvas, WebGL, audio, screen, hardware, và các device signal liên quan qua nhiều run.",
           whenToUse:
             "Giữ cố định cho identity có login persistent; reset identity rõ ràng khi test cần device persona mới.",
+        },
+        {
+          name: "Browser brand",
+          description:
+            "Brand CloakBrowser Chromium được yêu cầu cho launch identity. Chrome dùng brand Chromium-compatible mặc định của CloakBrowser, Microsoft Edge map sang Edge brand flag upstream hỗ trợ, còn Firefox chỉ để chuẩn bị kế hoạch và vẫn chạy tương thích Chrome cho tới khi upstream hỗ trợ Firefox trên core Chromium.",
+          whenToUse:
+            "Dùng Chrome cho baseline CloakBrowser, Edge khi identity owned cần signal kiểu Edge Chromium, và tránh Firefox cho probe gần production trừ khi preflight chấp nhận mismatch.",
         },
         {
           name: "Enable Run from selected",

@@ -389,6 +389,7 @@ function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
     display_name: "Login flow identity",
     profile_dir: "bi_workflow-1",
     fingerprint_seed: "14523",
+    browser_brand: "chrome",
     profile_name: null,
     user_agent: null,
     viewport_width: 1920,

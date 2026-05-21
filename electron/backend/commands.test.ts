@@ -63,6 +63,7 @@ describe("Electron workflow command handlers", () => {
         display_name: "Login flow identity",
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
+        browser_brand: "chrome",
         humanize: true,
         human_preset: "default",
       },
@@ -731,6 +732,40 @@ describe("Electron workflow command handlers", () => {
         field: "webrtc_policy",
         level: "error",
         message: "Disabled WebRTC policy is not supported by the installed CloakBrowser runtime",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          browser_brand: "safari" as never,
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "browser_brand",
+        level: "error",
+        message: "Browser brand must be chrome, microsoft_edge, or firefox",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          browser_brand: "firefox",
+        },
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "browser_brand",
+        level: "warning",
+        message: "Firefox is not a CloakBrowser-supported Chromium brand; Chrome-compatible CloakBrowser will run until upstream adds Firefox support",
       }),
     );
 

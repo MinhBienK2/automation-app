@@ -122,6 +122,7 @@ export type WorkflowSettingsSectionId =
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
+export type WorkflowBrowserBrand = "chrome" | "microsoft_edge" | "firefox";
 export type WorkflowFingerprintPlatform = "windows" | "macos" | "linux";
 export type WorkflowHumanPreset = "default" | "careful";
 export type WorkflowWebRtcPolicy =
@@ -153,6 +154,7 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   display_name: string;
   profile_dir: string;
   fingerprint_seed: string;
+  browser_brand: WorkflowBrowserBrand;
   user_agent?: string | null;
   viewport_width: number;
   viewport_height: number;

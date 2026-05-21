@@ -429,6 +429,26 @@ function BrowserLaunchSettingsSection({
             onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
           />
         </label>
+        <label className="field">
+          <span>Browser brand</span>
+          <Select
+            value={value.browser_brand ?? "chrome"}
+            onChange={(event) => {
+              const nextValue = event.currentTarget.value;
+              onChange({
+                ...value,
+                browser_brand:
+                  nextValue === "microsoft_edge" || nextValue === "firefox"
+                    ? nextValue
+                    : "chrome",
+              });
+            }}
+          >
+            <option value="chrome">Chrome</option>
+            <option value="microsoft_edge">Microsoft Edge</option>
+            <option value="firefox">Firefox (unsupported by CloakBrowser)</option>
+          </Select>
+        </label>
         <div className="settings-field-group-actions">
           <Button
             type="button"

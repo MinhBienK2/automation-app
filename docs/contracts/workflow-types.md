@@ -50,6 +50,7 @@ Workflow Settings are persisted separately from graph JSON:
     profile_dir,
     fingerprint_seed,
     profile_name,
+    browser_brand,
     user_agent,
     viewport_width,
     viewport_height,
@@ -93,7 +94,7 @@ Workflow Settings are persisted separately from graph JSON:
 }
 ```
 
-`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets or duplicates the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs.
+`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets or duplicates the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs. `browser_brand` is the operator-selected CloakBrowser Chromium brand request: `chrome` uses CloakBrowser's default Chromium-compatible brand, `microsoft_edge` maps to CloakBrowser's supported Edge brand flag, and `firefox` is retained as an unsupported planning option that currently runs Chrome-compatible CloakBrowser with a validation warning.
 
 Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords

@@ -31,6 +31,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
     expect(settings.browser_launch.humanize).toBe(true);
     expect(settings.browser_launch.human_preset).toBe("default");
+    expect(settings.browser_launch.browser_brand).toBe("chrome");
     expect(settings.browser_launch).not.toHaveProperty("behavior_fidelity");
     expect(settings.browser_launch.proxy_provider).toBeNull();
     expect(settings.browser_launch.test_account_binding).toBeNull();
@@ -122,6 +123,7 @@ describe("workflow settings model", () => {
       "Reuse login session",
       "Identity display name",
       "Fingerprint seed",
+      "Browser brand",
       "Enable Run from selected",
       "Use proxy",
       "Proxy server",

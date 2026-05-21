@@ -1636,6 +1636,25 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
     });
   }
   if (
+    settings.browser_launch.browser_brand &&
+    !validBrowserBrand(settings.browser_launch.browser_brand)
+  ) {
+    issues.push({
+      section: "browser_launch",
+      field: "browser_brand",
+      level: "error",
+      message: "Browser brand must be chrome, microsoft_edge, or firefox",
+    });
+  }
+  if (settings.browser_launch.browser_brand === "firefox") {
+    issues.push({
+      section: "browser_launch",
+      field: "browser_brand",
+      level: "warning",
+      message: "Firefox is not a CloakBrowser-supported Chromium brand; Chrome-compatible CloakBrowser will run until upstream adds Firefox support",
+    });
+  }
+  if (
     settings.browser_launch.fingerprint_platform &&
     !validFingerprintPlatform(settings.browser_launch.fingerprint_platform)
   ) {
@@ -2357,6 +2376,9 @@ function normalizeSettingsBrowserLaunch(
     display_name: nullableText(browser.display_name) ?? `${profileName ?? "Workflow"} identity`,
     profile_dir: profileDir,
     fingerprint_seed: fingerprintSeed,
+    browser_brand: validBrowserBrand(browser.browser_brand)
+      ? browser.browser_brand
+      : "chrome",
     viewport_width: positiveNumberOrDefault(browser.viewport_width, 1920),
     viewport_height: positiveNumberOrDefault(browser.viewport_height, 1080),
     device_scale_factor: positiveNumberOrDefault(browser.device_scale_factor, 1),
@@ -2468,6 +2490,7 @@ function createDefaultBrowserIdentity(
   | "display_name"
   | "profile_dir"
   | "fingerprint_seed"
+  | "browser_brand"
   | "viewport_width"
   | "viewport_height"
   | "device_scale_factor"
@@ -2505,6 +2528,7 @@ function createDefaultBrowserIdentity(
     fingerprint_seed: options.randomizeIdentity
       ? String(10000 + Math.floor(Math.random() * 90000))
       : stableFingerprintSeed(identityId),
+    browser_brand: "chrome",
     viewport_width: 1920,
     viewport_height: 1080,
     device_scale_factor: 1,
@@ -2584,6 +2608,10 @@ function validHumanPreset(value: unknown): value is WorkflowSettingsBrowserLaunc
   return value === "default" || value === "careful";
 }
 
+function validBrowserBrand(value: unknown): value is WorkflowSettingsBrowserLaunch["browser_brand"] {
+  return value === "chrome" || value === "microsoft_edge" || value === "firefox";
+}
+
 function validFingerprintPlatform(
   value: unknown,
 ): value is NonNullable<WorkflowSettingsBrowserLaunch["fingerprint_platform"]> {
@@ -2603,6 +2631,7 @@ function browserIdentityPreferences(
   | "display_name"
   | "profile_dir"
   | "fingerprint_seed"
+  | "browser_brand"
   | "user_agent"
   | "viewport_width"
   | "viewport_height"
@@ -2635,6 +2664,7 @@ function browserIdentityPreferences(
     display_name: browser.display_name,
     profile_dir: browser.profile_dir,
     fingerprint_seed: browser.fingerprint_seed,
+    browser_brand: browser.browser_brand,
     user_agent: browser.user_agent,
     viewport_width: browser.viewport_width,
     viewport_height: browser.viewport_height,
