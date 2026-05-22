@@ -423,7 +423,7 @@ function BrowserLaunchSettingsSection({
         <label className="field">
           <span>Fingerprint seed</span>
           <Input
-            type="password"
+            type="text"
             value={value.fingerprint_seed}
             onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
           />

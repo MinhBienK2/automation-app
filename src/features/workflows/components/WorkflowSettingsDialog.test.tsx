@@ -89,7 +89,7 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByLabelText("Profile directory")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Legacy profile key")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
-    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");
+    expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "text");
     expect(within(dialog).queryByLabelText("Browser brand")).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Show fingerprint seed" }))
       .not.toBeInTheDocument();
