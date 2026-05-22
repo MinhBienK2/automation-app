@@ -50,13 +50,7 @@ Workflow Settings are persisted separately from graph JSON:
     profile_dir,
     fingerprint_seed,
     profile_name,
-    browser_brand,
-    user_agent,
-    viewport_width,
-    viewport_height,
-    device_scale_factor,
-    mobile,
-    touch,
+    fingerprint_fonts_dir,
     timezone,
     locale,
     geoip,
@@ -67,11 +61,6 @@ Workflow Settings are persisted separately from graph JSON:
     test_account_binding,
     webrtc_policy,
     webrtc_ip,
-    fingerprint_platform,
-    hardware_concurrency,
-    device_memory_gb,
-    fingerprint_fonts_dir,
-    storage_quota_mb,
     preflight_enabled,
     preflight_probe_url,
     preflight_allowed_origins,
@@ -94,12 +83,12 @@ Workflow Settings are persisted separately from graph JSON:
 }
 ```
 
-`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets or duplicates the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs. `browser_brand` is the operator-selected CloakBrowser Chromium brand request: `chrome` uses CloakBrowser's default Chromium-compatible brand, `microsoft_edge` maps to CloakBrowser's supported Edge brand flag, and `firefox` is retained as an unsupported planning option that currently runs Chrome-compatible CloakBrowser with a validation warning.
+`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs. `fingerprint_fonts_dir` is an optional local readable directory passed to CloakBrowser as the managed font inventory for the launch identity.
 
 Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords
-and proxy URL credentials. Advanced fingerprint controls are allowlisted fields
-only; raw Chromium argument text is not part of the public settings contract.
+and proxy URL credentials. Raw Chromium argument text and ad hoc fingerprint
+override fields are not part of the public settings contract.
 CloakBrowser humanization defaults to `true` and is persisted as the Browser Launch `humanize` toggle. `human_preset` maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with invalid or missing persisted values normalized to `default`.
 
 Settings validation issues serialize as `{ section, field, message, level }`.
@@ -149,7 +138,7 @@ Deletion keeps profile data by default. When `deleteBrowserProfile` is true, the
 backend removes only the deleting workflow's private profile directory; shared
 or active-session profile directories are retained.
 
-Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
+Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as `fingerprint_fonts_dir` are preserved, and `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 
 ## Batch Run Shape
 

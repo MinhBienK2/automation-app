@@ -47,9 +47,6 @@ describeSmoke("CloakBrowser smoke", () => {
           fingerprint_seed: "38291",
           timezone: "America/New_York",
           locale: "en-US",
-          viewport_width: 1280,
-          viewport_height: 720,
-          device_scale_factor: 1,
         },
       };
 

@@ -90,9 +90,13 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByLabelText("Legacy profile key")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveValue("14523");
     expect(within(dialog).getByLabelText("Fingerprint seed")).toHaveAttribute("type", "password");
-    expect(within(dialog).getByLabelText("Browser brand")).toHaveValue("chrome");
-    expect(within(dialog).getByRole("button", { name: "Show fingerprint seed" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Copy fingerprint seed" })).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Browser brand")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Show fingerprint seed" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Copy fingerprint seed" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Duplicate identity" }))
+      .not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Proxy label")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Proxy provider")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Test account binding")).toBeInTheDocument();
@@ -100,11 +104,19 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "GeoIP from proxy" })).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint platform")).toHaveValue("");
-    expect(within(dialog).getByLabelText("Hardware concurrency")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Device memory GB")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Storage quota MB")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toBeInTheDocument();
+    expect(within(dialog).getByRole("group", { name: "Fingerprint" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toHaveValue("");
+    expect(within(dialog).queryByLabelText("Fingerprint platform")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Hardware concurrency")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Device memory GB")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Storage quota MB")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Viewport width")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Viewport height")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Device scale factor")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Mobile viewport" }))
+      .not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Touch input" }))
+      .not.toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
     expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
@@ -205,7 +217,7 @@ describe("WorkflowSettingsDialog", () => {
     const expectedBrowserGroups = [
       "Session & identity",
       "Proxy",
-      "Location & viewport",
+      "Location",
       "Fingerprint",
       "Humanization",
       "Preflight & launch",
@@ -230,36 +242,48 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByRole("group", { name: "Initial variables" })).toHaveClass("settings-field-group");
   });
 
-  test("can reveal and copy the fingerprint seed", async () => {
+  test("can edit the fingerprint fonts directory without seed reveal or copy actions", async () => {
     const user = userEvent.setup();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
+    const onSettingsChange = vi.fn();
+    const initialSettings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
     });
 
-    render(
-      <WorkflowSettingsDialog
-        activeSection="browser_launch"
-        hasUnsavedChanges={false}
-        open
-        settings={defaultWorkflowSettings({
-          workflowId: "workflow-1",
-          workflowName: "Checkout QA",
-        })}
-        onActiveSectionChange={vi.fn()}
-        onDiscardChanges={vi.fn()}
-        onOpenChange={vi.fn()}
-        onSaveSettings={vi.fn()}
-        onSettingsChange={vi.fn()}
-      />,
+    function Harness() {
+      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
+      return (
+        <WorkflowSettingsDialog
+          activeSection="browser_launch"
+          hasUnsavedChanges={false}
+          open
+          settings={settings}
+          onActiveSectionChange={vi.fn()}
+          onDiscardChanges={vi.fn()}
+          onOpenChange={vi.fn()}
+          onSaveSettings={vi.fn()}
+          onSettingsChange={(nextSettings) => {
+            onSettingsChange(nextSettings);
+            setSettings(nextSettings);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    expect(screen.queryByRole("button", { name: "Show fingerprint seed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy fingerprint seed" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Fingerprint fonts directory"), "/opt/fp-fonts");
+
+    expect(onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        browser_launch: expect.objectContaining({
+          fingerprint_fonts_dir: "/opt/fp-fonts",
+        }),
+      }),
     );
-
-    await user.click(screen.getByRole("button", { name: "Show fingerprint seed" }));
-    expect(screen.getByLabelText("Fingerprint seed")).toHaveAttribute("type", "text");
-
-    await user.click(screen.getByRole("button", { name: "Copy fingerprint seed" }));
-    expect(writeText).toHaveBeenCalledWith("14523");
   });
 
   test("does not save disabled batch switch changes but still edits active run policy fields", async () => {
@@ -358,7 +382,7 @@ describe("WorkflowSettingsDialog", () => {
     );
   });
 
-  test("resets and duplicates browser identity with explicit operator controls", async () => {
+  test("resets browser identity with one explicit operator control", async () => {
     const user = userEvent.setup();
     const onSettingsChange = vi.fn();
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -407,15 +431,8 @@ describe("WorkflowSettingsDialog", () => {
     expect(resetLaunch.proxy_server).toBe("http://proxy.test:8080");
     expect(resetLaunch.timezone).toBe("America/New_York");
     expect(resetLaunch.locale).toBe("en-US");
-
-    await user.click(screen.getByRole("button", { name: "Duplicate identity" }));
-    const duplicateLaunch = onSettingsChange.mock.lastCall?.[0].browser_launch;
-    expect(duplicateLaunch.identity_id).toMatch(/^bi_/);
-    expect(duplicateLaunch.identity_id).not.toBe(resetLaunch.identity_id);
-    expect(duplicateLaunch.profile_dir).toBe(duplicateLaunch.identity_id);
-    expect(duplicateLaunch.profile_name).toBe(duplicateLaunch.identity_id);
-    expect(duplicateLaunch.display_name).toBe("Checkout QA identity copy");
-    expect(duplicateLaunch.proxy_server).toBe("http://proxy.test:8080");
+    expect(screen.queryByRole("button", { name: "Duplicate identity" }))
+      .not.toBeInTheDocument();
 
     confirmSpy.mockRestore();
   });

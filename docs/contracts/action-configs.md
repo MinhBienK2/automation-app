@@ -77,7 +77,7 @@ Recovery config semantics must preserve failure behavior when recovery branches 
 - `dry_run_validate_config` exposes backend validation for builder assist.
 - Backend action validation covers visible action families, nested graph-internal action arrays, safe evidence names, geolocation and viewport ranges, network status ranges, required output names, and storage/header/permission lists.
 
-Set Viewport is a runtime viewport-size action. Active authoring exposes only `width` and `height`. Device scale factor, mobile mode, and touch capability belong in Workflow Settings Browser Launch before Chromium starts.
+Set Viewport is a runtime viewport-size action. Active authoring exposes only `width` and `height`; Workflow Settings Browser Launch no longer exposes device scale factor, mobile mode, or touch capability controls.
 
 ## Persistence
 

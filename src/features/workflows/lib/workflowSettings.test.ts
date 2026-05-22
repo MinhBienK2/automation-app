@@ -31,15 +31,21 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
     expect(settings.browser_launch.humanize).toBe(true);
     expect(settings.browser_launch.human_preset).toBe("default");
-    expect(settings.browser_launch.browser_brand).toBe("chrome");
+    expect(settings.browser_launch).not.toHaveProperty("browser_brand");
     expect(settings.browser_launch).not.toHaveProperty("behavior_fidelity");
+    expect(settings.browser_launch).not.toHaveProperty("user_agent");
+    expect(settings.browser_launch).not.toHaveProperty("fingerprint_platform");
+    expect(settings.browser_launch).not.toHaveProperty("hardware_concurrency");
+    expect(settings.browser_launch).not.toHaveProperty("device_memory_gb");
+    expect(settings.browser_launch).toHaveProperty("fingerprint_fonts_dir", null);
+    expect(settings.browser_launch).not.toHaveProperty("storage_quota_mb");
     expect(settings.browser_launch.proxy_provider).toBeNull();
     expect(settings.browser_launch.test_account_binding).toBeNull();
-    expect(settings.browser_launch.fingerprint_platform).toBeNull();
-    expect(settings.browser_launch.hardware_concurrency).toBeNull();
-    expect(settings.browser_launch.device_memory_gb).toBeNull();
-    expect(settings.browser_launch.viewport_width).toBe(1920);
-    expect(settings.browser_launch.viewport_height).toBe(1080);
+    expect(settings.browser_launch).not.toHaveProperty("viewport_width");
+    expect(settings.browser_launch).not.toHaveProperty("viewport_height");
+    expect(settings.browser_launch).not.toHaveProperty("device_scale_factor");
+    expect(settings.browser_launch).not.toHaveProperty("mobile");
+    expect(settings.browser_launch).not.toHaveProperty("touch");
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.graph_defaults.default_edge_delay).toBeNull();
@@ -100,6 +106,13 @@ describe("workflow settings model", () => {
       "Default retry interval",
       "Device profile",
       "User agent",
+      "Fingerprint platform",
+      "Hardware concurrency",
+      "Device memory",
+      "Storage quota",
+      "Firefox",
+      "Browser brand",
+      "Viewport",
       "Mobile viewport",
       "Touch input",
       "Challenge policy",
@@ -123,7 +136,7 @@ describe("workflow settings model", () => {
       "Reuse login session",
       "Identity display name",
       "Fingerprint seed",
-      "Browser brand",
+      "Fingerprint fonts directory",
       "Enable Run from selected",
       "Use proxy",
       "Proxy server",
@@ -133,8 +146,6 @@ describe("workflow settings model", () => {
       "Timezone",
       "Locale",
       "GeoIP from proxy",
-      "Viewport",
-      "Advanced fingerprint overrides",
       "Humanize browser input",
       "Fingerprint preflight",
       "Headless browser",

@@ -122,8 +122,6 @@ export type WorkflowSettingsSectionId =
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
-export type WorkflowBrowserBrand = "chrome" | "microsoft_edge" | "firefox";
-export type WorkflowFingerprintPlatform = "windows" | "macos" | "linux";
 export type WorkflowHumanPreset = "default" | "careful";
 export type WorkflowWebRtcPolicy =
   | "default"
@@ -154,13 +152,7 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   display_name: string;
   profile_dir: string;
   fingerprint_seed: string;
-  browser_brand: WorkflowBrowserBrand;
-  user_agent?: string | null;
-  viewport_width: number;
-  viewport_height: number;
-  device_scale_factor: number;
-  mobile: boolean;
-  touch: boolean;
+  fingerprint_fonts_dir?: string | null;
   timezone?: string | null;
   locale?: string | null;
   geoip: boolean;
@@ -171,11 +163,6 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   test_account_binding?: string | null;
   webrtc_policy: WorkflowWebRtcPolicy;
   webrtc_ip?: string | null;
-  fingerprint_platform?: WorkflowFingerprintPlatform | null;
-  hardware_concurrency?: number | null;
-  device_memory_gb?: number | null;
-  fingerprint_fonts_dir?: string | null;
-  storage_quota_mb?: number | null;
   preflight_enabled: boolean;
   preflight_probe_url?: string | null;
   preflight_allowed_origins: string[];

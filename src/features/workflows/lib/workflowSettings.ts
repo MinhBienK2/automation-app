@@ -218,14 +218,8 @@ export function defaultWorkflowSettings({
       display_name: `${workflowName} identity`,
       profile_dir: createDefaultBrowserIdentityId(workflowId),
       fingerprint_seed: stableFingerprintSeed(createDefaultBrowserIdentityId(workflowId)),
-      browser_brand: "chrome",
       profile_name: createDefaultBrowserIdentityId(workflowId),
-      user_agent: null,
-      viewport_width: 1920,
-      viewport_height: 1080,
-      device_scale_factor: 1,
-      mobile: false,
-      touch: false,
+      fingerprint_fonts_dir: null,
       timezone: null,
       locale: null,
       geoip: false,
@@ -236,11 +230,6 @@ export function defaultWorkflowSettings({
       test_account_binding: null,
       webrtc_policy: "default",
       webrtc_ip: null,
-      fingerprint_platform: null,
-      hardware_concurrency: null,
-      device_memory_gb: null,
-      fingerprint_fonts_dir: null,
-      storage_quota_mb: null,
       preflight_enabled: false,
       preflight_probe_url: null,
       preflight_allowed_origins: [],
@@ -570,13 +559,13 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Browser Identity Settings Help",
       summary:
-        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, viewport, location, network posture, and optional owned preflight.",
+        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, managed fingerprint fonts, location, network posture, and optional owned preflight.",
       uiLabels: enLabels,
       bestFor: [
         "Making session and network posture repeatable from the first browser request.",
         "Keeping launch-level profile and proxy controls in one auditable settings section.",
       ],
-      notFor: ["Changing browser identity halfway through a run, editing page viewport later, or solving human challenge flows."],
+      notFor: ["Changing browser identity halfway through a run, resizing pages after launch, or solving human challenge flows."],
       precedence: [
         "Browser Launch values are resolved before Chromium starts, so changes require saving settings and starting a new run.",
         "In-run graph actions can still change runtime browser context only after the browser has launched.",
@@ -604,11 +593,11 @@ export const workflowSettingsHelp: Record<
             "Keep it fixed for persistent login identities; reset the identity explicitly when the test needs a new device persona.",
         },
         {
-          name: "Browser brand",
+          name: "Fingerprint fonts directory",
           description:
-            "CloakBrowser Chromium brand requested for the launch identity. Chrome uses CloakBrowser's default Chromium-compatible brand, Microsoft Edge maps to the supported upstream Edge brand flag, and Firefox is shown for planning but remains Chrome-compatible until upstream supports Firefox on the Chromium core.",
+            "Optional readable directory of managed fonts passed to CloakBrowser at launch so owned test identities can use an explicit font inventory instead of host defaults.",
           whenToUse:
-            "Use Chrome for the baseline CloakBrowser path, Edge when an owned test identity needs Edge-style Chromium brand signals, and avoid Firefox for production-like probes unless preflight accepts the mismatch.",
+            "Use it only with an approved, versioned font bundle that belongs to the test environment and has been checked by owned preflight.",
         },
         {
           name: "Enable Run from selected",
@@ -674,20 +663,6 @@ export const workflowSettingsHelp: Record<
             "Use it when proxy inventory does not already provide explicit timezone and locale values, and validate the result with owned preflight.",
         },
         {
-          name: "Viewport",
-          description:
-            "Launch-time viewport and device-class values used to keep screen, window, device scale factor, mobile, and touch settings coherent for the identity.",
-          whenToUse:
-            "Use stable desktop defaults for most owned workflows; only change mobile or touch settings as part of a complete matching identity.",
-        },
-        {
-          name: "Advanced fingerprint overrides",
-          description:
-            "Allowlisted high-risk CloakBrowser overrides for platform, hardware concurrency, device memory, storage quota, and a managed fonts directory; raw Chromium args stay unavailable.",
-          whenToUse:
-            "Prefer seed defaults, and use overrides only when an owned account, proxy inventory, or preflight probe requires a specific coherent device bundle.",
-        },
-        {
           name: "Humanize browser input",
           description:
             "Launch-level CloakBrowser humanization toggle and preset. The default preset uses normal human-like mouse, keyboard, and scroll timing; careful uses slower, more deliberate movement.",
@@ -728,13 +703,13 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Browser Identity",
       summary:
-        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, viewport, vị trí, network posture, và preflight owned tùy chọn.",
+        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, bộ font fingerprint được quản lý, vị trí, network posture, và preflight owned tùy chọn.",
       uiLabels: viLabels,
       bestFor: [
         "Giữ session và network posture lặp lại được ngay từ request đầu tiên của browser.",
         "Gom profile và proxy ở cấp launch vào một section dễ audit.",
       ],
-      notFor: ["Không dùng để đổi danh tính browser giữa run, chỉnh viewport sau launch, hoặc giải human challenge."],
+      notFor: ["Không dùng để đổi danh tính browser giữa run, resize trang sau launch, hoặc giải human challenge."],
       precedence: [
         "Browser Launch được resolve trước khi Chromium start, nên thay đổi cần save settings và bắt đầu run mới.",
         "Graph action trong run chỉ có thể đổi runtime browser context sau khi browser đã mở.",
@@ -762,11 +737,11 @@ export const workflowSettingsHelp: Record<
             "Giữ cố định cho identity có login persistent; reset identity rõ ràng khi test cần device persona mới.",
         },
         {
-          name: "Browser brand",
+          name: "Fingerprint fonts directory",
           description:
-            "Brand CloakBrowser Chromium được yêu cầu cho launch identity. Chrome dùng brand Chromium-compatible mặc định của CloakBrowser, Microsoft Edge map sang Edge brand flag upstream hỗ trợ, còn Firefox chỉ để chuẩn bị kế hoạch và vẫn chạy tương thích Chrome cho tới khi upstream hỗ trợ Firefox trên core Chromium.",
+            "Thư mục font managed tùy chọn, có thể đọc được, được truyền cho CloakBrowser lúc launch để identity test owned dùng inventory font rõ ràng thay vì default của host.",
           whenToUse:
-            "Dùng Chrome cho baseline CloakBrowser, Edge khi identity owned cần signal kiểu Edge Chromium, và tránh Firefox cho probe gần production trừ khi preflight chấp nhận mismatch.",
+            "Chỉ dùng với font bundle đã được phê duyệt, version rõ ràng, thuộc môi trường test và đã kiểm tra bằng owned preflight.",
         },
         {
           name: "Enable Run from selected",
@@ -830,20 +805,6 @@ export const workflowSettingsHelp: Record<
             "Chế độ GeoIP tùy chọn của CloakBrowser để suy ra timezone và locale từ proxy exit IP khi dependency mmdb-lib đã được cài.",
           whenToUse:
             "Dùng khi proxy inventory chưa có timezone và locale rõ ràng, rồi xác nhận kết quả bằng owned preflight.",
-        },
-        {
-          name: "Viewport",
-          description:
-            "Viewport và device-class lúc launch để giữ screen, window, device scale factor, mobile, và touch settings nhất quán cho identity.",
-          whenToUse:
-            "Giữ desktop default ổn định cho đa số workflow owned; chỉ đổi mobile hoặc touch khi có identity tương ứng đầy đủ.",
-        },
-        {
-          name: "Advanced fingerprint overrides",
-          description:
-            "Các override CloakBrowser allowlist, rủi ro cao cho platform, hardware concurrency, device memory, storage quota, và fonts directory managed; raw Chromium args vẫn không được mở.",
-          whenToUse:
-            "Ưu tiên seed default, chỉ override khi account owned, proxy inventory, hoặc preflight probe yêu cầu một device bundle nhất quán cụ thể.",
         },
         {
           name: "Humanize browser input",

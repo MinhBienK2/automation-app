@@ -63,7 +63,7 @@ describe("Electron workflow command handlers", () => {
         display_name: "Login flow identity",
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
-        browser_brand: "chrome",
+        fingerprint_fonts_dir: null,
         humanize: true,
         human_preset: "default",
       },
@@ -160,6 +160,8 @@ describe("Electron workflow command handlers", () => {
     const source = handlers.createWorkflow("Source");
     handlers.saveWorkflowGraph(source.id, runnableGraph());
     const sourceSettings = handlers.getWorkflowSettings(source.id);
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflow-fonts-"));
+    tempRoots.push(fontsDir);
     handlers.saveWorkflowSettings(source.id, {
       ...sourceSettings,
       general: {
@@ -184,7 +186,7 @@ describe("Electron workflow command handlers", () => {
         proxy_label: "owned-proxy",
         locale: "vi-VN",
         timezone: "Asia/Ho_Chi_Minh",
-        viewport_width: 1366,
+        fingerprint_fonts_dir: fontsDir,
         humanize: false,
         human_preset: "careful",
       },
@@ -232,7 +234,7 @@ describe("Electron workflow command handlers", () => {
       proxy_label: "owned-proxy",
       locale: "vi-VN",
       timezone: "Asia/Ho_Chi_Minh",
-      viewport_width: 1366,
+      fingerprint_fonts_dir: fontsDir,
       humanize: false,
       human_preset: "careful",
     });
@@ -651,6 +653,42 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id),
         browser_launch: {
           ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-fingerprint-fonts"),
+        } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_fonts_dir",
+        level: "error",
+        message: "Fingerprint fonts directory must be readable",
+      }),
+    );
+
+    const readableFontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "fingerprint-fonts-"));
+    tempRoots.push(readableFontsDir);
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+          fingerprint_fonts_dir: readableFontsDir,
+        } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "fingerprint_fonts_dir",
+        level: "warning",
+        message: "Using the same fingerprint fonts directory across identities can create a stable font hash; validate it with owned preflight",
+      }),
+    );
+
+    expect(
+      handlers.validateWorkflowSettings({
+        ...handlers.getWorkflowSettings(workflow.id),
+        browser_launch: {
+          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
           geoip: true,
         },
       }),
@@ -735,162 +773,38 @@ describe("Electron workflow command handlers", () => {
       }),
     );
 
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          browser_brand: "safari" as never,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "browser_brand",
-        level: "error",
-        message: "Browser brand must be chrome, microsoft_edge, or firefox",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          browser_brand: "firefox",
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "browser_brand",
-        level: "warning",
-        message: "Firefox is not a CloakBrowser-supported Chromium brand; Chrome-compatible CloakBrowser will run until upstream adds Firefox support",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          fingerprint_platform: "plan9" as never,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "fingerprint_platform",
-        level: "error",
-        message: "Fingerprint platform must be windows, macos, or linux",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          hardware_concurrency: 0,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "hardware_concurrency",
-        level: "error",
-        message: "Hardware concurrency must be an integer between 1 and 64",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          fingerprint_fonts_dir: "/path/that/does/not/exist",
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "fingerprint_fonts_dir",
-        level: "error",
-        message: "Fingerprint fonts directory must be readable",
-      }),
-    );
-
-    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "automation-fonts-"));
-    tempRoots.push(fontsDir);
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          fingerprint_fonts_dir: fontsDir,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "fingerprint_fonts_dir",
-        level: "warning",
-        message: "Using the same fingerprint fonts directory across identities can create a stable font hash; validate it with owned preflight",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148",
-          mobile: false,
-          touch: false,
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "mobile",
-        level: "warning",
-        message: "Mobile user agents should use mobile viewport and touch settings",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "user_agent",
-        level: "warning",
-        message: "Custom user agents can diverge from navigator.userAgentData; prefer CloakBrowser defaults unless owned preflight validates UA-CH consistency",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          fingerprint_platform: "macos",
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "fingerprint_platform",
-        level: "warning",
-        message: "macOS fingerprint profiles have known upstream canvas/audio/WebGL and viewport caveats; require owned preflight before production-like runs",
-      }),
-    );
+    const legacyOverrideSettings = {
+      ...handlers.getWorkflowSettings(workflow.id),
+      browser_launch: {
+        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+        browser_brand: "firefox" as never,
+        viewport_width: 1366,
+        viewport_height: 768,
+        device_scale_factor: 2,
+        mobile: true,
+        touch: true,
+        fingerprint_platform: "macos" as never,
+        hardware_concurrency: 8,
+        device_memory_gb: 16,
+        fingerprint_fonts_dir: readableFontsDir,
+        storage_quota_mb: 256,
+        user_agent: "WorkflowBot/1.0",
+      },
+    };
+    handlers.saveWorkflowSettings(workflow.id, legacyOverrideSettings);
+    const normalizedLegacyBrowser = handlers.getWorkflowSettings(workflow.id).browser_launch;
+    expect(normalizedLegacyBrowser).not.toHaveProperty("browser_brand");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("viewport_width");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("viewport_height");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("device_scale_factor");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("mobile");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("touch");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("fingerprint_platform");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("hardware_concurrency");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("device_memory_gb");
+    expect(normalizedLegacyBrowser.fingerprint_fonts_dir).toBe(readableFontsDir);
+    expect(normalizedLegacyBrowser).not.toHaveProperty("storage_quota_mb");
+    expect(normalizedLegacyBrowser).not.toHaveProperty("user_agent");
 
     handlers.saveWorkflowSettings(workflow.id, {
       ...handlers.getWorkflowSettings(workflow.id),

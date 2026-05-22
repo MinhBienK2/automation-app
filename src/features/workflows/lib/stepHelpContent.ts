@@ -1162,7 +1162,6 @@ function fieldCategory(actionType: ActionType, fieldName: string): HelpFieldCate
     fieldName === "Username" ||
     fieldName === "Password" ||
     fieldName === "Accuracy" ||
-    fieldName === "Device scale factor" ||
     fieldName === "Block" ||
     fieldName === "Inline" ||
     fieldName === "Offset X / Offset Y"
@@ -1176,8 +1175,6 @@ function fieldCategory(actionType: ActionType, fieldName: string): HelpFieldCate
     fieldName === "Path" ||
     fieldName === "Output name" ||
     fieldName === "Full page" ||
-    fieldName === "Mobile" ||
-    fieldName === "Touch" ||
     fieldName === "Scroll into view" ||
     fieldName === "Position" ||
     fieldName === "Button" ||

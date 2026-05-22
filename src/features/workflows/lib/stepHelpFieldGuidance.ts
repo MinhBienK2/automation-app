@@ -189,14 +189,6 @@ const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOpt
       option("Yes", "Chụp toàn bộ trang từ đầu tới cuối.", "Dùng khi cần bằng chứng đầy đủ.", "Tránh với trang rất dài nếu file lớn hoặc chậm.", undefined, "true"),
       option("No", "Chỉ chụp viewport hiện tại.", "Dùng khi chỉ cần phần đang nhìn thấy.", "Tránh nếu kết quả nằm ngoài màn hình.", undefined, "false"),
     ],
-    Mobile: [
-      option("False", "Viewport desktop/tablet thông thường.", "Dùng mặc định cho website desktop.", "Tránh khi cần kiểm tra layout mobile.", undefined, "false"),
-      option("True", "Bật mô phỏng mobile viewport.", "Dùng khi workflow chạy trên layout mobile.", "Tránh nếu website desktop là mục tiêu.", undefined, "true"),
-    ],
-    Touch: [
-      option("False", "Không mô phỏng touch input.", "Dùng mặc định cho desktop.", "Tránh khi website chỉ hiện UI touch trên mobile.", undefined, "false"),
-      option("True", "Bật khả năng touch.", "Dùng cùng Mobile khi site phụ thuộc touch.", "Tránh nếu workflow dùng desktop interactions.", undefined, "true"),
-    ],
     "Match mode": [
       option("Contains", "Text thực tế chỉ cần chứa đoạn mong đợi.", "Dùng khi text có tiền tố/hậu tố hoặc số động.", "Tránh khi cần khớp tuyệt đối.", undefined, "contains"),
       option("Equals", "Text thực tế phải bằng đúng text mong đợi.", "Dùng khi cần kiểm tra chính xác.", "Tránh khi text có khoảng trắng hoặc nội dung động.", undefined, "equals"),
@@ -306,14 +298,6 @@ const commonFieldOptions: Record<StepHelpLanguage, Record<string, ActionFieldOpt
     "Full page": [
       option("Yes", "Captures the whole page from top to bottom.", "Use when complete visual evidence is needed.", "Avoid very long pages when file size or speed matters.", undefined, "true"),
       option("No", "Captures only the current viewport.", "Use when the visible area is enough.", "Avoid when the result is off-screen.", undefined, "false"),
-    ],
-    Mobile: [
-      option("False", "Uses a normal desktop/tablet viewport.", "Use by default for desktop sites.", "Avoid when testing mobile layout.", undefined, "false"),
-      option("True", "Enables mobile viewport emulation.", "Use when the workflow targets mobile layout.", "Avoid when desktop layout is the target.", undefined, "true"),
-    ],
-    Touch: [
-      option("False", "Does not emulate touch input.", "Use by default for desktop.", "Avoid when the site only exposes touch UI on mobile.", undefined, "false"),
-      option("True", "Enables touch capability.", "Use with Mobile when the site depends on touch.", "Avoid when the workflow uses desktop interactions.", undefined, "true"),
     ],
     "Match mode": [
       option("Contains", "Actual text only needs to contain the expected text.", "Use when text has dynamic prefix/suffix or numbers.", "Avoid when exact matching is required.", undefined, "contains"),

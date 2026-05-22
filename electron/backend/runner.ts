@@ -1950,29 +1950,13 @@ function buildLaunchOptions(
 ): BrowserLaunchOptions {
   const browser = settings.browser_launch;
   const proxy = buildProxyLaunchOptions(browser);
-  const viewport = {
-    width: browser.viewport_width || 1920,
-    height: browser.viewport_height || 1080,
-  };
+  const viewport = { width: 1920, height: 1080 };
   const args = [
     browser.fingerprint_seed?.trim()
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
       : null,
-    browserBrandLaunchArg(browser.browser_brand),
-    browser.fingerprint_platform?.trim()
-      ? `--fingerprint-platform=${browser.fingerprint_platform.trim()}`
-      : null,
-    browser.hardware_concurrency
-      ? `--fingerprint-hardware-concurrency=${browser.hardware_concurrency}`
-      : null,
-    browser.device_memory_gb
-      ? `--fingerprint-device-memory=${browser.device_memory_gb}`
-      : null,
     browser.fingerprint_fonts_dir?.trim()
       ? `--fingerprint-fonts-dir=${browser.fingerprint_fonts_dir.trim()}`
-      : null,
-    browser.storage_quota_mb
-      ? `--fingerprint-storage-quota=${browser.storage_quota_mb}`
       : null,
     browser.webrtc_policy === "auto_proxy_exit_ip"
       ? "--fingerprint-webrtc-ip=auto"
@@ -1985,7 +1969,7 @@ function buildLaunchOptions(
     headless: browser.headless,
     humanize: browser.humanize !== false,
     humanPreset: browser.human_preset === "careful" ? "careful" : "default",
-    userAgent: browser.user_agent?.trim() || undefined,
+    userAgent: undefined,
     viewport,
     timezone: browser.timezone?.trim() || undefined,
     locale: browser.locale?.trim() || undefined,
@@ -1995,9 +1979,6 @@ function buildLaunchOptions(
     contextOptions: {
       acceptDownloads: true,
       downloadsPath: appPaths.downloadsDir,
-      deviceScaleFactor: browser.device_scale_factor || 1,
-      isMobile: Boolean(browser.mobile),
-      hasTouch: Boolean(browser.touch),
     },
   };
 }
@@ -2066,33 +2047,16 @@ async function browserIdentityEvidence(settings: WorkflowSettings, runId: string
     geoip: browser.geoip,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_policy === "explicit_ip" ? browser.webrtc_ip ?? null : null,
-    browser_brand: browser.browser_brand ?? "chrome",
-    viewport: {
-      width: browser.viewport_width,
-      height: browser.viewport_height,
-      device_scale_factor: browser.device_scale_factor,
-      mobile: browser.mobile,
-      touch: browser.touch,
-    },
+    advanced_overrides: activeAdvancedFingerprintOverrides(browser),
     humanize: browser.humanize !== false,
     human_preset: browser.human_preset === "careful" ? "careful" : "default",
-    advanced_overrides: activeAdvancedFingerprintOverrides(browser),
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
   };
 }
 
-function browserBrandLaunchArg(brand: WorkflowSettings["browser_launch"]["browser_brand"]) {
-  if (brand === "microsoft_edge") return "--fingerprint-brand=Edge";
-  return null;
-}
-
 function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {
   return [
-    browser.fingerprint_platform ? "fingerprint_platform" : null,
-    browser.hardware_concurrency ? "hardware_concurrency" : null,
-    browser.device_memory_gb ? "device_memory_gb" : null,
     browser.fingerprint_fonts_dir ? "fingerprint_fonts_dir" : null,
-    browser.storage_quota_mb ? "storage_quota_mb" : null,
   ].filter((field): field is string => Boolean(field));
 }
 

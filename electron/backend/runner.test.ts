@@ -47,6 +47,7 @@ describe("BrowserWorkflowRunner", () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);
     const paths = await createTempAppPaths();
+    const fontsDir = path.join(paths.rootDir, "fingerprint-fonts");
     const settings = makeSettings({
       browser_launch: {
         session_mode: "persistent_profile",
@@ -67,21 +68,12 @@ describe("BrowserWorkflowRunner", () => {
         test_account_binding: "acct-checkout-1",
         timezone: "America/New_York",
         locale: "en-US",
-        viewport_width: 1920,
-        viewport_height: 1080,
-        device_scale_factor: 1,
-        mobile: false,
-        touch: false,
         geoip: false,
-        browser_brand: "microsoft_edge",
-        fingerprint_platform: "windows",
-        hardware_concurrency: 8,
-        device_memory_gb: 16,
-        storage_quota_mb: 256,
+        fingerprint_fonts_dir: fontsDir,
         webrtc_policy: "auto_proxy_exit_ip",
         humanize: false,
         human_preset: "careful",
-      },
+      } as Partial<WorkflowSettings["browser_launch"]> & Record<string, unknown>,
     });
 
     const runner = new BrowserWorkflowRunner({ appPaths: paths, driver });
@@ -107,11 +99,7 @@ describe("BrowserWorkflowRunner", () => {
           geoip: false,
           args: [
             "--fingerprint=38291",
-            "--fingerprint-brand=Edge",
-            "--fingerprint-platform=windows",
-            "--fingerprint-hardware-concurrency=8",
-            "--fingerprint-device-memory=16",
-            "--fingerprint-storage-quota=256",
+            `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
             "--window-size=1920,1080",
           ],
@@ -124,9 +112,6 @@ describe("BrowserWorkflowRunner", () => {
           contextOptions: expect.objectContaining({
             acceptDownloads: true,
             downloadsPath: paths.downloadsDir,
-            deviceScaleFactor: 1,
-            isMobile: false,
-            hasTouch: false,
           }),
         }),
       },
@@ -149,22 +134,9 @@ describe("BrowserWorkflowRunner", () => {
       geoip: false,
       webrtc_policy: "auto_proxy_exit_ip",
       webrtc_ip: null,
-      browser_brand: "microsoft_edge",
-      viewport: {
-        width: 1920,
-        height: 1080,
-        device_scale_factor: 1,
-        mobile: false,
-        touch: false,
-      },
+      advanced_overrides: ["fingerprint_fonts_dir"],
       humanize: false,
       human_preset: "careful",
-      advanced_overrides: [
-        "fingerprint_platform",
-        "hardware_concurrency",
-        "device_memory_gb",
-        "storage_quota_mb",
-      ],
       cloakbrowser: {
         wrapper_version: expect.stringMatching(/^\d+\.\d+\.\d+/),
         binary_version: expect.stringMatching(/^\d+/),

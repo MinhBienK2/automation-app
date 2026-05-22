@@ -1615,90 +1615,6 @@ function validateSettings(settings: WorkflowSettings): SettingsValidationIssue[]
       message: "Auto WebRTC proxy IP policy requires an enabled proxy",
     });
   }
-  if (
-    settings.browser_launch.user_agent &&
-    /mobile|iphone|android/i.test(settings.browser_launch.user_agent) &&
-    (!settings.browser_launch.mobile || !settings.browser_launch.touch)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "mobile",
-      level: "warning",
-      message: "Mobile user agents should use mobile viewport and touch settings",
-    });
-  }
-  if (settings.browser_launch.user_agent?.trim()) {
-    issues.push({
-      section: "browser_launch",
-      field: "user_agent",
-      level: "warning",
-      message: "Custom user agents can diverge from navigator.userAgentData; prefer CloakBrowser defaults unless owned preflight validates UA-CH consistency",
-    });
-  }
-  if (
-    settings.browser_launch.browser_brand &&
-    !validBrowserBrand(settings.browser_launch.browser_brand)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "browser_brand",
-      level: "error",
-      message: "Browser brand must be chrome, microsoft_edge, or firefox",
-    });
-  }
-  if (settings.browser_launch.browser_brand === "firefox") {
-    issues.push({
-      section: "browser_launch",
-      field: "browser_brand",
-      level: "warning",
-      message: "Firefox is not a CloakBrowser-supported Chromium brand; Chrome-compatible CloakBrowser will run until upstream adds Firefox support",
-    });
-  }
-  if (
-    settings.browser_launch.fingerprint_platform &&
-    !validFingerprintPlatform(settings.browser_launch.fingerprint_platform)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "fingerprint_platform",
-      level: "error",
-      message: "Fingerprint platform must be windows, macos, or linux",
-    });
-  }
-  if (settings.browser_launch.fingerprint_platform === "macos") {
-    issues.push({
-      section: "browser_launch",
-      field: "fingerprint_platform",
-      level: "warning",
-      message: "macOS fingerprint profiles have known upstream canvas/audio/WebGL and viewport caveats; require owned preflight before production-like runs",
-    });
-  }
-  if (
-    settings.browser_launch.hardware_concurrency != null &&
-    (!Number.isInteger(settings.browser_launch.hardware_concurrency) ||
-      settings.browser_launch.hardware_concurrency < 1 ||
-      settings.browser_launch.hardware_concurrency > 64)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "hardware_concurrency",
-      level: "error",
-      message: "Hardware concurrency must be an integer between 1 and 64",
-    });
-  }
-  if (
-    settings.browser_launch.device_memory_gb != null &&
-    (!Number.isFinite(settings.browser_launch.device_memory_gb) ||
-      settings.browser_launch.device_memory_gb <= 0 ||
-      settings.browser_launch.device_memory_gb > 128)
-  ) {
-    issues.push({
-      section: "browser_launch",
-      field: "device_memory_gb",
-      level: "error",
-      message: "Device memory must be greater than 0 and no more than 128 GB",
-    });
-  }
   if (settings.browser_launch.fingerprint_fonts_dir?.trim()) {
     const fontsDir = settings.browser_launch.fingerprint_fonts_dir.trim();
     if (!directoryReadable(fontsDir)) {
@@ -2370,20 +2286,38 @@ function normalizeSettingsBrowserLaunch(
   const identityId = nullableText(browser.identity_id) ?? createStableBrowserIdentityId(profileName ?? "workflow");
   const profileDir = nullableText(browser.profile_dir) ?? identityId;
   const fingerprintSeed = nullableText(browser.fingerprint_seed) ?? stableFingerprintSeed(identityId);
+  const {
+    browser_brand: _legacyBrowserBrand,
+    viewport_width: _legacyViewportWidth,
+    viewport_height: _legacyViewportHeight,
+    device_scale_factor: _legacyDeviceScaleFactor,
+    mobile: _legacyMobile,
+    touch: _legacyTouch,
+    user_agent: _legacyUserAgent,
+    fingerprint_platform: _legacyFingerprintPlatform,
+    hardware_concurrency: _legacyHardwareConcurrency,
+    device_memory_gb: _legacyDeviceMemoryGb,
+    storage_quota_mb: _legacyStorageQuotaMb,
+    ...browserWithoutLegacyOverrides
+  } = browser as WorkflowSettingsBrowserLaunch & Record<string, unknown>;
+  void _legacyBrowserBrand;
+  void _legacyViewportWidth;
+  void _legacyViewportHeight;
+  void _legacyDeviceScaleFactor;
+  void _legacyMobile;
+  void _legacyTouch;
+  void _legacyUserAgent;
+  void _legacyFingerprintPlatform;
+  void _legacyHardwareConcurrency;
+  void _legacyDeviceMemoryGb;
+  void _legacyStorageQuotaMb;
   return {
-    ...browser,
+    ...browserWithoutLegacyOverrides,
     identity_id: identityId,
     display_name: nullableText(browser.display_name) ?? `${profileName ?? "Workflow"} identity`,
     profile_dir: profileDir,
     fingerprint_seed: fingerprintSeed,
-    browser_brand: validBrowserBrand(browser.browser_brand)
-      ? browser.browser_brand
-      : "chrome",
-    viewport_width: positiveNumberOrDefault(browser.viewport_width, 1920),
-    viewport_height: positiveNumberOrDefault(browser.viewport_height, 1080),
-    device_scale_factor: positiveNumberOrDefault(browser.device_scale_factor, 1),
-    mobile: Boolean(browser.mobile),
-    touch: Boolean(browser.touch),
+    fingerprint_fonts_dir: nullableText(browser.fingerprint_fonts_dir),
     timezone: nullableText(browser.timezone),
     locale: nullableText(browser.locale),
     geoip: Boolean(browser.geoip),
@@ -2396,13 +2330,6 @@ function normalizeSettingsBrowserLaunch(
       ? browser.webrtc_policy
       : "default",
     webrtc_ip: nullableText(browser.webrtc_ip),
-    fingerprint_platform: validFingerprintPlatform(browser.fingerprint_platform)
-      ? browser.fingerprint_platform
-      : null,
-    hardware_concurrency: positiveIntegerOptionalNumber(browser.hardware_concurrency),
-    device_memory_gb: positiveOptionalNumber(browser.device_memory_gb),
-    fingerprint_fonts_dir: nullableText(browser.fingerprint_fonts_dir),
-    storage_quota_mb: positiveOptionalNumber(browser.storage_quota_mb),
     preflight_enabled: Boolean(browser.preflight_enabled),
     preflight_probe_url: nullableText(browser.preflight_probe_url),
     preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
@@ -2410,7 +2337,6 @@ function normalizeSettingsBrowserLaunch(
       : [],
     humanize: browser.humanize !== false,
     human_preset: validHumanPreset(browser.human_preset) ? browser.human_preset : "default",
-    user_agent: nullableText(browser.user_agent),
     session_mode: browser.session_mode === "persistent_profile"
       ? "persistent_profile"
       : "temporary",
@@ -2490,12 +2416,7 @@ function createDefaultBrowserIdentity(
   | "display_name"
   | "profile_dir"
   | "fingerprint_seed"
-  | "browser_brand"
-  | "viewport_width"
-  | "viewport_height"
-  | "device_scale_factor"
-  | "mobile"
-  | "touch"
+  | "fingerprint_fonts_dir"
   | "timezone"
   | "locale"
   | "geoip"
@@ -2506,17 +2427,11 @@ function createDefaultBrowserIdentity(
   | "test_account_binding"
   | "webrtc_policy"
   | "webrtc_ip"
-  | "fingerprint_platform"
-  | "hardware_concurrency"
-  | "device_memory_gb"
-  | "fingerprint_fonts_dir"
-  | "storage_quota_mb"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
   | "humanize"
   | "human_preset"
-  | "user_agent"
 > {
   const identityId = options.randomizeIdentity
     ? `bi_${randomUUID().replace(/-/g, "").slice(0, 12)}`
@@ -2528,12 +2443,7 @@ function createDefaultBrowserIdentity(
     fingerprint_seed: options.randomizeIdentity
       ? String(10000 + Math.floor(Math.random() * 90000))
       : stableFingerprintSeed(identityId),
-    browser_brand: "chrome",
-    viewport_width: 1920,
-    viewport_height: 1080,
-    device_scale_factor: 1,
-    mobile: false,
-    touch: false,
+    fingerprint_fonts_dir: null,
     timezone: null,
     locale: null,
     geoip: false,
@@ -2544,15 +2454,9 @@ function createDefaultBrowserIdentity(
     test_account_binding: null,
     webrtc_policy: "default",
     webrtc_ip: null,
-    fingerprint_platform: null,
-    hardware_concurrency: null,
-    device_memory_gb: null,
-    fingerprint_fonts_dir: null,
-    storage_quota_mb: null,
     preflight_enabled: false,
     preflight_probe_url: null,
     preflight_allowed_origins: [],
-    user_agent: null,
     humanize: true,
     human_preset: "default",
   };
@@ -2578,21 +2482,9 @@ function stableFingerprintSeed(seed: string) {
   return String(10000 + hash).padStart(5, "0");
 }
 
-function positiveNumberOrDefault(value: unknown, defaultValue: number) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : defaultValue;
-}
-
 function positiveOptionalNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
-    : null;
-}
-
-function positiveIntegerOptionalNumber(value: unknown) {
-  return Number.isInteger(value) && Number(value) > 0
-    ? Number(value)
     : null;
 }
 
@@ -2608,16 +2500,6 @@ function validHumanPreset(value: unknown): value is WorkflowSettingsBrowserLaunc
   return value === "default" || value === "careful";
 }
 
-function validBrowserBrand(value: unknown): value is WorkflowSettingsBrowserLaunch["browser_brand"] {
-  return value === "chrome" || value === "microsoft_edge" || value === "firefox";
-}
-
-function validFingerprintPlatform(
-  value: unknown,
-): value is NonNullable<WorkflowSettingsBrowserLaunch["fingerprint_platform"]> {
-  return value === "windows" || value === "macos" || value === "linux";
-}
-
 function browserProfileKey(settings: WorkflowSettings) {
   if (settings.browser_launch.session_mode !== "persistent_profile") return null;
   return settings.browser_launch.profile_dir?.trim() || settings.browser_launch.profile_name?.trim() || null;
@@ -2631,13 +2513,7 @@ function browserIdentityPreferences(
   | "display_name"
   | "profile_dir"
   | "fingerprint_seed"
-  | "browser_brand"
-  | "user_agent"
-  | "viewport_width"
-  | "viewport_height"
-  | "device_scale_factor"
-  | "mobile"
-  | "touch"
+  | "fingerprint_fonts_dir"
   | "timezone"
   | "locale"
   | "geoip"
@@ -2648,11 +2524,6 @@ function browserIdentityPreferences(
   | "test_account_binding"
   | "webrtc_policy"
   | "webrtc_ip"
-  | "fingerprint_platform"
-  | "hardware_concurrency"
-  | "device_memory_gb"
-  | "fingerprint_fonts_dir"
-  | "storage_quota_mb"
   | "preflight_enabled"
   | "preflight_probe_url"
   | "preflight_allowed_origins"
@@ -2664,13 +2535,7 @@ function browserIdentityPreferences(
     display_name: browser.display_name,
     profile_dir: browser.profile_dir,
     fingerprint_seed: browser.fingerprint_seed,
-    browser_brand: browser.browser_brand,
-    user_agent: browser.user_agent,
-    viewport_width: browser.viewport_width,
-    viewport_height: browser.viewport_height,
-    device_scale_factor: browser.device_scale_factor,
-    mobile: browser.mobile,
-    touch: browser.touch,
+    fingerprint_fonts_dir: browser.fingerprint_fonts_dir,
     timezone: browser.timezone,
     locale: browser.locale,
     geoip: browser.geoip,
@@ -2681,11 +2546,6 @@ function browserIdentityPreferences(
     test_account_binding: browser.test_account_binding,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_ip,
-    fingerprint_platform: browser.fingerprint_platform,
-    hardware_concurrency: browser.hardware_concurrency,
-    device_memory_gb: browser.device_memory_gb,
-    fingerprint_fonts_dir: browser.fingerprint_fonts_dir,
-    storage_quota_mb: browser.storage_quota_mb,
     preflight_enabled: browser.preflight_enabled,
     preflight_probe_url: browser.preflight_probe_url,
     preflight_allowed_origins: browser.preflight_allowed_origins,

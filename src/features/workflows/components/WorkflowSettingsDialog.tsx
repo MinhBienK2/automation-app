@@ -385,7 +385,6 @@ function BrowserLaunchSettingsSection({
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
 }) {
   const persistent = value.session_mode === "persistent_profile";
-  const [seedVisible, setSeedVisible] = useState(false);
   const canEnableRunFromSelected =
     persistent && runPolicy.browser_retention === "retain";
   return (
@@ -424,48 +423,12 @@ function BrowserLaunchSettingsSection({
         <label className="field">
           <span>Fingerprint seed</span>
           <Input
-            type={seedVisible ? "text" : "password"}
+            type="password"
             value={value.fingerprint_seed}
             onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
           />
         </label>
-        <label className="field">
-          <span>Browser brand</span>
-          <Select
-            value={value.browser_brand ?? "chrome"}
-            onChange={(event) => {
-              const nextValue = event.currentTarget.value;
-              onChange({
-                ...value,
-                browser_brand:
-                  nextValue === "microsoft_edge" || nextValue === "firefox"
-                    ? nextValue
-                    : "chrome",
-              });
-            }}
-          >
-            <option value="chrome">Chrome</option>
-            <option value="microsoft_edge">Microsoft Edge</option>
-            <option value="firefox">Firefox (unsupported by CloakBrowser)</option>
-          </Select>
-        </label>
         <div className="settings-field-group-actions">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setSeedVisible((current) => !current)}
-          >
-            {seedVisible ? "Hide fingerprint seed" : "Show fingerprint seed"}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              void navigator.clipboard?.writeText(value.fingerprint_seed);
-            }}
-          >
-            Copy fingerprint seed
-          </Button>
           <Button
             type="button"
             variant="destructive"
@@ -477,13 +440,6 @@ function BrowserLaunchSettingsSection({
             }}
           >
             Reset identity
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => onChange(duplicateBrowserIdentity(value))}
-          >
-            Duplicate identity
           </Button>
         </div>
         <SwitchField
@@ -576,8 +532,8 @@ function BrowserLaunchSettingsSection({
         ) : null}
       </SettingsFieldGroup>
       <SettingsFieldGroup
-        title="Location & viewport"
-        description="Locale, proxy-derived geography, viewport size, and device input shape."
+        title="Location"
+        description="Locale and proxy-derived geography used at browser launch."
       >
         <label className="field">
           <span>Timezone</span>
@@ -600,72 +556,11 @@ function BrowserLaunchSettingsSection({
           label="GeoIP from proxy"
           onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
         />
-        <NumberField
-          label="Viewport width"
-          value={value.viewport_width}
-          onChange={(nextValue) => onChange({ ...value, viewport_width: nextValue ?? 1920 })}
-        />
-        <NumberField
-          label="Viewport height"
-          value={value.viewport_height}
-          onChange={(nextValue) => onChange({ ...value, viewport_height: nextValue ?? 1080 })}
-        />
-        <NumberField
-          label="Device scale factor"
-          value={value.device_scale_factor}
-          onChange={(nextValue) => onChange({ ...value, device_scale_factor: nextValue ?? 1 })}
-        />
-        <SwitchField
-          checked={Boolean(value.mobile)}
-          label="Mobile viewport"
-          onCheckedChange={(checked) => onChange({ ...value, mobile: checked })}
-        />
-        <SwitchField
-          checked={Boolean(value.touch)}
-          label="Touch input"
-          onCheckedChange={(checked) => onChange({ ...value, touch: checked })}
-        />
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Fingerprint"
-        description="Optional launch-time fingerprint overrides layered on top of the stable seed."
+        description="Optional managed font inventory for launch-time fingerprint coherence."
       >
-        <label className="field">
-          <span>Fingerprint platform</span>
-          <Select
-            value={value.fingerprint_platform ?? ""}
-            onChange={(event) => {
-              const nextValue = event.currentTarget.value;
-              onChange({
-                ...value,
-                fingerprint_platform:
-                  nextValue === "windows" || nextValue === "macos" || nextValue === "linux"
-                    ? nextValue
-                    : null,
-              });
-            }}
-          >
-            <option value="">Seed default</option>
-            <option value="windows">Windows</option>
-            <option value="macos">macOS</option>
-            <option value="linux">Linux</option>
-          </Select>
-        </label>
-        <NumberField
-          label="Hardware concurrency"
-          value={value.hardware_concurrency ?? null}
-          onChange={(nextValue) => onChange({ ...value, hardware_concurrency: nextValue })}
-        />
-        <NumberField
-          label="Device memory GB"
-          value={value.device_memory_gb ?? null}
-          onChange={(nextValue) => onChange({ ...value, device_memory_gb: nextValue })}
-        />
-        <NumberField
-          label="Storage quota MB"
-          value={value.storage_quota_mb ?? null}
-          onChange={(nextValue) => onChange({ ...value, storage_quota_mb: nextValue })}
-        />
         <label className="field settings-field-group-wide">
           <span>Fingerprint fonts directory</span>
           <Input
@@ -891,10 +786,6 @@ function numberOrNull(value: string) {
 
 function resetBrowserIdentity(value: WorkflowSettingsBrowserLaunch): WorkflowSettingsBrowserLaunch {
   return applyNewBrowserIdentity(value, value.display_name);
-}
-
-function duplicateBrowserIdentity(value: WorkflowSettingsBrowserLaunch): WorkflowSettingsBrowserLaunch {
-  return applyNewBrowserIdentity(value, `${value.display_name || "Browser identity"} copy`);
 }
 
 function applyNewBrowserIdentity(
