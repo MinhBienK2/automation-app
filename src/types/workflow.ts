@@ -200,9 +200,6 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   proxy_bypass?: string | null;
   webrtc_policy: WorkflowWebRtcPolicy;
   webrtc_ip?: string | null;
-  preflight_enabled: boolean;
-  preflight_probe_url?: string | null;
-  preflight_allowed_origins: string[];
   headless: boolean;
   humanize: boolean;
   human_preset: WorkflowHumanPreset;
@@ -325,15 +322,6 @@ export type CloakBrowserDiagnostics = {
     status: "not_recorded";
     reason: string | null;
   };
-  last_preflight_verdict: {
-    workflow_id: string;
-    workflow_name: string | null;
-    run_id: string | null;
-    verdict: string;
-    passed: boolean;
-    risk_score: number | null;
-    finished_at: string | null;
-  } | null;
   headed_display: {
     available: boolean;
     reason: string | null;

@@ -184,7 +184,10 @@ function sanitizeBrowserLaunchSettings(
   browser: WorkflowSettingsBrowserLaunch,
   omittedFields: string[],
 ): WorkflowSettingsBrowserLaunch {
-  const sanitized = structuredClone(browser);
+  const sanitized = structuredClone(browser) as WorkflowSettingsBrowserLaunch & Record<string, unknown>;
+  delete sanitized.preflight_enabled;
+  delete sanitized.preflight_probe_url;
+  delete sanitized.preflight_allowed_origins;
   if (sanitized.proxy_password) {
     omittedFields.push("settings.browser_launch.proxy_password");
   }
@@ -200,13 +203,6 @@ function sanitizeBrowserLaunchSettings(
     omittedFields.push("settings.browser_launch.fingerprint_fonts_dir");
   }
   sanitized.fingerprint_fonts_dir = null;
-  if (sanitized.preflight_probe_url) {
-    const sanitizedProbeUrl = sanitizeUrlSearch(sanitized.preflight_probe_url);
-    if (sanitizedProbeUrl !== sanitized.preflight_probe_url) {
-      omittedFields.push("settings.browser_launch.preflight_probe_url.search");
-      sanitized.preflight_probe_url = sanitizedProbeUrl;
-    }
-  }
   return sanitized;
 }
 
@@ -216,17 +212,6 @@ function sanitizeProxyServerCredentials(value: string) {
     if (!url.username && !url.password) return value;
     url.username = "";
     url.password = "";
-    return url.toString();
-  } catch {
-    return value;
-  }
-}
-
-function sanitizeUrlSearch(value: string) {
-  try {
-    const url = new URL(value);
-    url.search = "";
-    url.hash = "";
     return url.toString();
   } catch {
     return value;

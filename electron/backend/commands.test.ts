@@ -438,20 +438,12 @@ describe("Electron workflow command handlers", () => {
         ) VALUES (?, ?, ?, ?, ?, ?)`,
       )
       .run(
-        "run-preflight",
+        "run-diagnostics",
         workflow.id,
-        "failed",
+        "success",
         "2026-05-15T00:00:00.000Z",
         "2026-05-15T00:00:02.000Z",
-        JSON.stringify({
-          fingerprint_preflight: {
-            passed: false,
-            verdict: "blocked",
-            risk_score: 72,
-            run_id: "fp-001",
-            profile_id: "bi_qa",
-          },
-        }),
+        JSON.stringify({ browser_identity: { identity_id: "bi_qa" } }),
       );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
@@ -470,15 +462,6 @@ describe("Electron workflow command handlers", () => {
     expect(diagnostics.last_smoke_result).toEqual({
       status: "not_recorded",
       reason: "Smoke tests are recorded by the npm run test:smoke command output",
-    });
-    expect(diagnostics.last_preflight_verdict).toMatchObject({
-      workflow_id: workflow.id,
-      workflow_name: "Diagnostics flow",
-      run_id: "fp-001",
-      verdict: "blocked",
-      passed: false,
-      risk_score: 72,
-      finished_at: "2026-05-15T00:00:02.000Z",
     });
     expect(diagnostics.profiles).toEqual(
       expect.arrayContaining([
@@ -974,7 +957,7 @@ describe("Electron workflow command handlers", () => {
         section: "browser_launch",
         field: "fingerprint_fonts_dir",
         level: "warning",
-        message: "Using the same fingerprint fonts directory across identities can create a stable font hash; validate it with owned preflight",
+        message: "Using the same fingerprint fonts directory across identities can create a stable font hash",
       }),
     );
 
@@ -992,25 +975,6 @@ describe("Electron workflow command handlers", () => {
         field: "geoip",
         level: "error",
         message: "GeoIP requires mmdb-lib to be installed",
-      }),
-    );
-
-    expect(
-      handlers.validateWorkflowSettings({
-        ...handlers.getWorkflowSettings(workflow.id),
-        browser_launch: {
-          ...handlers.getWorkflowSettings(workflow.id).browser_launch,
-          preflight_enabled: true,
-          preflight_probe_url: "https://probe.owned.test/verdict",
-          preflight_allowed_origins: ["https://other.owned.test"],
-        },
-      }),
-    ).toContainEqual(
-      expect.objectContaining({
-        section: "browser_launch",
-        field: "preflight_probe_url",
-        level: "error",
-        message: "Fingerprint preflight probe origin must be allowlisted",
       }),
     );
 
@@ -1193,9 +1157,6 @@ describe("Electron workflow command handlers", () => {
         proxy_password: "secret",
         proxy_server: "http://agent:secret@proxy.owned.test:8080",
         fingerprint_fonts_dir: fontsDir,
-        preflight_enabled: true,
-        preflight_probe_url: "https://probe.owned.test/verdict?token=secret",
-        preflight_allowed_origins: ["https://probe.owned.test"],
       },
     });
 
@@ -1209,15 +1170,12 @@ describe("Electron workflow command handlers", () => {
       "http://proxy.owned.test:8080/",
     );
     expect(packageValue.settings?.browser_launch?.fingerprint_fonts_dir).toBeNull();
-    expect(packageValue.settings?.browser_launch?.preflight_probe_url).toBe(
-      "https://probe.owned.test/verdict",
-    );
+    expect(packageValue.settings?.browser_launch).not.toHaveProperty("preflight_probe_url");
     expect(packageValue.omitted_fields).toEqual(
       expect.arrayContaining([
         "settings.browser_launch.proxy_password",
         "settings.browser_launch.proxy_server.credentials",
         "settings.browser_launch.fingerprint_fonts_dir",
-        "settings.browser_launch.preflight_probe_url.search",
       ]),
     );
     expect(

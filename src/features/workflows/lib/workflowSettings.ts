@@ -232,9 +232,6 @@ export function defaultWorkflowSettings({
       proxy_bypass: null,
       webrtc_policy: persona.webrtc_mode,
       webrtc_ip: null,
-      preflight_enabled: false,
-      preflight_probe_url: null,
-      preflight_allowed_origins: [],
       proxy_enabled: false,
       proxy_server: null,
       proxy_username: null,
@@ -575,7 +572,7 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Browser Identity Settings Help",
       summary:
-        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, managed fingerprint fonts, location, network posture, and optional owned preflight.",
+        "Browser Identity settings control the stable CloakBrowser identity resolved before Chromium opens: profile storage, fingerprint seed, managed fingerprint fonts, location, and network posture.",
       uiLabels: enLabels,
       bestFor: [
         "Making session and network posture repeatable from the first browser request.",
@@ -613,7 +610,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Optional readable directory of managed fonts passed to CloakBrowser at launch so owned test identities can use an explicit font inventory instead of host defaults.",
           whenToUse:
-            "Use it only with an approved, versioned font bundle that belongs to the test environment and has been checked by owned preflight.",
+            "Use it only with an approved, versioned font bundle that belongs to the test environment.",
         },
         {
           name: "Enable Run from selected",
@@ -676,7 +673,7 @@ export const workflowSettingsHelp: Record<
           description:
             "CloakBrowser GeoIP mode that derives timezone and locale from the current public or proxy exit IP when the mmdb-lib dependency is installed.",
           whenToUse:
-            "Keep it enabled by default when explicit timezone and locale values are unknown; validate the result with owned preflight for sensitive workflows.",
+            "Keep it enabled by default when explicit timezone and locale values are unknown.",
         },
         {
           name: "Humanize browser input",
@@ -686,16 +683,9 @@ export const workflowSettingsHelp: Record<
             "Keep it enabled for production-like owned tests; choose careful when a workflow should move more slowly and cautiously through sensitive screens.",
         },
         {
-          name: "Fingerprint preflight",
-          description:
-            "Optional owned probe gate that launches the resolved browser identity, opens an allowlisted probe, reads a JSON verdict, and blocks graph actions when identity mismatches are reported.",
-          whenToUse:
-            "Enable it for sensitive workflows where browser/device/network consistency must be measured before the first real workflow action.",
-        },
-        {
           name: "Headless browser",
           description:
-            "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled. Preflight identities should normally use headed mode.",
+            "Switch that launches Chromium without a visible window when enabled, or headed with a visible browser window when disabled.",
           whenToUse:
             "Use headed mode for debugging, visual review, and production-like probes; use headless only when the selected identity policy allows it.",
         },
@@ -719,7 +709,7 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Browser Identity",
       summary:
-        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, bộ font fingerprint được quản lý, vị trí, network posture, và preflight owned tùy chọn.",
+        "Browser Identity điều khiển danh tính CloakBrowser ổn định trước khi Chromium mở: profile storage, fingerprint seed, bộ font fingerprint được quản lý, vị trí, và network posture.",
       uiLabels: viLabels,
       bestFor: [
         "Giữ session và network posture lặp lại được ngay từ request đầu tiên của browser.",
@@ -757,7 +747,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Thư mục font managed tùy chọn, có thể đọc được, được truyền cho CloakBrowser lúc launch để identity test owned dùng inventory font rõ ràng thay vì default của host.",
           whenToUse:
-            "Chỉ dùng với font bundle đã được phê duyệt, version rõ ràng, thuộc môi trường test và đã kiểm tra bằng owned preflight.",
+            "Chỉ dùng với font bundle đã được phê duyệt, version rõ ràng, thuộc môi trường test.",
         },
         {
           name: "Enable Run from selected",
@@ -820,7 +810,7 @@ export const workflowSettingsHelp: Record<
           description:
             "Chế độ GeoIP của CloakBrowser để suy ra timezone và locale từ public IP hoặc proxy exit IP hiện tại khi dependency mmdb-lib đã được cài.",
           whenToUse:
-            "Giữ bật mặc định khi chưa có timezone và locale rõ ràng; xác nhận kết quả bằng owned preflight cho workflow nhạy cảm.",
+            "Giữ bật mặc định khi chưa có timezone và locale rõ ràng.",
         },
         {
           name: "Humanize browser input",
@@ -830,16 +820,9 @@ export const workflowSettingsHelp: Record<
             "Giữ bật cho test owned gần production; chọn careful khi workflow cần thao tác chậm và cẩn trọng hơn trên màn hình nhạy cảm.",
         },
         {
-          name: "Fingerprint preflight",
-          description:
-            "Gate probe owned tùy chọn: launch identity đã resolve, mở probe allowlisted, đọc JSON verdict, và block graph actions khi có identity mismatch.",
-          whenToUse:
-            "Bật cho workflow nhạy cảm cần đo browser/device/network consistency trước action workflow thật đầu tiên.",
-        },
-        {
           name: "Headless browser",
           description:
-            "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt. Preflight identity thường nên dùng headed.",
+            "Switch launch Chromium không hiện cửa sổ khi bật, hoặc headed với cửa sổ browser nhìn thấy được khi tắt.",
           whenToUse:
             "Dùng headed để debug, review trực quan, và production-like probes; chỉ dùng headless khi identity policy cho phép.",
         },

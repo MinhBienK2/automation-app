@@ -80,9 +80,6 @@ Workflow Settings are persisted separately from graph JSON:
     proxy_bypass,
     webrtc_policy,
     webrtc_ip,
-    preflight_enabled,
-    preflight_probe_url,
-    preflight_allowed_origins,
     proxy_enabled,
     proxy_server,
     proxy_username,
@@ -143,15 +140,14 @@ Package export options serialize as `{ include_flow, settings_sections }`, where
 
 Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI review point before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
 
-Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and secret search/hash portions of `settings.browser_launch.preflight_probe_url`.
+Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and local `settings.browser_launch.fingerprint_fonts_dir`.
 
 `BrowserProfileDiagnostics` reports profile directory, identity/workflow
 metadata, bounded approximate size, last modified time, last run time, and active-session
 status. The profile size walk is capped by diagnostics traversal limits so common diagnostics do not block on very large Chromium profiles. `BrowserProfileCleanupResult` reports deleted orphan profile directories,
 skipped referenced or active profiles, and reclaimed bytes.
-`CloakBrowserDiagnostics` also reports real fingerprint font diagnostics, last
-smoke result status, and the latest persisted `fingerprint_preflight` verdict
-summary when a run has produced one. Font diagnostics are `not_configured`,
+`CloakBrowserDiagnostics` also reports real fingerprint font diagnostics and
+last smoke result status. Font diagnostics are `not_configured`,
 `ok`, `warning`, or `error`; configured directories report file count, total
 bytes, normalized content hash, expected family coverage, missing families, and
 the workflow identities sharing each directory.
@@ -164,7 +160,7 @@ while a retained session still owns the workflow/profile. When
 private profile directory; shared or active-session profile directories are
 retained.
 
-`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, preflight, humanization, and `fingerprint_fonts_dir` are preserved, `run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
+`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, humanization, and `fingerprint_fonts_dir` are preserved, `run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
 
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 
@@ -258,7 +254,7 @@ The main graph toolbar exposes beginner-facing authoring groups: New node, Add A
 The Electron backend compiler currently emits action, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports. Nested compiled action configs retain their source graph node id/label so runner traces and persisted `run_steps` rows can identify the exact executed branch/body action.
 The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
-Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Current owned fingerprint preflight is a Browser Launch identity setting, not a graph prelude action.
+Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser Launch identity settings are applied by the runner/session manager rather than compiled into graph prelude actions.
 
 Executable frontend/backend ports must agree:
 

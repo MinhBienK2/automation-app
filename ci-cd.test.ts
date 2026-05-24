@@ -285,7 +285,7 @@ describe("desktop CI/CD", () => {
 
     expect(excludePatterns).toContain("cloakbrowser");
     expect(releaseGovernance).toContain("CloakBrowser upgrade gate");
-    expect(releaseGovernance).toContain("fingerprint preflight");
+    expect(releaseGovernance).toContain("browser identity");
     expect(releaseGovernance).toContain("owned staging smoke");
     expect(releaseGovernance).toContain("run evidence comparison");
     expect(releaseGovernance).toContain("rollback");

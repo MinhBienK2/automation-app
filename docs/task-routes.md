@@ -97,7 +97,7 @@ Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `ar
 
 Verify: `src/lib/personaCatalog.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/runtime/runner.ts`, `electron/backend/browser/sessionManager.ts`, `electron/backend/runtime/runManager.ts`, Electron runner/session-manager tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
 
-Checks: focused Electron runner/compiler/session-manager tests, `npm run test:fingerprint` for browser identity or preflight evidence changes, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
+Checks: focused Electron runner/compiler/session-manager tests, `npm run test:fingerprint` for browser identity evidence changes, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
 
 Update docs: execution semantics, runner architecture, run-state contract, impact map.
 

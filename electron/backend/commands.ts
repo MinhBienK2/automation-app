@@ -449,7 +449,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     async getCloakBrowserDiagnostics(): Promise<CloakBrowserDiagnostics> {
       return buildCloakBrowserDiagnostics({
         appPaths: context.appPaths,
-        database: context.database,
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
@@ -462,7 +461,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       await cloakbrowser.ensureBinary();
       return buildCloakBrowserDiagnostics({
         appPaths: context.appPaths,
-        database: context.database,
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
@@ -473,7 +471,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     async cleanupOrphanedBrowserProfiles(): Promise<BrowserProfileCleanupResult> {
       const diagnostics = await buildCloakBrowserDiagnostics({
         appPaths: context.appPaths,
-        database: context.database,
         workflows: repository.listWorkflows(),
         settingsForWorkflow: getSettings,
         lastRunAtForWorkflow,
@@ -1070,14 +1067,12 @@ function resolveDefaultFingerprintFontsDir(
 
 async function buildCloakBrowserDiagnostics({
   appPaths,
-  database,
   workflows,
   settingsForWorkflow,
   lastRunAtForWorkflow,
   retainedProfileNames,
 }: {
   appPaths: AppPaths;
-  database: DatabaseSync;
   workflows: WorkflowSummary[];
   settingsForWorkflow: (workflowId: string) => WorkflowSettings;
   lastRunAtForWorkflow: (workflowId: string) => string | null;
@@ -1130,7 +1125,6 @@ async function buildCloakBrowserDiagnostics({
       status: "not_recorded",
       reason: "Smoke tests are recorded by the npm run test:smoke command output",
     },
-    last_preflight_verdict: lastFingerprintPreflightVerdict(database, workflows),
     headed_display: headedDisplayAvailability(),
     profiles: await browserProfileDiagnostics(
       appPaths.browserProfilesDir,
@@ -1261,56 +1255,6 @@ function isFontFile(name: string) {
 
 function normalizeFontFileName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-function lastFingerprintPreflightVerdict(
-  database: DatabaseSync,
-  workflows: WorkflowSummary[],
-): CloakBrowserDiagnostics["last_preflight_verdict"] {
-  const workflowById = new Map(workflows.map((workflow) => [workflow.id, workflow.name]));
-  const rows = database
-    .prepare(
-      `SELECT workflow_id, finished_at, started_at, outputs_json
-       FROM runs
-       WHERE outputs_json IS NOT NULL
-       ORDER BY COALESCE(finished_at, started_at) DESC
-       LIMIT 50`,
-    )
-    .all() as Array<{
-      workflow_id: string;
-      finished_at: string | null;
-      started_at: string;
-      outputs_json: string | null;
-    }>;
-
-  for (const row of rows) {
-    try {
-      const outputs = JSON.parse(row.outputs_json ?? "{}") as {
-        fingerprint_preflight?: Record<string, unknown>;
-      };
-      const verdict = outputs.fingerprint_preflight;
-      if (!verdict) continue;
-      if (typeof verdict.passed !== "boolean" || typeof verdict.verdict !== "string") {
-        continue;
-      }
-      return {
-        workflow_id: row.workflow_id,
-        workflow_name: workflowById.get(row.workflow_id) ?? null,
-        run_id: typeof verdict.run_id === "string" ? verdict.run_id : null,
-        verdict: verdict.verdict,
-        passed: verdict.passed,
-        risk_score:
-          typeof verdict.risk_score === "number" && Number.isFinite(verdict.risk_score)
-            ? verdict.risk_score
-            : null,
-        finished_at: row.finished_at ?? row.started_at,
-      };
-    } catch {
-      continue;
-    }
-  }
-
-  return null;
 }
 
 async function cloakBinaryInfo(): Promise<CloakBrowserDiagnostics["binary"]> {

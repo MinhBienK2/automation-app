@@ -36,27 +36,36 @@ describe("WorkflowSettingsService", () => {
           preflight_probe_url: "https://owned.example/preflight",
           preflight_allowed_origins: ["https://owned.example"],
           headless: true,
-        },
+        } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
       },
       workflow,
     );
 
     expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(settings.browser_launch).not.toHaveProperty("preflight_enabled");
+    expect(settings.browser_launch).not.toHaveProperty("preflight_probe_url");
+    expect(settings.browser_launch).not.toHaveProperty("preflight_allowed_origins");
     expect(settings.run_policy.execute_js_enabled).toBe(true);
-    expect(service.validateSettings(settings)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          section: "browser_launch",
-          field: "webrtc_ip",
-          level: "error",
-        }),
-        expect.objectContaining({
-          section: "browser_launch",
-          field: "headless",
-          level: "error",
-        }),
-      ]),
+    const issues = service.validateSettings(settings);
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "webrtc_ip",
+        level: "error",
+      }),
+    );
+    expect(issues).not.toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "headless",
+      }),
+    );
+    expect(issues).not.toContainEqual(
+      expect.objectContaining({
+        section: "browser_launch",
+        field: "preflight_probe_url",
+      }),
     );
   });
 

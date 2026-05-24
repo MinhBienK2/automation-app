@@ -74,9 +74,6 @@ export function finalizeEvidenceOutputs(outputs: Record<string, unknown>) {
 
 export function evidenceCategoryForOutput(key: string): EvidenceCategory {
   if (key === "browser_identity") return "browser_identity";
-  if (key === "fingerprint_preflight" || key === "fingerprint_regression") {
-    return "network_posture";
-  }
   if (key === "__action_traces") return "action_trace";
   if (
     key === "__evidence" ||

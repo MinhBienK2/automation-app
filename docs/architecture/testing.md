@@ -21,7 +21,6 @@ Focused commands:
 - Graph validation/compiler: `electron/backend/graph/compiler.test.ts`
 - Runner unit coverage: `electron/backend/runtime/runner.test.ts`
 - Evidence model coverage: `electron/backend/evidence/model.test.ts`
-- Fingerprint regression report coverage: `electron/backend/browser/fingerprintRegression.test.ts`
 - CloakBrowser launch smoke: `electron/backend/runtime/runner.smoke.test.ts`, gated by `RUN_CLOAKBROWSER_SMOKE=1`
 
 Focused commands:
@@ -43,11 +42,10 @@ canvas stability, timezone/locale, positive viewport/screen coherence, and Cloak
 wrapper/binary evidence. A fresh machine may download the CloakBrowser binary
 before the smoke test runs.
 
-`npm run test:fingerprint` is the focused preflight/regression gate for browser
+`npm run test:fingerprint` is the focused browser identity gate for browser
 identity changes and CloakBrowser wrapper upgrades. It checks identity launch
-mapping, sanitized `browser_identity` evidence, the `fingerprint_regression`
-matrix report, and runner preflight integration without requiring a real owned
-staging probe.
+mapping and sanitized `browser_identity` evidence without requiring a real owned
+staging target.
 
 Runner unit coverage also guards the Run Policy `execute_js_enabled` safety
 switch: disabled workflows must reject Run JavaScript before browser-side script

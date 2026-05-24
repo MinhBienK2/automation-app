@@ -221,9 +221,6 @@ describe("Workflow detail integration", () => {
           geoip: false,
           webrtc_policy: "default",
           webrtc_ip: null,
-          preflight_enabled: false,
-          preflight_probe_url: null,
-          preflight_allowed_origins: [],
           proxy_enabled: true,
           proxy_server: "http://proxy.local:8080",
           proxy_username: "agent",
@@ -357,7 +354,7 @@ describe("Workflow detail integration", () => {
       .not.toBeInTheDocument();
   });
 
-  test("omits removed trigger settings while showing identity preflight", async () => {
+  test("omits removed trigger and preflight settings", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
@@ -373,8 +370,10 @@ describe("Workflow detail integration", () => {
 
     expect(within(settingsDialog).queryByRole("tab", { name: "Triggers" }))
       .not.toBeInTheDocument();
-    expect(within(settingsDialog).getByRole("switch", { name: "Fingerprint preflight" }))
-      .toBeInTheDocument();
+    expect(within(settingsDialog).queryByRole("switch", { name: "Fingerprint preflight" }))
+      .not.toBeInTheDocument();
+    expect(within(settingsDialog).queryByLabelText("Preflight probe URL"))
+      .not.toBeInTheDocument();
     expect(
       within(settingsDialog).queryByRole("checkbox", { name: "Enable trigger" }),
     ).not.toBeInTheDocument();

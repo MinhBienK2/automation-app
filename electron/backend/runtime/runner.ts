@@ -34,7 +34,6 @@ import {
   resolveEvidenceArtifact,
 } from "../evidence/artifacts.js";
 import { finalizeEvidenceOutputs, type EvidenceCategory } from "../evidence/model.js";
-import { buildFingerprintRegressionReport } from "../browser/fingerprintRegression.js";
 
 export {
   createCloakBrowserDriver,
@@ -238,7 +237,6 @@ export class BrowserWorkflowRunner {
 
     try {
       await this.applyEnvironment(runtime, request.settings);
-      await this.runFingerprintPreflight(runtime, request.settings);
       let stepNumber = 0;
       for (const step of request.graph.steps) {
         stepNumber += 1;
@@ -332,40 +330,6 @@ export class BrowserWorkflowRunner {
   }
 
   private async applyEnvironment(_runtime: Runtime, _settings: WorkflowSettings) {}
-
-  private async runFingerprintPreflight(runtime: Runtime, settings: WorkflowSettings) {
-    const browser = settings.browser_launch;
-    if (!browser.preflight_enabled) return;
-    const probeUrl = browser.preflight_probe_url?.trim();
-    if (!probeUrl) {
-      throw new Error("Fingerprint preflight probe URL is required");
-    }
-    const probeOrigin = originForUrl(probeUrl);
-    if (!probeOrigin || !browser.preflight_allowed_origins.includes(probeOrigin)) {
-      throw new Error("Fingerprint preflight probe origin must be allowlisted");
-    }
-
-    runtime.currentActionType = "fingerprint_preflight";
-    await runtime.page.goto(probeUrl);
-    const rawVerdict = await runtime.page.evaluate(() => {
-      return document.body?.innerText ?? document.documentElement?.textContent ?? "";
-    });
-    const verdict = parseFingerprintPreflightVerdict(rawVerdict);
-    const sanitizedVerdict = sanitizeFingerprintPreflightVerdict(verdict);
-    runtime.outputs.fingerprint_preflight = sanitizedVerdict;
-    runtime.outputs.fingerprint_regression = buildFingerprintRegressionReport({
-      browserIdentity: runtime.outputs.browser_identity as Record<string, unknown>,
-      preflight: sanitizedVerdict,
-    });
-    if (!verdict.passed) {
-      const mismatchSummary = verdict.mismatches
-        .map((mismatch) => `${mismatch.field}: ${mismatch.reason}`)
-        .join("; ");
-      throw new Error(
-        `Fingerprint preflight blocked${mismatchSummary ? `: ${mismatchSummary}` : ""}`,
-      );
-    }
-  }
 
   private async executeStep(runtime: Runtime, step: CompiledGraphStep) {
     const startedAt = new Date().toISOString();
@@ -1693,125 +1657,6 @@ function throwIfAborted(signal?: AbortSignal) {
 function firstActionFailure(failures: unknown[], fallbackMessage: string) {
   const firstFailure = failures.find((failure) => failure instanceof Error);
   return firstFailure instanceof Error ? firstFailure : new Error(fallbackMessage);
-}
-
-type FingerprintPreflightVerdict = {
-  passed: boolean;
-  verdict: string;
-  risk_score: number | null;
-  run_id: string;
-  profile_id: string;
-  mismatches: Array<{
-    category: string;
-    field: string;
-    severity: string;
-    expected?: string | null;
-    observed?: string | null;
-    reason: string;
-  }>;
-  evidence: Record<string, unknown>;
-};
-
-function parseFingerprintPreflightVerdict(raw: unknown): FingerprintPreflightVerdict {
-  let parsed: unknown;
-  try {
-    parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-  } catch {
-    throw new Error("Fingerprint preflight verdict is malformed");
-  }
-  if (!parsed || typeof parsed !== "object") {
-    throw new Error("Fingerprint preflight verdict is malformed");
-  }
-  const record = parsed as Record<string, unknown>;
-  if (typeof record.passed !== "boolean") {
-    throw new Error("Fingerprint preflight verdict is missing passed");
-  }
-  if (typeof record.verdict !== "string" || !record.verdict.trim()) {
-    throw new Error("Fingerprint preflight verdict is missing verdict");
-  }
-  if (typeof record.run_id !== "string" || !record.run_id.trim()) {
-    throw new Error("Fingerprint preflight verdict is missing run_id");
-  }
-  if (typeof record.profile_id !== "string" || !record.profile_id.trim()) {
-    throw new Error("Fingerprint preflight verdict is missing profile_id");
-  }
-  if (!Array.isArray(record.mismatches)) {
-    throw new Error("Fingerprint preflight verdict mismatches must be an array");
-  }
-  const mismatches = record.mismatches.map((value) => {
-    const mismatch = value as Record<string, unknown>;
-    return {
-      category: String(mismatch.category ?? "other"),
-      field: String(mismatch.field ?? "unknown"),
-      severity: String(mismatch.severity ?? "medium"),
-      expected: optionalString(mismatch.expected),
-      observed: optionalString(mismatch.observed),
-      reason: String(mismatch.reason ?? "Fingerprint mismatch"),
-    };
-  });
-  return {
-    passed: record.passed,
-    verdict: record.verdict,
-    risk_score: typeof record.risk_score === "number" ? record.risk_score : null,
-    run_id: record.run_id,
-    profile_id: record.profile_id,
-    mismatches,
-    evidence:
-      record.evidence && typeof record.evidence === "object"
-        ? (record.evidence as Record<string, unknown>)
-        : {},
-  };
-}
-
-function sanitizeFingerprintPreflightVerdict(verdict: FingerprintPreflightVerdict) {
-  return {
-    passed: verdict.passed,
-    verdict: verdict.verdict,
-    risk_score: verdict.risk_score,
-    run_id: verdict.run_id,
-    profile_id: verdict.profile_id,
-    mismatches: verdict.mismatches,
-    evidence: sanitizeFingerprintEvidence(verdict.evidence),
-  };
-}
-
-const redactedEvidenceValue = "[REDACTED]";
-const sensitiveEvidenceKeyPattern =
-  /(^|[_-])(token|cookie|password|authorization|auth|headers?|ip|account|email|secret|session|credential)(s)?($|[_-])/i;
-
-function sanitizeFingerprintEvidence(value: unknown, key = ""): unknown {
-  if (key && isSensitiveEvidenceKey(key)) {
-    return redactedEvidenceValue;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeFingerprintEvidence(item));
-  }
-  if (isPlainRecord(value)) {
-    return Object.fromEntries(
-      Object.entries(value).map(([entryKey, entryValue]) => [
-        entryKey,
-        sanitizeFingerprintEvidence(entryValue, entryKey),
-      ]),
-    );
-  }
-  return value;
-}
-
-function isSensitiveEvidenceKey(key: string) {
-  const normalized = key.replace(/([a-z])([A-Z])/g, "$1_$2");
-  return sensitiveEvidenceKeyPattern.test(normalized);
-}
-
-function optionalString(value: unknown) {
-  return typeof value === "string" ? value : null;
-}
-
-function originForUrl(value: string) {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
 }
 
 async function locatorFor(

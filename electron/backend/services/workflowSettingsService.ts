@@ -202,35 +202,7 @@ export class WorkflowSettingsService {
           section: "browser_launch",
           field: "fingerprint_fonts_dir",
           level: "warning",
-          message: "Using the same fingerprint fonts directory across identities can create a stable font hash; validate it with owned preflight",
-        });
-      }
-    }
-    if (settings.browser_launch.preflight_enabled) {
-      const probeUrl = settings.browser_launch.preflight_probe_url?.trim();
-      if (!probeUrl) {
-        issues.push({
-          section: "browser_launch",
-          field: "preflight_probe_url",
-          level: "error",
-          message: "Fingerprint preflight probe URL is required",
-        });
-      } else if (
-        !settings.browser_launch.preflight_allowed_origins.includes(originForUrl(probeUrl) ?? "")
-      ) {
-        issues.push({
-          section: "browser_launch",
-          field: "preflight_probe_url",
-          level: "error",
-          message: "Fingerprint preflight probe origin must be allowlisted",
-        });
-      }
-      if (settings.browser_launch.headless) {
-        issues.push({
-          section: "browser_launch",
-          field: "headless",
-          level: "error",
-          message: "Fingerprint preflight requires headed browser mode",
+          message: "Using the same fingerprint fonts directory across identities can create a stable font hash",
         });
       }
     }
@@ -406,14 +378,6 @@ function validateGraphEdgeDelay(delay: GraphEdgeDelay | null | undefined) {
   return "New link wait type is invalid";
 }
 
-function originForUrl(value: string) {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
-}
-
 function parseProxyServer(value: string):
   | { valid: true; hasCredentials: boolean }
   | { valid: false; message: string } {
@@ -524,6 +488,9 @@ function normalizeSettingsBrowserLaunch(
     proxy_region: _legacyProxyRegion,
     proxy_provider: _legacyProxyProvider,
     test_account_binding: _legacyTestAccountBinding,
+    preflight_enabled: _legacyPreflightEnabled,
+    preflight_probe_url: _legacyPreflightProbeUrl,
+    preflight_allowed_origins: _legacyPreflightAllowedOrigins,
     ...browserWithoutLegacyOverrides
   } = browser as WorkflowSettingsBrowserLaunch & Record<string, unknown>;
   void _legacyBrowserBrand;
@@ -541,6 +508,9 @@ function normalizeSettingsBrowserLaunch(
   void _legacyProxyRegion;
   void _legacyProxyProvider;
   void _legacyTestAccountBinding;
+  void _legacyPreflightEnabled;
+  void _legacyPreflightProbeUrl;
+  void _legacyPreflightAllowedOrigins;
   return {
     ...browserWithoutLegacyOverrides,
     identity_id: identityId,
@@ -559,11 +529,6 @@ function normalizeSettingsBrowserLaunch(
     proxy_bypass: nullableText(browser.proxy_bypass),
     webrtc_policy: persona.webrtc_mode,
     webrtc_ip: nullableText(browser.webrtc_ip),
-    preflight_enabled: Boolean(browser.preflight_enabled),
-    preflight_probe_url: nullableText(browser.preflight_probe_url),
-    preflight_allowed_origins: Array.isArray(browser.preflight_allowed_origins)
-      ? browser.preflight_allowed_origins.filter((origin) => typeof origin === "string" && origin.trim())
-      : [],
     humanize: browser.humanize !== false,
     human_preset: persona.behavioral_timing_profile,
     session_mode: browser.session_mode === "persistent_profile"
@@ -667,9 +632,6 @@ function createDefaultBrowserIdentity(
   | "proxy_bypass"
   | "webrtc_policy"
   | "webrtc_ip"
-  | "preflight_enabled"
-  | "preflight_probe_url"
-  | "preflight_allowed_origins"
   | "humanize"
   | "human_preset"
 > {
@@ -694,9 +656,6 @@ function createDefaultBrowserIdentity(
     proxy_bypass: null,
     webrtc_policy: persona.webrtc_mode,
     webrtc_ip: null,
-    preflight_enabled: false,
-    preflight_probe_url: null,
-    preflight_allowed_origins: [],
     humanize: true,
     human_preset: persona.behavioral_timing_profile,
   };
@@ -739,9 +698,6 @@ function browserIdentityPreferences(
   | "proxy_bypass"
   | "webrtc_policy"
   | "webrtc_ip"
-  | "preflight_enabled"
-  | "preflight_probe_url"
-  | "preflight_allowed_origins"
   | "humanize"
   | "human_preset"
 > {
@@ -759,9 +715,6 @@ function browserIdentityPreferences(
     proxy_bypass: browser.proxy_bypass,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_ip,
-    preflight_enabled: browser.preflight_enabled,
-    preflight_probe_url: browser.preflight_probe_url,
-    preflight_allowed_origins: browser.preflight_allowed_origins,
     humanize: browser.humanize,
     human_preset: browser.human_preset,
   };

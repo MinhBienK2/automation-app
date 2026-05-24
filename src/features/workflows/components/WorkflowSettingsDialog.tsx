@@ -468,7 +468,7 @@ function BrowserLaunchSettingsSection({
               <DialogDescription>
                 This creates a new backend-generated identity id, profile
                 directory, and fingerprint seed. Existing proxy, location,
-                font, and preflight preferences are preserved.
+                and font preferences are preserved.
               </DialogDescription>
             </DialogHeader>
             <div className="dialog-footer-actions">
@@ -620,40 +620,9 @@ function BrowserLaunchSettingsSection({
         </label>
       </SettingsFieldGroup>
       <SettingsFieldGroup
-        title="Preflight & launch"
-        description="Optional fingerprint probe and final headed/headless launch mode."
+        title="Launch"
+        description="Final headed/headless launch mode."
       >
-        <SwitchField
-          checked={Boolean(value.preflight_enabled)}
-          label="Fingerprint preflight"
-          onCheckedChange={(checked) => onChange({ ...value, preflight_enabled: checked })}
-        />
-        {value.preflight_enabled ? (
-          <>
-            <label className="field">
-              <span>Preflight probe URL</span>
-              <Input
-                value={value.preflight_probe_url ?? ""}
-                onChange={(event) => onChange({ ...value, preflight_probe_url: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Allowed probe origins</span>
-              <Input
-                value={value.preflight_allowed_origins.join(", ")}
-                onChange={(event) =>
-                  onChange({
-                    ...value,
-                    preflight_allowed_origins: event.currentTarget.value
-                      .split(",")
-                      .map((origin) => origin.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </label>
-          </>
-        ) : null}
         <SwitchField
           checked={value.headless}
           label="Headless browser"

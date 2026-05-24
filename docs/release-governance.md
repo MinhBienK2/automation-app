@@ -79,9 +79,8 @@ browser/fingerprint change.
 Before changing the pinned version:
 
 - Change `package.json` and `package-lock.json` to the exact new version.
-- Run the owned fingerprint preflight matrix for representative identities.
 - Run the owned staging smoke lane against allowlisted targets and named test
   accounts.
 - Complete a run evidence comparison before and after the upgrade, including
-  browser identity, preflight verdicts, action traces, and failure artifacts.
+  browser identity, action traces, and failure artifacts.
 - Document the rollback version and rollback command plan in the upgrade PR.

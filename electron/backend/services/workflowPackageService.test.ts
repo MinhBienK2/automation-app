@@ -34,14 +34,13 @@ describe("WorkflowPackageService", () => {
     expect(packageValue.settings.browser_launch?.proxy_password).toBeNull();
     expect(packageValue.settings.browser_launch?.proxy_server).toBe("https://proxy.example:8443/");
     expect(packageValue.settings.browser_launch?.fingerprint_fonts_dir).toBeNull();
-    expect(packageValue.settings.browser_launch?.preflight_probe_url).toBe(
-      "https://owned.example/preflight",
-    );
+    expect(packageValue.settings.browser_launch).not.toHaveProperty("preflight_enabled");
+    expect(packageValue.settings.browser_launch).not.toHaveProperty("preflight_probe_url");
+    expect(packageValue.settings.browser_launch).not.toHaveProperty("preflight_allowed_origins");
     expect(packageValue.omitted_fields).toEqual([
       "settings.browser_launch.proxy_password",
       "settings.browser_launch.proxy_server.credentials",
       "settings.browser_launch.fingerprint_fonts_dir",
-      "settings.browser_launch.preflight_probe_url.search",
     ]);
   });
 
@@ -152,7 +151,7 @@ function workflowSettings(
       humanize: true,
       human_preset: "default",
       run_from_selected_enabled: false,
-    },
+    } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
     graph_defaults: { default_edge_delay: null },
     environment: { initial_variables: [] },
     migration_notes: [],

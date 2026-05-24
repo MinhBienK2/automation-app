@@ -124,7 +124,9 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByRole("switch", { name: "Humanize browser input" })).toBeChecked();
     expect(within(dialog).getByLabelText("Humanize preset")).toHaveValue("default");
     expect(within(dialog).queryByLabelText("Behavior fidelity")).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("switch", { name: "Fingerprint preflight" })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("switch", { name: "Fingerprint preflight" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Preflight probe URL")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Allowed probe origins")).not.toBeInTheDocument();
   });
 
   test("groups graph link wait defaults into a reusable settings field group", () => {
@@ -173,7 +175,6 @@ describe("WorkflowSettingsDialog", () => {
       workflowName: "Checkout QA",
     });
     settings.browser_launch.proxy_enabled = true;
-    settings.browser_launch.preflight_enabled = true;
 
     const props = {
       hasUnsavedChanges: false,
@@ -225,7 +226,7 @@ describe("WorkflowSettingsDialog", () => {
       "Location",
       "Fingerprint",
       "Humanization",
-      "Preflight & launch",
+      "Launch",
     ];
     for (const groupName of expectedBrowserGroups) {
       expect(within(dialog).getByRole("group", { name: groupName })).toHaveClass("settings-field-group");
@@ -234,7 +235,7 @@ describe("WorkflowSettingsDialog", () => {
       .toBeInTheDocument();
     expect(within(within(dialog).getByRole("group", { name: "Proxy" })).getByLabelText("Proxy server"))
       .toBeInTheDocument();
-    expect(within(within(dialog).getByRole("group", { name: "Preflight & launch" })).getByLabelText("Preflight probe URL"))
+    expect(within(within(dialog).getByRole("group", { name: "Launch" })).getByRole("switch", { name: "Headless browser" }))
       .toBeInTheDocument();
 
     rerender(

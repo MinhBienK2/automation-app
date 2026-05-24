@@ -7,7 +7,6 @@ describe("evidence model", () => {
   test("classifies evidence outputs and redacts or limits unsafe values", () => {
     const outputs = finalizeEvidenceOutputs({
       browser_identity: { identity_id: "bi_identity", fingerprint_seed_hash: "hash" },
-      fingerprint_preflight: { verdict: "passed", evidence: { canvas_hash_bucket: "stable" } },
       extracted_text: "owned page observation",
       api_token: "secret-token",
       script_result: "x".repeat(5000),
@@ -48,7 +47,6 @@ describe("evidence model", () => {
       ],
       outputs: expect.arrayContaining([
         expect.objectContaining({ key: "browser_identity", category: "browser_identity" }),
-        expect.objectContaining({ key: "fingerprint_preflight", category: "network_posture" }),
         expect.objectContaining({ key: "__action_traces", category: "action_trace" }),
         expect.objectContaining({ key: "__evidence", category: "generated_output" }),
         expect.objectContaining({ key: "api_token", category: "sensitive_redacted", redacted: true }),

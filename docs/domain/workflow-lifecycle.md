@@ -60,7 +60,7 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, optionally runs owned fingerprint preflight before graph actions, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
+- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
 - Reset identity in Workflow Settings is an in-app confirmation that delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, and returns saved settings to the dialog.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
@@ -102,7 +102,7 @@
 - Canceling the native Save dialog leaves the export dialog open and does not create a file.
 - The Electron backend writes the package to the path returned by the native Save dialog; canceling the dialog leaves the workflow unchanged.
 - Flow export uses the saved `WorkflowGraph`.
-- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password and secret query/hash portions of fingerprint preflight probe URLs. Runtime fingerprint preflight evidence is recursively sanitized before it is stored in run outputs.
+- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password, proxy URL credentials, and local fingerprint font directories.
 
 ## Import Workflow Package
 

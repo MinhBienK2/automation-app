@@ -52,6 +52,9 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch).not.toHaveProperty("device_scale_factor");
     expect(settings.browser_launch).not.toHaveProperty("mobile");
     expect(settings.browser_launch).not.toHaveProperty("touch");
+    expect(settings.browser_launch).not.toHaveProperty("preflight_enabled");
+    expect(settings.browser_launch).not.toHaveProperty("preflight_probe_url");
+    expect(settings.browser_launch).not.toHaveProperty("preflight_allowed_origins");
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.graph_defaults.default_edge_delay).toBeNull();
@@ -154,7 +157,6 @@ describe("workflow settings model", () => {
       "Locale",
       "GeoIP location",
       "Humanize browser input",
-      "Fingerprint preflight",
       "Headless browser",
     ]);
     expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Settings Help");
@@ -165,7 +167,7 @@ describe("workflow settings model", () => {
     ]);
     expect(workflowSettingsHelp.environment.en.title).toBe("Environment Settings Help");
     expect(helpText).not.toContain("Owned Test Gates");
-    expect(helpText).toContain("Fingerprint preflight");
+    expect(helpText).not.toContain("Fingerprint preflight");
   });
 
   test("creates readable generated browser profile names", () => {
