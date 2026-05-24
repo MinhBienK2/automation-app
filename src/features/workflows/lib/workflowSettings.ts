@@ -4,6 +4,7 @@ import type {
   WorkflowSettings,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
+import { personaForSeed } from "../../../lib/personaCatalog";
 
 export type WorkflowSettingsSection = {
   id: WorkflowSettingsSectionId;
@@ -75,7 +76,7 @@ function randomProfileSeed() {
   if (globalThis.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID().slice(0, 8);
   }
-  return Math.random().toString(36).slice(2, 10);
+  return `local-${Date.now().toString(36)}`;
 }
 
 export function variableRowsFromJsonText(
@@ -194,6 +195,8 @@ export function defaultWorkflowSettings({
   createdAt?: string | null;
   updatedAt?: string | null;
 }): WorkflowSettings {
+  const identityId = createDefaultBrowserIdentityId(workflowId);
+  const persona = personaForSeed(identityId);
   return {
     workflow_id: workflowId,
     version: 2,
@@ -208,27 +211,30 @@ export function defaultWorkflowSettings({
     run_policy: {
       max_workflow_duration_ms: null,
       browser_retention: "retain",
+      execute_js_enabled: true,
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
     },
     browser_launch: {
       session_mode: "persistent_profile",
-      identity_id: createDefaultBrowserIdentityId(workflowId),
+      identity_id: identityId,
       display_name: `${workflowName} identity`,
-      profile_dir: createDefaultBrowserIdentityId(workflowId),
-      fingerprint_seed: stableFingerprintSeed(createDefaultBrowserIdentityId(workflowId)),
-      profile_name: createDefaultBrowserIdentityId(workflowId),
-      fingerprint_fonts_dir: null,
-      timezone: null,
-      locale: null,
+      persona_id: persona.id,
+      persona,
+      profile_dir: identityId,
+      fingerprint_seed: stableFingerprintSeed(identityId),
+      profile_name: identityId,
+      fingerprint_fonts_dir: persona.font_bundle.path ?? null,
+      timezone: persona.timezone,
+      locale: persona.locale,
       geoip: false,
       proxy_label: null,
-      proxy_region: null,
+      proxy_region: persona.proxy_region ?? null,
       proxy_provider: null,
       proxy_bypass: null,
-      test_account_binding: null,
-      webrtc_policy: "default",
+      test_account_binding: persona.test_account_binding ?? null,
+      webrtc_policy: persona.webrtc_mode,
       webrtc_ip: null,
       preflight_enabled: false,
       preflight_probe_url: null,
@@ -239,7 +245,7 @@ export function defaultWorkflowSettings({
       proxy_password: null,
       headless: false,
       humanize: true,
-      human_preset: "default",
+      human_preset: persona.behavioral_timing_profile,
       run_from_selected_enabled: false,
     },
     graph_defaults: {
@@ -455,6 +461,13 @@ export const workflowSettingsHelp: Record<
             "Choose retain for debugging and evidence review; choose close for unattended runs where cleanup matters more.",
         },
         {
+          name: "Allow Run JavaScript",
+          description:
+            "Policy switch that permits or rejects Run JavaScript actions before their script body reaches the browser page. Rejected steps fail with explicit run evidence.",
+          whenToUse:
+            "Leave it on for authorized flows that need direct page inspection; turn it off for lower-risk profiles that must avoid direct DOM scripting.",
+        },
+        {
           name: "Batch concurrency limit",
           description:
             "Maximum number of input rows the batch runner may execute at the same time. Current backend validation rejects values above one until row isolation is implemented.",
@@ -518,6 +531,13 @@ export const workflowSettingsHelp: Record<
             "Chính sách terminal mặc định quyết định Chromium còn mở để kiểm tra hay đóng sau success, failure, hoặc stop khi terminal node không ghi đè.",
           whenToUse:
             "Chọn retain khi cần debug và review evidence; chọn close cho run tự động cần dọn dẹp.",
+        },
+        {
+          name: "Allow Run JavaScript",
+          description:
+            "Công tắc policy cho phép hoặc từ chối node Run JavaScript trước khi script được đưa vào trang browser. Step bị từ chối sẽ fail với evidence rõ ràng.",
+          whenToUse:
+            "Bật cho flow được ủy quyền cần kiểm tra trực tiếp trong page; tắt cho profile rủi ro thấp không được dùng direct DOM scripting.",
         },
         {
           name: "Batch concurrency limit",

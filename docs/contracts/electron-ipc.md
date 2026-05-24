@@ -9,7 +9,7 @@
 - IPC channels: `electron/ipc.ts`
 - Main process registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
-- SQLite repository: `electron/backend/workflowRepository.ts`
+- SQLite repository: `electron/backend/persistence/workflowRepository.ts`
 
 ## Current Boundary
 
@@ -27,7 +27,10 @@ Electron main registers typed IPC channels and returns a result envelope:
 
 The preload unwraps successful values and throws the serialized error object for
 failed calls. This preserves the command-facing error shape used by
-`src/lib/workflowUi.ts`.
+`src/lib/workflowUi.ts`. `electron/ipc.ts` is the canonical channel map; the
+preload bridge derives channel strings from method names and type-checks those
+method names against the canonical map instead of maintaining a second runtime
+string map.
 
 ## Current Commands
 
@@ -42,6 +45,7 @@ failed calls. This preserves the command-facing error shape used by
 - `validateWorkflowGraph`
 - `compileWorkflowGraph`
 - `getWorkflowSettings`
+- `resetWorkflowBrowserIdentity`
 - `saveWorkflowSettings`
 - `saveWorkflowSettingsSection`
 - `validateWorkflowSettings`
@@ -79,7 +83,15 @@ failed calls. This preserves the command-facing error shape used by
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend
 deletes the workflow's private browser profile directory only if no other
-workflow still references it and no retained session is active.
+workflow still references it, no active run owns the workflow/profile, and no
+retained session is active.
+
+`resetWorkflowBrowserIdentity(workflowId)` rotates the Browser Launch identity
+in the backend. It persists and returns updated Workflow Settings with a
+crypto-generated `identity_id`, matching profile directory, deterministic
+CloakBrowser-compatible seed, disabled Run from selected, and a migration note
+recording the old and new identity. The command rejects while the workflow or
+profile is active or a retained session still owns the profile.
 
 `runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
 new `run_id`, workflow metadata, source, start time, and nested run state.
@@ -117,7 +129,8 @@ CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit
 binary install/check, and clean up orphaned inactive profile directories, but it
 never imports CloakBrowser, reads profile storage, or receives proxy passwords,
-cookies, localStorage, or sessionStorage values through IPC.
+cookies, localStorage, or sessionStorage values through IPC. Profile diagnostic
+sizes are bounded approximations, not unbounded recursive storage scans.
 
 ## Change Checklist
 

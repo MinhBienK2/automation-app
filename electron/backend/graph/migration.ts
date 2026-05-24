@@ -1,7 +1,7 @@
 import type {
   ElementTarget,
   WorkflowGraph,
-} from "../../src/types/workflow.js";
+} from "../../../src/types/workflow.js";
 
 export const CURRENT_WORKFLOW_GRAPH_VERSION = 2;
 

@@ -6,7 +6,7 @@ import type {
   WorkflowScheduleInput,
   WorkflowScheduleKind,
   WorkflowScheduleStatus,
-} from "../../src/types/workflow.js";
+} from "../../../src/types/workflow.js";
 
 export type ScheduleRepositoryPort = {
   listDueSchedules(now: Date): WorkflowSchedule[];

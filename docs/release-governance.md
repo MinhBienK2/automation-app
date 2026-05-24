@@ -64,6 +64,24 @@ supported by electron-builder. Keep signing credentials scoped to
 3. The Desktop Release workflow runs quality gates, waits for the
    `internal-release` environment approval, packages macOS, Windows, and
    Ubuntu/Linux artifacts, signs supported platforms with environment secrets,
-   generates `sbom.cyclonedx.json`, `SHA256SUMS`, and `release-manifest.json`,
+   generates `sbom.cyclonedx.json`, `SHA256SUMS`, and `release-manifest.json`
+   with actual `generated_at` provenance plus deterministic `reproducible_epoch`,
    creates artifact attestations, and uploads assets to the GitHub release.
 4. Operators verify checksums and release provenance before installation.
+
+## CloakBrowser upgrade gate
+
+`cloakbrowser` is exact-pinned because wrapper patches can change browser
+fingerprint, launch, diagnostics, or evidence behavior. Dependabot must keep it
+out of broad npm minor/patch groups so every upgrade is reviewed as a
+browser/fingerprint change.
+
+Before changing the pinned version:
+
+- Change `package.json` and `package-lock.json` to the exact new version.
+- Run the owned fingerprint preflight matrix for representative identities.
+- Run the owned staging smoke lane against allowlisted targets and named test
+  accounts.
+- Complete a run evidence comparison before and after the upgrade, including
+  browser identity, preflight verdicts, action traces, and failure artifacts.
+- Document the rollback version and rollback command plan in the upgrade PR.

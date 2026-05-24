@@ -4,6 +4,7 @@ export const workflowIpcChannels = {
   getWorkflowBrowserConfig: "workflow:getWorkflowBrowserConfig",
   saveWorkflowBrowserConfig: "workflow:saveWorkflowBrowserConfig",
   getWorkflowSettings: "workflow:getWorkflowSettings",
+  resetWorkflowBrowserIdentity: "workflow:resetWorkflowBrowserIdentity",
   saveWorkflowSettings: "workflow:saveWorkflowSettings",
   saveWorkflowSettingsSection: "workflow:saveWorkflowSettingsSection",
   validateWorkflowSettings: "workflow:validateWorkflowSettings",

@@ -7,55 +7,19 @@ type IpcResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: { message: string; field?: string | null } };
 
-const workflowIpcChannels = {
-  listWorkflows: "workflow:listWorkflows",
-  getWorkflow: "workflow:getWorkflow",
-  getWorkflowBrowserConfig: "workflow:getWorkflowBrowserConfig",
-  saveWorkflowBrowserConfig: "workflow:saveWorkflowBrowserConfig",
-  getWorkflowSettings: "workflow:getWorkflowSettings",
-  saveWorkflowSettings: "workflow:saveWorkflowSettings",
-  saveWorkflowSettingsSection: "workflow:saveWorkflowSettingsSection",
-  validateWorkflowSettings: "workflow:validateWorkflowSettings",
-  getCloakBrowserDiagnostics: "workflow:getCloakBrowserDiagnostics",
-  installCloakBrowserBinary: "workflow:installCloakBrowserBinary",
-  cleanupOrphanedBrowserProfiles: "workflow:cleanupOrphanedBrowserProfiles",
-  validateWorkflowRun: "workflow:validateWorkflowRun",
-  createWorkflow: "workflow:createWorkflow",
-  renameWorkflow: "workflow:renameWorkflow",
-  deleteWorkflow: "workflow:deleteWorkflow",
-  duplicateWorkflow: "workflow:duplicateWorkflow",
-  getWorkflowGraph: "workflow:getWorkflowGraph",
-  saveWorkflowGraph: "workflow:saveWorkflowGraph",
-  validateWorkflowGraph: "workflow:validateWorkflowGraph",
-  compileWorkflowGraph: "workflow:compileWorkflowGraph",
-  runWorkflow: "workflow:runWorkflow",
-  runWorkflowFromNode: "workflow:runWorkflowFromNode",
-  stopRun: "workflow:stopRun",
-  getRunState: "workflow:getRunState",
-  listRunStates: "workflow:listRunStates",
-  listSchedules: "workflow:listSchedules",
-  getSchedule: "workflow:getSchedule",
-  createSchedule: "workflow:createSchedule",
-  updateSchedule: "workflow:updateSchedule",
-  deleteSchedule: "workflow:deleteSchedule",
-  enableSchedule: "workflow:enableSchedule",
-  disableSchedule: "workflow:disableSchedule",
-  listScheduleEvents: "workflow:listScheduleEvents",
-  validateSchedule: "workflow:validateSchedule",
-  exportWorkflow: "workflow:exportWorkflow",
-  importWorkflow: "workflow:importWorkflow",
-  exportWorkflowPackage: "workflow:exportWorkflowPackage",
-  previewWorkflowPackage: "workflow:previewWorkflowPackage",
-  importWorkflowPackage: "workflow:importWorkflowPackage",
-  runBatchWorkflow: "workflow:runBatchWorkflow",
-  suggestSelectors: "workflow:suggestSelectors",
-  normalizeRecordedEvents: "workflow:normalizeRecordedEvents",
-  dryRunValidateConfig: "workflow:dryRunValidateConfig",
-  saveWorkflowPackageFile: "workflow:saveWorkflowPackageFile",
-} as const satisfies typeof mainWorkflowIpcChannels;
+type WorkflowIpcMethod = keyof typeof mainWorkflowIpcChannels;
 
-async function invokeWorkflow<T>(channel: string, ...args: unknown[]): Promise<T> {
-  const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
+function workflowChannel<TMethod extends WorkflowIpcMethod>(
+  methodName: TMethod,
+): (typeof mainWorkflowIpcChannels)[TMethod] {
+  return `workflow:${methodName}` as (typeof mainWorkflowIpcChannels)[TMethod];
+}
+
+async function invokeWorkflow<T>(
+  methodName: WorkflowIpcMethod,
+  ...args: unknown[]
+): Promise<T> {
+  const result = (await ipcRenderer.invoke(workflowChannel(methodName), ...args)) as IpcResult<T>;
   if (!result.ok) {
     throw result.error;
   }
@@ -63,101 +27,103 @@ async function invokeWorkflow<T>(channel: string, ...args: unknown[]): Promise<T
 }
 
 const workflowApi: WorkflowElectronBridge = {
-  listWorkflows: () => invokeWorkflow(workflowIpcChannels.listWorkflows),
-  getWorkflow: (id) => invokeWorkflow(workflowIpcChannels.getWorkflow, id),
+  listWorkflows: () => invokeWorkflow("listWorkflows"),
+  getWorkflow: (id) => invokeWorkflow("getWorkflow", id),
   getWorkflowBrowserConfig: (workflowId) =>
-    invokeWorkflow(workflowIpcChannels.getWorkflowBrowserConfig, workflowId),
+    invokeWorkflow("getWorkflowBrowserConfig", workflowId),
   saveWorkflowBrowserConfig: (workflowId, config) =>
     invokeWorkflow(
-      workflowIpcChannels.saveWorkflowBrowserConfig,
+      "saveWorkflowBrowserConfig",
       workflowId,
       config,
     ),
   getWorkflowSettings: (workflowId) =>
-    invokeWorkflow(workflowIpcChannels.getWorkflowSettings, workflowId),
+    invokeWorkflow("getWorkflowSettings", workflowId),
+  resetWorkflowBrowserIdentity: (workflowId) =>
+    invokeWorkflow("resetWorkflowBrowserIdentity", workflowId),
   saveWorkflowSettings: (workflowId, settings) =>
-    invokeWorkflow(workflowIpcChannels.saveWorkflowSettings, workflowId, settings),
+    invokeWorkflow("saveWorkflowSettings", workflowId, settings),
   saveWorkflowSettingsSection: (workflowId, section, sectionValue) =>
     invokeWorkflow(
-      workflowIpcChannels.saveWorkflowSettingsSection,
+      "saveWorkflowSettingsSection",
       workflowId,
       section,
       sectionValue,
     ),
   validateWorkflowSettings: (settings) =>
-    invokeWorkflow(workflowIpcChannels.validateWorkflowSettings, settings),
+    invokeWorkflow("validateWorkflowSettings", settings),
   getCloakBrowserDiagnostics: () =>
-    invokeWorkflow(workflowIpcChannels.getCloakBrowserDiagnostics),
+    invokeWorkflow("getCloakBrowserDiagnostics"),
   installCloakBrowserBinary: () =>
-    invokeWorkflow(workflowIpcChannels.installCloakBrowserBinary),
+    invokeWorkflow("installCloakBrowserBinary"),
   cleanupOrphanedBrowserProfiles: () =>
-    invokeWorkflow(workflowIpcChannels.cleanupOrphanedBrowserProfiles),
+    invokeWorkflow("cleanupOrphanedBrowserProfiles"),
   validateWorkflowRun: (workflowId) =>
-    invokeWorkflow(workflowIpcChannels.validateWorkflowRun, workflowId),
+    invokeWorkflow("validateWorkflowRun", workflowId),
   createWorkflow: (name) =>
-    invokeWorkflow(workflowIpcChannels.createWorkflow, name),
+    invokeWorkflow("createWorkflow", name),
   renameWorkflow: (id, name) =>
-    invokeWorkflow(workflowIpcChannels.renameWorkflow, id, name),
+    invokeWorkflow("renameWorkflow", id, name),
   deleteWorkflow: (id, options) =>
-    invokeWorkflow(workflowIpcChannels.deleteWorkflow, id, options),
+    invokeWorkflow("deleteWorkflow", id, options),
   duplicateWorkflow: (workflowId, name) =>
-    invokeWorkflow(workflowIpcChannels.duplicateWorkflow, workflowId, name),
+    invokeWorkflow("duplicateWorkflow", workflowId, name),
   getWorkflowGraph: (workflowId) =>
-    invokeWorkflow(workflowIpcChannels.getWorkflowGraph, workflowId),
+    invokeWorkflow("getWorkflowGraph", workflowId),
   saveWorkflowGraph: (workflowId, graph) =>
-    invokeWorkflow(workflowIpcChannels.saveWorkflowGraph, workflowId, graph),
+    invokeWorkflow("saveWorkflowGraph", workflowId, graph),
   validateWorkflowGraph: (graph) =>
-    invokeWorkflow(workflowIpcChannels.validateWorkflowGraph, graph),
+    invokeWorkflow("validateWorkflowGraph", graph),
   compileWorkflowGraph: (graph) =>
-    invokeWorkflow(workflowIpcChannels.compileWorkflowGraph, graph),
+    invokeWorkflow("compileWorkflowGraph", graph),
   runWorkflow: (workflowId) =>
-    invokeWorkflow(workflowIpcChannels.runWorkflow, workflowId),
+    invokeWorkflow("runWorkflow", workflowId),
   runWorkflowFromNode: (workflowId, startNodeId) =>
-    invokeWorkflow(workflowIpcChannels.runWorkflowFromNode, workflowId, startNodeId),
-  stopRun: (runId) => invokeWorkflow(workflowIpcChannels.stopRun, runId),
-  getRunState: () => invokeWorkflow(workflowIpcChannels.getRunState),
-  listRunStates: () => invokeWorkflow(workflowIpcChannels.listRunStates),
-  listSchedules: () => invokeWorkflow(workflowIpcChannels.listSchedules),
+    invokeWorkflow("runWorkflowFromNode", workflowId, startNodeId),
+  stopRun: (runId) => invokeWorkflow("stopRun", runId),
+  getRunState: () => invokeWorkflow("getRunState"),
+  listRunStates: () => invokeWorkflow("listRunStates"),
+  listSchedules: () => invokeWorkflow("listSchedules"),
   getSchedule: (scheduleId) =>
-    invokeWorkflow(workflowIpcChannels.getSchedule, scheduleId),
+    invokeWorkflow("getSchedule", scheduleId),
   createSchedule: (input) =>
-    invokeWorkflow(workflowIpcChannels.createSchedule, input),
+    invokeWorkflow("createSchedule", input),
   updateSchedule: (scheduleId, patch) =>
-    invokeWorkflow(workflowIpcChannels.updateSchedule, scheduleId, patch),
+    invokeWorkflow("updateSchedule", scheduleId, patch),
   deleteSchedule: (scheduleId) =>
-    invokeWorkflow(workflowIpcChannels.deleteSchedule, scheduleId),
+    invokeWorkflow("deleteSchedule", scheduleId),
   enableSchedule: (scheduleId) =>
-    invokeWorkflow(workflowIpcChannels.enableSchedule, scheduleId),
+    invokeWorkflow("enableSchedule", scheduleId),
   disableSchedule: (scheduleId) =>
-    invokeWorkflow(workflowIpcChannels.disableSchedule, scheduleId),
+    invokeWorkflow("disableSchedule", scheduleId),
   listScheduleEvents: (filter) =>
-    invokeWorkflow(workflowIpcChannels.listScheduleEvents, filter),
+    invokeWorkflow("listScheduleEvents", filter),
   validateSchedule: (schedule) =>
-    invokeWorkflow(workflowIpcChannels.validateSchedule, schedule),
+    invokeWorkflow("validateSchedule", schedule),
   exportWorkflow: (workflowId) =>
-    invokeWorkflow(workflowIpcChannels.exportWorkflow, workflowId),
+    invokeWorkflow("exportWorkflow", workflowId),
   importWorkflow: (exported) =>
-    invokeWorkflow(workflowIpcChannels.importWorkflow, exported),
+    invokeWorkflow("importWorkflow", exported),
   exportWorkflowPackage: (workflowId, options) =>
-    invokeWorkflow(workflowIpcChannels.exportWorkflowPackage, workflowId, options),
+    invokeWorkflow("exportWorkflowPackage", workflowId, options),
   previewWorkflowPackage: (packageValue) =>
-    invokeWorkflow(workflowIpcChannels.previewWorkflowPackage, packageValue),
+    invokeWorkflow("previewWorkflowPackage", packageValue),
   importWorkflowPackage: (packageValue, options) =>
     invokeWorkflow(
-      workflowIpcChannels.importWorkflowPackage,
+      "importWorkflowPackage",
       packageValue,
       options,
     ),
   runBatchWorkflow: (workflowId, request) =>
-    invokeWorkflow(workflowIpcChannels.runBatchWorkflow, workflowId, request),
+    invokeWorkflow("runBatchWorkflow", workflowId, request),
   suggestSelectors: (snapshot) =>
-    invokeWorkflow(workflowIpcChannels.suggestSelectors, snapshot),
+    invokeWorkflow("suggestSelectors", snapshot),
   normalizeRecordedEvents: (events) =>
-    invokeWorkflow(workflowIpcChannels.normalizeRecordedEvents, events),
+    invokeWorkflow("normalizeRecordedEvents", events),
   dryRunValidateConfig: (config) =>
-    invokeWorkflow(workflowIpcChannels.dryRunValidateConfig, config),
+    invokeWorkflow("dryRunValidateConfig", config),
   saveWorkflowPackageFile: (packageValue) =>
-    invokeWorkflow(workflowIpcChannels.saveWorkflowPackageFile, packageValue),
+    invokeWorkflow("saveWorkflowPackageFile", packageValue),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

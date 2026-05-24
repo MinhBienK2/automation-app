@@ -44,6 +44,7 @@ export type WorkflowElectronBridge = {
     config: WorkflowBrowserConfig,
   ): Promise<void>;
   getWorkflowSettings(workflowId: string): Promise<WorkflowSettings>;
+  resetWorkflowBrowserIdentity(workflowId: string): Promise<WorkflowSettings>;
   saveWorkflowSettings(
     workflowId: string,
     settings: WorkflowSettings,

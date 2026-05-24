@@ -203,6 +203,7 @@ describe("WorkflowSettingsDialog", () => {
     const runLifecycle = within(dialog).getByRole("group", { name: "Run lifecycle" });
     const batchDefaults = within(dialog).getByRole("group", { name: "Batch defaults" });
     expect(within(runLifecycle).getByLabelText("Max workflow duration ms")).toBeInTheDocument();
+    expect(within(runLifecycle).getByRole("switch", { name: "Allow Run JavaScript" })).toBeChecked();
     expect(within(batchDefaults).getByLabelText("Batch concurrency limit")).toBeDisabled();
     expect(within(batchDefaults).getByText("Batch controls are paused until Batch Run UI is ready."))
       .toHaveClass("settings-field-group-footer");
@@ -320,6 +321,14 @@ describe("WorkflowSettingsDialog", () => {
         run_policy: expect.objectContaining({ browser_retention: "close" }),
       }),
     );
+
+    await user.click(screen.getByRole("switch", { name: "Allow Run JavaScript" }));
+
+    expect(onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        run_policy: expect.objectContaining({ execute_js_enabled: false }),
+      }),
+    );
   });
 
   test("reuse session toggles persistent storage without changing the saved identity", async () => {
@@ -382,18 +391,14 @@ describe("WorkflowSettingsDialog", () => {
     );
   });
 
-  test("resets browser identity with one explicit operator control", async () => {
+  test("resets browser identity through an in-app confirmation and backend callback", async () => {
     const user = userEvent.setup();
-    const onSettingsChange = vi.fn();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onResetBrowserIdentity = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm");
     const initialSettings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
     });
-    initialSettings.browser_launch.proxy_enabled = true;
-    initialSettings.browser_launch.proxy_server = "http://proxy.test:8080";
-    initialSettings.browser_launch.timezone = "America/New_York";
-    initialSettings.browser_launch.locale = "en-US";
 
     function Harness() {
       const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
@@ -408,9 +413,9 @@ describe("WorkflowSettingsDialog", () => {
           onOpenChange={vi.fn()}
           onSaveSettings={vi.fn()}
           onSettingsChange={(nextSettings) => {
-            onSettingsChange(nextSettings);
             setSettings(nextSettings);
           }}
+          onResetBrowserIdentity={onResetBrowserIdentity}
         />
       );
     }
@@ -418,19 +423,16 @@ describe("WorkflowSettingsDialog", () => {
     render(<Harness />);
 
     await user.click(screen.getByRole("button", { name: "Reset identity" }));
-    const resetLaunch = onSettingsChange.mock.lastCall?.[0].browser_launch;
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(resetLaunch.identity_id).toMatch(/^bi_/);
-    expect(resetLaunch.identity_id).not.toBe("bi_workflow-1");
-    expect(resetLaunch.profile_dir).toBe(resetLaunch.identity_id);
-    expect(resetLaunch.profile_name).toBe(resetLaunch.identity_id);
-    expect(resetLaunch.fingerprint_seed).toMatch(/^\d{5}$/);
-    expect(resetLaunch.fingerprint_seed).not.toBe("14523");
-    expect(resetLaunch.display_name).toBe("Checkout QA identity");
-    expect(resetLaunch.proxy_enabled).toBe(true);
-    expect(resetLaunch.proxy_server).toBe("http://proxy.test:8080");
-    expect(resetLaunch.timezone).toBe("America/New_York");
-    expect(resetLaunch.locale).toBe("en-US");
+    const dialog = screen.getByRole("dialog", { name: "Reset browser identity" });
+
+    expect(within(dialog).getByText(/creates a new backend-generated identity id/i))
+      .toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onResetBrowserIdentity).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Reset identity" }));
+
+    expect(onResetBrowserIdentity).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Duplicate identity" }))
       .not.toBeInTheDocument();
 

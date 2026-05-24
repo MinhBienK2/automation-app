@@ -182,6 +182,46 @@ describe("Workflow list integration", () => {
       .toBeDisabled();
   });
 
+  test("disables destructive workflow actions while a run is already active", async () => {
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_run_states: [
+        {
+          run_id: "run-1",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-17T09:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+          },
+        },
+      ],
+    });
+
+    renderApp();
+
+    const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
+    expect(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Duplicate Login flow",
+    })).toBeDisabled();
+    expect(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Export Login flow",
+    })).toBeDisabled();
+    expect(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Delete Login flow",
+    })).toBeDisabled();
+
+    await userEvent.click(within(workflowCard as HTMLElement).getByRole("button", {
+      name: "Delete Login flow",
+    }));
+
+    expect(screen.queryByRole("dialog", { name: "Delete Workflow" })).not.toBeInTheDocument();
+    expect(workflowBridgeMock.deleteWorkflow).not.toHaveBeenCalled();
+  });
+
   test("scopes running status and stop controls to the active workflow row", async () => {
     const secondWorkflow = {
       id: "workflow-2",

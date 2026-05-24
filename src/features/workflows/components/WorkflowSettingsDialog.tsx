@@ -43,6 +43,7 @@ type WorkflowSettingsDialogProps = {
   onActiveSectionChange: (section: WorkflowSettingsSectionId) => void;
   onSettingsChange: (settings: WorkflowSettings) => void;
   onSaveSettings: () => void | boolean | Promise<void | boolean>;
+  onResetBrowserIdentity?: () => void | Promise<void>;
   onDiscardChanges: () => void;
 };
 
@@ -56,6 +57,7 @@ export function WorkflowSettingsDialog({
   onActiveSectionChange,
   onSettingsChange,
   onSaveSettings,
+  onResetBrowserIdentity,
   onDiscardChanges,
 }: WorkflowSettingsDialogProps) {
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
@@ -171,6 +173,7 @@ export function WorkflowSettingsDialog({
                     runPolicy={settings.run_policy}
                     value={settings.browser_launch}
                     onChange={(value) => updateSection("browser_launch", value)}
+                    onResetBrowserIdentity={onResetBrowserIdentity}
                   />
                 ) : null}
                 {activeSection === "graph_defaults" ? (
@@ -344,6 +347,11 @@ function RunPolicySettingsSection({
             <option value="close">Close after run</option>
           </Select>
         </label>
+        <SwitchField
+          checked={value.execute_js_enabled}
+          label="Allow Run JavaScript"
+          onCheckedChange={(checked) => onChange({ ...value, execute_js_enabled: checked })}
+        />
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Batch defaults"
@@ -379,14 +387,28 @@ function BrowserLaunchSettingsSection({
   runPolicy,
   value,
   onChange,
+  onResetBrowserIdentity,
 }: {
   runPolicy: WorkflowSettingsRunPolicy;
   value: WorkflowSettingsBrowserLaunch;
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
+  onResetBrowserIdentity?: () => void | Promise<void>;
 }) {
+  const [resetIdentityOpen, setResetIdentityOpen] = useState(false);
+  const [resetIdentityPending, setResetIdentityPending] = useState(false);
   const persistent = value.session_mode === "persistent_profile";
   const canEnableRunFromSelected =
     persistent && runPolicy.browser_retention === "retain";
+  const confirmResetIdentity = async () => {
+    if (!onResetBrowserIdentity) return;
+    setResetIdentityPending(true);
+    try {
+      await onResetBrowserIdentity();
+      setResetIdentityOpen(false);
+    } finally {
+      setResetIdentityPending(false);
+    }
+  };
   return (
     <div className="settings-form-grid">
       <SettingsFieldGroup
@@ -432,16 +454,44 @@ function BrowserLaunchSettingsSection({
           <Button
             type="button"
             variant="destructive"
-            onClick={() => {
-              if (!window.confirm("Reset this browser identity? This creates a new profile directory and fingerprint seed.")) {
-                return;
-              }
-              onChange(resetBrowserIdentity(value));
-            }}
+            disabled={!onResetBrowserIdentity}
+            onClick={() => setResetIdentityOpen(true)}
           >
             Reset identity
           </Button>
         </div>
+        <Dialog open={resetIdentityOpen} onOpenChange={setResetIdentityOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset browser identity</DialogTitle>
+              <DialogDescription>
+                This creates a new backend-generated identity id, profile
+                directory, and fingerprint seed. Existing proxy, location,
+                font, and preflight preferences are preserved.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="dialog-footer-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={resetIdentityPending}
+                onClick={() => setResetIdentityOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={resetIdentityPending}
+                onClick={() => {
+                  void confirmResetIdentity();
+                }}
+              >
+                Reset identity
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <SwitchField
           checked={Boolean(value.run_from_selected_enabled)}
           disabled={!canEnableRunFromSelected}
@@ -782,37 +832,4 @@ function numberOrNull(value: string) {
   if (!value.trim()) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function resetBrowserIdentity(value: WorkflowSettingsBrowserLaunch): WorkflowSettingsBrowserLaunch {
-  return applyNewBrowserIdentity(value, value.display_name);
-}
-
-function applyNewBrowserIdentity(
-  value: WorkflowSettingsBrowserLaunch,
-  displayName: string,
-): WorkflowSettingsBrowserLaunch {
-  const identityId = createBrowserIdentityId();
-  const fingerprintSeed = createFingerprintSeed(value.fingerprint_seed);
-  return {
-    ...value,
-    identity_id: identityId,
-    display_name: displayName,
-    profile_dir: identityId,
-    profile_name: value.session_mode === "persistent_profile" ? identityId : null,
-    fingerprint_seed: fingerprintSeed,
-    run_from_selected_enabled: false,
-  };
-}
-
-function createBrowserIdentityId() {
-  const randomId = globalThis.crypto?.randomUUID?.().replace(/-/g, "").slice(0, 12);
-  return `bi_${randomId || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`}`;
-}
-
-function createFingerprintSeed(previousSeed: string) {
-  const nextSeed = String(10000 + Math.floor(Math.random() * 90000));
-  if (nextSeed !== previousSeed) return nextSeed;
-  const parsed = Number(nextSeed);
-  return String(parsed >= 99999 ? 10000 : parsed + 1).padStart(5, "0");
 }

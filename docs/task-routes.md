@@ -25,9 +25,9 @@ Update docs: task routes, product model, overview, or invariants only if the tas
 
 Read: `domain/action-taxonomy.md`, `domain/cross-feature-impact-map.md`, `architecture/frontend.md`, `architecture/domain.md`, `architecture/runner.md`, `contracts/action-configs.md`, `contracts/workflow-types.md`
 
-Verify: `src/types/workflow.ts`, `src/lib/actionCapabilities.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/ActionConfigEditor.tsx`, `src/features/workflows/components/ActionConfig*Fields.tsx`, `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, `electron/backend/commands.ts`, `README.md`
+Verify: `src/types/workflow.ts`, `src/lib/actionCapabilities.ts`, `src/lib/workflowUi.ts`, `src/features/workflows/lib/workflowStepForm.ts`, `src/features/workflows/components/ActionConfigEditor.tsx`, `src/features/workflows/components/ActionConfig*Fields.tsx`, `electron/backend/actions/registry.ts`, `electron/backend/actions/validation.ts`, `electron/backend/actions/execution.ts`, `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/runtime/runner.ts`, `electron/backend/commands.ts`, `README.md`
 
-Checks: `npm test -- src/lib/actionCapabilities.test.ts`, `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/graphCompiler.test.ts`, `npm test -- electron/backend/commands.test.ts`; add runner tests when execution changes.
+Checks: `npm test -- src/lib/actionCapabilities.test.ts`, `npm test -- src/features/workflows/lib/workflowStepForm.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/actions/registry.test.ts electron/backend/actions/validation.test.ts electron/backend/actions/execution.test.ts`, `npm test -- electron/backend/graph/validateGraph.test.ts electron/backend/graph/compiler.test.ts`, `npm test -- electron/backend/commands.test.ts`; add runner tests when execution changes.
 
 Update docs: action taxonomy, action config contract, workflow types, runner docs, smoke checklist if user-visible behavior changes.
 
@@ -65,9 +65,9 @@ Update docs: command boundary, Electron IPC contract, workflow types when respon
 
 Read: `architecture/domain.md`, `contracts/action-configs.md`, `domain/user-visible-invariants.md`
 
-Verify: `electron/backend/graphCompiler.ts`, `electron/backend/commands.ts`, `electron/backend/graphCompiler.test.ts`, affected UI error display.
+Verify: `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/actions/validation.ts`, `electron/backend/commands.ts`, `electron/backend/services/workflowSettingsService.ts`, `electron/backend/services/workflowPackageService.ts`, `electron/backend/graph/validateGraph.test.ts`, `electron/backend/graph/compiler.test.ts`, affected UI error display.
 
-Checks: `npm test -- electron/backend/graphCompiler.test.ts`; add `npm test -- electron/backend/commands.test.ts` when command-facing errors change; run `npm run build:electron` when backend types change.
+Checks: `npm test -- electron/backend/graph/validateGraph.test.ts electron/backend/graph/compiler.test.ts`; add `npm test -- electron/backend/commands.test.ts` when command-facing errors change; run `npm run build:electron` when backend types change.
 
 Update docs: domain architecture, action config contract, user-visible invariants.
 
@@ -75,7 +75,7 @@ Update docs: domain architecture, action config contract, user-visible invariant
 
 Read: `architecture/persistence.md`, `contracts/workflow-types.md`, `domain/workflow-lifecycle.md`
 
-Verify: `electron/backend/database.ts`, `electron/backend/workflowRepository.ts`, `electron/backend/commands.ts`, repository/command tests, import/export code in the Electron backend if persisted shape changes.
+Verify: `src/types/workflow.ts`, `src/lib/personaCatalog.ts`, `electron/backend/persistence/database.ts`, `electron/backend/persistence/workflowRepository.ts`, `electron/backend/commands.ts`, `electron/backend/services/workflowSettingsService.ts`, `electron/backend/services/workflowPackageService.ts`, repository/command tests, import/export code in the Electron backend if persisted shape changes.
 
 Checks: `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; add narrower repository tests when repository behavior changes independently of command handlers.
 
@@ -85,9 +85,9 @@ Update docs: persistence architecture, workflow types, workflow lifecycle.
 
 Read: `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/frontend.md`, `architecture/persistence.md`, `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`, `domain/execution-semantics.md`
 
-Verify: `src/App.tsx`, `src/layouts/`, `src/features/schedules/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/main.ts`, `electron/backend/database.ts`, `electron/backend/workflowScheduleRepository.ts`, `electron/backend/scheduler.ts`, `electron/backend/commands.ts`
+Verify: `src/App.tsx`, `src/layouts/`, `src/features/schedules/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/main.ts`, `electron/backend/persistence/database.ts`, `electron/backend/scheduling/workflowScheduleRepository.ts`, `electron/backend/scheduling/scheduler.ts`, `electron/backend/commands.ts`, `electron/backend/runtime/runManager.ts`
 
-Checks: `npm test -- electron/backend/scheduler.test.ts`, `npm test -- electron/backend/workflowScheduleRepository.test.ts`, `npm test -- electron/backend/commands.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- src/features/schedules/pages/SchedulesPage.test.tsx`, `npx tsc --noEmit`, `npm run build:electron`
+Checks: `npm test -- electron/backend/scheduling/scheduler.test.ts`, `npm test -- electron/backend/scheduling/workflowScheduleRepository.test.ts`, `npm test -- electron/backend/commands.test.ts`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- src/features/schedules/pages/SchedulesPage.test.tsx`, `npx tsc --noEmit`, `npm run build:electron`
 
 Update docs: workflow lifecycle, user-visible invariants, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, execution semantics, and this route when ownership or checks change.
 
@@ -95,9 +95,9 @@ Update docs: workflow lifecycle, user-visible invariants, frontend architecture,
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `electron/backend/graphCompiler.ts`, `electron/backend/runner.ts`, Electron runner tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
+Verify: `src/lib/personaCatalog.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/runtime/runner.ts`, `electron/backend/browser/sessionManager.ts`, `electron/backend/runtime/runManager.ts`, Electron runner/session-manager tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
 
-Checks: focused Electron runner/compiler tests, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
+Checks: focused Electron runner/compiler/session-manager tests, `npm run test:fingerprint` for browser identity or preflight evidence changes, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
 
 Update docs: execution semantics, runner architecture, run-state contract, impact map.
 
@@ -105,7 +105,7 @@ Update docs: execution semantics, runner architecture, run-state contract, impac
 
 Read: `domain/execution-semantics.md`, `architecture/frontend.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/App.tsx`, `src/features/runs/`, `src/features/workflows/pages/`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runner.ts`
+Verify: `src/App.tsx`, `src/features/runs/`, `src/features/workflows/pages/`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runtime/runManager.ts`, `electron/backend/runtime/runner.ts`
 
 Checks: `npm test -- src/features/workflows/pages/WorkflowListPage.test.tsx src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/commands.test.ts`
 
@@ -127,7 +127,7 @@ Read: architecture doc for the module, related contract docs when public shapes 
 
 Verify: current imports, callers, tests around moved logic.
 
-Checks: existing tests for the module; typecheck or Electron backend build checks for moved boundaries.
+Checks: existing tests for the module; add focused service tests for extracted backend services; typecheck or Electron backend build checks for moved boundaries. For Electron backend ownership moves, run `npm test -- ci-cd.test.ts` to keep the top-level backend layout guarded.
 
 Update docs: architecture ownership and task routes if file ownership or reading paths change.
 

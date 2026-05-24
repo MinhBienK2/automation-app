@@ -27,7 +27,8 @@
     "test:e2e:full": "npm run build:electron && playwright test",
     "test:e2e:flake": "npm run build:electron && playwright test tests/e2e/pointer-actions.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/extended-form-actions.e2e.ts tests/e2e/keyboard-dialog.e2e.ts --repeat-each=5",
     "test:e2e:staging": "npm run build:electron && E2E_STAGING=1 playwright test tests/e2e/staging-owned-targets.e2e.ts",
-    "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runner.smoke.test.ts",
+    "test:fingerprint": "vitest run electron/backend/browser/fingerprintRegression.test.ts electron/backend/browser/sessionManager.test.ts electron/backend/runtime/runner.test.ts",
+    "test:smoke": "RUN_CLOAKBROWSER_SMOKE=1 vitest run electron/backend/runtime/runner.smoke.test.ts",
     "preview": "vite preview"
   },
   "build": {
@@ -82,7 +83,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@xyflow/react": "^12.10.2",
     "class-variance-authority": "^0.7.1",
-    "cloakbrowser": "^0.3.30",
+    "cloakbrowser": "0.3.30",
     "clsx": "^2.1.1",
     "lucide-react": "^1.11.0",
     "mmdb-lib": "3.0.2",

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, test } from "vitest";
 import {
   createDefaultBrowserProfileName,
@@ -22,6 +24,7 @@ describe("workflow settings model", () => {
     expect(settings.general.name).toBe("Login flow");
     expect(settings.general.tags).toEqual([]);
     expect(settings.run_policy.browser_retention).toBe("retain");
+    expect(settings.run_policy.execute_js_enabled).toBe(true);
     expect(settings.run_policy.batch_concurrency_limit).toBe(1);
     expect(settings.browser_launch.session_mode).toBe("persistent_profile");
     expect(settings.browser_launch.identity_id).toBe("bi_workflow-1");
@@ -127,6 +130,7 @@ describe("workflow settings model", () => {
     expect(workflowSettingsHelp.run_policy.en.fieldGuide.map((field) => field.name)).toEqual([
       "Max workflow duration ms",
       "Browser retention",
+      "Allow Run JavaScript",
       "Batch concurrency limit",
       "Batch runs are headless",
       "Stop batch on first failed row",
@@ -164,6 +168,20 @@ describe("workflow settings model", () => {
   test("creates readable generated browser profile names", () => {
     expect(createDefaultBrowserProfileName("abc123")).toBe("profile-abc123");
     expect(createDefaultBrowserProfileName("A B/C")).toBe("profile-A_B_C");
+  });
+
+  test("does not use Math.random for browser identity helpers", () => {
+    const settingsSource = readFileSync(
+      path.join(process.cwd(), "src/features/workflows/lib/workflowSettings.ts"),
+      "utf8",
+    );
+    const dialogSource = readFileSync(
+      path.join(process.cwd(), "src/features/workflows/components/WorkflowSettingsDialog.tsx"),
+      "utf8",
+    );
+
+    expect(settingsSource).not.toContain("Math.random");
+    expect(dialogSource).not.toContain("Math.random");
   });
 
   test("converts initial variables between rows and JSON text", () => {

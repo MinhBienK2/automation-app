@@ -24,6 +24,7 @@ import {
   listSchedules,
   listWorkflows,
   previewWorkflowPackage,
+  resetWorkflowBrowserIdentity as resetWorkflowBrowserIdentityCommand,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
   runWorkflowFromNode as runWorkflowFromNodeCommand,
@@ -813,6 +814,24 @@ function App() {
     return true;
   }
 
+  async function resetWorkflowBrowserIdentity() {
+    if (!workflowSettings) return;
+    const saved = await persistDirtyWorkflowSettings();
+    if (!saved) return;
+    setAppError("");
+    try {
+      const rotated = await resetWorkflowBrowserIdentityCommand(workflowSettings.workflow_id);
+      setWorkflowSettings(rotated);
+      setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(rotated));
+      setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
+      setToastMessage("Browser identity reset.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+      await loadWorkflows();
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
   async function runGraph() {
     if (!detail || !workflowGraph) return;
     setAppError("");
@@ -1230,6 +1249,7 @@ function App() {
         onActiveSectionChange={setWorkflowSettingsActiveSection}
         onSettingsChange={changeWorkflowSettings}
         onSaveSettings={persistWorkflowSettings}
+        onResetBrowserIdentity={resetWorkflowBrowserIdentity}
         onDiscardChanges={discardWorkflowSettingsChanges}
       />
       {toastMessage ? (

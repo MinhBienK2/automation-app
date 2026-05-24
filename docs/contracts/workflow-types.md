@@ -3,11 +3,14 @@
 ## Source Files
 
 - TypeScript: `src/types/workflow.ts`
+- Shared persona catalog: `src/lib/personaCatalog.ts`
 - Electron bridge: `src/types/electron.ts`
 - Node command handlers: `electron/backend/commands.ts`
-- TypeScript graph compiler: `electron/backend/graphCompiler.ts`
-- CloakBrowser runner: `electron/backend/runner.ts`
-- SQLite repository: `electron/backend/workflowRepository.ts`
+- Workflow Settings service: `electron/backend/services/workflowSettingsService.ts`
+- Workflow package service: `electron/backend/services/workflowPackageService.ts`
+- TypeScript graph compiler: `electron/backend/graph/compiler.ts`
+- CloakBrowser runner: `electron/backend/runtime/runner.ts`
+- SQLite repository: `electron/backend/persistence/workflowRepository.ts`
 
 ## Workflow Shapes
 
@@ -39,6 +42,7 @@ Workflow Settings are persisted separately from graph JSON:
   run_policy: {
     max_workflow_duration_ms,
     browser_retention,
+    execute_js_enabled,
     batch_concurrency_limit,
     batch_headless,
     batch_stop_on_first_failed_row
@@ -47,6 +51,25 @@ Workflow Settings are persisted separately from graph JSON:
     session_mode,
     identity_id,
     display_name,
+    persona_id,
+    persona: {
+      id,
+      label,
+      rationale,
+      os_bucket,
+      browser_channel_bucket,
+      viewport: { width, height },
+      window: { width, height },
+      timezone,
+      locale,
+      proxy_geo_policy,
+      proxy_region,
+      webrtc_mode,
+      font_bundle: { label, path, expected_families },
+      account_label,
+      test_account_binding,
+      behavioral_timing_profile
+    },
     profile_dir,
     fingerprint_seed,
     profile_name,
@@ -83,18 +106,18 @@ Workflow Settings are persisted separately from graph JSON:
 }
 ```
 
-`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. `fingerprint_seed` is generated when an identity is created and reused until the operator resets the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs. `fingerprint_fonts_dir` is an optional local readable directory passed to CloakBrowser as the managed font inventory for the launch identity.
+`identity_id` and `profile_dir` are stable storage identifiers; `display_name` is operator-editable metadata. New and rotated backend-owned identities use high-entropy `bi_<32 hex>` ids. `fingerprint_seed` is generated when an identity is created, deterministically derived from the identity id for backend rotations, collision-probed against other saved workflow seeds, and reused until the operator resets the identity. `profile_name` mirrors `profile_dir` for persistent-profile runs. `persona_id` selects a stable catalog persona, and `persona` stores the resolved OS/browser bucket, viewport/window dimensions, timezone/locale, proxy/geo policy, WebRTC mode, font bundle metadata, account label/test account binding, and behavior timing profile for that workflow identity. `src/lib/personaCatalog.ts` is the shared catalog source used by frontend defaults and backend normalization. `fingerprint_fonts_dir` is an optional local readable directory passed to CloakBrowser as the managed font inventory for the launch identity; when a persona font bundle has a path and no explicit directory is set, normalization uses the persona path.
 
 Proxy credentials can be provided as URL credentials or separate
 username/password fields, but not both. Package export removes proxy passwords
 and proxy URL credentials. Raw Chromium argument text and ad hoc fingerprint
 override fields are not part of the public settings contract.
-CloakBrowser humanization defaults to `true` and is persisted as the Browser Launch `humanize` toggle. `human_preset` maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with invalid or missing persisted values normalized to `default`.
+CloakBrowser humanization defaults to `true` and is persisted as the Browser Launch `humanize` toggle. `human_preset` maps to CloakBrowser `humanPreset` and accepts `default` or `careful`, with invalid or missing persisted values normalized through the selected persona timing profile.
 
 Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings are valid flow-only packages.
-Run Policy batch fields remain part of the current contract for backend batch execution, but Workflow Settings currently renders those batch controls as visible, disabled values until Batch Run UI is ready.
+Run Policy `execute_js_enabled` defaults to true for authorized test profiles. When it is false, the runner rejects `execute_js` / Run JavaScript actions before evaluating script text and returns a clear failed step error. Run Policy batch fields remain part of the current contract for backend batch execution, but Workflow Settings currently renders those batch controls as visible, disabled values until Batch Run UI is ready.
 Graph default link wait is an authoring default only. It is copied onto newly created graph links and does not rewrite existing links.
 
 ## Workflow Package Shape
@@ -126,19 +149,27 @@ Package preview serializes as `{ workflow_name, includes_flow, settings_sections
 Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and secret search/hash portions of `settings.browser_launch.preflight_probe_url`.
 
 `BrowserProfileDiagnostics` reports profile directory, identity/workflow
-metadata, approximate size, last modified time, last run time, and active-session
-status. `BrowserProfileCleanupResult` reports deleted orphan profile directories,
+metadata, bounded approximate size, last modified time, last run time, and active-session
+status. The profile size walk is capped by diagnostics traversal limits so common diagnostics do not block on very large Chromium profiles. `BrowserProfileCleanupResult` reports deleted orphan profile directories,
 skipped referenced or active profiles, and reclaimed bytes.
-`CloakBrowserDiagnostics` also reports font-check status, last smoke result
-status, and the latest persisted `fingerprint_preflight` verdict summary when a
-run has produced one.
+`CloakBrowserDiagnostics` also reports real fingerprint font diagnostics, last
+smoke result status, and the latest persisted `fingerprint_preflight` verdict
+summary when a run has produced one. Font diagnostics are `not_configured`,
+`ok`, `warning`, or `error`; configured directories report file count, total
+bytes, normalized content hash, expected family coverage, missing families, and
+the workflow identities sharing each directory.
 
 `WorkflowDeleteOptions` serializes as `{ deleteBrowserProfile?: boolean }`.
-Deletion keeps profile data by default. When `deleteBrowserProfile` is true, the
-backend removes only the deleting workflow's private profile directory; shared
-or active-session profile directories are retained.
+Deletion keeps profile data by default. Deletion is rejected while the workflow
+has an active run, while its persistent profile is owned by an active run, or
+while a retained session still owns the workflow/profile. When
+`deleteBrowserProfile` is true, the backend removes only the deleting workflow's
+private profile directory; shared or active-session profile directories are
+retained.
 
-Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as `fingerprint_fonts_dir` are preserved, and `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
+`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy metadata, locale/timezone, preflight, humanization, and `fingerprint_fonts_dir` are preserved, `run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
+
+Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 
 ## Batch Run Shape
 
@@ -227,7 +258,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 
 The main graph toolbar exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End.
 
-The Electron backend compiler currently emits action, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports.
+The Electron backend compiler currently emits action, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports. Nested compiled action configs retain their source graph node id/label so runner traces and persisted `run_steps` rows can identify the exact executed branch/body action.
 The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
 Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Current owned fingerprint preflight is a Browser Launch identity setting, not a graph prelude action.
@@ -257,7 +288,10 @@ Action configs use a tagged TypeScript DTO shape:
 { type: "click", config: { ... } }
 ```
 
-The `type` string must match the TypeScript `ActionType` union.
+The `type` string must match the TypeScript `ActionType` union. Unknown action
+types, unknown nested action types, unknown graph `node_type` values, and
+unknown `condition.kind` values are rejected by backend validation before they
+can be saved, imported, compiled, or executed through normal commands.
 `scroll` accepts `mode: "page" | "into_view" | "until_visible"`. Missing
 mode is treated as legacy `"page"` and uses `direction` plus `pixels`.
 Element-targeted scroll modes use `target` or legacy `xpath`, optional

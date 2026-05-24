@@ -8,10 +8,11 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type {
   ActionConfig,
   CompiledWorkflowGraph,
+  RunState,
   WorkflowSettings,
-} from "../../src/types/workflow";
-import { defaultWorkflowSettings } from "./commands";
-import { createAppPaths } from "./database";
+} from "../../../src/types/workflow";
+import { defaultWorkflowSettings } from "../commands";
+import { createAppPaths } from "../persistence/database";
 import {
   BrowserWorkflowRunner,
   createCloakBrowserDriver,
@@ -31,14 +32,14 @@ afterEach(async () => {
 describe("BrowserWorkflowRunner", () => {
   test("keeps evidence artifact path helpers outside the runner module", () => {
     const runnerSource = readFileSync(
-      path.join(process.cwd(), "electron/backend/runner.ts"),
+      path.join(process.cwd(), "electron/backend/runtime/runner.ts"),
       "utf8",
     );
 
-    expect(existsSync(path.join(process.cwd(), "electron/backend/evidenceArtifacts.ts"))).toBe(
+    expect(existsSync(path.join(process.cwd(), "electron/backend/evidence/artifacts.ts"))).toBe(
       true,
     );
-    expect(runnerSource).toContain("./evidenceArtifacts.js");
+    expect(runnerSource).toContain("../evidence/artifacts.js");
     expect(runnerSource).not.toContain("function resolveEvidenceArtifact");
     expect(runnerSource).not.toContain("function safeArtifactName");
   });
@@ -48,6 +49,8 @@ describe("BrowserWorkflowRunner", () => {
     const driver = createFakeDriver(context);
     const paths = await createTempAppPaths();
     const fontsDir = path.join(paths.rootDir, "fingerprint-fonts");
+    await fs.mkdir(fontsDir, { recursive: true });
+    await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
     const settings = makeSettings({
       browser_launch: {
         session_mode: "persistent_profile",
@@ -93,7 +96,7 @@ describe("BrowserWorkflowRunner", () => {
           humanize: false,
           humanPreset: "careful",
           userAgent: undefined,
-          viewport: { width: 1920, height: 1080 },
+          viewport: settings.browser_launch.persona.viewport,
           timezone: "America/New_York",
           locale: "en-US",
           geoip: false,
@@ -101,7 +104,7 @@ describe("BrowserWorkflowRunner", () => {
             "--fingerprint=38291",
             `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
-            "--window-size=1920,1080",
+            `--window-size=${settings.browser_launch.persona.window.width},${settings.browser_launch.persona.window.height}`,
           ],
           proxy: {
             server: "http://proxy.local:8080",
@@ -116,13 +119,19 @@ describe("BrowserWorkflowRunner", () => {
         }),
       },
     ]);
-    expect(result.outputs?.browser_identity).toEqual({
+    expect(result.outputs?.browser_identity).toMatchObject({
       run_id: "run-identity-1",
       identity_id: "bi_test_identity",
       display_name: "QA Profile Display",
+      persona: expect.objectContaining({
+        id: expect.any(String),
+        viewport: settings.browser_launch.persona.viewport,
+        window: settings.browser_launch.persona.window,
+      }),
       profile_dir: "bi_test_identity",
       session_mode: "persistent_profile",
       fingerprint_seed_hash: expect.stringMatching(/^[a-f0-9]{16}$/),
+      fingerprint_fonts_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       proxy_label: "Corp proxy",
       proxy_region: "us-east",
       proxy_provider: "owned-lab",
@@ -330,7 +339,34 @@ describe("BrowserWorkflowRunner", () => {
       run_id: "fp-run-pass",
       profile_id: "bi_probe",
       mismatches: [],
-      evidence: { browser_device_seen: true, automation_seen: true },
+      evidence: {
+        navigator: {
+          webdriver: false,
+          user_agent: "Mozilla/5.0 Chrome/130",
+          languages: ["vi-VN", "vi"],
+        },
+        hashes: {
+          canvas: "canvas-pass",
+          webgl: "webgl-pass",
+          audio: "audio-pass",
+        },
+        fonts: {
+          count: 58,
+          hash: "fonts-pass",
+        },
+        timezone: "Asia/Ho_Chi_Minh",
+        locale: "vi-VN",
+        webrtc: {
+          mode: "default",
+          leak_status: "none",
+        },
+        viewport: { width: 1600, height: 900 },
+        window: { width: 1680, height: 1050 },
+        screen: { width: 1680, height: 1050 },
+        proxy: { aligned: true },
+        storage: { persistent: true, continuity: "same_profile" },
+        automation: { headless_leak: false },
+      },
     });
     const context = new FakeContext(page);
     const runner = new BrowserWorkflowRunner({
@@ -368,6 +404,94 @@ describe("BrowserWorkflowRunner", () => {
       passed: true,
       verdict: "passed",
       run_id: "fp-run-pass",
+    });
+    expect(result.outputs?.fingerprint_regression).toMatchObject({
+      schema_version: 1,
+      preflight_run_id: "fp-run-pass",
+      summary: {
+        failed: 0,
+        missing: 0,
+      },
+      checks: expect.arrayContaining([
+        expect.objectContaining({ id: "canvas.hash", status: "passed" }),
+        expect.objectContaining({ id: "display.viewport", status: "passed" }),
+        expect.objectContaining({ id: "storage.continuity", status: "passed" }),
+      ]),
+    });
+  });
+
+  test("recursively redacts sensitive owned fingerprint preflight evidence", async () => {
+    const page = new FakePage();
+    page.evaluateResult = {
+      passed: true,
+      verdict: "pass",
+      risk_score: 0.1,
+      run_id: "probe-run",
+      profile_id: "probe-profile",
+      mismatches: [],
+      evidence: {
+        canvas_hash_bucket: "stable",
+        webgl_renderer_label: "ANGLE Intel",
+        timezone: "Asia/Ho_Chi_Minh",
+        locale: "vi-VN",
+        webrtc_leak_status: "none",
+        nested: {
+          token: "secret-token",
+          authorization: "Bearer secret",
+          headers: {
+            cookie: "sid=secret",
+          },
+          ip: "192.0.2.10",
+          email: "qa@example.test",
+          account_id: "acct-123",
+        },
+        samples: [
+          { secret: "nested-secret", safe_metric: 42 },
+          { ip_address: "198.51.100.20", canvas_hash_bucket: "bucket-b" },
+        ],
+      },
+    };
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: { steps: [] },
+      settings: makeSettings({
+        browser_launch: {
+          preflight_enabled: true,
+          preflight_probe_url: "https://probe.owned.test/verdict",
+          preflight_allowed_origins: ["https://probe.owned.test"],
+          headless: false,
+        },
+      }),
+      mode: "run_workflow",
+      runId: "run-preflight-redaction",
+    });
+
+    expect(result.outputs?.fingerprint_preflight).toMatchObject({
+      passed: true,
+      verdict: "pass",
+      evidence: {
+        canvas_hash_bucket: "stable",
+        webgl_renderer_label: "ANGLE Intel",
+        timezone: "Asia/Ho_Chi_Minh",
+        locale: "vi-VN",
+        webrtc_leak_status: "none",
+        nested: {
+          token: "[REDACTED]",
+          authorization: "[REDACTED]",
+          headers: "[REDACTED]",
+          ip: "[REDACTED]",
+          email: "[REDACTED]",
+          account_id: "[REDACTED]",
+        },
+        samples: [
+          { secret: "[REDACTED]", safe_metric: 42 },
+          { ip_address: "[REDACTED]", canvas_hash_bucket: "bucket-b" },
+        ],
+      },
     });
   });
 
@@ -513,8 +637,97 @@ describe("BrowserWorkflowRunner", () => {
         node_id: "script",
         action_type: "execute_js",
         status: "success",
+        audit_tags: ["direct_dom_script", "requires_review"],
       }),
     ]);
+  });
+
+  test("rejects execute_js when run policy disables direct JavaScript execution", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("script", "Script", {
+            type: "execute_js",
+            config: { script: "return 1", output_name: "value" },
+          }),
+        ],
+      },
+      settings: makeSettings({
+        run_policy: { execute_js_enabled: false } as Partial<
+          WorkflowSettings["run_policy"]
+        >,
+      }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "script",
+      action_type: "execute_js",
+      reason: "Execute JavaScript is disabled by Run Policy",
+    });
+    expect(result.outputs?.value).toBeUndefined();
+  });
+
+  test("classifies, redacts, and limits evidence outputs without dropping traces", async () => {
+    const page = new FakePage();
+    page.evaluateResult = {
+      api_token: "secret-token",
+      visible_text: "x".repeat(5000),
+    };
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("script", "Script", {
+            type: "execute_js",
+            config: {
+              script: "return { api_token: 'secret-token', visible_text: 'x'.repeat(5000) }",
+              output_name: "script_result",
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.outputs?.script_result).toMatchObject({
+      api_token: "[REDACTED]",
+      visible_text: expect.stringContaining("[TRUNCATED"),
+    });
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "script",
+        action_type: "execute_js",
+        audit_tags: ["direct_dom_script", "requires_review"],
+      }),
+    ]);
+    expect(result.outputs?.__evidence_model).toMatchObject({
+      schema_version: 1,
+      outputs: expect.arrayContaining([
+        expect.objectContaining({
+          key: "script_result",
+          category: "page_observation",
+          redacted: true,
+          truncated: true,
+        }),
+        expect.objectContaining({
+          key: "__action_traces",
+          category: "action_trace",
+          truncated: false,
+        }),
+      ]),
+    });
   });
 
   test("times out execute_js when timeout_ms elapses before evaluation resolves", async () => {
@@ -932,7 +1145,7 @@ describe("BrowserWorkflowRunner", () => {
 
   test("keeps scroll runner free of debug console logging", () => {
     const runnerSource = readFileSync(
-      path.join(process.cwd(), "electron/backend/runner.ts"),
+      path.join(process.cwd(), "electron/backend/runtime/runner.ts"),
       "utf8",
     );
 
@@ -1561,6 +1774,7 @@ describe("BrowserWorkflowRunner", () => {
   });
 
   test("keeps break and continue scoped to the current loop", async () => {
+    const progress: Array<Partial<RunState>> = [];
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext()),
@@ -1579,7 +1793,7 @@ describe("BrowserWorkflowRunner", () => {
                   type: "if_condition",
                   config: {
                     condition: { kind: "output_equals", name: "item", value: "skip" },
-                    then_steps: [{ type: "continue_loop", config: {} }],
+                    then_steps: [{ type: "continue_loop", graph_node_id: "continue-node", config: {} }],
                     else_steps: [],
                   },
                 },
@@ -1595,7 +1809,7 @@ describe("BrowserWorkflowRunner", () => {
                   type: "if_condition",
                   config: {
                     condition: { kind: "output_equals", name: "item", value: "stop" },
-                    then_steps: [{ type: "break_loop", config: {} }],
+                    then_steps: [{ type: "break_loop", graph_node_id: "break-node", config: {} }],
                     else_steps: [],
                   },
                 },
@@ -1620,6 +1834,7 @@ describe("BrowserWorkflowRunner", () => {
       },
       settings: makeSettings(),
       mode: "run_workflow",
+      onProgress: (state) => progress.push(state),
     });
 
     expect(result.status).toBe("success");
@@ -1627,6 +1842,15 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.outputs?.visited).toBe("stop");
     expect(result.outputs?.after_break).toBeUndefined();
     expect(result.outputs?.after_loop).toBe("done");
+    expect(progress).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ current_step_id: "continue-node" }),
+        expect.objectContaining({ current_step_id: "break-node" }),
+        expect.objectContaining({ current_step_id: "loop" }),
+        expect.objectContaining({ current_step_id: "after" }),
+      ]),
+    );
+    expect(result.current_step_id).toBeNull();
   });
 
   test("evaluates browser-backed conditions and runs repeat-until timeout steps", async () => {
@@ -1997,6 +2221,307 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.outputs?.branch).toBe("default");
   });
 
+  test("records nested branch traces with parent and sequence metadata", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("seed", "Seed", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "state", value_type: "text", value: "ready" }],
+            },
+          }),
+          step("if", "If", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "output_equals", name: "state", value: "ready" },
+              then_steps: [
+                {
+                  type: "set_variable",
+                  graph_node_id: "then-a",
+                  graph_label: "Then A",
+                  config: {
+                    variables: [{ name: "branch.first", value_type: "text", value: "a" }],
+                  },
+                },
+                {
+                  type: "set_variable",
+                  graph_node_id: "then-b",
+                  graph_label: "Then B",
+                  config: {
+                    variables: [{ name: "branch.second", value_type: "text", value: "b" }],
+                  },
+                },
+              ],
+              else_steps: [],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.__action_traces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          node_id: "then-a",
+          label: "Then A",
+          action_type: "set_variable",
+          parent_node_id: "if",
+          trace_sequence: 1,
+          output_summary: {
+            added_keys: ["branch.first"],
+            changed_keys: [],
+            removed_keys: [],
+          },
+          status: "success",
+        }),
+        expect.objectContaining({
+          node_id: "then-b",
+          label: "Then B",
+          action_type: "set_variable",
+          parent_node_id: "if",
+          trace_sequence: 2,
+          output_summary: {
+            added_keys: ["branch.second"],
+            changed_keys: [],
+            removed_keys: [],
+          },
+          status: "success",
+        }),
+        expect.objectContaining({
+          node_id: "if",
+          action_type: "if_condition",
+          trace_sequence: 3,
+          status: "success",
+        }),
+      ]),
+    );
+  });
+
+  test("records repeated loop body traces with stable sequence metadata", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("seed", "Seed", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "keep_going", value_type: "text", value: "yes" }],
+            },
+          }),
+          step("while", "While", {
+            type: "while_loop",
+            config: {
+              condition: { kind: "output_equals", name: "keep_going", value: "yes" },
+              max_attempts: 2,
+              timeout_ms: null,
+              steps: [
+                {
+                  type: "set_variable",
+                  graph_node_id: "loop-body",
+                  graph_label: "Loop Body",
+                  config: {
+                    variables: [{ name: "last_loop", value_type: "text", value: "ran" }],
+                  },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+    const traces = result.outputs?.__action_traces as Array<Record<string, unknown>>;
+
+    expect(result.status).toBe("success");
+    expect(
+      traces.filter((trace) => trace.node_id === "loop-body").map((trace) => ({
+        parent_node_id: trace.parent_node_id,
+        trace_sequence: trace.trace_sequence,
+        status: trace.status,
+      })),
+    ).toEqual([
+      { parent_node_id: "while", trace_sequence: 1, status: "success" },
+      { parent_node_id: "while", trace_sequence: 2, status: "success" },
+    ]);
+  });
+
+  test("records retry attempt traces and final control-node status", async () => {
+    class RetryPage extends FakePage {
+      attempts = 0;
+
+      override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+        if (typeof pageFunction === "string" && pageFunction.includes("__retry_value__")) {
+          this.attempts += 1;
+          return this.attempts === 1 ? "not-ready" : "ready";
+        }
+        return super.evaluate(pageFunction, arg);
+      }
+    }
+    const page = new RetryPage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("retry", "Retry", {
+            type: "retry_block",
+            config: {
+              max_attempts: 2,
+              delay_ms: 1,
+              steps: [
+                {
+                  type: "execute_js",
+                  graph_node_id: "retry-script",
+                  graph_label: "Retry Script",
+                  config: {
+                    script: "return '__retry_value__'",
+                    output_name: "retry_value",
+                    timeout_ms: 1000,
+                  },
+                },
+                {
+                  type: "assert_output",
+                  graph_node_id: "retry-assert",
+                  graph_label: "Retry Assert",
+                  config: {
+                    name: "retry_value",
+                    match_mode: "equals",
+                    value: "ready",
+                  },
+                },
+              ],
+              failed_steps: [],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+    const traces = result.outputs?.__action_traces as Array<Record<string, unknown>>;
+
+    expect(result.status).toBe("success");
+    expect(
+      traces.map((trace) => ({
+        node_id: trace.node_id,
+        parent_node_id: trace.parent_node_id,
+        trace_sequence: trace.trace_sequence,
+        status: trace.status,
+      })),
+    ).toEqual([
+      { node_id: "retry-script", parent_node_id: "retry", trace_sequence: 0, status: "success" },
+      { node_id: "retry-assert", parent_node_id: "retry", trace_sequence: 1, status: "failed" },
+      { node_id: "retry-script", parent_node_id: "retry", trace_sequence: 2, status: "success" },
+      { node_id: "retry-assert", parent_node_id: "retry", trace_sequence: 3, status: "success" },
+      { node_id: "retry", parent_node_id: undefined, trace_sequence: 4, status: "success" },
+    ]);
+    expect(traces[0]).toMatchObject({
+      output_summary: {
+        added_keys: ["retry_value"],
+        changed_keys: [],
+        removed_keys: [],
+      },
+    });
+    expect(traces[2]).toMatchObject({
+      output_summary: {
+        added_keys: [],
+        changed_keys: ["retry_value"],
+        removed_keys: [],
+      },
+    });
+  });
+
+  test("fails run when a compiled step has an unknown action type", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("unknown", "Unknown", {
+            type: "mystery_action",
+            config: {},
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "unknown",
+      action_type: "mystery_action",
+      reason: "Unsupported action type: mystery_action",
+    });
+  });
+
+  test("fails run when a compiled condition has an unknown kind", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("if", "If", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "fingerprint_score", name: "score", value: "low" },
+              then_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [{ name: "branch", value_type: "text", value: "then" }],
+                  },
+                },
+              ],
+              else_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [{ name: "branch", value_type: "text", value: "else" }],
+                  },
+                },
+              ],
+            },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "if",
+      action_type: "if_condition",
+      reason: "Unsupported condition kind: fingerprint_score",
+    });
+    expect(result.outputs?.branch).toBeUndefined();
+  });
+
   test("executes graph no-op actions without changing browser state or outputs", async () => {
     const context = new FakeContext();
     const runner = new BrowserWorkflowRunner({
@@ -2315,6 +2840,22 @@ describe("BrowserWorkflowRunner", () => {
         action_type: "take_screenshot",
         artifact_kind: "screenshot",
         path: "runs/run-evidence-1/screenshots/001-shot-checkout-receipt.png",
+      }),
+    ]);
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "shot",
+        evidence_summary: [
+          {
+            artifact_kind: "screenshot",
+            path: "runs/run-evidence-1/screenshots/001-shot-checkout-receipt.png",
+          },
+        ],
+        output_summary: {
+          added_keys: ["shot"],
+          changed_keys: [],
+          removed_keys: [],
+        },
       }),
     ]);
     await expect(

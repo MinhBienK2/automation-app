@@ -140,8 +140,8 @@ h4 {
 }
 
 h1 {
-  font-size: clamp(30px, 4vw, 48px);
-  line-height: 1.08;
+  font-size: 36px;
+  line-height: 1.25;
 }
 
 h2 {

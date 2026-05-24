@@ -4,8 +4,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { createAppPaths, initializeDatabase } from "./database";
-import { WorkflowRepository } from "./workflowRepository";
+import { createAppPaths, initializeDatabase } from "../persistence/database";
+import { WorkflowRepository } from "../persistence/workflowRepository";
 import { WorkflowScheduleRepository } from "./workflowScheduleRepository";
 
 const tempRoots: string[] = [];

@@ -1,8 +1,8 @@
 // @vitest-environment node
 
 import { describe, expect, test } from "vitest";
-import type { WorkflowGraph } from "../../src/types/workflow";
-import { migrateWorkflowGraph } from "./workflowGraphMigration";
+import type { WorkflowGraph } from "../../../src/types/workflow";
+import { migrateWorkflowGraph } from "./migration";
 
 describe("workflow graph migration", () => {
   test("only upgrades graph version and preserves current contract nodes", () => {

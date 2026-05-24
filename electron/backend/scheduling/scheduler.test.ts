@@ -10,7 +10,7 @@ import { WorkflowScheduleRepository } from "./workflowScheduleRepository";
 import type {
   WorkflowSchedule,
   WorkflowScheduleEvent,
-} from "../../src/types/workflow";
+} from "../../../src/types/workflow";
 
 describe("workflow schedule calculation", () => {
   test("calculates once, interval, daily, weekly, and monthly next runs", () => {

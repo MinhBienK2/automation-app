@@ -12,9 +12,9 @@ Check:
 - `src/features/workflows/lib/workflowStepForm.ts`
 - `src/features/workflows/components/ActionConfigEditor.tsx`
 - `src/features/workflows/components/ActionConfig*Fields.tsx`
-- `electron/backend/graphCompiler.ts`
+- `electron/backend/graph/compiler.ts`
 - `electron/backend/commands.ts`
-- `electron/backend/graphCompiler.test.ts`
+- `electron/backend/graph/compiler.test.ts`
 - `electron/backend/commands.test.ts`
 - `README.md` smoke checklist
 
@@ -48,9 +48,9 @@ Risk:
 
 Check:
 
-- `electron/backend/runner.ts`
-- `electron/backend/runner.test.ts`
-- `electron/backend/runner.smoke.test.ts`
+- `electron/backend/runtime/runner.ts`
+- `electron/backend/runtime/runner.test.ts`
+- `electron/backend/runtime/runner.smoke.test.ts`
 - `electron/backend/commands.ts`
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`
 - `src/features/workflows/components/RunStatusBar.tsx`
@@ -66,8 +66,8 @@ Risk:
 
 Check:
 
-- `electron/backend/database.ts`
-- `electron/backend/workflowRepository.ts`
+- `electron/backend/persistence/database.ts`
+- `electron/backend/persistence/workflowRepository.ts`
 - `electron/backend/commands.ts`
 - `electron/backend/commands.test.ts`
 - Import/export commands if persisted shape changes.

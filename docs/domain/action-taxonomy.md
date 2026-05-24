@@ -5,8 +5,12 @@
 - TypeScript union: `src/types/workflow.ts`
 - Capability registry: `src/lib/actionCapabilities.ts`
 - UI labels/groups: `src/lib/workflowUi.ts`
-- Graph compiler/defaults: `electron/backend/graphCompiler.ts`
-- Runner dispatch: `electron/backend/runner.ts`
+- Graph compiler/defaults: `electron/backend/graph/compiler.ts`
+- Runner dispatch: `electron/backend/runtime/runner.ts`
+- Backend action registry: `electron/backend/actions/registry.ts`
+- Backend action validation registry: `electron/backend/actions/validation.ts`
+- Backend action execution dispatcher: `electron/backend/actions/execution.ts`
+- Graph validation: `electron/backend/graph/validateGraph.ts`
 - Command validation/orchestration: `electron/backend/commands.ts`
 
 ## UI Groups
@@ -56,6 +60,15 @@ Graph-internal action types are not visible in the main action picker. This incl
 - `assert_output`
 - `domain_allowlist`
 
+The backend action registry enumerates every serialized action type with an
+execution owner, palette visibility, and audit-risk tag. Backend validation now
+uses `electron/backend/actions/validation.ts`, and runner dispatch goes through
+`electron/backend/actions/execution.ts`. Compiler and runner defense-in-depth
+checks use the same registry lookup for unsupported action errors before
+reaching action-specific validation or execution logic. `execute_js` is tagged
+as high audit risk in the registry and can be disabled per workflow by Run
+Policy before script text is evaluated.
+
 Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, and clear-method fields. Scroll is the exception that exposes Page pixel distance and element-targeted scroll modes because those are the action's core contract. The visible structured target editor defaults its locator kind to XPath while allowing more stable locator kinds when available.
 
 Removed actions: `open_url`, `sleep`, and `type_text` are not part of the current authoring contract.
@@ -70,6 +83,8 @@ When adding or changing an action, keep these in sync:
 - Capability registry classification.
 - Backend validation.
 - Runner execution or explicit unsupported error.
+- Backend action registry owner, visibility, and audit-risk metadata.
+- Backend action validation and execution registry coverage.
 - Persistence JSON contract.
 - Command and domain tests.
 - Smoke checklist when user-visible behavior changes.

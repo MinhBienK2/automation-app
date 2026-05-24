@@ -1,0 +1,666 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+import type {
+  RunState,
+  WorkflowPersona,
+  WorkflowPersonaDimensions,
+  WorkflowSettings,
+} from "../../../src/types/workflow.js";
+import type { AppPaths } from "../persistence/database.js";
+import { sanitizePathSegment } from "../evidence/artifacts.js";
+
+type CloakBrowserModule = {
+  launchContext: (options?: BrowserLaunchOptions) => Promise<BrowserDriverContext>;
+  launchPersistentContext: (
+    options: BrowserLaunchOptions & { userDataDir: string },
+  ) => Promise<BrowserDriverContext>;
+  binaryInfo?: () => {
+    version?: string;
+    platform?: string;
+    installed?: boolean;
+  };
+};
+
+export type BrowserLaunchOptions = Record<string, unknown>;
+
+export type BrowserDriver = {
+  launch(options: BrowserLaunchOptions): Promise<BrowserDriverContext>;
+  launchPersistent(
+    options: BrowserLaunchOptions & { userDataDir: string },
+  ): Promise<BrowserDriverContext>;
+};
+
+export type BrowserDriverContext = {
+  pages(): BrowserDriverPage[];
+  newPage(): Promise<BrowserDriverPage>;
+  close(): Promise<void>;
+  on?(eventName: "close", handler: () => void): void;
+  addCookies?(cookies: Array<Record<string, unknown>>): Promise<void>;
+  clearCookies?(options?: Record<string, unknown>): Promise<void>;
+  grantPermissions?(permissions: string[], options?: { origin?: string }): Promise<void>;
+  setGeolocation?(geolocation: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number | null;
+  }): Promise<void>;
+  setExtraHTTPHeaders?(headers: Record<string, string>): Promise<void>;
+  route?(
+    url: string | RegExp | ((url: URL) => boolean),
+    handler: (route: BrowserRoute) => Promise<void> | void,
+  ): Promise<void>;
+};
+
+export type BrowserDriverPage = {
+  goto(url: string, options?: Record<string, unknown>): Promise<unknown>;
+  locator(selector: string): BrowserDriverLocator;
+  waitForLoadState?(state?: string, options?: Record<string, unknown>): Promise<unknown>;
+  waitForURL?(url: string | RegExp | ((url: URL) => boolean), options?: Record<string, unknown>): Promise<unknown>;
+  waitForRequest?(predicate: string | RegExp | ((request: BrowserRequest) => boolean), options?: Record<string, unknown>): Promise<BrowserRequest>;
+  waitForResponse?(predicate: string | RegExp | ((response: BrowserResponse) => boolean), options?: Record<string, unknown>): Promise<BrowserResponse>;
+  waitForEvent?(eventName: "download", options?: Record<string, unknown>): Promise<BrowserDownload>;
+  once?(eventName: "dialog", handler: (dialog: BrowserDialog) => void | Promise<void>): void;
+  getByTestId?(testId: string): BrowserDriverLocator;
+  getByRole?(role: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByLabel?(label: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByPlaceholder?(placeholder: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByText?(text: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  frameLocator?(selector: string): BrowserDriverFrameLocator;
+  goBack?(): Promise<unknown>;
+  goForward?(): Promise<unknown>;
+  reload?(): Promise<unknown>;
+  bringToFront?(): Promise<void>;
+  close?(): Promise<void>;
+  isClosed?(): boolean;
+  screenshot?(options?: Record<string, unknown>): Promise<Buffer>;
+  evaluate<R = unknown, A = unknown>(
+    pageFunction: string | ((arg?: A) => R | Promise<R>),
+    arg?: A,
+  ): Promise<R>;
+  evaluateHandle?(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown): Promise<unknown>;
+  addInitScript?(script: string): Promise<unknown>;
+  setViewportSize?(viewport: { width: number; height: number }): Promise<void>;
+  keyboard?: {
+    press(key: string, options?: Record<string, unknown>): Promise<void>;
+    down?(key: string, options?: Record<string, unknown>): Promise<void>;
+    up?(key: string, options?: Record<string, unknown>): Promise<void>;
+    type(text: string, options?: Record<string, unknown>): Promise<void>;
+    insertText?(text: string): Promise<void>;
+  };
+  mouse?: {
+    move?(x: number, y: number): Promise<void>;
+    down?(options?: Record<string, unknown>): Promise<void>;
+    up?(options?: Record<string, unknown>): Promise<void>;
+    wheel(deltaX: number, deltaY: number): Promise<void>;
+  };
+};
+
+export type BrowserDriverFrameLocator = {
+  locator(selector: string): BrowserDriverLocator;
+  getByTestId?(testId: string): BrowserDriverLocator;
+  getByRole?(role: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByLabel?(label: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByPlaceholder?(placeholder: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  getByText?(text: string, options?: Record<string, unknown>): BrowserDriverLocator;
+  frameLocator?(selector: string): BrowserDriverFrameLocator;
+};
+
+export type BrowserDriverLocator = {
+  fill(value: string, options?: Record<string, unknown>): Promise<void>;
+  type?(value: string, options?: Record<string, unknown>): Promise<void>;
+  click(options?: Record<string, unknown>): Promise<void>;
+  evaluate?<Result, Arg = unknown>(
+    pageFunction: (element: Element, arg: Arg) => Result | Promise<Result>,
+    arg?: Arg,
+  ): Promise<Result>;
+  hover?(options?: Record<string, unknown>): Promise<void>;
+  dblclick?(options?: Record<string, unknown>): Promise<void>;
+  check?(options?: Record<string, unknown>): Promise<void>;
+  uncheck?(options?: Record<string, unknown>): Promise<void>;
+  selectOption?(value: string | string[] | Record<string, string>): Promise<unknown>;
+  setInputFiles?(files: string[]): Promise<void>;
+  press?(key: string, options?: Record<string, unknown>): Promise<void>;
+  textContent?(options?: Record<string, unknown>): Promise<string | null>;
+  getAttribute?(attribute: string, options?: Record<string, unknown>): Promise<string | null>;
+  inputValue?(options?: Record<string, unknown>): Promise<string>;
+  boundingBox?(): Promise<{ x?: number; y?: number; width: number; height: number } | null>;
+  count?(): Promise<number>;
+  nth?(index: number): BrowserDriverLocator;
+  isVisible?(options?: Record<string, unknown>): Promise<boolean>;
+  isEnabled?(options?: Record<string, unknown>): Promise<boolean>;
+  waitFor?(options?: Record<string, unknown>): Promise<void>;
+  dragTo?(target: BrowserDriverLocator, options?: Record<string, unknown>): Promise<void>;
+  scrollIntoViewIfNeeded?(options?: Record<string, unknown>): Promise<void>;
+};
+
+type BrowserDialog = {
+  accept(promptText?: string): Promise<void>;
+  dismiss(): Promise<void>;
+};
+
+type BrowserDownload = {
+  suggestedFilename?(): string;
+  saveAs?(filePath: string): Promise<void>;
+  path?(): Promise<string | null>;
+};
+
+type BrowserRoute = {
+  abort(): Promise<void>;
+  fulfill(response: Record<string, unknown>): Promise<void>;
+  continue(): Promise<void>;
+};
+
+type BrowserRequest = {
+  url(): string;
+};
+
+type BrowserResponse = {
+  url(): string;
+  status(): number;
+};
+
+export type RetainedSession = {
+  context: BrowserDriverContext;
+  page: BrowserDriverPage;
+  workflowId: string | null;
+  profileName: string | null;
+};
+
+type BrowserSessionManagerOptions = {
+  appPaths: AppPaths;
+  driver?: BrowserDriver;
+  retainedSessions?: Map<string, RetainedSession>;
+  usesDefaultDriver?: boolean;
+};
+
+export class BrowserSessionManager {
+  private readonly appPaths: AppPaths;
+  private readonly driver: BrowserDriver;
+  private readonly usesDefaultDriver: boolean;
+  private retainedSessions: Map<string, RetainedSession>;
+
+  constructor(options: BrowserSessionManagerOptions) {
+    this.appPaths = options.appPaths;
+    this.driver = options.driver ?? createCloakBrowserDriver();
+    this.usesDefaultDriver = options.usesDefaultDriver ?? !options.driver;
+    this.retainedSessions = options.retainedSessions ?? new Map<string, RetainedSession>();
+  }
+
+  createIsolatedManager() {
+    return new BrowserSessionManager({
+      appPaths: this.appPaths,
+      driver: this.driver,
+      retainedSessions: this.retainedSessions,
+      usesDefaultDriver: this.usesDefaultDriver,
+    });
+  }
+
+  async launchFreshSession(request: {
+    settings: WorkflowSettings;
+    retainedSessionWorkflowId?: string | null;
+  }) {
+    if (request.retainedSessionWorkflowId !== undefined) {
+      await this.closeRetainedSession(
+        request.retainedSessionWorkflowId ?? null,
+        retainedProfileKey(request.settings),
+      );
+    } else {
+      await this.closeRetainedContext();
+    }
+    return this.launch(request.settings);
+  }
+
+  async reuseRetainedSession(request: {
+    settings: WorkflowSettings;
+    retainedSessionWorkflowId?: string | null;
+  }) {
+    const profileName = retainedProfileKey(request.settings);
+    const workflowId = request.retainedSessionWorkflowId ?? null;
+    if (!workflowId || !this.hasReusableRetainedSession(workflowId, profileName)) {
+      throw new Error("No reusable browser session is available. Run the workflow again to create one.");
+    }
+    const session = this.retainedSessions.get(retainedSessionKey(workflowId, profileName));
+    if (!session) {
+      throw new Error("No reusable browser session is available. Run the workflow again to create one.");
+    }
+    return { context: session.context, page: session.page, temporary: false };
+  }
+
+  retainSession(
+    context: BrowserDriverContext,
+    page: BrowserDriverPage,
+    workflowId: string | null,
+    profileName: string | null,
+  ) {
+    const key = retainedSessionKey(workflowId, profileName);
+    this.retainedSessions.set(key, { context, page, workflowId, profileName });
+    context.on?.("close", () => {
+      if (this.retainedSessions.get(key)?.context === context) {
+        this.retainedSessions.delete(key);
+      }
+    });
+  }
+
+  async closeRetainedContext() {
+    for (const session of this.retainedSessions.values()) {
+      await session.context.close();
+    }
+    this.retainedSessions.clear();
+  }
+
+  async closeRetainedSession(workflowId: string | null, profileName: string | null) {
+    const key = retainedSessionKey(workflowId, profileName);
+    const session = this.retainedSessions.get(key);
+    if (!session) return;
+    await session.context.close();
+    this.retainedSessions.delete(key);
+  }
+
+  forgetContext(context: BrowserDriverContext) {
+    for (const [key, session] of this.retainedSessions) {
+      if (session.context === context) {
+        this.retainedSessions.delete(key);
+      }
+    }
+  }
+
+  hasReusableRetainedSession(workflowId: string, profileName?: string | null) {
+    const key = retainedSessionKey(workflowId, profileName ?? null);
+    const session = this.retainedSessions.get(key);
+    if (!session || this.isRetainedSessionStale(session)) {
+      this.retainedSessions.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  getRetainedSessionState(workflowId?: string | null, profileName?: string | null) {
+    return this.retainedSessionState(workflowId, profileName);
+  }
+
+  getRetainedSessionStates() {
+    const states: NonNullable<RunState["retained_session"]>[] = [];
+    for (const session of this.retainedSessions.values()) {
+      const state = this.retainedSessionState(session.workflowId, session.profileName);
+      if (state) {
+        states.push(state);
+      }
+    }
+    return states;
+  }
+
+  private async launch(settings: WorkflowSettings) {
+    if (this.usesDefaultDriver) assertHeadedDisplayAvailable(settings);
+    const options = buildLaunchOptions(settings, this.appPaths);
+    const profileDir = retainedProfileKey(settings);
+    const context = profileDir
+      ? await this.driver.launchPersistent({
+          ...options,
+          userDataDir: path.join(this.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)),
+        })
+      : await this.driver.launch(options);
+    const page = context.pages()[0] ?? (await context.newPage());
+    return { context, page, temporary: !profileDir };
+  }
+
+  private retainedSessionState(workflowId?: string | null, profileName?: string | null): RunState["retained_session"] {
+    if (workflowId !== undefined || profileName !== undefined) {
+      const key = retainedSessionKey(workflowId ?? null, profileName ?? null);
+      const session = this.retainedSessions.get(key);
+      if (!session) {
+        return {
+          available: false,
+          workflow_id: workflowId ?? null,
+          profile_name: profileName ?? null,
+          reason: "No retained browser session",
+        };
+      }
+      if (this.isRetainedSessionStale(session)) {
+        this.retainedSessions.delete(key);
+        return {
+          available: false,
+          workflow_id: workflowId ?? null,
+          profile_name: profileName ?? null,
+          reason: "Browser session was closed",
+        };
+      }
+      return {
+        available: true,
+        workflow_id: session.workflowId,
+        profile_name: session.profileName,
+        reason: null,
+      };
+    }
+
+    const sessions = [...this.retainedSessions.values()];
+    if (sessions.length === 0) {
+      return {
+        available: false,
+        workflow_id: null,
+        profile_name: null,
+        reason: "No retained browser session",
+      };
+    }
+    if (sessions.length > 1) {
+      return {
+        available: false,
+        workflow_id: null,
+        profile_name: null,
+        reason: "Multiple retained browser sessions",
+      };
+    }
+    const session = sessions[0];
+    if (this.isRetainedSessionStale(session)) {
+      this.retainedSessions.delete(retainedSessionKey(session.workflowId, session.profileName));
+      return {
+        available: false,
+        workflow_id: null,
+        profile_name: null,
+        reason: "Browser session was closed",
+      };
+    }
+    return {
+      available: true,
+      workflow_id: session.workflowId,
+      profile_name: session.profileName,
+      reason: null,
+    };
+  }
+
+  private isRetainedSessionStale(session: RetainedSession) {
+    const contextClosed = (session.context as { closed?: boolean }).closed === true;
+    const pageClosed = session.page.isClosed?.() === true;
+    return contextClosed || pageClosed;
+  }
+}
+
+export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): BrowserDriver {
+  const loadModule = async () => {
+    return moduleOverride ?? loadCloakBrowserModule();
+  };
+
+  return {
+    async launch(options) {
+      const cloakbrowser = await loadModule();
+      return cloakbrowser.launchContext(options);
+    },
+    async launchPersistent(options) {
+      const cloakbrowser = await loadModule();
+      return cloakbrowser.launchPersistentContext(options);
+    },
+  };
+}
+
+export function buildLaunchOptions(
+  settings: WorkflowSettings,
+  appPaths: AppPaths,
+): BrowserLaunchOptions {
+  const browser = settings.browser_launch;
+  const persona = browser.persona;
+  const proxy = buildProxyLaunchOptions(browser);
+  const viewport = validPersonaDimensions(persona?.viewport) ?? { width: 1920, height: 1080 };
+  const windowSize = validPersonaDimensions(persona?.window) ?? viewport;
+  const webrtcPolicy = browser.webrtc_policy === "default" && persona
+    ? persona.webrtc_mode
+    : browser.webrtc_policy;
+  const fontBundlePath = browser.fingerprint_fonts_dir?.trim() || persona?.font_bundle.path?.trim();
+  const args = [
+    browser.fingerprint_seed?.trim()
+      ? `--fingerprint=${browser.fingerprint_seed.trim()}`
+      : null,
+    fontBundlePath
+      ? `--fingerprint-fonts-dir=${fontBundlePath}`
+      : null,
+    webrtcPolicy === "auto_proxy_exit_ip"
+      ? "--fingerprint-webrtc-ip=auto"
+      : webrtcPolicy === "explicit_ip" && browser.webrtc_ip?.trim()
+        ? `--fingerprint-webrtc-ip=${browser.webrtc_ip.trim()}`
+        : null,
+    browser.headless ? null : `--window-size=${windowSize.width},${windowSize.height}`,
+  ].filter((arg): arg is string => Boolean(arg));
+  const humanPreset = browser.human_preset === "default" && persona
+    ? persona.behavioral_timing_profile
+    : browser.human_preset;
+  return {
+    headless: browser.headless,
+    humanize: browser.humanize !== false,
+    humanPreset: humanPreset === "careful" ? "careful" : "default",
+    userAgent: undefined,
+    viewport,
+    timezone: browser.timezone?.trim() || persona?.timezone || undefined,
+    locale: browser.locale?.trim() || persona?.locale || undefined,
+    geoip: Boolean(browser.geoip),
+    args,
+    proxy,
+    contextOptions: {
+      acceptDownloads: true,
+      downloadsPath: appPaths.downloadsDir,
+    },
+  };
+}
+
+export function retainedProfileKey(settings: WorkflowSettings) {
+  if (settings.browser_launch.session_mode !== "persistent_profile") return null;
+  return (
+    settings.browser_launch.profile_dir?.trim() ||
+    settings.browser_launch.profile_name?.trim() ||
+    null
+  );
+}
+
+export async function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
+  const browser = settings.browser_launch;
+  const persona = browser.persona;
+  const timezone = browser.timezone ?? persona?.timezone ?? null;
+  const locale = browser.locale ?? persona?.locale ?? null;
+  const fontBundlePath = browser.fingerprint_fonts_dir ?? persona?.font_bundle.path ?? null;
+  return {
+    run_id: runId,
+    identity_id: browser.identity_id,
+    display_name: browser.display_name,
+    profile_dir:
+      browser.session_mode === "persistent_profile"
+        ? browser.profile_dir
+        : "temporary",
+    session_mode: browser.session_mode,
+    fingerprint_seed_hash: createHash("sha256")
+      .update(browser.fingerprint_seed)
+      .digest("hex")
+      .slice(0, 16),
+    fingerprint_fonts_hash: await fingerprintFontsHash(fontBundlePath),
+    proxy_label: browser.proxy_label ?? null,
+    proxy_region: browser.proxy_region ?? null,
+    proxy_provider: browser.proxy_provider ?? null,
+    test_account_binding: browser.test_account_binding ?? persona?.test_account_binding ?? null,
+    account_label: persona?.account_label ?? null,
+    persona: browserPersonaEvidence(persona),
+    timezone,
+    timezone_source: browser.timezone ? "explicit" : persona ? "persona" : browser.geoip ? "geoip" : "default",
+    locale,
+    locale_source: browser.locale ? "explicit" : persona ? "persona" : browser.geoip ? "geoip" : "default",
+    geoip: browser.geoip,
+    webrtc_policy: browser.webrtc_policy,
+    webrtc_ip: browser.webrtc_policy === "explicit_ip" ? browser.webrtc_ip ?? null : null,
+    advanced_overrides: activeAdvancedFingerprintOverrides(browser),
+    humanize: browser.humanize !== false,
+    human_preset: browser.human_preset === "careful" ? "careful" : "default",
+    cloakbrowser: await cloakBrowserRuntimeEvidence(),
+  };
+}
+
+function validPersonaDimensions(
+  dimensions: WorkflowPersonaDimensions | null | undefined,
+): WorkflowPersonaDimensions | null {
+  if (
+    !dimensions ||
+    !Number.isFinite(dimensions.width) ||
+    !Number.isFinite(dimensions.height) ||
+    dimensions.width <= 0 ||
+    dimensions.height <= 0
+  ) {
+    return null;
+  }
+  return {
+    width: Math.round(dimensions.width),
+    height: Math.round(dimensions.height),
+  };
+}
+
+function browserPersonaEvidence(persona: WorkflowPersona | null | undefined) {
+  if (!persona) return null;
+  return {
+    id: persona.id,
+    label: persona.label,
+    rationale: persona.rationale,
+    os_bucket: persona.os_bucket,
+    browser_channel_bucket: persona.browser_channel_bucket,
+    viewport: persona.viewport,
+    window: persona.window,
+    timezone: persona.timezone,
+    locale: persona.locale,
+    proxy_geo_policy: persona.proxy_geo_policy,
+    proxy_region: persona.proxy_region ?? null,
+    webrtc_mode: persona.webrtc_mode,
+    font_bundle: {
+      label: persona.font_bundle.label,
+      expected_families: persona.font_bundle.expected_families,
+      path_configured: Boolean(persona.font_bundle.path),
+    },
+    account_label: persona.account_label ?? null,
+    test_account_binding: persona.test_account_binding ?? null,
+    behavioral_timing_profile: persona.behavioral_timing_profile,
+  };
+}
+
+function buildProxyLaunchOptions(browser: WorkflowSettings["browser_launch"]) {
+  if (!browser.proxy_enabled || !browser.proxy_server) return undefined;
+  const proxy = {
+    server: browser.proxy_server,
+    bypass: browser.proxy_bypass ?? undefined,
+    username: browser.proxy_username ?? undefined,
+    password: browser.proxy_password ?? undefined,
+  };
+  try {
+    const url = new URL(browser.proxy_server);
+    const username = url.username ? decodeURIComponent(url.username) : undefined;
+    const password = url.password ? decodeURIComponent(url.password) : undefined;
+    if (username || password) {
+      url.username = "";
+      url.password = "";
+      proxy.server = url.toString();
+      proxy.username = proxy.username ?? username;
+      proxy.password = proxy.password ?? password;
+    }
+  } catch {
+    return proxy;
+  }
+  return proxy;
+}
+
+function retainedSessionKey(workflowId: string | null, profileName: string | null) {
+  return `${workflowId ?? ""}\u0000${profileName ?? ""}`;
+}
+
+function assertHeadedDisplayAvailable(settings: WorkflowSettings) {
+  if (settings.browser_launch.headless) return;
+  if (process.platform !== "linux") return;
+  if (process.env.DISPLAY || process.env.WAYLAND_DISPLAY) return;
+  throw new Error(
+    "Headed CloakBrowser runs require DISPLAY or WAYLAND_DISPLAY on Linux. Enable headless mode or run under Xvfb/Wayland before launching a headed identity.",
+  );
+}
+
+async function loadCloakBrowserModule(): Promise<CloakBrowserModule> {
+  return (await import("cloakbrowser")) as unknown as CloakBrowserModule;
+}
+
+function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {
+  return [
+    browser.fingerprint_fonts_dir ? "fingerprint_fonts_dir" : null,
+  ].filter((field): field is string => Boolean(field));
+}
+
+async function fingerprintFontsHash(fontsDir: string | null | undefined) {
+  const root = fontsDir?.trim();
+  if (!root) return null;
+  try {
+    const files = await listFingerprintFontFiles(root);
+    if (files.length === 0) return null;
+    const hash = createHash("sha256");
+    for (const file of files) {
+      hash.update(file.relativePath.toLowerCase());
+      hash.update("\0");
+      hash.update(file.contentHash);
+      hash.update("\0");
+    }
+    return hash.digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+async function listFingerprintFontFiles(rootDir: string) {
+  const files: Array<{ relativePath: string; contentHash: string }> = [];
+  const visit = async (currentDir: string) => {
+    const entries = await fs.readdir(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const absolutePath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        await visit(absolutePath);
+        continue;
+      }
+      if (!entry.isFile() || !/\.(ttf|otf|woff|woff2)$/i.test(entry.name)) continue;
+      const content = await fs.readFile(absolutePath);
+      files.push({
+        relativePath: path.relative(rootDir, absolutePath).split(path.sep).join("/"),
+        contentHash: createHash("sha256").update(content).digest("hex"),
+      });
+    }
+  };
+  await visit(rootDir);
+  return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+}
+
+async function cloakBrowserRuntimeEvidence() {
+  const [wrapperVersion, binary] = await Promise.all([
+    cloakBrowserWrapperVersion(),
+    cloakBrowserBinaryEvidence(),
+  ]);
+  return {
+    wrapper_version: wrapperVersion,
+    binary_version: binary.version,
+    binary_platform: binary.platform,
+    binary_installed: binary.installed,
+  };
+}
+
+async function cloakBrowserBinaryEvidence() {
+  try {
+    const moduleValue = await loadCloakBrowserModule();
+    const info = moduleValue.binaryInfo?.();
+    return {
+      version: info?.version ?? null,
+      platform: info?.platform ?? null,
+      installed: Boolean(info?.installed),
+    };
+  } catch {
+    return {
+      version: null,
+      platform: process.platform,
+      installed: false,
+    };
+  }
+}
+
+async function cloakBrowserWrapperVersion() {
+  try {
+    const packageJson = await fs.readFile(
+      path.join(process.cwd(), "node_modules", "cloakbrowser", "package.json"),
+      "utf8",
+    );
+    const parsed = JSON.parse(packageJson) as { version?: unknown };
+    return typeof parsed.version === "string" ? parsed.version : null;
+  } catch {
+    return null;
+  }
+}

@@ -110,7 +110,7 @@ export const hiddenActionCoverage = {
   stop_workflow: graphInternal(controlFlow),
   transform_variable: backendGuard("hidden graph-internal action; backend runner tests cover transformation"),
   assert_output: backendGuard("hidden graph-internal action; backend runner tests cover output assertion"),
-  domain_allowlist: entry([...runValidation, "electron/backend/runner.test.ts"], "desktop_e2e_and_backend", "Hidden graph-internal node; E2E verifies navigation policy."),
+  domain_allowlist: entry([...runValidation, "electron/backend/runtime/runner.test.ts"], "desktop_e2e_and_backend", "Hidden graph-internal node; E2E verifies navigation policy."),
 } satisfies Partial<Record<ActionType, CoverageEntry>>;
 
 export const graphNodeCoverage = {
@@ -134,16 +134,16 @@ export const graphNodeCoverage = {
   repeat_until: entry(controlFlow),
   while: entry(controlFlow),
   retry: entry(controlFlow),
-  try_catch: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
-  fallback: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
+  try_catch: entry(["electron/backend/runtime/runner.test.ts", "electron/backend/graph/compiler.test.ts"], "backend_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
+  fallback: entry(["electron/backend/runtime/runner.test.ts", "electron/backend/graph/compiler.test.ts"], "backend_guard", "Hidden from simplified Add Logic but compiled and executed by backend tests."),
   break_loop: entry(controlFlow),
   continue_loop: entry(controlFlow),
   stop_workflow: entry(controlFlow),
   set_variable: entry(controlFlow),
   set_json_variables: entry(controlFlow),
-  transform_variable: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Graph node covered below desktop visible-node level."),
-  assert_output: entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", "Graph node covered below desktop visible-node level."),
-  domain_allowlist: entry([...runValidation, "electron/backend/runner.test.ts"], "desktop_e2e_and_backend", "Safety boundary covered by E2E navigation policy."),
+  transform_variable: entry(["electron/backend/runtime/runner.test.ts", "electron/backend/graph/compiler.test.ts"], "backend_guard", "Graph node covered below desktop visible-node level."),
+  assert_output: entry(["electron/backend/runtime/runner.test.ts", "electron/backend/graph/compiler.test.ts"], "backend_guard", "Graph node covered below desktop visible-node level."),
+  domain_allowlist: entry([...runValidation, "electron/backend/runtime/runner.test.ts"], "desktop_e2e_and_backend", "Safety boundary covered by E2E navigation policy."),
 } satisfies Partial<Record<GraphNodeType, CoverageEntry>>;
 
 export const workflowJourneyCoverage = {
@@ -159,7 +159,7 @@ export const workflowJourneyCoverage = {
   settings_before_run: entry([
     ...workflowJourneys,
     "src/features/workflows/pages/WorkflowDetailPage.test.tsx",
-    "electron/backend/runner.test.ts",
+    "electron/backend/runtime/runner.test.ts",
   ], "desktop_e2e_and_backend"),
   workflow_run_success: entry([
     ...workflowJourneys,
@@ -171,7 +171,7 @@ export const workflowJourneyCoverage = {
     "tests/e2e/wait-assertion-actions.e2e.ts",
     "tests/e2e/control-flow.e2e.ts",
   ], "desktop_e2e"),
-  workflow_stop: entry([...runValidation, "electron/backend/runner.test.ts"], "desktop_e2e_and_backend"),
+  workflow_stop: entry([...runValidation, "electron/backend/runtime/runner.test.ts"], "desktop_e2e_and_backend"),
   evidence_persistence: entry([
     ...batchEvidence,
     "tests/e2e/capture-network.e2e.ts",
@@ -199,5 +199,5 @@ function graphInternal(files: string[]): CoverageEntry {
 }
 
 function backendGuard(notes: string): CoverageEntry {
-  return entry(["electron/backend/runner.test.ts", "electron/backend/graphCompiler.test.ts"], "backend_guard", notes);
+  return entry(["electron/backend/runtime/runner.test.ts", "electron/backend/graph/compiler.test.ts"], "backend_guard", notes);
 }

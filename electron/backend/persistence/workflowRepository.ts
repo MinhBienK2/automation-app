@@ -5,7 +5,7 @@ import type {
   WorkflowGraph,
   WorkflowSettings,
   WorkflowSummary,
-} from "../../src/types/workflow.js";
+} from "../../../src/types/workflow.js";
 
 type WorkflowRow = {
   id: string;

@@ -7,7 +7,7 @@ import {
   serializeCommandError,
   type WorkflowCommandHandlers,
 } from "./backend/commands.js";
-import { createAppPaths, initializeDatabase } from "./backend/database.js";
+import { createAppPaths, initializeDatabase } from "./backend/persistence/database.js";
 import {
   workflowIpcChannels,
   type WorkflowIpcChannelName,

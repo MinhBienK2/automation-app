@@ -51,7 +51,8 @@ export async function generateReleaseManifest(releaseDir) {
 
   const checksumLines = artifacts.map((artifact) => `${artifact.sha256}  ${artifact.name}`).join("\n");
   const manifest = {
-    generated_at: new Date(0).toISOString(),
+    generated_at: new Date().toISOString(),
+    reproducible_epoch: new Date(0).toISOString(),
     artifact_count: artifacts.length,
     artifacts,
   };

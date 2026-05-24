@@ -7,9 +7,13 @@
 - `src/features/workflows/lib/workflowStepForm.ts`
 - `src/features/workflows/components/ActionConfigEditor.tsx`
 - `src/features/workflows/components/ActionConfig*Fields.tsx`
-- `electron/backend/graphCompiler.ts`
+- `electron/backend/graph/compiler.ts`
+- `electron/backend/graph/validateGraph.ts`
 - `electron/backend/commands.ts`
-- `electron/backend/runner.ts`
+- `electron/backend/runtime/runner.ts`
+- `electron/backend/actions/registry.ts`
+- `electron/backend/actions/validation.ts`
+- `electron/backend/actions/execution.ts`
 
 ## Required Sync Points
 
@@ -25,6 +29,8 @@ Every user-addable action type must have:
 - Form support in workflow step form logic/components when user editable.
 - Backend validation when fields have constraints.
 - Runner execution or an explicit unsupported error. Silent success for stubbed actions is not allowed.
+- Backend action registry metadata for owner, palette visibility, and audit risk.
+- Backend action validation and execution coverage in the `electron/backend/actions/` registries.
 
 Browser identity actions such as profile, proxy, user-agent, and download-directory settings are not part of the in-run action contract. Browser identity belongs in Workflow Settings Browser Launch.
 
@@ -72,10 +78,22 @@ Recovery config semantics must preserve failure behavior when recovery branches 
 ## Validation Ownership
 
 - Electron backend validation is authoritative.
-- `electron/backend/graphCompiler.ts` owns graph structural validation, graph-native semantic validation, and graph-to-action compilation.
+- `electron/backend/graph/compiler.ts` owns graph structural validation, graph-native semantic validation, and graph-to-action compilation.
+- `electron/backend/actions/validation.ts` owns serialized `ActionConfig` validation and nested action-config recursion.
 - Frontend may provide ergonomic form behavior but cannot be the only validation.
 - `dry_run_validate_config` exposes backend validation for builder assist.
 - Backend action validation covers visible action families, nested graph-internal action arrays, safe evidence names, geolocation and viewport ranges, network status ranges, required output names, and storage/header/permission lists.
+- Backend graph validation rejects unknown graph `node_type`, unknown action
+  `type`, unknown nested action `type`, and unknown `condition.kind` values at
+  save/import/compile boundaries. The runner also fails unknown action and
+  condition discriminants as a defense-in-depth guard so unsupported inputs
+  cannot execute as successful no-ops.
+- Backend unknown-action errors are routed through
+  `electron/backend/actions/registry.ts`, which is the canonical runtime list of
+  supported serialized action types. The compiler calls
+  `electron/backend/actions/validation.ts`, and the runner calls
+  `electron/backend/actions/execution.ts`, so action validation and execution
+  coverage are both checked against the registry.
 
 Set Viewport is a runtime viewport-size action. Active authoring exposes only `width` and `height`; Workflow Settings Browser Launch no longer exposes device scale factor, mobile mode, or touch capability controls.
 

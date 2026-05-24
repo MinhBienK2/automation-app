@@ -92,6 +92,13 @@ browser runtime:
 npm run test:smoke
 ```
 
+Run the focused fingerprint regression gate when changing browser identity,
+preflight, or CloakBrowser wrapper behavior:
+
+```bash
+npm run test:fingerprint
+```
+
 ## CloakBrowser Operations
 
 CloakBrowser is an exact-pinned npm dependency through `package.json` and
@@ -113,9 +120,11 @@ commands exposed over IPC: `getCloakBrowserDiagnostics`,
 `installCloakBrowserBinary`, and `cleanupOrphanedBrowserProfiles`. Diagnostics
 report wrapper/binary version, platform, binary path/cache/download URL,
 auto-update and checksum-skip status, GeoIP dependency availability, headed
-display availability, font-check status, last recorded smoke/preflight summary,
-and profile storage metadata without proxy passwords, cookies, or browser
-storage values.
+display availability, fingerprint font diagnostics with file counts,
+normalized hashes, missing/shared directory warnings, last recorded
+smoke/preflight summary, and profile storage metadata with bounded approximate
+profile sizes without proxy passwords,
+cookies, or browser storage values.
 
 For reproducible sensitive runs, keep `CLOAKBROWSER_AUTO_UPDATE=false` on lab
 machines or record the effective binary version from `browser_identity`
@@ -182,7 +191,8 @@ GitHub Actions workflow `.github/workflows/desktop-release.yml` runs on tags
 matching `v*` or manual dispatch. After quality gates pass, it waits on the
 `internal-release` environment, packages artifacts for macOS (`dmg`, `zip`),
 Windows (`nsis`, `zip`), and Ubuntu/Linux (`AppImage`, `deb`, `tar.gz`),
-generates `sbom.cyclonedx.json`, `SHA256SUMS`, and `release-manifest.json`,
+generates `sbom.cyclonedx.json`, `SHA256SUMS`, and `release-manifest.json`
+with actual `generated_at` provenance plus deterministic `reproducible_epoch`,
 creates artifact attestations, uploads workflow artifacts, and publishes assets
 to the GitHub release.
 
@@ -203,17 +213,17 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.
 7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
 8. Add Set Cookie and Clear Cookies action nodes. Confirm profile, proxy, fingerprint seed, timezone/locale, headless launch, and browser retention are configured through Workflow Settings rather than in-run action nodes; confirm batch run defaults are visible there but paused until Batch Run UI is ready.
-9. Open Settings from the workflow detail header, confirm it opens to Browser Launch, and configure Reuse login session, identity display name, stable identity id, fingerprint seed, fingerprint fonts directory, proxy URL/credentials/bypass/metadata, timezone/locale, Humanize browser input, Humanize preset (`default` or `careful`), optional owned fingerprint preflight, and headed/headless default. Confirm Workflow Settings has General, Graph, Run Policy, Browser Launch, and Environment sections with related fields grouped inside each section; Run Policy shows disabled batch controls with the pause note; Graph edits the new link wait default in one grouped control; Environment edits initial variable rows; section help is available; the dialog has one Save Settings button in the header; and closing with edits shows the unsaved-changes prompt.
-12. From the workflow list, run saved workflows directly and confirm the app stays on the list, disables only rows whose workflow is already running, shows row-level status and Stop for active runs, and keeps Run Center updated with each active/terminal run until terminal state.
+9. Open Settings from the workflow detail header, confirm it opens to Browser Launch, and configure Reuse login session, identity display name, stable identity id, fingerprint seed, fingerprint fonts directory, proxy URL/credentials/bypass/metadata, timezone/locale, Humanize browser input, Humanize preset (`default` or `careful`), optional owned fingerprint preflight, and headed/headless default. Confirm Reset identity opens an in-app confirmation, returns a backend-generated identity/profile/seed, and disables Run from selected. Confirm Workflow Settings has General, Graph, Run Policy, Browser Launch, and Environment sections with related fields grouped inside each section; Run Policy edits max duration, browser retention, and Allow Run JavaScript, and shows disabled batch controls with the pause note; Graph edits the new link wait default in one grouped control; Environment edits initial variable rows; section help is available; the dialog has one Save Settings button in the header; and closing with edits shows the unsaved-changes prompt.
+12. From the workflow list, run saved workflows directly and confirm the app stays on the list, disables Run, Duplicate, Export, and Delete only for rows whose workflow is already running, shows row-level status and Stop for active runs, and keeps Run Center updated with each active/terminal run until terminal state.
 12. Open Schedules from the sidebar, create disabled one-time, interval, daily, weekly, and monthly schedules for saved workflows, enable valid schedules, confirm invalid workflow drafts cannot be enabled, confirm isolated due schedules can start concurrently, and confirm schedule history records started/skipped/missed/failed-to-start/disabled decisions with workflow/profile/batch conflict reasons when skipped.
 13. Duplicate a workflow and confirm the copy keeps the saved graph and non-storage local settings while receiving a fresh browser identity/profile/fingerprint and disabled Run from selected, export a workflow package with Flow and selected Settings, confirm the native Save dialog lets you choose the folder and file name, import it back as a new workflow without overwriting the original, and run a graph-backed batch with at least two input rows.
 13. Add Run JavaScript, Wait For Request, Wait For Response, Block Request, Mock Response, Set Local Storage, and Set Session Storage action nodes.
 14. Generate selector suggestions from an element snapshot, normalize recorded click/input_text events, dry-run validate a config, and in a debug build generate a local fixture HTML file from a single `.html` filename.
 15. Move graph nodes, reopen the workflow, and confirm node positions persist.
 16. Save Workflow Settings, save the graph, and run the graph workflow.
-17. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, applies the selected human preset, passes the stable fingerprint seed and configured fingerprint fonts directory, uses headed/headless according to Workflow Settings, reports wrapper/binary evidence, keeps `navigator.webdriver === false`, omits `HeadlessChrome` from UA, keeps Chromium UA Client Hints coherent when exposed, exposes baseline `window.chrome`/plugins, reflects timezone/locale/default viewport, keeps fixed-seed canvas output stable across two launches, and stores persistent localStorage under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
+17. Run `npm run test:fingerprint` and confirm persona-to-launch mapping, sanitized `browser_identity`, and the `fingerprint_regression` matrix pass. Run `npm run test:smoke` and confirm the Electron runner launches CloakBrowser/Playwright with `humanize` enabled by default, applies the selected human preset, passes the stable fingerprint seed and configured fingerprint fonts directory, records the fingerprint font hash, uses headed/headless according to Workflow Settings, reports wrapper/binary evidence, keeps `navigator.webdriver === false`, omits `HeadlessChrome` from UA, keeps Chromium UA Client Hints coherent when exposed, exposes baseline `window.chrome`/plugins, reflects timezone/locale/persona viewport, keeps fixed-seed canvas output stable across two launches, and stores persistent localStorage under the app data browser profile directory. On a fresh machine, expect the first smoke run to download the browser runtime.
 17. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
-17. Confirm runner evidence outputs include `__action_traces` and run-scoped `__evidence` metadata when screenshot or download artifacts are produced.
+17. Confirm runner evidence outputs include `__action_traces` and run-scoped `__evidence` metadata when screenshot or download artifacts are produced, and that nested branch/body action traces include parent node and sequence metadata.
 18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
 19. Confirm structured target fields let element and output steps target iframe content, and confirm Scroll Into View/Until Visible can target iframe content with an iframe XPath.
 20. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
@@ -222,8 +232,8 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 23. Confirm persistent identity profile state survives a browser restart through Workflow Settings, Reuse login session can be disabled without rotating identity id/profile directory/fingerprint seed, and cookies can be set/cleared.
 24. Confirm Workflow Settings Browser Launch identity profile, fingerprint fonts directory, proxy, timezone/locale, WebRTC, humanize toggle/preset, preflight, and headless defaults apply before browser launch; Environment initial variables apply before graph actions run; saved graph edge waits run before their target nodes; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
 27. Confirm batch run results account for each executed row, separate success from failure, use saved graph steps, apply batch headless defaults, reject concurrency above 1, and stop after the first failed row when configured.
-28. Confirm terminal workflow and batch row runs create SQLite `runs` and `run_steps` evidence with outputs, action traces, failed-step errors, and failure screenshot paths when failures occur.
-28. Confirm Run JavaScript stores output, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.
+28. Confirm terminal workflow and batch row runs create SQLite `runs` and `run_steps` evidence with outputs, action traces, nested branch/body run-step rows, failed-step errors, and failure screenshot paths when failures occur.
+28. Confirm Run JavaScript stores output when Run Policy allows it, fails clearly before script evaluation when Allow Run JavaScript is off, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.
 29. Confirm selector suggestions prefer stable attributes and recorder output maps to the action taxonomy.
 30. Confirm bad XPath fails immediately with a short message.
 31. Stop during a long Wait duration.
@@ -232,4 +242,4 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 34. Run the graph and confirm blocking validation issues appear in the run issue panel before execution, runtime failures identify the failed graph node and can select it, long runtime/system errors stay collapsed with Copy details, the selected-node inspector mirrors last run error details without overflowing, canvas run highlights use semantic colors, and subworkflow nodes fail explicitly until nested lifecycle support is implemented.
 35. Confirm Chromium remains open after success, failure, and stop by default, closes when Workflow Settings browser retention is set to close, closes when an End or Stop Workflow node has Close browser after workflow ends enabled, and max workflow duration fails an overlong run with a timeout message.
 36. In Workflow Settings, enable Reuse login session and Enable Run from selected with browser retention set to retain. Run or stop a workflow to leave Chromium open, select a supported main-path node, and confirm Run from selected continues from that node in the same browser. Then close Chromium manually and confirm Run from selected is unavailable or reports that a new reusable session is required.
-36. Delete the workflow and confirm the dialog asks whether to keep or delete the private browser profile data. Keep it by default unless the workflow's unshared retained login state should be removed.
+36. Delete the workflow and confirm the dialog asks whether to keep or delete the private browser profile data. Keep it by default unless the workflow's unshared retained login state should be removed. Confirm deletion is unavailable during an active run and works again after the run reaches a terminal state.

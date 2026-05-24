@@ -73,6 +73,10 @@ describe("App CSS", () => {
     expect(buttonSource).not.toContain("#3ecf8e");
   });
 
+  test("does not scale font sizes with viewport units", () => {
+    expect(css).not.toMatch(/font-size\s*:\s*[^;]*(vw|vh|vmin|vmax)/);
+  });
+
   test("keeps workflow detail overlays and compact controls contained", () => {
     const addStepPalette = cssRule(".add-step-palette");
     const paletteBody = cssRule(".add-step-palette-body");

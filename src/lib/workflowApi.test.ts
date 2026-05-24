@@ -16,6 +16,7 @@ import {
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  resetWorkflowBrowserIdentity,
   listScheduleEvents,
   listSchedules,
   getCloakBrowserDiagnostics,
@@ -48,6 +49,7 @@ import type {
   WorkflowSettingsBrowserLaunch,
   WorkflowSettings,
 } from "../types/workflow";
+import { personaForSeed } from "./personaCatalog";
 
 describe("workflow API phase ten commands", () => {
   test("invokes orchestration commands with frontend-safe payloads", async () => {
@@ -328,6 +330,7 @@ describe("workflow API settings commands", () => {
       run_policy: {
         max_workflow_duration_ms: null,
         browser_retention: "retain",
+        execute_js_enabled: true,
         batch_concurrency_limit: null,
         batch_headless: false,
         batch_stop_on_first_failed_row: false,
@@ -345,18 +348,23 @@ describe("workflow API settings commands", () => {
     };
 
     workflowBridgeMock.getWorkflowSettings.mockResolvedValue(settings);
+    workflowBridgeMock.resetWorkflowBrowserIdentity.mockResolvedValue(settings);
     workflowBridgeMock.saveWorkflowSettings.mockResolvedValue(settings);
     workflowBridgeMock.saveWorkflowSettingsSection.mockResolvedValue(settings);
     workflowBridgeMock.validateWorkflowSettings.mockResolvedValue([]);
     workflowBridgeMock.validateWorkflowRun.mockResolvedValue([]);
 
     await getWorkflowSettings("workflow-1");
+    await resetWorkflowBrowserIdentity("workflow-1");
     await saveWorkflowSettings("workflow-1", settings);
     await saveWorkflowSettingsSection("workflow-1", "browser_launch", settings.browser_launch);
     await validateWorkflowSettings(settings);
     await validateWorkflowRun("workflow-1");
 
     expect(workflowBridgeMock.getWorkflowSettings).toHaveBeenCalledWith(
+      "workflow-1",
+    );
+    expect(workflowBridgeMock.resetWorkflowBrowserIdentity).toHaveBeenCalledWith(
       "workflow-1",
     );
     expect(workflowBridgeMock.saveWorkflowSettings).toHaveBeenCalledWith(
@@ -378,10 +386,13 @@ describe("workflow API settings commands", () => {
 });
 
 function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
+  const persona = personaForSeed("bi_workflow-1");
   return {
     session_mode: "temporary",
     identity_id: "bi_workflow-1",
     display_name: "Login flow identity",
+    persona_id: persona.id,
+    persona,
     profile_dir: "bi_workflow-1",
     fingerprint_seed: "14523",
     profile_name: null,

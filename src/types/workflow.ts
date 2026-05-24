@@ -128,6 +128,44 @@ export type WorkflowWebRtcPolicy =
   | "auto_proxy_exit_ip"
   | "explicit_ip"
   | "disabled_if_supported";
+export type WorkflowPersonaOsBucket =
+  | "windows_desktop"
+  | "macos_desktop"
+  | "linux_desktop";
+export type WorkflowPersonaBrowserChannelBucket =
+  | "chromium_stable"
+  | "chromium_extended_stable";
+export type WorkflowPersonaProxyGeoPolicy =
+  | "direct"
+  | "match_proxy_region"
+  | "geoip_from_proxy";
+export type WorkflowPersonaDimensions = {
+  width: number;
+  height: number;
+};
+export type WorkflowPersonaFontBundle = {
+  label: string;
+  path?: string | null;
+  expected_families: string[];
+};
+export type WorkflowPersona = {
+  id: string;
+  label: string;
+  rationale: string;
+  os_bucket: WorkflowPersonaOsBucket;
+  browser_channel_bucket: WorkflowPersonaBrowserChannelBucket;
+  viewport: WorkflowPersonaDimensions;
+  window: WorkflowPersonaDimensions;
+  timezone: string;
+  locale: string;
+  proxy_geo_policy: WorkflowPersonaProxyGeoPolicy;
+  proxy_region?: string | null;
+  webrtc_mode: WorkflowWebRtcPolicy;
+  font_bundle: WorkflowPersonaFontBundle;
+  account_label?: string | null;
+  test_account_binding?: string | null;
+  behavioral_timing_profile: WorkflowHumanPreset;
+};
 
 export type WorkflowSettingsGeneral = {
   name: string;
@@ -141,6 +179,7 @@ export type WorkflowSettingsGeneral = {
 export type WorkflowSettingsRunPolicy = {
   max_workflow_duration_ms?: number | null;
   browser_retention: WorkflowBrowserRetention;
+  execute_js_enabled: boolean;
   batch_concurrency_limit?: number | null;
   batch_headless: boolean;
   batch_stop_on_first_failed_row: boolean;
@@ -150,6 +189,8 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   session_mode: WorkflowBrowserSessionMode;
   identity_id: string;
   display_name: string;
+  persona_id: string;
+  persona: WorkflowPersona;
   profile_dir: string;
   fingerprint_seed: string;
   fingerprint_fonts_dir?: string | null;
@@ -193,7 +234,7 @@ export type WorkflowSettingsGraphDefaults = {
 
 export type WorkflowSettingsMigrationNote = {
   path: string;
-  action: "converted" | "dropped" | "review";
+  action: "converted" | "dropped" | "review" | "rotated";
   message: string;
 };
 
@@ -269,8 +310,20 @@ export type CloakBrowserDiagnostics = {
   geoip_available: boolean;
   profile_root: string;
   font_checklist: {
-    status: "not_checked";
+    status: "not_configured" | "ok" | "warning" | "error";
     reason: string | null;
+    directories: Array<{
+      path: string;
+      status: "ok" | "warning" | "missing";
+      reason: string | null;
+      file_count: number;
+      total_size_bytes: number;
+      normalized_hash: string | null;
+      expected_families_present: string[];
+      missing_expected_families: string[];
+      workflow_ids: string[];
+      workflow_names: string[];
+    }>;
   };
   last_smoke_result: {
     status: "not_recorded";

@@ -6,7 +6,7 @@
 - Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, creates a `Start -> New node` draft graph, and persists default Workflow Settings with a browser identity. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
-- The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
+- The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh backend-generated browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
 
 ## Open Detail
@@ -36,7 +36,7 @@
 - Missing optional branch ports are allowed and compile as no-op paths. Missing continuation ports end the current path successfully. Required body ports such as loop body, retry try, try/catch try, and fallback primary block validation/run.
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
 - `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header, groups related controls inside each settings section, and saves dirty sections through that section command. General updates workflow summary metadata.
-- Workflow Settings Run Policy keeps batch defaults visible, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
+- Workflow Settings Run Policy keeps maximum duration, browser retention, and Allow Run JavaScript editable. Batch defaults remain visible, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
 - Workflow Settings Graph owns the default duration-only wait copied onto newly created graph links. Changing it does not rewrite existing graph links.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
@@ -52,7 +52,7 @@
 - Users can create disabled draft schedules, edit schedules, delete schedules, enable or disable schedules, and inspect schedule event history.
 - Schedule kinds are one-time `once_at`, repeating `interval`, and friendly calendar presets for daily, weekly, and monthly local-time runs.
 - Enabling a schedule validates the schedule config and the current saved workflow run readiness. Invalid saved graph/settings block enablement with a command-facing error.
-- The Electron backend scheduler runs while the app process is open. It scans enabled schedules for `next_run_at <= now`, processes due schedules in chronological order, and writes audit events for starts, skips, missed windows, failed validation/start, and automatic one-time disablement.
+- The Electron backend scheduler runs while the app process is open. It scans enabled schedules for `next_run_at <= now` through the schedule lookup index, processes due schedules in chronological order, and writes audit events for starts, skips, missed windows, failed validation/start, and automatic one-time disablement.
 - Scheduled runs call the same saved-workflow backend path as `run_workflow`; they do not save or run unsaved detail-page drafts.
 - If the scheduled workflow conflicts with an active run for the same workflow, an active run using the same persistent browser profile, or an active batch at the scheduled time, the occurrence is skipped and not queued. Due schedules for isolated workflows can start concurrently in the same tick.
 
@@ -60,13 +60,14 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, timezone, locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, optionally runs owned fingerprint preflight before graph actions, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
+- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, timezone, locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, optionally runs owned fingerprint preflight before graph actions, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
+- Reset identity in Workflow Settings is an in-app confirmation that delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, and returns saved settings to the dialog.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `list_run_states` while any run snapshot is `running`, regardless of whether the run was started from the workflow detail workspace, directly from the workflow list, or by the scheduler. `get_run_state` remains a compatibility/latest-state view.
 - Graph runs share the same run-state lifecycle as full workflow runs, with each active workflow run tracked by its run id.
-- Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`.
+- Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`. Top-level run-step rows remain compatible with existing history queries, while executed nested branch/body traces are appended with parent node and sequence metadata for path reconstruction.
 - End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Run Policy browser retention decides whether terminal runs retain or close the browser session.
 
 ## Batch Workflow
@@ -88,6 +89,9 @@
 - The confirmation includes a profile-data choice. Keeping private browser
   profile data is the default; deleting profile data is explicit and only
   removes unshared inactive profile directories.
+- Backend deletion rejects while the workflow has an active run, while the
+  workflow's persistent profile is owned by any active run, or while a retained
+  browser session still owns that workflow/profile.
 - Deleting the selected workflow returns the UI to the list screen.
 
 ## Export Workflow Package
@@ -98,7 +102,7 @@
 - Canceling the native Save dialog leaves the export dialog open and does not create a file.
 - The Electron backend writes the package to the path returned by the native Save dialog; canceling the dialog leaves the workflow unchanged.
 - Flow export uses the saved `WorkflowGraph`.
-- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password and secret query/hash portions of fingerprint preflight probe URLs.
+- Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password and secret query/hash portions of fingerprint preflight probe URLs. Runtime fingerprint preflight evidence is recursively sanitized before it is stored in run outputs.
 
 ## Import Workflow Package
 

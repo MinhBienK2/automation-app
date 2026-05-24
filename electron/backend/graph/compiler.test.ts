@@ -4,13 +4,13 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { createWorkflowCommandHandlers } from "./commands";
-import { createAppPaths, initializeDatabase } from "./database";
+import { createWorkflowCommandHandlers } from "../commands";
+import { createAppPaths, initializeDatabase } from "../persistence/database";
 import {
   compileWorkflowGraphFromNode,
   compileWorkflowRunPlan,
   validateActionConfig,
-} from "./graphCompiler";
+} from "./compiler";
 import type {
   ActionConfig,
   GraphNode,
@@ -19,7 +19,7 @@ import type {
   WorkflowCondition,
   WorkflowGraph,
   WorkflowSettings,
-} from "../../src/types/workflow";
+} from "../../../src/types/workflow";
 
 const tempRoots: string[] = [];
 
@@ -121,6 +121,114 @@ describe("TypeScript graph compiler parity", () => {
         "Break Loop can only be used inside a loop body",
       ]),
     );
+  });
+
+  test("rejects unknown graph node and action discriminants", async () => {
+    const { handlers } = await createTestHandlers();
+    const unknownNodeGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("unknown", "sidequest" as GraphNodeType, {
+          ports: [inputPort("in", "In"), outputPort("out", "Out")],
+        }),
+      ],
+      [edge("start", "out", "unknown", "in")],
+    );
+    const unknownActionGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("unknown-action", "action", {
+          config: { type: "mystery_action", config: {} } as ActionConfig,
+        }),
+      ],
+      [edge("start", "out", "unknown-action", "in")],
+    );
+
+    expect(handlers.validateWorkflowGraph(unknownNodeGraph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          node_id: "unknown",
+          level: "error",
+          message: "Unsupported graph node type: sidequest",
+        }),
+      ]),
+    );
+    expect(handlers.validateWorkflowGraph(unknownActionGraph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          node_id: "unknown-action",
+          level: "error",
+          message: "Node Unknown Action has invalid action config: Unsupported action type: mystery_action",
+        }),
+      ]),
+    );
+  });
+
+  test("validates unknown condition kinds across branching and loops", async () => {
+    const { handlers } = await createTestHandlers();
+    const unsupportedCondition = {
+      kind: "fingerprint_score",
+      name: "score",
+      value: "low",
+    } as WorkflowCondition;
+    const graphs = [
+      graphOf(
+        [
+          graphNode("start", "start"),
+          graphNode("if-node", "if", { config: { condition: unsupportedCondition } }),
+        ],
+        [edge("start", "out", "if-node", "in")],
+      ),
+      graphOf(
+        [
+          graphNode("start", "start"),
+          graphNode("router", "router", {
+            config: {
+              mode: "first_match",
+              cases: [{ id: "case-1", label: "Case 1", condition: unsupportedCondition }],
+            },
+          }),
+        ],
+        [edge("start", "out", "router", "in")],
+      ),
+      graphOf(
+        [
+          graphNode("start", "start"),
+          graphNode("while", "while", {
+            config: { condition: unsupportedCondition, max_attempts: 2 },
+          }),
+          graphNode("body", "action", { config: waitAction(1) }),
+        ],
+        [
+          edge("start", "out", "while", "in"),
+          edge("while", "loop", "body", "in"),
+        ],
+      ),
+      graphOf(
+        [
+          graphNode("start", "start"),
+          graphNode("repeat-until", "repeat_until", {
+            config: { condition: unsupportedCondition, max_attempts: 2 },
+          }),
+          graphNode("body", "action", { config: waitAction(1) }),
+        ],
+        [
+          edge("start", "out", "repeat-until", "in"),
+          edge("repeat-until", "loop", "body", "in"),
+        ],
+      ),
+    ];
+
+    for (const graph of graphs) {
+      expect(handlers.validateWorkflowGraph(graph)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            level: "error",
+            message: "Unsupported condition kind: fingerprint_score",
+          }),
+        ]),
+      );
+    }
   });
 
   test("compiles branch, loop, retry, variable, and terminal graph nodes", async () => {
@@ -988,6 +1096,22 @@ describe("TypeScript graph compiler parity", () => {
     expect(validation).toEqual({
       field: "then_steps[0].url",
       message: "URL is required",
+    });
+  });
+
+  test("rejects unknown nested action discriminants", () => {
+    expect(
+      validateActionConfig({
+        type: "if_condition",
+        config: {
+          condition: outputEqualsCondition(),
+          then_steps: [{ type: "mystery_action", config: {} }],
+          else_steps: [],
+        },
+      } as ActionConfig),
+    ).toEqual({
+      field: "then_steps[0].type",
+      message: "Unsupported action type: mystery_action",
     });
   });
 });

@@ -14,6 +14,7 @@ const methodNames: BridgeMethodName[] = [
   "getWorkflowBrowserConfig",
   "saveWorkflowBrowserConfig",
   "getWorkflowSettings",
+  "resetWorkflowBrowserIdentity",
   "saveWorkflowSettings",
   "saveWorkflowSettingsSection",
   "validateWorkflowSettings",
@@ -104,6 +105,9 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getWorkflowSettings.mockImplementation((workflowId: string) =>
     resolveCommand(commands, "get_workflow_settings", { workflowId }),
+  );
+  workflowBridgeMock.resetWorkflowBrowserIdentity.mockImplementation((workflowId: string) =>
+    resolveCommand(commands, "reset_workflow_browser_identity", { workflowId }),
   );
   workflowBridgeMock.saveWorkflowSettings.mockImplementation(
     (workflowId: string, settings: unknown) =>

@@ -124,80 +124,87 @@ export function WorkflowListPage({
             <p className="muted">Create one to begin building an automation graph.</p>
           </div>
         ) : (
-          workflows.map((workflow) => (
-            <Card className="workflow-card" key={workflow.id}>
-              <div className="workflow-card-main">
-                <div>
-                  <h2>{workflow.name}</h2>
-                  {activeRunsByWorkflow.get(workflow.id) ? (
-                    <p className="muted workflow-row-run-status" role="status">
-                      {runStatusLabel(activeRunsByWorkflow.get(workflow.id)!.state)}
-                    </p>
-                  ) : null}
+          workflows.map((workflow) => {
+            const activeRun = activeRunsByWorkflow.get(workflow.id);
+            const hasActiveRun = Boolean(activeRun);
+            return (
+              <Card className="workflow-card" key={workflow.id}>
+                <div className="workflow-card-main">
+                  <div>
+                    <h2>{workflow.name}</h2>
+                    {activeRun ? (
+                      <p className="muted workflow-row-run-status" role="status">
+                        {runStatusLabel(activeRun.state)}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-              <div className="row-actions">
-                <IconButton
-                  label="View Details"
-                  type="button"
-                  onClick={() => onOpenWorkflow(workflow.id)}
-                >
-                  <Eye aria-hidden="true" />
-                </IconButton>
-                <IconButton
-                  label={`Run ${workflow.name}`}
-                  type="button"
-                  variant="secondary"
-                  disabled={Boolean(activeRunsByWorkflow.get(workflow.id))}
-                  onClick={() => onRunWorkflow(workflow)}
-                >
-                  <Play aria-hidden="true" />
-                </IconButton>
-                {activeRunsByWorkflow.get(workflow.id) ? (
+                <div className="row-actions">
                   <IconButton
-                    label={`Stop ${workflow.name}`}
+                    label="View Details"
+                    type="button"
+                    onClick={() => onOpenWorkflow(workflow.id)}
+                  >
+                    <Eye aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    label={`Run ${workflow.name}`}
+                    type="button"
+                    variant="secondary"
+                    disabled={hasActiveRun}
+                    onClick={() => onRunWorkflow(workflow)}
+                  >
+                    <Play aria-hidden="true" />
+                  </IconButton>
+                  {activeRun ? (
+                    <IconButton
+                      label={`Stop ${workflow.name}`}
+                      type="button"
+                      variant="destructive"
+                      onClick={() => onStopRun(activeRun.run_id)}
+                    >
+                      <Square aria-hidden="true" />
+                    </IconButton>
+                  ) : null}
+                  <IconButton
+                    variant="secondary"
+                    type="button"
+                    label={`Edit ${workflow.name}`}
+                    onClick={() => onOpenEditWorkflow(workflow)}
+                  >
+                    <Pencil aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    label={`Duplicate ${workflow.name}`}
+                    type="button"
+                    variant="secondary"
+                    disabled={hasActiveRun}
+                    onClick={() => onDuplicateWorkflow(workflow)}
+                  >
+                    <Copy aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    label={`Export ${workflow.name}`}
+                    type="button"
+                    variant="secondary"
+                    disabled={hasActiveRun}
+                    onClick={() => onOpenExportWorkflow(workflow)}
+                  >
+                    <Download aria-hidden="true" />
+                  </IconButton>
+                  <IconButton
+                    label={`Delete ${workflow.name}`}
                     type="button"
                     variant="destructive"
-                    onClick={() => onStopRun(activeRunsByWorkflow.get(workflow.id)!.run_id)}
+                    disabled={hasActiveRun}
+                    onClick={() => onDeleteWorkflow(workflow.id)}
                   >
-                    <Square aria-hidden="true" />
+                    <Trash2 aria-hidden="true" />
                   </IconButton>
-                ) : null}
-                <IconButton
-                  variant="secondary"
-                  type="button"
-                  label={`Edit ${workflow.name}`}
-                  onClick={() => onOpenEditWorkflow(workflow)}
-                >
-                  <Pencil aria-hidden="true" />
-                </IconButton>
-                <IconButton
-                  label={`Duplicate ${workflow.name}`}
-                  type="button"
-                  variant="secondary"
-                  onClick={() => onDuplicateWorkflow(workflow)}
-                >
-                  <Copy aria-hidden="true" />
-                </IconButton>
-                <IconButton
-                  label={`Export ${workflow.name}`}
-                  type="button"
-                  variant="secondary"
-                  onClick={() => onOpenExportWorkflow(workflow)}
-                >
-                  <Download aria-hidden="true" />
-                </IconButton>
-                <IconButton
-                  label={`Delete ${workflow.name}`}
-                  type="button"
-                  variant="destructive"
-                  onClick={() => onDeleteWorkflow(workflow.id)}
-                >
-                  <Trash2 aria-hidden="true" />
-                </IconButton>
-              </div>
-            </Card>
-          ))
+                </div>
+              </Card>
+            );
+          })
         )}
       </section>
 

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -23,6 +23,8 @@ const dependabotPath = path.join(currentDir, ".github/dependabot.yml");
 const releaseGovernancePath = path.join(currentDir, "docs/release-governance.md");
 const packageJsonPath = path.join(currentDir, "package.json");
 const packageLockPath = path.join(currentDir, "package-lock.json");
+const backendDir = path.join(currentDir, "electron/backend");
+const preloadPath = path.join(currentDir, "electron/preload.cts");
 const releaseManifestScriptPath = path.join(currentDir, "scripts/generate-release-manifest.mjs");
 
 async function readYamlFile(filePath: string) {
@@ -271,6 +273,24 @@ describe("desktop CI/CD", () => {
     expect(updates.map((entry) => entry["package-ecosystem"])).toEqual(expect.arrayContaining(["npm", "github-actions"]));
   });
 
+  test("keeps CloakBrowser out of grouped Dependabot churn and documents its upgrade gate", async () => {
+    const dependabot = await readYamlFile(dependabotPath);
+    const updates = getArray(dependabot.updates).map((entry) => getRecord(entry));
+    const npmUpdate = updates.find((entry) => entry["package-ecosystem"] === "npm");
+    expect(npmUpdate).toBeDefined();
+    const groups = getRecord(npmUpdate?.groups);
+    const minorPatchGroup = getRecord(groups["npm-minor-and-patch"]);
+    const excludePatterns = getArray(minorPatchGroup["exclude-patterns"]);
+    const releaseGovernance = await readFile(releaseGovernancePath, "utf8");
+
+    expect(excludePatterns).toContain("cloakbrowser");
+    expect(releaseGovernance).toContain("CloakBrowser upgrade gate");
+    expect(releaseGovernance).toContain("fingerprint preflight");
+    expect(releaseGovernance).toContain("owned staging smoke");
+    expect(releaseGovernance).toContain("run evidence comparison");
+    expect(releaseGovernance).toContain("rollback");
+  });
+
   test("documents required repository governance settings", async () => {
     const source = await readFile(releaseGovernancePath, "utf8");
 
@@ -308,6 +328,26 @@ describe("desktop CI/CD", () => {
     expect(packageJson.build.linux?.maintainer ?? packageJson.author).toBeTruthy();
   });
 
+  test("derives preload IPC channels instead of duplicating runtime string maps", async () => {
+    const source = await readFile(preloadPath, "utf8");
+
+    expect(source).not.toContain("const workflowIpcChannels = {");
+    expect(source).not.toMatch(/["']workflow:/);
+    expect(source).toContain("workflowChannel");
+    expect(source).toContain("keyof typeof mainWorkflowIpcChannels");
+  });
+
+  test("keeps Electron backend files grouped by ownership", async () => {
+    const entries = await readdir(backendDir, { withFileTypes: true });
+    const topLevelFiles = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
+    const topLevelDirectories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+
+    expect(topLevelFiles).toEqual(["commands.test.ts", "commands.ts"]);
+    expect(topLevelDirectories).toEqual(
+      expect.arrayContaining(["actions", "browser", "evidence", "graph", "persistence", "runtime", "scheduling", "services"]),
+    );
+  });
+
   test("generates a reproducible checksum manifest for release files", async () => {
     const releaseDir = await mkdtemp(path.join(os.tmpdir(), "automation-release-"));
     const filePath = path.join(releaseDir, "Automation App-0.1.0-linux-x64.tar.gz");
@@ -319,10 +359,14 @@ describe("desktop CI/CD", () => {
     const expectedHash = createHash("sha256").update(contents).digest("hex");
     const checksums = await readFile(path.join(releaseDir, "SHA256SUMS"), "utf8");
     const manifest = JSON.parse(await readFile(path.join(releaseDir, "release-manifest.json"), "utf8")) as {
+      generated_at: string;
+      reproducible_epoch: string;
       artifacts: Array<{ name: string; sha256: string; size: number }>;
     };
 
     expect(checksums).toContain(`${expectedHash}  Automation App-0.1.0-linux-x64.tar.gz`);
+    expect(manifest.generated_at).not.toBe(new Date(0).toISOString());
+    expect(manifest.reproducible_epoch).toBe(new Date(0).toISOString());
     expect(manifest.artifacts).toEqual([
       { name: "Automation App-0.1.0-linux-x64.tar.gz", sha256: expectedHash, size: contents.length },
     ]);

@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   createWorkflowCommandHandlers,
+  deriveFingerprintSeedFromIdentityId,
   finishRun,
   serializeCommandError,
 } from "./commands";
@@ -13,7 +14,7 @@ import {
   createAppPaths,
   initializeDatabase,
   type AppPaths,
-} from "./database";
+} from "./persistence/database";
 import type {
   CompiledWorkflowGraph,
   RunState,
@@ -56,18 +57,33 @@ describe("Electron workflow command handlers", () => {
       id: created.id,
       name: "Login flow",
     });
-    expect(JSON.parse(row?.settings_json ?? "{}")).toMatchObject({
+    const persistedSettings = JSON.parse(row?.settings_json ?? "{}");
+    expect(persistedSettings).toMatchObject({
       browser_launch: {
         session_mode: "persistent_profile",
         identity_id: expect.stringMatching(/^bi_/),
         display_name: "Login flow identity",
+        persona_id: expect.any(String),
+        persona: expect.objectContaining({
+          behavioral_timing_profile: expect.any(String),
+          viewport: expect.objectContaining({
+            width: expect.any(Number),
+            height: expect.any(Number),
+          }),
+          window: expect.objectContaining({
+            width: expect.any(Number),
+            height: expect.any(Number),
+          }),
+        }),
         profile_dir: expect.stringMatching(/^bi_/),
         fingerprint_seed: expect.stringMatching(/^\d{5}$/),
         fingerprint_fonts_dir: null,
         humanize: true,
-        human_preset: "default",
       },
     });
+    expect(persistedSettings.browser_launch.human_preset).toBe(
+      persistedSettings.browser_launch.persona.behavioral_timing_profile,
+    );
     expect(JSON.parse(row?.graph_json ?? "{}")).toMatchObject({
       version: 2,
       nodes: expect.arrayContaining([
@@ -254,6 +270,66 @@ describe("Electron workflow command handlers", () => {
     );
   });
 
+  test("rotates browser identity through backend-owned high-entropy generation", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Identity reset");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "identity-fonts-"));
+    tempRoots.push(fontsDir);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        run_from_selected_enabled: true,
+        proxy_enabled: true,
+        proxy_server: "http://proxy.local:8080",
+        timezone: "America/New_York",
+        locale: "en-US",
+        fingerprint_fonts_dir: fontsDir,
+      },
+    });
+
+    const rotated = handlers.resetWorkflowBrowserIdentity(workflow.id);
+
+    expect(rotated.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
+    expect(rotated.browser_launch.identity_id).not.toBe(settings.browser_launch.identity_id);
+    expect(rotated.browser_launch.profile_dir).toBe(rotated.browser_launch.identity_id);
+    expect(rotated.browser_launch.profile_name).toBe(rotated.browser_launch.identity_id);
+    expect(rotated.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(rotated.browser_launch.fingerprint_seed).toBe(
+      deriveFingerprintSeedFromIdentityId(rotated.browser_launch.identity_id),
+    );
+    expect(rotated.browser_launch.run_from_selected_enabled).toBe(false);
+    expect(rotated.browser_launch.proxy_enabled).toBe(true);
+    expect(rotated.browser_launch.proxy_server).toBe("http://proxy.local:8080");
+    expect(rotated.browser_launch.timezone).toBe("America/New_York");
+    expect(rotated.browser_launch.locale).toBe("en-US");
+    expect(rotated.browser_launch.fingerprint_fonts_dir).toBe(fontsDir);
+    expect(rotated.migration_notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "browser_launch.identity_id",
+          action: "rotated",
+          message: expect.stringContaining(settings.browser_launch.identity_id),
+        }),
+      ]),
+    );
+    expect(handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id)
+      .toBe(rotated.browser_launch.identity_id);
+  });
+
+  test("derives deterministic CloakBrowser seeds and probes collisions", () => {
+    const identityId = "bi_11111111111111111111111111111111";
+    const firstSeed = deriveFingerprintSeedFromIdentityId(identityId);
+
+    expect(firstSeed).toMatch(/^\d{5}$/);
+    expect(deriveFingerprintSeedFromIdentityId(identityId)).toBe(firstSeed);
+    expect(deriveFingerprintSeedFromIdentityId(identityId, new Set([firstSeed])))
+      .not.toBe(firstSeed);
+    expect(deriveFingerprintSeedFromIdentityId(identityId, new Set([firstSeed])))
+      .toMatch(/^\d{5}$/);
+  });
+
   test("deletes private browser profile data only when requested", async () => {
     const { handlers, appPaths } = await createTestHandlers();
     const keptWorkflow = handlers.createWorkflow("Keep profile");
@@ -360,9 +436,10 @@ describe("Electron workflow command handlers", () => {
     expect(typeof diagnostics.binary.installed).toBe("boolean");
     expect(diagnostics.profile_root).toBe(appPaths.browserProfilesDir);
     expect(diagnostics.geoip_available).toBe(true);
-    expect(diagnostics.font_checklist).toEqual({
-      status: "not_checked",
-      reason: "Font coverage detection is not implemented",
+    expect(diagnostics.font_checklist).toMatchObject({
+      status: "not_configured",
+      reason: "No workflow has a fingerprint fonts directory configured",
+      directories: [],
     });
     expect(diagnostics.last_smoke_result).toEqual({
       status: "not_recorded",
@@ -389,6 +466,126 @@ describe("Electron workflow command handlers", () => {
     );
     expect(diagnostics.profiles[0]?.last_run_at).toBe("2026-05-15T00:00:02.000Z");
     expect(JSON.stringify(diagnostics)).not.toContain("secret-proxy-password");
+  });
+
+  test("reports configured fingerprint font directory hash and expected family coverage", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Font diagnostics");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "font-diagnostics-"));
+    tempRoots.push(fontsDir);
+    await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
+    await fs.writeFile(path.join(fontsDir, "NotoSans-Regular.otf"), "noto");
+    await fs.writeFile(path.join(fontsDir, "CourierNew.ttf"), "courier");
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        fingerprint_fonts_dir: fontsDir,
+      },
+    });
+
+    const diagnostics = await handlers.getCloakBrowserDiagnostics();
+
+    expect(diagnostics.font_checklist.status).toBe("ok");
+    expect(diagnostics.font_checklist.directories).toEqual([
+      expect.objectContaining({
+        path: fontsDir,
+        status: "ok",
+        file_count: 3,
+        total_size_bytes: 16,
+        normalized_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        expected_families_present: expect.arrayContaining(["arial", "courier", "noto"]),
+        missing_expected_families: [],
+        workflow_ids: [workflow.id],
+      }),
+    ]);
+  });
+
+  test("reports missing and shared fingerprint font directories as actionable diagnostics", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const owner = handlers.createWorkflow("Font owner");
+    const shared = handlers.createWorkflow("Font shared");
+    const missing = handlers.createWorkflow("Font missing");
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "shared-fonts-"));
+    tempRoots.push(fontsDir);
+    await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
+    await fs.writeFile(path.join(fontsDir, "NotoSans-Regular.otf"), "noto");
+    await fs.writeFile(path.join(fontsDir, "CourierNew.ttf"), "courier");
+    const ownerSettings = handlers.getWorkflowSettings(owner.id);
+    const sharedSettings = handlers.getWorkflowSettings(shared.id);
+    const missingSettings = handlers.getWorkflowSettings(missing.id);
+    handlers.saveWorkflowSettings(owner.id, {
+      ...ownerSettings,
+      browser_launch: {
+        ...ownerSettings.browser_launch,
+        fingerprint_fonts_dir: fontsDir,
+      },
+    });
+    handlers.saveWorkflowSettings(shared.id, {
+      ...sharedSettings,
+      browser_launch: {
+        ...sharedSettings.browser_launch,
+        fingerprint_fonts_dir: fontsDir,
+      },
+    });
+    database
+      .prepare("UPDATE workflows SET settings_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({
+          ...missingSettings,
+          browser_launch: {
+            ...missingSettings.browser_launch,
+            fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
+          },
+        }),
+        missing.id,
+      );
+
+    const diagnostics = await handlers.getCloakBrowserDiagnostics();
+
+    expect(diagnostics.font_checklist.status).toBe("error");
+    expect(diagnostics.font_checklist.reason).toContain("missing");
+    expect(diagnostics.font_checklist.directories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: fontsDir,
+          status: "warning",
+          workflow_ids: expect.arrayContaining([owner.id, shared.id]),
+          reason: expect.stringContaining("shared"),
+        }),
+        expect.objectContaining({
+          status: "missing",
+          reason: expect.stringContaining("not readable"),
+          workflow_ids: [missing.id],
+        }),
+      ]),
+    );
+  });
+
+  test("caps browser profile size traversal during diagnostics", async () => {
+    const previousLimit = process.env.WAM_PROFILE_DIAGNOSTICS_MAX_ENTRIES;
+    process.env.WAM_PROFILE_DIAGNOSTICS_MAX_ENTRIES = "1";
+    try {
+      const { handlers, appPaths } = await createTestHandlers();
+      const workflow = handlers.createWorkflow("Large profile diagnostics");
+      const profileDir = handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir;
+      const profilePath = path.join(appPaths.browserProfilesDir, profileDir);
+      await fs.mkdir(profilePath, { recursive: true });
+      await fs.writeFile(path.join(profilePath, "a.bin"), "a".repeat(100));
+      await fs.writeFile(path.join(profilePath, "b.bin"), "b".repeat(100));
+
+      const diagnostics = await handlers.getCloakBrowserDiagnostics();
+      const profile = diagnostics.profiles.find((candidate) => candidate.profile_dir === profileDir);
+
+      expect(profile?.approximate_size_bytes).toBeLessThan(200);
+    } finally {
+      if (previousLimit === undefined) {
+        delete process.env.WAM_PROFILE_DIAGNOSTICS_MAX_ENTRIES;
+      } else {
+        process.env.WAM_PROFILE_DIAGNOSTICS_MAX_ENTRIES = previousLimit;
+      }
+    }
   });
 
   test("cleans up only orphaned inactive CloakBrowser profiles", async () => {
@@ -462,6 +659,77 @@ describe("Electron workflow command handlers", () => {
     expect(() => handlers.deleteWorkflow(workflow.id)).toThrow(
       "Close the retained browser session before changing or deleting its identity profile",
     );
+  });
+
+  test("rejects backend identity rotation while a retained browser session owns the profile", async () => {
+    const runner = {
+      run: vi.fn(),
+      getRetainedSessionState: vi.fn(),
+      getRetainedSessionStates: vi.fn(() => []),
+      hasReusableRetainedSession: vi.fn(() => true),
+    };
+    const { handlers } = await createTestHandlers({ runner });
+    const workflow = handlers.createWorkflow("Active reset");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    runner.getRetainedSessionState.mockReturnValue({
+      available: true,
+      workflow_id: workflow.id,
+      profile_name: settings.browser_launch.profile_dir,
+      reason: null,
+    });
+
+    expect(() => handlers.resetWorkflowBrowserIdentity(workflow.id)).toThrow(
+      "Close the retained browser session before resetting this browser identity",
+    );
+  });
+
+  test("rejects workflow deletion while a run is active and allows it after finalization", async () => {
+    const finishByRunId = new Map<string, (state: RunState) => void>();
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        async run(request: { runId?: string | null }): Promise<RunState> {
+          if (!request.runId) throw new Error("run id is required");
+          return new Promise((resolve) => {
+            finishByRunId.set(request.runId as string, resolve);
+          });
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Active delete guard");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    const snapshot = await handlers.runWorkflow(workflow.id);
+
+    let deleteError: unknown;
+    try {
+      handlers.deleteWorkflow(workflow.id);
+    } catch (error) {
+      deleteError = error;
+    }
+    expect(deleteError).toMatchObject({
+      message: "Stop the active workflow run before deleting this workflow",
+      field: "workflowId",
+    });
+    expect(handlers.getWorkflow(workflow.id)).not.toBeNull();
+    expect(
+      database.prepare("SELECT workflow_id FROM runs WHERE id = ?").get(snapshot.run_id),
+    ).toMatchObject({ workflow_id: workflow.id });
+
+    finishByRunId.get(snapshot.run_id)?.({
+      status: "success",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: ["visit"],
+      outputs: {},
+      error: null,
+    });
+    await waitForRunSnapshotStatus(handlers, snapshot.run_id, "success");
+
+    handlers.deleteWorkflow(workflow.id);
+
+    expect(handlers.getWorkflow(workflow.id)).toBeNull();
   });
 
   test("preserves workflow graphs on load and persists the current contract", async () => {
@@ -1024,6 +1292,123 @@ describe("Electron workflow command handlers", () => {
       field: "package.flow",
     });
     expect(handlers.listWorkflows()).toHaveLength(initialCount);
+
+    const unknownNodePackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Unknown Node" },
+      included_sections: ["flow"],
+      omitted_fields: [],
+      flow: {
+        version: 2,
+        nodes: [
+          {
+            id: "start",
+            node_type: "start",
+            label: "Start",
+            position: { x: 0, y: 0 },
+            config: null,
+            ports: [{ id: "out", label: "Out", direction: "output" }],
+          },
+          {
+            id: "unknown",
+            node_type: "sidequest" as WorkflowGraph["nodes"][number]["node_type"],
+            label: "Unknown",
+            position: { x: 100, y: 0 },
+            config: {},
+            ports: [
+              { id: "in", label: "In", direction: "input" },
+              { id: "out", label: "Out", direction: "output" },
+            ],
+          },
+        ],
+        edges: [edgeForPackage("start", "out", "unknown", "in")],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
+      settings: null,
+    };
+    expect(() =>
+      handlers.importWorkflowPackage(unknownNodePackage, {
+        include_flow: true,
+        settings_sections: [],
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Unsupported graph node type: sidequest",
+      field: "package.flow",
+    }));
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+
+    const unknownActionPackage: WorkflowPackage = {
+      ...unknownNodePackage,
+      workflow: { name: "Unknown Action" },
+      flow: {
+        ...unknownNodePackage.flow!,
+        nodes: unknownNodePackage.flow!.nodes.map((node) =>
+          node.id === "unknown"
+            ? {
+                ...node,
+                node_type: "action",
+                config: { type: "mystery_action", config: {} },
+              }
+            : node,
+        ),
+      },
+    };
+    expect(() =>
+      handlers.importWorkflowPackage(unknownActionPackage, {
+        include_flow: true,
+        settings_sections: [],
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Node Unknown has invalid action config: Unsupported action type: mystery_action",
+      field: "package.flow",
+    }));
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+  });
+
+  test("rejects workflow graph updates with unknown nested action discriminants", async () => {
+    const { handlers } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Unknown nested action");
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: null,
+          ports: [{ id: "out", label: "Out", direction: "output" }],
+        },
+        {
+          id: "if",
+          node_type: "action",
+          label: "If",
+          position: { x: 100, y: 0 },
+          config: {
+            type: "if_condition",
+            config: {
+              condition: { kind: "output_equals", name: "ready", value: "yes" },
+              then_steps: [{ type: "mystery_action", config: {} }],
+              else_steps: [],
+            },
+          },
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+        },
+      ],
+      edges: [edgeForPackage("start", "out", "if", "in")],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    expect(() => handlers.saveWorkflowGraph(workflow.id, graph)).toThrow(
+      expect.objectContaining({
+        message: "Node If has invalid action config: Unsupported action type: mystery_action",
+        field: "workflow.graph",
+      }),
+    );
   });
 
   test("rejects malformed workflow package payloads with command errors", async () => {
@@ -1768,6 +2153,178 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("persists executed nested action traces as durable run step rows", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Nested trace persistence");
+    const runId = "run-nested-traces";
+    database
+      .prepare(
+        `INSERT INTO runs (id, workflow_id, status, started_at)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(runId, workflow.id, "running", "1");
+    const graph: CompiledWorkflowGraph = {
+      steps: [
+        {
+          node_id: "if",
+          label: "If",
+          config: {
+            type: "if_condition",
+            config: { condition: { kind: "output_equals", name: "state", value: "ready" }, then_steps: [], else_steps: [] },
+          },
+        },
+        {
+          node_id: "router",
+          label: "Router",
+          config: {
+            type: "router_condition",
+            config: { mode: "first_match", cases: [], default_steps: [] },
+          },
+        },
+        {
+          node_id: "while",
+          label: "While",
+          config: {
+            type: "while_loop",
+            config: { condition: { kind: "output_equals", name: "keep", value: "yes" }, max_attempts: 2, timeout_ms: null, steps: [] },
+          },
+        },
+        {
+          node_id: "retry",
+          label: "Retry",
+          config: {
+            type: "retry_block",
+            config: { max_attempts: 2, delay_ms: 0, steps: [], failed_steps: [] },
+          },
+        },
+      ],
+    };
+
+    finishRun(database, runId, graph, {
+      status: "success",
+      mode: "run_workflow",
+      target_step_id: null,
+      current_step_id: null,
+      current_step_number: null,
+      completed_step_ids: ["if", "router", "while", "retry"],
+      outputs: {
+        __action_traces: [
+          {
+            node_id: "if-true-a",
+            label: "If True A",
+            action_type: "set_variable",
+            status: "success",
+            mode: "direct_dom",
+            parent_node_id: "if",
+            trace_sequence: 0,
+          },
+          {
+            node_id: "if-true-b",
+            label: "If True B",
+            action_type: "set_variable",
+            status: "success",
+            mode: "direct_dom",
+            parent_node_id: "if",
+            trace_sequence: 1,
+          },
+          {
+            node_id: "router-selected",
+            label: "Router Selected",
+            action_type: "set_variable",
+            status: "success",
+            mode: "direct_dom",
+            parent_node_id: "router",
+            trace_sequence: 2,
+          },
+          {
+            node_id: "loop-body",
+            label: "Loop Body",
+            action_type: "set_variable",
+            status: "success",
+            mode: "direct_dom",
+            parent_node_id: "while",
+            trace_sequence: 3,
+          },
+          {
+            node_id: "loop-body",
+            label: "Loop Body",
+            action_type: "set_variable",
+            status: "success",
+            mode: "direct_dom",
+            parent_node_id: "while",
+            trace_sequence: 4,
+          },
+          {
+            node_id: "retry-attempt",
+            label: "Retry Attempt",
+            action_type: "assert_output",
+            status: "failed",
+            mode: "observer",
+            parent_node_id: "retry",
+            trace_sequence: 5,
+            reason: "Output retry_value did not equal ready",
+          },
+          {
+            node_id: "retry-attempt",
+            label: "Retry Attempt",
+            action_type: "assert_output",
+            status: "success",
+            mode: "observer",
+            parent_node_id: "retry",
+            trace_sequence: 6,
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const stepRows = database
+      .prepare("SELECT node_id, step_number, action_type, status, trace_json FROM run_steps WHERE run_id = ? ORDER BY step_number")
+      .all(runId) as Array<Record<string, string | number | null>>;
+    const nodeIds = stepRows.map((row) => row.node_id);
+
+    expect(nodeIds).toEqual(
+      expect.arrayContaining([
+        "if",
+        "router",
+        "while",
+        "retry",
+        "if-true-a",
+        "if-true-b",
+        "router-selected",
+        "loop-body",
+        "retry-attempt",
+      ]),
+    );
+    expect(nodeIds).not.toContain("router-unselected");
+    expect(stepRows.filter((row) => row.node_id === "loop-body")).toHaveLength(2);
+    expect(stepRows.filter((row) => row.node_id === "retry-attempt")).toHaveLength(2);
+    expect(
+      stepRows
+        .filter((row) => ["if-true-a", "if-true-b", "router-selected", "loop-body", "retry-attempt"].includes(String(row.node_id)))
+        .map((row) => JSON.parse(String(row.trace_json)))
+        .map((trace) => ({
+          node_id: trace.node_id,
+          parent_node_id: trace.parent_node_id,
+          trace_sequence: trace.trace_sequence,
+          status: trace.status,
+        })),
+    ).toEqual([
+      { node_id: "if-true-a", parent_node_id: "if", trace_sequence: 0, status: "success" },
+      { node_id: "if-true-b", parent_node_id: "if", trace_sequence: 1, status: "success" },
+      { node_id: "router-selected", parent_node_id: "router", trace_sequence: 2, status: "success" },
+      { node_id: "loop-body", parent_node_id: "while", trace_sequence: 3, status: "success" },
+      { node_id: "loop-body", parent_node_id: "while", trace_sequence: 4, status: "success" },
+      { node_id: "retry-attempt", parent_node_id: "retry", trace_sequence: 5, status: "failed" },
+      { node_id: "retry-attempt", parent_node_id: "retry", trace_sequence: 6, status: "success" },
+    ]);
+    expect(
+      JSON.parse(String(stepRows.find((row) =>
+        row.node_id === "retry-attempt" && row.status === "failed",
+      )?.trace_json)).reason,
+    ).toBe("Output retry_value did not equal ready");
+  });
+
   test("rolls back terminal run evidence when a step insert fails", async () => {
     const { handlers, database } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Evidence rollback");
@@ -2427,6 +2984,21 @@ function startOnlyGraph(): WorkflowGraph {
     ],
     edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function edgeForPackage(
+  source_node_id: string,
+  source_port: string,
+  target_node_id: string,
+  target_port: string,
+) {
+  return {
+    id: `${source_node_id}-${source_port}-${target_node_id}-${target_port}`,
+    source_node_id,
+    source_port,
+    target_node_id,
+    target_port,
   };
 }
 

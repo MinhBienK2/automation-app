@@ -49,6 +49,10 @@ export function getWorkflowSettings(workflowId: string) {
   return bridge().getWorkflowSettings(workflowId);
 }
 
+export function resetWorkflowBrowserIdentity(workflowId: string) {
+  return bridge().resetWorkflowBrowserIdentity(workflowId);
+}
+
 export function saveWorkflowSettings(
   workflowId: string,
   settings: WorkflowSettings,

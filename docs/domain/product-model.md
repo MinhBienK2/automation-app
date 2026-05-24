@@ -17,9 +17,9 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.
 - Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, graph authoring defaults, and initial environment variables.
-- The Browser Launch section is identity-oriented. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, fixed CloakBrowser fingerprint seed, and optional `fingerprint_fonts_dir`. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns Run from selected enablement, proxy posture and non-secret proxy metadata, timezone/locale/GeoIP, supported WebRTC IP policy values, the humanize toggle and `default`/`careful` preset, optional owned fingerprint preflight, and headed/headless policy. Settings validation warns when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities.
-- CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
-- The Run Policy section owns maximum workflow duration, terminal browser retention, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
+- The Browser Launch section is identity-oriented. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, fixed CloakBrowser fingerprint seed, and a stored persona selected from `src/lib/personaCatalog.ts`. The persona binds the OS/browser bucket, viewport/window dimensions, timezone/locale, proxy/geo policy, WebRTC mode, font bundle metadata, account label/test account binding, and behavior timing profile so the identity is explainable and less clustered than one fixed desktop shape. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns Run from selected enablement, proxy posture and non-secret proxy metadata, timezone/locale/GeoIP, supported WebRTC IP policy values, the humanize toggle and `default`/`careful` preset, optional owned fingerprint preflight, and headed/headless policy. Settings validation warns when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities.
+- CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata with bounded approximate profile sizes, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
+- The Run Policy section owns maximum workflow duration, terminal browser retention, the Allow Run JavaScript policy, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
 - The Graph section owns the default duration-only wait copied onto newly created graph links.
 - The Environment section owns initial variable rows that are available before graph actions run.
 
@@ -47,16 +47,22 @@ Users can:
 ## Current Source Files
 
 - Frontend types: `src/types/workflow.ts`
+- Shared persona catalog: `src/lib/personaCatalog.ts`
 - UI orchestration: `src/App.tsx`
 - Electron bridge wrappers: `src/lib/workflowApi.ts`
 - Electron bridge type: `src/types/electron.ts`
 - Electron main/preload: `electron/main.ts`, `electron/preload.cts`
 - Node command handlers: `electron/backend/commands.ts`
-- Graph compiler: `electron/backend/graphCompiler.ts`
-- CloakBrowser runner: `electron/backend/runner.ts`
-- SQLite bootstrap: `electron/backend/database.ts`
-- Workflow repository: `electron/backend/workflowRepository.ts`
-- Schedule repository and engine: `electron/backend/workflowScheduleRepository.ts`, `electron/backend/scheduler.ts`
+- Run lifecycle manager: `electron/backend/runtime/runManager.ts`
+- Browser session manager: `electron/backend/browser/sessionManager.ts`
+- Workflow Settings service: `electron/backend/services/workflowSettingsService.ts`
+- Workflow package service: `electron/backend/services/workflowPackageService.ts`
+- Graph validation: `electron/backend/graph/validateGraph.ts`
+- Graph compiler: `electron/backend/graph/compiler.ts`
+- CloakBrowser runner: `electron/backend/runtime/runner.ts`
+- SQLite bootstrap: `electron/backend/persistence/database.ts`
+- Workflow repository: `electron/backend/persistence/workflowRepository.ts`
+- Schedule repository and engine: `electron/backend/scheduling/workflowScheduleRepository.ts`, `electron/backend/scheduling/scheduler.ts`
 
 ## Invariant
 

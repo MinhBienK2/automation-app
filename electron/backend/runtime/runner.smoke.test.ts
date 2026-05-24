@@ -5,8 +5,8 @@ import { createServer, type Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { defaultWorkflowSettings } from "./commands";
-import { createAppPaths } from "./database";
+import { defaultWorkflowSettings } from "../commands";
+import { createAppPaths } from "../persistence/database";
 import { BrowserWorkflowRunner } from "./runner";
 
 const tempRoots: string[] = [];

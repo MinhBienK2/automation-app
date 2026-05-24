@@ -109,6 +109,21 @@ export function initializeDatabase(paths: AppPaths) {
       FOREIGN KEY (schedule_id) REFERENCES workflow_schedules(id) ON DELETE CASCADE,
       FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
     );
+
+    CREATE INDEX IF NOT EXISTS idx_runs_workflow_started_at
+      ON runs(workflow_id, started_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_run_steps_run_step_number
+      ON run_steps(run_id, step_number);
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_schedules_enabled_next_run_at
+      ON workflow_schedules(enabled, next_run_at);
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_schedule_events_schedule_created_at
+      ON workflow_schedule_events(schedule_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_schedule_events_workflow_created_at
+      ON workflow_schedule_events(workflow_id, created_at DESC);
   `);
   migrateWorkflowSchema(database);
 

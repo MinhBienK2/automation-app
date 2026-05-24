@@ -1,0 +1,122 @@
+// @vitest-environment node
+
+import { describe, expect, test } from "vitest";
+import {
+  deriveFingerprintSeedFromIdentityId,
+  WorkflowSettingsService,
+} from "./workflowSettingsService";
+import { personaCatalog } from "../../../src/lib/personaCatalog";
+
+describe("WorkflowSettingsService", () => {
+  test("normalizes settings defaults and validates browser identity constraints without commands", () => {
+    const service = new WorkflowSettingsService({
+      directoryReadable: () => true,
+      isOptionalModuleAvailable: () => false,
+    });
+    const workflow = {
+      id: "workflow-1",
+      name: "Checkout",
+      step_count: 0,
+      created_at: "2026-05-24T00:00:00.000Z",
+      updated_at: "2026-05-24T00:00:00.000Z",
+    };
+
+    const settings = service.normalizeWorkflowSettings(
+      {
+        ...service.defaultWorkflowSettings(workflow),
+        browser_launch: {
+          ...service.defaultWorkflowSettings(workflow).browser_launch,
+          session_mode: "persistent_profile",
+          profile_name: "",
+          fingerprint_seed: "",
+          webrtc_policy: "explicit_ip",
+          webrtc_ip: "not-an-ip",
+          preflight_enabled: true,
+          preflight_probe_url: "https://owned.example/preflight",
+          preflight_allowed_origins: ["https://owned.example"],
+          headless: true,
+        },
+      },
+      workflow,
+    );
+
+    expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
+    expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(settings.run_policy.execute_js_enabled).toBe(true);
+    expect(service.validateSettings(settings)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          section: "browser_launch",
+          field: "webrtc_ip",
+          level: "error",
+        }),
+        expect.objectContaining({
+          section: "browser_launch",
+          field: "headless",
+          level: "error",
+        }),
+      ]),
+    );
+  });
+
+  test("derives deterministic collision-probed fingerprint seeds from identity ids", () => {
+    const identityId = "bi_1234567890abcdef";
+    const firstSeed = deriveFingerprintSeedFromIdentityId(identityId);
+
+    expect(firstSeed).toMatch(/^\d{5}$/);
+    expect(deriveFingerprintSeedFromIdentityId(identityId)).toBe(firstSeed);
+    expect(deriveFingerprintSeedFromIdentityId(identityId, new Set([firstSeed])))
+      .not.toBe(firstSeed);
+  });
+
+  test("stores a coherent persona object with normalized browser identity settings", () => {
+    const service = new WorkflowSettingsService({
+      directoryReadable: () => true,
+      isOptionalModuleAvailable: () => true,
+    });
+    const workflow = {
+      id: "workflow-persona",
+      name: "Persona checkout",
+      step_count: 0,
+      created_at: "2026-05-24T00:00:00.000Z",
+      updated_at: "2026-05-24T00:00:00.000Z",
+    };
+
+    const settings = service.normalizeWorkflowSettings({
+      ...service.defaultWorkflowSettings(workflow),
+      browser_launch: {
+        ...service.defaultWorkflowSettings(workflow).browser_launch,
+        persona_id: "desktop_us_east_careful",
+        persona: {
+          id: "unknown",
+          label: "stale",
+          rationale: "",
+          os_bucket: "linux_desktop",
+          browser_channel_bucket: "chromium_stable",
+          viewport: { width: 1, height: 1 },
+          window: { width: 1, height: 1 },
+          timezone: "UTC",
+          locale: "en-US",
+          proxy_geo_policy: "direct",
+          webrtc_mode: "default",
+          font_bundle: {
+            label: "Host default",
+            path: null,
+            expected_families: [],
+          },
+          account_label: null,
+          test_account_binding: null,
+          behavioral_timing_profile: "default",
+        },
+      },
+    }, workflow);
+    const catalogPersona = personaCatalog.find((persona) => persona.id === "desktop_us_east_careful");
+
+    expect(settings.browser_launch.persona_id).toBe("desktop_us_east_careful");
+    expect(settings.browser_launch.persona).toEqual(catalogPersona);
+    expect(settings.browser_launch.timezone).toBe(catalogPersona?.timezone);
+    expect(settings.browser_launch.locale).toBe(catalogPersona?.locale);
+    expect(settings.browser_launch.webrtc_policy).toBe(catalogPersona?.webrtc_mode);
+    expect(settings.browser_launch.human_preset).toBe(catalogPersona?.behavioral_timing_profile);
+  });
+});

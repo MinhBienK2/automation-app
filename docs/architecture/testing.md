@@ -18,15 +18,19 @@ Focused commands:
 ## Electron Backend Tests
 
 - Command API and persistence: `electron/backend/commands.test.ts`
-- Graph validation/compiler: `electron/backend/graphCompiler.test.ts`
-- Runner unit coverage: `electron/backend/runner.test.ts`
-- CloakBrowser launch smoke: `electron/backend/runner.smoke.test.ts`, gated by `RUN_CLOAKBROWSER_SMOKE=1`
+- Graph validation/compiler: `electron/backend/graph/compiler.test.ts`
+- Runner unit coverage: `electron/backend/runtime/runner.test.ts`
+- Evidence model coverage: `electron/backend/evidence/model.test.ts`
+- Fingerprint regression report coverage: `electron/backend/browser/fingerprintRegression.test.ts`
+- CloakBrowser launch smoke: `electron/backend/runtime/runner.smoke.test.ts`, gated by `RUN_CLOAKBROWSER_SMOKE=1`
 
 Focused commands:
 
 - `npm test -- electron/backend/commands.test.ts`
-- `npm test -- electron/backend/graphCompiler.test.ts`
-- `npm test -- electron/backend/runner.test.ts`
+- `npm test -- electron/backend/graph/compiler.test.ts`
+- `npm test -- electron/backend/runtime/runner.test.ts`
+- `npm test -- electron/backend/evidence/model.test.ts`
+- `npm run test:fingerprint`
 - `npm run test:smoke`
 - `npm run build:electron`
 
@@ -38,6 +42,17 @@ persistent localStorage across two launches of the same profile, fixed-seed
 canvas stability, timezone/locale, viewport/screen coherence, and CloakBrowser
 wrapper/binary evidence. A fresh machine may download the CloakBrowser binary
 before the smoke test runs.
+
+`npm run test:fingerprint` is the focused preflight/regression gate for browser
+identity changes and CloakBrowser wrapper upgrades. It checks persona-to-launch
+mapping, sanitized `browser_identity` evidence, the `fingerprint_regression`
+matrix report, and runner preflight integration without requiring a real owned
+staging probe.
+
+Runner unit coverage also guards the Run Policy `execute_js_enabled` safety
+switch: disabled workflows must reject Run JavaScript before browser-side script
+evaluation while still preserving normal evidence tags and output redaction
+when JavaScript execution is enabled.
 
 ## Desktop E2E Tests
 
@@ -77,7 +92,7 @@ Desktop coverage map:
 - `pointer-actions.e2e.ts`: `click`, `double_click`, `right_click`, `hover`, `drag_and_drop`, `scroll`.
 - `navigation-actions.e2e.ts`: `navigate`, `go_back`, `go_forward`, `reload`, `open_new_tab`, `switch_tab`, `close_tab`.
 - `extended-form-actions.e2e.ts`: `upload_file`, `select_custom_option`, `set_contenteditable`.
-- `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(element_visible)`, `wait(text_visible)`, `wait(url_contains)`, `random_wait`, visible `assert_element`, `assert_text` pass and failure run-state paths. Non-visible `assert_element` states and invalid element/form/assertion enum paths are covered in `electron/backend/runner.test.ts` and `electron/backend/graphCompiler.test.ts`.
+- `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(element_visible)`, `wait(text_visible)`, `wait(url_contains)`, `random_wait`, visible `assert_element`, `assert_text` pass and failure run-state paths. Non-visible `assert_element` states and invalid element/form/assertion enum paths are covered in `electron/backend/runtime/runner.test.ts` and `electron/backend/graph/compiler.test.ts`.
 - `control-flow.e2e.ts`: graph-visible `set_variable`, `set_json_variables`, `if`, `switch`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `break_loop`, `continue_loop`, `end_success`, `end_failure`, and `stop_workflow`.
 - `browser-context-storage.e2e.ts`: runtime `set_viewport` width/height behavior, `set_geolocation`, `grant_permission`, `set_extra_headers`, `set_cookie`, `clear_cookies`, `set_local_storage`, `set_session_storage`. Browser Launch no longer exposes launch-time device-shape controls.
 - `run-validation-and-stop.e2e.ts`: unconfigured graph run blocking, domain allowlist navigation blocking, and stop during a running wait.
@@ -111,7 +126,8 @@ Lower-level coverage:
   `internal-release` environment, execute quality gates before packaging, and
   upload macOS, Windows, and Ubuntu/Linux artifacts.
 - Release artifacts must include a CycloneDX SBOM, SHA-256 checksum manifest,
-  JSON release manifest, and GitHub artifact attestation.
+  JSON release manifest with actual `generated_at` and deterministic
+  `reproducible_epoch`, and GitHub artifact attestation.
 - `npm run deploy` is the local release helper. Real deploys require a clean
   worktree, run tests/build, bump the package version, commit, create a `v*`
   tag, and push the branch and tag.
@@ -119,7 +135,9 @@ Lower-level coverage:
   are part of release verification.
 - `ci-cd.test.ts` also verifies the audited CloakBrowser wrapper is exact-pinned
   in `package.json` and `package-lock.json` so browser wrapper drift is caught
-  before release.
+  before release. It also verifies Dependabot excludes `cloakbrowser` from the
+  broad npm minor/patch group and that release governance documents the
+  CloakBrowser upgrade gate.
 
 Focused commands:
 

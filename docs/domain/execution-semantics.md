@@ -6,9 +6,13 @@
 - `run_workflow` executes the compiled saved graph.
 - `run_workflow_from_node` executes the saved graph from one selected main-path graph node to the end by reusing the currently retained browser session.
 - `test_step` executes from the first step through the selected step.
-- During the Electron migration, graph validation and compilation are owned by `electron/backend/graphCompiler.ts`.
-- Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` and Playwright-compatible page/context APIs.
+- During the Electron migration, graph validation and compilation are owned by `electron/backend/graph/compiler.ts`.
+- Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` and Playwright-compatible page/context APIs. Browser launch, retained-session state, and browser identity evidence are delegated to `electron/backend/browser/sessionManager.ts`.
 - Visual graphs compile to executable action configs, including graph-internal control configs for router, switch, guarded loops, try/catch, fallback, loop break/continue, output assertions, transforms, Merge no-ops, explicit unsupported subworkflow placeholders, and domain allowlists.
+- Unknown graph node, action, nested action, and condition discriminants are
+  validation errors before normal save/import/run boundaries. If a malformed
+  compiled plan reaches the runner directly, unknown action and condition kinds
+  fail the run instead of becoming no-ops or false conditions.
 - Graph edge delays compile to synthetic fixed or random wait steps before the edge target node. They are duration-only transition timing, not page-state waits.
 - Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, `Router`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
 - Router nodes evaluate cases in saved order using `first_match` semantics. The first matching case branch runs; when no cases match, the default branch runs. Missing case/default branches are no-ops, and a missing `done` continuation ends successfully after Router.
@@ -18,7 +22,7 @@
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
 - Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
-- Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled step evidence to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
+- Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled top-level step evidence and executed nested action traces to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
 - Scheduled runs start through the same saved-workflow command path as manual full runs. If the scheduled workflow conflicts with an active workflow, active persistent profile, or active batch, the scheduler records a skipped occurrence instead of queueing it; isolated due schedules can start in the same scheduler tick.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup actions before graph actions.
@@ -26,6 +30,7 @@
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
+- Run Policy `execute_js_enabled` defaults to enabled. When disabled, `execute_js` fails before script evaluation with a clear Run Policy error so lower-risk profiles can reject direct DOM scripting while keeping the action available for authorized workflows.
 - `run_workflow_from_node` requires Browser Launch `run_from_selected_enabled`, Browser Launch `persistent_profile`, Run Policy browser retention `retain`, and a retained session owned by the same workflow/profile directory. Temporary retained sessions are not eligible.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
@@ -34,14 +39,14 @@
 - Browser identity, proxy, profile, and download behavior belong in Workflow Settings Browser Launch, not in in-run action nodes.
 - `set_viewport` changes only runtime viewport width and height. Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile mode, or touch capability controls.
 - Click, double click, hover, fill, select, checkbox, drag/drop, and element-targeted scroll prefer CloakBrowser-patched locator/frame APIs so CloakBrowser owns supported humanization.
-- Runner action traces record compact action mode/status metadata. The runner also keeps an internal interaction capability map: CloakBrowser-native when supported, custom human behavior only for unsupported cases, and direct DOM for read/assert/storage or final fallback paths.
+- Runner action traces record compact action mode/status metadata. Nested branch/body traces also record parent control node id, sequence order, timestamps, output summary, evidence summary, and failure reason when present. The runner also keeps an internal interaction capability map: CloakBrowser-native when supported, custom human behavior only for unsupported cases, and direct DOM for read/assert/storage or final fallback paths.
 - Select Radio tries the CloakBrowser locator `check()` path first, then locator click, and only falls back to DOM checked/input/change mutation if the native paths fail.
 - Submit Form with a target tries locator click/press first and only falls back to DOM `requestSubmit`; Submit Form without a target uses custom Enter key hold timing on the page keyboard.
 - Right Click uses custom human movement to the resolved target followed by right-button down/up, avoiding CloakBrowser patched click paths that do not preserve the right-button option.
 - Scroll Page mode uses custom human wheel chunks because CloakBrowser does not patch `page.mouse.wheel` directly; `window.scrollBy` is only a fallback for driver adapters without wheel input. Scroll Into View and Until Visible use the target locator's CloakBrowser/Playwright scroll-to-element path, including legacy `iframe_xpath` resolution when provided.
 - Dialog actions register one-shot browser dialog handlers. `wait_for_download` waits for a real download event and saves the artifact under the current run evidence directory.
 - `extract_table` resolves the target table or nearest owning table and stores rows as arrays of trimmed `th`/`td` cell text.
-- `execute_js` runs script text as a browser-side function body. Scripts may use `return ...`; when `output_name` is set, the returned value is stored in run outputs.
+- `execute_js` runs script text as a browser-side function body only when Run Policy allows it. Scripts may use `return ...`; when `output_name` is set, the returned value is stored in run outputs.
 
 ## Run State
 
@@ -49,7 +54,7 @@
 - Mode values are `none`, `run_workflow`, and `test_step`.
 - Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
-- Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`.
+- Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`. At finish time, command persistence keeps compatible top-level `run_steps` rows and appends executed nested trace rows, so the stored rows can reconstruct which branch, loop iteration, or retry attempt actually ran.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 
@@ -72,11 +77,12 @@
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
 - Retained browser sessions are keyed by workflow/profile so multiple isolated workflows can retain inspectable browsers at the same time. Starting a fresh run closes only the retained session that would conflict with that workflow/profile before a new CloakBrowser context launches, releasing that persistent profile lock while preserving unrelated retained sessions.
 - A run-from-selected run reuses the matching retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
-- Workflow Settings Browser Launch resolves the browser identity before the browser starts. It maps persistent versus temporary storage, stable profile directory, fingerprint seed, fingerprint fonts directory, proxy server/bypass/credentials, timezone, locale, GeoIP, supported WebRTC policy values, humanize toggle/preset, and headless mode into CloakBrowser launch options. For headed runs, the runner also passes a fixed desktop `--window-size=1920,1080` Chromium argument.
+- Workflow Settings Browser Launch resolves the browser identity before the browser starts. `BrowserSessionManager` maps persistent versus temporary storage, stable profile directory, fingerprint seed, selected persona viewport/window dimensions, fingerprint fonts directory, proxy server/bypass/credentials, timezone, locale, GeoIP, supported WebRTC policy values, humanize toggle/preset, and headless mode into CloakBrowser launch options. For headed runs, it passes the selected persona window dimensions as the Chromium `--window-size` argument; in-run Set Viewport can still change runtime viewport later.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.
-- When enabled, owned fingerprint preflight runs after CloakBrowser launch and initial environment setup, opens the configured allowlisted probe URL, reads a structured verdict, writes sanitized `fingerprint_preflight` output, and stops before graph actions if the verdict fails or is malformed.
-- `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, non-secret proxy metadata, timezone/locale source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, and configured humanization status/preset. Package export redacts proxy passwords, proxy URL credentials, and probe URL search/hash values.
+- When enabled, owned fingerprint preflight runs after CloakBrowser launch and initial environment setup, opens the configured allowlisted probe URL, reads a structured verdict, writes recursively sanitized `fingerprint_preflight` output, generates a comparable `fingerprint_regression` matrix report, and stops before graph actions if the verdict fails or is malformed.
+- `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, configured fingerprint font hash when available, sanitized selected persona metadata and rationale, non-secret proxy metadata, account label/test-account binding, timezone/locale source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, and configured humanization status/preset. Package export redacts proxy passwords, proxy URL credentials, and probe URL search/hash values.
+- Final run outputs include `__evidence_model`, a per-output category/limit/redaction manifest. It preserves structured action traces and generated artifact metadata while redacting sensitive arbitrary page-observation outputs and limiting oversized strings, arrays, and objects. `execute_js` remains available for authorized testing, can be disabled per workflow through Run Policy, and its traces carry explicit direct-DOM audit tags when allowed.
 
 ## Cancellation
 
