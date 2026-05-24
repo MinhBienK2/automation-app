@@ -3,13 +3,29 @@ import { dirname, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-function npmExecutable() {
-  return process.platform === "win32" ? "npm.cmd" : "npm";
+const NPM_SBOM_ARGS = ["sbom", "--sbom-format", "cyclonedx", "--omit", "dev"];
+
+export function createNpmSbomCommand({ platform = process.platform, env = process.env, execPath = process.execPath } = {}) {
+  if (env.npm_execpath) {
+    return {
+      command: env.npm_node_execpath || execPath,
+      args: [env.npm_execpath, ...NPM_SBOM_ARGS],
+      options: {},
+    };
+  }
+
+  return {
+    command: "npm",
+    args: NPM_SBOM_ARGS,
+    options: platform === "win32" ? { shell: true } : {},
+  };
 }
 
 async function runNpmSbom() {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(npmExecutable(), ["sbom", "--sbom-format", "cyclonedx", "--omit", "dev"], {
+    const npmSbomCommand = createNpmSbomCommand();
+    const child = spawn(npmSbomCommand.command, npmSbomCommand.args, {
+      ...npmSbomCommand.options,
       stdio: ["ignore", "pipe", "pipe"],
     });
     const stdout = [];

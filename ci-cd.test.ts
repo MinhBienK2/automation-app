@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { describe, expect, test } from "vitest";
 
@@ -26,6 +26,7 @@ const packageLockPath = path.join(currentDir, "package-lock.json");
 const backendDir = path.join(currentDir, "electron/backend");
 const preloadPath = path.join(currentDir, "electron/preload.cts");
 const releaseManifestScriptPath = path.join(currentDir, "scripts/generate-release-manifest.mjs");
+const releaseSbomScriptPath = path.join(currentDir, "scripts/generate-release-sbom.mjs");
 
 async function readYamlFile(filePath: string) {
   const source = await readFile(filePath, "utf8");
@@ -370,5 +371,33 @@ describe("desktop CI/CD", () => {
     expect(manifest.artifacts).toEqual([
       { name: "Automation App-0.1.0-linux-x64.tar.gz", sha256: expectedHash, size: contents.length },
     ]);
+  });
+
+  test("runs npm sbom through Node on Windows instead of spawning the npm.cmd shim", async () => {
+    const { createNpmSbomCommand } = (await import(pathToFileURL(releaseSbomScriptPath).href)) as {
+      createNpmSbomCommand: (context: {
+        platform: NodeJS.Platform;
+        env: NodeJS.ProcessEnv;
+        execPath: string;
+      }) => {
+        command: string;
+        args: string[];
+        options: { shell?: boolean };
+      };
+    };
+    const npmExecPath = String.raw`C:\hostedtoolcache\windows\node\24.15.0\x64\node_modules\npm\bin\npm-cli.js`;
+    const nodeExecPath = String.raw`C:\hostedtoolcache\windows\node\24.15.0\x64\node.exe`;
+
+    const command = createNpmSbomCommand({
+      platform: "win32",
+      env: { npm_execpath: npmExecPath, npm_node_execpath: nodeExecPath },
+      execPath: "node",
+    });
+
+    expect(command).toEqual({
+      command: nodeExecPath,
+      args: [npmExecPath, "sbom", "--sbom-format", "cyclonedx", "--omit", "dev"],
+      options: {},
+    });
   });
 });
