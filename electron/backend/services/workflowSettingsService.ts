@@ -14,19 +14,31 @@ import { personaForId, personaForSeed } from "../../../src/lib/personaCatalog.js
 type WorkflowSettingsServiceDependencies = {
   directoryReadable: (value: string) => boolean;
   isOptionalModuleAvailable: (name: string) => boolean;
+  defaultFingerprintFontsDir?: () => string | null;
+};
+
+type DefaultWorkflowSettingsOptions = {
+  randomizeIdentity?: boolean;
+  defaultFingerprintFontsDir?: string | null;
 };
 
 export class WorkflowSettingsService {
   constructor(private readonly dependencies: WorkflowSettingsServiceDependencies) {}
 
-  defaultWorkflowSettings = defaultWorkflowSettings;
+  defaultWorkflowSettings = (
+    workflow: Parameters<typeof defaultWorkflowSettings>[0],
+    options: DefaultWorkflowSettingsOptions = {},
+  ) => defaultWorkflowSettings(
+    workflow,
+    withDefaultFingerprintFontsDir(options, this.dependencies.defaultFingerprintFontsDir),
+  );
 
   deriveFingerprintSeedFromIdentityId = deriveFingerprintSeedFromIdentityId;
 
   createHighEntropyBrowserIdentityId = createHighEntropyBrowserIdentityId;
 
   normalizeWorkflowSettings(settings: WorkflowSettings, workflow: WorkflowSummary): WorkflowSettings {
-    const base = defaultWorkflowSettings(workflow);
+    const base = this.defaultWorkflowSettings(workflow);
     return {
       workflow_id: settings.workflow_id || workflow.id,
       version: 2,
@@ -251,9 +263,13 @@ export class WorkflowSettingsService {
   configToSettingsBrowserLaunch(
     config: WorkflowBrowserConfig,
     workflow?: Pick<WorkflowSummary, "id" | "name">,
-    options: { randomizeIdentity?: boolean } = {},
+    options: DefaultWorkflowSettingsOptions = {},
   ): WorkflowSettingsBrowserLaunch {
-    return configToSettingsBrowserLaunch(config, workflow, options);
+    return configToSettingsBrowserLaunch(
+      config,
+      workflow,
+      withDefaultFingerprintFontsDir(options, this.dependencies.defaultFingerprintFontsDir),
+    );
   }
 
   settingsBrowserToConfig(
@@ -269,7 +285,7 @@ export class WorkflowSettingsService {
 
   duplicateWorkflowSettings(sourceSettings: WorkflowSettings, created: Workflow): WorkflowSettings {
     const copied = structuredClone(sourceSettings);
-    const freshDefaults = defaultWorkflowSettings(created, { randomizeIdentity: true });
+    const freshDefaults = this.defaultWorkflowSettings(created, { randomizeIdentity: true });
     const sourceBrowser = copied.browser_launch;
     const freshBrowser = freshDefaults.browser_launch;
     const persistent = sourceBrowser.session_mode === "persistent_profile";
@@ -300,10 +316,23 @@ export class WorkflowSettingsService {
   }
 }
 
+function withDefaultFingerprintFontsDir(
+  options: DefaultWorkflowSettingsOptions,
+  resolver: (() => string | null) | undefined,
+): DefaultWorkflowSettingsOptions {
+  if (Object.prototype.hasOwnProperty.call(options, "defaultFingerprintFontsDir")) {
+    return options;
+  }
+  return {
+    ...options,
+    defaultFingerprintFontsDir: resolver?.() ?? null,
+  };
+}
+
 export function defaultWorkflowSettings(
   workflow: Pick<WorkflowSummary, "id" | "name" | "created_at" | "updated_at"> &
     Partial<Pick<WorkflowSummary, "step_count">>,
-  options: { randomizeIdentity?: boolean } = {},
+  options: DefaultWorkflowSettingsOptions = {},
 ): WorkflowSettings {
   const browserLaunch = normalizeSettingsBrowserLaunch({
     ...configToSettingsBrowserLaunch(defaultBrowserConfig(workflow.id), workflow, options),
@@ -432,7 +461,7 @@ function defaultBrowserConfig(workflowId: string): WorkflowBrowserConfig {
 function configToSettingsBrowserLaunch(
   config: WorkflowBrowserConfig,
   workflow?: Pick<WorkflowSummary, "id" | "name">,
-  options: { randomizeIdentity?: boolean } = {},
+  options: DefaultWorkflowSettingsOptions = {},
 ): WorkflowSettingsBrowserLaunch {
   const identity = createDefaultBrowserIdentity(workflow, options);
   return normalizeSettingsBrowserLaunch({
@@ -620,7 +649,7 @@ function normalizeGraphEdgeDelay(value: unknown): GraphEdgeDelay | null {
 
 function createDefaultBrowserIdentity(
   workflow?: Pick<WorkflowSummary, "id" | "name">,
-  options: { randomizeIdentity?: boolean } = {},
+  options: DefaultWorkflowSettingsOptions = {},
 ): Pick<
   WorkflowSettingsBrowserLaunch,
   | "identity_id"
@@ -646,6 +675,7 @@ function createDefaultBrowserIdentity(
     ? createHighEntropyBrowserIdentityId()
     : createStableBrowserIdentityId(workflow?.id ?? "workflow");
   const persona = personaForSeed(identityId);
+  const defaultFontsDir = nullableText(options.defaultFingerprintFontsDir);
   return {
     identity_id: identityId,
     display_name: `${workflow?.name ?? "Workflow"} identity`,
@@ -655,7 +685,7 @@ function createDefaultBrowserIdentity(
     fingerprint_seed: options.randomizeIdentity
       ? deriveFingerprintSeedFromIdentityId(identityId)
       : stableFingerprintSeed(identityId),
-    fingerprint_fonts_dir: nullableText(persona.font_bundle.path),
+    fingerprint_fonts_dir: defaultFontsDir ?? nullableText(persona.font_bundle.path),
     timezone: null,
     locale: null,
     geoip: false,

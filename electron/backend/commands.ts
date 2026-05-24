@@ -67,7 +67,6 @@ import { WorkflowRepository } from "./persistence/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
 import {
   createHighEntropyBrowserIdentityId,
-  defaultWorkflowSettings,
   deriveFingerprintSeedFromIdentityId,
   WorkflowSettingsService,
 } from "./services/workflowSettingsService.js";
@@ -101,6 +100,7 @@ type CommandContext = {
   database: DatabaseSync;
   runner?: RunnerCommandPort;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
+  defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
@@ -111,12 +111,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const settingsService = new WorkflowSettingsService({
     directoryReadable,
     isOptionalModuleAvailable,
+    defaultFingerprintFontsDir: () => resolveDefaultFingerprintFontsDir(context.defaultFingerprintFontsDir),
   });
   const packageService = new WorkflowPackageService({
     migrateGraph: migrateWorkflowGraph,
     validateGraph,
     validateSettings: (settings) => settingsService.validateSettings(settings),
-    defaultSettings: defaultWorkflowSettings,
+    defaultSettings: settingsService.defaultWorkflowSettings,
   });
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
@@ -131,7 +132,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const persisted = repository.getWorkflowSettings(workflowId);
     const workflow = requireWorkflow(workflowId);
     if (persisted) return settingsService.normalizeWorkflowSettings(persisted, workflow);
-    return defaultWorkflowSettings(workflow);
+    return settingsService.defaultWorkflowSettings(workflow);
   }
 
   function lastRunAtForWorkflow(workflowId: string): string | null {
@@ -291,7 +292,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const workflow = repository.createWorkflow(normalized, createDraftGraph());
     repository.saveWorkflowSettings(
       workflow.id,
-      defaultWorkflowSettings(workflow, { randomizeIdentity: true }),
+      settingsService.defaultWorkflowSettings(workflow, { randomizeIdentity: true }),
     );
     return workflow;
   }
@@ -1056,6 +1057,15 @@ function directoryReadable(value: string) {
   } catch {
     return false;
   }
+}
+
+function resolveDefaultFingerprintFontsDir(
+  override: CommandContext["defaultFingerprintFontsDir"],
+) {
+  if (typeof override === "function") return override();
+  if (override !== undefined) return override;
+  const candidate = path.join(process.cwd(), ".local", "cloakbrowser-fonts", "linux");
+  return directoryReadable(candidate) ? candidate : null;
 }
 
 async function buildCloakBrowserDiagnostics({

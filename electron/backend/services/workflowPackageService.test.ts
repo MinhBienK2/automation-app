@@ -33,12 +33,14 @@ describe("WorkflowPackageService", () => {
     });
     expect(packageValue.settings.browser_launch?.proxy_password).toBeNull();
     expect(packageValue.settings.browser_launch?.proxy_server).toBe("https://proxy.example:8443/");
+    expect(packageValue.settings.browser_launch?.fingerprint_fonts_dir).toBeNull();
     expect(packageValue.settings.browser_launch?.preflight_probe_url).toBe(
       "https://owned.example/preflight",
     );
     expect(packageValue.omitted_fields).toEqual([
       "settings.browser_launch.proxy_password",
       "settings.browser_launch.proxy_server.credentials",
+      "settings.browser_launch.fingerprint_fonts_dir",
       "settings.browser_launch.preflight_probe_url.search",
     ]);
   });
@@ -132,7 +134,7 @@ function workflowSettings(
       profile_dir: "bi_workflow_1",
       fingerprint_seed: "12345",
       profile_name: "bi_workflow_1",
-      fingerprint_fonts_dir: null,
+      fingerprint_fonts_dir: "/repo/.local/cloakbrowser-fonts/linux",
       timezone: null,
       locale: null,
       geoip: false,

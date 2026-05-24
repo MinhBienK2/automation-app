@@ -196,6 +196,10 @@ function sanitizeBrowserLaunchSettings(
       sanitized.proxy_server = sanitizedProxyServer;
     }
   }
+  if (sanitized.fingerprint_fonts_dir) {
+    omittedFields.push("settings.browser_launch.fingerprint_fonts_dir");
+  }
+  sanitized.fingerprint_fonts_dir = null;
   if (sanitized.preflight_probe_url) {
     const sanitizedProbeUrl = sanitizeUrlSearch(sanitized.preflight_probe_url);
     if (sanitizedProbeUrl !== sanitized.preflight_probe_url) {

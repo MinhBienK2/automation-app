@@ -150,6 +150,34 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
+  test("defaults new workflow browser launch fonts from the detected repo-local CloakBrowser bundle", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "repo-font-default-"));
+    tempRoots.push(repoRoot);
+    const defaultFontsDir = path.join(repoRoot, ".local", "cloakbrowser-fonts", "linux");
+    await fs.mkdir(defaultFontsDir, { recursive: true });
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(repoRoot);
+
+    try {
+      const { handlers } = await createTestHandlers({
+        defaultFingerprintFontsDir: undefined,
+      });
+      const workflow = handlers.createWorkflow("Font defaults");
+      const settings = handlers.getWorkflowSettings(workflow.id);
+      const cleared = handlers.saveWorkflowSettings(workflow.id, {
+        ...settings,
+        browser_launch: {
+          ...settings.browser_launch,
+          fingerprint_fonts_dir: null,
+        },
+      });
+
+      expect(settings.browser_launch.fingerprint_fonts_dir).toBe(defaultFontsDir);
+      expect(cleared.browser_launch.fingerprint_fonts_dir).toBeNull();
+    } finally {
+      cwd.mockRestore();
+    }
+  });
+
   test("rolls back duplicate workflow when copied graph persistence fails", async () => {
     const { handlers, database } = await createTestHandlers();
     const source = handlers.createWorkflow("Source");
@@ -1156,12 +1184,15 @@ describe("Electron workflow command handlers", () => {
     const { handlers } = await createTestHandlers();
     const workflow = handlers.createWorkflow("Export me");
     const settings = handlers.getWorkflowSettings(workflow.id);
+    const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "export-fonts-"));
+    tempRoots.push(fontsDir);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
       browser_launch: {
         ...settings.browser_launch,
         proxy_password: "secret",
         proxy_server: "http://agent:secret@proxy.owned.test:8080",
+        fingerprint_fonts_dir: fontsDir,
         preflight_enabled: true,
         preflight_probe_url: "https://probe.owned.test/verdict?token=secret",
         preflight_allowed_origins: ["https://probe.owned.test"],
@@ -1177,6 +1208,7 @@ describe("Electron workflow command handlers", () => {
     expect(packageValue.settings?.browser_launch?.proxy_server).toBe(
       "http://proxy.owned.test:8080/",
     );
+    expect(packageValue.settings?.browser_launch?.fingerprint_fonts_dir).toBeNull();
     expect(packageValue.settings?.browser_launch?.preflight_probe_url).toBe(
       "https://probe.owned.test/verdict",
     );
@@ -1184,6 +1216,7 @@ describe("Electron workflow command handlers", () => {
       expect.arrayContaining([
         "settings.browser_launch.proxy_password",
         "settings.browser_launch.proxy_server.credentials",
+        "settings.browser_launch.fingerprint_fonts_dir",
         "settings.browser_launch.preflight_probe_url.search",
       ]),
     );
@@ -3007,7 +3040,12 @@ async function createTestHandlers(
   tempRoots.push(tempRoot);
   const appPaths = createAppPaths(tempRoot);
   const database = initializeDatabase(appPaths);
-  const handlers = createWorkflowCommandHandlers({ appPaths, database, ...overrides });
+  const handlers = createWorkflowCommandHandlers({
+    appPaths,
+    database,
+    defaultFingerprintFontsDir: null,
+    ...overrides,
+  });
   return { appPaths, database, handlers };
 }
 

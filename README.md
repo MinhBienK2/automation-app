@@ -148,9 +148,11 @@ machines. To avoid installing the recommended Linux font packages system-wide,
 run `npm run cloakbrowser:fonts:setup`; it downloads and extracts the
 CloakBrowser-recommended Ubuntu font packages into the gitignored repo-local
 directory `.local/cloakbrowser-fonts/linux`, refreshes fontconfig for that
-directory when `fc-cache` is available, and prints the absolute path to copy into
-Workflow Settings -> Browser Launch -> Fingerprint fonts directory. The generated
-font files and downloaded `.deb` packages are local machine output and should not
+directory when `fc-cache` is available, and prints the absolute path. New or
+lazy-created Workflow Settings auto-fill that repo-local path when the directory
+exists and is readable; operators can still edit or clear Workflow Settings ->
+Browser Launch -> Fingerprint fonts directory per workflow. The generated font
+files and downloaded `.deb` packages are local machine output and should not
 be committed. GeoIP mode uses the installed `mmdb-lib` package and may download its
 GeoIP database on first use; prefer explicit timezone/locale when proxy
 inventory already supplies region metadata. Workflow Settings validation warns

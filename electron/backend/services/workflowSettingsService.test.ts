@@ -70,6 +70,37 @@ describe("WorkflowSettingsService", () => {
       .not.toBe(firstSeed);
   });
 
+  test("defaults readable repo-local CloakBrowser fonts without restoring them after a user clears the field", () => {
+    const defaultFontsDir = "/repo/.local/cloakbrowser-fonts/linux";
+    const service = new WorkflowSettingsService({
+      directoryReadable: () => true,
+      isOptionalModuleAvailable: () => true,
+      defaultFingerprintFontsDir: () => defaultFontsDir,
+    });
+    const workflow = {
+      id: "workflow-font-default",
+      name: "Font defaults",
+      step_count: 0,
+      created_at: "2026-05-24T00:00:00.000Z",
+      updated_at: "2026-05-24T00:00:00.000Z",
+    };
+
+    const defaults = service.defaultWorkflowSettings(workflow);
+    const cleared = service.normalizeWorkflowSettings(
+      {
+        ...defaults,
+        browser_launch: {
+          ...defaults.browser_launch,
+          fingerprint_fonts_dir: null,
+        },
+      },
+      workflow,
+    );
+
+    expect(defaults.browser_launch.fingerprint_fonts_dir).toBe(defaultFontsDir);
+    expect(cleared.browser_launch.fingerprint_fonts_dir).toBeNull();
+  });
+
   test("stores a coherent persona object with normalized browser identity settings", () => {
     const service = new WorkflowSettingsService({
       directoryReadable: () => true,
