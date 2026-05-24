@@ -108,13 +108,16 @@ describe("BrowserSessionManager", () => {
       session_mode: "persistent_profile",
       fingerprint_seed_hash: expect.stringMatching(/^[a-f0-9]{16}$/),
       fingerprint_fonts_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
-      proxy_label: "Corp proxy",
       timezone_source: "explicit",
       locale_source: "explicit",
       advanced_overrides: ["fingerprint_fonts_dir"],
       humanize: false,
       human_preset: "careful",
     });
+    expect(evidence).not.toHaveProperty("proxy_label");
+    expect(evidence).not.toHaveProperty("proxy_region");
+    expect(evidence).not.toHaveProperty("proxy_provider");
+    expect(evidence).not.toHaveProperty("test_account_binding");
   });
 
   test("keeps stored persona dimensions in evidence without forcing launch dimensions", async () => {
@@ -189,10 +192,11 @@ describe("BrowserSessionManager", () => {
           label: "Windows 11 core fonts",
           expected_families: ["Arial", "Calibri"],
         },
-        account_label: "checkout-us-east",
         behavioral_timing_profile: "careful",
       },
     });
+    expect(evidence.persona).not.toHaveProperty("account_label");
+    expect(evidence.persona).not.toHaveProperty("test_account_binding");
   });
 
   test("omits optional launch keys when no browser setting resolves them", async () => {

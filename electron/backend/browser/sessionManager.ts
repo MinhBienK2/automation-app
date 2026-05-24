@@ -469,11 +469,6 @@ export async function browserIdentityEvidence(settings: WorkflowSettings, runId:
       .digest("hex")
       .slice(0, 16),
     fingerprint_fonts_hash: await fingerprintFontsHash(fontBundlePath),
-    proxy_label: browser.proxy_label ?? null,
-    proxy_region: browser.proxy_region ?? null,
-    proxy_provider: browser.proxy_provider ?? null,
-    test_account_binding: browser.test_account_binding ?? persona?.test_account_binding ?? null,
-    account_label: persona?.account_label ?? null,
     persona: browserPersonaEvidence(persona),
     timezone,
     timezone_source: browser.timezone ? "explicit" : browser.geoip ? "geoip" : "local",
@@ -523,8 +518,6 @@ function browserPersonaEvidence(persona: WorkflowPersona | null | undefined) {
       expected_families: persona.font_bundle.expected_families,
       path_configured: Boolean(persona.font_bundle.path),
     },
-    account_label: persona.account_label ?? null,
-    test_account_binding: persona.test_account_binding ?? null,
     behavioral_timing_profile: persona.behavioral_timing_profile,
   };
 }

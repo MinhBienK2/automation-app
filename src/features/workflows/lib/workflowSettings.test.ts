@@ -42,8 +42,10 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch).not.toHaveProperty("device_memory_gb");
     expect(settings.browser_launch).toHaveProperty("fingerprint_fonts_dir", null);
     expect(settings.browser_launch).not.toHaveProperty("storage_quota_mb");
-    expect(settings.browser_launch.proxy_provider).toBeNull();
-    expect(settings.browser_launch.test_account_binding).toBeNull();
+    expect(settings.browser_launch).not.toHaveProperty("proxy_label");
+    expect(settings.browser_launch).not.toHaveProperty("proxy_region");
+    expect(settings.browser_launch).not.toHaveProperty("proxy_provider");
+    expect(settings.browser_launch).not.toHaveProperty("test_account_binding");
     expect(settings.browser_launch).not.toHaveProperty("viewport_width");
     expect(settings.browser_launch).not.toHaveProperty("viewport_height");
     expect(settings.browser_launch).not.toHaveProperty("device_scale_factor");
@@ -146,7 +148,7 @@ describe("workflow settings model", () => {
       "Proxy server",
       "Proxy username",
       "Proxy password",
-      "Proxy metadata",
+      "Proxy bypass",
       "Timezone",
       "Locale",
       "GeoIP from proxy",

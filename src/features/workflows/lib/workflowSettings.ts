@@ -229,11 +229,7 @@ export function defaultWorkflowSettings({
       timezone: null,
       locale: null,
       geoip: false,
-      proxy_label: null,
-      proxy_region: persona.proxy_region ?? null,
-      proxy_provider: null,
       proxy_bypass: null,
-      test_account_binding: persona.test_account_binding ?? null,
       webrtc_policy: persona.webrtc_mode,
       webrtc_ip: null,
       preflight_enabled: false,
@@ -655,11 +651,11 @@ export const workflowSettingsHelp: Record<
             "Use it only when the authorized proxy requires a password and avoid placing the value in notes or screenshots.",
         },
         {
-          name: "Proxy metadata",
+          name: "Proxy bypass",
           description:
-            "Non-secret proxy label, region, provider, bypass list, and approved test-account binding stored separately from credentials for audit and diagnostics.",
+            "Optional comma-separated domains that should connect directly instead of through the configured proxy, such as .internal.test, localhost, or 127.0.0.1.",
           whenToUse:
-            "Use it whenever the identity depends on a known proxy pool or named owned test account and needs reviewable network posture evidence.",
+            "Use it when a workflow needs the proxy for external targets but must still reach approved local, staging, or internal hosts directly.",
         },
         {
           name: "Timezone",
@@ -799,11 +795,11 @@ export const workflowSettingsHelp: Record<
             "Chỉ dùng khi proxy được phép yêu cầu password và tránh đưa giá trị này vào notes hoặc screenshot.",
         },
         {
-          name: "Proxy metadata",
+          name: "Proxy bypass",
           description:
-            "Metadata không phải secret gồm label, region, provider, bypass list, và test-account binding được phép, lưu tách khỏi credential để audit và diagnostics.",
+            "Danh sách domain phân tách bằng dấu phẩy sẽ kết nối trực tiếp thay vì đi qua proxy đã cấu hình, ví dụ .internal.test, localhost, hoặc 127.0.0.1.",
           whenToUse:
-            "Dùng khi identity phụ thuộc proxy pool hoặc test account owned có tên rõ ràng và cần evidence network posture dễ review.",
+            "Dùng khi workflow cần proxy cho target bên ngoài nhưng vẫn phải truy cập trực tiếp host local, staging, hoặc nội bộ được phép.",
         },
         {
           name: "Timezone",

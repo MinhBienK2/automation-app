@@ -6,6 +6,7 @@ import {
   WorkflowSettingsService,
 } from "./workflowSettingsService";
 import { personaCatalog } from "../../../src/lib/personaCatalog";
+import type { WorkflowSettings } from "../../../src/types/workflow";
 
 describe("WorkflowSettingsService", () => {
   test("normalizes settings defaults and validates browser identity constraints without commands", () => {
@@ -118,5 +119,37 @@ describe("WorkflowSettingsService", () => {
     expect(settings.browser_launch.locale).toBeNull();
     expect(settings.browser_launch.webrtc_policy).toBe(catalogPersona?.webrtc_mode);
     expect(settings.browser_launch.human_preset).toBe(catalogPersona?.behavioral_timing_profile);
+  });
+
+  test("drops legacy proxy metadata fields from normalized browser launch settings", () => {
+    const service = new WorkflowSettingsService({
+      directoryReadable: () => true,
+      isOptionalModuleAvailable: () => true,
+    });
+    const workflow = {
+      id: "workflow-proxy-metadata",
+      name: "Proxy metadata cleanup",
+      step_count: 0,
+      created_at: "2026-05-24T00:00:00.000Z",
+      updated_at: "2026-05-24T00:00:00.000Z",
+    };
+
+    const settings = service.normalizeWorkflowSettings({
+      ...service.defaultWorkflowSettings(workflow),
+      browser_launch: {
+        ...service.defaultWorkflowSettings(workflow).browser_launch,
+        proxy_label: "Corp proxy",
+        proxy_region: "apac-vn",
+        proxy_provider: "owned-lab",
+        test_account_binding: "acct-checkout-1",
+        proxy_bypass: ".internal.test",
+      } as Partial<WorkflowSettings["browser_launch"]> & Record<string, unknown>,
+    }, workflow);
+
+    expect(settings.browser_launch).not.toHaveProperty("proxy_label");
+    expect(settings.browser_launch).not.toHaveProperty("proxy_region");
+    expect(settings.browser_launch).not.toHaveProperty("proxy_provider");
+    expect(settings.browser_launch).not.toHaveProperty("test_account_binding");
+    expect(settings.browser_launch.proxy_bypass).toBe(".internal.test");
   });
 });

@@ -77,11 +77,7 @@ Workflow Settings are persisted separately from graph JSON:
     timezone,
     locale,
     geoip,
-    proxy_label,
-    proxy_region,
-    proxy_provider,
     proxy_bypass,
-    test_account_binding,
     webrtc_policy,
     webrtc_ip,
     preflight_enabled,
@@ -167,7 +163,7 @@ while a retained session still owns the workflow/profile. When
 private profile directory; shared or active-session profile directories are
 retained.
 
-`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy metadata, locale/timezone, preflight, humanization, and `fingerprint_fonts_dir` are preserved, `run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
+`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, preflight, humanization, and `fingerprint_fonts_dir` are preserved, `run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
 
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 

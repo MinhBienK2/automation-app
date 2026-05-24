@@ -512,7 +512,7 @@ function BrowserLaunchSettingsSection({
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Proxy"
-        description="Network route, credentials, and non-secret metadata used at browser launch."
+        description="Network route, credentials, and direct-connection bypasses used at browser launch."
       >
         <SwitchField
           checked={value.proxy_enabled}
@@ -544,37 +544,9 @@ function BrowserLaunchSettingsSection({
               />
             </label>
             <label className="field">
-              <span>Proxy label</span>
-              <Input
-                value={value.proxy_label ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_label: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Proxy region</span>
-              <Input
-                value={value.proxy_region ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_region: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Proxy provider</span>
-              <Input
-                value={value.proxy_provider ?? ""}
-                onChange={(event) => onChange({ ...value, proxy_provider: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
-              <span>Test account binding</span>
-              <Input
-                value={value.test_account_binding ?? ""}
-                onChange={(event) => onChange({ ...value, test_account_binding: nullableText(event.currentTarget.value) })}
-              />
-            </label>
-            <label className="field">
               <span>Proxy bypass</span>
               <Input
-                placeholder=".internal.test"
+                placeholder=".internal.test, localhost, 127.0.0.1"
                 value={value.proxy_bypass ?? ""}
                 onChange={(event) => onChange({ ...value, proxy_bypass: nullableText(event.currentTarget.value) })}
               />

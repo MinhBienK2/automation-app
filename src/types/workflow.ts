@@ -197,11 +197,7 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   timezone?: string | null;
   locale?: string | null;
   geoip: boolean;
-  proxy_label?: string | null;
-  proxy_region?: string | null;
-  proxy_provider?: string | null;
   proxy_bypass?: string | null;
-  test_account_binding?: string | null;
   webrtc_policy: WorkflowWebRtcPolicy;
   webrtc_ip?: string | null;
   preflight_enabled: boolean;

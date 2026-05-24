@@ -219,8 +219,6 @@ describe("Workflow detail integration", () => {
           timezone: null,
           locale: null,
           geoip: false,
-          proxy_label: null,
-          proxy_region: null,
           webrtc_policy: "default",
           webrtc_ip: null,
           preflight_enabled: false,

@@ -97,9 +97,10 @@ describe("WorkflowSettingsDialog", () => {
       .not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Duplicate identity" }))
       .not.toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Proxy label")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Proxy provider")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Test account binding")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Proxy label")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Proxy region")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Proxy provider")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Test account binding")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Proxy bypass")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();

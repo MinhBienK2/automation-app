@@ -489,6 +489,10 @@ function normalizeSettingsBrowserLaunch(
     hardware_concurrency: _legacyHardwareConcurrency,
     device_memory_gb: _legacyDeviceMemoryGb,
     storage_quota_mb: _legacyStorageQuotaMb,
+    proxy_label: _legacyProxyLabel,
+    proxy_region: _legacyProxyRegion,
+    proxy_provider: _legacyProxyProvider,
+    test_account_binding: _legacyTestAccountBinding,
     ...browserWithoutLegacyOverrides
   } = browser as WorkflowSettingsBrowserLaunch & Record<string, unknown>;
   void _legacyBrowserBrand;
@@ -502,6 +506,10 @@ function normalizeSettingsBrowserLaunch(
   void _legacyHardwareConcurrency;
   void _legacyDeviceMemoryGb;
   void _legacyStorageQuotaMb;
+  void _legacyProxyLabel;
+  void _legacyProxyRegion;
+  void _legacyProxyProvider;
+  void _legacyTestAccountBinding;
   return {
     ...browserWithoutLegacyOverrides,
     identity_id: identityId,
@@ -517,16 +525,7 @@ function normalizeSettingsBrowserLaunch(
     timezone: nullableText(browser.timezone),
     locale: nullableText(browser.locale),
     geoip: Boolean(browser.geoip),
-    proxy_label: nullableText(browser.proxy_label),
-    proxy_region: personaDefaultsSelected
-      ? nullableText(persona.proxy_region)
-      : nullableText(browser.proxy_region) ?? nullableText(persona.proxy_region),
-    proxy_provider: nullableText(browser.proxy_provider),
     proxy_bypass: nullableText(browser.proxy_bypass),
-    test_account_binding:
-      personaDefaultsSelected
-        ? nullableText(persona.test_account_binding)
-        : nullableText(browser.test_account_binding) ?? nullableText(persona.test_account_binding),
     webrtc_policy: persona.webrtc_mode,
     webrtc_ip: nullableText(browser.webrtc_ip),
     preflight_enabled: Boolean(browser.preflight_enabled),
@@ -583,7 +582,7 @@ function normalizeBrowserPersona(
     ...basePersona,
     timezone: nullableText(browser.timezone) ?? basePersona.timezone,
     locale: nullableText(browser.locale) ?? basePersona.locale,
-    proxy_region: nullableText(browser.proxy_region) ?? nullableText(basePersona.proxy_region),
+    proxy_region: nullableText(basePersona.proxy_region),
     webrtc_mode: validWebRtcPolicy(browser.webrtc_policy)
       ? browser.webrtc_policy
       : basePersona.webrtc_mode,
@@ -595,7 +594,6 @@ function normalizeBrowserPersona(
       nullableText(rawPersona.account_label as string | null | undefined) ??
       nullableText(basePersona.account_label),
     test_account_binding:
-      nullableText(browser.test_account_binding) ??
       nullableText(rawPersona.test_account_binding as string | null | undefined) ??
       nullableText(basePersona.test_account_binding),
     behavioral_timing_profile: validHumanPreset(browser.human_preset)
@@ -635,11 +633,7 @@ function createDefaultBrowserIdentity(
   | "timezone"
   | "locale"
   | "geoip"
-  | "proxy_label"
-  | "proxy_region"
-  | "proxy_provider"
   | "proxy_bypass"
-  | "test_account_binding"
   | "webrtc_policy"
   | "webrtc_ip"
   | "preflight_enabled"
@@ -665,11 +659,7 @@ function createDefaultBrowserIdentity(
     timezone: null,
     locale: null,
     geoip: false,
-    proxy_label: null,
-    proxy_region: persona.proxy_region ?? null,
-    proxy_provider: null,
     proxy_bypass: null,
-    test_account_binding: persona.test_account_binding ?? null,
     webrtc_policy: persona.webrtc_mode,
     webrtc_ip: null,
     preflight_enabled: false,
@@ -714,11 +704,7 @@ function browserIdentityPreferences(
   | "timezone"
   | "locale"
   | "geoip"
-  | "proxy_label"
-  | "proxy_region"
-  | "proxy_provider"
   | "proxy_bypass"
-  | "test_account_binding"
   | "webrtc_policy"
   | "webrtc_ip"
   | "preflight_enabled"
@@ -738,11 +724,7 @@ function browserIdentityPreferences(
     timezone: browser.timezone,
     locale: browser.locale,
     geoip: browser.geoip,
-    proxy_label: browser.proxy_label,
-    proxy_region: browser.proxy_region,
-    proxy_provider: browser.proxy_provider,
     proxy_bypass: browser.proxy_bypass,
-    test_account_binding: browser.test_account_binding,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_ip,
     preflight_enabled: browser.preflight_enabled,
