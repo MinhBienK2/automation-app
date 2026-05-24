@@ -98,7 +98,38 @@ describe("WorkflowSettingsService", () => {
     );
 
     expect(defaults.browser_launch.fingerprint_fonts_dir).toBe(defaultFontsDir);
+    expect(defaults.browser_launch.geoip).toBe(true);
     expect(cleared.browser_launch.fingerprint_fonts_dir).toBeNull();
+  });
+
+  test("migrates blank legacy location settings to GeoIP", () => {
+    const service = new WorkflowSettingsService({
+      directoryReadable: () => true,
+      isOptionalModuleAvailable: () => true,
+    });
+    const workflow = {
+      id: "workflow-legacy-geoip",
+      name: "Legacy location",
+      step_count: 0,
+      created_at: "2026-05-24T00:00:00.000Z",
+      updated_at: "2026-05-24T00:00:00.000Z",
+    };
+    const defaults = service.defaultWorkflowSettings(workflow);
+
+    const normalized = service.normalizeWorkflowSettings(
+      {
+        ...defaults,
+        browser_launch: {
+          ...defaults.browser_launch,
+          geoip: false,
+          timezone: null,
+          locale: null,
+        },
+      },
+      workflow,
+    );
+
+    expect(normalized.browser_launch.geoip).toBe(true);
   });
 
   test("stores a coherent persona object with normalized browser identity settings", () => {

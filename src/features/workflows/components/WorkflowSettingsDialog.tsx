@@ -577,7 +577,7 @@ function BrowserLaunchSettingsSection({
         </label>
         <SwitchField
           checked={Boolean(value.geoip)}
-          label="GeoIP from proxy"
+          label="GeoIP location"
           onCheckedChange={(checked) => onChange({ ...value, geoip: checked })}
         />
       </SettingsFieldGroup>

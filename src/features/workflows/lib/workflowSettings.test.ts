@@ -32,6 +32,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.profile_dir).toBe("bi_workflow-1");
     expect(settings.browser_launch.profile_name).toBe("bi_workflow-1");
     expect(settings.browser_launch.fingerprint_seed).toMatch(/^\d{5}$/);
+    expect(settings.browser_launch.geoip).toBe(true);
     expect(settings.browser_launch.humanize).toBe(true);
     expect(settings.browser_launch.human_preset).toBe("default");
     expect(settings.browser_launch).not.toHaveProperty("browser_brand");
@@ -151,7 +152,7 @@ describe("workflow settings model", () => {
       "Proxy bypass",
       "Timezone",
       "Locale",
-      "GeoIP from proxy",
+      "GeoIP location",
       "Humanize browser input",
       "Fingerprint preflight",
       "Headless browser",

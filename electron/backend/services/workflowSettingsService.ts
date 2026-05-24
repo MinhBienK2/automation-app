@@ -500,6 +500,8 @@ function normalizeSettingsBrowserLaunch(
   const identityId = nullableText(browser.identity_id) ?? createStableBrowserIdentityId(profileName ?? "workflow");
   const profileDir = nullableText(browser.profile_dir) ?? identityId;
   const fingerprintSeed = nullableText(browser.fingerprint_seed) ?? stableFingerprintSeed(identityId);
+  const timezone = nullableText(browser.timezone);
+  const locale = nullableText(browser.locale);
   const persona = normalizeBrowserPersona(browser, identityId, explicitBrowserFields);
   const personaDefaultsSelected = selectedPersonaDefaultsWereRequested(
     browser,
@@ -551,9 +553,9 @@ function normalizeSettingsBrowserLaunch(
       personaDefaultsSelected
         ? nullableText(persona.font_bundle.path)
         : nullableText(browser.fingerprint_fonts_dir) ?? nullableText(persona.font_bundle.path),
-    timezone: nullableText(browser.timezone),
-    locale: nullableText(browser.locale),
-    geoip: Boolean(browser.geoip),
+    timezone,
+    locale,
+    geoip: Boolean(browser.geoip) || !(timezone && locale),
     proxy_bypass: nullableText(browser.proxy_bypass),
     webrtc_policy: persona.webrtc_mode,
     webrtc_ip: nullableText(browser.webrtc_ip),
@@ -688,7 +690,7 @@ function createDefaultBrowserIdentity(
     fingerprint_fonts_dir: defaultFontsDir ?? nullableText(persona.font_bundle.path),
     timezone: null,
     locale: null,
-    geoip: false,
+    geoip: true,
     proxy_bypass: null,
     webrtc_policy: persona.webrtc_mode,
     webrtc_ip: null,

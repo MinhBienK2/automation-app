@@ -228,7 +228,7 @@ export function defaultWorkflowSettings({
       fingerprint_fonts_dir: persona.font_bundle.path ?? null,
       timezone: null,
       locale: null,
-      geoip: false,
+      geoip: true,
       proxy_bypass: null,
       webrtc_policy: persona.webrtc_mode,
       webrtc_ip: null,
@@ -672,11 +672,11 @@ export const workflowSettingsHelp: Record<
             "Set it with timezone and proxy region when production detection expects a specific regional browser profile.",
         },
         {
-          name: "GeoIP from proxy",
+          name: "GeoIP location",
           description:
-            "Optional CloakBrowser GeoIP mode that derives timezone and locale from the configured proxy exit IP when the mmdb-lib dependency is installed.",
+            "CloakBrowser GeoIP mode that derives timezone and locale from the current public or proxy exit IP when the mmdb-lib dependency is installed.",
           whenToUse:
-            "Use it when proxy inventory does not already provide explicit timezone and locale values, and validate the result with owned preflight.",
+            "Keep it enabled by default when explicit timezone and locale values are unknown; validate the result with owned preflight for sensitive workflows.",
         },
         {
           name: "Humanize browser input",
@@ -816,11 +816,11 @@ export const workflowSettingsHelp: Record<
             "Set cùng timezone và proxy region khi production detection kỳ vọng một regional browser profile cụ thể.",
         },
         {
-          name: "GeoIP from proxy",
+          name: "GeoIP location",
           description:
-            "Chế độ GeoIP tùy chọn của CloakBrowser để suy ra timezone và locale từ proxy exit IP khi dependency mmdb-lib đã được cài.",
+            "Chế độ GeoIP của CloakBrowser để suy ra timezone và locale từ public IP hoặc proxy exit IP hiện tại khi dependency mmdb-lib đã được cài.",
           whenToUse:
-            "Dùng khi proxy inventory chưa có timezone và locale rõ ràng, rồi xác nhận kết quả bằng owned preflight.",
+            "Giữ bật mặc định khi chưa có timezone và locale rõ ràng; xác nhận kết quả bằng owned preflight cho workflow nhạy cảm.",
         },
         {
           name: "Humanize browser input",

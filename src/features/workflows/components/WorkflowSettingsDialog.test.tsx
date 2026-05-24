@@ -107,7 +107,7 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByText(
       `Detected on this machine: ${expectedLocalTimezone()} / ${expectedLocalLocale()}`,
     )).toBeInTheDocument();
-    expect(within(dialog).getByRole("switch", { name: "GeoIP from proxy" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("switch", { name: "GeoIP location" })).toBeInTheDocument();
     expect(within(dialog).getByRole("group", { name: "Fingerprint" })).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toHaveValue("");
     expect(within(dialog).queryByLabelText("Fingerprint platform")).not.toBeInTheDocument();
