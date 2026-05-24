@@ -74,7 +74,6 @@ describe("BrowserSessionManager", () => {
           headless: false,
           humanize: false,
           humanPreset: "careful",
-          viewport: settings.browser_launch.persona.viewport,
           timezone: "America/New_York",
           locale: "en-US",
           geoip: false,
@@ -82,7 +81,6 @@ describe("BrowserSessionManager", () => {
             "--fingerprint=38291",
             `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
-            `--window-size=${settings.browser_launch.persona.window.width},${settings.browser_launch.persona.window.height}`,
           ],
           proxy: {
             server: "http://proxy.local:8080/",
@@ -97,6 +95,11 @@ describe("BrowserSessionManager", () => {
         }),
       },
     ]);
+    expect(driver.launches[0]?.options).not.toHaveProperty("userAgent");
+    expect(driver.launches[0]?.options).not.toHaveProperty("viewport");
+    expect(driver.launches[0]?.options.args).not.toContain(
+      `--window-size=${settings.browser_launch.persona.window.width},${settings.browser_launch.persona.window.height}`,
+    );
     expect(retainedProfileKey(settings)).toBe("bi_identity");
     expect(evidence).toMatchObject({
       run_id: "run-identity-1",
@@ -114,7 +117,7 @@ describe("BrowserSessionManager", () => {
     });
   });
 
-  test("maps stored persona dimensions and metadata into launch options and evidence", async () => {
+  test("keeps stored persona dimensions in evidence without forcing launch dimensions", async () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);
     const paths = await createTempAppPaths();
@@ -161,13 +164,18 @@ describe("BrowserSessionManager", () => {
     expect(driver.launches[0]).toEqual({
       kind: "persistent",
       options: expect.objectContaining({
-        viewport: { width: 1365, height: 768 },
         timezone: "America/New_York",
         locale: "en-US",
         humanPreset: "careful",
-        args: expect.arrayContaining(["--window-size=1440,900", "--fingerprint-webrtc-ip=auto"]),
+        args: expect.arrayContaining([
+          expect.stringMatching(/^--fingerprint=\d{5}$/),
+          "--fingerprint-webrtc-ip=auto",
+        ]),
       }),
     });
+    expect(driver.launches[0]?.options).not.toHaveProperty("userAgent");
+    expect(driver.launches[0]?.options).not.toHaveProperty("viewport");
+    expect(driver.launches[0]?.options.args).not.toContain("--window-size=1440,900");
     expect(evidence).toMatchObject({
       persona: {
         id: "desktop_us_east_careful",
@@ -185,6 +193,48 @@ describe("BrowserSessionManager", () => {
         behavioral_timing_profile: "careful",
       },
     });
+  });
+
+  test("omits optional launch keys when no browser setting resolves them", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const paths = await createTempAppPaths();
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "temporary",
+        profile_name: null,
+        persona: null,
+        fingerprint_fonts_dir: null,
+        proxy_enabled: false,
+        proxy_server: null,
+        timezone: null,
+        locale: null,
+        geoip: false,
+        webrtc_policy: "default",
+      } as Partial<WorkflowSettings["browser_launch"]> & Record<string, unknown>,
+    });
+
+    const manager = new BrowserSessionManager({ appPaths: paths, driver });
+    await manager.launchFreshSession({
+      settings,
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    expect(driver.launches[0]).toEqual({
+      kind: "temporary",
+      options: expect.objectContaining({
+        headless: false,
+        humanize: true,
+        humanPreset: "default",
+        geoip: false,
+        args: [expect.stringMatching(/^--fingerprint=\d{5}$/)],
+      }),
+    });
+    expect(driver.launches[0]?.options).not.toHaveProperty("proxy");
+    expect(driver.launches[0]?.options).not.toHaveProperty("timezone");
+    expect(driver.launches[0]?.options).not.toHaveProperty("locale");
+    expect(driver.launches[0]?.options).not.toHaveProperty("userAgent");
+    expect(driver.launches[0]?.options).not.toHaveProperty("viewport");
   });
 
   test("tracks retained sessions per workflow profile and clears stale pages", async () => {

@@ -55,7 +55,7 @@ persistence, run lifecycle orchestration, and CloakBrowser execution.
 - Run manager code owns active run/profile locks, run snapshots, stop handling,
   batch run state, run timeouts, and final run persistence.
 - Browser session manager code owns CloakBrowser launch option mapping,
-  persona-to-launch translation, retained-session state, profile launch paths,
+  persona evidence translation, retained-session state, profile launch paths,
   and browser identity evidence.
 - Workflow settings service owns settings defaults, normalization, validation,
   browser-config compatibility mapping, persona resolution, local duplication

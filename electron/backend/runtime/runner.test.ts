@@ -95,8 +95,6 @@ describe("BrowserWorkflowRunner", () => {
           headless: false,
           humanize: false,
           humanPreset: "careful",
-          userAgent: undefined,
-          viewport: settings.browser_launch.persona.viewport,
           timezone: "America/New_York",
           locale: "en-US",
           geoip: false,
@@ -104,7 +102,6 @@ describe("BrowserWorkflowRunner", () => {
             "--fingerprint=38291",
             `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
-            `--window-size=${settings.browser_launch.persona.window.width},${settings.browser_launch.persona.window.height}`,
           ],
           proxy: {
             server: "http://proxy.local:8080",
@@ -119,6 +116,11 @@ describe("BrowserWorkflowRunner", () => {
         }),
       },
     ]);
+    expect(driver.launches[0]?.options).not.toHaveProperty("userAgent");
+    expect(driver.launches[0]?.options).not.toHaveProperty("viewport");
+    expect(driver.launches[0]?.options.args).not.toContain(
+      `--window-size=${settings.browser_launch.persona.window.width},${settings.browser_launch.persona.window.height}`,
+    );
     expect(result.outputs?.browser_identity).toMatchObject({
       run_id: "run-identity-1",
       identity_id: "bi_test_identity",

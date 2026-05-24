@@ -4,7 +4,6 @@ import path from "node:path";
 import type {
   RunState,
   WorkflowPersona,
-  WorkflowPersonaDimensions,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../persistence/database.js";
@@ -398,8 +397,6 @@ export function buildLaunchOptions(
   const browser = settings.browser_launch;
   const persona = browser.persona;
   const proxy = buildProxyLaunchOptions(browser);
-  const viewport = validPersonaDimensions(persona?.viewport) ?? { width: 1920, height: 1080 };
-  const windowSize = validPersonaDimensions(persona?.window) ?? viewport;
   const webrtcPolicy = browser.webrtc_policy === "default" && persona
     ? persona.webrtc_mode
     : browser.webrtc_policy;
@@ -416,17 +413,14 @@ export function buildLaunchOptions(
       : webrtcPolicy === "explicit_ip" && browser.webrtc_ip?.trim()
         ? `--fingerprint-webrtc-ip=${browser.webrtc_ip.trim()}`
         : null,
-    browser.headless ? null : `--window-size=${windowSize.width},${windowSize.height}`,
   ].filter((arg): arg is string => Boolean(arg));
   const humanPreset = browser.human_preset === "default" && persona
     ? persona.behavioral_timing_profile
     : browser.human_preset;
-  return {
+  return omitUndefinedLaunchOptions({
     headless: browser.headless,
     humanize: browser.humanize !== false,
     humanPreset: humanPreset === "careful" ? "careful" : "default",
-    userAgent: undefined,
-    viewport,
     timezone: browser.timezone?.trim() || persona?.timezone || undefined,
     locale: browser.locale?.trim() || persona?.locale || undefined,
     geoip: Boolean(browser.geoip),
@@ -436,7 +430,13 @@ export function buildLaunchOptions(
       acceptDownloads: true,
       downloadsPath: appPaths.downloadsDir,
     },
-  };
+  });
+}
+
+function omitUndefinedLaunchOptions(options: BrowserLaunchOptions): BrowserLaunchOptions {
+  return Object.fromEntries(
+    Object.entries(options).filter(([, value]) => value !== undefined),
+  );
 }
 
 export function retainedProfileKey(settings: WorkflowSettings) {
@@ -485,24 +485,6 @@ export async function browserIdentityEvidence(settings: WorkflowSettings, runId:
     humanize: browser.humanize !== false,
     human_preset: browser.human_preset === "careful" ? "careful" : "default",
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
-  };
-}
-
-function validPersonaDimensions(
-  dimensions: WorkflowPersonaDimensions | null | undefined,
-): WorkflowPersonaDimensions | null {
-  if (
-    !dimensions ||
-    !Number.isFinite(dimensions.width) ||
-    !Number.isFinite(dimensions.height) ||
-    dimensions.width <= 0 ||
-    dimensions.height <= 0
-  ) {
-    return null;
-  }
-  return {
-    width: Math.round(dimensions.width),
-    height: Math.round(dimensions.height),
   };
 }
 

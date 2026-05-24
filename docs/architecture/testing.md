@@ -44,7 +44,7 @@ wrapper/binary evidence. A fresh machine may download the CloakBrowser binary
 before the smoke test runs.
 
 `npm run test:fingerprint` is the focused preflight/regression gate for browser
-identity changes and CloakBrowser wrapper upgrades. It checks persona-to-launch
+identity changes and CloakBrowser wrapper upgrades. It checks identity launch
 mapping, sanitized `browser_identity` evidence, the `fingerprint_regression`
 matrix report, and runner preflight integration without requiring a real owned
 staging probe.
