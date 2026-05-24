@@ -96,6 +96,8 @@ describe("BrowserWorkflowRunner", () => {
           geoip: false,
           args: [
             "--fingerprint=38291",
+            "--fingerprint-noise=false",
+            "--fingerprint-storage-quota=500",
             `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
           ],

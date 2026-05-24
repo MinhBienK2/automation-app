@@ -406,6 +406,10 @@ export function buildLaunchOptions(
     browser.fingerprint_seed?.trim()
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
       : null,
+    "--fingerprint-noise=false",
+    browser.session_mode === "persistent_profile"
+      ? "--fingerprint-storage-quota=500"
+      : null,
     fontBundlePath
       ? `--fingerprint-fonts-dir=${fontBundlePath}`
       : null,

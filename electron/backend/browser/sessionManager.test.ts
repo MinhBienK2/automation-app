@@ -10,6 +10,7 @@ import { createAppPaths } from "../persistence/database";
 import {
   BrowserSessionManager,
   browserIdentityEvidence,
+  buildLaunchOptions,
   retainedProfileKey,
   type BrowserDriver,
   type BrowserDriverContext,
@@ -25,6 +26,43 @@ afterEach(async () => {
 });
 
 describe("BrowserSessionManager", () => {
+  test("adds CloakBrowser fingerprint mitigation args for persistent profiles", async () => {
+    const paths = await createTempAppPaths();
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "persistent_profile",
+        profile_dir: "fingerprint-profile",
+        fingerprint_seed: "66220",
+      },
+    });
+
+    const options = buildLaunchOptions(settings, paths);
+
+    expect(options.args).toEqual(
+      expect.arrayContaining([
+        "--fingerprint=66220",
+        "--fingerprint-noise=false",
+        "--fingerprint-storage-quota=500",
+      ]),
+    );
+  });
+
+  test("does not add persistent storage quota to temporary contexts", async () => {
+    const paths = await createTempAppPaths();
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "temporary",
+        profile_name: null,
+        fingerprint_seed: "66220",
+      },
+    });
+
+    const options = buildLaunchOptions(settings, paths);
+
+    expect(options.args).toContain("--fingerprint-noise=false");
+    expect(options.args).not.toContain("--fingerprint-storage-quota=500");
+  });
+
   test("launches persistent identities with CloakBrowser options and identity evidence", async () => {
     const context = new FakeContext();
     const driver = createFakeDriver(context);
@@ -79,6 +117,8 @@ describe("BrowserSessionManager", () => {
           geoip: false,
           args: [
             "--fingerprint=38291",
+            "--fingerprint-noise=false",
+            "--fingerprint-storage-quota=500",
             `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
           ],
@@ -233,7 +273,10 @@ describe("BrowserSessionManager", () => {
         geoip: false,
         timezone: expectedLocalTimezone(),
         locale: expectedLocalLocale(),
-        args: [expect.stringMatching(/^--fingerprint=\d{5}$/)],
+        args: [
+          expect.stringMatching(/^--fingerprint=\d{5}$/),
+          "--fingerprint-noise=false",
+        ],
       }),
     });
     expect(driver.launches[0]?.options).not.toHaveProperty("proxy");
