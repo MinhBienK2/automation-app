@@ -8,6 +8,7 @@ import type {
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../persistence/database.js";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
+import { localBrowserLocale, localBrowserTimezone } from "./localEnvironment.js";
 
 type CloakBrowserModule = {
   launchContext: (options?: BrowserLaunchOptions) => Promise<BrowserDriverContext>;
@@ -421,8 +422,8 @@ export function buildLaunchOptions(
     headless: browser.headless,
     humanize: browser.humanize !== false,
     humanPreset: humanPreset === "careful" ? "careful" : "default",
-    timezone: browser.timezone?.trim() || persona?.timezone || undefined,
-    locale: browser.locale?.trim() || persona?.locale || undefined,
+    timezone: resolveLaunchTimezone(browser),
+    locale: resolveLaunchLocale(browser),
     geoip: Boolean(browser.geoip),
     args,
     proxy,
@@ -451,8 +452,8 @@ export function retainedProfileKey(settings: WorkflowSettings) {
 export async function browserIdentityEvidence(settings: WorkflowSettings, runId: string) {
   const browser = settings.browser_launch;
   const persona = browser.persona;
-  const timezone = browser.timezone ?? persona?.timezone ?? null;
-  const locale = browser.locale ?? persona?.locale ?? null;
+  const timezone = resolveLaunchTimezone(browser) ?? null;
+  const locale = resolveLaunchLocale(browser) ?? null;
   const fontBundlePath = browser.fingerprint_fonts_dir ?? persona?.font_bundle.path ?? null;
   return {
     run_id: runId,
@@ -475,9 +476,9 @@ export async function browserIdentityEvidence(settings: WorkflowSettings, runId:
     account_label: persona?.account_label ?? null,
     persona: browserPersonaEvidence(persona),
     timezone,
-    timezone_source: browser.timezone ? "explicit" : persona ? "persona" : browser.geoip ? "geoip" : "default",
+    timezone_source: browser.timezone ? "explicit" : browser.geoip ? "geoip" : "local",
     locale,
-    locale_source: browser.locale ? "explicit" : persona ? "persona" : browser.geoip ? "geoip" : "default",
+    locale_source: browser.locale ? "explicit" : browser.geoip ? "geoip" : "local",
     geoip: browser.geoip,
     webrtc_policy: browser.webrtc_policy,
     webrtc_ip: browser.webrtc_policy === "explicit_ip" ? browser.webrtc_ip ?? null : null,
@@ -486,6 +487,20 @@ export async function browserIdentityEvidence(settings: WorkflowSettings, runId:
     human_preset: browser.human_preset === "careful" ? "careful" : "default",
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
   };
+}
+
+function resolveLaunchTimezone(browser: WorkflowSettings["browser_launch"]) {
+  const explicit = browser.timezone?.trim();
+  if (explicit) return explicit;
+  if (browser.geoip) return undefined;
+  return localBrowserTimezone();
+}
+
+function resolveLaunchLocale(browser: WorkflowSettings["browser_launch"]) {
+  const explicit = browser.locale?.trim();
+  if (explicit) return explicit;
+  if (browser.geoip) return undefined;
+  return localBrowserLocale();
 }
 
 function browserPersonaEvidence(persona: WorkflowPersona | null | undefined) {

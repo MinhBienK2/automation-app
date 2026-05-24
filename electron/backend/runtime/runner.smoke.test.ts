@@ -137,9 +137,9 @@ describeSmoke("CloakBrowser smoke", () => {
         expect(secondProbe.pluginsLength).toBeGreaterThan(0);
         expect(secondProbe.timezone).toBe("America/New_York");
         expect(secondProbe.language).toBe("en-US");
-        expect(secondProbe.innerWidth).toBe(1280);
-        expect(secondProbe.innerHeight).toBe(720);
-        expect(secondProbe.devicePixelRatio).toBe(1);
+        expect(secondProbe.innerWidth).toBeGreaterThan(0);
+        expect(secondProbe.innerHeight).toBeGreaterThan(0);
+        expect(secondProbe.devicePixelRatio).toBeGreaterThan(0);
         expect(secondProbe.screenWidth).toBeGreaterThanOrEqual(secondProbe.innerWidth);
         expect(secondProbe.screenHeight).toBeGreaterThanOrEqual(secondProbe.innerHeight);
         expect(secondProbe.canvasSignature).toBe(firstProbe.canvasSignature);

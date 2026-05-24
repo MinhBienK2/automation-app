@@ -114,8 +114,8 @@ describe("WorkflowSettingsService", () => {
 
     expect(settings.browser_launch.persona_id).toBe("desktop_us_east_careful");
     expect(settings.browser_launch.persona).toEqual(catalogPersona);
-    expect(settings.browser_launch.timezone).toBe(catalogPersona?.timezone);
-    expect(settings.browser_launch.locale).toBe(catalogPersona?.locale);
+    expect(settings.browser_launch.timezone).toBeNull();
+    expect(settings.browser_launch.locale).toBeNull();
     expect(settings.browser_launch.webrtc_policy).toBe(catalogPersona?.webrtc_mode);
     expect(settings.browser_launch.human_preset).toBe(catalogPersona?.behavioral_timing_profile);
   });

@@ -227,14 +227,44 @@ describe("BrowserSessionManager", () => {
         humanize: true,
         humanPreset: "default",
         geoip: false,
+        timezone: expectedLocalTimezone(),
+        locale: expectedLocalLocale(),
         args: [expect.stringMatching(/^--fingerprint=\d{5}$/)],
       }),
     });
     expect(driver.launches[0]?.options).not.toHaveProperty("proxy");
-    expect(driver.launches[0]?.options).not.toHaveProperty("timezone");
-    expect(driver.launches[0]?.options).not.toHaveProperty("locale");
     expect(driver.launches[0]?.options).not.toHaveProperty("userAgent");
     expect(driver.launches[0]?.options).not.toHaveProperty("viewport");
+  });
+
+  test("lets GeoIP own timezone and locale when no explicit location is configured", async () => {
+    const context = new FakeContext();
+    const driver = createFakeDriver(context);
+    const settings = makeSettings({
+      browser_launch: {
+        session_mode: "temporary",
+        profile_name: null,
+        persona: null,
+        timezone: null,
+        locale: null,
+        geoip: true,
+      } as Partial<WorkflowSettings["browser_launch"]> & Record<string, unknown>,
+    });
+
+    const manager = new BrowserSessionManager({
+      appPaths: await createTempAppPaths(),
+      driver,
+    });
+    await manager.launchFreshSession({
+      settings,
+      retainedSessionWorkflowId: "workflow-1",
+    });
+
+    expect(driver.launches[0]?.options).toEqual(expect.objectContaining({
+      geoip: true,
+    }));
+    expect(driver.launches[0]?.options).not.toHaveProperty("timezone");
+    expect(driver.launches[0]?.options).not.toHaveProperty("locale");
   });
 
   test("tracks retained sessions per workflow profile and clears stale pages", async () => {
@@ -296,6 +326,14 @@ function makeSettings(overrides: Partial<WorkflowSettings> = {}): WorkflowSettin
       ...(overrides.run_policy ?? {}),
     },
   };
+}
+
+function expectedLocalTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+function expectedLocalLocale() {
+  return Intl.DateTimeFormat().resolvedOptions().locale || "en-US";
 }
 
 async function createTempAppPaths() {

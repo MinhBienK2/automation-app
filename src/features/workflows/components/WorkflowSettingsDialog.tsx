@@ -399,6 +399,7 @@ function BrowserLaunchSettingsSection({
   const persistent = value.session_mode === "persistent_profile";
   const canEnableRunFromSelected =
     persistent && runPolicy.browser_retention === "retain";
+  const localEnvironment = detectedLocalBrowserEnvironment();
   const confirmResetIdentity = async () => {
     if (!onResetBrowserIdentity) return;
     setResetIdentityPending(true);
@@ -584,11 +585,12 @@ function BrowserLaunchSettingsSection({
       <SettingsFieldGroup
         title="Location"
         description="Locale and proxy-derived geography used at browser launch."
+        footer={`Detected on this machine: ${localEnvironment.timezone} / ${localEnvironment.locale}`}
       >
         <label className="field">
           <span>Timezone</span>
           <Input
-            placeholder="America/New_York"
+            placeholder={localEnvironment.timezone}
             value={value.timezone ?? ""}
             onChange={(event) => onChange({ ...value, timezone: nullableText(event.currentTarget.value) })}
           />
@@ -596,7 +598,7 @@ function BrowserLaunchSettingsSection({
         <label className="field">
           <span>Locale</span>
           <Input
-            placeholder="en-US"
+            placeholder={localEnvironment.locale}
             value={value.locale ?? ""}
             onChange={(event) => onChange({ ...value, locale: nullableText(event.currentTarget.value) })}
           />
@@ -688,6 +690,14 @@ function BrowserLaunchSettingsSection({
       </SettingsFieldGroup>
     </div>
   );
+}
+
+function detectedLocalBrowserEnvironment() {
+  const options = Intl.DateTimeFormat().resolvedOptions();
+  return {
+    timezone: options.timeZone || "UTC",
+    locale: options.locale || "en-US",
+  };
 }
 
 function GraphDefaultsSettingsSection({

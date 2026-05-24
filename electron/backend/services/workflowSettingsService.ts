@@ -514,12 +514,8 @@ function normalizeSettingsBrowserLaunch(
       personaDefaultsSelected
         ? nullableText(persona.font_bundle.path)
         : nullableText(browser.fingerprint_fonts_dir) ?? nullableText(persona.font_bundle.path),
-    timezone: personaDefaultsSelected
-      ? persona.timezone
-      : nullableText(browser.timezone) ?? persona.timezone,
-    locale: personaDefaultsSelected
-      ? persona.locale
-      : nullableText(browser.locale) ?? persona.locale,
+    timezone: nullableText(browser.timezone),
+    locale: nullableText(browser.locale),
     geoip: Boolean(browser.geoip),
     proxy_label: nullableText(browser.proxy_label),
     proxy_region: personaDefaultsSelected
@@ -666,8 +662,8 @@ function createDefaultBrowserIdentity(
       ? deriveFingerprintSeedFromIdentityId(identityId)
       : stableFingerprintSeed(identityId),
     fingerprint_fonts_dir: nullableText(persona.font_bundle.path),
-    timezone: persona.timezone,
-    locale: persona.locale,
+    timezone: null,
+    locale: null,
     geoip: false,
     proxy_label: null,
     proxy_region: persona.proxy_region ?? null,

@@ -103,6 +103,9 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByLabelText("Proxy bypass")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Timezone")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Locale")).toBeInTheDocument();
+    expect(within(dialog).getByText(
+      `Detected on this machine: ${expectedLocalTimezone()} / ${expectedLocalLocale()}`,
+    )).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "GeoIP from proxy" })).toBeInTheDocument();
     expect(within(dialog).getByRole("group", { name: "Fingerprint" })).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Fingerprint fonts directory")).toHaveValue("");
@@ -469,3 +472,11 @@ describe("WorkflowSettingsDialog", () => {
       .toHaveClass("workflow-settings-help-body");
   });
 });
+
+function expectedLocalTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+function expectedLocalLocale() {
+  return Intl.DateTimeFormat().resolvedOptions().locale || "en-US";
+}

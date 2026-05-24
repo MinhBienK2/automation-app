@@ -226,8 +226,8 @@ export function defaultWorkflowSettings({
       fingerprint_seed: stableFingerprintSeed(identityId),
       profile_name: identityId,
       fingerprint_fonts_dir: persona.font_bundle.path ?? null,
-      timezone: persona.timezone,
-      locale: persona.locale,
+      timezone: null,
+      locale: null,
       geoip: false,
       proxy_label: null,
       proxy_region: persona.proxy_region ?? null,
@@ -664,14 +664,14 @@ export const workflowSettingsHelp: Record<
         {
           name: "Timezone",
           description:
-            "Optional IANA timezone passed through CloakBrowser's launch-level fingerprint flag instead of Playwright context emulation, keeping local browser signals aligned with the identity.",
+            "Optional IANA timezone passed through CloakBrowser's launch-level fingerprint flag. When blank and GeoIP is off, launch uses the detected timezone of this machine.",
           whenToUse:
             "Set it explicitly when the proxy or account region is known and must be reproducible across machines.",
         },
         {
           name: "Locale",
           description:
-            "Optional BCP 47 locale passed at launch so browser language and locale-sensitive APIs match the selected identity and network posture.",
+            "Optional BCP 47 locale passed at launch. When blank and GeoIP is off, launch uses the detected locale of this machine.",
           whenToUse:
             "Set it with timezone and proxy region when production detection expects a specific regional browser profile.",
         },
@@ -808,14 +808,14 @@ export const workflowSettingsHelp: Record<
         {
           name: "Timezone",
           description:
-            "Timezone IANA tùy chọn được truyền qua launch-level fingerprint flag của CloakBrowser thay vì Playwright context emulation, giúp local browser signal khớp identity.",
+            "Timezone IANA tùy chọn được truyền qua launch-level fingerprint flag của CloakBrowser. Khi để trống và GeoIP tắt, launch dùng timezone phát hiện từ máy hiện tại.",
           whenToUse:
             "Set rõ khi proxy hoặc account region đã biết và phải lặp lại được trên nhiều máy.",
         },
         {
           name: "Locale",
           description:
-            "Locale BCP 47 tùy chọn được truyền lúc launch để language và locale-sensitive APIs khớp browser identity và network posture.",
+            "Locale BCP 47 tùy chọn được truyền lúc launch. Khi để trống và GeoIP tắt, launch dùng locale phát hiện từ máy hiện tại.",
           whenToUse:
             "Set cùng timezone và proxy region khi production detection kỳ vọng một regional browser profile cụ thể.",
         },

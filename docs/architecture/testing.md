@@ -39,7 +39,7 @@ fixture, so it is intentionally separate from the normal unit suite. It verifies
 `navigator.webdriver === false`, UA/headless masking, coherent Chromium UA
 Client Hints when the runtime exposes them, `window.chrome` and plugin baseline signals,
 persistent localStorage across two launches of the same profile, fixed-seed
-canvas stability, timezone/locale, viewport/screen coherence, and CloakBrowser
+canvas stability, timezone/locale, positive viewport/screen coherence, and CloakBrowser
 wrapper/binary evidence. A fresh machine may download the CloakBrowser binary
 before the smoke test runs.
 
