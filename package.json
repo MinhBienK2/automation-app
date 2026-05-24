@@ -1,7 +1,7 @@
 {
   "name": "workflow-automation-manager",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Electron desktop app for authorized internal browser automation workflows.",
   "author": "Internal Automation Lab <automation-lab@example.invalid>",
   "type": "module",
