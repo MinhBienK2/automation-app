@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import type {
   RunState,
@@ -20,6 +21,17 @@ type CloakBrowserModule = {
     platform?: string;
     installed?: boolean;
   };
+};
+
+type PlaywrightFirefox = {
+  launch(options: BrowserLaunchOptions): Promise<{
+    newContext(options?: BrowserLaunchOptions): Promise<BrowserDriverContext>;
+    close(): Promise<void>;
+  }>;
+  launchPersistentContext(
+    userDataDir: string,
+    options?: BrowserLaunchOptions,
+  ): Promise<BrowserDriverContext>;
 };
 
 export type BrowserLaunchOptions = Record<string, unknown>;
@@ -181,7 +193,7 @@ export class BrowserSessionManager {
 
   constructor(options: BrowserSessionManagerOptions) {
     this.appPaths = options.appPaths;
-    this.driver = options.driver ?? createCloakBrowserDriver();
+    this.driver = options.driver ?? createDefaultBrowserDriver();
     this.usesDefaultDriver = options.usesDefaultDriver ?? !options.driver;
     this.retainedSessions = options.retainedSessions ?? new Map<string, RetainedSession>();
   }
@@ -391,6 +403,43 @@ export function createCloakBrowserDriver(moduleOverride?: CloakBrowserModule): B
   };
 }
 
+export function createDefaultBrowserDriver(): BrowserDriver {
+  return selectedBrowserEngine() === "camoufox"
+    ? createCamoufoxDriver()
+    : createCloakBrowserDriver();
+}
+
+export function createCamoufoxDriver(options: {
+  firefox?: PlaywrightFirefox;
+  executablePath?: string;
+} = {}): BrowserDriver {
+  const loadFirefox = async () => {
+    if (options.firefox) return options.firefox;
+    const moduleValue = await import("playwright-core");
+    return moduleValue.firefox as unknown as PlaywrightFirefox;
+  };
+  const executablePath = options.executablePath ?? camoufoxExecutablePath();
+
+  return {
+    async launch(options) {
+      const firefox = await loadFirefox();
+      const browser = await firefox.launch(camoufoxBrowserOptions(options, executablePath));
+      const context = await browser.newContext(camoufoxContextOptions(options));
+      return closeBrowserWithContext(context, browser);
+    },
+    async launchPersistent(options) {
+      const firefox = await loadFirefox();
+      return firefox.launchPersistentContext(
+        String(options.userDataDir),
+        {
+          ...camoufoxBrowserOptions(options, executablePath),
+          ...camoufoxContextOptions(options),
+        },
+      );
+    },
+  };
+}
+
 export function buildLaunchOptions(
   settings: WorkflowSettings,
   appPaths: AppPaths,
@@ -407,9 +456,8 @@ export function buildLaunchOptions(
       ? `--fingerprint=${browser.fingerprint_seed.trim()}`
       : null,
     "--fingerprint-noise=false",
-    browser.session_mode === "persistent_profile"
-      ? "--fingerprint-storage-quota=500"
-      : null,
+    "--fingerprint-storage-quota=500",
+    "--fingerprint-platform=windows",
     fontBundlePath
       ? `--fingerprint-fonts-dir=${fontBundlePath}`
       : null,
@@ -484,7 +532,9 @@ export async function browserIdentityEvidence(settings: WorkflowSettings, runId:
     advanced_overrides: activeAdvancedFingerprintOverrides(browser),
     humanize: browser.humanize !== false,
     human_preset: browser.human_preset === "careful" ? "careful" : "default",
+    browser_engine: selectedBrowserEngine(),
     cloakbrowser: await cloakBrowserRuntimeEvidence(),
+    camoufox: await camoufoxRuntimeEvidence(),
   };
 }
 
@@ -566,6 +616,66 @@ function assertHeadedDisplayAvailable(settings: WorkflowSettings) {
 
 async function loadCloakBrowserModule(): Promise<CloakBrowserModule> {
   return (await import("cloakbrowser")) as unknown as CloakBrowserModule;
+}
+
+function selectedBrowserEngine() {
+  return process.env.AUTOMATION_BROWSER_ENGINE?.toLowerCase() === "camoufox"
+    ? "camoufox"
+    : "cloakbrowser";
+}
+
+function camoufoxExecutablePath() {
+  return (
+    process.env.CAMOUFOX_EXECUTABLE_PATH?.trim() ||
+    path.join(os.homedir(), ".cache", "camoufox", "camoufox")
+  );
+}
+
+function camoufoxBrowserOptions(options: BrowserLaunchOptions, executablePath: string) {
+  return omitUndefinedLaunchOptions({
+    executablePath,
+    headless: typeof options.headless === "boolean" ? options.headless : undefined,
+    proxy: options.proxy,
+  });
+}
+
+function camoufoxContextOptions(options: BrowserLaunchOptions) {
+  const contextOptions = isPlainRecord(options.contextOptions)
+    ? options.contextOptions
+    : {};
+  return omitUndefinedLaunchOptions({
+    ...contextOptions,
+    timezoneId: typeof options.timezone === "string" ? options.timezone : undefined,
+    locale: typeof options.locale === "string" ? options.locale : undefined,
+  });
+}
+
+function closeBrowserWithContext(
+  context: BrowserDriverContext,
+  browser: { close(): Promise<void> },
+) {
+  let closed = false;
+  return new Proxy(context, {
+    get(target, property, receiver) {
+      if (property === "close") {
+        return async () => {
+          if (closed) return;
+          closed = true;
+          try {
+            await target.close();
+          } finally {
+            await browser.close();
+          }
+        };
+      }
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as BrowserDriverContext;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {
@@ -656,5 +766,41 @@ async function cloakBrowserWrapperVersion() {
     return typeof parsed.version === "string" ? parsed.version : null;
   } catch {
     return null;
+  }
+}
+
+async function camoufoxRuntimeEvidence() {
+  const executablePath = camoufoxExecutablePath();
+  let installed = false;
+  try {
+    await fs.access(executablePath);
+    installed = true;
+  } catch {
+    installed = false;
+  }
+  return {
+    executable_path_configured: Boolean(process.env.CAMOUFOX_EXECUTABLE_PATH?.trim()),
+    executable_path: executablePath,
+    installed,
+    version: await camoufoxVersionEvidence(),
+  };
+}
+
+async function camoufoxVersionEvidence() {
+  try {
+    const versionJson = await fs.readFile(
+      path.join(path.dirname(camoufoxExecutablePath()), "version.json"),
+      "utf8",
+    );
+    const parsed = JSON.parse(versionJson) as { version?: unknown; release?: unknown };
+    return {
+      version: typeof parsed.version === "string" ? parsed.version : null,
+      release: typeof parsed.release === "string" ? parsed.release : null,
+    };
+  } catch {
+    return {
+      version: null,
+      release: null,
+    };
   }
 }

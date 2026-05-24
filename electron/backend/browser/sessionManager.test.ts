@@ -11,6 +11,7 @@ import {
   BrowserSessionManager,
   browserIdentityEvidence,
   buildLaunchOptions,
+  createCamoufoxDriver,
   retainedProfileKey,
   type BrowserDriver,
   type BrowserDriverContext,
@@ -47,7 +48,7 @@ describe("BrowserSessionManager", () => {
     );
   });
 
-  test("does not add persistent storage quota to temporary contexts", async () => {
+  test("adds storage quota mitigation to temporary contexts", async () => {
     const paths = await createTempAppPaths();
     const settings = makeSettings({
       browser_launch: {
@@ -60,7 +61,96 @@ describe("BrowserSessionManager", () => {
     const options = buildLaunchOptions(settings, paths);
 
     expect(options.args).toContain("--fingerprint-noise=false");
-    expect(options.args).not.toContain("--fingerprint-storage-quota=500");
+    expect(options.args).toContain("--fingerprint-storage-quota=500");
+    expect(options.args).toContain("--fingerprint-platform=windows");
+    expect(options.args).not.toContain(
+      `--fingerprint-screen-width=${settings.browser_launch.persona.window.width}`,
+    );
+    expect(options.args).not.toContain(
+      `--fingerprint-screen-height=${settings.browser_launch.persona.window.height}`,
+    );
+  });
+
+  test("maps temporary Camoufox launches through Playwright Firefox", async () => {
+    const context = new FakeContext();
+    const firefox = createFakeFirefox(context);
+    const driver = createCamoufoxDriver({
+      firefox,
+      executablePath: "/opt/camoufox/camoufox",
+    });
+
+    const launched = await driver.launch({
+      headless: false,
+      humanize: true,
+      humanPreset: "careful",
+      geoip: true,
+      timezone: "Asia/Bangkok",
+      locale: "en-US",
+      args: ["--fingerprint=12345", "--fingerprint-platform=windows"],
+      proxy: { server: "socks5://proxy.local:1080" },
+      contextOptions: {
+        acceptDownloads: true,
+        downloadsPath: "/tmp/downloads",
+      },
+    });
+
+    expect(launched.pages()).toEqual([context.page]);
+    expect(firefox.launches).toEqual([
+      {
+        executablePath: "/opt/camoufox/camoufox",
+        headless: false,
+        proxy: { server: "socks5://proxy.local:1080" },
+      },
+    ]);
+    expect(firefox.contextOptions).toEqual([
+      {
+        acceptDownloads: true,
+        downloadsPath: "/tmp/downloads",
+        timezoneId: "Asia/Bangkok",
+        locale: "en-US",
+      },
+    ]);
+
+    await launched.close();
+
+    expect(firefox.closedBrowsers).toBe(1);
+  });
+
+  test("maps persistent Camoufox launches to user data dirs", async () => {
+    const context = new FakeContext();
+    const firefox = createFakeFirefox(context);
+    const driver = createCamoufoxDriver({
+      firefox,
+      executablePath: "/opt/camoufox/camoufox",
+    });
+
+    const launched = await driver.launchPersistent({
+      userDataDir: "/tmp/profile",
+      headless: true,
+      timezone: "Europe/Dublin",
+      locale: "en-IE",
+      proxy: { server: "http://proxy.local:8080" },
+      contextOptions: {
+        acceptDownloads: true,
+        downloadsPath: "/tmp/downloads",
+      },
+    });
+
+    expect(launched).toBe(context);
+    expect(firefox.persistentLaunches).toEqual([
+      {
+        userDataDir: "/tmp/profile",
+        options: {
+          executablePath: "/opt/camoufox/camoufox",
+          headless: true,
+          proxy: { server: "http://proxy.local:8080" },
+          acceptDownloads: true,
+          downloadsPath: "/tmp/downloads",
+          timezoneId: "Europe/Dublin",
+          locale: "en-IE",
+        },
+      },
+    ]);
   });
 
   test("launches persistent identities with CloakBrowser options and identity evidence", async () => {
@@ -119,6 +209,7 @@ describe("BrowserSessionManager", () => {
             "--fingerprint=38291",
             "--fingerprint-noise=false",
             "--fingerprint-storage-quota=500",
+            "--fingerprint-platform=windows",
             `--fingerprint-fonts-dir=${fontsDir}`,
             "--fingerprint-webrtc-ip=auto",
           ],
@@ -276,6 +367,8 @@ describe("BrowserSessionManager", () => {
         args: [
           expect.stringMatching(/^--fingerprint=\d{5}$/),
           "--fingerprint-noise=false",
+          "--fingerprint-storage-quota=500",
+          "--fingerprint-platform=windows",
         ],
       }),
     });
@@ -447,4 +540,30 @@ function createFakeDriver(...contexts: FakeContext[]) {
     },
   };
   return driver;
+}
+
+function createFakeFirefox(context: FakeContext) {
+  const fake = {
+    launches: [] as Array<Record<string, unknown>>,
+    contextOptions: [] as Array<Record<string, unknown>>,
+    persistentLaunches: [] as Array<{ userDataDir: string; options: Record<string, unknown> }>,
+    closedBrowsers: 0,
+    async launch(options: Record<string, unknown>) {
+      fake.launches.push(options);
+      return {
+        async newContext(contextOptions: Record<string, unknown>) {
+          fake.contextOptions.push(contextOptions);
+          return context;
+        },
+        async close() {
+          fake.closedBrowsers += 1;
+        },
+      };
+    },
+    async launchPersistentContext(userDataDir: string, options: Record<string, unknown>) {
+      fake.persistentLaunches.push({ userDataDir, options });
+      return context;
+    },
+  };
+  return fake;
 }
