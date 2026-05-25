@@ -43,6 +43,8 @@ Workflow Settings are persisted separately from graph JSON:
     max_workflow_duration_ms,
     browser_retention,
     execute_js_enabled,
+    run_from_selected_enabled,
+    run_from_selected_mode: "selected_only" | "from_selected",
     batch_concurrency_limit,
     batch_headless,
     batch_stop_on_first_failed_row
@@ -86,8 +88,7 @@ Workflow Settings are persisted separately from graph JSON:
     proxy_password,
     headless,
     humanize,
-    human_preset,
-    run_from_selected_enabled
+    human_preset
   },
   graph_defaults: {
     default_edge_delay: null
@@ -160,9 +161,9 @@ while a retained session still owns the workflow/profile. When
 private profile directory; shared or active-session profile directories are
 retained.
 
-`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, humanization, and `fingerprint_fonts_dir` are preserved, `run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
+`resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, humanization, and `fingerprint_fonts_dir` are preserved, `run_policy.run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
 
-Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
+Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_policy.run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 
 ## Batch Run Shape
 
@@ -252,7 +253,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 The main graph toolbar exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End.
 
 The Electron backend compiler currently emits action, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports. Nested compiled action configs retain their source graph node id/label so runner traces and persisted `run_steps` rows can identify the exact executed branch/body action.
-The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
+The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. `run_policy.run_from_selected_mode` chooses whether that sub-plan contains only the selected node (`selected_only`) or the selected node through the downstream main path (`from_selected`). Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
 Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser Launch identity settings are applied by the runner/session manager rather than compiled into graph prelude actions.
 

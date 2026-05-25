@@ -7,6 +7,7 @@ import type {
   WorkflowPersona,
   WorkflowSettings,
   WorkflowSettingsBrowserLaunch,
+  WorkflowRunFromSelectedMode,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
 import { personaForId, personaForSeed } from "../../../src/lib/personaCatalog.js";
@@ -39,6 +40,23 @@ export class WorkflowSettingsService {
 
   normalizeWorkflowSettings(settings: WorkflowSettings, workflow: WorkflowSummary): WorkflowSettings {
     const base = this.defaultWorkflowSettings(workflow);
+    const rawRunPolicy = objectRecord(settings.run_policy);
+    const rawBrowserLaunch = objectRecord(settings.browser_launch);
+    const browserLaunch = normalizeSettingsBrowserLaunch(
+      {
+        ...base.browser_launch,
+        ...rawBrowserLaunch,
+      },
+      rawBrowserLaunch,
+    );
+    const browserRetention = settings.run_policy?.browser_retention === "close" ? "close" : "retain";
+    const canEnableRunFromSelected =
+      browserRetention === "retain" &&
+      browserLaunch.session_mode === "persistent_profile" &&
+      Boolean(browserLaunch.profile_name);
+    const requestedRunFromSelected =
+      rawRunPolicy.run_from_selected_enabled ??
+      rawBrowserLaunch.run_from_selected_enabled;
     return {
       workflow_id: settings.workflow_id || workflow.id,
       version: 2,
@@ -50,19 +68,18 @@ export class WorkflowSettingsService {
       },
       run_policy: {
         ...base.run_policy,
-        ...objectRecord(settings.run_policy),
-        browser_retention: settings.run_policy?.browser_retention === "close" ? "close" : "retain",
+        ...rawRunPolicy,
+        browser_retention: browserRetention,
         execute_js_enabled: settings.run_policy?.execute_js_enabled !== false,
+        run_from_selected_enabled:
+          canEnableRunFromSelected && Boolean(requestedRunFromSelected),
+        run_from_selected_mode: normalizeRunFromSelectedMode(
+          rawRunPolicy.run_from_selected_mode,
+        ),
         batch_headless: Boolean(settings.run_policy?.batch_headless),
         batch_stop_on_first_failed_row: Boolean(settings.run_policy?.batch_stop_on_first_failed_row),
       },
-      browser_launch: normalizeSettingsBrowserLaunch(
-        {
-          ...base.browser_launch,
-          ...objectRecord(settings.browser_launch),
-        },
-        objectRecord(settings.browser_launch),
-      ),
+      browser_launch: browserLaunch,
       graph_defaults: {
         default_edge_delay: normalizeGraphEdgeDelay(
           objectRecord(settings.graph_defaults).default_edge_delay,
@@ -261,6 +278,11 @@ export class WorkflowSettingsService {
     const sourceBrowser = copied.browser_launch;
     const freshBrowser = freshDefaults.browser_launch;
     const persistent = sourceBrowser.session_mode === "persistent_profile";
+    const {
+      run_from_selected_enabled: _legacyRunFromSelectedEnabled,
+      ...sourceBrowserWithoutLegacyRunFromSelected
+    } = sourceBrowser;
+    void _legacyRunFromSelectedEnabled;
 
     return {
       ...copied,
@@ -271,8 +293,12 @@ export class WorkflowSettingsService {
         created_at: created.created_at,
         updated_at: created.updated_at,
       },
+      run_policy: {
+        ...copied.run_policy,
+        run_from_selected_enabled: false,
+      },
       browser_launch: {
-        ...sourceBrowser,
+        ...sourceBrowserWithoutLegacyRunFromSelected,
         identity_id: freshBrowser.identity_id,
         display_name: freshBrowser.display_name,
         profile_dir: freshBrowser.profile_dir,
@@ -280,7 +306,6 @@ export class WorkflowSettingsService {
         fingerprint_seed: freshBrowser.fingerprint_seed,
         persona_id: sourceBrowser.persona_id,
         persona: sourceBrowser.persona,
-        run_from_selected_enabled: false,
       },
       created_at: created.created_at,
       updated_at: created.updated_at,
@@ -325,6 +350,8 @@ export function defaultWorkflowSettings(
       max_workflow_duration_ms: null,
       browser_retention: "retain",
       execute_js_enabled: true,
+      run_from_selected_enabled: false,
+      run_from_selected_mode: "from_selected",
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
@@ -437,7 +464,6 @@ function configToSettingsBrowserLaunch(
     proxy_username: nullableText(config.proxy_username),
     proxy_password: nullableText(config.proxy_password),
     headless: config.headless ?? false,
-    run_from_selected_enabled: false,
   });
 }
 
@@ -491,6 +517,7 @@ function normalizeSettingsBrowserLaunch(
     preflight_enabled: _legacyPreflightEnabled,
     preflight_probe_url: _legacyPreflightProbeUrl,
     preflight_allowed_origins: _legacyPreflightAllowedOrigins,
+    run_from_selected_enabled: _legacyRunFromSelectedEnabled,
     ...browserWithoutLegacyOverrides
   } = browser as WorkflowSettingsBrowserLaunch & Record<string, unknown>;
   void _legacyBrowserBrand;
@@ -511,6 +538,7 @@ function normalizeSettingsBrowserLaunch(
   void _legacyPreflightEnabled;
   void _legacyPreflightProbeUrl;
   void _legacyPreflightAllowedOrigins;
+  void _legacyRunFromSelectedEnabled;
   return {
     ...browserWithoutLegacyOverrides,
     identity_id: identityId,
@@ -535,14 +563,14 @@ function normalizeSettingsBrowserLaunch(
       ? "persistent_profile"
       : "temporary",
     profile_name: browser.session_mode === "persistent_profile" ? (profileName ?? profileDir) : null,
-    run_from_selected_enabled:
-      browser.session_mode === "persistent_profile" && (profileName ?? profileDir)
-        ? Boolean(browser.run_from_selected_enabled)
-        : false,
     proxy_server: nullableText(browser.proxy_server),
     proxy_username: nullableText(browser.proxy_username),
     proxy_password: nullableText(browser.proxy_password),
   };
+}
+
+function normalizeRunFromSelectedMode(value: unknown): WorkflowRunFromSelectedMode {
+  return value === "selected_only" ? "selected_only" : "from_selected";
 }
 
 function selectedPersonaDefaultsWereRequested(

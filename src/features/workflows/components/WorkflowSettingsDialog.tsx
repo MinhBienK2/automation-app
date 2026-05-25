@@ -70,7 +70,17 @@ export function WorkflowSettingsDialog({
     value: WorkflowSettings[Section],
   ) => {
     if (!settings) return;
-    onSettingsChange({ ...settings, [section]: value });
+    const nextSettings: WorkflowSettings = { ...settings, [section]: value };
+    if (
+      section === "browser_launch" &&
+      (value as WorkflowSettingsBrowserLaunch).session_mode !== "persistent_profile"
+    ) {
+      nextSettings.run_policy = {
+        ...settings.run_policy,
+        run_from_selected_enabled: false,
+      };
+    }
+    onSettingsChange(nextSettings);
   };
 
   const requestOpenChange = (nextOpen: boolean) => {
@@ -164,13 +174,13 @@ export function WorkflowSettingsDialog({
                 ) : null}
                 {activeSection === "run_policy" ? (
                   <RunPolicySettingsSection
+                    browserLaunch={settings.browser_launch}
                     value={settings.run_policy}
                     onChange={(value) => updateSection("run_policy", value)}
                   />
                 ) : null}
                 {activeSection === "browser_launch" ? (
                   <BrowserLaunchSettingsSection
-                    runPolicy={settings.run_policy}
                     value={settings.browser_launch}
                     onChange={(value) => updateSection("browser_launch", value)}
                     onResetBrowserIdentity={onResetBrowserIdentity}
@@ -315,12 +325,19 @@ function GeneralSettingsSection({
 }
 
 function RunPolicySettingsSection({
+  browserLaunch,
   value,
   onChange,
 }: {
+  browserLaunch: WorkflowSettingsBrowserLaunch;
   value: WorkflowSettingsRunPolicy;
   onChange: (value: WorkflowSettingsRunPolicy) => void;
 }) {
+  const canEnableRunFromSelected =
+    browserLaunch.session_mode === "persistent_profile" &&
+    Boolean(browserLaunch.profile_name) &&
+    value.browser_retention === "retain";
+  const runFromSelectedMode = value.run_from_selected_mode ?? "from_selected";
   return (
     <div className="settings-form-grid">
       <SettingsFieldGroup
@@ -340,6 +357,10 @@ function RunPolicySettingsSection({
               onChange({
                 ...value,
                 browser_retention: event.currentTarget.value === "close" ? "close" : "retain",
+                run_from_selected_enabled:
+                  event.currentTarget.value === "close"
+                    ? false
+                    : value.run_from_selected_enabled,
               })
             }
           >
@@ -352,6 +373,49 @@ function RunPolicySettingsSection({
           label="Allow Run JavaScript"
           onCheckedChange={(checked) => onChange({ ...value, execute_js_enabled: checked })}
         />
+        <div
+          aria-label="Run from selected controls"
+          className="workflow-run-from-selected-group"
+          role="group"
+        >
+          <SwitchField
+            checked={Boolean(value.run_from_selected_enabled)}
+            disabled={!canEnableRunFromSelected}
+            label="Enable Run from selected"
+            description={
+              canEnableRunFromSelected
+                ? "Show the Run from selected action when a matching browser session is retained."
+                : "Requires Reuse login session and Browser retention set to retain."
+            }
+            onCheckedChange={(checked) =>
+              onChange({
+                ...value,
+                run_from_selected_enabled: canEnableRunFromSelected ? checked : false,
+                run_from_selected_mode: runFromSelectedMode,
+              })
+            }
+          />
+          {value.run_from_selected_enabled ? (
+            <label className="field workflow-run-from-selected-scope">
+              <span>Run from selected scope</span>
+              <Select
+                value={runFromSelectedMode}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    run_from_selected_mode:
+                      event.currentTarget.value === "selected_only"
+                        ? "selected_only"
+                        : "from_selected",
+                  })
+                }
+              >
+                <option value="selected_only">Only rerun selected node</option>
+                <option value="from_selected">Run from selected node onward</option>
+              </Select>
+            </label>
+          ) : null}
+        </div>
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Batch defaults"
@@ -384,12 +448,10 @@ function RunPolicySettingsSection({
 }
 
 function BrowserLaunchSettingsSection({
-  runPolicy,
   value,
   onChange,
   onResetBrowserIdentity,
 }: {
-  runPolicy: WorkflowSettingsRunPolicy;
   value: WorkflowSettingsBrowserLaunch;
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
   onResetBrowserIdentity?: () => void | Promise<void>;
@@ -397,8 +459,6 @@ function BrowserLaunchSettingsSection({
   const [resetIdentityOpen, setResetIdentityOpen] = useState(false);
   const [resetIdentityPending, setResetIdentityPending] = useState(false);
   const persistent = value.session_mode === "persistent_profile";
-  const canEnableRunFromSelected =
-    persistent && runPolicy.browser_retention === "retain";
   const localEnvironment = detectedLocalBrowserEnvironment();
   const confirmResetIdentity = async () => {
     if (!onResetBrowserIdentity) return;
@@ -424,9 +484,6 @@ function BrowserLaunchSettingsSection({
               ...value,
               session_mode: checked ? "persistent_profile" : "temporary",
               profile_name: checked ? value.profile_dir : null,
-              run_from_selected_enabled: checked
-                ? value.run_from_selected_enabled
-                : false,
             })
           }
         />
@@ -493,22 +550,6 @@ function BrowserLaunchSettingsSection({
             </div>
           </DialogContent>
         </Dialog>
-        <SwitchField
-          checked={Boolean(value.run_from_selected_enabled)}
-          disabled={!canEnableRunFromSelected}
-          label="Enable Run from selected"
-          description={
-            canEnableRunFromSelected
-              ? "Show the Run from selected action when a matching browser session is retained."
-              : "Requires Reuse login session and Run Policy browser retention set to retain."
-          }
-          onCheckedChange={(checked) =>
-            onChange({
-              ...value,
-              run_from_selected_enabled: canEnableRunFromSelected ? checked : false,
-            })
-          }
-        />
       </SettingsFieldGroup>
       <SettingsFieldGroup
         title="Proxy"

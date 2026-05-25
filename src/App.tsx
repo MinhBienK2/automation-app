@@ -133,10 +133,10 @@ function runFromSelectedState({
       visible: false,
     };
   }
-  if (!settings.browser_launch?.run_from_selected_enabled) {
+  if (!settings.run_policy?.run_from_selected_enabled) {
     return {
       enabled: false,
-      reason: "Enable Run from selected in Workflow Settings first.",
+      reason: "Enable Run from selected in Workflow Settings Run Policy first.",
       visible: false,
     };
   }
@@ -183,7 +183,10 @@ function runFromSelectedState({
   }
   return {
     enabled: true,
-    reason: "Run from the selected node using the retained browser session.",
+    reason:
+      settings.run_policy.run_from_selected_mode === "selected_only"
+        ? "Run only the selected node using the retained browser session."
+        : "Run from the selected node using the retained browser session.",
     visible: true,
   };
 }

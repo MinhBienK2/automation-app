@@ -212,6 +212,8 @@ export function defaultWorkflowSettings({
       max_workflow_duration_ms: null,
       browser_retention: "retain",
       execute_js_enabled: true,
+      run_from_selected_enabled: false,
+      run_from_selected_mode: "from_selected",
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
@@ -239,7 +241,6 @@ export function defaultWorkflowSettings({
       headless: false,
       humanize: true,
       human_preset: persona.behavioral_timing_profile,
-      run_from_selected_enabled: false,
     },
     graph_defaults: {
       default_edge_delay: null,
@@ -461,6 +462,20 @@ export const workflowSettingsHelp: Record<
             "Leave it on for authorized flows that need direct page inspection; turn it off for lower-risk profiles that must avoid direct DOM scripting.",
         },
         {
+          name: "Enable Run from selected",
+          description:
+            "Shows the Run from selected workflow action when the workflow uses a retained persistent browser session.",
+          whenToUse:
+            "Use it after a retained full run when operators need to rerun one selected main-path node or continue from that node without reopening Chromium.",
+        },
+        {
+          name: "Run from selected scope",
+          description:
+            "Selects whether Run from selected executes only the selected node or the selected node plus the downstream main-path nodes.",
+          whenToUse:
+            "Choose selected-only for a focused retry of one node; choose downstream when the rest of the workflow depends on that node's fresh output.",
+        },
+        {
           name: "Batch concurrency limit",
           description:
             "Maximum number of input rows the batch runner may execute at the same time. Current backend validation rejects values above one until row isolation is implemented.",
@@ -531,6 +546,20 @@ export const workflowSettingsHelp: Record<
             "Công tắc policy cho phép hoặc từ chối node Run JavaScript trước khi script được đưa vào trang browser. Step bị từ chối sẽ fail với evidence rõ ràng.",
           whenToUse:
             "Bật cho flow được ủy quyền cần kiểm tra trực tiếp trong page; tắt cho profile rủi ro thấp không được dùng direct DOM scripting.",
+        },
+        {
+          name: "Enable Run from selected",
+          description:
+            "Hiển thị action Run from selected khi workflow dùng browser session persistent đang được giữ lại.",
+          whenToUse:
+            "Dùng sau một full run được retain khi operator cần chạy lại một node main-path được chọn hoặc chạy tiếp từ node đó mà không mở lại Chromium.",
+        },
+        {
+          name: "Run from selected scope",
+          description:
+            "Chọn Run from selected chỉ chạy node được chọn, hoặc chạy node đó cùng các node main-path phía sau.",
+          whenToUse:
+            "Chọn selected-only để retry đúng một node; chọn downstream khi phần còn lại của workflow phụ thuộc output mới từ node đó.",
         },
         {
           name: "Batch concurrency limit",
@@ -611,13 +640,6 @@ export const workflowSettingsHelp: Record<
             "Optional readable directory of managed fonts passed to CloakBrowser at launch so owned test identities can use an explicit font inventory instead of host defaults.",
           whenToUse:
             "Use it only with an approved, versioned font bundle that belongs to the test environment.",
-        },
-        {
-          name: "Enable Run from selected",
-          description:
-            "Shows the Run from selected workflow action when the workflow uses a retained persistent browser session.",
-          whenToUse:
-            "Use it for workflows where operators need to continue from a selected main-path node without reopening Chromium.",
         },
         {
           name: "Use proxy",
@@ -748,13 +770,6 @@ export const workflowSettingsHelp: Record<
             "Thư mục font managed tùy chọn, có thể đọc được, được truyền cho CloakBrowser lúc launch để identity test owned dùng inventory font rõ ràng thay vì default của host.",
           whenToUse:
             "Chỉ dùng với font bundle đã được phê duyệt, version rõ ràng, thuộc môi trường test.",
-        },
-        {
-          name: "Enable Run from selected",
-          description:
-            "Hiển thị action Run from selected khi workflow dùng browser session persistent đang được giữ lại.",
-          whenToUse:
-            "Dùng cho workflow cần chạy tiếp từ một node main-path được chọn mà không mở lại Chromium.",
         },
         {
           name: "Use proxy",

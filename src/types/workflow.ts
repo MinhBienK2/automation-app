@@ -122,6 +122,7 @@ export type WorkflowSettingsSectionId =
 
 export type WorkflowBrowserRetention = "retain" | "close";
 export type WorkflowBrowserSessionMode = "temporary" | "persistent_profile";
+export type WorkflowRunFromSelectedMode = "selected_only" | "from_selected";
 export type WorkflowHumanPreset = "default" | "careful";
 export type WorkflowWebRtcPolicy =
   | "default"
@@ -180,6 +181,8 @@ export type WorkflowSettingsRunPolicy = {
   max_workflow_duration_ms?: number | null;
   browser_retention: WorkflowBrowserRetention;
   execute_js_enabled: boolean;
+  run_from_selected_enabled: boolean;
+  run_from_selected_mode: WorkflowRunFromSelectedMode;
   batch_concurrency_limit?: number | null;
   batch_headless: boolean;
   batch_stop_on_first_failed_row: boolean;
@@ -203,7 +206,7 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   headless: boolean;
   humanize: boolean;
   human_preset: WorkflowHumanPreset;
-  run_from_selected_enabled: boolean;
+  run_from_selected_enabled?: boolean;
 };
 
 export type WorkflowSettingsEnvironment = {

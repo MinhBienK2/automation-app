@@ -336,13 +336,93 @@ describe("WorkflowSettingsDialog", () => {
     );
   });
 
-  test("reuse session toggles persistent storage without changing the saved identity", async () => {
+  test("renders Run from selected controls in Run Policy with a scope select", async () => {
     const user = userEvent.setup();
     const onSettingsChange = vi.fn();
     const initialSettings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
     });
+
+    function Harness() {
+      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
+      return (
+        <WorkflowSettingsDialog
+          activeSection="run_policy"
+          hasUnsavedChanges={false}
+          open
+          settings={settings}
+          onActiveSectionChange={vi.fn()}
+          onDiscardChanges={vi.fn()}
+          onOpenChange={vi.fn()}
+          onSaveSettings={vi.fn()}
+          onSettingsChange={(nextSettings) => {
+            onSettingsChange(nextSettings);
+            setSettings(nextSettings);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    expect(screen.getByRole("switch", { name: "Enable Run from selected" }))
+      .not.toBeDisabled();
+    expect(screen.queryByLabelText("Run from selected scope")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("switch", { name: "Enable Run from selected" }));
+
+    expect(onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        run_policy: expect.objectContaining({
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "from_selected",
+        }),
+      }),
+    );
+    expect(screen.getByLabelText("Run from selected scope")).toBeInTheDocument();
+    const runFromSelectedGroup = screen
+      .getByRole("switch", { name: "Enable Run from selected" })
+      .closest(".workflow-run-from-selected-group");
+    expect(runFromSelectedGroup).not.toBeNull();
+    expect(screen.getByLabelText("Run from selected scope").closest(".workflow-run-from-selected-group"))
+      .toBe(runFromSelectedGroup);
+    expect(screen.getByRole("option", { name: "Only rerun selected node" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Run from selected node onward" }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Chỉ chạy lại mỗi node được select" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Chạy từ node đó đổ đi" }))
+      .not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Run from selected scope"), "selected_only");
+
+    expect(onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        run_policy: expect.objectContaining({
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "selected_only",
+        }),
+      }),
+    );
+  });
+
+  test("reuse session toggles persistent storage without changing the saved identity", async () => {
+    const user = userEvent.setup();
+    const onSettingsChange = vi.fn();
+    const defaultSettings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    const initialSettings = {
+      ...defaultSettings,
+      run_policy: {
+        ...defaultSettings.run_policy,
+        run_from_selected_enabled: true,
+        run_from_selected_mode: "from_selected" as const,
+      },
+    };
 
     function Harness() {
       const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
@@ -368,8 +448,8 @@ describe("WorkflowSettingsDialog", () => {
       <Harness />,
     );
 
-    expect(screen.getByRole("switch", { name: "Enable Run from selected" }))
-      .not.toBeDisabled();
+    expect(screen.queryByRole("switch", { name: "Enable Run from selected" }))
+      .not.toBeInTheDocument();
 
     await user.click(screen.getByRole("switch", { name: "Reuse login session" }));
     expect(onSettingsChange).toHaveBeenLastCalledWith(
@@ -380,17 +460,8 @@ describe("WorkflowSettingsDialog", () => {
           identity_id: "bi_workflow-1",
           profile_dir: "bi_workflow-1",
         }),
-      }),
-    );
-
-    await user.click(screen.getByRole("switch", { name: "Reuse login session" }));
-    await user.click(screen.getByRole("switch", { name: "Enable Run from selected" }));
-
-    expect(onSettingsChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        browser_launch: expect.objectContaining({
-          session_mode: "persistent_profile",
-          run_from_selected_enabled: true,
+        run_policy: expect.objectContaining({
+          run_from_selected_enabled: false,
         }),
       }),
     );

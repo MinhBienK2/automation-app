@@ -331,6 +331,8 @@ describe("workflow API settings commands", () => {
         max_workflow_duration_ms: null,
         browser_retention: "retain",
         execute_js_enabled: true,
+        run_from_selected_enabled: false,
+        run_from_selected_mode: "from_selected",
         batch_concurrency_limit: null,
         batch_headless: false,
         batch_stop_on_first_failed_row: false,
@@ -410,6 +412,5 @@ function browserLaunchSettings(): WorkflowSettingsBrowserLaunch {
     headless: false,
     humanize: true,
     human_preset: "default",
-    run_from_selected_enabled: false,
   };
 }

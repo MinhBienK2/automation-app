@@ -25,6 +25,8 @@ describe("workflow settings model", () => {
     expect(settings.general.tags).toEqual([]);
     expect(settings.run_policy.browser_retention).toBe("retain");
     expect(settings.run_policy.execute_js_enabled).toBe(true);
+    expect(settings.run_policy.run_from_selected_enabled).toBe(false);
+    expect(settings.run_policy.run_from_selected_mode).toBe("from_selected");
     expect(settings.run_policy.batch_concurrency_limit).toBe(1);
     expect(settings.browser_launch.session_mode).toBe("persistent_profile");
     expect(settings.browser_launch.identity_id).toBe("bi_workflow-1");
@@ -55,6 +57,7 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch).not.toHaveProperty("preflight_enabled");
     expect(settings.browser_launch).not.toHaveProperty("preflight_probe_url");
     expect(settings.browser_launch).not.toHaveProperty("preflight_allowed_origins");
+    expect(settings.browser_launch).not.toHaveProperty("run_from_selected_enabled");
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.graph_defaults.default_edge_delay).toBeNull();
@@ -137,6 +140,8 @@ describe("workflow settings model", () => {
       "Max workflow duration ms",
       "Browser retention",
       "Allow Run JavaScript",
+      "Enable Run from selected",
+      "Run from selected scope",
       "Batch concurrency limit",
       "Batch runs are headless",
       "Stop batch on first failed row",
@@ -147,7 +152,6 @@ describe("workflow settings model", () => {
       "Identity display name",
       "Fingerprint seed",
       "Fingerprint fonts directory",
-      "Enable Run from selected",
       "Use proxy",
       "Proxy server",
       "Proxy username",

@@ -217,12 +217,13 @@ describe("Electron workflow command handlers", () => {
       run_policy: {
         ...sourceSettings.run_policy,
         browser_retention: "retain",
+        run_from_selected_enabled: true,
+        run_from_selected_mode: "from_selected",
         batch_headless: true,
         batch_stop_on_first_failed_row: true,
       },
       browser_launch: {
         ...sourceSettings.browser_launch,
-        run_from_selected_enabled: true,
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
         proxy_username: "operator",
@@ -259,6 +260,8 @@ describe("Electron workflow command handlers", () => {
     });
     expect(copiedSettings.run_policy).toMatchObject({
       browser_retention: "retain",
+      run_from_selected_enabled: false,
+      run_from_selected_mode: "from_selected",
       batch_headless: true,
       batch_stop_on_first_failed_row: true,
     });
@@ -269,7 +272,6 @@ describe("Electron workflow command handlers", () => {
       session_mode: "persistent_profile",
       display_name: "Copy of Source identity",
       profile_name: copiedSettings.browser_launch.profile_dir,
-      run_from_selected_enabled: false,
       proxy_enabled: true,
       proxy_server: "http://proxy.local:8080",
       proxy_username: "operator",
@@ -304,9 +306,12 @@ describe("Electron workflow command handlers", () => {
     tempRoots.push(fontsDir);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
+      run_policy: {
+        ...settings.run_policy,
+        run_from_selected_enabled: true,
+      },
       browser_launch: {
         ...settings.browser_launch,
-        run_from_selected_enabled: true,
         proxy_enabled: true,
         proxy_server: "http://proxy.local:8080",
         timezone: "America/New_York",
@@ -325,7 +330,7 @@ describe("Electron workflow command handlers", () => {
     expect(rotated.browser_launch.fingerprint_seed).toBe(
       deriveFingerprintSeedFromIdentityId(rotated.browser_launch.identity_id),
     );
-    expect(rotated.browser_launch.run_from_selected_enabled).toBe(false);
+    expect(rotated.run_policy.run_from_selected_enabled).toBe(false);
     expect(rotated.browser_launch.proxy_enabled).toBe(true);
     expect(rotated.browser_launch.proxy_server).toBe("http://proxy.local:8080");
     expect(rotated.browser_launch.timezone).toBe("America/New_York");
@@ -1658,11 +1663,11 @@ describe("Electron workflow command handlers", () => {
         ...settings.browser_launch,
         session_mode: "persistent_profile",
         profile_name: "qa-profile",
-        run_from_selected_enabled: true,
       },
       run_policy: {
         ...settings.run_policy,
         browser_retention: "retain",
+        run_from_selected_enabled: true,
       },
     });
 
@@ -1681,6 +1686,74 @@ describe("Electron workflow command handlers", () => {
     expect(runnerCalls[0]?.graph.steps.map((step) => step.node_id)).toEqual(["visit"]);
   });
 
+  test("runs only the selected node when Run Policy selects selected-only scope", async () => {
+    const runnerCalls: Array<{ graph: CompiledWorkflowGraph }> = [];
+    const { handlers } = await createTestHandlers({
+      runner: {
+        hasReusableRetainedSession: vi.fn(() => true),
+        async run(request: { graph: CompiledWorkflowGraph }): Promise<RunState> {
+          runnerCalls.push(request);
+          return {
+            status: "success",
+            mode: "run_workflow",
+            target_step_id: "visit",
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: ["visit"],
+            outputs: {},
+            error: null,
+            retained_session: {
+              available: true,
+              workflow_id: "workflow-1",
+              profile_name: "qa-profile",
+              reason: null,
+            },
+          };
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Selected-only");
+    const graph = runnableGraph();
+    graph.nodes.push({
+      id: "after",
+      node_type: "action",
+      label: "After",
+      position: { x: 400, y: 0 },
+      config: { type: "wait", config: { condition: "duration", duration_ms: 100 } },
+      ports: [
+        { id: "in", label: "In", direction: "input" },
+        { id: "out", label: "Out", direction: "output" },
+      ],
+    });
+    graph.edges.push({
+      id: "visit-after",
+      source_node_id: "visit",
+      source_port: "out",
+      target_node_id: "after",
+      target_port: "in",
+    });
+    handlers.saveWorkflowGraph(workflow.id, graph);
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        session_mode: "persistent_profile",
+        profile_name: "qa-profile",
+      },
+      run_policy: {
+        ...settings.run_policy,
+        browser_retention: "retain",
+        run_from_selected_enabled: true,
+        run_from_selected_mode: "selected_only",
+      },
+    });
+
+    await handlers.runWorkflowFromNode(workflow.id, "visit");
+
+    expect(runnerCalls[0]?.graph.steps.map((step) => step.node_id)).toEqual(["visit"]);
+  });
+
   test("rejects run-from-selected when reuse session or retained browser state is unavailable", async () => {
     const runner = {
       hasReusableRetainedSession: vi.fn(() => false),
@@ -1692,17 +1765,20 @@ describe("Electron workflow command handlers", () => {
 
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
       message: "Run from selected must be enabled in Workflow Settings",
-      field: "browser_launch.run_from_selected_enabled",
+      field: "run_policy.run_from_selected_enabled",
     });
 
     const settings = handlers.getWorkflowSettings(workflow.id);
     handlers.saveWorkflowSettings(workflow.id, {
       ...settings,
+      run_policy: {
+        ...settings.run_policy,
+        run_from_selected_enabled: true,
+      },
       browser_launch: {
         ...settings.browser_launch,
         session_mode: "temporary",
         profile_name: null,
-        run_from_selected_enabled: true,
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
@@ -1716,11 +1792,11 @@ describe("Electron workflow command handlers", () => {
         ...handlers.getWorkflowSettings(workflow.id).browser_launch,
         session_mode: "persistent_profile",
         profile_name: handlers.getWorkflowSettings(workflow.id).browser_launch.profile_dir,
-        run_from_selected_enabled: true,
       },
       run_policy: {
         ...handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "close",
+        run_from_selected_enabled: true,
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
@@ -1733,21 +1809,18 @@ describe("Electron workflow command handlers", () => {
       run_policy: {
         ...handlers.getWorkflowSettings(workflow.id).run_policy,
         browser_retention: "retain",
-      },
-      browser_launch: {
-        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
         run_from_selected_enabled: false,
       },
     });
     await expect(handlers.runWorkflowFromNode(workflow.id, "visit")).rejects.toMatchObject({
       message: "Run from selected must be enabled in Workflow Settings",
-      field: "browser_launch.run_from_selected_enabled",
+      field: "run_policy.run_from_selected_enabled",
     });
 
     handlers.saveWorkflowSettings(workflow.id, {
       ...handlers.getWorkflowSettings(workflow.id),
-      browser_launch: {
-        ...handlers.getWorkflowSettings(workflow.id).browser_launch,
+      run_policy: {
+        ...handlers.getWorkflowSettings(workflow.id).run_policy,
         run_from_selected_enabled: true,
       },
     });
@@ -2438,11 +2511,11 @@ describe("Electron workflow command handlers", () => {
         ...settings.browser_launch,
         session_mode: "persistent_profile",
         profile_name: "qa-profile",
-        run_from_selected_enabled: true,
       },
       run_policy: {
         ...settings.run_policy,
         browser_retention: "retain",
+        run_from_selected_enabled: true,
       },
     });
     database.exec(`

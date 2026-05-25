@@ -52,7 +52,7 @@ older UI helpers that expect a direct `RunState`.
 ## Lifecycle
 
 - `run_workflow` delegates to the run manager to create a run-id scoped snapshot, close only a conflicting retained browser session for the same workflow/profile when launching a fresh session, then set that snapshot status to `running`, mode, target step id, and clears progress/error.
-- `run_workflow_from_node` reuses an existing retained session and runs from a selected main-path graph node to the end. It requires the Workflow Settings Run from selected toggle, Reuse login session, browser retention `retain`, and a retained session matching the workflow/profile.
+- `run_workflow_from_node` reuses an existing retained session and runs from a selected main-path graph node. It requires the Workflow Settings Run Policy Run from selected toggle, Reuse login session, browser retention `retain`, and a retained session matching the workflow/profile. Run Policy scope decides whether the compiled sub-plan contains only the selected node or the selected node through the downstream main path.
 - Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes.
 - Multiple different workflows can run concurrently when they do not share a persistent browser profile. A second run for the same workflow fails with a workflow conflict, and a second run that would reuse the same persistent browser profile fails with a profile conflict.
 - `run_batch_workflow` remains globally exclusive. A batch blocks normal runs while active, normal runs block a batch start, batch reports progress through the same state shape, and it can be stopped through `stop_run`.
@@ -75,7 +75,7 @@ older UI helpers that expect a direct `RunState`.
 - Run status bar displays terminal and error states.
 - Workflow list rows display the active snapshot for their workflow, disable only the affected row Run action, and expose row-level Stop for that run id.
 - Run Center displays all session run snapshots and can stop a selected active run by id.
-- Workflow detail renders `Run from selected` only when the Workflow Settings toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Merge is not a supported selected start because it compiles to an internal no-op graph marker.
+- Workflow detail renders `Run from selected` only when the Workflow Settings Run Policy toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Merge is not a supported selected start because it compiles to an internal no-op graph marker.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
 - Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation.
 

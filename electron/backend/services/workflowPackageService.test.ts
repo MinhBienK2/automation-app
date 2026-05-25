@@ -122,6 +122,9 @@ function workflowSettings(
     run_policy: {
       max_workflow_duration_ms: null,
       browser_retention: "retain",
+      execute_js_enabled: true,
+      run_from_selected_enabled: false,
+      run_from_selected_mode: "from_selected",
       batch_concurrency_limit: 1,
       batch_headless: false,
       batch_stop_on_first_failed_row: false,
@@ -150,7 +153,6 @@ function workflowSettings(
       headless: false,
       humanize: true,
       human_preset: "default",
-      run_from_selected_enabled: false,
     } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
     graph_defaults: { default_edge_delay: null },
     environment: { initial_variables: [] },

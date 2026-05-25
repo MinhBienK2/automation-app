@@ -11,6 +11,7 @@ import type {
   VariableAssignment,
   WorkflowCondition,
   WorkflowGraph,
+  WorkflowRunFromSelectedMode,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
 import { validateWorkflowGraph as validateWorkflowGraphModule } from "./validateGraph.js";
@@ -72,9 +73,14 @@ export function compileWorkflowRunPlan(
   };
 }
 
+type CompileWorkflowGraphFromNodeOptions = {
+  mode?: WorkflowRunFromSelectedMode;
+};
+
 export function compileWorkflowGraphFromNode(
   graph: WorkflowGraph,
   startNodeId: string,
+  options: CompileWorkflowGraphFromNodeOptions = {},
 ): CompiledWorkflowGraph {
   const normalizedGraph = migrateWorkflowGraph(graph);
   const blocking = validateWorkflowGraphModule(normalizedGraph).find((issue) => issue.level === "error");
@@ -92,7 +98,9 @@ export function compileWorkflowGraphFromNode(
   }
 
   const steps: CompiledGraphStep[] = [];
-  compilePath(normalizedGraph, startNodeId, new Set(), steps);
+  compilePath(normalizedGraph, startNodeId, new Set(), steps, {
+    stopAfterCurrentNode: options.mode === "selected_only",
+  });
   const compiled = steps.map((stepValue) => ({
     ...stepValue,
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
@@ -114,6 +122,7 @@ function compilePath(
   nodeId: string | null,
   visited: Set<string>,
   steps: CompiledGraphStep[],
+  options: { stopAfterCurrentNode?: boolean } = {},
 ) {
   if (!nodeId) return;
   if (visited.has(nodeId)) {
@@ -147,11 +156,11 @@ function compilePath(
       return;
     case "action":
       steps.push(step(node, node.config as ActionConfig));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "merge":
       steps.push(step(node, { type: "graph_noop", config: { kind: "merge" } }));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "router": {
       const router = routerGraphConfig(node);
@@ -168,7 +177,7 @@ function compilePath(
           default_steps: compileNestedConfigs(graph, node.id, "default", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "if": {
@@ -181,7 +190,7 @@ function compilePath(
           else_steps: compileNestedConfigs(graph, node.id, "false", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "switch": {
@@ -198,7 +207,7 @@ function compilePath(
           default_steps: compileNestedConfigs(graph, node.id, "default", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "repeat_times": {
@@ -209,7 +218,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "repeat_for_each": {
@@ -225,7 +234,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "while": {
@@ -238,7 +247,7 @@ function compilePath(
           steps: compileNestedConfigs(graph, node.id, "loop", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "repeat_until": {
@@ -252,7 +261,7 @@ function compilePath(
           timeout_steps: compileNestedConfigs(graph, node.id, "timeout", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "retry": {
@@ -265,7 +274,7 @@ function compilePath(
           failed_steps: compileNestedConfigs(graph, node.id, "failed", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "success"), visited, steps);
+      compileContinuation(graph, node.id, "success", visited, steps, options);
       break;
     }
     case "try_catch": {
@@ -278,7 +287,7 @@ function compilePath(
           finally_steps: compileNestedConfigs(graph, node.id, "finally", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "fallback": {
@@ -289,7 +298,7 @@ function compilePath(
           fallback_steps: compileNestedConfigs(graph, node.id, "fallback", visited),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "done"), visited, steps);
+      compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "break_loop":
@@ -310,14 +319,14 @@ function compilePath(
       return;
     case "set_variable":
       steps.push(step(node, setVariableActionConfig(node)));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "set_json_variables":
       steps.push(step(node, {
         type: "set_json_variables",
         config: { json: requiredString(node.config, "json", "JSON variables are required") },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "transform_variable":
       steps.push(step(node, {
@@ -328,7 +337,7 @@ function compilePath(
           expression: stringField(node.config, "expression") ?? "",
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "assert_output":
       steps.push(step(node, {
@@ -339,23 +348,35 @@ function compilePath(
           value: requiredString(node.config, "value", "Expected output value is required"),
         },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "domain_allowlist":
       steps.push(step(node, {
         type: "domain_allowlist",
         config: { domains: stringArray(node.config, "domains", "Allowed domains are required") },
       }));
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "start":
-      compileTransition(graph, nextTransition(graph, node.id, "out"), visited, steps);
+      compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     default:
       throw validationError("node_type", unsupportedGraphNodeTypeMessage(node.node_type));
   }
 
   visited.delete(nodeId);
+}
+
+function compileContinuation(
+  graph: WorkflowGraph,
+  nodeId: string,
+  sourcePort: string,
+  visited: Set<string>,
+  steps: CompiledGraphStep[],
+  options: { stopAfterCurrentNode?: boolean },
+) {
+  if (options.stopAfterCurrentNode) return;
+  compileTransition(graph, nextTransition(graph, nodeId, sourcePort), visited, steps);
 }
 
 type GraphTransition = {

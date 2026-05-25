@@ -119,12 +119,13 @@ describe("Workflow detail integration", () => {
         run_policy: {
           ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
           browser_retention: "retain",
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "from_selected",
         },
         browser_launch: {
           ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
           session_mode: "persistent_profile",
           profile_name: "qa-profile",
-          run_from_selected_enabled: true,
         },
       },
       run_workflow_from_node: {
@@ -174,7 +175,6 @@ describe("Workflow detail integration", () => {
           ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
           session_mode: "persistent_profile",
           profile_name: "qa-profile",
-          run_from_selected_enabled: false,
         },
       },
     });

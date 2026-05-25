@@ -4,7 +4,7 @@
 
 - Runs execute ordered action configs.
 - `run_workflow` executes the compiled saved graph.
-- `run_workflow_from_node` executes the saved graph from one selected main-path graph node to the end by reusing the currently retained browser session.
+- `run_workflow_from_node` executes the saved graph from one selected main-path graph node by reusing the currently retained browser session. Run Policy scope selects either only that node or that node through the downstream main path.
 - `test_step` executes from the first step through the selected step.
 - During the Electron migration, graph validation and compilation are owned by `electron/backend/graph/compiler.ts`.
 - Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` by default and Playwright-compatible page/context APIs. Setting `AUTOMATION_BROWSER_ENGINE=camoufox` selects the local Camoufox Firefox-compatible runtime for lab runs when the binary exists at `CAMOUFOX_EXECUTABLE_PATH` or `~/.cache/camoufox/camoufox`. Browser launch, retained-session state, and browser identity evidence are delegated to `electron/backend/browser/sessionManager.ts`.
@@ -21,7 +21,7 @@
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
-- Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
+- Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. `run_policy.run_from_selected_mode` controls whether the sub-plan stops after the selected node or continues through the downstream main path. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
 - Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled top-level step evidence and executed nested action traces to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
 - Scheduled runs start through the same saved-workflow command path as manual full runs. If the scheduled workflow conflicts with an active workflow, active persistent profile, or active batch, the scheduler records a skipped occurrence instead of queueing it; isolated due schedules can start in the same scheduler tick.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
@@ -31,7 +31,7 @@
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - Run Policy `execute_js_enabled` defaults to enabled. When disabled, `execute_js` fails before script evaluation with a clear Run Policy error so lower-risk profiles can reject direct DOM scripting while keeping the action available for authorized workflows.
-- `run_workflow_from_node` requires Browser Launch `run_from_selected_enabled`, Browser Launch `persistent_profile`, Run Policy browser retention `retain`, and a retained session owned by the same workflow/profile directory. Temporary retained sessions are not eligible.
+- `run_workflow_from_node` requires Run Policy `run_from_selected_enabled`, Browser Launch `persistent_profile`, Run Policy browser retention `retain`, and a retained session owned by the same workflow/profile directory. Temporary retained sessions are not eligible.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.

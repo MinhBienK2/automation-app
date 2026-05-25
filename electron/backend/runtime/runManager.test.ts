@@ -230,6 +230,9 @@ function workflowSettings(workflowId: string, profileName: string): WorkflowSett
     run_policy: {
       max_workflow_duration_ms: null,
       browser_retention: "retain",
+      execute_js_enabled: true,
+      run_from_selected_enabled: false,
+      run_from_selected_mode: "from_selected",
       batch_concurrency_limit: 1,
       batch_headless: true,
       batch_stop_on_first_failed_row: false,
@@ -255,7 +258,6 @@ function workflowSettings(workflowId: string, profileName: string): WorkflowSett
       headless: true,
       humanize: true,
       human_preset: "default",
-      run_from_selected_enabled: false,
     },
     graph_defaults: {
       default_edge_delay: null,

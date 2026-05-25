@@ -497,6 +497,27 @@
   grid-column: 1 / -1;
 }
 
+.workflow-run-from-selected-group {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #171717;
+}
+
+.workflow-run-from-selected-group > [data-slot="switch-field"] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.workflow-run-from-selected-scope {
+  min-width: 0;
+}
+
 .settings-field-group-actions {
   display: flex;
   grid-column: 1 / -1;

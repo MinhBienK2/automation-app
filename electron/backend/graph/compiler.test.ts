@@ -369,6 +369,31 @@ describe("TypeScript graph compiler parity", () => {
     expect(plan.steps.map((step) => step.node_id)).toEqual(["second", "third"]);
   });
 
+  test("compiles a selected-only run plan for just the selected main-path node", () => {
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("first", "action", { config: waitAction(100) }),
+        graphNode("second", "action", { config: clickAction("//continue") }),
+        graphNode("third", "action", { config: waitAction(200) }),
+      ],
+      [
+        edge("start", "out", "first", "in"),
+        edge("first", "out", "second", "in"),
+        edge("second", "out", "third", "in"),
+      ],
+    );
+    const compileFromNodeWithMode = compileWorkflowGraphFromNode as unknown as (
+      graphValue: WorkflowGraph,
+      startNodeId: string,
+      options: { mode: "selected_only" },
+    ) => ReturnType<typeof compileWorkflowGraphFromNode>;
+
+    const plan = compileFromNodeWithMode(graph, "second", { mode: "selected_only" });
+
+    expect(plan.steps.map((step) => step.node_id)).toEqual(["second"]);
+  });
+
   test("rejects selected nodes inside nested branch bodies", () => {
     const graph = graphOf(
       [

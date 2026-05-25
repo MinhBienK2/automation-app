@@ -194,6 +194,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const timestamp = new Date().toISOString();
     return saveSettings(workflowId, {
       ...settings,
+      run_policy: {
+        ...settings.run_policy,
+        run_from_selected_enabled: false,
+      },
       browser_launch: {
         ...settings.browser_launch,
         identity_id: identityId,
@@ -203,7 +207,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             ? identityId
             : null,
         fingerprint_seed: fingerprintSeed,
-        run_from_selected_enabled: false,
       },
       migration_notes: [
         ...settings.migration_notes,
@@ -583,10 +586,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
           "run_policy.browser_retention",
         );
       }
-      if (!settings.browser_launch.run_from_selected_enabled) {
+      if (!settings.run_policy.run_from_selected_enabled) {
         throw commandError(
           "Run from selected must be enabled in Workflow Settings",
-          "browser_launch.run_from_selected_enabled",
+          "run_policy.run_from_selected_enabled",
         );
       }
       if (!runner.hasReusableRetainedSession?.(workflowId, profileKey)) {
@@ -604,7 +607,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       }
 
       const graph = getWorkflowGraph(workflowId);
-      const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId);
+      const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId, {
+        mode: settings.run_policy.run_from_selected_mode,
+      });
       if (compiledGraph.steps.length === 0) {
         throw commandError("Selected graph node has no executable steps", "startNodeId");
       }
