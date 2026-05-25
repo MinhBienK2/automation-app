@@ -63,12 +63,7 @@ export function WorkflowGraphNode({
         <span>{data.label}</span>
         <small>{graphNodeLabel(data.nodeType)}</small>
       </button>
-      <div
-        aria-label={`Drag node ${id}`}
-        className="graph-node-drag-handle"
-        role="button"
-        tabIndex={0}
-      />
+      <div aria-hidden="true" className="graph-node-drag-surface" />
 
       {inputPorts.map((port, index) => {
         const tooltip = graphPortTooltip(data.nodeType, port);

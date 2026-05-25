@@ -201,7 +201,6 @@ describe("workflow graph helpers", () => {
           id: "step-wait",
           type: "workflow",
           position: { x: 220, y: 0 },
-          dragHandle: ".graph-node-drag-handle",
           selected: true,
           data: expect.objectContaining({
             label: "Wait",
@@ -216,6 +215,7 @@ describe("workflow graph helpers", () => {
         }),
       ]),
     );
+    expect(flow.nodes.find((node) => node.id === "step-wait")).not.toHaveProperty("dragHandle");
     expect(flow.edges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -251,6 +251,7 @@
   border-radius: 8px;
   background: #171717;
   color: #fafafa;
+  cursor: grab;
 }
 
 .graph-node-button {
@@ -263,6 +264,7 @@
   border: 0;
   background: transparent;
   color: #fafafa;
+  cursor: inherit;
   font: inherit;
   font-size: 13px;
   text-align: center;
@@ -273,36 +275,17 @@
   font-size: 11px;
 }
 
-.graph-node-drag-handle {
+.graph-node-drag-surface {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  min-height: 20px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  background: #0f0f0f;
-  color: #898989;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
   cursor: grab;
 }
 
-.graph-node-drag-handle:active {
+.graph-canvas .react-flow__node.dragging .graph-node,
+.graph-canvas .react-flow__node.dragging .graph-node-drag-surface {
   cursor: grabbing;
-}
-
-.graph-node-drag-handle::before {
-  width: 14px;
-  height: 8px;
-  background: repeating-linear-gradient(
-    90deg,
-    #898989 0,
-    #898989 2px,
-    transparent 2px,
-    transparent 6px
-  );
-  content: "";
 }
 
 .graph-node-selected {

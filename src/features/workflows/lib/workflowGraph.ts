@@ -171,7 +171,6 @@ export function toReactFlowGraph(
       position: node.position,
       initialHeight: 64,
       initialWidth: 160,
-      dragHandle: ".graph-node-drag-handle",
       selected: state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id,
       data: {
         label: node.label,

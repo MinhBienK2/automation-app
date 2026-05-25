@@ -1472,7 +1472,10 @@ describe("Workflow graph editor integration", () => {
 
     expect(within(editor).queryByLabelText("Visible edge Start to Wait for page"))
       .not.toBeInTheDocument();
-    expect(within(editor).getByLabelText("Drag node step-1")).toBeInTheDocument();
+    expect(within(editor).queryByLabelText("Drag node step-1")).not.toBeInTheDocument();
+    const dragSurface = editor.querySelector(".graph-node-drag-surface");
+    expect(dragSurface).toBeInTheDocument();
+    expect(dragSurface).not.toHaveClass("nodrag");
 
     fireEvent.contextMenu(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
     const menu = await within(editor).findByRole("menu", { name: "Node actions" });
