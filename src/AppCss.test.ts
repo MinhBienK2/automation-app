@@ -51,6 +51,25 @@ describe("App CSS", () => {
     expect(body).toContain("overflow-y: auto");
   });
 
+  test("styles help disclosures as readable nested sections", () => {
+    const helpDisclosure = cssRule(".help-disclosure");
+    const helpSummary = cssRule(".help-disclosure-summary");
+    const fieldGroupSummary = cssRule(".help-field-group-summary");
+    const fieldLeaf = cssRule(".help-field-leaf");
+    const optionDisclosure = cssRule(".help-option-disclosure");
+    const settingsDisclosure = cssRule(".workflow-settings-help-disclosure");
+    const settingsItem = cssRule(".workflow-settings-help-item");
+
+    expect(helpDisclosure).toContain("border: 1px solid #2e2e2e");
+    expect(helpSummary).toContain("cursor: pointer");
+    expect(helpSummary).toContain("list-style: none");
+    expect(fieldGroupSummary).toContain("cursor: pointer");
+    expect(fieldLeaf).toContain("border-top: 1px solid #242424");
+    expect(optionDisclosure).toContain("border: 1px solid #242424");
+    expect(settingsDisclosure).toContain("background: #0f0f0f");
+    expect(settingsItem).toContain("border: 1px solid #2e2e2e");
+  });
+
   test("removes legacy backdrop CSS after Radix dialog migration", () => {
     expect(css).not.toContain(".modal-backdrop");
     expect(css).not.toContain(".monitor-backdrop");

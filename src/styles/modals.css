@@ -83,7 +83,7 @@
   padding-right: 4px;
 }
 
-.help-section {
+.help-disclosure {
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -92,8 +92,44 @@
   background: #0f0f0f;
 }
 
-.help-section h3 {
+.help-disclosure-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  color: #fafafa;
   font-size: 15px;
+  font-weight: 500;
+}
+
+.help-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.help-disclosure-summary::before {
+  content: ">";
+  width: 16px;
+  color: #898989;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 120ms ease, color 120ms ease;
+}
+
+.help-disclosure[open] > .help-disclosure-summary::before {
+  color: #3ecf8e;
+  transform: rotate(90deg);
+}
+
+.help-disclosure-content {
+  display: grid;
+  gap: 10px;
+}
+
+.help-section {
+  padding: 14px;
 }
 
 .help-section ul {
@@ -123,15 +159,76 @@
   gap: 8px;
 }
 
+.help-field-group-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+}
+
+.help-field-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.help-field-group-summary::before {
+  content: ">";
+  color: #898989;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 120ms ease, color 120ms ease;
+}
+
+.help-field-group[open] > .help-field-group-summary::before {
+  color: #3ecf8e;
+  transform: rotate(90deg);
+}
+
 .help-field-group h4 {
   margin: 0;
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid #303030;
+  border-radius: 6px;
   color: #d8d8d8;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .help-field-item {
   display: grid;
+  gap: 6px;
+}
+
+.help-field-leaf {
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px solid #242424;
+  border-radius: 0;
+  background: transparent;
+}
+
+.help-field-list > .help-field-leaf:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.help-field-leaf > .help-disclosure-summary {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+  color: #fafafa;
+  font-size: 13px;
+}
+
+.help-field-leaf > .help-disclosure-summary::before {
+  width: 12px;
+  font-size: 10px;
+}
+
+.help-field-leaf > .help-disclosure-content {
   gap: 6px;
 }
 
@@ -198,6 +295,14 @@
   border: 1px solid #242424;
   border-radius: 6px;
   background: #171717;
+}
+
+.help-option-disclosure {
+  border: 1px solid #242424;
+}
+
+.help-option-summary {
+  font-size: 13px;
 }
 
 .help-option-item strong {

@@ -153,10 +153,8 @@ function runFromSelectedState({
       visible: true,
     };
   }
-  if (
-    settings.browser_launch?.session_mode !== "persistent_profile" ||
-    !settings.browser_launch.profile_name
-  ) {
+  const retainedProfileKey = workflowBrowserProfileKey(settings);
+  if (!retainedProfileKey) {
     return {
       enabled: false,
       reason: "Enable Reuse login session in Workflow Settings first.",
@@ -173,7 +171,7 @@ function runFromSelectedState({
   if (
     !runState.retained_session?.available ||
     runState.retained_session.workflow_id !== settings.workflow_id ||
-    runState.retained_session.profile_name !== settings.browser_launch.profile_name
+    runState.retained_session.profile_name !== retainedProfileKey
   ) {
     return {
       enabled: false,
@@ -189,6 +187,15 @@ function runFromSelectedState({
         : "Run from the selected node using the retained browser session.",
     visible: true,
   };
+}
+
+function workflowBrowserProfileKey(settings: WorkflowSettings) {
+  if (settings.browser_launch?.session_mode !== "persistent_profile") return null;
+  return (
+    settings.browser_launch.profile_dir?.trim() ||
+    settings.browser_launch.profile_name?.trim() ||
+    null
+  );
 }
 
 function mainPathNodeIds(graph: WorkflowGraph) {

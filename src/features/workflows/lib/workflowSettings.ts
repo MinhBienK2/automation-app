@@ -513,7 +513,7 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Run Policy",
       summary:
-        "Run Policy định nghĩa giới hạn cấp workflow và chính sách giữ browser sau kết thúc. Batch controls are paused until Batch Run UI is ready.",
+        "Run Policy định nghĩa giới hạn cấp workflow và chính sách giữ browser sau kết thúc. Các batch control đang tạm dừng cho tới khi Batch Run UI sẵn sàng.",
       uiLabels: viLabels,
       bestFor: [
         "Đặt guardrail áp dụng cho cả lần chạy workflow thay vì một node graph riêng lẻ.",
@@ -523,7 +523,7 @@ export const workflowSettingsHelp: Record<
       precedence: [
         "Run Policy được đọc khi run bắt đầu; hãy save settings trước khi chạy để áp dụng thay đổi.",
         "Terminal node trong graph vẫn có thể yêu cầu đóng browser tại điểm kết thúc của nó.",
-        "Batch controls are paused until Batch Run UI is ready; các mặc định batch đã lưu vẫn hiển thị nhưng không chỉnh ở đây.",
+        "Các batch control đang tạm dừng cho tới khi Batch Run UI sẵn sàng; các mặc định batch đã lưu vẫn hiển thị nhưng không chỉnh ở đây.",
       ],
       fieldGuide: [
         {

@@ -125,6 +125,7 @@ describe("Workflow detail integration", () => {
         browser_launch: {
           ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
           session_mode: "persistent_profile",
+          profile_dir: "qa-profile",
           profile_name: "qa-profile",
         },
       },
@@ -149,7 +150,68 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Run from selected" }));
+    const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
+    expect(runFromSelected).toBeEnabled();
+    await userEvent.click(runFromSelected);
+
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
+      workflowId: "workflow-1",
+      startNodeId: "step-1",
+    });
+  });
+
+  test("enables Run from selected when the retained session matches the profile directory", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+      get_run_state: {
+        ...idleRunState,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile-dir",
+          reason: null,
+        },
+      },
+      get_workflow_settings: {
+        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        run_policy: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
+          browser_retention: "retain",
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "from_selected",
+        },
+        browser_launch: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
+          session_mode: "persistent_profile",
+          profile_dir: "qa-profile-dir",
+          profile_name: "legacy-display-name",
+        },
+      },
+      run_workflow_from_node: {
+        status: "running",
+        mode: "run_workflow",
+        target_step_id: "step-1",
+        current_step_id: "step-1",
+        current_step_number: 1,
+        completed_step_ids: [],
+        outputs: {},
+        error: null,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile-dir",
+          reason: null,
+        },
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
+    expect(runFromSelected).toBeEnabled();
+    await userEvent.click(runFromSelected);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
       workflowId: "workflow-1",

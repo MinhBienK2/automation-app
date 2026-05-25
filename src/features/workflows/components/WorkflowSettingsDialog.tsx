@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { HelpCircle, Save, Settings } from "lucide-react";
 import type {
   WorkflowSettings,
@@ -24,6 +24,7 @@ import { SettingsFieldGroup } from "../../../components/ui/settings-field-group"
 import { SwitchField } from "../../../components/ui/switch";
 import { Textarea } from "../../../components/ui/textarea";
 import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import {
   tagsFromInput,
   tagsToInput,
@@ -32,6 +33,7 @@ import {
   workflowSettingsSections,
 } from "../lib/workflowSettings";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
+import { HelpDisclosure } from "./HelpDisclosure";
 
 type WorkflowSettingsDialogProps = {
   open: boolean;
@@ -243,40 +245,147 @@ function WorkflowSettingsHelpButton({ section }: { section: WorkflowSettingsSect
             <DialogTitle>{help.title}</DialogTitle>
             <DialogDescription>{help.summary}</DialogDescription>
           </div>
-          <div className="workflow-settings-help-language">
-            <Button
-              type="button"
-              variant={language === "en" ? "default" : "ghost"}
-              onClick={() => setLanguage("en")}
-            >
-              EN
-            </Button>
-            <Button
-              type="button"
-              variant={language === "vi" ? "default" : "ghost"}
-              onClick={() => setLanguage("vi")}
-            >
-              VI
-            </Button>
-          </div>
+          <SegmentedControl
+            ariaLabel="Help language"
+            className="workflow-settings-help-language"
+            value={language}
+            options={[
+              { value: "en", label: "EN" },
+              { value: "vi", label: "VI" },
+            ]}
+            onValueChange={setLanguage}
+          />
         </DialogHeader>
         <div
           className="workflow-settings-help-body"
           data-testid="workflow-settings-help-body"
         >
-          <section className="workflow-settings-help-list workflow-settings-help-fields">
-            <h3>{help.uiLabels.fieldGuide}</h3>
+          <WorkflowSettingsHelpList
+            defaultOpen
+            items={help.bestFor}
+            title={help.uiLabels.bestFor}
+          />
+          {help.notFor?.length ? (
+            <WorkflowSettingsHelpList
+              items={help.notFor}
+              title={help.uiLabels.notFor}
+            />
+          ) : null}
+          {help.precedence?.length ? (
+            <WorkflowSettingsHelpList
+              items={help.precedence}
+              title={help.uiLabels.precedence}
+            />
+          ) : null}
+          <HelpDisclosure
+            className="workflow-settings-help-disclosure workflow-settings-help-list workflow-settings-help-fields"
+            defaultOpen
+            title={help.uiLabels.fieldGuide}
+          >
             {help.fieldGuide.map((field) => (
-              <div key={field.name}>
-                <strong>{field.name}</strong>
+              <WorkflowSettingsHelpItem key={field.name} title={<strong>{field.name}</strong>}>
                 <p>{field.description}</p>
                 {field.whenToUse ? <span>{field.whenToUse}</span> : null}
-              </div>
+                {field.overrideBehavior ? <span>{field.overrideBehavior}</span> : null}
+              </WorkflowSettingsHelpItem>
             ))}
-          </section>
+          </HelpDisclosure>
+          <HelpDisclosure
+            className="workflow-settings-help-disclosure workflow-settings-help-list workflow-settings-help-examples"
+            title={language === "vi" ? "Ví dụ workflow" : "Workflow examples"}
+          >
+            {help.workflowExamples.map((example) => (
+              <WorkflowSettingsHelpItem key={example.title} title={<strong>{example.title}</strong>}>
+                <ul>
+                  {example.steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                  {example.notes?.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              </WorkflowSettingsHelpItem>
+            ))}
+          </HelpDisclosure>
+          {help.relatedGraphActions?.length ? (
+            <HelpDisclosure
+              className="workflow-settings-help-disclosure workflow-settings-help-list"
+              title={language === "vi" ? "Action graph liên quan" : "Related graph actions"}
+            >
+              {help.relatedGraphActions.map((action) => (
+                <WorkflowSettingsHelpItem
+                  key={`${action.action}-${action.relationship}`}
+                  title={<strong>{action.action}</strong>}
+                >
+                  <p>{action.explanation}</p>
+                </WorkflowSettingsHelpItem>
+              ))}
+            </HelpDisclosure>
+          ) : null}
+          <HelpDisclosure
+            className="workflow-settings-help-disclosure workflow-settings-help-list"
+            title={help.uiLabels.commonMistakes}
+          >
+            {help.commonMistakes.map((mistake) => (
+              <WorkflowSettingsHelpItem
+                key={mistake.mistake}
+                title={<strong>{mistake.mistake}</strong>}
+              >
+                <p>{mistake.fix}</p>
+              </WorkflowSettingsHelpItem>
+            ))}
+          </HelpDisclosure>
+          {help.safetyNotes?.length ? (
+            <WorkflowSettingsHelpList
+              items={help.safetyNotes}
+              title={help.uiLabels.safetyNotes}
+            />
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function WorkflowSettingsHelpItem({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: ReactNode;
+}) {
+  return (
+    <HelpDisclosure
+      className="workflow-settings-help-item"
+      summaryClassName="workflow-settings-help-item-summary"
+      title={title}
+    >
+      {children}
+    </HelpDisclosure>
+  );
+}
+
+function WorkflowSettingsHelpList({
+  defaultOpen = false,
+  items,
+  title,
+}: {
+  defaultOpen?: boolean;
+  items: string[];
+  title: string;
+}) {
+  return (
+    <HelpDisclosure
+      className="workflow-settings-help-disclosure workflow-settings-help-list"
+      defaultOpen={defaultOpen}
+      title={title}
+    >
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </HelpDisclosure>
   );
 }
 

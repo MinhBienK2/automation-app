@@ -75,6 +75,7 @@ Focused commands:
 - `npm run test:e2e:full -- tests/e2e/browser-context-storage.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/run-validation-and-stop.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/batch-evidence.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/run-from-selected-real.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/workflow-user-journeys.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/workflow-package.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/coverage-matrix.e2e.ts`
@@ -95,6 +96,7 @@ Desktop coverage map:
 - `browser-context-storage.e2e.ts`: runtime `set_viewport` width/height behavior, `set_geolocation`, `grant_permission`, `set_extra_headers`, `set_cookie`, `clear_cookies`, `set_local_storage`, `set_session_storage`. Browser Launch no longer exposes launch-time device-shape controls.
 - `run-validation-and-stop.e2e.ts`: unconfigured graph run blocking, domain allowlist navigation blocking, and stop during a running wait.
 - `batch-evidence.e2e.ts`: graph-backed batch execution, row variable interpolation, persisted SQLite `runs`/`run_steps`, screenshot evidence files, and `__evidence` metadata.
+- `run-from-selected-real.e2e.ts`: retained persistent-session workflow run, visual graph node selection in the real browser, enabled Run from selected detail action, and selected-node rerun through the retained session.
 - `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
 - `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
 - `staging-owned-targets.e2e.ts`: opt-in authorized staging smoke workflows against allowlisted owned targets and named test accounts.

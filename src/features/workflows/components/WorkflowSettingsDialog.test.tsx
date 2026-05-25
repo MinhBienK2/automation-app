@@ -537,12 +537,47 @@ describe("WorkflowSettingsDialog", () => {
 
     const help = await screen.findByRole("dialog", { name: "Run Policy Settings Help" });
     expect(help).toHaveClass("workflow-settings-help-dialog");
-    expect(within(help).getByText(/Batch controls are paused until Batch Run UI is ready/i))
-      .toBeInTheDocument();
+    expect(within(help).getAllByText(/Batch controls are paused until Batch Run UI is ready/i).length)
+      .toBeGreaterThan(0);
     expect(within(help).getByTestId("workflow-settings-help-header"))
       .toHaveClass("workflow-settings-help-header");
     expect(within(help).getByTestId("workflow-settings-help-body"))
       .toHaveClass("workflow-settings-help-body");
+
+    const bestForSection = within(help)
+      .getByText("Use it when")
+      .closest("details") as HTMLDetailsElement | null;
+    const mistakesSection = within(help)
+      .getByText("Common mistakes")
+      .closest("details") as HTMLDetailsElement | null;
+
+    expect(bestForSection).not.toBeNull();
+    expect(bestForSection?.open).toBe(true);
+    expect(mistakesSection).not.toBeNull();
+    expect(mistakesSection?.open).toBe(false);
+
+    await userEvent.click(within(mistakesSection!).getByText("Common mistakes"));
+
+    expect(mistakesSection?.open).toBe(true);
+    expect(within(mistakesSection!).getByText(/Expecting Run Policy to add pacing/i))
+      .toBeInTheDocument();
+
+    const fieldGuideSection = within(help)
+      .getByText("Field guide")
+      .closest("details") as HTMLDetailsElement | null;
+    const fieldItem = fieldGuideSection?.querySelector(
+      ".workflow-settings-help-item",
+    ) as HTMLDetailsElement | null;
+    const mistakeItem = mistakesSection!.querySelector(
+      ".workflow-settings-help-item",
+    ) as HTMLDetailsElement | null;
+
+    expect(fieldItem).not.toBeNull();
+    expect(fieldItem?.tagName).toBe("DETAILS");
+    expect(fieldItem?.open).toBe(false);
+    expect(mistakeItem).not.toBeNull();
+    expect(mistakeItem?.tagName).toBe("DETAILS");
+    expect(mistakeItem?.open).toBe(false);
   });
 });
 

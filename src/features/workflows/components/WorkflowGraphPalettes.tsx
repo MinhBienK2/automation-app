@@ -30,6 +30,7 @@ import {
 } from "../lib/graphNodeHelpContent";
 import type { HelpFieldCategory } from "../lib/stepHelpTypes";
 import { StepHelpModal } from "./StepHelpModal";
+import { HelpDisclosure } from "./HelpDisclosure";
 
 export const logicNodeGroups: Array<{
   label: string;
@@ -339,11 +340,17 @@ export function NodeHelpDialog({
               className="step-help-body"
               style={{ overflow: "visible", paddingRight: 0 }}
             >
-              <HelpSection title={language === "vi" ? "Node này làm gì" : "What this does"}>
+              <HelpSection
+                defaultOpen
+                title={language === "vi" ? "Node này làm gì" : "What this does"}
+              >
                 <p>{content.summary}</p>
               </HelpSection>
 
-              <HelpSection title={language === "vi" ? "Dùng khi" : "Use it when"}>
+              <HelpSection
+                defaultOpen
+                title={language === "vi" ? "Dùng khi" : "Use it when"}
+              >
                 <ul>
                   {content.useWhen.map((item) => (
                     <li key={item}>{item}</li>
@@ -362,23 +369,28 @@ export function NodeHelpDialog({
               ) : null}
 
               {content.portSemantics?.length ? (
-                <HelpSection title={language === "vi" ? "Port và luồng chạy" : "Ports and flow"}>
+                <HelpSection
+                  defaultOpen
+                  title={language === "vi" ? "Port và luồng chạy" : "Ports and flow"}
+                >
                   <div className="help-field-list">
                     {content.portSemantics.map((port) => (
-                      <div className="help-field-item" key={port.port}>
-                        <strong>{port.port}</strong>
+                      <HelpLeafItem key={port.port} title={port.port}>
                         <p>{port.description}</p>
                         <ul className="help-field-details">
                           <li>{port.kind}</li>
                           <li>{port.required ? "required" : "optional"}</li>
                         </ul>
-                      </div>
+                      </HelpLeafItem>
                     ))}
                   </div>
                 </HelpSection>
               ) : null}
 
-              <HelpSection title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}>
+              <HelpSection
+                defaultOpen
+                title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}
+              >
                 <HelpFieldList fields={content.minimalConfig ?? content.fields} />
               </HelpSection>
 
@@ -393,17 +405,31 @@ export function NodeHelpDialog({
                   {(content.workflowExamples ?? [
                     { title: language === "vi" ? "Ví dụ" : "Example", steps: content.examples },
                   ]).map((example) => (
-                    <div className="help-field-item" key={example.title}>
-                      <strong>{example.title}</strong>
+                    <HelpLeafItem key={example.title} title={example.title}>
                       <ul className="help-field-details">
                         {example.steps.map((step) => (
                           <li key={step}>{step}</li>
                         ))}
                       </ul>
-                    </div>
+                    </HelpLeafItem>
                   ))}
                 </div>
               </HelpSection>
+
+              {content.relatedNodes?.length ? (
+                <HelpSection title={language === "vi" ? "Node liên quan" : "Related nodes"}>
+                  <div className="help-field-list">
+                    {content.relatedNodes.map((related) => (
+                      <HelpLeafItem
+                        key={`${related.node}-${related.relationship}`}
+                        title={related.node}
+                      >
+                        <p>{related.relationship}</p>
+                      </HelpLeafItem>
+                    ))}
+                  </div>
+                </HelpSection>
+              ) : null}
 
             </div>
           </ScrollArea>
@@ -424,16 +450,21 @@ function actionTypeForNodeHelp(node: GraphNode | null) {
 
 function HelpSection({
   children,
+  defaultOpen = false,
   title,
 }: {
   children: ReactNode;
+  defaultOpen?: boolean;
   title: string;
 }) {
   return (
-    <section className="help-section">
-      <h3>{title}</h3>
+    <HelpDisclosure
+      className="help-section"
+      defaultOpen={defaultOpen}
+      title={title}
+    >
       {children}
-    </section>
+    </HelpDisclosure>
   );
 }
 
@@ -449,8 +480,7 @@ function HelpFieldList({
   return (
     <div className="help-field-list">
       {fields.map((field) => (
-        <div className="help-field-item" key={field.name}>
-          <strong>{field.name}</strong>
+        <HelpLeafItem key={field.name} title={field.name}>
           <p>{field.description}</p>
           {field.details?.length ? (
             <ul className="help-field-details">
@@ -459,9 +489,31 @@ function HelpFieldList({
               ))}
             </ul>
           ) : null}
-        </div>
+        </HelpLeafItem>
       ))}
     </div>
+  );
+}
+
+function HelpLeafItem({
+  children,
+  className = "",
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title: ReactNode;
+}) {
+  return (
+    <HelpDisclosure
+      className={["help-field-item", "help-field-leaf", className]
+        .filter(Boolean)
+        .join(" ")}
+      summaryClassName="help-field-leaf-summary"
+      title={title}
+    >
+      {children}
+    </HelpDisclosure>
   );
 }
 
@@ -485,17 +537,28 @@ function GraphFieldReferenceGroups({
         const groupFields = fields.filter((field) => field.category === category);
         if (!groupFields.length) return null;
         return (
-          <section className="help-field-group" key={category}>
-            <h4>{labels[category]}</h4>
+          <details
+            className="help-field-group"
+            key={category}
+            open={category === "required"}
+          >
+            <summary className="help-field-group-summary">
+              <h4>{labels[category]}</h4>
+            </summary>
             <div className="help-field-list">
               {groupFields.map((field) => (
-                <div className="help-field-item help-field-reference" key={field.name}>
-                  <div className="help-field-title-row">
+                <HelpLeafItem
+                  className="help-field-reference"
+                  key={field.name}
+                  title={(
+                    <span className="help-field-title-row">
                     <strong>{field.name}</strong>
                     <span className={`help-field-badge help-field-badge-${field.category}`}>
                       {field.category}
                     </span>
-                  </div>
+                    </span>
+                  )}
+                >
                   <p>{field.description}</p>
                   <ul className="help-field-details">
                     <li>{field.requiredWhen}</li>
@@ -511,11 +574,17 @@ function GraphFieldReferenceGroups({
                   {field.options?.length ? (
                     <div className="help-option-list">
                       {field.options.map((option) => (
-                        <div className="help-option-item" key={`${field.name}-${option.label}`}>
-                          <strong>
+                        <HelpDisclosure
+                          className="help-option-item help-option-disclosure"
+                          key={`${field.name}-${option.label}`}
+                          summaryClassName="help-option-summary"
+                          title={(
+                            <strong>
                             {option.label}
                             {option.value ? <span>{option.value}</span> : null}
-                          </strong>
+                            </strong>
+                          )}
+                        >
                           <p>{option.description}</p>
                           <ul className="help-field-details">
                             <li>
@@ -529,14 +598,14 @@ function GraphFieldReferenceGroups({
                               </li>
                             ) : null}
                           </ul>
-                        </div>
+                        </HelpDisclosure>
                       ))}
                     </div>
                   ) : null}
-                </div>
+                </HelpLeafItem>
               ))}
             </div>
-          </section>
+          </details>
         );
       })}
     </div>

@@ -182,6 +182,54 @@ describe("RunManager", () => {
     expect(runner.getRetainedSessionState).toHaveBeenLastCalledWith(workflow.id, "profile-1");
     database.close();
   });
+
+  test("keys retained sessions from normal runs by workflow profile", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
+    tempRoots.push(tempRoot);
+    const database = initializeDatabase(createAppPaths(tempRoot));
+    const workflow = workflowSummary("workflow-1", "Retained owner workflow");
+    const graph = workflowGraph();
+    const settings = workflowSettings(workflow.id, "profile-1");
+    database
+      .prepare(
+        `INSERT INTO workflows (
+          id, name, description, tags_json, graph_json, settings_json, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
+      )
+      .run(
+        workflow.id,
+        workflow.name,
+        JSON.stringify(graph),
+        JSON.stringify(settings),
+        workflow.created_at,
+        workflow.updated_at,
+      );
+    const runner = {
+      run: vi.fn(async (): Promise<RunState> => ({
+        ...idleRunState,
+        status: "success",
+        mode: "run_workflow",
+      })),
+      getRetainedSessionState: vi.fn(() => idleRunState.retained_session),
+    };
+    const manager = new RunManager({ database, runner });
+
+    await manager.startWorkflowRun({
+      workflow,
+      source: "manual",
+      settings,
+      graphSnapshot: graph,
+      compiledGraph: compiledGraph(),
+    });
+    await flushAsyncWork();
+
+    expect(runner.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retainedSessionWorkflowId: workflow.id,
+      }),
+    );
+    database.close();
+  });
 });
 
 function workflowSummary(id: string, name: string): WorkflowSummary {

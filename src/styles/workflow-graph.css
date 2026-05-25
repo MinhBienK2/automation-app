@@ -255,6 +255,8 @@
 }
 
 .graph-node-button {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 4px;
   align-content: center;

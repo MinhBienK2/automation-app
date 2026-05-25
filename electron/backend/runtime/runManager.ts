@@ -514,6 +514,7 @@ export class RunManager {
     reuseRetainedSession: boolean;
     retainedSessionWorkflowId?: string;
   }) {
+    const retainedSessionOwnerWorkflowId = retainedSessionWorkflowId ?? workflowId;
     try {
       let terminalState = await runRunner.run({
         runId,
@@ -522,7 +523,7 @@ export class RunManager {
         mode: "run_workflow",
         targetStepId: targetStepId ?? undefined,
         reuseRetainedSession,
-        retainedSessionWorkflowId,
+        retainedSessionWorkflowId: retainedSessionOwnerWorkflowId,
         signal: abortController.signal,
         onProgress: (progress) => {
           const activeEntry = this.runEntries.get(runId);

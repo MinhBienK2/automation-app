@@ -593,8 +593,8 @@
 }
 
 .workflow-settings-help-language {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   padding: 3px;
   border: 1px solid #2e2e2e;
@@ -612,6 +612,10 @@
   gap: 14px;
   min-height: 0;
   overflow-y: auto;
+}
+
+.workflow-settings-help-disclosure {
+  background: #0f0f0f;
 }
 
 .workflow-settings-help-overview {
@@ -641,13 +645,26 @@
   line-height: 1.5;
 }
 
-.workflow-settings-help-list div {
+.workflow-settings-help-item {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   padding: 10px 12px;
   border: 1px solid #2e2e2e;
   border-radius: 8px;
   background: #0f0f0f;
+}
+
+.workflow-settings-help-item-summary {
+  font-size: 14px;
+}
+
+.workflow-settings-help-item-summary::before {
+  width: 12px;
+  font-size: 10px;
+}
+
+.workflow-settings-help-item > .help-disclosure-content {
+  gap: 6px;
 }
 
 .workflow-settings-help-list strong {
@@ -656,7 +673,7 @@
   font-weight: 500;
 }
 
-.workflow-settings-help-fields > div strong {
+.workflow-settings-help-fields .workflow-settings-help-item-summary strong {
   width: fit-content;
   padding: 2px 7px;
   border: 1px solid rgba(62, 207, 142, 0.36);
@@ -667,7 +684,7 @@
   font-weight: 400;
 }
 
-.workflow-settings-help-fields > div span {
+.workflow-settings-help-fields .workflow-settings-help-item > .help-disclosure-content span {
   color: #b4b4b4;
   font-size: 13px;
 }
