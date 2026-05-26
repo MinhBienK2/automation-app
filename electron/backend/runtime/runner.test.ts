@@ -674,13 +674,16 @@ describe("BrowserWorkflowRunner", () => {
     ]);
   });
 
-  test("adds bounded reverse corrections to page scroll while preserving requested distance", async () => {
+  test("keeps page scroll decisive and monotonic while preserving requested distance", async () => {
     const page = new FakePage();
+    const sleeps: number[] = [];
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext(page)),
-      sleep: async () => {},
-      random: () => 0.05,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      random: () => 0.5,
     });
 
     const result = await runner.run({
@@ -701,8 +704,15 @@ describe("BrowserWorkflowRunner", () => {
       .filter((event) => event.startsWith("wheel:"))
       .map((event) => Number(event.split(":")[2]));
     expect(deltas.some((delta) => delta > 0)).toBe(true);
-    expect(deltas.some((delta) => delta < 0)).toBe(true);
+    expect(deltas.some((delta) => delta < 0)).toBe(false);
+    expect(deltas.length).toBeGreaterThanOrEqual(8);
+    expect(deltas.length).toBeLessThanOrEqual(18);
+    expect(Math.min(...deltas.map((delta) => Math.abs(delta)))).toBeGreaterThanOrEqual(30);
+    expect(Math.max(...deltas.map((delta) => Math.abs(delta)))).toBeLessThanOrEqual(140);
     expect(deltas.reduce((sum, delta) => sum + delta, 0)).toBe(900);
+    expect(sleeps.some((ms) => ms >= 18 && ms <= 55)).toBe(true);
+    expect(sleeps.filter((ms) => ms >= 160).length).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...sleeps)).toBeLessThanOrEqual(320);
   });
 
   test("scrolls element targets through a wheel-based human planner", async () => {
@@ -714,7 +724,7 @@ describe("BrowserWorkflowRunner", () => {
       sleep: async (ms) => {
         sleeps.push(ms);
       },
-      random: () => 0.05,
+      random: () => 0.5,
     });
 
     const result = await runner.run({
@@ -740,9 +750,17 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("evaluate:testid=cta");
     const wheelEvents = page.events.filter((event) => event.startsWith("wheel:"));
     expect(wheelEvents.length).toBeGreaterThan(1);
-    expect(wheelEvents.some((event) => Number(event.split(":")[2]) > 0)).toBe(true);
-    expect(wheelEvents.some((event) => Number(event.split(":")[2]) < 0)).toBe(true);
+    const wheelDeltas = wheelEvents.map((event) => Number(event.split(":")[2]));
+    expect(wheelDeltas.some((delta) => delta > 0)).toBe(true);
+    expect(wheelDeltas.some((delta) => delta < 0)).toBe(false);
+    expect(wheelDeltas.length).toBeGreaterThanOrEqual(8);
+    expect(wheelDeltas.length).toBeLessThanOrEqual(20);
+    expect(Math.max(...wheelDeltas.map((delta) => Math.abs(delta)))).toBeGreaterThanOrEqual(70);
+    expect(Math.max(...wheelDeltas.map((delta) => Math.abs(delta)))).toBeLessThanOrEqual(160);
     expect(sleeps.length).toBeGreaterThan(0);
+    expect(sleeps.some((ms) => ms >= 18 && ms <= 55)).toBe(true);
+    expect(sleeps.filter((ms) => ms >= 160).length).toBeGreaterThanOrEqual(2);
+    expect(Math.max(...sleeps)).toBeLessThanOrEqual(360);
     expect(result.outputs?.__action_traces).toEqual([
       expect.objectContaining({
         node_id: "scroll",
@@ -754,6 +772,52 @@ describe("BrowserWorkflowRunner", () => {
       y: expect.any(Number),
       height: 40,
     });
+    const finalBox = await page.targetLocator.boundingBox();
+    expect(finalBox?.y).toBeGreaterThanOrEqual(0);
+    expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
+  });
+
+  test("scrolls upward with distance-aware pacing when a target is above the viewport", async () => {
+    const page = new HumanScrollPage({ targetDocumentY: 300, initialScrollY: 900 });
+    const sleeps: number[] = [];
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      random: () => 0.5,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll-up", "Scroll Up", {
+            type: "scroll",
+            config: {
+              mode: "into_view",
+              target: { locators: [{ kind: "test_id", value: "cta" }] },
+              timeout_ms: 4500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    const wheelDeltas = page.events
+      .filter((event) => event.startsWith("wheel:"))
+      .map((event) => Number(event.split(":")[2]));
+    expect(wheelDeltas.every((delta) => delta < 0)).toBe(true);
+    expect(wheelDeltas.length).toBeGreaterThanOrEqual(8);
+    expect(wheelDeltas.length).toBeLessThanOrEqual(20);
+    expect(Math.min(...wheelDeltas.map((delta) => Math.abs(delta)))).toBeGreaterThanOrEqual(25);
+    expect(Math.max(...wheelDeltas.map((delta) => Math.abs(delta)))).toBeLessThanOrEqual(140);
+    expect(sleeps.some((ms) => ms >= 18 && ms <= 55)).toBe(true);
+    expect(sleeps.filter((ms) => ms >= 160).length).toBeGreaterThanOrEqual(2);
+    expect(Math.max(...sleeps)).toBeLessThanOrEqual(360);
     const finalBox = await page.targetLocator.boundingBox();
     expect(finalBox?.y).toBeGreaterThanOrEqual(0);
     expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
@@ -3419,8 +3483,9 @@ class HumanScrollPage extends FakePage {
   readonly targetLocator: HumanScrollLocator;
   scrollY = 0;
 
-  constructor(private readonly options: { targetDocumentY: number }) {
+  constructor(private readonly options: { targetDocumentY: number; initialScrollY?: number }) {
     super();
+    this.scrollY = options.initialScrollY ?? 0;
     this.targetLocator = new HumanScrollLocator("testid=cta", this);
   }
 

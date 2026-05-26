@@ -72,7 +72,7 @@ describe("workflow step form config helpers", () => {
         direction: "down",
         pixels: 300,
         target: null,
-        timeout_ms: 5000,
+        timeout_ms: 60000,
       },
     });
 
@@ -83,7 +83,7 @@ describe("workflow step form config helpers", () => {
         direction: "down",
         pixels: 300,
         target: null,
-        timeout_ms: 5000,
+        timeout_ms: 60000,
       },
     };
 
@@ -95,7 +95,7 @@ describe("workflow step form config helpers", () => {
         pixels: 300,
         target: null,
         xpath: "//h2",
-        timeout_ms: 5000,
+        timeout_ms: 60000,
       },
     });
     expect(updateActionConfigField(targetedConfig, "timeout_ms", "9000")).toEqual({

@@ -289,7 +289,8 @@ can be saved, imported, compiled, or executed through normal commands.
 `scroll` accepts `mode: "page" | "into_view" | "until_visible"`. Missing
 mode is treated as legacy `"page"` and uses `direction` plus `pixels`.
 Element-targeted scroll modes use `target` or legacy `xpath`, optional
-`iframe_xpath`, and optional `timeout_ms`.
+`iframe_xpath`, and optional `timeout_ms`. When `timeout_ms` is omitted, target
+scroll defaults to `60000` ms.
 
 Graph-internal Merge and Router configs use:
 

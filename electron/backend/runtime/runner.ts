@@ -124,14 +124,27 @@ type ScrollBox = {
 };
 
 type HumanScrollProfile = {
+  closeMinChunk: number;
+  closeMaxChunk: number;
   minChunk: number;
   maxChunk: number;
-  pauseMinMs: number;
-  pauseMaxMs: number;
-  reverseChance: number;
-  reverseMin: number;
-  reverseMax: number;
+  farDistance: number;
+  gesturePauseMinMs: number;
+  gesturePauseMaxMs: number;
+  farGesturePauseMinMs: number;
+  farGesturePauseMaxMs: number;
+  pulsePauseMinMs: number;
+  pulsePauseMaxMs: number;
 };
+
+const PAGE_SCROLL_TARGET_CHUNK_PX = 240;
+const PAGE_SCROLL_MAX_STEPS = 18;
+const PAGE_SCROLL_PULSE_PAUSE_MIN_MS = 18;
+const PAGE_SCROLL_PULSE_PAUSE_MAX_MS = 55;
+const PAGE_SCROLL_GESTURE_PAUSE_MIN_MS = 170;
+const PAGE_SCROLL_GESTURE_PAUSE_MAX_MS = 310;
+
+const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
 const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapability>> = {
   click: "cloak_native",
@@ -1539,26 +1552,27 @@ async function humanPageScroll(
   const deltaY = direction === "up" ? -pixels : direction === "down" ? pixels : 0;
   if (page.mouse?.wheel) {
     const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
-    const steps = Math.max(2, Math.min(10, Math.ceil(distance / 180)));
+    const steps = decisivePageScrollSteps(distance);
     let remainingX = deltaX;
     let remainingY = deltaY;
     for (let remainingSteps = steps; remainingSteps > 0; remainingSteps -= 1) {
       throwIfAborted(signal);
       const chunkX = nextScrollChunk(remainingX, remainingSteps, random);
       const chunkY = nextScrollChunk(remainingY, remainingSteps, random);
-      await page.mouse.wheel(chunkX, chunkY);
+      await humanScrollGesture(
+        page,
+        chunkX,
+        chunkY,
+        sleepFn,
+        random,
+        signal,
+        {
+          pulsePauseMinMs: PAGE_SCROLL_PULSE_PAUSE_MIN_MS,
+          pulsePauseMaxMs: PAGE_SCROLL_PULSE_PAUSE_MAX_MS,
+        },
+      );
       remainingX -= chunkX;
       remainingY -= chunkY;
-      if (shouldReversePageScroll(steps - remainingSteps, remainingSteps, distance, random)) {
-        const reverseX = reversePageScrollChunk(chunkX, random);
-        const reverseY = reversePageScrollChunk(chunkY, random);
-        if (reverseX !== 0 || reverseY !== 0) {
-          await sleepFn(scrollPauseMs(random), signal);
-          await page.mouse.wheel(reverseX, reverseY);
-          remainingX -= reverseX;
-          remainingY -= reverseY;
-        }
-      }
       if (remainingSteps > 1) {
         await sleepFn(scrollPauseMs(random), signal);
       }
@@ -1588,8 +1602,8 @@ async function humanScrollLocatorIntoView(
     throw new Error("Scroll To Element requires driver support for locator.boundingBox");
   }
   const profile = humanScrollProfile(preset);
-  const timeoutBudgetMs = timeoutMs ?? 5000;
-  const maxAttempts = Math.max(8, Math.min(60, Math.ceil(timeoutBudgetMs / 250)));
+  const timeoutBudgetMs = timeoutMs ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS;
+  const maxAttempts = Math.max(20, Math.min(600, Math.ceil(timeoutBudgetMs / 70)));
   const startedAt = Date.now();
   let lastDistance = Number.POSITIVE_INFINITY;
   let stalledAttempts = 0;
@@ -1603,7 +1617,7 @@ async function humanScrollLocatorIntoView(
     const viewport = await viewportSizeFor(page);
     const box = await locator.boundingBox();
     if (!box) {
-      await sleepFn(humanScrollPauseMs(profile, random), signal);
+      await sleepFn(humanScrollPauseMs(profile, random, profile.farDistance), signal);
       continue;
     }
 
@@ -1620,16 +1634,21 @@ async function humanScrollLocatorIntoView(
       throw new Error("Scroll target did not move closer to the viewport");
     }
 
-    const chunk = humanTargetScrollChunk(plan, viewport, profile, random);
-    await wheelOrScrollBy(page, chunk.deltaX, chunk.deltaY);
+    const chunk = humanTargetScrollChunk(plan, profile, random);
+    await humanScrollGesture(
+      page,
+      chunk.deltaX,
+      chunk.deltaY,
+      sleepFn,
+      random,
+      signal,
+      {
+        pulsePauseMinMs: profile.pulsePauseMinMs,
+        pulsePauseMaxMs: profile.pulsePauseMaxMs,
+      },
+    );
 
-    if (shouldReverseScroll(attempt, plan.distance, viewport, profile, random)) {
-      await sleepFn(humanScrollPauseMs(profile, random), signal);
-      const reverse = reverseScrollChunk(chunk, profile, random);
-      await wheelOrScrollBy(page, reverse.deltaX, reverse.deltaY);
-    }
-
-    await sleepFn(humanScrollPauseMs(profile, random), signal);
+    await sleepFn(humanScrollPauseMs(profile, random, plan.distance), signal);
   }
 
   throw new Error("Scroll target did not enter the viewport before max attempts");
@@ -1661,7 +1680,7 @@ function scrollPlanForBox(box: ScrollBox, viewport: ScrollViewport) {
   const visibleWidth = Math.max(0, Math.min(x + box.width, viewport.width) - Math.max(x, 0));
   const visibleHeight = Math.max(0, Math.min(y + box.height, viewport.height) - Math.max(y, 0));
   const visibleRatio = (visibleWidth * visibleHeight) / Math.max(1, box.width * box.height);
-  if (visibleRatio >= 0.6) {
+  if (visibleRatio >= 0.9) {
     return { done: true as const, deltaX: 0, deltaY: 0, distance: 0 };
   }
 
@@ -1688,75 +1707,77 @@ function scrollPlanForBox(box: ScrollBox, viewport: ScrollViewport) {
 
 function humanTargetScrollChunk(
   plan: { deltaX: number; deltaY: number; distance: number },
-  viewport: ScrollViewport,
   profile: HumanScrollProfile,
   random: () => number,
 ) {
-  const maxAxis = Math.max(viewport.width, viewport.height);
-  const progressScale = Math.max(0.35, Math.min(1, plan.distance / Math.max(1, maxAxis)));
-  const base = profile.minChunk + Math.floor(random() * (profile.maxChunk - profile.minChunk));
-  const magnitude = Math.max(24, Math.min(plan.distance, Math.round(base * progressScale)));
-  const axisTotal = Math.abs(plan.deltaX) + Math.abs(plan.deltaY);
-  const ratioX = axisTotal > 0 ? Math.abs(plan.deltaX) / axisTotal : 0;
-  const ratioY = axisTotal > 0 ? Math.abs(plan.deltaY) / axisTotal : 0;
+  const axisDistance = Math.max(Math.abs(plan.deltaX), Math.abs(plan.deltaY));
+  const magnitude = decisiveTargetScrollChunk(axisDistance, profile, random);
+  const scale = axisDistance > 0 ? magnitude / axisDistance : 0;
   return {
-    deltaX: Math.round(Math.sign(plan.deltaX) * magnitude * ratioX),
-    deltaY: Math.round(Math.sign(plan.deltaY) * magnitude * ratioY),
+    deltaX: Math.round(Math.sign(plan.deltaX) * Math.abs(plan.deltaX) * scale),
+    deltaY: Math.round(Math.sign(plan.deltaY) * Math.abs(plan.deltaY) * scale),
   };
-}
-
-function reverseScrollChunk(
-  chunk: { deltaX: number; deltaY: number },
-  profile: HumanScrollProfile,
-  random: () => number,
-) {
-  const magnitude = profile.reverseMin + Math.floor(random() * (profile.reverseMax - profile.reverseMin));
-  const axisTotal = Math.abs(chunk.deltaX) + Math.abs(chunk.deltaY);
-  const ratioX = axisTotal > 0 ? Math.abs(chunk.deltaX) / axisTotal : 0;
-  const ratioY = axisTotal > 0 ? Math.abs(chunk.deltaY) / axisTotal : 0;
-  return {
-    deltaX: Math.round(-Math.sign(chunk.deltaX) * magnitude * ratioX),
-    deltaY: Math.round(-Math.sign(chunk.deltaY) * magnitude * ratioY),
-  };
-}
-
-function shouldReverseScroll(
-  attempt: number,
-  distance: number,
-  viewport: ScrollViewport,
-  profile: HumanScrollProfile,
-  random: () => number,
-) {
-  if (attempt === 0) return false;
-  if (distance < Math.min(220, viewport.height * 0.35)) return false;
-  return random() < profile.reverseChance;
 }
 
 function humanScrollProfile(preset?: string | null): HumanScrollProfile {
   if (preset === "careful") {
     return {
-      minChunk: 120,
-      maxChunk: 320,
-      pauseMinMs: 150,
-      pauseMaxMs: 520,
-      reverseChance: 0.26,
-      reverseMin: 18,
-      reverseMax: 72,
+      closeMinChunk: 90,
+      closeMaxChunk: 170,
+      minChunk: 150,
+      maxChunk: 260,
+      farDistance: 1000,
+      gesturePauseMinMs: 140,
+      gesturePauseMaxMs: 220,
+      farGesturePauseMinMs: 210,
+      farGesturePauseMaxMs: 360,
+      pulsePauseMinMs: 22,
+      pulsePauseMaxMs: 58,
     };
   }
   return {
-    minChunk: 170,
-    maxChunk: 460,
-    pauseMinMs: 90,
-    pauseMaxMs: 340,
-    reverseChance: 0.18,
-    reverseMin: 14,
-    reverseMax: 64,
+    closeMinChunk: 110,
+    closeMaxChunk: 200,
+    minChunk: 190,
+    maxChunk: 320,
+    farDistance: 1200,
+    gesturePauseMinMs: 130,
+    gesturePauseMaxMs: 210,
+    farGesturePauseMinMs: 200,
+    farGesturePauseMaxMs: 340,
+    pulsePauseMinMs: 18,
+    pulsePauseMaxMs: 55,
   };
 }
 
-function humanScrollPauseMs(profile: HumanScrollProfile, random: () => number) {
-  return profile.pauseMinMs + Math.floor(random() * (profile.pauseMaxMs - profile.pauseMinMs));
+function humanScrollPauseMs(profile: HumanScrollProfile, random: () => number, distance: number) {
+  const distanceScale = clampRatio(distance / profile.farDistance);
+  const pauseMinMs = interpolate(profile.gesturePauseMinMs, profile.farGesturePauseMinMs, distanceScale);
+  const pauseMaxMs = interpolate(profile.gesturePauseMaxMs, profile.farGesturePauseMaxMs, distanceScale);
+  return pauseMinMs + Math.floor(random() * (pauseMaxMs - pauseMinMs));
+}
+
+async function humanScrollGesture(
+  page: BrowserDriverPage,
+  deltaX: number,
+  deltaY: number,
+  sleepFn: (ms: number, signal?: AbortSignal) => Promise<void>,
+  random: () => number,
+  signal: AbortSignal | undefined,
+  timing: { pulsePauseMinMs: number; pulsePauseMaxMs: number },
+) {
+  const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+  const pulseCount = scrollGesturePulseCount(distance, random);
+  const pulsesX = scrollGesturePulses(deltaX, pulseCount, random);
+  const pulsesY = scrollGesturePulses(deltaY, pulseCount, random);
+
+  for (let index = 0; index < pulseCount; index += 1) {
+    throwIfAborted(signal);
+    await wheelOrScrollBy(page, pulsesX[index] ?? 0, pulsesY[index] ?? 0);
+    if (index < pulseCount - 1) {
+      await sleepFn(scrollPulsePauseMs(timing, random), signal);
+    }
+  }
 }
 
 async function wheelOrScrollBy(page: BrowserDriverPage, deltaX: number, deltaY: number) {
@@ -1871,24 +1892,85 @@ function nextScrollChunk(total: number, remainingSteps: number, random: () => nu
   return total > 0 ? 1 : total < 0 ? -1 : 0;
 }
 
-function shouldReversePageScroll(
-  completedSteps: number,
-  remainingSteps: number,
-  distance: number,
-  random: () => number,
-) {
-  if (completedSteps === 0 || remainingSteps <= 2 || distance < 500) return false;
-  return random() < 0.12;
+function decisivePageScrollSteps(distance: number) {
+  if (distance <= 0) return 0;
+  return Math.max(1, Math.min(PAGE_SCROLL_MAX_STEPS, Math.ceil(distance / PAGE_SCROLL_TARGET_CHUNK_PX)));
 }
 
-function reversePageScrollChunk(chunk: number, random: () => number) {
-  if (chunk === 0) return 0;
-  const magnitude = Math.max(8, Math.min(60, Math.round(Math.abs(chunk) * (0.15 + random() * 0.2))));
-  return -Math.sign(chunk) * magnitude;
+function decisiveTargetScrollChunk(distance: number, profile: HumanScrollProfile, random: () => number) {
+  if (distance <= 0) return 0;
+  const distanceScale = clampRatio(distance / profile.farDistance);
+  const minChunk = interpolate(profile.closeMinChunk, profile.minChunk, distanceScale);
+  const maxChunk = interpolate(profile.closeMaxChunk, profile.maxChunk, distanceScale);
+  if (distance <= maxChunk) return distance;
+
+  const preferredChunk = minChunk + Math.floor(random() * (maxChunk - minChunk));
+  const remainingSteps = Math.max(1, Math.ceil(distance / preferredChunk));
+  const chunk = Math.abs(nextScrollChunk(distance, remainingSteps, random));
+  return Math.max(minChunk, Math.min(maxChunk, chunk));
+}
+
+function scrollGesturePulseCount(distance: number, random: () => number) {
+  if (distance <= 0) return 1;
+  if (distance < 120) return 2;
+  if (distance < 260) return random() > 0.75 ? 4 : 3;
+  return random() > 0.65 ? 5 : 4;
+}
+
+function scrollGesturePulses(total: number, pulseCount: number, random: () => number) {
+  const weights = scrollGestureWeights(pulseCount);
+  const pulses: number[] = [];
+  let remaining = total;
+  let remainingWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+  for (let index = 0; index < pulseCount; index += 1) {
+    if (index === pulseCount - 1) {
+      pulses.push(remaining);
+      break;
+    }
+
+    const share = weights[index] / remainingWeight;
+    const base = remaining * share;
+    const jitter = Math.abs(base) * 0.18 * (random() - 0.5);
+    let pulse = Math.round(base + jitter);
+    if (pulse === 0 && remaining !== 0) pulse = Math.sign(remaining);
+    if (Math.sign(pulse) !== Math.sign(remaining)) pulse = Math.sign(remaining);
+
+    pulses.push(pulse);
+    remaining -= pulse;
+    remainingWeight -= weights[index];
+  }
+
+  return pulses;
+}
+
+function scrollGestureWeights(pulseCount: number) {
+  if (pulseCount <= 2) return [0.46, 0.54];
+  if (pulseCount === 3) return [0.24, 0.42, 0.34];
+  if (pulseCount === 4) return [0.16, 0.28, 0.34, 0.22];
+  return [0.12, 0.21, 0.28, 0.24, 0.15];
+}
+
+function scrollPulsePauseMs(
+  timing: { pulsePauseMinMs: number; pulsePauseMaxMs: number },
+  random: () => number,
+) {
+  return timing.pulsePauseMinMs + Math.floor(random() * (timing.pulsePauseMaxMs - timing.pulsePauseMinMs));
+}
+
+function clampRatio(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function interpolate(from: number, to: number, ratio: number) {
+  return Math.round(from + (to - from) * ratio);
 }
 
 function scrollPauseMs(random: () => number) {
-  return 30 + Math.floor(random() * 90);
+  return (
+    PAGE_SCROLL_GESTURE_PAUSE_MIN_MS +
+    Math.floor(random() * (PAGE_SCROLL_GESTURE_PAUSE_MAX_MS - PAGE_SCROLL_GESTURE_PAUSE_MIN_MS))
+  );
 }
 
 function keyHoldMs(random: () => number) {

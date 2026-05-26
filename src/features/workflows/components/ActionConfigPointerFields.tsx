@@ -9,6 +9,8 @@ import {
   StructuredTargetFields,
 } from "./ActionConfigElementSharedFields";
 
+const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
+
 type ActionFieldsProps = {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
@@ -96,7 +98,7 @@ export function PointerActionFields({
                 <Input
                   min="1"
                   type="number"
-                  value={config.config.timeout_ms ?? 5000}
+                  value={config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS}
                   onChange={(event) =>
                     onChange(
                       updateActionConfigField(config, "timeout_ms", event.currentTarget.value),

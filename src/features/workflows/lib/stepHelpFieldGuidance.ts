@@ -540,6 +540,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     "Timeout ms": [
       "Đơn vị là mili-giây: 1000 = 1 giây, 5000 = 5 giây.",
+      "Với Scroll To Element và Wait Then Scroll To Element, mặc định là 60000 ms để có đủ thời gian cuộn bằng nhiều wheel pulse và pause thích ứng tới target.",
       "Timeout quá ngắn dễ fail trên mạng chậm; timeout quá dài làm workflow đợi lâu khi XPath sai.",
     ],
     Condition: [
@@ -676,6 +677,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     "Timeout ms": [
       "Unit is milliseconds: 1000 = 1 second, 5000 = 5 seconds.",
+      "For Scroll To Element and Wait Then Scroll To Element, the default is 60000 ms so the runner has time to scroll with adaptive wheel pulses and pauses to the target.",
       "Too short can fail on slow pages; too long makes wrong XPath failures slower.",
     ],
     Condition: [

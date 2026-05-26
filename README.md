@@ -219,7 +219,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 1. Create a workflow.
 2. Confirm the new workflow graph starts with `Start -> New node`.
 3. Open Settings from the sidebar, turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
-4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll Direction/Pixels fields and Scroll To Element/Wait Then Scroll To Element target fields without low-level target constraint or scroll tuning controls.
+4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll Direction/Pixels fields and Scroll To Element/Wait Then Scroll To Element target fields with Timeout ms defaulting to 60000, without low-level target constraint or scroll tuning controls.
 5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.
 7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Router, Merge, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.

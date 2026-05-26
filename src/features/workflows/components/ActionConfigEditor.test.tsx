@@ -185,7 +185,7 @@ describe("ActionConfigEditor", () => {
         direction: "down",
         pixels: 500,
         target: null,
-        timeout_ms: 5000,
+        timeout_ms: 60000,
       },
     });
   });

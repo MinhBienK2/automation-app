@@ -109,6 +109,11 @@ const timeoutField = {
   en: "Timeout ms is the maximum time to wait before failing. 5000 means 5 seconds.",
 };
 
+const scrollTimeoutField = {
+  vi: "Timeout ms là thời gian tối đa để chờ/scroll tới target. Mặc định Scroll To Element là 60000 ms, tức 1 phút.",
+  en: "Timeout ms is the maximum time to wait/scroll to the target. Scroll To Element defaults to 60000 ms, or 1 minute.",
+};
+
 const baseStepHelpContent: Record<
   Exclude<ActionType, PhaseOneActionType | GraphInternalActionType>,
   BilingualStepHelp
@@ -309,30 +314,30 @@ const baseStepHelpContent: Record<
       summary: "Cuộn trang theo pixel hoặc dùng wheel human-like để đưa một element đích vào vùng nhìn thấy.",
       useWhen: ["Dùng Page Scroll khi cần cuộn một lượng pixel cố định.", "Dùng Scroll To Element khi element đã có trên trang nhưng nằm ngoài màn hình.", "Dùng Wait Then Scroll To Element khi muốn chờ element visible rồi cuộn tới element đó."],
       fields: [
-        { name: "Mode", description: "Page Scroll dùng wheel theo pixel có pause/correction; các mode target dùng planner wheel human-like tới element." },
+        { name: "Mode", description: "Page Scroll và các mode target dùng gesture gồm nhiều wheel pulse nhỏ, pause ngắn trong gesture và pause random dài hơn giữa các gesture." },
         { name: "Direction", description: "Hướng cuộn Page: down, up, right, hoặc left." },
         { name: "Pixels", description: "Số pixel cho Page scroll. Thử 250-800 tùy trang." },
         { name: "Target locator", description: "Element đích cho Scroll To Element hoặc Wait Then Scroll To Element." },
         { name: "Iframe XPath", description: "Chọn iframe trên trang cha nếu target nằm trong iframe legacy XPath." },
-        { name: "Timeout ms", description: timeoutField.vi },
+        { name: "Timeout ms", description: scrollTimeoutField.vi },
       ],
       examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Target locator: //button[@type='submit']", "Mode: Wait Then Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
-      commonMistakes: ["Wait Then Scroll To Element cần target là element đích cần thấy, không phải body.", "Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Các mode target dùng wheel human-like; không cần cấu hình step/pause thủ công."],
+      commonMistakes: ["Wait Then Scroll To Element cần target là element đích cần thấy, không phải body.", "Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Các mode target tự tính chunk/pause human-like; không cần cấu hình step/pause thủ công."],
     },
     en: {
       title: "Scroll Help",
       summary: "Scroll the page by pixels or use human-like wheel movement to bring a target element into view.",
       useWhen: ["Use Page Scroll for a fixed pixel-distance scroll.", "Use Scroll To Element when the element is already on the page but outside the viewport.", "Use Wait Then Scroll To Element when the runner should wait for visibility, then scroll to the element."],
       fields: [
-        { name: "Mode", description: "Page Scroll uses wheel chunks with pauses/correction; target modes use a human-like wheel planner to the element." },
+        { name: "Mode", description: "Page Scroll and target modes use gestures made of smaller wheel pulses, short pauses inside each gesture, and longer random pauses between gestures." },
         { name: "Direction", description: "Page scroll direction: down, up, right, or left." },
         { name: "Pixels", description: "Pixel distance for Page scroll. Try 250-800 depending on the page." },
         { name: "Target locator", description: "Target element for Scroll To Element or Wait Then Scroll To Element." },
         { name: "Iframe XPath", description: "Selects the parent-page iframe when the target uses a legacy XPath inside a frame." },
-        { name: "Timeout ms", description: timeoutField.en },
+        { name: "Timeout ms", description: scrollTimeoutField.en },
       ],
       examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Target locator: //button[@type='submit']", "Mode: Wait Then Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
-      commonMistakes: ["Wait Then Scroll To Element needs the target element, not body.", "If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Target modes use human-like wheel movement; step and pause tuning is automatic."],
+      commonMistakes: ["Wait Then Scroll To Element needs the target element, not body.", "If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Target modes calculate human-like chunks and pauses automatically."],
     },
   },
   select_option: {
@@ -1275,6 +1280,9 @@ function fieldExample(
   if (fieldName.endsWith("contains text")) return vi ? "Đăng nhập" : "Sign in";
   if (fieldName.endsWith("index")) return "0";
   if (fieldName.includes("XPath")) return "//*[@data-testid='submit']";
+  if (actionType === "scroll" && fieldName.includes("Timeout")) {
+    return vi ? "60000 nghĩa là 1 phút." : "60000 means 1 minute.";
+  }
   if (fieldName.includes("Timeout")) return vi ? "5000 nghĩa là 5 giây." : "5000 means 5 seconds.";
   if (fieldName.includes("Delay") || fieldName.includes("Wait")) return "100";
   if (fieldName === "URL") return "https://example.com/login";

@@ -60,6 +60,8 @@ export type ActionConfigField =
   | "width"
   | "xpaths";
 
+const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
+
 export function updateActionConfigField(
   config: ActionConfig,
   field: ActionConfigField,
@@ -433,7 +435,7 @@ function updateScrollConfigField(
         ...config.config,
         mode,
         target: config.config.target ?? null,
-        timeout_ms: config.config.timeout_ms ?? 5000,
+        timeout_ms: config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS,
       },
     };
   }
