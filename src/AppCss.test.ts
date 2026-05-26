@@ -189,6 +189,16 @@ describe("App CSS", () => {
     expect(validTargetHandle).toContain("background: #00c573");
   });
 
+  test("keeps graph node body drags above labels and below ports", () => {
+    const graphNodeButton = cssRule(".graph-node-button");
+    const graphDragSurface = cssRule(".graph-node-drag-surface");
+    const graphHandle = cssRule(".graph-handle");
+
+    expect(graphNodeButton).toContain("z-index: 1");
+    expect(graphDragSurface).toContain("z-index: 2");
+    expect(graphHandle).toContain("z-index: 3");
+  });
+
   test("keeps graph port tooltips delayed and above neighboring nodes", () => {
     const tooltipBubble = cssRule(".graph-handle::after");
     const visibleTooltip = cssRule(

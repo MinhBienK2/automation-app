@@ -256,7 +256,7 @@
 
 .graph-node-button {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   display: grid;
   gap: 4px;
   align-content: center;
@@ -279,7 +279,7 @@
 
 .graph-node-drag-surface {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   inset: 0;
   border-radius: inherit;
   cursor: grab;
@@ -323,7 +323,7 @@
 }
 
 .graph-handle {
-  z-index: 2;
+  z-index: 3;
   width: 16px;
   height: 16px;
   pointer-events: all;
