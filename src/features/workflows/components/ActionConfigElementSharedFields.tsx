@@ -134,10 +134,12 @@ export function StructuredTargetFields({
   config,
   onChange,
   targetField = "target",
+  showConstraints = true,
 }: {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
   targetField?: "target" | "source_target" | "target_target" | "trigger_target";
+  showConstraints?: boolean;
 }) {
   const rawConfig = config.config as Record<string, unknown>;
   const target = (rawConfig[targetField] as ElementTarget | null | undefined) ?? null;
@@ -251,56 +253,60 @@ export function StructuredTargetFields({
           />
         </Label>
       ) : null}
-      <Label>
-        Target visibility
-        <Select
-          value={
-            constraints?.visible === true
-              ? "true"
-              : constraints?.visible === false
-                ? "false"
-                : "any"
-          }
-          onChange={(event) => updateConstraint("visible", event.currentTarget.value)}
-        >
-          <option value="any">Any</option>
-          <option value="true">Visible</option>
-          <option value="false">Hidden</option>
-        </Select>
-      </Label>
-      <Label>
-        Target enabled
-        <Select
-          value={
-            constraints?.enabled === true
-              ? "true"
-              : constraints?.enabled === false
-                ? "false"
-                : "any"
-          }
-          onChange={(event) => updateConstraint("enabled", event.currentTarget.value)}
-        >
-          <option value="any">Any</option>
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
-        </Select>
-      </Label>
-      <Label>
-        Target contains text
-        <Input
-          value={constraints?.contains_text ?? ""}
-          onChange={(event) => updateConstraint("contains_text", event.currentTarget.value)}
-        />
-      </Label>
-      <Label>
-        Target index
-        <Input
-          min="0"
-          type="number"
-          value={constraints?.index ?? ""}
-          onChange={(event) => updateConstraint("index", event.currentTarget.value)}
-        />
-      </Label>
+      {showConstraints ? (
+        <>
+          <Label>
+            Target visibility
+            <Select
+              value={
+                constraints?.visible === true
+                  ? "true"
+                  : constraints?.visible === false
+                    ? "false"
+                    : "any"
+              }
+              onChange={(event) => updateConstraint("visible", event.currentTarget.value)}
+            >
+              <option value="any">Any</option>
+              <option value="true">Visible</option>
+              <option value="false">Hidden</option>
+            </Select>
+          </Label>
+          <Label>
+            Target enabled
+            <Select
+              value={
+                constraints?.enabled === true
+                  ? "true"
+                  : constraints?.enabled === false
+                    ? "false"
+                    : "any"
+              }
+              onChange={(event) => updateConstraint("enabled", event.currentTarget.value)}
+            >
+              <option value="any">Any</option>
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </Select>
+          </Label>
+          <Label>
+            Target contains text
+            <Input
+              value={constraints?.contains_text ?? ""}
+              onChange={(event) => updateConstraint("contains_text", event.currentTarget.value)}
+            />
+          </Label>
+          <Label>
+            Target index
+            <Input
+              min="0"
+              type="number"
+              value={constraints?.index ?? ""}
+              onChange={(event) => updateConstraint("index", event.currentTarget.value)}
+            />
+          </Label>
+        </>
+      ) : null}
     </>
   );
 }

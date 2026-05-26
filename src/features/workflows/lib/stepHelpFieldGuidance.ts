@@ -615,19 +615,19 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode quyết định ý nghĩa của các field còn lại.",
-      "Page dùng Direction/Pixels; Into View và Until Visible dùng Target locator và Timeout.",
+      "Page Scroll dùng Direction/Pixels; Scroll To Element và Wait Then Scroll To Element dùng Target locator và Timeout.",
     ],
     Direction: [
       "Down/Up cuộn theo chiều dọc; Left/Right cuộn theo chiều ngang.",
       "Direction chỉ dùng trong Page scroll.",
     ],
     Pixels: [
-      "Pixels là khoảng cách cuộn mỗi lần.",
-      "250-800 thường hợp lý; quá nhỏ sẽ cần nhiều attempts, quá lớn có thể nhảy qua nội dung.",
+      "Pixels là tổng khoảng cách cho Page Scroll.",
+      "250-800 thường hợp lý cho một hành động cuộn trang.",
     ],
     "Max attempts": [
-      "Số lần app thử cuộn trong Until Visible.",
-      "Tổng quãng cuộn xấp xỉ Pixels nhân Max attempts.",
+      "Thông số nội bộ của planner scroll, không cần cấu hình trong Scroll UI hiện tại.",
+      "Hệ thống tự giới hạn theo Timeout ms và human preset.",
     ],
     "Wait ms": [
       "Khoảng nghỉ giữa mỗi lần cuộn để browser kịp render nội dung mới.",
@@ -751,19 +751,19 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode decides how the other fields are interpreted.",
-      "Page uses Direction/Pixels; Into View and Until Visible use Target locator and Timeout.",
+      "Page Scroll uses Direction/Pixels; Scroll To Element and Wait Then Scroll To Element use Target locator and Timeout.",
     ],
     Direction: [
       "Down/Up scroll vertically; Left/Right scroll horizontally.",
       "Direction is only used by Page scroll.",
     ],
     Pixels: [
-      "Pixels is the distance per scroll attempt.",
-      "250-800 is usually reasonable; too small needs many attempts, too large can jump past content.",
+      "Pixels is the total distance for Page Scroll.",
+      "250-800 is usually reasonable for one page-scroll action.",
     ],
     "Max attempts": [
-      "How many times the app tries to scroll in Until Visible.",
-      "Total scroll distance is roughly Pixels multiplied by Max attempts.",
+      "Internal scroll-planner tuning; the current Scroll UI does not require configuring it.",
+      "The system bounds attempts from Timeout ms and the human preset.",
     ],
     "Wait ms": [
       "Delay between scroll attempts so the browser can render new content.",

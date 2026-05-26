@@ -674,11 +674,47 @@ describe("BrowserWorkflowRunner", () => {
     ]);
   });
 
-  test("scrolls element targets into view through CloakBrowser locator scroll", async () => {
+  test("adds bounded reverse corrections to page scroll while preserving requested distance", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.05,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: { mode: "page", direction: "down", pixels: 900 },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    const deltas = page.events
+      .filter((event) => event.startsWith("wheel:"))
+      .map((event) => Number(event.split(":")[2]));
+    expect(deltas.some((delta) => delta > 0)).toBe(true);
+    expect(deltas.some((delta) => delta < 0)).toBe(true);
+    expect(deltas.reduce((sum, delta) => sum + delta, 0)).toBe(900);
+  });
+
+  test("scrolls element targets through a wheel-based human planner", async () => {
+    const page = new HumanScrollPage({ targetDocumentY: 1400 });
+    const sleeps: number[] = [];
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      random: () => 0.05,
     });
 
     const result = await runner.run({
@@ -699,14 +735,28 @@ describe("BrowserWorkflowRunner", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(page.events).toEqual(
-      expect.arrayContaining([
-        "getByTestId:cta",
-        "scrollIntoViewIfNeeded:testid=cta:4500",
-      ]),
-    );
-    expect(page.events.some((event) => event.startsWith("wheel:"))).toBe(false);
+    expect(page.events).toContain("getByTestId:cta");
+    expect(page.events.some((event) => event.startsWith("scrollIntoViewIfNeeded:"))).toBe(false);
     expect(page.events).not.toContain("evaluate:testid=cta");
+    const wheelEvents = page.events.filter((event) => event.startsWith("wheel:"));
+    expect(wheelEvents.length).toBeGreaterThan(1);
+    expect(wheelEvents.some((event) => Number(event.split(":")[2]) > 0)).toBe(true);
+    expect(wheelEvents.some((event) => Number(event.split(":")[2]) < 0)).toBe(true);
+    expect(sleeps.length).toBeGreaterThan(0);
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "scroll",
+        action_type: "scroll",
+        mode: "assisted_browser",
+      }),
+    ]);
+    expect(await page.targetLocator.boundingBox()).toMatchObject({
+      y: expect.any(Number),
+      height: 40,
+    });
+    const finalBox = await page.targetLocator.boundingBox();
+    expect(finalBox?.y).toBeGreaterThanOrEqual(0);
+    expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
   });
 
   test("fails targeted scroll modes when no target is configured", async () => {
@@ -768,9 +818,9 @@ describe("BrowserWorkflowRunner", () => {
         "frameLocator://iframe[@id='main']",
         "frameLocator.locator://h2[normalize-space(.)='Ready']",
         "waitFor://h2[normalize-space(.)='Ready']:visible:2500",
-        "scrollIntoViewIfNeeded://h2[normalize-space(.)='Ready']:2500",
       ]),
     );
+    expect(page.events.some((event) => event.startsWith("scrollIntoViewIfNeeded:"))).toBe(false);
     expect(page.events.some((event) => event.startsWith("wheel:"))).toBe(false);
   });
 
@@ -891,6 +941,16 @@ describe("BrowserWorkflowRunner", () => {
     );
 
     expect(runnerSource).not.toMatch(/console\.log\([^)]*scroll/i);
+  });
+
+  test("keeps obsolete native scroll helper names out of the Scroll action path", () => {
+    const runnerSource = readFileSync(
+      path.join(process.cwd(), "electron/backend/runtime/runner.ts"),
+      "utf8",
+    );
+
+    expect(runnerSource).not.toContain("function scrollLocatorIntoView");
+    expect(runnerSource).not.toContain("scroll requires driver support for locator.scrollIntoViewIfNeeded");
   });
 
   test("dispatches right-click targets through custom right-button mouse input", async () => {
@@ -3354,6 +3414,54 @@ class FakePage implements BrowserDriverPage {
   };
 }
 
+class HumanScrollPage extends FakePage {
+  readonly viewport = { width: 800, height: 600 };
+  readonly targetLocator: HumanScrollLocator;
+  scrollY = 0;
+
+  constructor(private readonly options: { targetDocumentY: number }) {
+    super();
+    this.targetLocator = new HumanScrollLocator("testid=cta", this);
+  }
+
+  override getByTestId(testId: string) {
+    this.events.push(`getByTestId:${testId}`);
+    return this.targetLocator;
+  }
+
+  override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+    if (typeof pageFunction === "function" && pageFunction.toString().includes("innerWidth")) {
+      return this.viewport;
+    }
+    return super.evaluate(pageFunction, arg);
+  }
+
+  override mouse = {
+    move: async (x: number, y: number) => {
+      this.events.push(`move:${x}:${y}`);
+    },
+    down: async (options?: { button?: string }) => {
+      this.events.push(`mouseDown:${options?.button ?? "left"}`);
+    },
+    up: async (options?: { button?: string }) => {
+      this.events.push(`mouseUp:${options?.button ?? "left"}`);
+    },
+    wheel: async (x: number, y: number) => {
+      this.scrollY += y;
+      this.events.push(`wheel:${x}:${y}`);
+    },
+  };
+
+  targetBox() {
+    return {
+      x: 100,
+      y: this.options.targetDocumentY - this.scrollY,
+      width: 120,
+      height: 40,
+    };
+  }
+}
+
 class FakeLocator {
   constructor(
     protected readonly selector: string,
@@ -3476,6 +3584,27 @@ class FakeLocator {
 
   async dragTo(target: FakeLocator) {
     this.events.push(`dragTo:${this.selector}:${target.selector}`);
+  }
+}
+
+class HumanScrollLocator extends FakeLocator {
+  constructor(
+    selector: string,
+    private readonly page: HumanScrollPage,
+  ) {
+    super(selector, page.events);
+  }
+
+  override async boundingBox() {
+    const box = this.page.targetBox();
+    this.events.push(`boundingBox:${this.selector}:${Math.round(box.y)}`);
+    return box;
+  }
+
+  override async isVisible() {
+    const box = this.page.targetBox();
+    this.events.push(`isVisible:${this.selector}`);
+    return box.y >= 0 && box.y + box.height <= this.page.viewport.height;
   }
 }
 

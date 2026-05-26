@@ -159,6 +159,11 @@ describe("ActionConfigEditor", () => {
     render(<Harness />);
 
     expect(screen.getByLabelText("Mode")).toHaveValue("page");
+    expect(screen.getByRole("option", { name: "Page Scroll" })).toHaveValue("page");
+    expect(screen.getByRole("option", { name: "Scroll To Element" })).toHaveValue("into_view");
+    expect(screen.getByRole("option", { name: "Wait Then Scroll To Element" })).toHaveValue(
+      "until_visible",
+    );
     expect(screen.getByLabelText("Direction")).toBeInTheDocument();
     expect(screen.getByLabelText("Pixels")).toBeInTheDocument();
     expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
@@ -167,6 +172,10 @@ describe("ActionConfigEditor", () => {
 
     expect(screen.getByLabelText("Target locator")).toBeInTheDocument();
     expect(screen.getByLabelText("Timeout ms")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Target visibility")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Target enabled")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Target contains text")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Target index")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Direction")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Pixels")).not.toBeInTheDocument();
     expect(onChange).toHaveBeenLastCalledWith({

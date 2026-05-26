@@ -111,6 +111,28 @@ type ActionTrace = {
 
 type RunnerActionCapability = "cloak_native" | "custom_human" | "direct_dom";
 
+type ScrollViewport = {
+  width: number;
+  height: number;
+};
+
+type ScrollBox = {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+};
+
+type HumanScrollProfile = {
+  minChunk: number;
+  maxChunk: number;
+  pauseMinMs: number;
+  pauseMaxMs: number;
+  reverseChance: number;
+  reverseMin: number;
+  reverseMax: number;
+};
+
 const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapability>> = {
   click: "cloak_native",
   double_click: "cloak_native",
@@ -1132,7 +1154,15 @@ export class BrowserWorkflowRunner {
     if (mode === "until_visible") {
       await waitForLocatorState(locator, "visible", action.config.timeout_ms);
     }
-    await scrollLocatorIntoView(locator, action.config.timeout_ms);
+    await humanScrollLocatorIntoView(
+      runtime.page,
+      locator,
+      action.config.timeout_ms,
+      this.sleep,
+      this.random,
+      runtime.signal,
+      runtime.settings.browser_launch.human_preset,
+    );
   }
 
   private async executePasteClipboard(
@@ -1519,6 +1549,16 @@ async function humanPageScroll(
       await page.mouse.wheel(chunkX, chunkY);
       remainingX -= chunkX;
       remainingY -= chunkY;
+      if (shouldReversePageScroll(steps - remainingSteps, remainingSteps, distance, random)) {
+        const reverseX = reversePageScrollChunk(chunkX, random);
+        const reverseY = reversePageScrollChunk(chunkY, random);
+        if (reverseX !== 0 || reverseY !== 0) {
+          await sleepFn(scrollPauseMs(random), signal);
+          await page.mouse.wheel(reverseX, reverseY);
+          remainingX -= reverseX;
+          remainingY -= reverseY;
+        }
+      }
       if (remainingSteps > 1) {
         await sleepFn(scrollPauseMs(random), signal);
       }
@@ -1535,7 +1575,206 @@ async function humanPageScroll(
   );
 }
 
-async function scrollLocatorIntoView(
+async function humanScrollLocatorIntoView(
+  page: BrowserDriverPage,
+  locator: BrowserDriverLocator,
+  timeoutMs: number | null | undefined,
+  sleepFn: (ms: number, signal?: AbortSignal) => Promise<void>,
+  random: () => number,
+  signal?: AbortSignal,
+  preset?: string | null,
+) {
+  if (!locator.boundingBox) {
+    throw new Error("Scroll To Element requires driver support for locator.boundingBox");
+  }
+  const profile = humanScrollProfile(preset);
+  const timeoutBudgetMs = timeoutMs ?? 5000;
+  const maxAttempts = Math.max(8, Math.min(60, Math.ceil(timeoutBudgetMs / 250)));
+  const startedAt = Date.now();
+  let lastDistance = Number.POSITIVE_INFINITY;
+  let stalledAttempts = 0;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    throwIfAborted(signal);
+    if (Date.now() - startedAt > timeoutBudgetMs) {
+      throw new Error(`Scroll target did not enter the viewport within ${timeoutBudgetMs} ms`);
+    }
+
+    const viewport = await viewportSizeFor(page);
+    const box = await locator.boundingBox();
+    if (!box) {
+      await sleepFn(humanScrollPauseMs(profile, random), signal);
+      continue;
+    }
+
+    const plan = scrollPlanForBox(box, viewport);
+    if (plan.done) return;
+
+    if (plan.distance >= lastDistance - 2) {
+      stalledAttempts += 1;
+    } else {
+      stalledAttempts = 0;
+    }
+    lastDistance = plan.distance;
+    if (stalledAttempts >= 5) {
+      throw new Error("Scroll target did not move closer to the viewport");
+    }
+
+    const chunk = humanTargetScrollChunk(plan, viewport, profile, random);
+    await wheelOrScrollBy(page, chunk.deltaX, chunk.deltaY);
+
+    if (shouldReverseScroll(attempt, plan.distance, viewport, profile, random)) {
+      await sleepFn(humanScrollPauseMs(profile, random), signal);
+      const reverse = reverseScrollChunk(chunk, profile, random);
+      await wheelOrScrollBy(page, reverse.deltaX, reverse.deltaY);
+    }
+
+    await sleepFn(humanScrollPauseMs(profile, random), signal);
+  }
+
+  throw new Error("Scroll target did not enter the viewport before max attempts");
+}
+
+async function viewportSizeFor(page: BrowserDriverPage): Promise<ScrollViewport> {
+  try {
+    const viewport = await page.evaluate<Partial<ScrollViewport>>(() => ({
+      width: window.innerWidth || document.documentElement.clientWidth || 1280,
+      height: window.innerHeight || document.documentElement.clientHeight || 720,
+    }));
+    const width = typeof viewport?.width === "number" && viewport.width > 0 ? viewport.width : 1280;
+    const height = typeof viewport?.height === "number" && viewport.height > 0 ? viewport.height : 720;
+    return { width, height };
+  } catch {
+    return { width: 1280, height: 720 };
+  }
+}
+
+function scrollPlanForBox(box: ScrollBox, viewport: ScrollViewport) {
+  const x = box.x ?? 0;
+  const y = box.y ?? 0;
+  const marginX = Math.max(16, Math.round(viewport.width * 0.06));
+  const marginY = Math.max(16, Math.round(viewport.height * 0.08));
+  const targetLeft = marginX;
+  const targetRight = viewport.width - marginX;
+  const targetTop = marginY;
+  const targetBottom = viewport.height - marginY;
+  const visibleWidth = Math.max(0, Math.min(x + box.width, viewport.width) - Math.max(x, 0));
+  const visibleHeight = Math.max(0, Math.min(y + box.height, viewport.height) - Math.max(y, 0));
+  const visibleRatio = (visibleWidth * visibleHeight) / Math.max(1, box.width * box.height);
+  if (visibleRatio >= 0.6) {
+    return { done: true as const, deltaX: 0, deltaY: 0, distance: 0 };
+  }
+
+  let deltaX = 0;
+  let deltaY = 0;
+  if (x < targetLeft) {
+    deltaX = x - targetLeft;
+  } else if (x + box.width > targetRight) {
+    deltaX = x + box.width - targetRight;
+  }
+  if (y < targetTop) {
+    deltaY = y - targetTop;
+  } else if (y + box.height > targetBottom) {
+    deltaY = y + box.height - targetBottom;
+  }
+
+  return {
+    done: false as const,
+    deltaX,
+    deltaY,
+    distance: Math.max(Math.abs(deltaX), Math.abs(deltaY)),
+  };
+}
+
+function humanTargetScrollChunk(
+  plan: { deltaX: number; deltaY: number; distance: number },
+  viewport: ScrollViewport,
+  profile: HumanScrollProfile,
+  random: () => number,
+) {
+  const maxAxis = Math.max(viewport.width, viewport.height);
+  const progressScale = Math.max(0.35, Math.min(1, plan.distance / Math.max(1, maxAxis)));
+  const base = profile.minChunk + Math.floor(random() * (profile.maxChunk - profile.minChunk));
+  const magnitude = Math.max(24, Math.min(plan.distance, Math.round(base * progressScale)));
+  const axisTotal = Math.abs(plan.deltaX) + Math.abs(plan.deltaY);
+  const ratioX = axisTotal > 0 ? Math.abs(plan.deltaX) / axisTotal : 0;
+  const ratioY = axisTotal > 0 ? Math.abs(plan.deltaY) / axisTotal : 0;
+  return {
+    deltaX: Math.round(Math.sign(plan.deltaX) * magnitude * ratioX),
+    deltaY: Math.round(Math.sign(plan.deltaY) * magnitude * ratioY),
+  };
+}
+
+function reverseScrollChunk(
+  chunk: { deltaX: number; deltaY: number },
+  profile: HumanScrollProfile,
+  random: () => number,
+) {
+  const magnitude = profile.reverseMin + Math.floor(random() * (profile.reverseMax - profile.reverseMin));
+  const axisTotal = Math.abs(chunk.deltaX) + Math.abs(chunk.deltaY);
+  const ratioX = axisTotal > 0 ? Math.abs(chunk.deltaX) / axisTotal : 0;
+  const ratioY = axisTotal > 0 ? Math.abs(chunk.deltaY) / axisTotal : 0;
+  return {
+    deltaX: Math.round(-Math.sign(chunk.deltaX) * magnitude * ratioX),
+    deltaY: Math.round(-Math.sign(chunk.deltaY) * magnitude * ratioY),
+  };
+}
+
+function shouldReverseScroll(
+  attempt: number,
+  distance: number,
+  viewport: ScrollViewport,
+  profile: HumanScrollProfile,
+  random: () => number,
+) {
+  if (attempt === 0) return false;
+  if (distance < Math.min(220, viewport.height * 0.35)) return false;
+  return random() < profile.reverseChance;
+}
+
+function humanScrollProfile(preset?: string | null): HumanScrollProfile {
+  if (preset === "careful") {
+    return {
+      minChunk: 120,
+      maxChunk: 320,
+      pauseMinMs: 150,
+      pauseMaxMs: 520,
+      reverseChance: 0.26,
+      reverseMin: 18,
+      reverseMax: 72,
+    };
+  }
+  return {
+    minChunk: 170,
+    maxChunk: 460,
+    pauseMinMs: 90,
+    pauseMaxMs: 340,
+    reverseChance: 0.18,
+    reverseMin: 14,
+    reverseMax: 64,
+  };
+}
+
+function humanScrollPauseMs(profile: HumanScrollProfile, random: () => number) {
+  return profile.pauseMinMs + Math.floor(random() * (profile.pauseMaxMs - profile.pauseMinMs));
+}
+
+async function wheelOrScrollBy(page: BrowserDriverPage, deltaX: number, deltaY: number) {
+  if (page.mouse?.wheel) {
+    await page.mouse.wheel(deltaX, deltaY);
+    return;
+  }
+  await page.evaluate(
+    (payload?: { deltaX: number; deltaY: number }) => {
+      const { deltaX: x, deltaY: y } = payload ?? { deltaX: 0, deltaY: 0 };
+      window.scrollBy({ left: x, top: y, behavior: "instant" });
+      window.dispatchEvent(new Event("scroll"));
+    },
+    { deltaX, deltaY },
+  );
+}
+
+async function nativePointerLocatorIntoView(
   locator: BrowserDriverLocator,
   timeoutMs: number | null | undefined,
 ) {
@@ -1558,7 +1797,7 @@ async function scrollLocatorIntoView(
     return;
   }
 
-  throw new Error("scroll requires driver support for locator.scrollIntoViewIfNeeded");
+  throw new Error("pointer action requires driver support for locator scroll into view");
 }
 
 async function writeBrowserClipboard(page: BrowserDriverPage, text: string) {
@@ -1586,7 +1825,7 @@ async function rightClickTarget(
   timeoutMs: number | null | undefined,
   signal?: AbortSignal,
 ) {
-  await scrollLocatorIntoView(locator, timeoutMs);
+  await nativePointerLocatorIntoView(locator, timeoutMs);
   const box = await locator.boundingBox?.();
   if (box && page.mouse?.move && page.mouse.down && page.mouse.up) {
     const targetX = Math.round((box.x ?? 0) + box.width / 2);
@@ -1630,6 +1869,22 @@ function nextScrollChunk(total: number, remainingSteps: number, random: () => nu
   const chunk = Math.round(base + jitter);
   if (chunk !== 0) return chunk;
   return total > 0 ? 1 : total < 0 ? -1 : 0;
+}
+
+function shouldReversePageScroll(
+  completedSteps: number,
+  remainingSteps: number,
+  distance: number,
+  random: () => number,
+) {
+  if (completedSteps === 0 || remainingSteps <= 2 || distance < 500) return false;
+  return random() < 0.12;
+}
+
+function reversePageScrollChunk(chunk: number, random: () => number) {
+  if (chunk === 0) return 0;
+  const magnitude = Math.max(8, Math.min(60, Math.round(Math.abs(chunk) * (0.15 + random() * 0.2))));
+  return -Math.sign(chunk) * magnitude;
 }
 
 function scrollPauseMs(random: () => number) {
@@ -2017,7 +2272,7 @@ function actionEvidenceModel(
 
 function runnerCapabilityForAction(action: ActionConfig): RunnerActionCapability | null {
   if (action.type === "scroll") {
-    return (action.config.mode ?? "page") === "page" ? "custom_human" : "cloak_native";
+    return "custom_human";
   }
   return runnerActionCapabilities[action.type] ?? null;
 }

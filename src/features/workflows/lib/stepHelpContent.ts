@@ -306,33 +306,33 @@ const baseStepHelpContent: Record<
   scroll: {
     vi: {
       title: "Trợ giúp Scroll",
-      summary: "Cuộn trang theo pixel hoặc đưa một element đích vào vùng nhìn thấy bằng đường scroll humanized của CloakBrowser.",
-      useWhen: ["Dùng Page khi cần cuộn một lượng pixel cố định.", "Dùng Into View khi element đã có trên trang nhưng nằm ngoài màn hình.", "Dùng Until Visible khi muốn chờ element visible rồi đưa vào màn hình."],
+      summary: "Cuộn trang theo pixel hoặc dùng wheel human-like để đưa một element đích vào vùng nhìn thấy.",
+      useWhen: ["Dùng Page Scroll khi cần cuộn một lượng pixel cố định.", "Dùng Scroll To Element khi element đã có trên trang nhưng nằm ngoài màn hình.", "Dùng Wait Then Scroll To Element khi muốn chờ element visible rồi cuộn tới element đó."],
       fields: [
-        { name: "Mode", description: "Page dùng custom human wheel theo pixel; Into View và Until Visible dùng scroll-to-element của CloakBrowser." },
+        { name: "Mode", description: "Page Scroll dùng wheel theo pixel có pause/correction; các mode target dùng planner wheel human-like tới element." },
         { name: "Direction", description: "Hướng cuộn Page: down, up, right, hoặc left." },
         { name: "Pixels", description: "Số pixel cho Page scroll. Thử 250-800 tùy trang." },
-        { name: "Target locator", description: "Element đích cho Into View hoặc Until Visible." },
+        { name: "Target locator", description: "Element đích cho Scroll To Element hoặc Wait Then Scroll To Element." },
         { name: "Iframe XPath", description: "Chọn iframe trên trang cha nếu target nằm trong iframe legacy XPath." },
         { name: "Timeout ms", description: timeoutField.vi },
       ],
-      examples: ["Mode: Page, Direction: Down, Pixels: 500", "Mode: Into View, Target locator: //button[@type='submit']", "Mode: Until Visible, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
-      commonMistakes: ["Until Visible cần target là element đích cần thấy, không phải body.", "Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Page scroll là custom human fallback vì CloakBrowser không patch trực tiếp mouse wheel."],
+      examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Target locator: //button[@type='submit']", "Mode: Wait Then Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
+      commonMistakes: ["Wait Then Scroll To Element cần target là element đích cần thấy, không phải body.", "Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Các mode target dùng wheel human-like; không cần cấu hình step/pause thủ công."],
     },
     en: {
       title: "Scroll Help",
-      summary: "Scroll the page by pixels or bring a target element into view through CloakBrowser's humanized scroll-to-element path.",
-      useWhen: ["Use Page for a fixed pixel-distance scroll.", "Use Into View when the element is already on the page but outside the viewport.", "Use Until Visible when the runner should wait for visibility, then bring the element into view."],
+      summary: "Scroll the page by pixels or use human-like wheel movement to bring a target element into view.",
+      useWhen: ["Use Page Scroll for a fixed pixel-distance scroll.", "Use Scroll To Element when the element is already on the page but outside the viewport.", "Use Wait Then Scroll To Element when the runner should wait for visibility, then scroll to the element."],
       fields: [
-        { name: "Mode", description: "Page uses custom human wheel chunks; Into View and Until Visible use CloakBrowser scroll-to-element." },
+        { name: "Mode", description: "Page Scroll uses wheel chunks with pauses/correction; target modes use a human-like wheel planner to the element." },
         { name: "Direction", description: "Page scroll direction: down, up, right, or left." },
         { name: "Pixels", description: "Pixel distance for Page scroll. Try 250-800 depending on the page." },
-        { name: "Target locator", description: "Target element for Into View or Until Visible." },
+        { name: "Target locator", description: "Target element for Scroll To Element or Wait Then Scroll To Element." },
         { name: "Iframe XPath", description: "Selects the parent-page iframe when the target uses a legacy XPath inside a frame." },
         { name: "Timeout ms", description: timeoutField.en },
       ],
-      examples: ["Mode: Page, Direction: Down, Pixels: 500", "Mode: Into View, Target locator: //button[@type='submit']", "Mode: Until Visible, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
-      commonMistakes: ["Until Visible needs the target element, not body.", "If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Page scroll is a custom human fallback because CloakBrowser does not directly patch mouse wheel."],
+      examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Target locator: //button[@type='submit']", "Mode: Wait Then Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
+      commonMistakes: ["Wait Then Scroll To Element needs the target element, not body.", "If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Target modes use human-like wheel movement; step and pause tuning is automatic."],
     },
   },
   select_option: {
@@ -806,6 +806,12 @@ function actualFieldNames(actionType: ActionType): string[] {
     "Target contains text",
     "Target index",
   ];
+  const scrollTargetFields = [
+    "Target locator type",
+    "Target locator",
+    "Target role",
+    "Target attribute",
+  ];
   const sourceTargetFields = [
     "Source locator type",
     "Source locator",
@@ -844,7 +850,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "click":
       return targetFields;
     case "scroll":
-      return ["Mode", "Direction", "Pixels", ...targetFields, "Iframe XPath", "Timeout ms"];
+      return ["Mode", "Direction", "Pixels", ...scrollTargetFields, "Iframe XPath", "Timeout ms"];
     case "select_option":
       return [...targetFields, "Match by", "Value"];
     case "press_key":
@@ -1022,7 +1028,7 @@ function fieldRequiredWhen(
         "wait:URL contains": "Bắt buộc khi Condition là URL contains.",
         "navigate:URL": "Bắt buộc; đây là trang workflow sẽ mở.",
         "navigate:Wait until": "Tùy chọn; mặc định là Load.",
-        "scroll:Target locator": "Bắt buộc với Into View và Until Visible; không cần với Page.",
+        "scroll:Target locator": "Bắt buộc với Scroll To Element và Wait Then Scroll To Element; không cần với Page Scroll.",
         "click:Offset X / Offset Y": "Chỉ bắt buộc khi Position là Offset.",
         "go_back:No fields": "Action này không có field cấu hình.",
         "go_forward:No fields": "Action này không có field cấu hình.",
@@ -1037,7 +1043,7 @@ function fieldRequiredWhen(
         "wait:URL contains": "Required when Condition is URL contains.",
         "navigate:URL": "Required; this is the page the workflow opens.",
         "navigate:Wait until": "Optional; defaults to Load.",
-        "scroll:Target locator": "Required for Into View and Until Visible; not needed for Page.",
+        "scroll:Target locator": "Required for Scroll To Element and Wait Then Scroll To Element; not needed for Page Scroll.",
         "click:Offset X / Offset Y": "Required only when Position is Offset.",
         "go_back:No fields": "This action has no configurable fields.",
         "go_forward:No fields": "This action has no configurable fields.",

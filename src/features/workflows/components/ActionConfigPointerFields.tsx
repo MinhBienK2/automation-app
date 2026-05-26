@@ -35,9 +35,9 @@ export function PointerActionFields({
                 onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
               }
             >
-              <option value="page">Page</option>
-              <option value="into_view">Into view</option>
-              <option value="until_visible">Until visible</option>
+              <option value="page">Page Scroll</option>
+              <option value="into_view">Scroll To Element</option>
+              <option value="until_visible">Wait Then Scroll To Element</option>
             </Select>
           </Label>
           {mode === "page" ? (
@@ -74,7 +74,11 @@ export function PointerActionFields({
             </>
           ) : (
             <>
-              <StructuredTargetFields config={config} onChange={onChange} />
+              <StructuredTargetFields
+                config={config}
+                onChange={onChange}
+                showConstraints={false}
+              />
               <Label>
                 Iframe XPath
                 <Input
