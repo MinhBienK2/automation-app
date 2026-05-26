@@ -11,11 +11,11 @@ test.describe("desktop pointer and element interaction node execution", () => {
       {
         type: "nodes",
         description:
-          "navigate, click, double_click, right_click, hover, drag_and_drop, scroll, extract_text",
+          "navigate, click, double_click, right_click, hover, drag_and_drop, scroll(page/into_view/until_visible), extract_text",
       },
       {
         type: "desktop depth",
-        description: "Verifies pointer and page-scroll side effects through the real browser page.",
+        description: "Verifies pointer and scroll mode side effects through the real browser page.",
       },
     );
 
@@ -62,6 +62,22 @@ test.describe("desktop pointer and element interaction node execution", () => {
         config: { type: "scroll", config: { direction: "down", pixels: 900 } },
       },
       {
+        id: "scroll-into-view",
+        label: "Scroll Into View",
+        config: {
+          type: "scroll",
+          config: { mode: "into_view", target: target("into-view-target"), timeout_ms: 5000 },
+        },
+      },
+      {
+        id: "scroll-until-visible",
+        label: "Scroll Until Visible",
+        config: {
+          type: "scroll",
+          config: { mode: "until_visible", target: target("until-visible-target"), timeout_ms: 5000 },
+        },
+      },
+      {
         id: "extract-pointer-summary",
         label: "Extract Pointer Summary",
         config: {
@@ -82,6 +98,8 @@ test.describe("desktop pointer and element interaction node execution", () => {
         "hover-button",
         "drag-source-to-zone",
         "scroll-page",
+        "scroll-into-view",
+        "scroll-until-visible",
       ]),
     );
   });

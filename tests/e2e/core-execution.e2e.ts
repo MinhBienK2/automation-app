@@ -65,7 +65,7 @@ test.describe("desktop workflow node execution", () => {
       {
         type: "nodes",
         description:
-          "navigate, input_text, clear_input, select_option, check, uncheck, toggle_checkbox, select_radio, submit_form, extract_text, extract_input_value",
+          "navigate, input_text, clear_input, select_option(label/value), check, uncheck, toggle_checkbox, select_radio, submit_form, extract_text, extract_input_value",
       },
       {
         type: "desktop depth",
@@ -84,7 +84,7 @@ test.describe("desktop workflow node execution", () => {
         label: "Fill Email",
         config: {
           type: "input_text",
-          config: { target: target("email"), text: "qa@example.test", clear_before_input: true },
+          config: { target: target("email"), text: "qa-user", clear_before_input: true },
         },
       },
       {
@@ -98,6 +98,14 @@ test.describe("desktop workflow node execution", () => {
         config: {
           type: "select_option",
           config: { target: target("plan"), match_by: "label", value: "Team" },
+        },
+      },
+      {
+        id: "select-plan-code",
+        label: "Select Plan Code",
+        config: {
+          type: "select_option",
+          config: { target: target("plan-code"), match_by: "value", value: "pro" },
         },
       },
       {
@@ -138,15 +146,16 @@ test.describe("desktop workflow node execution", () => {
         label: "Extract Email",
         config: {
           type: "extract_input_value",
-          config: { target: target("email"), output_name: "email_value" },
+          config: { target: target("email"), output_name: "contact_value" },
         },
       },
     ]);
 
-    expect(state.outputs.email_value).toBe("qa@example.test");
-    expect(state.outputs.summary_text).toContain("email=qa@example.test");
+    expect(state.outputs.contact_value).toBe("qa-user");
+    expect(state.outputs.summary_text).toContain("email=qa-user");
     expect(state.outputs.summary_text).toContain("clear=");
     expect(state.outputs.summary_text).toContain("plan=Team");
+    expect(state.outputs.summary_text).toContain("planCode=pro");
     expect(state.outputs.summary_text).toContain("agree=true");
     expect(state.outputs.summary_text).toContain("newsletter=false");
     expect(state.outputs.summary_text).toContain("toggle=true");

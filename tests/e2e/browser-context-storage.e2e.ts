@@ -81,7 +81,11 @@ test.describe("desktop browser context and storage node execution", () => {
         label: "Read Cookie",
         config: {
           type: "execute_js",
-          config: { script: "return document.cookie;", output_name: "cookie_before_clear" },
+          config: {
+            script:
+              "return document.cookie.includes('e2e_cookie=cookie-value') ? 'present' : 'missing';",
+            output_name: "state_before_clear",
+          },
         },
       },
       {
@@ -94,7 +98,11 @@ test.describe("desktop browser context and storage node execution", () => {
         label: "Read Cookie Cleared",
         config: {
           type: "execute_js",
-          config: { script: "return document.cookie;", output_name: "cookie_after_clear" },
+          config: {
+            script:
+              "return document.cookie.includes('e2e_cookie=cookie-value') ? 'present' : 'missing';",
+            output_name: "state_after_clear",
+          },
         },
       },
       {
@@ -115,7 +123,7 @@ test.describe("desktop browser context and storage node execution", () => {
         label: "Extract Header",
         config: {
           type: "extract_text",
-          config: { target: target("header-marker"), output_name: "header_marker" },
+          config: { target: target("header-marker"), output_name: "server_marker" },
         },
       },
       {
@@ -150,9 +158,9 @@ test.describe("desktop browser context and storage node execution", () => {
 
     expect(state.outputs.viewport_size).toBe("900x700");
     expect(state.outputs.storage_values).toBe("local-value|session-value");
-    expect(String(state.outputs.cookie_before_clear)).toContain("e2e_cookie=cookie-value");
-    expect(String(state.outputs.cookie_after_clear)).not.toContain("e2e_cookie=cookie-value");
-    expect(state.outputs.header_marker).toBe("header:header-value");
+    expect(state.outputs.state_before_clear).toBe("present");
+    expect(state.outputs.state_after_clear).toBe("missing");
+    expect(state.outputs.server_marker).toBe("header:header-value");
     expect(state.outputs.geolocation_value).toBe("10:20");
   });
 });

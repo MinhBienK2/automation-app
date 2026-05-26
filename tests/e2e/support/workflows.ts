@@ -3,8 +3,17 @@ import type {
   ActionConfig,
   ElementTarget,
   RunState,
+  WorkflowBrowserRetention,
   WorkflowGraph,
 } from "../../../src/types/workflow";
+
+type E2EEnv = Record<string, string | undefined>;
+
+export type E2EWorkflowRuntimeOverrides = {
+  browserRetention: WorkflowBrowserRetention;
+  headless: boolean;
+  observeAfterRunMs: number;
+};
 
 export function target(testId: string): ElementTarget {
   return { locators: [{ kind: "test_id", value: testId }] };
@@ -40,6 +49,7 @@ export async function createAndRunGraph(page: Page, name: string, graph: Workflo
       { cause: error },
     );
   }
+  await observeAfterRunWhenRequested(page);
   return { workflowId, state: await runState(page) };
 }
 
@@ -66,6 +76,7 @@ export async function createAndRunGraphExpectingFailure(
     }, { timeout: 45_000 })
     .toMatchObject({ status: "failed" });
 
+  await observeAfterRunWhenRequested(page);
   return { workflowId, state: await runState(page) };
 }
 
@@ -78,54 +89,77 @@ export async function runState(page: Page): Promise<RunState> {
 }
 
 export async function createWorkflow(page: Page, name: string, graph: WorkflowGraph) {
+  const runtimeOverrides = e2eWorkflowRuntimeOverrides();
   return page.evaluate(
-    async ({ workflowName, workflowGraph }) => {
-      const api = window.workflowApi;
-      if (!api) throw new Error("Workflow API bridge is unavailable");
-      const workflow = await api.createWorkflow(workflowName);
-      const settings = await api.getWorkflowSettings(workflow.id);
-      await api.saveWorkflowSettings(workflow.id, {
-        ...settings,
-        run_policy: {
-          ...settings.run_policy,
-          browser_retention: "close",
-        },
-        browser_launch: {
-          ...settings.browser_launch,
-          headless: true,
-        },
-      });
-      await api.saveWorkflowGraph(workflow.id, workflowGraph);
-      await api.runWorkflow(workflow.id);
-      return workflow.id;
+    async ({ workflowName, workflowGraph, runtimeOverrides }) => {
+      try {
+        const api = window.workflowApi;
+        if (!api) throw new Error("Workflow API bridge is unavailable");
+        const workflow = await api.createWorkflow(workflowName);
+        const settings = await api.getWorkflowSettings(workflow.id);
+        await api.saveWorkflowSettings(workflow.id, {
+          ...settings,
+          run_policy: {
+            ...settings.run_policy,
+            browser_retention: runtimeOverrides.browserRetention,
+          },
+          browser_launch: {
+            ...settings.browser_launch,
+            headless: runtimeOverrides.headless,
+          },
+        });
+        await api.saveWorkflowGraph(workflow.id, workflowGraph);
+        await api.runWorkflow(workflow.id);
+        return workflow.id;
+      } catch (error) {
+        if (error instanceof Error) throw error;
+        throw new Error(error && typeof error === "object" ? JSON.stringify(error) : String(error));
+      }
     },
-    { workflowName: name, workflowGraph: graph },
+    { workflowName: name, workflowGraph: graph, runtimeOverrides },
   );
 }
 
 export async function createWorkflowWithoutRun(page: Page, name: string, graph: WorkflowGraph) {
+  const runtimeOverrides = e2eWorkflowRuntimeOverrides();
   return page.evaluate(
-    async ({ workflowName, workflowGraph }) => {
-      const api = window.workflowApi;
-      if (!api) throw new Error("Workflow API bridge is unavailable");
-      const workflow = await api.createWorkflow(workflowName);
-      const settings = await api.getWorkflowSettings(workflow.id);
-      await api.saveWorkflowSettings(workflow.id, {
-        ...settings,
-        run_policy: {
-          ...settings.run_policy,
-          browser_retention: "close",
-        },
-        browser_launch: {
-          ...settings.browser_launch,
-          headless: true,
-        },
-      });
-      await api.saveWorkflowGraph(workflow.id, workflowGraph);
-      return workflow.id;
+    async ({ workflowName, workflowGraph, runtimeOverrides }) => {
+      try {
+        const api = window.workflowApi;
+        if (!api) throw new Error("Workflow API bridge is unavailable");
+        const workflow = await api.createWorkflow(workflowName);
+        const settings = await api.getWorkflowSettings(workflow.id);
+        await api.saveWorkflowSettings(workflow.id, {
+          ...settings,
+          run_policy: {
+            ...settings.run_policy,
+            browser_retention: runtimeOverrides.browserRetention,
+          },
+          browser_launch: {
+            ...settings.browser_launch,
+            headless: runtimeOverrides.headless,
+          },
+        });
+        await api.saveWorkflowGraph(workflow.id, workflowGraph);
+        return workflow.id;
+      } catch (error) {
+        if (error instanceof Error) throw error;
+        throw new Error(error && typeof error === "object" ? JSON.stringify(error) : String(error));
+      }
     },
-    { workflowName: name, workflowGraph: graph },
+    { workflowName: name, workflowGraph: graph, runtimeOverrides },
   );
+}
+
+export function e2eWorkflowRuntimeOverrides(
+  env: E2EEnv = process.env,
+): E2EWorkflowRuntimeOverrides {
+  const visibleBrowser = isTruthy(env.E2E_VISIBLE_BROWSER);
+  return {
+    browserRetention: visibleBrowser ? "retain" : "close",
+    headless: !visibleBrowser,
+    observeAfterRunMs: observeAfterRunMs(env, visibleBrowser),
+  };
 }
 
 export async function runWorkflowExpectingCommandError(page: Page, workflowId: string) {
@@ -195,4 +229,24 @@ async function runStateForError(page: Page, fallback: RunState | null) {
       reason: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+async function observeAfterRunWhenRequested(page: Page) {
+  const { observeAfterRunMs } = e2eWorkflowRuntimeOverrides();
+  if (observeAfterRunMs <= 0) return;
+  await page.waitForTimeout(observeAfterRunMs);
+}
+
+function observeAfterRunMs(env: E2EEnv, visibleBrowser: boolean) {
+  const fallback = visibleBrowser ? 1500 : 0;
+  const value = env.E2E_OBSERVE_MS;
+  if (!value) return fallback;
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.floor(parsed));
+}
+
+function isTruthy(value: string | undefined) {
+  return ["1", "true", "yes", "on"].includes(String(value ?? "").toLowerCase());
 }

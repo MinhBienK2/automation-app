@@ -69,6 +69,20 @@ Run the fast E2E smoke lane:
 npm run test:e2e:smoke
 ```
 
+Run E2E in visible browser mode for local review/debugging. This keeps the
+workflow browser headed, retains it at terminal state during the test, and adds
+a short observation pause after helper-driven workflow runs:
+
+```bash
+npm run test:e2e:visible
+```
+
+To slow the post-run observation window:
+
+```bash
+E2E_OBSERVE_MS=3000 npm run test:e2e:visible -- tests/e2e/core-execution.e2e.ts
+```
+
 Run high-risk E2E interaction suites repeatedly to catch flaky pointer/form/keyboard behavior:
 
 ```bash
@@ -216,7 +230,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Direction/Pixels fields and Into View/Until Visible target fields.
 5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.
-7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
+7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Router, Merge, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
 8. Add Set Cookie and Clear Cookies action nodes. Confirm profile, proxy, fingerprint seed, timezone/locale, headless launch, and browser retention are configured through Workflow Settings rather than in-run action nodes; confirm batch run defaults are visible there but paused until Batch Run UI is ready.
 9. Open Settings from the workflow detail header, confirm it opens to Browser Launch, and configure Reuse login session, identity display name, stable identity id, fingerprint seed, fingerprint fonts directory, proxy URL/credentials/bypass/metadata, timezone/locale with GeoIP location enabled by default and the detected local machine fallback visible, Humanize browser input, Humanize preset (`default` or `careful`), and headed/headless default. Confirm Reset identity opens an in-app confirmation, returns a backend-generated identity/profile/seed, and disables Run from selected. Confirm Workflow Settings has General, Graph, Run Policy, Browser Launch, and Environment sections with related fields grouped inside each section; Run Policy edits max duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control with the Run from selected scope select, and shows disabled batch controls with the pause note; Graph edits the new link wait default in one grouped control; Environment edits initial variable rows; section help is available with nested collapsible guidance groups and item-level field/example/mistake disclosures; the dialog has one Save Settings button in the header; and closing with edits shows the unsaved-changes prompt.
 12. From the workflow list, run saved workflows directly and confirm the app stays on the list, disables Run, Duplicate, Export, and Delete only for rows whose workflow is already running, shows row-level status and Stop for active runs, and keeps Run Center updated with each active/terminal run until terminal state.
@@ -234,7 +248,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 19. Confirm structured target fields let element and output steps target iframe content, and confirm Scroll Into View/Until Visible can target iframe content with an iframe XPath.
 20. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
 21. Confirm download actions save a new file under the current run evidence directory and store its app-local path plus `__evidence` metadata in outputs.
-22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use a variable array, and control-flow blocks run nested actions.
+22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use literal items and a variable array, Router takes the first matching case or default branch, Merge converges routed branches, and control-flow blocks run nested actions.
 23. Confirm persistent identity profile state survives a browser restart through Workflow Settings, Reuse login session can be disabled without rotating identity id/profile directory/fingerprint seed, and cookies can be set/cleared.
 24. Confirm Workflow Settings Browser Launch identity profile, fingerprint fonts directory, proxy, GeoIP or explicit timezone/locale, WebRTC, humanize toggle/preset, and headless defaults apply before browser launch; Environment initial variables apply before graph actions run; saved graph edge waits run before their target nodes; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
 27. Confirm batch run results account for each executed row, separate success from failure, use saved graph steps, apply batch headless defaults, reject concurrency above 1, and stop after the first failed row when configured.

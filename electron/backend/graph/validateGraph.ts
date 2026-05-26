@@ -227,6 +227,11 @@ function pushNodeSemanticIssues(
     case "merge":
       warnMissingContinuation(graph, node, "out", "Merge out is unconnected; workflow path ends successfully here", issues);
       break;
+    case "end_success":
+    case "end_failure":
+    case "break_loop":
+    case "continue_loop":
+      break;
     case "router":
       pushRouterSemanticIssues(graph, node, issues);
       break;

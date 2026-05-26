@@ -162,5 +162,6 @@ Common E2E commands:
 
 - Smoke: `npm run test:e2e:smoke`
 - Full local desktop: `npm run test:e2e:full`
+- Visible local browser review/debug: `npm run test:e2e:visible`
 - Flake detection: `npm run test:e2e:flake`
 - Authorized staging: `npm run test:e2e:staging` with `E2E_STAGING_TARGETS_FILE` and `E2E_STAGING_ACCOUNTS_FILE`

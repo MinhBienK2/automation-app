@@ -138,6 +138,12 @@ function formPage() {
           <option>Team</option>
         </select>
       </label>
+      <label>Plan code
+        <select data-testid="plan-code" name="planCode">
+          <option value="starter">Starter</option>
+          <option value="pro">Professional</option>
+        </select>
+      </label>
       <label><input data-testid="agree" type="checkbox" name="agree"> Agree</label>
       <label><input data-testid="newsletter" type="checkbox" name="newsletter" checked> Newsletter</label>
       <label><input data-testid="toggle" type="checkbox" name="toggle"> Toggle</label>
@@ -155,6 +161,7 @@ function formPage() {
           'email=' + data.get('email'),
           'clear=' + data.get('clearMe'),
           'plan=' + data.get('plan'),
+          'planCode=' + data.get('planCode'),
           'agree=' + document.querySelector('[data-testid="agree"]').checked,
           'newsletter=' + document.querySelector('[data-testid="newsletter"]').checked,
           'toggle=' + document.querySelector('[data-testid="toggle"]').checked,
@@ -289,6 +296,8 @@ function pointerPage() {
     <button data-testid="hover-target">Hover target</button>
     <div data-testid="drag-source" draggable="true">drag-source</div>
     <div data-testid="drop-zone" id="drop-zone">Drop here</div>
+    <div style="margin-top: 900px" data-testid="into-view-target">Into view target</div>
+    <div style="margin-top: 360px" data-testid="until-visible-target" hidden>Until visible target</div>
     <script>
       const summary = document.querySelector('[data-testid="pointer-summary"]');
       const state = { click: 0, double: 0, right: 0, hover: 0, drop: 'none', scroll: 'idle' };
@@ -345,8 +354,11 @@ function pointerPage() {
           render();
         }
       });
+      setTimeout(() => {
+        document.querySelector('[data-testid="until-visible-target"]').hidden = false;
+      }, 80);
     </script>
-</body>
+  </body>
 </html>`;
 }
 
@@ -431,6 +443,10 @@ function waitAssertionPage() {
   <body>
     <h1>Wait Assertion Fixture</h1>
     <div data-testid="async-status">idle</div>
+    <div data-testid="hide-me">visible before wait</div>
+    <div data-testid="detach-me">attached before wait</div>
+    <button data-testid="enable-me" disabled>Enable me</button>
+    <button data-testid="disable-me">Disable me</button>
   </body>
 </html>`;
 }

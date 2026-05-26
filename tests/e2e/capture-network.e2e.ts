@@ -192,6 +192,25 @@ test.describe("desktop capture and network node execution", () => {
         },
       },
       {
+        id: "schedule-unfiltered-response",
+        label: "Schedule Unfiltered Response",
+        config: {
+          type: "execute_js",
+          config: {
+            script: `setTimeout(() => fetch('${fixtureServer.baseUrl}/api/echo?q=response-any'), 250); return 'unfiltered response scheduled';`,
+            output_name: "unfiltered_response_schedule",
+          },
+        },
+      },
+      {
+        id: "wait-unfiltered-response",
+        label: "Wait Unfiltered Response",
+        config: {
+          type: "wait_for_response",
+          config: { url_contains: "/api/echo?q=response-any" },
+        },
+      },
+      {
         id: "block-route",
         label: "Block Route",
         config: {
@@ -239,8 +258,9 @@ test.describe("desktop capture and network node execution", () => {
     expect(state.outputs.network_title).toBe("Network Fixture");
     expect(state.outputs.request_schedule).toBe("request scheduled");
     expect(state.outputs.response_schedule).toBe("response scheduled");
+    expect(state.outputs.unfiltered_response_schedule).toBe("unfiltered response scheduled");
     expect(String(state.outputs.last_request_url)).toContain("/api/echo?q=request");
-    expect(String(state.outputs.last_response_url)).toContain("/api/echo?q=response");
+    expect(String(state.outputs.last_response_url)).toContain("/api/echo?q=response-any");
     expect(state.outputs.blocked_result).toBe("blocked");
     expect(state.outputs.mocked_result).toBe("203:mocked");
   });

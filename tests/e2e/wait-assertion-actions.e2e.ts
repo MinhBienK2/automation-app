@@ -21,7 +21,7 @@ test.describe("desktop wait and assertion node execution", () => {
       {
         type: "nodes",
         description:
-          "navigate, execute_js, wait(duration/text_visible/url_contains/element_visible), random_wait, assert_element, assert_text, extract_text",
+          "navigate, execute_js, wait(duration/page_load/text_visible/url_contains/element_visible/element_hidden/element_attached/element_detached/element_enabled/element_disabled), random_wait, assert_element states, assert_text modes, extract_text",
       },
       {
         type: "desktop depth",
@@ -47,11 +47,26 @@ test.describe("desktop wait and assertion node execution", () => {
                 document.querySelector('[data-testid="async-status"]').textContent = 'ready';
                 history.pushState({}, '', '/wait-assertion-ready');
               }, 80);
+              setTimeout(() => {
+                document.querySelector('[data-testid="hide-me"]').hidden = true;
+              }, 40);
+              setTimeout(() => {
+                document.querySelector('[data-testid="detach-me"]').remove();
+              }, 60);
+              setTimeout(() => {
+                document.querySelector('[data-testid="enable-me"]').disabled = false;
+                document.querySelector('[data-testid="disable-me"]').disabled = true;
+              }, 70);
               return 'scheduled';
             `,
             output_name: "schedule_result",
           },
         },
+      },
+      {
+        id: "wait-page-load",
+        label: "Wait Page Load",
+        config: { type: "wait", config: { condition: "page_load", timeout_ms: 5000 } },
       },
       {
         id: "wait-duration",
@@ -69,6 +84,31 @@ test.describe("desktop wait and assertion node execution", () => {
         config: { type: "wait", config: { condition: "element_visible", target: target("async-status") } },
       },
       {
+        id: "wait-hidden",
+        label: "Wait Hidden",
+        config: { type: "wait", config: { condition: "element_hidden", target: target("hide-me") } },
+      },
+      {
+        id: "wait-attached",
+        label: "Wait Attached",
+        config: { type: "wait", config: { condition: "element_attached", target: target("async-status") } },
+      },
+      {
+        id: "wait-detached",
+        label: "Wait Detached",
+        config: { type: "wait", config: { condition: "element_detached", target: target("detach-me") } },
+      },
+      {
+        id: "wait-enabled",
+        label: "Wait Enabled",
+        config: { type: "wait", config: { condition: "element_enabled", target: target("enable-me") } },
+      },
+      {
+        id: "wait-disabled",
+        label: "Wait Disabled",
+        config: { type: "wait", config: { condition: "element_disabled", target: target("disable-me") } },
+      },
+      {
         id: "wait-text",
         label: "Wait Text",
         config: { type: "wait", config: { condition: "text_visible", text: "ready" } },
@@ -82,6 +122,34 @@ test.describe("desktop wait and assertion node execution", () => {
         id: "assert-visible",
         label: "Assert Visible",
         config: { type: "assert_element", config: { target: target("async-status"), state: "visible" } },
+      },
+      {
+        id: "assert-hidden",
+        label: "Assert Hidden",
+        config: { type: "assert_element", config: { target: target("hide-me"), state: "hidden" } },
+      },
+      {
+        id: "assert-attached",
+        label: "Assert Attached",
+        config: { type: "assert_element", config: { target: target("async-status"), state: "attached" } },
+      },
+      {
+        id: "assert-enabled",
+        label: "Assert Enabled",
+        config: { type: "assert_element", config: { target: target("enable-me"), state: "enabled" } },
+      },
+      {
+        id: "assert-disabled",
+        label: "Assert Disabled",
+        config: { type: "assert_element", config: { target: target("disable-me"), state: "disabled" } },
+      },
+      {
+        id: "assert-text-contains",
+        label: "Assert Text Contains",
+        config: {
+          type: "assert_text",
+          config: { target: target("async-status"), text: "rea", match_mode: "contains" },
+        },
       },
       {
         id: "assert-text",
@@ -103,6 +171,25 @@ test.describe("desktop wait and assertion node execution", () => {
         },
       },
       {
+        id: "wait-state",
+        label: "Wait State",
+        config: {
+          type: "execute_js",
+          config: {
+            script: `
+              return [
+                document.querySelector('[data-testid="async-status"]').textContent,
+                document.querySelector('[data-testid="hide-me"]').hidden ? 'hidden' : 'visible',
+                document.querySelector('[data-testid="detach-me"]') ? 'attached' : 'detached',
+                document.querySelector('[data-testid="enable-me"]').disabled ? 'disabled' : 'enabled',
+                document.querySelector('[data-testid="disable-me"]').disabled ? 'disabled' : 'enabled',
+              ].join('|');
+            `,
+            output_name: "wait_state",
+          },
+        },
+      },
+      {
         id: "extract-status",
         label: "Extract Status",
         config: {
@@ -114,6 +201,7 @@ test.describe("desktop wait and assertion node execution", () => {
 
     expect(state.outputs.schedule_result).toBe("scheduled");
     expect(state.outputs.async_status).toBe("ready");
+    expect(state.outputs.wait_state).toBe("ready|hidden|detached|enabled|disabled");
     expect(Number(state.outputs.elapsed_ms)).toBeGreaterThanOrEqual(100);
 
     const traces = state.outputs.__action_traces as ActionTrace[];

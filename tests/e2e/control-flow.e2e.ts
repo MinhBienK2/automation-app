@@ -17,7 +17,7 @@ test.describe("desktop graph variable and control-flow node execution", () => {
       {
         type: "nodes",
         description:
-          "set_variable, set_json_variables, if, switch, repeat_times, repeat_for_each, while, repeat_until, retry, end_success",
+          "set_variable, set_json_variables, if, switch, repeat_times, repeat_for_each(array/literal), while, repeat_until, retry, end_success",
       },
       {
         type: "desktop depth",
@@ -37,6 +37,7 @@ test.describe("desktop graph variable and control-flow node execution", () => {
     expect(state.outputs.switch_result).toBe("beta");
     expect(state.outputs.repeat_count).toBe(3);
     expect(state.outputs.item_seen).toBe("blue");
+    expect(state.outputs.literal_item_seen).toBe("two");
     expect(state.outputs.while_result).toBe("ran");
     expect(state.outputs.until_result).toBe("ran");
     expect(state.outputs.retry_count).toBe(2);
@@ -52,6 +53,8 @@ test.describe("desktop graph variable and control-flow node execution", () => {
         "repeat-counter",
         "repeat-each",
         "each-value",
+        "repeat-each-literal",
+        "each-literal-value",
         "while-node",
         "while-body",
         "until-node",
@@ -94,6 +97,55 @@ test.describe("desktop graph variable and control-flow node execution", () => {
         "continue-counter",
         "after-continue",
       ]),
+    );
+  });
+
+  test("routes through prioritized router cases, default, and merge convergence", async ({
+    appWindow,
+  }, testInfo) => {
+    testInfo.annotations.push(
+      { type: "fixture route", description: "none" },
+      {
+        type: "nodes",
+        description: "router, merge, set_variable, end_success",
+      },
+      {
+        type: "desktop depth",
+        description:
+          "Verifies graph-native Router and Merge behavior through saved graph compilation and runner traces.",
+      },
+    );
+
+    const { state } = await createAndRunGraph(
+      appWindow,
+      "E2E router merge priority convergence",
+      routerMergeGraph(),
+    );
+
+    expect(state.outputs.route_result).toBe("expired");
+    expect(state.outputs.default_result).toBeUndefined();
+    expect(state.outputs.after_merge).toBe("verified");
+    expect(state.completed_step_ids).toEqual(
+      expect.arrayContaining(["router-node", "route-expired", "merge-node", "after-merge"]),
+    );
+    expect(state.outputs.__action_traces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ node_id: "router-node", action_type: "router_condition" }),
+        expect.objectContaining({ node_id: "merge-node", action_type: "graph_noop" }),
+      ]),
+    );
+
+    const defaultRun = await createAndRunGraph(
+      appWindow,
+      "E2E router merge default convergence",
+      routerMergeGraph("normal"),
+    );
+
+    expect(defaultRun.state.outputs.route_result).toBeUndefined();
+    expect(defaultRun.state.outputs.default_result).toBe("normal");
+    expect(defaultRun.state.outputs.after_merge).toBe("verified");
+    expect(defaultRun.state.completed_step_ids).toEqual(
+      expect.arrayContaining(["router-node", "route-default", "merge-node", "after-merge"]),
     );
   });
 
@@ -177,6 +229,14 @@ function controlFlowGraph(): WorkflowGraph {
     node("each-value", "set_variable", "Set Each Value", {
       variables: [{ name: "item_seen", value_type: "text", value: "{{item}}" }],
     }),
+    node("repeat-each-literal", "repeat_for_each", "Repeat Each Literal", {
+      item_name: "literal_item",
+      array_variable: null,
+      items: ["one", "two"],
+    }),
+    node("each-literal-value", "set_variable", "Set Literal Each Value", {
+      variables: [{ name: "literal_item_seen", value_type: "text", value: "{{literal_item}}" }],
+    }),
     node("while-node", "while", "While Once", {
       condition: { kind: "output_equals", name: "while_go", value: "yes" },
       max_attempts: 3,
@@ -228,7 +288,9 @@ function controlFlowGraph(): WorkflowGraph {
       edge("repeat-times", "loop", "repeat-counter"),
       edge("repeat-times", "done", "repeat-each"),
       edge("repeat-each", "loop", "each-value"),
-      edge("repeat-each", "done", "while-node"),
+      edge("repeat-each", "done", "repeat-each-literal"),
+      edge("repeat-each-literal", "loop", "each-literal-value"),
+      edge("repeat-each-literal", "done", "while-node"),
       edge("while-node", "loop", "while-body"),
       edge("while-node", "done", "until-node"),
       edge("until-node", "loop", "until-body"),
@@ -315,10 +377,63 @@ function stopSuccessGraph(): WorkflowGraph {
       node("stop-success", "stop_workflow", "Stop Success", {
         status: "success",
         reason: "operator stop",
-        close_browser: false,
+        close_browser: true,
       }),
     ],
     edges: [edge("start", "out", "stop-success")],
+    viewport: { x: 0, y: 0, zoom: 1 },
+    migration_notes: [],
+  };
+}
+
+function routerMergeGraph(accountState = "expired challenge"): WorkflowGraph {
+  const nodes = [
+    node("start", "start", "Start", null),
+    node("seed-route", "set_variable", "Seed Route", {
+      variables: [{ name: "account_state", value_type: "text", value: accountState }],
+    }),
+    node("router-node", "router", "Route Account State", {
+      mode: "first_match",
+      cases: [
+        {
+          id: "expired",
+          label: "Expired Session",
+          condition: { kind: "output_contains", name: "account_state", value: "expired" },
+        },
+        {
+          id: "challenge",
+          label: "Challenge Visible",
+          condition: { kind: "output_contains", name: "account_state", value: "challenge" },
+        },
+      ],
+      default_label: "Normal",
+    }),
+    node("route-expired", "set_variable", "Route Expired", {
+      variables: [{ name: "route_result", value_type: "text", value: "expired" }],
+    }),
+    node("route-default", "set_variable", "Route Default", {
+      variables: [{ name: "default_result", value_type: "text", value: "normal" }],
+    }),
+    node("merge-node", "merge", "Merge Routes", null),
+    node("after-merge", "set_variable", "After Merge", {
+      variables: [{ name: "after_merge", value_type: "text", value: "verified" }],
+    }),
+    node("end-success", "end_success", "End Success", { close_browser: false }),
+  ];
+
+  return {
+    version: 2,
+    nodes,
+    edges: [
+      edge("start", "out", "seed-route"),
+      edge("seed-route", "out", "router-node"),
+      edge("router-node", "case_expired", "route-expired"),
+      edge("router-node", "default", "route-default"),
+      edge("route-expired", "out", "merge-node"),
+      edge("route-default", "out", "merge-node"),
+      edge("merge-node", "out", "after-merge"),
+      edge("after-merge", "out", "end-success"),
+    ],
     viewport: { x: 0, y: 0, zoom: 1 },
     migration_notes: [],
   };
@@ -373,6 +488,19 @@ function ports(nodeType: GraphNodeType): GraphPort[] {
         { id: "case_2", label: "Case 2", direction: "output" },
         { id: "default", label: "Default", direction: "output" },
         { id: "done", label: "Done", direction: "output" },
+      ];
+    case "router":
+      return [
+        { id: "in", label: "In", direction: "input" },
+        { id: "case_expired", label: "Expired Session", direction: "output" },
+        { id: "case_challenge", label: "Challenge Visible", direction: "output" },
+        { id: "default", label: "Normal", direction: "output" },
+        { id: "done", label: "Done", direction: "output" },
+      ];
+    case "merge":
+      return [
+        { id: "in", label: "In", direction: "input" },
+        { id: "out", label: "Out", direction: "output" },
       ];
     case "repeat_times":
     case "repeat_for_each":
