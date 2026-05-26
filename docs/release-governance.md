@@ -79,8 +79,7 @@ browser/fingerprint change.
 Before changing the pinned version:
 
 - Change `package.json` and `package-lock.json` to the exact new version.
-- Run the owned staging smoke lane against allowlisted targets and named test
-  accounts.
+- Run `npm run test:fingerprint` and the relevant local desktop E2E lanes.
 - Complete a run evidence comparison before and after the upgrade, including
   browser identity, action traces, and failure artifacts.
 - Document the rollback version and rollback command plan in the upgrade PR.

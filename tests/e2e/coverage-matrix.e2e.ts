@@ -154,7 +154,6 @@ test.describe("desktop E2E coverage matrix", () => {
       "graph_authoring",
       "import_export",
       "settings_before_run",
-      "staging_owned_target",
       "workflow_crud",
       "workflow_run_failure",
       "workflow_run_success",

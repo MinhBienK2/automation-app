@@ -1,9 +1,0 @@
-{
-  "accounts": [
-    {
-      "label": "named-test-account",
-      "usernameEnv": "E2E_STAGING_USERNAME",
-      "passwordEnv": "E2E_STAGING_PASSWORD"
-    }
-  ]
-}

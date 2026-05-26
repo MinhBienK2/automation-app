@@ -44,8 +44,8 @@ before the smoke test runs.
 
 `npm run test:fingerprint` is the focused browser identity gate for browser
 identity changes and CloakBrowser wrapper upgrades. It checks identity launch
-mapping and sanitized `browser_identity` evidence without requiring a real owned
-staging target.
+mapping and sanitized `browser_identity` evidence without requiring an external
+owned target.
 
 Runner unit coverage also guards the Run Policy `execute_js_enabled` safety
 switch: disabled workflows must reject Run JavaScript before browser-side script
@@ -79,7 +79,6 @@ Focused commands:
 - `npm run test:e2e:full -- tests/e2e/workflow-user-journeys.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/workflow-package.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/coverage-matrix.e2e.ts`
-- `npm run test:e2e:staging` with staging env files
 
 Desktop coverage map:
 
@@ -99,15 +98,12 @@ Desktop coverage map:
 - `run-from-selected-real.e2e.ts`: retained persistent-session workflow run, visual graph node selection in the real browser, enabled Run from selected detail action, and selected-node rerun through the retained session.
 - `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
 - `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
-- `staging-owned-targets.e2e.ts`: opt-in authorized staging smoke workflows against allowlisted owned targets and named test accounts.
-
 E2E lanes:
 
 - `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, and coverage matrix.
-- `npm run test:e2e:full`: all local deterministic desktop E2E except staging unless `E2E_STAGING=1`. This lane intentionally uses helper defaults that run workflow browsers headless and close them after each workflow so CI and local verification stay deterministic.
-- `npm run test:e2e:visible`: local review/debug lane. It sets `E2E_VISIBLE_BROWSER=1`, runs Playwright headed, makes helper-created workflow browsers non-headless, retains the workflow browser at terminal state, and waits briefly after helper-driven runs. Set `E2E_OBSERVE_MS=<milliseconds>` to change the post-run observation pause.
+- `npm run test:e2e:full`: all local deterministic desktop E2E. This lane intentionally uses helper defaults that run workflow browsers headless and close them after each workflow so CI and local verification stay deterministic.
+- `npm run test:e2e:visible`: local browser-observable review/debug lane. It runs only suites with meaningful browser-page behavior, excluding coverage, package, Electron-isolation, and UI-only journeys that would otherwise only show the desktop app. It sets `E2E_VISIBLE_BROWSER=1`, runs Playwright headed, makes helper-created workflow browsers non-headless, retains the workflow browser at terminal state, and waits briefly after helper-driven runs. Set `E2E_OBSERVE_MS=<milliseconds>` to change the post-run observation pause.
 - `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing and humanized pointer regressions.
-- `npm run test:e2e:staging`: opt-in staging lane. Requires `E2E_STAGING_TARGETS_FILE` and `E2E_STAGING_ACCOUNTS_FILE`; targets must be allowlisted and accounts named. Example schemas live in `tests/e2e/fixtures/staging-targets.example.json` and `tests/e2e/fixtures/staging-accounts.example.json`.
 
 Lower-level coverage:
 

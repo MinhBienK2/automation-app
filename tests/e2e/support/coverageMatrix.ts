@@ -4,8 +4,7 @@ export type CoverageDepth =
   | "desktop_e2e"
   | "desktop_e2e_and_backend"
   | "backend_contract"
-  | "backend_guard"
-  | "staging_opt_in";
+  | "backend_guard";
 
 export type CoverageEntry = {
   files: string[];
@@ -190,7 +189,6 @@ export const workflowJourneyCoverage = {
     "electron/backend/commands.test.ts",
   ], "desktop_e2e_and_backend"),
   batch_execution: entry([...batchEvidence, "electron/backend/commands.test.ts"], "desktop_e2e_and_backend"),
-  staging_owned_target: entry(["tests/e2e/staging-owned-targets.e2e.ts"], "staging_opt_in"),
 } satisfies Record<string, CoverageEntry>;
 
 export type BehaviorCapabilityStatus = "covered" | "gap" | "not_applicable";

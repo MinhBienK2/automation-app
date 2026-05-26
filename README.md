@@ -69,9 +69,11 @@ Run the fast E2E smoke lane:
 npm run test:e2e:smoke
 ```
 
-Run E2E in visible browser mode for local review/debugging. This keeps the
-workflow browser headed, retains it at terminal state during the test, and adds
-a short observation pause after helper-driven workflow runs:
+Run the browser-observable E2E subset in visible mode for local review/debugging.
+This excludes coverage, package, Electron-isolation, and UI-only journeys that
+would only open the desktop app without meaningful browser action. The visible
+lane keeps workflow browsers headed, retains them at terminal state during the
+test, and adds a short observation pause after helper-driven workflow runs:
 
 ```bash
 npm run test:e2e:visible
@@ -88,16 +90,6 @@ Run high-risk E2E interaction suites repeatedly to catch flaky pointer/form/keyb
 ```bash
 npm run test:e2e:flake
 ```
-
-Run authorized staging E2E only with explicit owned target allowlists and named test accounts:
-
-```bash
-E2E_STAGING_TARGETS_FILE=./staging-targets.local.json \
-E2E_STAGING_ACCOUNTS_FILE=./staging-accounts.local.json \
-npm run test:e2e:staging
-```
-
-Example file shapes live in `tests/e2e/fixtures/staging-targets.example.json` and `tests/e2e/fixtures/staging-accounts.example.json`.
 
 Run the real CloakBrowser smoke test separately. First run may download the
 browser runtime:
