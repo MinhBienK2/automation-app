@@ -20,6 +20,8 @@ import {
   listScheduleEvents,
   listSchedules,
   getCloakBrowserDiagnostics,
+  getOperationalRunDetail,
+  getOperationsOverview,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
@@ -79,6 +81,8 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.suggestSelectors.mockResolvedValue(undefined);
     workflowBridgeMock.normalizeRecordedEvents.mockResolvedValue(undefined);
     workflowBridgeMock.dryRunValidateConfig.mockResolvedValue(undefined);
+    workflowBridgeMock.getOperationsOverview.mockResolvedValue(undefined);
+    workflowBridgeMock.getOperationalRunDetail.mockResolvedValue(undefined);
 
     await validateSchedule({
       workflow_id: "workflow-1",
@@ -118,6 +122,12 @@ describe("workflow API phase ten commands", () => {
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
     });
+    await getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+    await getOperationalRunDetail("run-1");
     await getCloakBrowserDiagnostics();
     await installCloakBrowserBinary();
     await cleanupOrphanedBrowserProfiles();
@@ -171,6 +181,12 @@ describe("workflow API phase ten commands", () => {
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
     });
+    expect(workflowBridgeMock.getOperationsOverview).toHaveBeenCalledWith({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+    expect(workflowBridgeMock.getOperationalRunDetail).toHaveBeenCalledWith("run-1");
     expect(workflowBridgeMock.getCloakBrowserDiagnostics).toHaveBeenCalled();
     expect(workflowBridgeMock.installCloakBrowserBinary).toHaveBeenCalled();
     expect(workflowBridgeMock.cleanupOrphanedBrowserProfiles).toHaveBeenCalled();

@@ -67,6 +67,11 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
+  async function openWorkflowDetails() {
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+  }
+
   test("adds selects deletes and saves logic nodes through the grouped React Flow workspace", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
@@ -75,7 +80,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
 
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     expect(within(editor).getByLabelText("Workflow graph canvas")).toBeInTheDocument();
@@ -211,7 +216,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     const startPort = within(editor).getByLabelText("Start Out port");
@@ -374,7 +379,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Shortcuts" }));
@@ -394,7 +399,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Variable" }));
@@ -449,7 +454,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node internal-loop" }));
 
@@ -469,7 +474,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -516,7 +521,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -567,7 +572,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const canvas = within(editor).getByLabelText("Workflow graph canvas");
 
@@ -631,7 +636,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
@@ -692,7 +697,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -739,7 +744,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -765,7 +770,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
@@ -800,7 +805,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -849,7 +854,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
 
@@ -912,7 +917,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -972,7 +977,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("combobox", { name: "Action type" }));
@@ -991,7 +996,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add End" }));
@@ -1033,7 +1038,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -1056,7 +1061,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Variable" }));
@@ -1091,7 +1096,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
 
@@ -1176,7 +1181,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
 
@@ -1209,7 +1214,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
     const canvas = within(editor).getByLabelText("Workflow graph canvas");
@@ -1252,7 +1257,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
@@ -1340,7 +1345,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     expect(within(editor).getByRole("button", { name: "Graph canvas node hidden-domain" }))
@@ -1473,7 +1478,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     expect(within(editor).queryByLabelText("Visible edge Start to Wait for page"))
@@ -1504,7 +1509,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     expect(within(editor).getByRole("button", { name: "Graph canvas node new-node" }))
@@ -1523,7 +1528,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "New node" }));
@@ -1567,7 +1572,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "New node" }));
@@ -1596,7 +1601,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
 
@@ -1630,7 +1635,7 @@ describe("Workflow graph editor integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     const pageCopy = new KeyboardEvent("keydown", {

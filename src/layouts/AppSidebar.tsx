@@ -1,11 +1,12 @@
 import { Button } from "../components/ui/button";
-import { Activity, CalendarClock, ListTree, Settings } from "lucide-react";
+import { Activity, CalendarClock, Gauge, ListTree, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "workflows" | "runs" | "schedules" | "settings";
+type AppSidebarActiveItem = "overview" | "workflows" | "runs" | "schedules" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
+  onOpenOverview: () => void;
   onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
@@ -50,6 +51,7 @@ function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
 export function AppSidebar({
   activeItem,
   collapsed,
+  onOpenOverview,
   onOpenRunCenter,
   onOpenSchedules,
   onOpenSettings,
@@ -63,6 +65,19 @@ export function AppSidebar({
         <span className="sidebar-title">Mission Control</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
+        <Button
+          className={
+            activeItem === "overview"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenOverview}
+        >
+          <Gauge aria-hidden="true" className="sidebar-item-icon" />
+          <span>Overview</span>
+        </Button>
         <Button
           className={
             activeItem === "workflows"

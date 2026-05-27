@@ -1869,6 +1869,180 @@ describe("Electron workflow command handlers", () => {
     expect(runner.run).not.toHaveBeenCalled();
   });
 
+  test("records blocked manual launches and exposes the durable operations overview", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Checkout flow");
+    handlers.saveWorkflowGraph(workflow.id, {
+      version: 2,
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    });
+
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
+      message: "Graph must contain exactly one start node",
+    });
+
+    const attentionRows = database
+      .prepare("SELECT event_type, source, workflow_id, severity, summary FROM operational_attention_events")
+      .all() as Array<Record<string, string>>;
+    expect(attentionRows).toEqual([
+      expect.objectContaining({
+        event_type: "launch_blocked",
+        source: "manual",
+        workflow_id: workflow.id,
+        severity: "failure",
+        summary: "Graph must contain exactly one start node",
+      }),
+    ]);
+
+    const overview = handlers.getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+    expect(overview.metrics.attention_today).toBe(1);
+    expect(overview.metrics.active_runs).toBe(0);
+    expect(overview.attention.items).toEqual([
+      expect.objectContaining({
+        source_kind: "launch_blocked",
+        title: "Launch blocked",
+        workflow: { id: workflow.id, name: "Checkout flow" },
+        navigation_target: { type: "workflow", workflow_id: workflow.id },
+      }),
+    ]);
+    expect(overview.activity).toHaveLength(24);
+    expect(overview.activity.some((bucket) => bucket.blocked === 1)).toBe(true);
+  });
+
+  test("aggregates persisted runs schedule attention evidence schedules and selected run detail", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Evidence flow");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const schedule = handlers.createSchedule({
+      workflow_id: workflow.id,
+      name: "Daily evidence",
+      enabled: true,
+      kind: { type: "once_at", timestamp: "2026-05-27T20:00:00.000Z" },
+    });
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-success",
+        workflow.id,
+        "success",
+        "2026-05-27T09:00:00.000Z",
+        "2026-05-27T09:02:00.000Z",
+        JSON.stringify({
+          __evidence: [
+            {
+              run_id: "run-success",
+              node_id: "shot",
+              artifact_kind: "screenshot",
+              path: "runs/run-success/screenshots/001-shot.png",
+              created_at: "2026-05-27T09:01:00.000Z",
+            },
+          ],
+        }),
+        null,
+      );
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-failed",
+        workflow.id,
+        "failed",
+        "2026-05-27T10:00:00.000Z",
+        "2026-05-27T10:03:00.000Z",
+        JSON.stringify({ reason: "Assertion failed", step_id: "assert" }),
+      );
+    database
+      .prepare(
+        `INSERT INTO run_steps (
+          id, run_id, node_id, step_number, action_type, status, started_at, finished_at, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "step-1",
+        "run-failed",
+        "assert",
+        1,
+        "assert_text",
+        "failed",
+        "2026-05-27T10:00:00.000Z",
+        "2026-05-27T10:03:00.000Z",
+        JSON.stringify({ reason: "Assertion failed" }),
+      );
+    database
+      .prepare(
+        `INSERT INTO workflow_schedule_events (
+          id, schedule_id, workflow_id, event_type, run_id, scheduled_for, created_at, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "schedule-event-1",
+        schedule.id,
+        workflow.id,
+        "failed_to_start",
+        null,
+        "2026-05-27T08:00:00.000Z",
+        "2026-05-27T08:00:01.000Z",
+        "Workflow validation failed",
+      );
+
+    const overview = handlers.getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+
+    expect(overview.metrics).toMatchObject({
+      succeeded_today: 1,
+      attention_today: 2,
+      upcoming_schedules: 1,
+    });
+    expect(overview.attention.items.map((item) => item.source_kind)).toEqual([
+      "run_failed",
+      "schedule_event",
+    ]);
+    expect(overview.recent_evidence.items).toEqual([
+      expect.objectContaining({
+        artifact_kind: "screenshot",
+        relative_path_or_label: "runs/run-success/screenshots/001-shot.png",
+        run_id: "run-success",
+      }),
+    ]);
+    expect(overview.upcoming_schedules.items).toEqual([
+      expect.objectContaining({
+        schedule_id: schedule.id,
+        workflow_id: workflow.id,
+        schedule_name: "Daily evidence",
+      }),
+    ]);
+
+    expect(handlers.getOperationalRunDetail("run-failed")).toMatchObject({
+      run_id: "run-failed",
+      workflow: { id: workflow.id, name: "Evidence flow" },
+      status: "failed",
+      sanitized_error_summary: "Assertion failed",
+      step_summaries: [
+        expect.objectContaining({
+          node_id: "assert",
+          action_type: "assert_text",
+          status: "failed",
+        }),
+      ],
+    });
+  });
+
   test("starts isolated workflow runs concurrently and lists each run snapshot", async () => {
     const finishByRunId = new Map<string, (state: RunState) => void>();
     const observedSignals = new Map<string, AbortSignal>();

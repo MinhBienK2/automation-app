@@ -110,6 +110,18 @@ export function initializeDatabase(paths: AppPaths) {
       FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS operational_attention_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      workflow_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      details_json TEXT,
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_runs_workflow_started_at
       ON runs(workflow_id, started_at DESC);
 
@@ -124,6 +136,12 @@ export function initializeDatabase(paths: AppPaths) {
 
     CREATE INDEX IF NOT EXISTS idx_workflow_schedule_events_workflow_created_at
       ON workflow_schedule_events(workflow_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_operational_attention_events_created_at
+      ON operational_attention_events(created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_operational_attention_events_workflow_created_at
+      ON operational_attention_events(workflow_id, created_at DESC);
   `);
   migrateWorkflowSchema(database);
 

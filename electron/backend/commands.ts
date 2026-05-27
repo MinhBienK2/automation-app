@@ -14,6 +14,7 @@ import type {
   ElementSnapshot,
   GraphValidationIssue,
   OrchestrationSchedule,
+  OperationsOverviewRequest,
   RecordedEvent,
   RunValidationIssue,
   ScheduleValidationIssue,
@@ -65,6 +66,7 @@ import { elementTargetFromXpath, migrateWorkflowGraph } from "./graph/migration.
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
+import { OperationsRepository } from "./operations/operationsRepository.js";
 import {
   createHighEntropyBrowserIdentityId,
   deriveFingerprintSeedFromIdentityId,
@@ -106,6 +108,7 @@ type CommandContext = {
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
   const scheduleRepository = new WorkflowScheduleRepository(context.database);
+  const operationsRepository = new OperationsRepository(context.database);
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   const runManager = new RunManager({ database: context.database, runner });
   const settingsService = new WorkflowSettingsService({
@@ -349,6 +352,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const runIssues = validateWorkflowRun(workflowId);
     const firstError = runIssues.find((issue) => issue.level === "error");
     if (firstError) {
+      if (source === "manual") {
+        operationsRepository.recordLaunchBlocked({ workflow, issues: runIssues });
+      }
       throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
     }
     if (compileGraph(graph).steps.length === 0) {
@@ -636,6 +642,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     listRunStates(): WorkflowRunSnapshot[] {
       return runManager.listRunStates();
+    },
+
+    getOperationsOverview(request: OperationsOverviewRequest) {
+      return operationsRepository.getOverview(request, runManager.listRunStates());
+    },
+
+    getOperationalRunDetail(runId: string) {
+      return operationsRepository.getRunDetail(runId);
     },
 
     listSchedules(): WorkflowSchedule[] {

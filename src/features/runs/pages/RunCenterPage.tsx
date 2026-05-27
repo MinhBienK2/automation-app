@@ -1,16 +1,18 @@
 import { Square } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import type { WorkflowRunSnapshot } from "../../../types/workflow";
+import type { OperationalRunDetail, WorkflowRunSnapshot } from "../../../types/workflow";
 import { runStatusLabel } from "../../../lib/workflowUi";
 
 type RunCenterPageProps = {
   runSnapshots: WorkflowRunSnapshot[];
+  focusedRunDetail?: OperationalRunDetail | null;
   error: string;
   onStopRun: (runId: string) => void;
 };
 
 export function RunCenterPage({
   runSnapshots,
+  focusedRunDetail,
   error,
   onStopRun,
 }: RunCenterPageProps) {
@@ -37,6 +39,43 @@ export function RunCenterPage({
       </header>
 
       <section className="run-center-panel panel">
+        {focusedRunDetail ? (
+          <article className="focused-run-detail" aria-label="Selected run detail">
+            <header>
+              <div>
+                <p className="eyebrow">Persisted Run</p>
+                <h2>{focusedRunDetail.workflow.name}</h2>
+              </div>
+              <span className={focusedRunDetail.status === "failed" ? "status-pill status-pill-danger" : "status-pill"}>
+                {focusedRunDetail.status}
+              </span>
+            </header>
+            <dl className="detail-list">
+              <div>
+                <dt>Run ID</dt>
+                <dd>{focusedRunDetail.run_id}</dd>
+              </div>
+              <div>
+                <dt>Started</dt>
+                <dd>{formatDateTime(focusedRunDetail.started_at)}</dd>
+              </div>
+              <div>
+                <dt>Issue</dt>
+                <dd>{focusedRunDetail.sanitized_error_summary ?? "-"}</dd>
+              </div>
+            </dl>
+            <div className="run-step-summary-list">
+              {focusedRunDetail.step_summaries.map((step) => (
+                <div key={`${step.step_number}-${step.node_id ?? "step"}`} className="run-step-summary">
+                  <span>{step.step_number}</span>
+                  <strong>{step.action_type}</strong>
+                  <span>{step.status}</span>
+                  <small>{step.sanitized_error_summary ?? step.node_id ?? "-"}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+        ) : null}
         {sortedRuns.length === 0 ? (
           <div className="empty-state">
             <h2>No runs in this session</h2>
