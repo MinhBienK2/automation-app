@@ -82,12 +82,13 @@ Preserve these unless the task explicitly changes them.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
-- Run Center is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
+- Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
+- Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. `Run from selected` remains the direct retained-session debugging command.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.

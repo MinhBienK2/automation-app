@@ -1204,6 +1204,18 @@ function App() {
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
             defaultEdgeDelay={workflowSettings?.graph_defaults?.default_edge_delay ?? null}
+            workflowIdentityLabel={
+              workflowSettings?.browser_launch.display_name ||
+              workflowSettings?.browser_launch.identity_id ||
+              null
+            }
+            workflowSessionLabel={
+              workflowSettings?.browser_launch.session_mode === "persistent_profile"
+                ? "Reuse login session"
+                : workflowSettings?.browser_launch.session_mode
+                  ? "Temporary browser session"
+                  : null
+            }
             onBack={backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => stopRun(detailRunSnapshot?.run_id ?? null)}

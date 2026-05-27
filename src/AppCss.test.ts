@@ -60,14 +60,14 @@ describe("App CSS", () => {
     const settingsDisclosure = cssRule(".workflow-settings-help-disclosure");
     const settingsItem = cssRule(".workflow-settings-help-item");
 
-    expect(helpDisclosure).toContain("border: 1px solid #2e2e2e");
+    expect(helpDisclosure).toContain("border: 1px solid #233240");
     expect(helpSummary).toContain("cursor: pointer");
     expect(helpSummary).toContain("list-style: none");
     expect(fieldGroupSummary).toContain("cursor: pointer");
-    expect(fieldLeaf).toContain("border-top: 1px solid #242424");
-    expect(optionDisclosure).toContain("border: 1px solid #242424");
-    expect(settingsDisclosure).toContain("background: #0f0f0f");
-    expect(settingsItem).toContain("border: 1px solid #2e2e2e");
+    expect(fieldLeaf).toContain("border-top: 1px solid #233240");
+    expect(optionDisclosure).toContain("border: 1px solid #233240");
+    expect(settingsDisclosure).toContain("background: #121c26");
+    expect(settingsItem).toContain("border: 1px solid #233240");
   });
 
   test("removes legacy backdrop CSS after Radix dialog migration", () => {
@@ -84,12 +84,12 @@ describe("App CSS", () => {
   test("exposes design tokens for shared UI primitives", () => {
     const root = cssRule(":root");
 
-    expect(root).toContain("--app-bg: #171717");
-    expect(root).toContain("--app-surface: #0f0f0f");
-    expect(root).toContain("--app-accent: #3ecf8e");
-    expect(root).toContain("--app-radius-pill: 9999px");
+    expect(root).toContain("--app-bg: #0b1016");
+    expect(root).toContain("--app-surface: #121c26");
+    expect(root).toContain("--app-accent: #32d3e6");
+    expect(root).toContain("--app-radius-pill: 8px");
     expect(buttonSource).toContain("var(--app-accent-border)");
-    expect(buttonSource).not.toContain("#3ecf8e");
+    expect(buttonSource).not.toContain("#32d3e6");
   });
 
   test("does not scale font sizes with viewport units", () => {
@@ -109,8 +109,8 @@ describe("App CSS", () => {
     expect(addStepPalette).toContain("width: min(760px, calc(100vw - 48px))");
     expect(addStepPalette).toContain("max-height: min(760px, calc(100dvh - 48px))");
     expect(paletteBody).toContain("grid-template-columns: 160px minmax(0, 1fr)");
-    expect(actionCategory).toContain("color: #b4b4b4");
-    expect(actionCategoryActive).toContain("color: #3ecf8e");
+    expect(actionCategory).toContain("color: #9aaebd");
+    expect(actionCategoryActive).toContain("color: #32d3e6");
     expect(actionResultList).toContain("overflow-y: auto");
     expect(css).toContain(".action-result-list {\n  grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(actionResult).toContain("min-height: 58px");
@@ -122,7 +122,7 @@ describe("App CSS", () => {
     expect(css).not.toContain(".builder-grid");
     expect(css).not.toContain(".step-list");
     expect(css).not.toContain(".step-detail-panel");
-    expect(pageBackButton).toContain("border: 1px solid #2e2e2e");
+    expect(pageBackButton).toContain("border: 1px solid #233240");
     expect(toastAlert).toContain("position: fixed");
     expect(toastAlert).toContain("z-index: 70");
     expect(toastAlert).toContain("bottom: 24px");
@@ -178,15 +178,15 @@ describe("App CSS", () => {
     expect(css).not.toContain(".graph-connection-preview");
     expect(connectionLine).toContain("z-index: 40");
     expect(connectionLine).toContain("overflow: visible");
-    expect(connectionPath).toContain("stroke: #3ecf8e");
+    expect(connectionPath).toContain("stroke: #32d3e6");
     expect(connectionPath).toContain("stroke-width: 3");
     expect(connectionPath).toContain("stroke-linecap: round");
-    expect(edgePath).toContain("stroke: #4d4d4d");
+    expect(edgePath).toContain("stroke: #3e5668");
     expect(edgePath).toContain("stroke-width: 2.5");
-    expect(edgeLabel).toContain("fill: #b4b4b4");
-    expect(edgeLabelBackground).toContain("fill: #0f0f0f");
-    expect(activeSourceHandle).toContain("background: #fafafa");
-    expect(validTargetHandle).toContain("background: #00c573");
+    expect(edgeLabel).toContain("fill: #9aaebd");
+    expect(edgeLabelBackground).toContain("fill: #121c26");
+    expect(activeSourceHandle).toContain("background: #e7eef5");
+    expect(validTargetHandle).toContain("background: #39d98a");
   });
 
   test("keeps graph node body drags above labels and below ports", () => {
@@ -224,12 +224,12 @@ describe("App CSS", () => {
       ".graph-canvas .graph-edge-failed.graph-edge-selected .react-flow__edge-path",
     );
 
-    expect(selectedNode).not.toContain("border-color: rgba(34, 211, 238");
-    expect(selectedNode).toContain("outline: 2px solid rgba(34, 211, 238");
-    expect(selectedIssueNode).toContain("border-color: rgba(251, 191, 36");
-    expect(selectedFailedNode).toContain("border-color: rgba(248, 113, 113");
-    expect(selectedIssueEdge).toContain("stroke: #fbbf24");
-    expect(selectedFailedEdge).toContain("stroke: #ff7b72");
+    expect(selectedNode).not.toContain("border-color: rgba(50, 211, 230");
+    expect(selectedNode).toContain("outline: 2px solid rgba(50, 211, 230");
+    expect(selectedIssueNode).toContain("border-color: rgba(244, 183, 64");
+    expect(selectedFailedNode).toContain("border-color: rgba(240, 100, 103");
+    expect(selectedIssueEdge).toContain("stroke: #f4b740");
+    expect(selectedFailedEdge).toContain("stroke: #f06467");
   });
 
   test("keeps variable rows tabular while protecting narrow inspectors from overflow", () => {
@@ -249,12 +249,12 @@ describe("App CSS", () => {
     const fieldGroupGrid = cssRule(".settings-field-group-grid");
     const fieldGroupFooter = cssRule(".settings-field-group-footer");
 
-    expect(fieldGroup).toContain("border: 1px solid #2e2e2e");
+    expect(fieldGroup).toContain("border: 1px solid #233240");
     expect(fieldGroup).toContain("border-radius: 8px");
-    expect(fieldGroup).toContain("background: #0f0f0f");
-    expect(fieldGroupHeader).toContain("border-bottom: 1px solid #242424");
+    expect(fieldGroup).toContain("background: #121c26");
+    expect(fieldGroupHeader).toContain("border-bottom: 1px solid #233240");
     expect(fieldGroupGrid).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
-    expect(fieldGroupFooter).toContain("color: #898989");
+    expect(fieldGroupFooter).toContain("color: #667d8d");
     expect(cssRule(".settings-field-group-wide")).toContain("grid-column: 1 / -1");
     expect(cssRule(".settings-field-group-actions")).toContain("flex-wrap: wrap");
   });

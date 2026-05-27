@@ -59,8 +59,8 @@ export function AppSidebar({
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
-        <img className="sidebar-logo" src={appLogoSrc} alt="Automation App logo" />
-        <span className="sidebar-title">Workflow Manager</span>
+        <img className="sidebar-logo" src={appLogoSrc} alt="Mission Control logo" />
+        <span className="sidebar-title">Mission Control</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
         <Button
@@ -87,7 +87,7 @@ export function AppSidebar({
           onClick={onOpenRunCenter}
         >
           <Activity aria-hidden="true" className="sidebar-item-icon" />
-          <span>Run Center</span>
+          <span>Runs</span>
         </Button>
         <Button
           className={

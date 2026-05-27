@@ -22,6 +22,12 @@ describe("App settings and graph autosave", () => {
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
+  async function confirmLaunchRun(scope: HTMLElement = document.body) {
+    await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
+    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
+  }
+
   test("opens settings from the sidebar and persists the autosave preference", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
@@ -60,7 +66,7 @@ describe("App settings and graph autosave", () => {
     expect(within(shortcuts).getByText("Hold Space + drag")).toBeInTheDocument();
     expect(within(shortcuts).getByText("Pan the graph view")).toBeInTheDocument();
     expect(within(shortcuts).getByText("Ctrl/Cmd + Enter")).toBeInTheDocument();
-    expect(within(shortcuts).getByText("Run workflow")).toBeInTheDocument();
+    expect(within(shortcuts).getByText("Launch Run")).toBeInTheDocument();
   });
 
   test("autosaves graph changes by default", async () => {
@@ -134,7 +140,7 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByText("Autosave failed")).toBeInTheDocument();
 
     const header = screen.getByRole("region", { name: "Workflow detail header" });
-    await userEvent.click(within(header).getByRole("button", { name: "Run" }));
+    await confirmLaunchRun(header);
 
     await waitFor(() => {
       expect(saveGraph).toHaveBeenCalled();
@@ -157,7 +163,7 @@ describe("App settings and graph autosave", () => {
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     expect(within(header).getByRole("button", { name: "Validate" })).toBeInTheDocument();
-    expect(within(header).getByRole("button", { name: "Run" })).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: "Launch Run" })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "Save" })).toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Validate Graph" }))
       .not.toBeInTheDocument();
