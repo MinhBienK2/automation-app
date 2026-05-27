@@ -80,9 +80,6 @@ The complete feature is done only when all of the following are true:
   after record-to-run stability is proven.
 - Testable phases: every phase must leave the product in a coherent state with
   focused tests.
-- Auditability by design: full governance can be phased after stable replay, but
-  the data model and extension points must not block later allowlists, test
-  account binding, evidence, or approval gates.
 
 ## Non-Goals For The First Stable MVP
 
@@ -95,11 +92,9 @@ The first stable MVP does not need to support:
 - Multi-user collaborative recording.
 - Recording arbitrary browser extensions.
 - Recording unsupported native OS dialogs.
-- Full governance UI for domain allowlists, test accounts, evidence review, and
-  operator approval.
 
-Those capabilities remain part of the complete product roadmap where noted
-below.
+Anything outside record-to-graph-to-replay requires a separate spec and must not
+be added to this implementation plan.
 
 ## Chosen Approach
 
@@ -395,9 +390,8 @@ Backend observation should capture:
 - Page load and network idle markers where useful for wait inference.
 - Browser close or crash.
 
-Event capture must sanitize and bound raw payloads. It should not store
-unbounded DOM snapshots, full page HTML, cookies, localStorage, sessionStorage,
-password values, or secrets from protected input fields.
+Event capture should store only the fields needed for replay and debugging. It
+must not store unbounded DOM snapshots or full page HTML.
 
 ## Action Mapping
 
@@ -417,7 +411,7 @@ password values, or secrets from protected input fields.
 | Element-focused scroll | `scroll` with `mode: "into_view"` when target is clear |
 | Enter/Escape/Tab or hotkey | `press_key` or `hotkey` |
 | Form submit | `submit_form` when a stable submit target exists, otherwise click/press sequence |
-| File chooser | `upload_file` only if local file path policy is designed and reviewed |
+| File chooser | `upload_file` when the recorder can reliably capture the selected path for local replay |
 | Download | `wait_for_download` when the action contract can represent it |
 | Dialog accept/dismiss | `accept_dialog` or `dismiss_dialog` |
 | Meaningful pause | `wait` or `random_wait` only after normalization |
@@ -440,8 +434,6 @@ Normalization rules:
 - Add a wait after navigation when lifecycle timing proves the page changed.
 - Merge focus plus typing into one input action.
 - Prefer the last value before blur, enter, submit, click-away, or stop.
-- Mark password or secret-like fields as redacted and require review before
-  saving a value.
 - Preserve event sequence so generated graph order is deterministic.
 
 ## Graph Generation
@@ -504,52 +496,17 @@ Generated `ElementTarget` values should use existing structured target bundles:
 Low-confidence locators do not block draft generation, but they must be visible
 in review and covered by replay tests.
 
-## Sensitive Values
+## Recorder Scope Boundary
 
-Recorder must treat sensitive values conservatively.
+This spec is only for turning recorded browser usage into a normal workflow
+graph and replaying that graph reliably.
 
-MVP behavior:
+The recorder must:
 
-- Do not store values from `input[type=password]`.
-- Warn on field names, labels, placeholders, or autocomplete attributes that
-  suggest password, token, secret, API key, OTP, or credential material.
-- Allow the generated input action to exist with a placeholder variable value
-  instead of the captured secret.
-- Make the warning visible in review.
-
-Complete behavior:
-
-- Support operator-managed variables for secrets.
-- Support test account binding metadata.
-- Support evidence redaction for recorded values.
-
-## Safety And Governance Phasing
-
-The user preference is to make stable record/replay work first, then add the
-full governance layer. This spec follows that preference while preserving the
-extension points.
-
-MVP minimum:
-
-- The recorder uses backend-owned browser launch and normal command errors.
-- The generated workflow is a review draft before save.
-- Secret-like values are redacted or warned.
-- Unsupported events become warnings instead of hidden actions.
-
-Complete feature:
-
-- Domain allowlist can be inferred from initial navigation and edited before
-  save.
-- Test account metadata can be attached to a recording.
-- Recording evidence is captured and redacted in the same evidence model as
-  runs.
-- Operator approval can be required before a recording draft becomes runnable.
-- Generated workflows can include a `domain_allowlist` node when governance is
-  enabled.
-
-The complete governance layer must not be implemented by adding renderer-only
-checks. Backend validation and saved graph/settings contracts must enforce any
-blocking policy.
+- Use backend-owned browser launch and normal command errors.
+- Keep the generated workflow as a review draft before save.
+- Convert unsupported captured behavior into review warnings.
+- Avoid adding unrelated requirements to this implementation.
 
 ## Error Handling
 
@@ -691,7 +648,6 @@ Work:
 - Inject bounded page-side event capture.
 - Observe main-frame navigation.
 - Collect raw events in sequence.
-- Sanitize secret-like values.
 - Add backend tests with a fake page adapter where possible.
 
 Checks:
@@ -704,7 +660,7 @@ Checks:
 Exit criteria:
 
 - Recorded event stream is deterministic enough for normalization.
-- Unsupported or secret-like events produce warnings.
+- Unsupported events produce warnings.
 - Commit created.
 
 ### Phase 3: Locator Generation And Timeline Normalization
@@ -819,7 +775,7 @@ Work:
 - Add keyboard/hotkey support.
 - Add tab support.
 - Add download/dialog handling.
-- Add upload support only with explicit local file policy.
+- Add upload support when selected local files can replay reliably.
 - Add screenshot/action evidence integration where relevant.
 - Add tests per action family.
 
@@ -835,35 +791,7 @@ Exit criteria:
 - Unsupported behaviors remain warnings.
 - Commit created after each action-family slice.
 
-### Phase 8: Governance, Evidence, And Approval
-
-Goal: complete the governance layer after stable replay is proven.
-
-Work:
-
-- Add domain allowlist inference and edit/review support.
-- Add optional generated `domain_allowlist` node.
-- Add test account metadata to recording sessions or workflow settings.
-- Add recording evidence summary with redaction.
-- Add operator approval before a generated workflow becomes runnable when
-  governance mode is enabled.
-- Add backend validation for blocking policies.
-- Update docs for product model, invariants, execution semantics, command
-  boundary, workflow types, run-state/evidence if changed, and README smoke.
-
-Checks:
-
-- Focused backend validation tests.
-- UI approval flow tests.
-- Runner/domain allowlist tests.
-- E2E governance fixture.
-
-Exit criteria:
-
-- Full scope controls exist and are enforced by backend contracts.
-- Commit created.
-
-### Phase 9: Final Hardening And Completion Audit
+### Phase 8: Final Hardening And Completion Audit
 
 Goal: prove the full Definition Of Done and close the implementation ledger.
 
@@ -979,10 +907,8 @@ Docs-only phase changes can skip TDD. Runtime behavior changes cannot.
 | Event stream captures too much noise | Timeline normalization and tests that assert small generated action count. |
 | Renderer accidentally owns browser logic | IPC-only contract tests and architecture review. |
 | Generated graphs bypass validation | Backend graph validation before save and compiler tests. |
-| Secret values are captured | Password/secret detection, redaction, warnings, and later variable support. |
 | Feature grows too large before stability | Phase gates and commit-after-test rule. |
 | Agents forget remaining work | Source-controlled implementation ledger and final prompt-to-artifact audit. |
-| Governance deferred too long | Extension points in data model and explicit Phase 8 completion gate. |
 
 ## Open Product Choices Fixed By This Spec
 
@@ -990,8 +916,7 @@ Docs-only phase changes can skip TDD. Runtime behavior changes cannot.
 - The first implementation prioritizes new workflow creation over replacing an
   existing graph.
 - Review before save is required.
-- Full governance is phased after stable replay but remains part of complete
-  Done.
+- Anything outside record-to-graph-to-replay needs a separate spec.
 - Coordinate-only replay is not a primary strategy.
 - The implementation must be phase-based with a commit after each tested phase.
 
@@ -1013,7 +938,5 @@ evidence:
 - Record-to-replay E2E passes on a deterministic fixture.
 - Source-of-truth docs are updated.
 - Phase ledger is complete with commit hashes and checks.
-- Governance Phase 8 is complete for the final product, or the ledger clearly
-  says the shipped scope is an MVP and final product remains incomplete.
 
 If any item lacks evidence, the feature is not done.
