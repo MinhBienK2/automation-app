@@ -66,6 +66,7 @@ Focused commands:
 - `npm run test:e2e:full -- tests/e2e/electron-isolation.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/core-execution.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/capture-network.e2e.ts`
+- `npm run test:e2e:full -- tests/e2e/human-behavior.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/keyboard-dialog.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/pointer-actions.e2e.ts`
 - `npm run test:e2e:full -- tests/e2e/navigation-actions.e2e.ts`
@@ -87,6 +88,7 @@ Desktop coverage map:
 - `core-execution.e2e.ts`: `navigate`, `click`, `wait(text_visible)`, `input_text`, `clear_input`, `select_option` by label and value, `check`, `uncheck`, `toggle_checkbox`, `select_radio`, `submit_form`, `extract_text`, `extract_input_value`.
 - `capture-network.e2e.ts`: `extract_text`, `extract_attribute`, `extract_input_value`, `extract_list`, `extract_table`, `take_screenshot`, `wait_for_download`, `execute_js`, `wait_for_request`, `wait_for_response` with status-filtered and unfiltered matching, `block_request`, `mock_response`.
 - `keyboard-dialog.e2e.ts`: `focus_element`, `blur_element`, `press_key`, `hotkey`, `set_clipboard`, `paste_clipboard`, `type_sequence`, `accept_dialog`, `dismiss_dialog`.
+- `human-behavior.e2e.ts`: `hover`, `click`, `double_click`, `right_click`, `input_text`, `type_sequence`, and page scroll emit trusted page-observable mouse, pointer, keyboard, wheel, and scroll event sequences with CloakBrowser humanization enabled.
 - `pointer-actions.e2e.ts`: `click`, `double_click`, `right_click`, `hover`, `drag_and_drop`, `scroll` page, into-view, and until-visible modes.
 - `navigation-actions.e2e.ts`: `navigate`, `go_back`, `go_forward`, `reload`, `open_new_tab`, `switch_tab`, `close_tab`.
 - `extended-form-actions.e2e.ts`: `upload_file`, `select_custom_option`, `set_contenteditable`.
@@ -103,7 +105,7 @@ E2E lanes:
 - `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, and coverage matrix.
 - `npm run test:e2e:full`: all local deterministic desktop E2E. This lane intentionally uses helper defaults that run workflow browsers headless and close them after each workflow so CI and local verification stay deterministic.
 - `npm run test:e2e:visible`: local browser-observable review/debug lane. It runs only suites with meaningful browser-page behavior, excluding coverage, package, Electron-isolation, and UI-only journeys that would otherwise only show the desktop app. It sets `E2E_VISIBLE_BROWSER=1`, runs Playwright headed, makes helper-created workflow browsers non-headless, retains the workflow browser at terminal state, and waits briefly after helper-driven runs. Set `E2E_OBSERVE_MS=<milliseconds>` to change the post-run observation pause.
-- `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing and humanized pointer regressions.
+- `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing, humanized pointer, form, and keyboard regressions.
 
 Lower-level coverage:
 

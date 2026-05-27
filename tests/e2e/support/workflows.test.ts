@@ -46,6 +46,7 @@ describe("E2E workflow runtime overrides", () => {
       "tests/e2e/capture-network.e2e.ts",
       "tests/e2e/core-execution.e2e.ts",
       "tests/e2e/extended-form-actions.e2e.ts",
+      "tests/e2e/human-behavior.e2e.ts",
       "tests/e2e/keyboard-dialog.e2e.ts",
       "tests/e2e/navigation-actions.e2e.ts",
       "tests/e2e/pointer-actions.e2e.ts",

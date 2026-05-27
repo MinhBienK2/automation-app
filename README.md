@@ -85,7 +85,8 @@ To slow the post-run observation window:
 E2E_OBSERVE_MS=3000 npm run test:e2e:visible -- tests/e2e/core-execution.e2e.ts
 ```
 
-Run high-risk E2E interaction suites repeatedly to catch flaky pointer/form/keyboard behavior:
+Run high-risk E2E interaction suites repeatedly to catch flaky pointer, humanized
+interaction, form, and keyboard behavior:
 
 ```bash
 npm run test:e2e:flake

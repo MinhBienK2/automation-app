@@ -37,6 +37,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, pointerPage());
       return;
     }
+    if (url.pathname === "/human-behavior") {
+      respondHtml(response, humanBehaviorPage());
+      return;
+    }
     if (url.pathname === "/history-a") {
       respondHtml(response, historyPage("a"));
       return;
@@ -357,6 +361,202 @@ function pointerPage() {
       setTimeout(() => {
         document.querySelector('[data-testid="until-visible-target"]').hidden = false;
       }, 80);
+    </script>
+  </body>
+</html>`;
+}
+
+function humanBehaviorPage() {
+  return `<!doctype html>
+<html>
+  <head>
+    <title>Human Behavior Fixture</title>
+    <style>
+      body { font-family: sans-serif; margin: 0; min-height: 1800px; padding: 24px; }
+      button, input {
+        display: block;
+        font-size: 16px;
+        margin: 22px 0;
+        min-height: 52px;
+        min-width: 260px;
+        padding: 12px 16px;
+      }
+      input { box-sizing: border-box; width: 320px; }
+      [data-testid="human-summary"] {
+        background: #fff;
+        border: 1px solid #d0d5dd;
+        font-size: 12px;
+        margin-bottom: 20px;
+        padding: 10px;
+        white-space: pre-wrap;
+      }
+      [data-testid="scroll-marker"] { margin-top: 720px; }
+    </style>
+  </head>
+  <body>
+    <pre data-testid="human-summary">{}</pre>
+    <button data-testid="human-hover" type="button">Human hover target</button>
+    <button data-testid="human-click" type="button">Human click target</button>
+    <button data-testid="human-double-click" type="button">Human double click target</button>
+    <button data-testid="human-right-click" type="button">Human right click target</button>
+    <label>Human input <input data-testid="human-input" value=""></label>
+    <label>Human type sequence <input data-testid="human-type-sequence" value=""></label>
+    <div data-testid="scroll-marker">Scroll marker</div>
+    <script>
+      const summary = document.querySelector('[data-testid="human-summary"]');
+      const humanInput = document.querySelector('[data-testid="human-input"]');
+      const humanTypeSequence = document.querySelector('[data-testid="human-type-sequence"]');
+      const startedAt = performance.now();
+      const metrics = {
+        global: {
+          mouse_moves: 0,
+          pointer_moves: 0,
+          untrusted_events: 0,
+          duration_ms: 0,
+        },
+        hover: {
+          enter_trusted: false,
+          moves_before_enter: 0,
+        },
+        click: {
+          down_trusted: false,
+          up_trusted: false,
+          click_trusted: false,
+          moves_before_down: 0,
+        },
+        double_click: {
+          dblclick_trusted: false,
+          click_events: 0,
+        },
+        right_click: {
+          down_button: null,
+          up_button: null,
+          contextmenu_trusted: false,
+        },
+        input: {
+          value: '',
+          trusted_keydowns: 0,
+          trusted_inputs: 0,
+        },
+        type_sequence: {
+          value: '',
+          trusted_keydowns: 0,
+          trusted_inputs: 0,
+        },
+        scroll: {
+          trusted_wheels: 0,
+          scroll_events: 0,
+          max_scroll_y: 0,
+        },
+      };
+
+      function recordTrust(event) {
+        if (!event.isTrusted) metrics.global.untrusted_events += 1;
+      }
+
+      function render() {
+        metrics.global.duration_ms = Math.round(performance.now() - startedAt);
+        metrics.input.value = humanInput.value;
+        metrics.type_sequence.value = humanTypeSequence.value;
+        summary.textContent = JSON.stringify(metrics);
+      }
+
+      document.addEventListener('mousemove', (event) => {
+        recordTrust(event);
+        metrics.global.mouse_moves += 1;
+        render();
+      }, true);
+      document.addEventListener('pointermove', (event) => {
+        recordTrust(event);
+        metrics.global.pointer_moves += 1;
+        render();
+      }, true);
+      document.addEventListener('wheel', (event) => {
+        recordTrust(event);
+        if (event.isTrusted) metrics.scroll.trusted_wheels += 1;
+        render();
+      }, { capture: true, passive: true });
+      window.addEventListener('scroll', () => {
+        metrics.scroll.scroll_events += 1;
+        metrics.scroll.max_scroll_y = Math.max(metrics.scroll.max_scroll_y, Math.round(window.scrollY));
+        render();
+      }, { passive: true });
+
+      document.querySelector('[data-testid="human-hover"]').addEventListener('mouseenter', (event) => {
+        recordTrust(event);
+        if (metrics.hover.enter_trusted) {
+          render();
+          return;
+        }
+        metrics.hover.enter_trusted = event.isTrusted;
+        metrics.hover.moves_before_enter = metrics.global.mouse_moves;
+        render();
+      });
+
+      const clickTarget = document.querySelector('[data-testid="human-click"]');
+      clickTarget.addEventListener('mousedown', (event) => {
+        recordTrust(event);
+        metrics.click.down_trusted = event.isTrusted;
+        metrics.click.moves_before_down = metrics.global.mouse_moves;
+        render();
+      });
+      clickTarget.addEventListener('mouseup', (event) => {
+        recordTrust(event);
+        metrics.click.up_trusted = event.isTrusted;
+        render();
+      });
+      clickTarget.addEventListener('click', (event) => {
+        recordTrust(event);
+        metrics.click.click_trusted = event.isTrusted;
+        render();
+      });
+
+      const doubleClickTarget = document.querySelector('[data-testid="human-double-click"]');
+      doubleClickTarget.addEventListener('click', (event) => {
+        recordTrust(event);
+        if (event.isTrusted) metrics.double_click.click_events += 1;
+        render();
+      });
+      doubleClickTarget.addEventListener('dblclick', (event) => {
+        recordTrust(event);
+        metrics.double_click.dblclick_trusted = event.isTrusted;
+        render();
+      });
+
+      const rightClickTarget = document.querySelector('[data-testid="human-right-click"]');
+      rightClickTarget.addEventListener('mousedown', (event) => {
+        recordTrust(event);
+        metrics.right_click.down_button = event.button;
+        render();
+      });
+      rightClickTarget.addEventListener('mouseup', (event) => {
+        recordTrust(event);
+        metrics.right_click.up_button = event.button;
+        render();
+      });
+      rightClickTarget.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        recordTrust(event);
+        metrics.right_click.contextmenu_trusted = event.isTrusted;
+        render();
+      });
+
+      function monitorTextField(element, bucket) {
+        element.addEventListener('keydown', (event) => {
+          recordTrust(event);
+          if (event.isTrusted) metrics[bucket].trusted_keydowns += 1;
+          render();
+        });
+        element.addEventListener('input', (event) => {
+          recordTrust(event);
+          if (event.isTrusted) metrics[bucket].trusted_inputs += 1;
+          render();
+        });
+      }
+
+      monitorTextField(humanInput, 'input');
+      monitorTextField(humanTypeSequence, 'type_sequence');
+      render();
     </script>
   </body>
 </html>`;

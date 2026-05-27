@@ -14,6 +14,7 @@ export type CoverageEntry = {
 
 const coreExecution = ["tests/e2e/core-execution.e2e.ts"];
 const captureNetwork = ["tests/e2e/capture-network.e2e.ts"];
+const humanBehavior = ["tests/e2e/human-behavior.e2e.ts"];
 const keyboardDialog = ["tests/e2e/keyboard-dialog.e2e.ts"];
 const pointerActions = ["tests/e2e/pointer-actions.e2e.ts"];
 const navigationActions = ["tests/e2e/navigation-actions.e2e.ts"];
@@ -33,20 +34,20 @@ export const actionCoverage = {
   navigate: entry([...coreExecution, ...navigationActions, ...waitAssertion]),
   wait: entry([...coreExecution, ...waitAssertion, ...keyboardDialog]),
   random_wait: entry(waitAssertion),
-  input_text: entry(coreExecution),
+  input_text: entry([...coreExecution, ...humanBehavior]),
   clear_input: entry(coreExecution),
-  click: entry([...coreExecution, ...pointerActions, ...keyboardDialog]),
-  scroll: entry(pointerActions),
+  click: entry([...coreExecution, ...pointerActions, ...keyboardDialog, ...humanBehavior]),
+  scroll: entry([...pointerActions, ...humanBehavior]),
   select_option: entry(coreExecution),
   press_key: entry(keyboardDialog),
   hotkey: entry(keyboardDialog),
-  hover: entry(pointerActions),
-  double_click: entry(pointerActions),
-  right_click: entry(pointerActions),
+  hover: entry([...pointerActions, ...humanBehavior]),
+  double_click: entry([...pointerActions, ...humanBehavior]),
+  right_click: entry([...pointerActions, ...humanBehavior]),
   drag_and_drop: entry(pointerActions),
   focus_element: entry(keyboardDialog),
   blur_element: entry(keyboardDialog),
-  type_sequence: entry(keyboardDialog),
+  type_sequence: entry([...keyboardDialog, ...humanBehavior]),
   set_clipboard: entry(keyboardDialog),
   paste_clipboard: entry(keyboardDialog),
   check: entry(coreExecution),
@@ -60,12 +61,13 @@ export const actionCoverage = {
   extract_text: entry([
     ...coreExecution,
     ...captureNetwork,
+    ...humanBehavior,
     ...navigationActions,
     ...pointerActions,
     ...waitAssertion,
   ]),
   extract_attribute: entry(captureNetwork),
-  extract_input_value: entry([...coreExecution, ...captureNetwork, ...keyboardDialog]),
+  extract_input_value: entry([...coreExecution, ...captureNetwork, ...keyboardDialog, ...humanBehavior]),
   extract_table: entry(captureNetwork),
   extract_list: entry(captureNetwork),
   take_screenshot: entry(captureNetwork),
@@ -122,6 +124,7 @@ export const graphNodeCoverage = {
   action: entry([
     ...coreExecution,
     ...captureNetwork,
+    ...humanBehavior,
     ...keyboardDialog,
     ...pointerActions,
     ...navigationActions,
@@ -357,6 +360,34 @@ export const behaviorScenarios: BehaviorScenario[] = [
     expected_outcomes: ["Pointer summary records click, double click, right click, hover, drop, and scroll states"],
     capability_status: "covered",
     evidence: { files: pointerActions },
+  },
+  {
+    id: "humanized_interaction_signal_evidence",
+    domain: "element_interaction",
+    user_intent:
+      "Verify interaction actions produce page-observable browser input signals instead of direct DOM mutation.",
+    preconditions: ["Local /human-behavior fixture", "CloakBrowser humanization enabled"],
+    workflow_authoring: ["Linear graph with pointer, text input, type sequence, scroll, and extraction action nodes"],
+    browser_behavior: [
+      "Fixture records trusted mouse, pointer, keyboard, wheel, and scroll events plus basic movement counts.",
+    ],
+    actions_and_fields: [
+      "browser_launch.humanize=true",
+      "hover.target",
+      "click.target",
+      "double_click.target",
+      "right_click.target",
+      "input_text.clear_before_input",
+      "type_sequence.text",
+      "scroll.mode=page",
+      "extract_text.output_name",
+    ],
+    expected_outcomes: [
+      "Run evidence reports CloakBrowser humanization enabled",
+      "Extracted JSON summary contains trusted pointer, keyboard, wheel, and scroll event signals",
+    ],
+    capability_status: "covered",
+    evidence: { files: humanBehavior },
   },
   {
     id: "keyboard_clipboard_dialog_flow",
@@ -606,6 +637,7 @@ export const capabilityTraceability: CapabilityTraceabilityEntry[] = [
   trace("extended_form_actions", ["extended_form_upload_custom_rich_text"], "covered", extendedForm),
   trace("history_and_tabs", ["navigation_history_and_tabs"], "covered", navigationActions),
   trace("element_interaction", ["pointer_page_interaction"], "covered", pointerActions),
+  trace("humanized_interaction_signals", ["humanized_interaction_signal_evidence"], "covered", humanBehavior),
   trace("keyboard_dialog", ["keyboard_clipboard_dialog_flow"], "covered", keyboardDialog),
   trace("capture_and_evidence", ["capture_network_evidence"], "covered", captureNetwork),
   trace("network_behavior", ["network_request_policy"], "covered", captureNetwork),
