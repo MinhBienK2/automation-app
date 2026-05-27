@@ -34,10 +34,18 @@ type PendingInput = {
   events: RecordingEvent[];
 };
 
+type PendingDedupedEvent = {
+  kind: "select" | "checkbox" | "radio" | "click" | "upload";
+  key: string;
+  events: RecordingEvent[];
+};
+
 export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedRecordingStep[] {
   const sortedEvents = [...events].sort((left, right) => left.sequence - right.sequence);
   const steps: ReviewedRecordingStep[] = [];
   let pendingInput: PendingInput | null = null;
+  let pendingDedupedEvent: PendingDedupedEvent | null = null;
+  let previousScrollPosition = { x: 0, y: 0 };
 
   const flushInput = () => {
     if (!pendingInput) return;
@@ -47,8 +55,22 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
     pendingInput = null;
   };
 
+  const flushDedupedEvent = () => {
+    if (!pendingDedupedEvent) return;
+    const finalEvent = pendingDedupedEvent.events[pendingDedupedEvent.events.length - 1];
+    const step = stepFromEvent(finalEvent, pendingDedupedEvent.events);
+    if (step) steps.push(withStepId(step, steps.length + 1));
+    pendingDedupedEvent = null;
+  };
+
+  const flushPending = () => {
+    flushInput();
+    flushDedupedEvent();
+  };
+
   for (const event of sortedEvents) {
     if (isInputEvent(event)) {
+      flushDedupedEvent();
       const key = targetKey(event.target);
       if (pendingInput && pendingInput.key === key) {
         pendingInput.events.push(event);
@@ -59,22 +81,52 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       continue;
     }
 
-    flushInput();
+    if (event.kind === "scroll") {
+      flushPending();
+      const scrollDelta = scrollEventWithDelta(event, previousScrollPosition);
+      if (!scrollDelta) continue;
+      previousScrollPosition = scrollDelta.position;
+      const step = stepFromEvent(scrollDelta.event, [event]);
+      if (step) steps.push(withStepId(step, steps.length + 1));
+      continue;
+    }
+
+    const dedupedKind = dedupedEventKind(event);
+    if (dedupedKind) {
+      flushInput();
+      const key = dedupedEventKey(dedupedKind, event);
+      if (
+        pendingDedupedEvent &&
+        canMergeDedupedEvent(pendingDedupedEvent, dedupedKind, key, event)
+      ) {
+        pendingDedupedEvent.events.push(event);
+      } else {
+        flushDedupedEvent();
+        pendingDedupedEvent = { kind: dedupedKind, key, events: [event] };
+      }
+      continue;
+    }
+
+    flushPending();
+    if (event.kind === "navigation") {
+      previousScrollPosition = { x: 0, y: 0 };
+    }
     const step = stepFromEvent(event);
     if (step) steps.push(withStepId(step, steps.length + 1));
   }
-  flushInput();
+  flushPending();
 
   return steps;
 }
 
 function stepFromEvent(
   event: RecordingEvent,
+  sourceEvents: RecordingEvent[] = [event],
 ): Omit<ReviewedRecordingStep, "id"> | null {
   if (event.kind === "navigation") {
     const url = event.page_url ?? event.frame_url;
     if (!url) return null;
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "navigate",
       config: {
         url,
@@ -86,7 +138,7 @@ function stepFromEvent(
     const locator = generateElementTarget(event.target);
     const clickType = stringValue(event.raw.click_type);
     if (clickType === "double" || numberValue(event.raw.detail) >= 2) {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "double_click",
         config: {
           target: locator.target,
@@ -96,7 +148,7 @@ function stepFromEvent(
       }, locator);
     }
     if (clickType === "right" || numberValue(event.raw.button) === 2) {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "right_click",
         config: {
           target: locator.target,
@@ -105,7 +157,7 @@ function stepFromEvent(
         },
       }, locator);
     }
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "click",
       config: {
         target: locator.target,
@@ -118,7 +170,7 @@ function stepFromEvent(
     const locator = generateElementTarget(event.target);
     const selectedValue = event.value?.selected_value?.trim();
     const selectedLabel = event.value?.selected_label?.trim();
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "select_option",
       config: {
         target: locator.target,
@@ -131,7 +183,7 @@ function stepFromEvent(
   }
   if (event.kind === "checkbox") {
     const locator = generateElementTarget(event.target);
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: event.value?.checked === false ? "uncheck" : "check",
       config: {
         target: locator.target,
@@ -143,7 +195,7 @@ function stepFromEvent(
   if (event.kind === "radio") {
     if (event.value?.checked === false) return null;
     const locator = generateElementTarget(event.target);
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "select_radio",
       config: {
         target: locator.target,
@@ -157,7 +209,7 @@ function stepFromEvent(
     if (!scroll) return null;
     const horizontal = Math.abs(scroll.x) > Math.abs(scroll.y);
     const amount = Math.max(1, Math.round(Math.abs(horizontal ? scroll.x : scroll.y)));
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "scroll",
       config: {
         mode: "page",
@@ -169,18 +221,18 @@ function stepFromEvent(
     });
   }
   if ((event.kind === "input" || event.kind === "change") && event.value?.file_names) {
-    return uploadStep(event);
+    return uploadStep(event, sourceEvents);
   }
   if (event.kind === "keyboard") {
     if (event.value?.keys?.length && event.value.keys.length > 1) {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "hotkey",
         config: { keys: event.value.keys },
       });
     }
     const key = event.value?.key ?? event.value?.keys?.[0];
     if (!key) return null;
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "press_key",
       config: { key },
     });
@@ -188,19 +240,19 @@ function stepFromEvent(
   if (event.kind === "tab") {
     const action = stringValue(event.raw.action);
     if (action === "open") {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "open_new_tab",
         config: { url: stringValue(event.raw.url) },
       });
     }
     const index = numberValue(event.raw.index);
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "switch_tab",
       config: { index: Number.isFinite(index) ? Math.max(0, Math.trunc(index)) : 0 },
     });
   }
   if (event.kind === "download") {
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "wait_for_download",
       config: {
         output_name: outputNameForDownload(event),
@@ -211,12 +263,12 @@ function stepFromEvent(
   if (event.kind === "dialog") {
     const action = stringValue(event.raw.action);
     if (action === "accept") {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "accept_dialog",
         config: { prompt_text: stringValue(event.raw.prompt_text) },
       });
     }
-    return recordingStep([event], {
+    return recordingStep(sourceEvents, {
       type: "dismiss_dialog",
       config: {},
     });
@@ -224,7 +276,7 @@ function stepFromEvent(
   if (event.kind === "wait_marker") {
     const action = stringValue(event.raw.action);
     if (action === "screenshot") {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "take_screenshot",
         config: {
           path: stringValue(event.raw.path) || `recorded-step-${event.sequence}.png`,
@@ -235,7 +287,7 @@ function stepFromEvent(
     }
     if (action === "submit") {
       const locator = generateElementTarget(event.target);
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "submit_form",
         config: {
           target: locator.target,
@@ -245,7 +297,7 @@ function stepFromEvent(
       }, locator);
     }
     if (action === "wait") {
-      return recordingStep([event], {
+      return recordingStep(sourceEvents, {
         type: "wait",
         config: {
           condition: waitCondition(event.raw.condition),
@@ -262,6 +314,7 @@ function stepFromEvent(
 
 function uploadStep(
   event: RecordingEvent,
+  sourceEvents: RecordingEvent[] = [event],
 ): Omit<ReviewedRecordingStep, "id"> | null {
   const locator = generateElementTarget(event.target);
   const files = stringArray(event.raw.reviewed_file_paths);
@@ -274,7 +327,7 @@ function uploadStep(
         event_id: event.id,
         severity: "warning" as const,
       }];
-  return recordingStep([event], {
+  return recordingStep(sourceEvents, {
     type: "upload_file",
     config: {
       target: locator.target,
@@ -351,6 +404,104 @@ function isInputEvent(event: RecordingEvent) {
     (event.kind === "input" || event.kind === "change") &&
     event.value?.text != null
   );
+}
+
+function dedupedEventKind(event: RecordingEvent): PendingDedupedEvent["kind"] | null {
+  if ((event.kind === "input" || event.kind === "change") && event.value?.file_names) {
+    return "upload";
+  }
+  if (
+    event.kind === "select" ||
+    event.kind === "checkbox" ||
+    event.kind === "radio" ||
+    event.kind === "click"
+  ) {
+    return event.kind;
+  }
+  return null;
+}
+
+function dedupedEventKey(
+  kind: PendingDedupedEvent["kind"],
+  event: RecordingEvent,
+) {
+  return `${kind}:${targetKey(event.target)}:${dedupedValueKey(kind, event)}`;
+}
+
+function dedupedValueKey(
+  kind: PendingDedupedEvent["kind"],
+  event: RecordingEvent,
+) {
+  if (kind === "select") {
+    return `${event.value?.selected_value ?? ""}\u0000${event.value?.selected_label ?? ""}`;
+  }
+  if (kind === "checkbox" || kind === "radio") {
+    return String(event.value?.checked ?? "");
+  }
+  if (kind === "upload") {
+    return event.value?.file_names?.join("\u0000") ?? "";
+  }
+  return "";
+}
+
+function canMergeDedupedEvent(
+  pending: PendingDedupedEvent,
+  kind: PendingDedupedEvent["kind"],
+  key: string,
+  event: RecordingEvent,
+) {
+  if (pending.kind !== kind || pending.key !== key) return false;
+  if (kind === "click") {
+    return (
+      pending.events.length === 1 &&
+      isSingleClickEvent(pending.events[0]) &&
+      isDoubleClickEvent(event)
+    );
+  }
+  return true;
+}
+
+function isSingleClickEvent(event: RecordingEvent) {
+  const clickType = stringValue(event.raw.click_type);
+  return (
+    event.kind === "click" &&
+    clickType !== "double" &&
+    clickType !== "right" &&
+    numberValue(event.raw.button) !== 2 &&
+    (clickType === "single" || numberValue(event.raw.detail) < 2)
+  );
+}
+
+function isDoubleClickEvent(event: RecordingEvent) {
+  const clickType = stringValue(event.raw.click_type);
+  return (
+    event.kind === "click" &&
+    (clickType === "double" || numberValue(event.raw.detail) >= 2)
+  );
+}
+
+function scrollEventWithDelta(
+  event: RecordingEvent,
+  previousPosition: { x: number; y: number },
+) {
+  const scroll = event.value?.scroll;
+  if (!scroll) return null;
+  const position = { x: scroll.x, y: scroll.y };
+  const delta = {
+    x: position.x - previousPosition.x,
+    y: position.y - previousPosition.y,
+  };
+  if (delta.x === 0 && delta.y === 0) return null;
+  return {
+    event: {
+      ...event,
+      value: {
+        ...event.value,
+        scroll: delta,
+      },
+    },
+    position,
+  };
 }
 
 function targetKey(target: RecordingTarget | null) {

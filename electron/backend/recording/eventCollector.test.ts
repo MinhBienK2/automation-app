@@ -164,13 +164,174 @@ describe("RecordingEventCollector", () => {
     expect(event.warnings).toEqual([
       expect.objectContaining({ code: "sensitive_input_redacted" }),
     ]);
-    expect(normalizeRecordingEvents([event])).toMatchObject([
-      {
-        included: false,
-        action: { type: "input_text", config: { text: "" } },
-        warnings: [expect.objectContaining({ code: "sensitive_input_redacted" })],
+    const [step] = normalizeRecordingEvents([event]);
+    expect(step).toMatchObject({
+      included: false,
+      action: { type: "input_text", config: { text: "" } },
+    });
+    expect(step.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "sensitive_input_redacted" }),
+      ]),
+    );
+  });
+
+  test("redacts sensitive text from target metadata and locator candidates", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_sensitive_target");
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "input",
+      page_url: "https://fixture.owned.test/login",
+      frame_url: "https://fixture.owned.test/login",
+      target: {
+        tag_name: "input",
+        input_type: "password",
+        text_sample: "super-secret-password",
+        accessible_name: "Password",
+        locators: [
+          {
+            kind: "css",
+            value: "[value='super-secret-password']",
+            score: 0.5,
+            reason: "Value fallback super-secret-password",
+          },
+        ],
       },
-    ]);
+      value: { text: "super-secret-password" },
+      raw: { input_type: "password" },
+      confidence: "high",
+      warnings: [],
+    });
+
+    const [event] = collector.listEvents();
+
+    expect(event.value).toEqual({ text: "" });
+    expect(JSON.stringify(event)).not.toContain("super-secret-password");
+    expect(event.target?.text_sample).toBeNull();
+    expect(event.target?.locators).toEqual([]);
+  });
+
+  test("redacts sensitive target metadata even when the event has no text value", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_sensitive_target_only");
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "click",
+      page_url: "https://fixture.owned.test/login",
+      frame_url: "https://fixture.owned.test/login",
+      target: {
+        tag_name: "input",
+        input_type: "password",
+        text_sample: "super-secret-password",
+        accessible_name: "Password",
+        locators: [
+          {
+            kind: "css",
+            value: "[value='super-secret-password']",
+            score: 0.5,
+            reason: "Value fallback super-secret-password",
+          },
+        ],
+      },
+      value: null,
+      raw: { input_type: "password" },
+      confidence: "high",
+      warnings: [],
+    });
+
+    const [event] = collector.listEvents();
+
+    expect(JSON.stringify(event)).not.toContain("super-secret-password");
+    expect(event.target?.text_sample).toBeNull();
+    expect(event.target?.locators).toEqual([]);
+  });
+
+  test("deeply bounds page-controlled raw payloads and warning messages", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_bounded");
+    const hugeText = "x".repeat(10_000);
+    const hugeUrl = `https://fixture.owned.test/${hugeText}`;
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "click",
+      page_url: hugeUrl,
+      frame_url: hugeUrl,
+      target: { tag_name: "button", text_sample: "Save", locators: [] },
+      value: null,
+      raw: {
+        hugeText,
+        nested: {
+          hugeText,
+          list: Array.from({ length: 100 }, (_, index) => ({ index, hugeText })),
+        },
+      },
+      confidence: "high",
+      warnings: [
+        {
+          code: "page_warning",
+          message: hugeText,
+          severity: "warning",
+        },
+      ],
+    });
+
+    const [event] = collector.listEvents();
+    const serialized = JSON.stringify(event);
+
+    expect(serialized).not.toContain(hugeText);
+    expect(serialized.length).toBeLessThan(8_000);
+    expect(event.page_url?.length).toBeLessThanOrEqual(2_048);
+    expect(event.frame_url?.length).toBeLessThanOrEqual(2_048);
+    expect(String(event.raw.hugeText)).toHaveLength(500);
+    expect(event.warnings[0]?.message).toHaveLength(500);
+  });
+
+  test("bounds unsupported page-controlled event kind warnings", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_bad_kind");
+    const hugeKind = "unsupported-".concat("x".repeat(10_000));
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: hugeKind,
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      raw: { hugeKind },
+      confidence: "high",
+      warnings: [],
+    });
+
+    const [event] = collector.listEvents();
+
+    expect(event.kind).toBe("wait_marker");
+    expect(event.warnings[0]?.message).not.toContain(hugeKind);
+    expect(event.warnings[0]?.message.length).toBeLessThanOrEqual(160);
+    expect(JSON.stringify(event).length).toBeLessThan(2_000);
+  });
+
+  test("caps page-controlled recording events per session", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_cap");
+
+    await collector.attachPage(page);
+    for (let index = 0; index < 1_105; index += 1) {
+      await page.emit({
+        kind: "click",
+        page_url: "https://fixture.owned.test/form",
+        frame_url: "https://fixture.owned.test/form",
+        target: { tag_name: "button", text_sample: `Save ${index}`, locators: [] },
+        value: null,
+        raw: { index },
+        confidence: "high",
+        warnings: [],
+      });
+    }
+
+    expect(collector.listEvents()).toHaveLength(1_000);
   });
 
   test("drops malformed locator candidates from page-controlled payloads", async () => {

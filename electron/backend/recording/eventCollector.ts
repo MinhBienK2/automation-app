@@ -51,6 +51,13 @@ type RecorderCapablePage = BrowserDriverPage & {
 };
 
 const RECORDER_CAPTURE_BINDING = "__wamRecorderCapture";
+const MAX_RECORDING_EVENTS = 1_000;
+const MAX_RAW_DEPTH = 3;
+const MAX_RAW_OBJECT_ENTRIES = 16;
+const MAX_RAW_ARRAY_ITEMS = 8;
+const MAX_RAW_STRING_LENGTH = 500;
+const MAX_WARNING_MESSAGE_LENGTH = 500;
+const MAX_URL_STRING_LENGTH = 2_048;
 
 const RECORDABLE_EVENT_KINDS = new Set<RecordingEventKind>([
   "navigation",
@@ -191,13 +198,14 @@ export class RecordingEventCollector {
   }
 
   recordNavigation(url: string) {
+    const publicUrl = boundedString(url, MAX_URL_STRING_LENGTH) ?? "";
     this.pushEvent({
       kind: "navigation",
-      frame_url: url,
-      page_url: url,
+      frame_url: publicUrl,
+      page_url: publicUrl,
       target: null,
       value: null,
-      raw: { url },
+      raw: { url: publicUrl },
       confidence: "high",
       warnings: [],
     });
@@ -208,8 +216,8 @@ export class RecordingEventCollector {
     if (!kind || !isRecordingEventKind(kind)) {
       this.pushEvent({
         kind: "wait_marker",
-        frame_url: stringOrNull(payload.frame_url),
-        page_url: stringOrNull(payload.page_url),
+        frame_url: boundedString(payload.frame_url, MAX_URL_STRING_LENGTH),
+        page_url: boundedString(payload.page_url, MAX_URL_STRING_LENGTH),
         target: null,
         value: null,
         raw: boundedRecord(payload.raw),
@@ -217,7 +225,7 @@ export class RecordingEventCollector {
         warnings: [
           {
             code: "unsupported_recording_event",
-            message: `Unsupported recorder event kind: ${String(payload.kind)}`,
+            message: `Unsupported recorder event kind: ${boundedDisplayValue(payload.kind, 120)}`,
             severity: "warning",
           },
         ],
@@ -228,7 +236,9 @@ export class RecordingEventCollector {
     let value = recordingValueOrNull(payload.value);
     let raw = boundedRecord(payload.raw);
     let warnings = recordingWarnings(payload.warnings);
-    if (value?.text != null && isSensitiveTextTarget(target, raw)) {
+    const sensitiveTarget = isSensitiveTextTarget(target, raw);
+    const sensitiveTextTarget = value?.text != null && sensitiveTarget;
+    if (sensitiveTextTarget) {
       value = { text: "" };
       raw = {
         ...redactSensitiveRaw(raw),
@@ -244,11 +254,12 @@ export class RecordingEventCollector {
         },
       ];
     }
+    const publicTarget = sensitiveTarget ? redactSensitiveTarget(target) : target;
     this.pushEvent({
       kind,
-      frame_url: stringOrNull(payload.frame_url),
-      page_url: stringOrNull(payload.page_url),
-      target,
+      frame_url: boundedString(payload.frame_url, MAX_URL_STRING_LENGTH),
+      page_url: boundedString(payload.page_url, MAX_URL_STRING_LENGTH),
+      target: publicTarget,
       value,
       raw,
       confidence:
@@ -262,6 +273,7 @@ export class RecordingEventCollector {
   private pushEvent(
     input: Omit<RecordingEvent, "id" | "session_id" | "sequence" | "timestamp">,
   ) {
+    if (this.events.length >= MAX_RECORDING_EVENTS) return;
     const sequence = this.events.length + 1;
     this.events.push({
       id: `${this.sessionId}_evt_${sequence}`,
@@ -293,7 +305,8 @@ function isRecordingEventKind(value: string): value is RecordingEventKind {
   return RECORDABLE_EVENT_KINDS.has(value as RecordingEventKind);
 }
 
-function recordingTargetOrNull(value: unknown): RecordingTarget | null {
+function recordingTargetOrNull(value: unknown, depth = 0): RecordingTarget | null {
+  if (depth > MAX_RAW_DEPTH) return null;
   const raw = objectRecord(value);
   const tagName = stringOrNull(raw.tag_name)?.toLowerCase();
   if (!tagName) return null;
@@ -303,7 +316,7 @@ function recordingTargetOrNull(value: unknown): RecordingTarget | null {
     text_sample: boundedString(raw.text_sample),
     role: stringOrNull(raw.role),
     accessible_name: boundedString(raw.accessible_name),
-    iframe: recordingTargetOrNull(raw.iframe),
+    iframe: recordingTargetOrNull(raw.iframe, depth + 1),
     locators: recordingLocatorCandidates(raw.locators),
     bounding_box: boundingBoxOrNull(raw.bounding_box),
   };
@@ -366,13 +379,13 @@ function recordingWarnings(value: unknown): RecordingWarning[] {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 12).flatMap((item) => {
     const raw = objectRecord(item);
-    const code = stringOrNull(raw.code);
-    const message = stringOrNull(raw.message);
+    const code = boundedString(raw.code, 80);
+    const message = boundedString(raw.message, MAX_WARNING_MESSAGE_LENGTH);
     if (!code || !message) return [];
     return [{
       code,
       message,
-      event_id: stringOrNull(raw.event_id),
+      event_id: boundedString(raw.event_id, 120),
       severity:
         raw.severity === "error" || raw.severity === "info"
           ? raw.severity
@@ -402,11 +415,40 @@ function scrollOrNull(value: unknown) {
 function boundedRecord(value: unknown): Record<string, unknown> {
   const raw = objectRecord(value);
   return Object.fromEntries(
-    Object.entries(raw).slice(0, 24).map(([key, entry]) => [
+    Object.entries(raw).slice(0, MAX_RAW_OBJECT_ENTRIES).map(([key, entry]) => [
       key.slice(0, 80),
-      typeof entry === "string" ? entry.slice(0, 500) : entry,
+      boundedUnknown(entry, 1),
     ]),
   );
+}
+
+function boundedUnknown(value: unknown, depth: number): unknown {
+  if (typeof value === "string") return value.slice(0, MAX_RAW_STRING_LENGTH);
+  if (
+    value == null ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (depth >= MAX_RAW_DEPTH) return `[${value.length} items]`;
+    return value
+      .slice(0, MAX_RAW_ARRAY_ITEMS)
+      .map((entry) => boundedUnknown(entry, depth + 1));
+  }
+  if (typeof value === "object") {
+    if (depth >= MAX_RAW_DEPTH) return "[object]";
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .slice(0, MAX_RAW_OBJECT_ENTRIES)
+        .map(([key, entry]) => [
+          key.slice(0, 80),
+          boundedUnknown(entry, depth + 1),
+        ]),
+    );
+  }
+  return String(value).slice(0, MAX_RAW_STRING_LENGTH);
 }
 
 function finiteNumber(value: unknown) {
@@ -420,6 +462,10 @@ function stringOrNull(value: unknown) {
 function boundedString(value: unknown, limit = 500) {
   const text = stringOrNull(value);
   return text ? text.slice(0, limit) : null;
+}
+
+function boundedDisplayValue(value: unknown, limit: number) {
+  return String(value).slice(0, limit);
 }
 
 function objectRecord(value: unknown): Record<string, unknown> {
@@ -466,6 +512,16 @@ function redactSensitiveRaw(raw: Record<string, unknown>) {
   );
 }
 
+function redactSensitiveTarget(target: RecordingTarget | null): RecordingTarget | null {
+  if (!target) return null;
+  return {
+    ...target,
+    text_sample: null,
+    locators: [],
+    iframe: redactSensitiveTarget(target.iframe ?? null),
+  };
+}
+
 function recorderCaptureScript() {
   return `(() => {
     if (window.__wamRecorderInstalled) return;
@@ -503,7 +559,10 @@ function recorderCaptureScript() {
       if (!element || !element.tagName) return null;
       const rect = element.getBoundingClientRect ? element.getBoundingClientRect() : null;
       const tag = element.tagName.toLowerCase();
-      const textSample = trim(element.innerText || element.textContent || element.value || "", 160);
+      const textSample = trim(
+        element.innerText || element.textContent || (isSensitiveInput(element) ? "" : element.value) || "",
+        160
+      );
       const accessibleName = trim(
         (element.getAttribute && (element.getAttribute("aria-label") || element.getAttribute("name") || element.getAttribute("placeholder"))) || "",
         160

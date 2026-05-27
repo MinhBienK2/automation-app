@@ -93,6 +93,118 @@ describe("normalizeRecordingEvents", () => {
     ]);
   });
 
+  test("turns sequential absolute scroll positions into replay deltas", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("scroll-1", 1, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 400 } },
+      }),
+      recordingEvent("scroll-2", 2, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 800 } },
+      }),
+      recordingEvent("scroll-3", 3, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 650 } },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action)).toMatchObject([
+      { type: "scroll", config: { direction: "down", pixels: 400 } },
+      { type: "scroll", config: { direction: "down", pixels: 400 } },
+      { type: "scroll", config: { direction: "up", pixels: 150 } },
+    ]);
+  });
+
+  test("resets absolute scroll deltas after navigation", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("scroll-1", 1, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 800 } },
+      }),
+      recordingEvent("nav-1", 2, "navigation", {
+        page_url: "https://fixture.owned.test/next",
+        frame_url: "https://fixture.owned.test/next",
+      }),
+      recordingEvent("scroll-2", 3, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 200 } },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action)).toMatchObject([
+      { type: "scroll", config: { direction: "down", pixels: 800 } },
+      { type: "navigate" },
+      { type: "scroll", config: { direction: "down", pixels: 200 } },
+    ]);
+  });
+
+  test("deduplicates browser control events emitted by multiple DOM event phases", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("select-input", 1, "select", {
+        target: selectTarget(),
+        value: { selected_value: "team", selected_label: "Team" },
+        raw: {},
+      }),
+      recordingEvent("select-change", 2, "select", {
+        target: selectTarget(),
+        value: { selected_value: "team", selected_label: "Team" },
+        raw: { source: "change" },
+      }),
+      recordingEvent("checkbox-input", 3, "checkbox", {
+        target: checkboxTarget(),
+        value: { checked: true },
+        raw: {},
+      }),
+      recordingEvent("checkbox-change", 4, "checkbox", {
+        target: checkboxTarget(),
+        value: { checked: true },
+        raw: { source: "change" },
+      }),
+      recordingEvent("radio-input", 5, "radio", {
+        target: radioTarget(),
+        value: { checked: true },
+        raw: {},
+      }),
+      recordingEvent("radio-change", 6, "radio", {
+        target: radioTarget(),
+        value: { checked: true },
+        raw: { source: "change" },
+      }),
+      recordingEvent("file-input", 7, "change", {
+        target: fileTarget(),
+        value: { file_names: ["avatar.png"] },
+        raw: { input_type: "file" },
+      }),
+      recordingEvent("file-change", 8, "change", {
+        target: fileTarget(),
+        value: { file_names: ["avatar.png"] },
+        raw: { source: "change", input_type: "file" },
+      }),
+      recordingEvent("click-before-double", 9, "click", {
+        target: buttonTarget(),
+        raw: { click_type: "single", detail: 1 },
+      }),
+      recordingEvent("double-click", 10, "click", {
+        target: buttonTarget(),
+        raw: { click_type: "double", detail: 2 },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action.type)).toEqual([
+      "select_option",
+      "check",
+      "select_radio",
+      "upload_file",
+      "double_click",
+    ]);
+    expect(steps[0]?.source_event_ids).toEqual(["select-input", "select-change"]);
+    expect(steps[1]?.source_event_ids).toEqual(["checkbox-input", "checkbox-change"]);
+    expect(steps[2]?.source_event_ids).toEqual(["radio-input", "radio-change"]);
+    expect(steps[3]?.source_event_ids).toEqual(["file-input", "file-change"]);
+    expect(steps[4]?.source_event_ids).toEqual(["click-before-double", "double-click"]);
+  });
+
   test("maps keyboard and click variant events to existing actions", () => {
     const steps = normalizeRecordingEvents([
       recordingEvent("key-1", 1, "keyboard", {

@@ -698,6 +698,8 @@ function App() {
     setRecordingBusy(true);
 
     try {
+      const settingsSaved = await persistDirtyWorkflowSettings();
+      if (!settingsSaved) return;
       const session = await startRecordingSession({
         mode: "replace_current_graph",
         workflow_id: detail.workflow.id,

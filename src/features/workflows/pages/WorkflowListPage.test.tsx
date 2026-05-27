@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
@@ -272,6 +272,72 @@ describe("Workflow list integration", () => {
         }),
       );
     });
+  });
+
+  test("saves dirty workflow settings before starting replacement recording", async () => {
+    const scenario = workflowDetailScenario([]);
+    const saveSettingsSection = vi.fn(
+      ({
+        section,
+        sectionValue,
+      }: {
+        section: keyof typeof scenario.get_workflow_settings;
+        sectionValue: unknown;
+      }) => ({
+        ...scenario.get_workflow_settings,
+        [section]: sectionValue,
+      }),
+    );
+    const session: RecordingSession = {
+      ...recordingSession(),
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+      workflow_settings_snapshot: scenario.get_workflow_settings,
+    };
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      ...listWorkflowScenario([workflow]),
+      save_workflow_settings_section: saveSettingsSection,
+      start_recording_session: session,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    await userEvent.click(within(controlsRow).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
+    await userEvent.click(within(settingsDialog).getByRole("switch", {
+      name: "Headless browser",
+    }));
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Record Replacement",
+      hidden: true,
+    }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
+        mode: "replace_current_graph",
+        workflow_id: workflow.id,
+        workflow_name: workflow.name,
+      });
+    });
+    expect(workflowBridgeMock.saveWorkflowSettingsSection).toHaveBeenCalledWith(
+      workflow.id,
+      "browser_launch",
+      expect.objectContaining({ headless: true }),
+    );
+    expect(
+      workflowBridgeMock.saveWorkflowSettingsSection.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      workflowBridgeMock.startRecordingSession.mock.invocationCallOrder[0],
+    );
   });
 
   test("shows icon-only workflow card actions with duplicate", async () => {
