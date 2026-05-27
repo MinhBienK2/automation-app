@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schedules - Mission Control</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Geist Mono Font -->
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              background: "#0B1016",
+              panel: "#0E151D",
+              surface: "#121C26",
+              "elevated-surface": "#172431",
+              border: "#233240",
+              "border-emphasis": "#314758",
+              "text-primary": "#E7EEF5",
+              "text-secondary": "#9AAEBD",
+              "text-muted": "#667D8D",
+              primary: "#32D3E6",
+              "primary-wash": "rgba(50, 211, 230, 0.12)",
+              success: "#39D98A",
+              warning: "#F4B740",
+              danger: "#F06467"
+            },
+            borderRadius: {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "full": "9999px",
+              "control": "8px",
+              "card": "12px",
+              "panel": "16px",
+              "pill": "9999px"
+            },
+            spacing: {
+              "base": "8px",
+              "compact": "12px",
+              "panel": "16px",
+              "page": "24px",
+              "section": "32px"
+            },
+            fontFamily: {
+              headline: ["Inter", "sans-serif"],
+              display: ["Inter", "sans-serif"],
+              body: ["Inter", "sans-serif"],
+              label: ["Geist Mono", "monospace"],
+              inter: ["Inter", "sans-serif"],
+              geist: ["Geist Mono", "monospace"]
+            },
+            fontSize: {
+              "page-title": ["30px", { lineHeight: "38px", letterSpacing: "0", fontWeight: "600" }],
+              "section-title": ["19px", { lineHeight: "26px", letterSpacing: "0", fontWeight: "500" }],
+              "body": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+              "control": ["13px", { lineHeight: "18px", letterSpacing: "0", fontWeight: "500" }],
+              "technical": ["12px", { lineHeight: "16px", letterSpacing: "0.08em", fontWeight: "600" }],
+              "metric": ["34px", { lineHeight: "40px", letterSpacing: "0", fontWeight: "600" }]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+      body {
+        background-color: theme('colors.background');
+        color: theme('colors.text-primary');
+        font-family: theme('fontFamily.body');
+      }
+      
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      }
+      
+      .filled-icon {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex overflow-hidden bg-background">
+<!-- SideNavBar -->
+<nav class="w-[232px] h-full fixed left-0 top-0 bg-[#0E151D] border-r border-[#233240] flex flex-col py-6 px-4 z-50">
+<div class="mb-8 px-2">
+<div class="flex items-center gap-3 mb-2">
+<span class="text-[19px] font-semibold text-[#E7EEF5] tracking-tight">Mission Control</span>
+</div>
+<div class="text-[#9AAEBD] text-[13px]">Automation Lab</div>
+</div>
+<button class="w-full bg-[#32D3E6] hover:bg-[#32D3E6]/90 text-[#0B1016] font-headline text-[14px] font-medium tracking-normal py-2 px-4 rounded-control mb-6 transition-colors duration-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined text-[18px]">add</span>
+      New Project
+    </button>
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+        Overview
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">account_tree</span>
+        Workflows
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">play_circle</span>
+        Runs
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">description</span>
+        Evidence
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control bg-[#32D3E61F] text-[#32D3E6] border-l-2 border-[#32D3E6] active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px] filled-icon">calendar_month</span>
+        Schedules
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">fingerprint</span>
+        Identities
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+        Settings
+      </a>
+</div>
+<div class="mt-auto flex flex-col gap-1 pt-4 border-t border-[#233240]">
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+        Diagnostics
+      </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 active:scale-[0.98] transition-transform font-headline text-[14px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[18px]">help</span>
+        Help
+      </a>
+<div class="mt-4 px-3 flex items-center gap-3 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-[#233240] flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[18px] text-[#9AAEBD]">person</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[13px] font-medium text-[#E7EEF5]">Operator Profile</span>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col ml-[232px] w-[calc(100%-232px)]">
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-232px)] h-16 bg-[#0B1016] border-b border-[#233240] flex justify-between items-center px-6 z-40">
+<div class="flex-1 flex items-center">
+<!-- Search omitted for focus -->
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-pill bg-surface border border-border">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-technical text-text-secondary">Environment: Production</span>
+</div>
+<button class="text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] p-2 rounded-control transition-colors duration-200 focus-within:ring-1 focus-within:ring-[#32D3E6]">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] p-2 rounded-control transition-colors duration-200 focus-within:ring-1 focus-within:ring-[#32D3E6]">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="bg-[#32D3E6] hover:bg-[#32D3E6]/90 text-[#0B1016] px-4 py-2 rounded-control font-headline text-[13px] font-medium transition-colors duration-200 active:scale-[0.98] transition-transform">
+          Launch Run
+        </button>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="flex-1 mt-16 p-page flex flex-col gap-page overflow-y-auto bg-background">
+<!-- Page Header -->
+<div class="flex items-center justify-between">
+<div>
+<h1 class="text-page-title text-text-primary">Schedules</h1>
+<p class="text-body text-text-secondary mt-1">Manage automated execution windows and triggers.</p>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-background px-4 py-2 rounded-control text-control transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+          New Schedule
+        </button>
+</div>
+<!-- Execution Ribbon -->
+<div class="bg-surface border border-border rounded-panel p-panel flex gap-section overflow-x-auto">
+<!-- Summary Stats -->
+<div class="flex gap-compact pr-section border-r border-border min-w-max">
+<div class="flex flex-col gap-1">
+<span class="text-body text-text-secondary">Active</span>
+<span class="text-section-title text-text-primary">24</span>
+</div>
+<div class="flex flex-col gap-1 pl-4 border-l border-border">
+<span class="text-body text-text-secondary flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-warning"></span> Paused</span>
+<span class="text-section-title text-warning">3</span>
+</div>
+<div class="flex flex-col gap-1 pl-4 border-l border-border">
+<span class="text-body text-text-secondary flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-text-muted"></span> Skipped</span>
+<span class="text-section-title text-text-muted">12</span>
+</div>
+<div class="flex flex-col gap-1 pl-4 border-l border-border">
+<span class="text-body text-text-secondary flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-danger"></span> Failed</span>
+<span class="text-section-title text-danger">1</span>
+</div>
+</div>
+<!-- Upcoming Timeline -->
+<div class="flex-1 min-w-[500px] flex flex-col justify-center">
+<div class="flex justify-between text-technical text-text-muted mb-2">
+<span>NOW</span>
+<span>+1H</span>
+<span>+2H</span>
+<span>+3H</span>
+</div>
+<div class="relative h-2 bg-panel rounded-pill w-full">
+<!-- Markers -->
+<div class="absolute top-1/2 -translate-y-1/2 left-[10%] w-3 h-3 rounded-full bg-primary border-2 border-surface z-10" title="Nightly Sync"></div>
+<div class="absolute top-1/2 -translate-y-1/2 left-[45%] w-3 h-3 rounded-full bg-primary border-2 border-surface z-10" title="Data Ingestion"></div>
+<div class="absolute top-1/2 -translate-y-1/2 left-[80%] w-3 h-3 rounded-full bg-warning border-2 border-surface z-10" title="Reporting (Paused)"></div>
+</div>
+</div>
+</div>
+<!-- Main Layout: Table + Side Panel -->
+<div class="flex flex-1 gap-page h-full min-h-[500px]">
+<!-- Schedule Table -->
+<div class="flex-1 bg-surface border border-border rounded-panel overflow-hidden flex flex-col">
+<div class="p-compact border-b border-border flex justify-between items-center bg-panel/50">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="w-full bg-panel border border-border rounded-control py-1.5 pl-9 pr-3 text-body text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-text-muted" placeholder="Filter schedules..." type="text"/>
+</div>
+<div class="flex gap-2">
+<button class="p-1.5 text-text-secondary hover:text-text-primary hover:bg-panel rounded-control border border-transparent hover:border-border transition-all">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+</div>
+</div>
+<div class="overflow-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface z-10 shadow-[0_1px_0_0_#233240]">
+<tr>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium w-8"></th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium">WORKFLOW</th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium">TRIGGER</th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium">NEXT RUN</th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium">STATUS</th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium">IDENTITY</th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium">OWNER</th>
+<th class="py-3 px-4 text-technical text-text-secondary font-medium text-right">ACTIONS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- Row 1: Active -->
+<tr class="hover:bg-panel/50 transition-colors group cursor-pointer bg-primary-wash/5">
+<td class="py-3 px-4 border-l-2 border-primary">
+<input class="rounded bg-background border-border text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="text-body font-medium text-text-primary">Daily_ETL_Sync</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-control bg-panel border border-border text-technical text-text-secondary">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                      0 0 * * *
+                                  </div>
+</td>
+<td class="py-3 px-4 text-technical text-primary">IN 45M</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-body text-text-secondary">Active</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="text-technical text-text-secondary">svc-data-prod</span>
+</td>
+<td class="py-3 px-4 text-body text-text-secondary">SysAdmin</td>
+<td class="py-3 px-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-text-secondary hover:text-text-primary rounded" title="Edit"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1 text-text-secondary hover:text-warning rounded" title="Pause"><span class="material-symbols-outlined text-[18px]">pause</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Paused -->
+<tr class="hover:bg-panel/50 transition-colors group cursor-pointer">
+<td class="py-3 px-4 border-l-2 border-transparent">
+<input class="rounded bg-background border-border text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="text-body font-medium text-text-primary">Weekly_Report_Gen</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-control bg-panel border border-border text-technical text-text-secondary">
+<span class="material-symbols-outlined text-[14px]">update</span>
+                                      Every 7d
+                                  </div>
+</td>
+<td class="py-3 px-4 text-technical text-text-muted">-</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+<span class="text-body text-text-secondary">Paused</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="text-technical text-text-secondary">svc-report-rw</span>
+</td>
+<td class="py-3 px-4 text-body text-text-secondary">Alice_D</td>
+<td class="py-3 px-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-text-secondary hover:text-text-primary rounded" title="Edit"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1 text-text-secondary hover:text-success rounded" title="Resume"><span class="material-symbols-outlined text-[18px]">play_arrow</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Warning/Failed -->
+<tr class="hover:bg-panel/50 transition-colors group cursor-pointer">
+<td class="py-3 px-4 border-l-2 border-transparent">
+<input class="rounded bg-background border-border text-primary focus:ring-primary focus:ring-offset-surface" type="checkbox"/>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="text-body font-medium text-text-primary">Heartbeat_Monitor</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-control bg-panel border border-danger/30 text-technical text-danger">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                                      * * * * *
+                                  </div>
+</td>
+<td class="py-3 px-4 text-technical text-text-muted">PAST DUE</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-danger"></span>
+<span class="text-body text-danger">Failed to Start</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="text-technical text-text-secondary">svc-monitor</span>
+</td>
+<td class="py-3 px-4 text-body text-text-secondary">SysAdmin</td>
+<td class="py-3 px-4 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-text-secondary hover:text-text-primary rounded" title="Edit"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="p-1 text-text-secondary hover:text-danger rounded" title="Stop"><span class="material-symbols-outlined text-[18px]">stop</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- History Panel -->
+<div class="w-80 bg-surface border border-border rounded-panel flex flex-col shrink-0">
+<div class="p-4 border-b border-border">
+<h3 class="text-section-title text-text-primary">Event History</h3>
+</div>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<!-- Event Item -->
+<div class="relative pl-6">
+<div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-success ring-4 ring-surface"></div>
+<div class="absolute left-1 top-3 bottom-[-20px] w-px bg-border"></div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<span class="text-control text-text-primary">Started</span>
+<span class="text-technical text-text-muted">10:00 AM</span>
+</div>
+<span class="text-body text-text-secondary">Daily_ETL_Sync triggered by schedule.</span>
+</div>
+</div>
+<!-- Event Item -->
+<div class="relative pl-6">
+<div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-warning ring-4 ring-surface"></div>
+<div class="absolute left-1 top-3 bottom-[-20px] w-px bg-border"></div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<span class="text-control text-text-primary">Skipped</span>
+<span class="text-technical text-text-muted">09:00 AM</span>
+</div>
+<span class="text-body text-text-secondary">Previous run still active. Concurrency policy enforced.</span>
+</div>
+</div>
+<!-- Event Item -->
+<div class="relative pl-6">
+<div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-danger ring-4 ring-surface"></div>
+<!-- No bottom line for last item visually (handled by gap usually, but let's just leave it short) -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<span class="text-control text-danger">Failed to Start</span>
+<span class="text-technical text-text-muted">08:00 AM</span>
+</div>
+<span class="text-body text-text-secondary">Identity svc-monitor failed auth check.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,28 @@
+{
+  "id": 7007,
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "text": "{\"name\":\"projects/17656305095080667375/screens/30adc0a53cac48898b224cf3f7c067ad\",\"title\":\"Settings Workspace - Mission Control\",\"screenshot\":{\"name\":\"projects/17656305095080667375/files/6ecc39a041b1456eb37fb1143e48b316\",\"downloadUrl\":\"https://lh3.googleusercontent.com/aida/ADBb0uiSHGFVQcM-5ViJrkkH7JKCUQpcNiGvfvXPma16ItQoH6jXMZYbZmjjOO3IKh4hJMuINKaqQEsJQS8BRsMGVY8fnp5Avs36CHxZ5SGNw2gsmL8w_6wMkhbpJaobruIvhcGRHB5osNL3f_pH9X501568uEqulM7GDgEA_b_jwSIVS_vCpy54VFJokgQCVaJT6weEmNgZeL-KCZkXy0NHb8KKdNm19rWd-RNIV_2PcjVIOCom4NqNkbD6MA\"},\"htmlCode\":{\"name\":\"projects/17656305095080667375/files/41d79b9dccf24195a20c3a5d92417626\",\"downloadUrl\":\"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzkxMDgxNGRkNmNhNjRjYzdiYzM2NjMyMjIyMjdmNTE5EgsSBxDm7Zq2owYYAZIBJAoKcHJvamVjdF9pZBIWQhQxNzY1NjMwNTA5NTA4MDY2NzM3NQ&filename=&opi=96797242\",\"mimeType\":\"text/html\"},\"width\":\"2560\",\"height\":\"2048\",\"deviceType\":\"DESKTOP\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzkxMDgxNGRkNmNhNjRjYzdiYzM2NjMyMjIyMjdmNTE5EgsSBxDm7Zq2owYYAZIBJAoKcHJvamVjdF9pZBIWQhQxNzY1NjMwNTA5NTA4MDY2NzM3NQ&filename=&opi=96797242",
+        "mimeType": "text/html",
+        "name": "projects/17656305095080667375/files/41d79b9dccf24195a20c3a5d92417626"
+      },
+      "name": "projects/17656305095080667375/screens/30adc0a53cac48898b224cf3f7c067ad",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/ADBb0uiSHGFVQcM-5ViJrkkH7JKCUQpcNiGvfvXPma16ItQoH6jXMZYbZmjjOO3IKh4hJMuINKaqQEsJQS8BRsMGVY8fnp5Avs36CHxZ5SGNw2gsmL8w_6wMkhbpJaobruIvhcGRHB5osNL3f_pH9X501568uEqulM7GDgEA_b_jwSIVS_vCpy54VFJokgQCVaJT6weEmNgZeL-KCZkXy0NHb8KKdNm19rWd-RNIV_2PcjVIOCom4NqNkbD6MA",
+        "name": "projects/17656305095080667375/files/6ecc39a041b1456eb37fb1143e48b316"
+      },
+      "title": "Settings Workspace - Mission Control",
+      "width": "2560"
+    }
+  }
+}

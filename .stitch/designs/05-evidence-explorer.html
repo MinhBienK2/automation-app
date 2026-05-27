@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Evidence Explorer - Mission Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Geist Mono", "monospace"],
+                        mono: ["Geist Mono", "monospace"]
+                    },
+                    fontSize: {
+                        "page-title": ["30px", { lineHeight: "38px", letterSpacing: "0", fontWeight: "600" }],
+                        "section-title": ["19px", { lineHeight: "26px", letterSpacing: "0", fontWeight: "500" }],
+                        "body": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+                        "control": ["13px", { lineHeight: "18px", letterSpacing: "0", fontWeight: "500" }],
+                        "technical": ["12px", { lineHeight: "16px", letterSpacing: "0.08em", fontWeight: "600" }],
+                        "metric": ["34px", { lineHeight: "40px", letterSpacing: "0", fontWeight: "600" }]
+                    },
+                    borderRadius: {
+                        "control": "8px",
+                        "card": "12px",
+                        "panel": "16px",
+                        "pill": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "compact": "12px",
+                        "panel": "16px",
+                        "page": "24px",
+                        "section": "32px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B1016;
+            color: #E7EEF5;
+        }
+        .font-mono {
+            font-family: 'Geist Mono', monospace;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #233240;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #314758;
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary h-screen w-screen overflow-hidden flex font-body text-body selection:bg-primary-wash selection:text-primary">
+<!-- SideNavBar -->
+<nav class="w-[232px] h-screen fixed left-0 top-0 border-r border-border bg-panel flex flex-col h-full py-4 z-50">
+<div class="px-6 mb-6">
+<h1 class="font-headline text-[19px] font-semibold text-text-primary mb-1">Mission Control</h1>
+<p class="text-text-secondary text-technical font-label uppercase">v2.4.0-stable</p>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-control">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-control">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span class="font-control">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-primary bg-primary-wash border-l-2 border-primary transition-colors duration-150 relative -left-[2px] w-[calc(100%+2px)] pl-[14px]" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-control">Evidence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="font-control">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+<span class="font-control">Identities</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-control">Settings</span>
+</a>
+</div>
+<div class="px-3 mt-auto space-y-1 pt-4 border-t border-border">
+<button class="w-full bg-primary text-background font-control py-2 rounded-control mb-4 hover:opacity-90 active:scale-[0.99] transition-all">
+                Launch Run
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="font-control">Diagnostics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-control">Support</span>
+</a>
+<div class="mt-4 px-3 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border overflow-hidden">
+<img alt="Operator Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATA2AseYfm2V1d-oYD-IpmRV9kSYOodCcWymCYkvfhCMYXvBZeqymrWZuEw_VW55F4jwMlrEfmlJ1R1wQah1nakY7XmAlWOwe86QWrFq_EPAqcNfkBUY4c6SRM0Zyyfz1eH7hH11mlqUDyhb5prgT8SzSP9w9Sibt8SX0HD2pDYbkUb0KcFYXUVMwVZJ5EFmFymgzLUR_Qp6MXBL3D99VLS23asJMTZUmoQi6XwSEjexlOOeEiYrz86JLQ816cjhWAy6jEoVvK9stw"/>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="font-control text-text-primary truncate">SysAdmin</p>
+<p class="text-technical text-text-muted truncate">Active</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- TopNavBar & Main Content Wrapper -->
+<div class="flex-1 ml-[232px] flex flex-col h-screen">
+<!-- TopNavBar -->
+<header class="h-14 border-b border-border bg-background flex items-center justify-between px-6 shrink-0 z-40">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[18px]">search</span>
+<input class="w-full bg-surface border border-border rounded-control py-1.5 pl-9 pr-3 text-control text-text-primary placeholder:text-text-muted focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Search across environment..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-text-secondary hover:text-text-primary hover:bg-surface p-1.5 rounded-control transition-colors relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="text-text-secondary hover:text-text-primary hover:bg-surface p-1.5 rounded-control transition-colors">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</button>
+<div class="h-6 w-px bg-border mx-1"></div>
+<button class="px-3 py-1.5 bg-surface border border-border-emphasis text-text-primary font-control rounded-control hover:bg-elevated-surface transition-colors">
+                    Export Selection
+                </button>
+<button class="px-3 py-1.5 bg-primary text-background font-control rounded-control hover:opacity-90 transition-opacity">
+                    Launch Run
+                </button>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Page Header -->
+<div class="px-6 py-page border-b border-border shrink-0 flex items-end justify-between bg-background">
+<div>
+<h2 class="text-page-title mb-compact">Evidence Explorer</h2>
+<!-- Filters -->
+<div class="flex items-center gap-3 flex-wrap">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px]">filter_list</span>
+<select class="appearance-none bg-surface border border-border rounded-control py-1 pl-8 pr-8 text-control text-text-primary focus:ring-1 focus:ring-primary outline-none custom-select">
+<option>All Types</option>
+<option>Screenshot</option>
+<option>Log</option>
+<option>Download</option>
+<option>Identity Report</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px] pointer-events-none">arrow_drop_down</span>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px]">stacked_line_chart</span>
+<select class="appearance-none bg-surface border border-border rounded-control py-1 pl-8 pr-8 text-control text-text-primary focus:ring-1 focus:ring-primary outline-none">
+<option>Status: All</option>
+<option>Active</option>
+<option>Completed</option>
+<option>Warning</option>
+<option>Failed</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px] pointer-events-none">arrow_drop_down</span>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px]">schedule</span>
+<select class="appearance-none bg-surface border border-border rounded-control py-1 pl-8 pr-8 text-control text-text-primary focus:ring-1 focus:ring-primary outline-none">
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+<option>Custom Range</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px] pointer-events-none">arrow_drop_down</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Split View -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Pane: Evidence Gallery -->
+<div class="w-[70%] h-full overflow-y-auto custom-scrollbar p-6 bg-background">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Artifact Card 1: Selected Screenshot -->
+<div class="bg-surface border-2 border-primary rounded-card overflow-hidden cursor-pointer relative shadow-sm group">
+<div class="absolute top-2 left-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[14px]">image</span> PNG
+                                </span>
+</div>
+<div class="absolute top-2 right-2 z-10">
+<span class="bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Completed
+                                </span>
+</div>
+<div class="h-32 bg-[#1A2634] w-full border-b border-border relative overflow-hidden">
+<!-- Placeholder for Screenshot -->
+<div class="absolute inset-0 bg-cover bg-center opacity-50" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCmtjPCtqhnXjigWvsjcqRnP1jBvEn6BRkg8502AiUN0CFBvvEeEla0Z3L416dgHxrt0xqf7akAaD5PqIzcX-ivBaXaYcgVj8WZqRSrrplYoMAdCNMvbIuG6rSCEt9kAnEh06riQ49zzie7SOfSWJ9hc0VgDNJNLhH1kXgyqrG9SavPw1AW1vEOof22HfQK4Uv311_1jNyTzPOK2SM3pUtypEhMOubco09Bp4OHnilGjZoUvyjFr6obSrP0q8uhgostvrI-57w_r-o4');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent"></div>
+</div>
+<div class="p-3">
+<h4 class="font-control text-text-primary truncate mb-1" title="checkout_confirmation_step.png">checkout_confirmation_step.png</h4>
+<div class="flex justify-between items-center text-technical text-text-muted mt-2">
+<span class="font-mono">RUN-8X22</span>
+<span>2 mins ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 2: Log -->
+<div class="bg-surface border border-border rounded-card overflow-hidden cursor-pointer hover:border-border-emphasis transition-colors group">
+<div class="p-4 h-32 border-b border-border flex flex-col justify-between bg-[#0B1016]">
+<div class="flex justify-between items-start">
+<span class="bg-surface border border-border px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[14px]">description</span> LOG
+                                    </span>
+<span class="bg-warning/20 text-warning border border-warning/30 px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span> Warning
+                                    </span>
+</div>
+<div class="font-mono text-technical text-text-secondary truncate mt-2">
+<span class="text-text-muted">14:02:45</span> [WARN] DOM element timeout...
+                                </div>
+</div>
+<div class="p-3">
+<h4 class="font-control text-text-primary truncate mb-1">nav_interaction_trace.log</h4>
+<div class="flex justify-between items-center text-technical text-text-muted mt-2">
+<span class="font-mono">RUN-9Y11</span>
+<span>15 mins ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 3: Download -->
+<div class="bg-surface border border-border rounded-card overflow-hidden cursor-pointer hover:border-border-emphasis transition-colors group">
+<div class="p-4 h-32 border-b border-border flex items-center justify-center bg-elevated-surface relative">
+<div class="absolute top-2 left-2 flex gap-2">
+<span class="bg-background border border-border px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[14px]">download</span> CSV
+                                    </span>
+</div>
+<div class="absolute top-2 right-2">
+<span class="bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Completed
+                                    </span>
+</div>
+<span class="material-symbols-outlined text-[40px] text-text-muted">table_view</span>
+</div>
+<div class="p-3">
+<h4 class="font-control text-text-primary truncate mb-1">q3_financial_export.csv</h4>
+<div class="flex justify-between items-center text-technical text-text-muted mt-2">
+<span class="font-mono">RUN-7Z00</span>
+<span>1 hr ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 4: Failed Screenshot -->
+<div class="bg-surface border border-border rounded-card overflow-hidden cursor-pointer hover:border-border-emphasis transition-colors group">
+<div class="absolute top-2 left-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[14px]">image</span> PNG
+                                </span>
+</div>
+<div class="absolute top-2 right-2 z-10">
+<span class="bg-danger/20 text-danger border border-danger/30 px-2 py-0.5 rounded-pill flex items-center gap-1 text-[11px] font-label">
+<span class="w-1.5 h-1.5 rounded-full bg-danger"></span> Failed
+                                </span>
+</div>
+<div class="h-32 bg-[#1A2634] w-full border-b border-border relative overflow-hidden">
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-danger text-[32px] opacity-50">broken_image</span>
+</div>
+</div>
+<div class="p-3">
+<h4 class="font-control text-text-primary truncate mb-1">login_error_capture.png</h4>
+<div class="flex justify-between items-center text-technical text-text-muted mt-2">
+<span class="font-mono">RUN-8X22</span>
+<span>2 hrs ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Pane: Artifact Details Panel -->
+<div class="w-[30%] min-w-[320px] h-full border-l border-border bg-panel flex flex-col overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.1)] z-10">
+<div class="p-4 border-b border-border bg-elevated-surface flex justify-between items-center shrink-0">
+<h3 class="font-section-title text-text-primary">Artifact Details</h3>
+<button class="text-text-secondary hover:text-text-primary p-1 rounded-control transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+<!-- Preview Box -->
+<div class="space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-text-secondary font-control">Preview</span>
+<button class="text-primary text-technical font-label hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">open_in_new</span> Expand
+                                </button>
+</div>
+<div class="bg-surface border border-border rounded-card p-1 aspect-video relative overflow-hidden">
+<img alt="Detailed screenshot of a checkout confirmation step showing successful transaction processing" class="w-full h-full object-cover rounded-control border border-border/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAstTdLRtsIF4g99_apz7nncCwuVSeD73EnAbf-9QmG-u5VYXKsgXK3vHJfpJ3BEhq0F-mQldKnwM0jv-kmAJ8TkG7UJuHp5x-eJ3gI0Hh7ZyUkiXYK7MxPj9atwwub0ObQWPYsbWW1rWuZbbhdGZg1-PMmgpJATJ1U1z25yy085pW4w1GCoyUTVw7c5S4Tdiz0DeYiYv1c3oKtqeMjTFkAUYfhqIeYOPN46RGDuuYdWPRbmiJyl9YtBqzohv3mkb75QahjzllLzNOz"/>
+</div>
+</div>
+<!-- Traceability Section -->
+<div class="space-y-3">
+<h4 class="text-text-secondary font-control uppercase tracking-wider text-[11px]">Traceability</h4>
+<div class="bg-surface border border-border rounded-card divide-y divide-border">
+<div class="p-3 flex items-start gap-3 hover:bg-elevated-surface transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-text-muted text-[18px] mt-0.5">account_tree</span>
+<div class="flex-1 min-w-0">
+<p class="text-technical text-text-muted mb-0.5">Origin Workflow</p>
+<p class="font-control text-text-primary truncate group-hover:text-primary transition-colors">Daily Account Reconciliation</p>
+</div>
+<span class="material-symbols-outlined text-text-muted opacity-0 group-hover:opacity-100 text-[16px]">chevron_right</span>
+</div>
+<div class="p-3 flex items-start gap-3 hover:bg-elevated-surface transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-text-muted text-[18px] mt-0.5">play_circle</span>
+<div class="flex-1 min-w-0">
+<p class="text-technical text-text-muted mb-0.5">Run ID</p>
+<p class="font-mono text-technical text-text-primary group-hover:text-primary transition-colors">RUN-8X22</p>
+</div>
+<span class="material-symbols-outlined text-text-muted opacity-0 group-hover:opacity-100 text-[16px]">chevron_right</span>
+</div>
+<div class="p-3 flex items-start gap-3">
+<span class="material-symbols-outlined text-text-muted text-[18px] mt-0.5">fingerprint</span>
+<div class="flex-1 min-w-0">
+<p class="text-technical text-text-muted mb-0.5">Executing Identity</p>
+<p class="font-mono text-technical text-text-primary">svc-etl-prod</p>
+</div>
+</div>
+<div class="p-3 flex items-start gap-3">
+<span class="material-symbols-outlined text-text-muted text-[18px] mt-0.5">route</span>
+<div class="flex-1 min-w-0">
+<p class="text-technical text-text-muted mb-0.5">Step</p>
+<p class="font-control text-text-primary">Ledger Write</p>
+</div>
+</div>
+</div>
+</div>
+<!-- File Metadata Section -->
+<div class="space-y-3">
+<h4 class="text-text-secondary font-control uppercase tracking-wider text-[11px]">File Metadata</h4>
+<div class="bg-surface border border-border rounded-card p-3 space-y-2">
+<div class="flex flex-col gap-1">
+<span class="text-technical text-text-muted">Storage Path</span>
+<div class="flex items-center gap-2">
+<span class="font-mono text-technical text-text-primary truncate">s3://mc-prod-evidence/2023/10/24/RUN-8X22/checkout.png</span>
+</div>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-border/50">
+<span class="text-technical text-text-muted">Size</span>
+<span class="font-mono text-technical text-text-primary">1.2 MB</span>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-border/50">
+<span class="text-technical text-text-muted">Checksum (SHA-256)</span>
+<span class="font-mono text-technical text-text-primary truncate w-32 text-right" title="8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4">8f43434...7aa4</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Panel Footer Actions -->
+<div class="p-4 border-t border-border bg-elevated-surface shrink-0 flex flex-wrap gap-2"><button class="flex-1 flex justify-center items-center gap-2 px-3 py-2 bg-primary text-background font-control rounded-control hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">download</span> Download
+</button>
+<button class="flex-1 flex justify-center items-center gap-2 px-3 py-2 bg-surface border border-border-emphasis text-text-primary font-control rounded-control hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">content_copy</span> Copy Path
+</button>
+<button class="w-full flex justify-center items-center gap-2 px-3 py-2 mt-2 bg-surface border border-border-emphasis text-text-primary font-control rounded-control hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">play_circle</span> Open Run
+</button>
+<button class="w-full flex justify-center items-center gap-2 px-3 py-2 bg-surface border border-border-emphasis text-text-primary font-control rounded-control hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">account_tree</span> Open Workflow
+</button></div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
