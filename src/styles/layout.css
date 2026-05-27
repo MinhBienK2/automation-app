@@ -3,7 +3,7 @@
   grid-template-columns: 248px minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
-  background: #171717;
+  background: #0b1016;
 }
 
 .app-shell-collapsed {
@@ -20,8 +20,8 @@
   min-height: 0;
   overflow: hidden;
   padding: 18px 12px;
-  border-right: 1px solid #242424;
-  background: #0f0f0f;
+  border-right: 1px solid #233240;
+  background: #121c26;
 }
 
 .sidebar-brand {
@@ -37,15 +37,15 @@
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(62, 207, 142, 0.48);
+  border: 1px solid rgba(50, 211, 230, 0.48);
   border-radius: 8px;
-  background: #171717;
+  background: #0b1016;
   object-fit: contain;
 }
 
 .sidebar-title {
   overflow: hidden;
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 14px;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -67,13 +67,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border-color: #2e2e2e;
+  border-color: #233240;
   text-align: left;
 }
 
 .sidebar-nav-item-active {
-  border-color: rgba(62, 207, 142, 0.48);
-  color: #3ecf8e;
+  border-color: rgba(50, 211, 230, 0.48);
+  color: #32d3e6;
 }
 
 .sidebar-toggle {
@@ -83,7 +83,7 @@
   min-height: 40px;
   padding: 0;
   justify-self: center;
-  color: #b4b4b4;
+  color: #9aaebd;
 }
 
 .app-shell-collapsed .sidebar-brand {
@@ -140,14 +140,14 @@
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #242424;
+  border-bottom: 1px solid #233240;
 }
 
 .page-detail-header {
   display: grid;
   gap: 14px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #242424;
+  border-bottom: 1px solid #233240;
 }
 
 .page-detail-title-row,
@@ -181,23 +181,23 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #898989;
+  color: #667d8d;
   font-size: 15px;
 }
 
 .page-breadcrumb-link:hover:not(:disabled) {
   border-color: transparent;
-  color: #fafafa;
+  color: #e7eef5;
 }
 
 .page-breadcrumb-separator {
-  color: #4d4d4d;
+  color: #3e5668;
   font-size: 15px;
 }
 
 .page-breadcrumb-current {
   overflow: hidden;
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 22px;
   font-weight: 400;
   line-height: 1.25;
@@ -208,8 +208,8 @@
 .page-kind-badge {
   margin: 0;
   padding: 7px 11px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
+  border: 1px solid #233240;
+  border-radius: 8px;
   white-space: nowrap;
 }
 
@@ -224,19 +224,19 @@
   gap: 6px;
   min-height: 34px;
   padding: 0 11px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  background: #0f0f0f;
-  color: #b4b4b4;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #121c26;
+  color: #9aaebd;
 }
 
 .page-back-button svg {
-  color: #3ecf8e;
+  color: #32d3e6;
 }
 
 .page-back-button:hover:not(:disabled) {
-  border-color: rgba(62, 207, 142, 0.48);
-  color: #fafafa;
+  border-color: rgba(50, 211, 230, 0.48);
+  color: #e7eef5;
 }
 
 .page-header-meta {
@@ -253,9 +253,9 @@
   min-height: 30px;
   align-items: center;
   padding: 0 11px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  color: #b4b4b4;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  color: #9aaebd;
   font-size: 13px;
 }
 
@@ -271,7 +271,7 @@
 
 .eyebrow {
   margin-bottom: 8px;
-  color: #898989;
+  color: #667d8d;
   font-family:
     "Source Code Pro", "Office Code Pro", Menlo, Consolas, monospace;
   font-size: 12px;
@@ -282,14 +282,14 @@
 }
 
 .muted {
-  color: #898989;
+  color: #667d8d;
 }
 
 .panel,
 .workflow-card {
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .header-stats {
@@ -311,9 +311,9 @@
   min-height: 32px;
   align-items: center;
   padding: 0 12px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  color: #b4b4b4;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  color: #9aaebd;
   font-size: 13px;
 }
 

@@ -23,9 +23,9 @@
   gap: 8px;
   align-items: center;
   padding: 8px;
-  border: 1px solid #242424;
+  border: 1px solid #233240;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .graph-icon-tools {
@@ -33,7 +33,7 @@
   gap: 4px;
   align-items: center;
   padding-right: 4px;
-  border-right: 1px solid #242424;
+  border-right: 1px solid #233240;
 }
 
 .graph-inspector {
@@ -66,18 +66,18 @@
   position: relative;
   height: clamp(460px, calc(100dvh - 260px), 640px);
   overflow: hidden;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
   background:
-    linear-gradient(rgba(62, 207, 142, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(62, 207, 142, 0.06) 1px, transparent 1px),
-    #0f0f0f;
+    linear-gradient(rgba(50, 211, 230, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(50, 211, 230, 0.06) 1px, transparent 1px),
+    #121c26;
   background-size: 32px 32px;
 }
 
 .graph-canvas .react-flow {
   height: 100%;
-  color: #fafafa;
+  color: #e7eef5;
 }
 
 .graph-canvas .react-flow__pane {
@@ -93,8 +93,8 @@
 }
 
 .graph-canvas .react-flow__selection {
-  border: 1px solid rgba(62, 207, 142, 0.72);
-  background: rgba(62, 207, 142, 0.12);
+  border: 1px solid rgba(50, 211, 230, 0.72);
+  background: rgba(50, 211, 230, 0.12);
 }
 
 .graph-canvas .react-flow__connectionline {
@@ -103,31 +103,31 @@
 }
 
 .graph-canvas .react-flow__connection-path {
-  stroke: #3ecf8e;
+  stroke: #32d3e6;
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .graph-canvas .react-flow__edge-path {
-  stroke: #4d4d4d;
+  stroke: #3e5668;
   stroke-width: 2.5;
 }
 
 .graph-canvas .react-flow__edge-text {
-  fill: #b4b4b4;
+  fill: #9aaebd;
   font-size: 12px;
   font-weight: 500;
 }
 
 .graph-canvas .react-flow__edge-textbg {
-  fill: #0f0f0f;
-  stroke: #363636;
+  fill: #121c26;
+  stroke: #314758;
   stroke-width: 1;
 }
 
 .graph-canvas .react-flow__edge.selected:not(.graph-edge-has-issue):not(.graph-edge-failed) .react-flow__edge-path {
-  stroke: #22d3ee;
+  stroke: #32d3e6;
   stroke-width: 3.5;
 }
 
@@ -136,41 +136,41 @@
 }
 
 .graph-canvas .graph-edge-selected .react-flow__edge-text {
-  fill: #fafafa;
+  fill: #e7eef5;
 }
 
 .graph-canvas .graph-edge-selected .react-flow__edge-textbg {
-  stroke: rgba(34, 211, 238, 0.72);
+  stroke: rgba(50, 211, 230, 0.72);
 }
 
 .graph-canvas .graph-edge-has-issue .react-flow__edge-path {
-  stroke: #fbbf24;
+  stroke: #f4b740;
 }
 
 .graph-canvas .graph-edge-has-issue.graph-edge-selected .react-flow__edge-path {
-  stroke: #fbbf24;
+  stroke: #f4b740;
 }
 
 .graph-canvas .graph-edge-running .react-flow__edge-path {
-  stroke: #38bdf8;
+  stroke: #32d3e6;
 }
 
 .graph-canvas .graph-edge-completed .react-flow__edge-path {
-  stroke: #3ecf8e;
+  stroke: #32d3e6;
 }
 
 .graph-canvas .graph-edge-failed .react-flow__edge-path {
-  stroke: #ff7b72;
+  stroke: #f06467;
 }
 
 .graph-canvas .graph-edge-failed.graph-edge-selected .react-flow__edge-path {
-  stroke: #ff7b72;
+  stroke: #f06467;
 }
 
 .graph-canvas .react-flow__controls,
 .graph-canvas .react-flow__minimap {
-  border: 1px solid #2e2e2e;
-  background: #0f0f0f;
+  border: 1px solid #233240;
+  background: #121c26;
 }
 
 .graph-shortcuts-dialog {
@@ -193,9 +193,9 @@
   gap: 10px;
   align-content: start;
   padding: 14px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .graph-shortcut-group h3 {
@@ -221,7 +221,7 @@
 
 .graph-shortcut-row dd {
   margin: 0;
-  color: #b4b4b4;
+  color: #9aaebd;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -232,10 +232,10 @@
   min-height: 28px;
   align-items: center;
   padding: 3px 8px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 6px;
-  background: #171717;
-  color: #fafafa;
+  background: #0b1016;
+  color: #e7eef5;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 11px;
   line-height: 1.3;
@@ -247,10 +247,10 @@
   display: grid;
   width: 160px;
   min-height: 64px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 8px;
-  background: #171717;
-  color: #fafafa;
+  background: #0b1016;
+  color: #e7eef5;
   cursor: grab;
 }
 
@@ -265,7 +265,7 @@
   padding: 8px 10px;
   border: 0;
   background: transparent;
-  color: #fafafa;
+  color: #e7eef5;
   cursor: inherit;
   font: inherit;
   font-size: 13px;
@@ -273,7 +273,7 @@
 }
 
 .graph-node-button small {
-  color: #898989;
+  color: #667d8d;
   font-size: 11px;
 }
 
@@ -291,17 +291,17 @@
 }
 
 .graph-node-selected {
-  outline: 2px solid rgba(34, 211, 238, 0.58);
+  outline: 2px solid rgba(50, 211, 230, 0.58);
   outline-offset: 2px;
   color: #67e8f9;
 }
 
 .graph-node-has-issue {
-  border-color: rgba(251, 191, 36, 0.6);
+  border-color: rgba(244, 183, 64, 0.6);
 }
 
 .graph-node-has-issue.graph-node-selected {
-  border-color: rgba(251, 191, 36, 0.6);
+  border-color: rgba(244, 183, 64, 0.6);
 }
 
 .graph-node-running {
@@ -309,16 +309,16 @@
 }
 
 .graph-node-completed {
-  border-color: rgba(62, 207, 142, 0.44);
+  border-color: rgba(50, 211, 230, 0.44);
 }
 
 .graph-node-failed {
-  border-color: rgba(248, 113, 113, 0.76);
+  border-color: rgba(240, 100, 103, 0.76);
   color: #fca5a5;
 }
 
 .graph-node-failed.graph-node-selected {
-  border-color: rgba(248, 113, 113, 0.76);
+  border-color: rgba(240, 100, 103, 0.76);
   color: #fca5a5;
 }
 
@@ -327,8 +327,8 @@
   width: 16px;
   height: 16px;
   pointer-events: all;
-  border: 1px solid #0f0f0f;
-  background: #3ecf8e;
+  border: 1px solid #121c26;
+  background: #32d3e6;
   cursor: crosshair;
 }
 
@@ -339,10 +339,10 @@
   width: max-content;
   max-width: 280px;
   padding: 8px 10px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 6px;
-  background: #0f0f0f;
-  color: #fafafa;
+  background: #121c26;
+  color: #e7eef5;
   content: attr(data-tooltip);
   font-size: 12px;
   font-weight: 400;
@@ -391,23 +391,23 @@
 }
 
 .graph-canvas .react-flow__handle.connectingfrom {
-  border-color: #3ecf8e;
-  background: #fafafa;
-  box-shadow: 0 0 0 4px rgba(62, 207, 142, 0.16);
+  border-color: #32d3e6;
+  background: #e7eef5;
+  box-shadow: 0 0 0 4px rgba(50, 211, 230, 0.16);
 }
 
 .graph-canvas .react-flow__handle.connectingto.valid {
-  border-color: #fafafa;
-  background: #00c573;
+  border-color: #e7eef5;
+  background: #39d98a;
   box-shadow: 0 0 0 4px rgba(0, 197, 115, 0.2);
 }
 
 .graph-minimap {
   justify-self: end;
   padding: 4px 8px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  color: #898989;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  color: #667d8d;
   font-size: 12px;
 }
 
@@ -423,9 +423,9 @@
   min-width: 0;
   overflow: hidden;
   padding: 5px 7px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 6px;
-  color: #b4b4b4;
+  color: #9aaebd;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -436,7 +436,7 @@
   min-width: 0;
   gap: 8px;
   padding: 10px;
-  border: 1px solid rgba(248, 113, 113, 0.42);
+  border: 1px solid rgba(240, 100, 103, 0.42);
   border-radius: 8px;
   background: #121212;
 }
@@ -456,7 +456,7 @@
 }
 
 .graph-error-context {
-  color: #898989;
+  color: #667d8d;
   font-size: 12px;
   line-height: 1.4;
 }
@@ -478,10 +478,10 @@
   overflow: auto;
   overflow-wrap: anywhere;
   padding: 8px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 6px;
-  background: #0f0f0f;
-  color: #b4b4b4;
+  background: #121c26;
+  color: #9aaebd;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 12px;
   line-height: 1.45;
@@ -490,29 +490,29 @@
 
 .graph-connection-summary {
   padding: 8px;
-  border: 1px solid #242424;
+  border: 1px solid #233240;
   border-radius: 8px;
   background: #121212;
 }
 
 .graph-port-guidance {
   padding: 8px;
-  border: 1px solid #242424;
+  border: 1px solid #233240;
   border-radius: 8px;
   background: #121212;
 }
 
 .graph-selected-edge {
   padding: 8px;
-  border: 1px solid rgba(62, 207, 142, 0.48);
+  border: 1px solid rgba(50, 211, 230, 0.48);
   border-radius: 8px;
   background: #121212;
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 12px;
 }
 
 .graph-connection-summary h3 {
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 13px;
   font-weight: 400;
 }
@@ -521,7 +521,7 @@
   display: grid;
   gap: 10px;
   padding-top: 12px;
-  border-top: 1px solid #242424;
+  border-top: 1px solid #233240;
 }
 
 .graph-config-fields .muted {
@@ -538,7 +538,7 @@
   display: grid;
   gap: 10px;
   padding: 10px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
   background: #121212;
 }
@@ -561,7 +561,7 @@
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 8px;
   background: #121212;
 }
@@ -571,7 +571,7 @@
 }
 
 .graph-internal-action h3 {
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 14px;
   font-weight: 400;
 }
@@ -580,10 +580,10 @@
   max-height: 220px;
   overflow: auto;
   padding: 8px;
-  border: 1px solid #242424;
+  border: 1px solid #233240;
   border-radius: 6px;
-  background: #0f0f0f;
-  color: #b4b4b4;
+  background: #121c26;
+  color: #9aaebd;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 11px;
   line-height: 1.5;
@@ -610,9 +610,9 @@
   width: min(320px, 100%);
   gap: 8px;
   padding: 8px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .variable-picker-options {
@@ -629,27 +629,27 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: #fafafa;
+  color: #e7eef5;
   text-align: left;
 }
 
 .variable-picker-options button:hover {
-  border-color: rgba(62, 207, 142, 0.3);
-  background: #171717;
+  border-color: rgba(50, 211, 230, 0.3);
+  background: #0b1016;
 }
 
 .variable-picker-options small {
-  color: #898989;
+  color: #667d8d;
   font-size: 11px;
 }
 
 .template-preview {
   min-height: 28px;
   padding: 6px 8px;
-  border: 1px solid #242424;
+  border: 1px solid #233240;
   border-radius: 6px;
   background: #121212;
-  color: #b4b4b4;
+  color: #9aaebd;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 12px;
   line-height: 1.4;
@@ -657,9 +657,9 @@
 }
 
 .template-token-highlight {
-  border: 1px solid rgba(62, 207, 142, 0.48);
+  border: 1px solid rgba(50, 211, 230, 0.48);
   border-radius: 4px;
-  color: #3ecf8e;
+  color: #32d3e6;
   padding: 0 3px;
 }
 
@@ -683,7 +683,7 @@
 }
 
 .variable-row-heading {
-  color: #898989;
+  color: #667d8d;
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -728,9 +728,9 @@
   gap: 8px;
   overflow: auto;
   padding: 8px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .action-type-group {
@@ -747,19 +747,19 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: #fafafa;
+  color: #e7eef5;
   text-align: left;
 }
 
 .action-type-option small {
-  color: #898989;
+  color: #667d8d;
   font-size: 12px;
 }
 
 .action-type-option:hover,
 .action-type-option[aria-selected="true"] {
-  border-color: rgba(62, 207, 142, 0.3);
-  background: #171717;
+  border-color: rgba(50, 211, 230, 0.3);
+  background: #0b1016;
 }
 
 .graph-node-context-menu {
@@ -769,9 +769,9 @@
   min-width: 150px;
   gap: 4px;
   padding: 6px;
-  border: 1px solid #363636;
+  border: 1px solid #314758;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .graph-node-context-menu button {
@@ -780,13 +780,13 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #b4b4b4;
+  color: #9aaebd;
   text-align: left;
 }
 
 .graph-node-context-menu button:hover:not(:disabled) {
-  background: #171717;
-  color: #fafafa;
+  background: #0b1016;
+  color: #e7eef5;
 }
 
 .graph-node-context-menu button:disabled {
@@ -797,7 +797,7 @@
   display: grid;
   gap: 6px;
   padding: 8px;
-  border: 1px solid rgba(251, 191, 36, 0.36);
+  border: 1px solid rgba(244, 183, 64, 0.36);
   border-radius: 8px;
   color: #facc15;
   font-size: 12px;
@@ -808,20 +808,20 @@
   max-width: 100%;
   overflow: hidden;
   padding: 4px 7px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  color: #b4b4b4;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  color: #9aaebd;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .graph-issue-error {
-  border-color: rgba(248, 113, 113, 0.52);
+  border-color: rgba(240, 100, 103, 0.52);
   color: #fca5a5;
 }
 
 .graph-issue-warning {
-  border-color: rgba(251, 191, 36, 0.52);
+  border-color: rgba(244, 183, 64, 0.52);
   color: #facc15;
 }

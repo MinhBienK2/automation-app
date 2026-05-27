@@ -19,11 +19,11 @@ export function RunCenterPage({
   );
 
   return (
-    <section className="app-screen run-center-screen" aria-label="Run Center">
+    <section className="app-screen run-center-screen" aria-label="Runs">
       <header className="app-header">
         <div>
           <p className="eyebrow">Execution</p>
-          <h1>Run Center</h1>
+          <h1>Runs</h1>
         </div>
         <div className="header-stats" aria-label="Run summary">
           <span>{sortedRuns.filter((run) => run.state.status === "running").length} active</span>
