@@ -54,16 +54,22 @@ Users can:
 - Start, inspect, stop, and discard backend-owned browser recording sessions.
   Recorder sessions launch through backend browser/session infrastructure,
   inject page-side capture, observe navigation, and collect raw navigation,
-  click, input, select, checkbox/radio, and scroll events in memory. Backend
-  normalization turns that raw stream into reviewable action-intent steps with
-  ordered locator candidates and weak-locator warnings. Draft generation creates
-  a validated review-only v2 workflow graph without persisting a workflow or
-  replacing an existing saved graph. The workflow list exposes Record Workflow
-  for creating a new workflow from a recording, while the workflow detail header
-  exposes Record Replacement for replacing that workflow's graph. The review
-  dialog lets operators edit the workflow name, step labels, step inclusion, and
-  supported captured values before `saveRecordingDraft` creates a normal
-  workflow or explicitly replaces the linked graph.
+  click, input, select, checkbox/radio, and scroll events in memory. Capture
+  drops malformed locator candidates, bounds locator strings, and redacts
+  password or secret-like text field values before they enter the event stream;
+  redacted input steps are generated excluded with a review warning until an
+  operator supplies a safe value or variable. Backend normalization turns that
+  raw stream into reviewable action-intent steps with ordered locator candidates
+  and weak-locator warnings. Draft generation creates a validated review-only v2
+  workflow graph without persisting a workflow or replacing an existing saved
+  graph. The workflow list exposes Record Workflow for creating a new workflow
+  from a recording, while the workflow detail header exposes Record Replacement
+  for replacing that workflow's graph. The review dialog lets operators edit the
+  workflow name, step labels, step inclusion, and supported captured values
+  before `saveRecordingDraft` creates a normal workflow or explicitly replaces
+  the linked graph. Discarding a recorder session removes its in-memory session
+  and drafts, and saving a draft consumes the draft/session after successful
+  persistence.
 
 ## Current Source Files
 

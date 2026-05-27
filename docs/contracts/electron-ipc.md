@@ -107,19 +107,22 @@ returns the current app-session run snapshots for multi-run monitoring.
 
 Recorder session commands are backend-owned. `startRecordingSession`
 accepts `{ mode, workflow_id?, workflow_name?, initial_url?,
-browser_launch_overrides? }` and returns a `RecordingSession` with sanitized
-browser identity metadata and a sanitized Workflow Settings snapshot. The
-recorder accepts the safe `browser_launch_overrides.headless` boolean for
-headless verification runs and warns on unsupported override keys. Starting a
-session launches a backend-owned recorder browser through the existing browser
-session infrastructure, injects bounded page-side capture with an in-page buffer
-fallback for adapter binding failures, observes navigation plus backend tab,
-download, and dialog events, and optionally navigates to `initial_url`.
+  browser_launch_overrides? }` and returns a `RecordingSession` with sanitized
+  browser identity metadata and a sanitized Workflow Settings snapshot. The
+  recorder accepts the safe `browser_launch_overrides.headless` boolean for
+  headless verification runs and warns on unsupported override keys. Starting a
+  session launches a backend-owned recorder browser through the existing browser
+  session infrastructure, injects bounded page-side capture with an in-page buffer
+  fallback for adapter binding failures, observes navigation plus backend tab,
+  download, and dialog events, and optionally navigates to `initial_url`. If
+  launch, capture setup, or initial navigation fails, the backend closes any
+  partially launched recorder context before returning the command error.
 Dialogs observed through the backend adapter are dismissed with a review warning
 so the recorder browser does not block on native modal state. `listRecordingEvents`
 returns the in-memory raw event stream for the session. `stopRecordingSession` and
-`discardRecordingSession` close the recorder browser context. Commands operate
-by session id and serialize errors as `{ message, field? }`.
+`discardRecordingSession` close the recorder browser context. Discard consumes
+the in-memory session and any generated drafts for that session. Commands
+operate by session id and serialize errors as `{ message, field? }`.
 
 `generateRecordingDraft(sessionId, options)` normalizes the selected session
 events, creates a review-only `RecordingWorkflowDraft`, generates a standard v2
@@ -130,7 +133,9 @@ existing graph. `getRecordingDraft(draftId)` returns the stored review draft.
 reviewed output. It consumes renderer-reviewed step labels, inclusion flags, and
 supported action value edits, regenerates and validates the graph, then either
 creates a normal workflow with the recorder browser settings snapshot or
-replaces the linked workflow graph for `replace_current_graph` drafts.
+replaces the linked workflow graph for `replace_current_graph` drafts. Successful
+save consumes the in-memory draft and its source session; subsequent
+`getRecordingDraft` or session lookups return not-found command errors.
 
 The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
 are no longer part of the production Electron bridge. Selector generation and
@@ -146,8 +151,9 @@ timeline normalization belong behind the `Recording*` session/draft contract.
 - Native save-dialog and file-writing behavior is owned by Electron main through
   `saveWorkflowPackageFile`; package JSON is not written from the renderer.
 - Command errors serialize as `{ message: string, field?: string | null }`.
-- Recorder DTOs use the `Recording*` prefix. Session snapshots sent to the
-  renderer must not include browser secrets such as proxy passwords.
+- Recorder DTOs use the `Recording*` prefix. Session snapshots and recording
+  events sent to the renderer must not include browser secrets such as proxy
+  passwords or captured password/secret-like field values.
 
 ## Persistence And Command Parity
 

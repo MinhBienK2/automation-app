@@ -295,6 +295,10 @@ function inputStep(
   const text = finalEvent.value?.text;
   if (text == null) return null;
   const locator = generateElementTarget(finalEvent.target);
+  const sensitiveRedacted = sourceEvents.some((event) =>
+    event.warnings.some((warning) => warning.code === "sensitive_input_redacted") ||
+    event.raw.value_redacted === true
+  );
   return recordingStep(sourceEvents, {
     type: "input_text",
     config: {
@@ -304,7 +308,9 @@ function inputStep(
       wait_until: "visible",
       timeout_ms: 60000,
     },
-  }, locator);
+  }, locator, {
+    included: !sensitiveRedacted,
+  });
 }
 
 function recordingStep(

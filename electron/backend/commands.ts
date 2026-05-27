@@ -340,9 +340,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     }
   }
 
-  function requireRecordingResult<T>(value: T | null, field = "sessionId"): T {
+  function requireRecordingResult<T>(
+    value: T | null,
+    field = "sessionId",
+    message = "Recording session not found",
+  ): T {
     if (value == null) {
-      throw commandError("Recording session not found", field);
+      throw commandError(message, field);
     }
     return value;
   }
@@ -390,7 +394,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     draftId: string,
     input: RecordingSaveDraftInput,
   ): WorkflowDetail {
-    const draft = requireRecordingResult(recordingDrafts.get(draftId) ?? null, "draftId");
+    const draft = requireRecordingResult(
+      recordingDrafts.get(draftId) ?? null,
+      "draftId",
+      "Recording draft not found",
+    );
     if (draft.status !== "draft") {
       throw commandError("Recording draft has already been saved", "draftId");
     }
@@ -421,18 +429,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         input.save_mode === "create_new"
           ? saveRecordingAsNewWorkflow(draft, graph, normalizedName)
           : replaceRecordingWorkflowGraph(draft, graph);
-      recordingDrafts.set(draft.id, {
-        ...draft,
-        status: "saved",
-        steps: reviewedSteps,
-        graph,
-        validation_issues: validationIssues,
-        warnings: [
-          ...draft.warnings,
-          ...reviewedSteps.flatMap((step) => step.warnings),
-        ],
-      });
       context.database.exec("COMMIT");
+      recordingDrafts.delete(draft.id);
+      recorderSessionManager.deleteSession(draft.session_id);
       return detail;
     } catch (error) {
       context.database.exec("ROLLBACK");
@@ -1177,7 +1176,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     async discardRecordingSession(sessionId: string): Promise<RecordingSession> {
-      return requireRecordingResult(await recorderSessionManager.discardSession(sessionId));
+      const discarded = requireRecordingResult(await recorderSessionManager.discardSession(sessionId));
+      for (const [draftId, draft] of recordingDrafts) {
+        if (draft.session_id === sessionId) {
+          recordingDrafts.delete(draftId);
+        }
+      }
+      return discarded;
     },
 
     generateRecordingDraft(
@@ -1188,7 +1193,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     getRecordingDraft(draftId: string): RecordingWorkflowDraft {
-      return requireRecordingResult(recordingDrafts.get(draftId) ?? null, "draftId");
+      return requireRecordingResult(
+        recordingDrafts.get(draftId) ?? null,
+        "draftId",
+        "Recording draft not found",
+      );
     },
 
     saveRecordingDraft,

@@ -67,13 +67,16 @@ package import/export, graph validation/compilation, workflow scheduling, SQLite
 - Browser recorder session manager owns active in-memory recorder sessions,
   including new-workflow settings drafts, existing-workflow settings snapshots,
   sanitized browser identity metadata, backend browser launch/cleanup,
-  stop/discard lifecycle state, and recording event buffers. The event collector
-  injects bounded page-side capture and observes backend page navigation before
-  the locator generator and timeline normalizer convert raw events into stable
-  review steps. Graph draft generation converts those review steps into a
-  standard v2 `WorkflowGraph` and validates it without persistence. Draft save
-  persists reviewed steps only through `saveRecordingDraft`, creating a normal
-  workflow with the recorder settings snapshot or replacing the linked graph.
+  stop/discard lifecycle state, and recording event buffers. Failed recorder
+  launch/setup/navigation closes any browser context before surfacing the error.
+  The event collector injects bounded page-side capture, redacts sensitive text
+  field values, drops malformed locator candidates, and observes backend page
+  navigation before the locator generator and timeline normalizer convert raw
+  events into stable review steps. Graph draft generation converts those review
+  steps into a standard v2 `WorkflowGraph` and validates it without persistence.
+  Draft save persists reviewed steps only through `saveRecordingDraft`, creating
+  a normal workflow with the recorder settings snapshot or replacing the linked
+  graph, then consumes the in-memory draft/session.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
 - Schedule repository/engine code owns schedule SQL, next-run calculation, due-schedule scanning, and schedule event audit history.
 - Graph validation code owns structural/semantic workflow graph checks before persistence or compilation.

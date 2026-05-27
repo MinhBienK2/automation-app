@@ -1526,6 +1526,7 @@ describe("Electron workflow command handlers", () => {
       id: session.id,
       status: "discarded",
     });
+    expect(() => handlers.getRecordingSession(session.id)).toThrow("Recording session not found");
   });
 
   test("starts replace-current-graph recording from saved workflow settings without leaking secrets", async () => {
@@ -1658,6 +1659,23 @@ describe("Electron workflow command handlers", () => {
     expect(context.closed).toBe(true);
   });
 
+  test("closes the recorder browser when initial navigation fails before session registration", async () => {
+    const page = new FakeRecordingPage();
+    page.gotoError = new Error("Navigation failed");
+    const context = new FakeRecordingContext(page);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+
+    await expect(handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Broken recorder",
+      initial_url: "https://fixture.owned.test/fails",
+    })).rejects.toThrow("Navigation failed");
+
+    expect(context.closed).toBe(true);
+  });
+
   test("generates a recording draft without persisting a workflow", async () => {
     const page = new FakeRecordingPage();
     const context = new FakeRecordingContext(page);
@@ -1782,7 +1800,8 @@ describe("Electron workflow command handlers", () => {
     ).toBe(false);
     expect(handlers.getWorkflowSettings(saved.workflow.id).browser_launch.identity_id)
       .toBe(draft.workflow_settings_snapshot.browser_launch.identity_id);
-    expect(handlers.getRecordingDraft(draft.id).status).toBe("saved");
+    expect(() => handlers.getRecordingDraft(draft.id)).toThrow("Recording draft not found");
+    expect(() => handlers.getRecordingSession(session.id)).toThrow("Recording session not found");
   });
 
   test("replaces the current workflow graph without creating a new workflow", async () => {
@@ -3332,6 +3351,7 @@ class FakeRecordingContext implements BrowserDriverContext {
 class FakeRecordingPage implements BrowserDriverPage {
   initScripts: string[] = [];
   gotoCalls: string[] = [];
+  gotoError: Error | null = null;
   private exposedCapture:
     | ((payload: Record<string, unknown>) => void | Promise<void>)
     | null = null;
@@ -3339,6 +3359,7 @@ class FakeRecordingPage implements BrowserDriverPage {
 
   async goto(url: string) {
     this.gotoCalls.push(url);
+    if (this.gotoError) throw this.gotoError;
     this.frameNavigated?.({ url: () => url });
   }
 

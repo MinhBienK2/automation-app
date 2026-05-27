@@ -3,6 +3,7 @@
 import { describe, expect, test } from "vitest";
 import type { BrowserDriverPage } from "../browser/sessionManager";
 import { RecordingEventCollector } from "./eventCollector";
+import { normalizeRecordingEvents } from "./timelineNormalizer";
 
 describe("RecordingEventCollector", () => {
   test("injects page capture and records ordered page-side events", async () => {
@@ -128,6 +129,87 @@ describe("RecordingEventCollector", () => {
       },
     ]);
     expect(popup.initScripts).toHaveLength(1);
+  });
+
+  test("redacts sensitive text input values before they enter recording events", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_sensitive");
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "input",
+      page_url: "https://fixture.owned.test/login",
+      frame_url: "https://fixture.owned.test/login",
+      target: {
+        tag_name: "input",
+        input_type: "password",
+        accessible_name: "Password",
+        locators: [{ kind: "test_id", value: "password", score: 1, reason: "Stable test id" }],
+      },
+      value: { text: "super-secret-password" },
+      raw: {
+        input_type: "password",
+        typed_value: "super-secret-password",
+        nested: { value: "super-secret-password" },
+      },
+      confidence: "high",
+      warnings: [],
+    });
+
+    const [event] = collector.listEvents();
+
+    expect(event.value).toEqual({ text: "" });
+    expect(JSON.stringify(event)).not.toContain("super-secret-password");
+    expect(event.raw).toMatchObject({ input_type: "password", value_redacted: true });
+    expect(event.warnings).toEqual([
+      expect.objectContaining({ code: "sensitive_input_redacted" }),
+    ]);
+    expect(normalizeRecordingEvents([event])).toMatchObject([
+      {
+        included: false,
+        action: { type: "input_text", config: { text: "" } },
+        warnings: [expect.objectContaining({ code: "sensitive_input_redacted" })],
+      },
+    ]);
+  });
+
+  test("drops malformed locator candidates from page-controlled payloads", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_locators");
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "click",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "button",
+        text_sample: "Submit",
+        locators: [
+          { kind: "test_id", value: "submit", score: 1, reason: "Stable test id" },
+          { kind: "role", value: 42, score: 0.9, reason: "Malformed role" },
+          { kind: "__proto__", value: "polluted", score: 1, reason: "Invalid kind" },
+          { kind: "css", value: "x".repeat(1000), score: 0.1, reason: "Oversized fallback" },
+        ],
+      },
+      value: null,
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+
+    const [event] = collector.listEvents();
+
+    expect(event.target?.locators).toEqual([
+      { kind: "test_id", value: "submit", score: 1, reason: "Stable test id" },
+      {
+        kind: "css",
+        value: "x".repeat(240),
+        score: 0.1,
+        reason: "Oversized fallback",
+      },
+    ]);
+    expect(() => normalizeRecordingEvents([event])).not.toThrow();
   });
 });
 

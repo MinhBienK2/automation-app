@@ -1,6 +1,7 @@
 import type {
   RecordingEvent,
   RecordingEventKind,
+  RecordingLocatorCandidate,
   RecordingTarget,
   RecordingValue,
   RecordingWarning,
@@ -66,6 +67,20 @@ const RECORDABLE_EVENT_KINDS = new Set<RecordingEventKind>([
   "tab",
   "wait_marker",
 ]);
+
+const RECORDING_LOCATOR_KINDS = new Set<RecordingLocatorCandidate["kind"]>([
+  "test_id",
+  "role",
+  "label",
+  "placeholder",
+  "text",
+  "attribute",
+  "css",
+  "xpath",
+]);
+
+const SENSITIVE_FIELD_PATTERN = /(?:password|passwd|passcode|secret|token|api[-_ ]?key|access[-_ ]?key|private[-_ ]?key|credential)/i;
+const SENSITIVE_INPUT_TYPES = new Set(["password"]);
 
 export class RecordingEventCollector {
   private readonly events: RecordingEvent[] = [];
@@ -209,18 +224,38 @@ export class RecordingEventCollector {
       });
       return;
     }
+    const target = recordingTargetOrNull(payload.target);
+    let value = recordingValueOrNull(payload.value);
+    let raw = boundedRecord(payload.raw);
+    let warnings = recordingWarnings(payload.warnings);
+    if (value?.text != null && isSensitiveTextTarget(target, raw)) {
+      value = { text: "" };
+      raw = {
+        ...redactSensitiveRaw(raw),
+        value_redacted: true,
+      };
+      warnings = [
+        ...warnings,
+        {
+          code: "sensitive_input_redacted",
+          message:
+            "Recorder redacted a sensitive field value; review this step and provide a safe variable or test value before replay.",
+          severity: "warning",
+        },
+      ];
+    }
     this.pushEvent({
       kind,
       frame_url: stringOrNull(payload.frame_url),
       page_url: stringOrNull(payload.page_url),
-      target: recordingTargetOrNull(payload.target),
-      value: recordingValueOrNull(payload.value),
-      raw: boundedRecord(payload.raw),
+      target,
+      value,
+      raw,
       confidence:
         payload.confidence === "medium" || payload.confidence === "low"
           ? payload.confidence
           : "high",
-      warnings: recordingWarnings(payload.warnings),
+      warnings,
     });
   }
 
@@ -269,9 +304,40 @@ function recordingTargetOrNull(value: unknown): RecordingTarget | null {
     role: stringOrNull(raw.role),
     accessible_name: boundedString(raw.accessible_name),
     iframe: recordingTargetOrNull(raw.iframe),
-    locators: Array.isArray(raw.locators) ? clone(raw.locators).slice(0, 8) : [],
+    locators: recordingLocatorCandidates(raw.locators),
     bounding_box: boundingBoxOrNull(raw.bounding_box),
   };
+}
+
+function recordingLocatorCandidates(value: unknown): RecordingLocatorCandidate[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 16).flatMap((item) => {
+    const raw = objectRecord(item);
+    const kind = stringOrNull(raw.kind);
+    const candidateValue = boundedString(raw.value, 240);
+    const score = finiteNumber(raw.score);
+    const reason = boundedString(raw.reason, 160);
+    if (!kind || !isRecordingLocatorKind(kind) || !candidateValue || score == null || !reason) {
+      return [];
+    }
+    const candidate: RecordingLocatorCandidate = {
+      kind,
+      value: candidateValue,
+      score,
+      reason,
+    };
+    const name = boundedString(raw.name, 160);
+    const role = boundedString(raw.role, 80);
+    const attribute = boundedString(raw.attribute, 80);
+    if (name) candidate.name = name;
+    if (role) candidate.role = role;
+    if (attribute) candidate.attribute = attribute;
+    return [candidate];
+  }).slice(0, 8);
+}
+
+function isRecordingLocatorKind(value: string): value is RecordingLocatorCandidate["kind"] {
+  return RECORDING_LOCATOR_KINDS.has(value as RecordingLocatorCandidate["kind"]);
 }
 
 function recordingValueOrNull(value: unknown): RecordingValue | null {
@@ -351,9 +417,9 @@ function stringOrNull(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function boundedString(value: unknown) {
+function boundedString(value: unknown, limit = 500) {
   const text = stringOrNull(value);
-  return text ? text.slice(0, 500) : null;
+  return text ? text.slice(0, limit) : null;
 }
 
 function objectRecord(value: unknown): Record<string, unknown> {
@@ -366,12 +432,54 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function isSensitiveTextTarget(
+  target: RecordingTarget | null,
+  raw: Record<string, unknown>,
+) {
+  const inputType =
+    target?.input_type?.toLowerCase() ??
+    stringOrNull(raw.input_type)?.toLowerCase();
+  if (inputType && SENSITIVE_INPUT_TYPES.has(inputType)) return true;
+  const locatorFields = target?.locators.flatMap((locator) => [
+    locator.value,
+    locator.name,
+    locator.attribute,
+    locator.reason,
+  ]) ?? [];
+  return [
+    target?.accessible_name,
+    target?.text_sample,
+    ...locatorFields,
+    ...Object.entries(raw).flatMap(([key, value]) => [
+      key,
+      typeof value === "string" ? value : null,
+    ]),
+  ].some((value) => typeof value === "string" && SENSITIVE_FIELD_PATTERN.test(value));
+}
+
+function redactSensitiveRaw(raw: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(raw).map(([key, value]) => [
+      key,
+      key === "input_type" ? value : "[redacted]",
+    ]),
+  );
+}
+
 function recorderCaptureScript() {
   return `(() => {
     if (window.__wamRecorderInstalled) return;
     window.__wamRecorderInstalled = true;
     const trim = (value, limit = 500) =>
       typeof value === "string" ? value.trim().slice(0, limit) : null;
+    const sensitiveFieldPattern = /(?:password|passwd|passcode|secret|token|api[-_ ]?key|access[-_ ]?key|private[-_ ]?key|credential)/i;
+    const isSensitiveInput = (target) => {
+      if (!target) return false;
+      const type = String(target.type || "").toLowerCase();
+      if (type === "password") return true;
+      return [target.name, target.id, target.placeholder, target.getAttribute && target.getAttribute("aria-label")]
+        .some((value) => typeof value === "string" && sensitiveFieldPattern.test(value));
+    };
     const attrSelector = (name, value) =>
       "[" + name + "='" + String(value).replace(/'/g, "\\\\'") + "']";
     const locatorCandidatesFor = (element, tag, textSample, accessibleName) => {
@@ -529,8 +637,16 @@ function recorderCaptureScript() {
       push({
         kind: "input",
         target: targetFor(target),
-        value: { text: target.value || "" },
-        raw: { input_type: type || null }
+        value: { text: isSensitiveInput(target) ? "" : target.value || "" },
+        raw: {
+          input_type: type || null,
+          value_redacted: isSensitiveInput(target) || undefined
+        },
+        warnings: isSensitiveInput(target) ? [{
+          code: "sensitive_input_redacted",
+          message: "Recorder redacted a sensitive field value; review this step and provide a safe variable or test value before replay.",
+          severity: "warning"
+        }] : []
       });
     }, true);
     document.addEventListener("change", (event) => {

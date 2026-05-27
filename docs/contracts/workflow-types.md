@@ -278,15 +278,20 @@ credentials must not be sent to renderer code in recorder snapshots.
 checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
 Capture records navigation, click variants, text entry, select, checkbox/radio,
 file-input change names, throttled scroll, non-text keys/hotkeys, form submit
-markers, tab creation/switch, downloads, and dialogs. Unsupported captured
-behavior must become `RecordingWarning` entries rather than silently producing
-graph nodes.
+markers, tab creation/switch, downloads, and dialogs. Capture drops malformed
+locator candidates, bounds locator strings, and redacts password or
+secret-like text field values before events are returned through IPC. Redacted
+input events carry a `sensitive_input_redacted` warning and `raw.value_redacted`
+marker. Unsupported captured behavior must become `RecordingWarning` entries
+rather than silently producing graph nodes.
 
 The recorder normalizer collapses repeated input/change events for the same
 target into one `input_text` step with the final value, maps navigation, click
 variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
 wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
 into existing action configs, and carries source event ids forward for review.
+Sensitive redacted input steps are generated with an empty value, excluded by
+default, and must be reviewed with a safe literal or variable before replay.
 Native file chooser captures only expose file names; generated `upload_file`
 steps remain excluded and carry `upload_requires_reviewed_file_path` until a
 reviewer supplies explicit local file paths. Locator generation prefers
@@ -318,6 +323,8 @@ saveRecordingDraft(draftId, {
 internal recorder settings snapshot with the reviewed workflow name. `replace_graph`
 requires a draft linked to an existing workflow and replaces only that workflow's
 graph; saved Workflow Settings and browser identity remain unchanged.
+Successful save consumes the backend-memory draft and source session. Discarding
+a recorder session also removes generated drafts for that session.
 
 ## Graph Shape
 

@@ -60,16 +60,23 @@ export class RecorderSessionManager {
 
     const workflowId = input.mode === "replace_current_graph" ? input.workflow_id ?? null : null;
     const collector = new RecordingEventCollector(id);
-    const launched = this.dependencies.launchBrowser
-      ? await this.dependencies.launchBrowser({ settings, workflowId })
-      : null;
-    if (launched) {
-      await collector.attachContext(launched.context);
-      await collector.attachPage(launched.page);
-    }
-    if (launched && normalizedOptionalText(input.initial_url)) {
-      await launched.page.goto(normalizedOptionalText(input.initial_url) as string);
-      await collector.installPageCapture(launched.page);
+    let launched: Awaited<ReturnType<NonNullable<RecorderSessionManagerDependencies["launchBrowser"]>>> | null = null;
+    try {
+      launched = this.dependencies.launchBrowser
+        ? await this.dependencies.launchBrowser({ settings, workflowId })
+        : null;
+      if (launched) {
+        await collector.attachContext(launched.context);
+        await collector.attachPage(launched.page);
+      }
+      if (launched && normalizedOptionalText(input.initial_url)) {
+        await launched.page.goto(normalizedOptionalText(input.initial_url) as string);
+        await collector.installPageCapture(launched.page);
+      }
+    } catch (error) {
+      collector.dispose();
+      await launched?.context.close().catch(() => undefined);
+      throw error;
     }
 
     const publicSession: RecordingSession = {
@@ -135,12 +142,22 @@ export class RecorderSessionManager {
     record.browserContext = null;
     record.collector?.dispose();
     record.collector = null;
-    return this.publicSession(record);
+    const publicSession = this.publicSession(record);
+    this.sessions.delete(sessionId);
+    return publicSession;
   }
 
   getInternalSettingsSnapshot(sessionId: string): WorkflowSettings | null {
     const record = this.sessions.get(sessionId);
     return record ? clone(record.settingsSnapshot) : null;
+  }
+
+  deleteSession(sessionId: string) {
+    const record = this.sessions.get(sessionId);
+    if (!record) return;
+    record.collector?.dispose();
+    void record.browserContext?.close().catch(() => undefined);
+    this.sessions.delete(sessionId);
   }
 
   private savedWorkflowSettings(workflowId: string | null | undefined) {
