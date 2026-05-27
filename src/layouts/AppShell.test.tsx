@@ -57,11 +57,11 @@ describe("App shell", () => {
       "Overview",
       "Workflows",
       "Runs",
+      "Evidence",
       "Schedules",
       "Settings",
     ]);
     expect(screen.queryByRole("button", { name: "Run Center" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Evidence" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Identities" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Application content" }))
       .toHaveClass("app-content");

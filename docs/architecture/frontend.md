@@ -10,6 +10,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/overview/pages/OperationsOverviewPage.tsx`: default Mission
   Control operations dashboard with durable metrics, live runs, attention,
   activity, recent evidence metadata, and upcoming schedules.
+- `src/features/evidence/pages/EvidenceExplorerPage.tsx`: durable evidence
+  workspace with filters, list/grid results, selection, typed detail payloads,
+  screenshot preview, artifact reveal, and bundle export actions.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, and event history view.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots.
@@ -51,7 +54,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,
   supports manual refresh, and navigates returned workflow/run/schedule
-  references into existing Workflows, Runs, and Schedules destinations.
+  references into existing Workflows, Runs, Schedules, and focused Evidence
+  destinations.
+- Evidence owns historical evidence browsing UI state. It calls
+  `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
+  requests screenshot previews only through `getEvidenceScreenshotPreview`,
+  delegates file reveal/export through backend commands, and navigates related
+  runs/workflows back into existing destinations.
 - Workflow list direct Run, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while run snapshot polling continues. Active row status, row Run disabling, and row Stop are scoped to that workflow's run id. Duplicate calls `duplicateWorkflow` so local copies preserve the saved graph and non-storage settings while receiving a fresh browser identity/profile/fingerprint. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
@@ -70,6 +79,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
+- Evidence navigation state in the app shell/sidebar, Evidence query/detail
+  state, and Overview/Runs-to-Evidence handoff state.
 - Schedules navigation state in the app shell/sidebar, plus schedule create/edit form state and schedule event history presentation.
 - Runs navigation state in the app shell/sidebar.
 - Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands. Workflow detail header commands keep Settings, Validate, and Save icon-only while Run, Stop, and Run from selected remain text commands.

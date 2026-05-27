@@ -28,6 +28,9 @@
   .graph-shortcut-guide,
   .overview-kpi-grid,
   .overview-grid,
+  .evidence-toolbar,
+  .evidence-workspace,
+  .evidence-grid,
   .workflow-settings-body,
   .workflow-settings-grid,
   .settings-field-group-grid,
@@ -38,6 +41,7 @@
 
   .overview-row,
   .activity-bucket,
+  .evidence-metadata div,
   .run-step-summary {
     grid-template-columns: 1fr;
   }

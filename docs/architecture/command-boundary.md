@@ -20,6 +20,7 @@ Node/Electron backend.
 - Electron SQLite bootstrap: `electron/backend/persistence/database.ts`
 - Electron repository: `electron/backend/persistence/workflowRepository.ts`
 - Operations read model: `electron/backend/operations/operationsRepository.ts`
+- Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
 - Command contract: `docs/contracts/electron-ipc.md`
 
 ## Belongs Here
@@ -36,6 +37,10 @@ Node/Electron backend.
 - Operations aggregate reads through `getOperationsOverview` and
   `getOperationalRunDetail`; metric meanings, attention dedupe, evidence
   metadata filtering, and bounded limits stay in the backend.
+- Evidence reads and artifact operations through `listEvidenceItems`,
+  `getEvidenceDetail`, `getEvidenceScreenshotPreview`,
+  `revealEvidenceArtifact`, and `exportEvidenceBundle`; evidence extraction,
+  path validation, native reveal, and bundle writing stay in the backend.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
@@ -63,6 +68,7 @@ Node/Electron backend.
 - UI state decisions.
 - SQL implementation details.
 - Renderer-side KPI or evidence aggregation.
+- Renderer-side evidence extraction from raw outputs or filesystem paths.
 - Browser action internals.
 - Active run/profile lock maps, run snapshots, batch state, and final run persistence internals outside calls into the run manager.
 

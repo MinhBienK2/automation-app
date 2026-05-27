@@ -57,6 +57,7 @@ export function initializeDatabase(paths: AppPaths) {
     CREATE TABLE IF NOT EXISTS runs (
       id TEXT PRIMARY KEY,
       workflow_id TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'schedule')),
       status TEXT NOT NULL,
       started_at TEXT NOT NULL,
       finished_at TEXT,
@@ -144,6 +145,11 @@ export function initializeDatabase(paths: AppPaths) {
       ON operational_attention_events(workflow_id, created_at DESC);
   `);
   migrateWorkflowSchema(database);
+  migrateRunSchema(database);
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_runs_source_started_at
+      ON runs(source, started_at DESC);
+  `);
 
   return database;
 }
@@ -163,5 +169,27 @@ function migrateWorkflowSchema(database: DatabaseSync) {
   }
   if (!columns.has("settings_json")) {
     database.exec("ALTER TABLE workflows ADD COLUMN settings_json TEXT");
+  }
+}
+
+function migrateRunSchema(database: DatabaseSync) {
+  const columns = new Set(
+    database
+      .prepare("PRAGMA table_info(runs)")
+      .all()
+      .map((row) => (row as { name: string }).name),
+  );
+  if (!columns.has("source")) {
+    database.exec("ALTER TABLE runs ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+    database.exec(`
+      UPDATE runs
+      SET source = 'schedule'
+      WHERE id IN (
+        SELECT DISTINCT run_id
+        FROM workflow_schedule_events
+        WHERE event_type = 'started'
+          AND run_id IS NOT NULL
+      )
+    `);
   }
 }

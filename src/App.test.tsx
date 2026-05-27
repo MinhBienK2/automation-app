@@ -177,6 +177,114 @@ describe("App settings and graph autosave", () => {
     });
   });
 
+  test("opens Evidence Explorer from sidebar and focuses Overview evidence selections", async () => {
+    const evidencePage = {
+      generated_at: "2026-05-27T00:00:00.000Z",
+      items: [
+        {
+          evidence_id: "ev-shot",
+          kind: "screenshot",
+          label: "001-visit.png",
+          created_at: "2026-05-27T09:01:00.000Z",
+          run: {
+            id: "run-1",
+            status: "success",
+            source: "manual",
+            started_at: "2026-05-27T09:00:00.000Z",
+            finished_at: "2026-05-27T09:02:00.000Z",
+          },
+          workflow: { id: workflow.id, name: workflow.name },
+          identity: { id: "bi_123", display_name: "QA identity" },
+          node_id: "visit",
+          step_number: 1,
+          relative_path: "runs/run-1/screenshots/001-visit.png",
+          file_state: "unchecked",
+          navigation_targets: { run: true, workflow: true },
+        },
+      ],
+      next_cursor: null,
+      has_more: false,
+      warnings: {
+        skipped_artifacts: 1,
+        skipped_reports: 0,
+        skipped_traces: 0,
+        skipped_manifests: 0,
+      },
+    };
+    const listEvidenceItems = vi.fn((_request: unknown) => evidencePage);
+    const getEvidenceDetail = vi.fn((_evidenceId: string) => ({
+      item: evidencePage.items[0],
+      payload: {
+        kind: "screenshot",
+        relative_path: "runs/run-1/screenshots/001-visit.png",
+        file_state: "available",
+        artifact_kind: "screenshot",
+      },
+    }));
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_evidence_items: ({ request }: { request: unknown }) => listEvidenceItems(request),
+      get_evidence_detail: ({ evidenceId }: { evidenceId: string }) => getEvidenceDetail(evidenceId),
+      get_evidence_screenshot_preview: () => ({
+        evidence_id: "ev-shot",
+        mime_type: "image/png",
+        base64_data: "cG5nLWRhdGE=",
+        file_state: "available",
+      }),
+      reveal_evidence_artifact: null,
+      export_evidence_bundle: {
+        bundle_dir: "/tmp/evidence-bundle-20260527",
+        exported_count: 1,
+        omitted_file_count: 0,
+      },
+      get_operations_overview: () => ({
+        ...emptyOperationsOverview(),
+        recent_evidence: {
+          items: [
+            {
+              evidence_id: "ev-shot",
+              artifact_kind: "screenshot",
+              relative_path_or_label: "runs/run-1/screenshots/001-visit.png",
+              created_at: "2026-05-27T09:01:00.000Z",
+              run_id: "run-1",
+              workflow: { id: workflow.id, name: workflow.name },
+              node_id: "visit",
+              navigation_targets: {
+                run: { type: "run", run_id: "run-1" },
+                workflow: { type: "workflow", workflow_id: workflow.id },
+                evidence: { type: "evidence", evidence_id: "ev-shot" },
+              },
+            },
+          ],
+          total: 1,
+          has_more: false,
+        },
+      }),
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Evidence" }));
+
+    expect(await screen.findByRole("heading", { name: "Evidence Explorer" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search evidence" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export Selection" })).toBeDisabled();
+    expect(screen.getByRole("region", { name: "Evidence results" })).toHaveTextContent("001-visit.png");
+    expect(screen.getByRole("region", { name: "Evidence detail" })).toHaveTextContent("runs/run-1/screenshots/001-visit.png");
+    expect(screen.getByText("1 malformed evidence item skipped.")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Overview" }));
+    await userEvent.click(await screen.findByRole("button", { name: /001-visit\.png/ }));
+
+    expect(await screen.findByRole("heading", { name: "Evidence Explorer" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listEvidenceItems).toHaveBeenLastCalledWith(
+        expect.objectContaining({ focus_evidence_id: "ev-shot" }),
+      );
+    });
+    expect(getEvidenceDetail).toHaveBeenCalledWith("ev-shot");
+  });
+
   test("shows graph keyboard and mouse guidance in settings", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 

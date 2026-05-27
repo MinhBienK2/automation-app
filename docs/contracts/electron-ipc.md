@@ -10,6 +10,7 @@
 - Main process registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
 - SQLite repository: `electron/backend/persistence/workflowRepository.ts`
+- Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
 
 ## Current Boundary
 
@@ -62,6 +63,11 @@ string map.
 - `listRunStates`
 - `getOperationsOverview`
 - `getOperationalRunDetail`
+- `listEvidenceItems`
+- `getEvidenceDetail`
+- `getEvidenceScreenshotPreview`
+- `revealEvidenceArtifact`
+- `exportEvidenceBundle`
 - `listSchedules`
 - `getSchedule`
 - `createSchedule`
@@ -109,6 +115,14 @@ metadata. `getOperationalRunDetail(runId)` returns one bounded persisted run
 summary for Overview-to-Runs navigation; it is not an unbounded run-history or
 artifact-opening API.
 
+`listEvidenceItems(request?)` returns a bounded historical evidence page derived
+from persisted run outputs and run steps. `getEvidenceDetail(evidenceId)` returns
+one typed bounded detail payload. `getEvidenceScreenshotPreview(evidenceId)`,
+`revealEvidenceArtifact(evidenceId)`, and
+`exportEvidenceBundle({ evidence_ids })` accept evidence ids only; the backend
+resolves and validates file artifact paths before preview, native reveal, or
+manifest-bundle export.
+
 ## Payload Rules
 
 - Renderer wrapper names remain camelCase.
@@ -138,6 +152,10 @@ bridge; it does not own timers or schedule SQL.
 Operations Overview aggregation is owned by the Electron backend. The renderer
 can refresh and navigate from returned references, but it does not compute KPI
 meaning from raw SQL rows or expose arbitrary run outputs.
+
+Evidence Explorer aggregation and artifact actions are owned by the Electron
+backend. The renderer never receives absolute original artifact paths and does
+not import filesystem, SQLite, Electron shell/dialog, or raw output readers.
 
 CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit

@@ -10,14 +10,19 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Electron workflow repository: `electron/backend/persistence/workflowRepository.ts`
 - Electron schedule repository: `electron/backend/scheduling/workflowScheduleRepository.ts`
 - Electron operations read model: `electron/backend/operations/operationsRepository.ts`
+- Electron evidence read model: `electron/backend/evidence/evidenceRepository.ts`
 - Electron command handlers: `electron/backend/commands.ts`
 
 ## Current Behavior
 
 - Electron app data uses `appData/automation-app`.
 - The current schema creates document-shaped `workflows`, queryable `runs` and `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and `operational_attention_events`.
+- `runs.source` stores durable run provenance as `manual` or `schedule`.
+  Existing local rows are migrated by marking rows referenced by started
+  schedule events as `schedule`; all other legacy rows become `manual`.
 - Database initialization idempotently creates indexes for the core lookup paths:
   `runs(workflow_id, started_at DESC)`,
+  `runs(source, started_at DESC)`,
   `run_steps(run_id, step_number)`,
   `workflow_schedules(enabled, next_run_at)`,
   `workflow_schedule_events(schedule_id, created_at DESC)`, and
@@ -40,6 +45,10 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Operational attention rows store sanitized manual full-run launch blocks that happen before a run row exists. They keep workflow references and concise issue summaries, not browser storage, cookies, proxy credentials, or raw page outputs.
 - Deleting a workflow cascades to its schedules, schedule events, and operational attention events.
 - `OperationsRepository` owns bounded Overview SQL reads for run metrics, attention, upcoming schedules, and metadata-only evidence extracted from sanitized run outputs. The renderer supplies local-day UTC boundaries; persisted timestamps remain UTC.
+- `EvidenceRepository` owns bounded evidence queries over persisted run outputs
+  and run steps. It derives typed evidence items on read rather than maintaining
+  a separate projection table, and validates run-scoped artifact paths before
+  preview/reveal/export.
 - Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here
@@ -53,6 +62,7 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Persistence of Workflow Settings rows.
 - Persistence of workflow schedule rows and schedule event rows.
 - Persistence of operational attention rows and bounded operations read queries.
+- Persistence of durable run source and bounded evidence read queries.
 
 ## Does Not Belong Here
 

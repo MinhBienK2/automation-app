@@ -12,6 +12,8 @@ import type {
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
   ElementSnapshot,
+  EvidenceBundleExportRequest,
+  EvidenceListRequest,
   GraphValidationIssue,
   OrchestrationSchedule,
   OperationsOverviewRequest,
@@ -62,6 +64,7 @@ import {
   type RunnerCommandPort,
 } from "./runtime/runManager.js";
 import { sanitizePathSegment } from "./evidence/artifacts.js";
+import { EvidenceRepository } from "./evidence/evidenceRepository.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./graph/migration.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
@@ -102,6 +105,8 @@ type CommandContext = {
   database: DatabaseSync;
   runner?: RunnerCommandPort;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
+  revealEvidenceArtifact?: (absolutePath: string) => void | Promise<void>;
+  selectEvidenceBundleDirectory?: () => Promise<string | null>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 
@@ -109,6 +114,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
   const scheduleRepository = new WorkflowScheduleRepository(context.database);
   const operationsRepository = new OperationsRepository(context.database);
+  const evidenceRepository = new EvidenceRepository({
+    database: context.database,
+    appPaths: context.appPaths,
+    revealEvidenceArtifact: context.revealEvidenceArtifact,
+    selectEvidenceBundleDirectory: context.selectEvidenceBundleDirectory,
+  });
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   const runManager = new RunManager({ database: context.database, runner });
   const settingsService = new WorkflowSettingsService({
@@ -650,6 +661,26 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     getOperationalRunDetail(runId: string) {
       return operationsRepository.getRunDetail(runId);
+    },
+
+    listEvidenceItems(request: EvidenceListRequest = {}) {
+      return evidenceRepository.listEvidenceItems(request);
+    },
+
+    getEvidenceDetail(evidenceId: string) {
+      return evidenceRepository.getEvidenceDetail(evidenceId);
+    },
+
+    getEvidenceScreenshotPreview(evidenceId: string) {
+      return evidenceRepository.getEvidenceScreenshotPreview(evidenceId);
+    },
+
+    revealEvidenceArtifact(evidenceId: string) {
+      return evidenceRepository.revealEvidenceArtifact(evidenceId);
+    },
+
+    exportEvidenceBundle(request: EvidenceBundleExportRequest) {
+      return evidenceRepository.exportEvidenceBundle(request);
     },
 
     listSchedules(): WorkflowSchedule[] {

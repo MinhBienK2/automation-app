@@ -1018,7 +1018,8 @@ export type WorkflowScheduleEventFilter = {
 export type OperationsNavigationTarget =
   | { type: "workflow"; workflow_id: string }
   | { type: "run"; run_id: string }
-  | { type: "schedule"; schedule_id: string };
+  | { type: "schedule"; schedule_id: string }
+  | { type: "evidence"; evidence_id: string };
 
 export type OperationsOverviewRequest = {
   day_start_utc: string;
@@ -1090,6 +1091,7 @@ export type OverviewEvidenceItem = {
   navigation_targets: {
     run?: OperationsNavigationTarget;
     workflow?: OperationsNavigationTarget;
+    evidence?: OperationsNavigationTarget;
   };
 };
 
@@ -1148,6 +1150,133 @@ export type OperationalRunDetail = {
   evidence_metadata: OverviewEvidenceItem[];
   evidence_metadata_has_more: boolean;
 };
+
+export type EvidenceKind =
+  | "screenshot"
+  | "download"
+  | "browser_identity"
+  | "action_trace"
+  | "evidence_manifest";
+
+export type EvidenceFileState = "unchecked" | "available" | "unavailable";
+
+export type EvidenceListRequest = {
+  search?: string | null;
+  types?: EvidenceKind[] | null;
+  run_statuses?: RunStatus[] | null;
+  sources?: WorkflowRunSource[] | null;
+  workflow_id?: string | null;
+  run_id?: string | null;
+  identity_id?: string | null;
+  time_start_utc?: string | null;
+  time_end_utc?: string | null;
+  focus_evidence_id?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
+};
+
+export type EvidenceListItem = {
+  evidence_id: string;
+  kind: EvidenceKind;
+  label: string;
+  created_at: string;
+  run: {
+    id: string;
+    status: RunStatus;
+    source: WorkflowRunSource;
+    started_at: string;
+    finished_at?: string | null;
+  };
+  workflow: { id: string; name: string } | null;
+  identity: { id: string; display_name?: string | null } | null;
+  node_id?: string | null;
+  step_number?: number | null;
+  relative_path?: string | null;
+  file_state?: EvidenceFileState;
+  navigation_targets: {
+    run: boolean;
+    workflow: boolean;
+  };
+};
+
+export type EvidencePage = {
+  generated_at: string;
+  items: EvidenceListItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+  warnings: {
+    skipped_artifacts: number;
+    skipped_reports: number;
+    skipped_traces: number;
+    skipped_manifests: number;
+  };
+};
+
+export type EvidenceDetail =
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "screenshot";
+        artifact_kind: "screenshot";
+        relative_path: string;
+        file_state: EvidenceFileState;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "download";
+        artifact_kind: "download";
+        relative_path: string;
+        file_state: EvidenceFileState;
+        size_bytes?: number | null;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "browser_identity";
+        fields: Array<{ key: string; value: string | number | boolean | null }>;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "action_trace";
+        entries: Array<Record<string, unknown>>;
+        has_more: boolean;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "evidence_manifest";
+        rows: Array<{
+          key: string;
+          category: string;
+          approximate_bytes?: number | null;
+          redacted: boolean;
+          truncated: boolean;
+        }>;
+      };
+    };
+
+export type EvidenceScreenshotPreview = {
+  evidence_id: string;
+  mime_type: "image/png";
+  base64_data: string;
+  file_state: "available";
+};
+
+export type EvidenceBundleExportRequest = {
+  evidence_ids: string[];
+};
+
+export type EvidenceBundleExportResult = {
+  bundle_dir: string;
+  exported_count: number;
+  omitted_file_count: number;
+} | null;
 
 export type ScheduleValidationIssue = {
   field: string;

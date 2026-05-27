@@ -9,6 +9,12 @@ import type {
   OperationalRunDetail,
   OperationsOverview,
   OperationsOverviewRequest,
+  EvidenceBundleExportRequest,
+  EvidenceBundleExportResult,
+  EvidenceDetail,
+  EvidenceListRequest,
+  EvidencePage,
+  EvidenceScreenshotPreview,
   RecordedEvent,
   RunState,
   RunValidationIssue,
@@ -81,6 +87,15 @@ export type WorkflowElectronBridge = {
     request: OperationsOverviewRequest,
   ): Promise<OperationsOverview>;
   getOperationalRunDetail(runId: string): Promise<OperationalRunDetail>;
+  listEvidenceItems(request?: EvidenceListRequest): Promise<EvidencePage>;
+  getEvidenceDetail(evidenceId: string): Promise<EvidenceDetail>;
+  getEvidenceScreenshotPreview(
+    evidenceId: string,
+  ): Promise<EvidenceScreenshotPreview>;
+  revealEvidenceArtifact(evidenceId: string): Promise<void>;
+  exportEvidenceBundle(
+    request: EvidenceBundleExportRequest,
+  ): Promise<EvidenceBundleExportResult>;
   listSchedules(): Promise<WorkflowSchedule[]>;
   getSchedule(scheduleId: string): Promise<WorkflowSchedule>;
   createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule>;

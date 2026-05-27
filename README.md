@@ -225,6 +225,7 @@ artifacts and required only when publishing signed/notarized builds.
 Use a simple page with an input, button, iframe, dialog trigger, download link, list, table, link, tall body, and an HTTP fixture that echoes request headers and geolocation.
 
 1. Confirm the app opens on Overview, shows Active Runs, Succeeded Today, Attention Needed, Upcoming Schedules, Live Operations, Attention Queue, Execution Activity, Recent Evidence, and Upcoming Schedules, and that Open Workflows navigates to the workflow list.
+1. Open Evidence from the sidebar, confirm screenshot/download/browser identity/action trace/evidence manifest items from completed runs are searchable and filterable, screenshot preview and Reveal in Folder work only through validated evidence actions, downloads show metadata without in-app preview, Export Selection creates a manifest bundle without absolute original paths, and Overview Recent Evidence plus Runs selected details navigate into Evidence.
 2. Create a workflow.
 2. Confirm the new workflow graph starts with `Start -> New node`.
 3. Open Settings from the sidebar, turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.

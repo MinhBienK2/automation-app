@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { RunCenterPage } from "./features/runs/pages/RunCenterPage";
+import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
@@ -15,6 +16,9 @@ import {
   duplicateWorkflow as duplicateWorkflowCommand,
   enableSchedule,
   exportWorkflowPackage,
+  exportEvidenceBundle,
+  getEvidenceDetail,
+  getEvidenceScreenshotPreview,
   getWorkflowGraph,
   getOperationalRunDetail,
   getOperationsOverview,
@@ -22,6 +26,7 @@ import {
   getWorkflow,
   getWorkflowSettings,
   importWorkflowPackage,
+  listEvidenceItems,
   listRunStates,
   listScheduleEvents,
   listSchedules,
@@ -34,6 +39,7 @@ import {
   saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
+  revealEvidenceArtifact,
   stopRun as stopRunCommand,
   updateSchedule,
   validateWorkflowGraph,
@@ -66,6 +72,11 @@ import {
 import type {
   GraphValidationIssue,
   GraphNodeType,
+  EvidenceBundleExportResult,
+  EvidenceDetail,
+  EvidenceListRequest,
+  EvidencePage,
+  EvidenceScreenshotPreview,
   OperationalRunDetail,
   OperationsNavigationTarget,
   OperationsOverview,
@@ -84,7 +95,7 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "runs";
+type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "runs" | "evidence";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -315,6 +326,16 @@ function App() {
   const [operationsOverviewLoading, setOperationsOverviewLoading] = useState(false);
   const [focusedRunDetail, setFocusedRunDetail] =
     useState<OperationalRunDetail | null>(null);
+  const [evidencePage, setEvidencePage] = useState<EvidencePage | null>(null);
+  const [evidenceQuery, setEvidenceQuery] = useState<EvidenceListRequest>({});
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+  const [evidenceDetail, setEvidenceDetail] = useState<EvidenceDetail | null>(null);
+  const [evidenceDetailLoading, setEvidenceDetailLoading] = useState(false);
+  const [evidenceDetailError, setEvidenceDetailError] = useState("");
+  const [evidencePreview, setEvidencePreview] = useState<EvidenceScreenshotPreview | null>(null);
+  const [evidenceExportResult, setEvidenceExportResult] =
+    useState<EvidenceBundleExportResult>(null);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -470,6 +491,46 @@ function App() {
     } catch (error) {
       setFocusedRunDetail(null);
       setAppError(commandMessage(error));
+    }
+  }
+
+  async function loadEvidencePage(nextQuery: EvidenceListRequest = evidenceQuery) {
+    setEvidenceLoading(true);
+    try {
+      const page = await listEvidenceItems(nextQuery);
+      setEvidencePage(page);
+      setEvidenceQuery(nextQuery);
+      setAppError("");
+      const nextSelected =
+        nextQuery.focus_evidence_id ??
+        (selectedEvidenceId && page.items.some((item) => item.evidence_id === selectedEvidenceId)
+          ? selectedEvidenceId
+          : page.items[0]?.evidence_id ?? null);
+      setSelectedEvidenceId(nextSelected);
+      if (nextSelected) {
+        await loadEvidenceDetail(nextSelected);
+      } else {
+        setEvidenceDetail(null);
+        setEvidencePreview(null);
+      }
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setEvidenceLoading(false);
+    }
+  }
+
+  async function loadEvidenceDetail(evidenceId: string) {
+    setEvidenceDetailLoading(true);
+    setEvidenceDetailError("");
+    try {
+      setEvidenceDetail(await getEvidenceDetail(evidenceId));
+      setEvidencePreview(null);
+    } catch (error) {
+      setEvidenceDetail(null);
+      setEvidenceDetailError(commandMessage(error));
+    } finally {
+      setEvidenceDetailLoading(false);
     }
   }
 
@@ -1026,6 +1087,51 @@ function App() {
     void refreshRunStates();
   }
 
+  function openEvidence(nextQuery: EvidenceListRequest = evidenceQuery) {
+    setScreen("evidence");
+    setAppError("");
+    setEvidenceDetailError("");
+    void loadEvidencePage(nextQuery);
+  }
+
+  function updateEvidenceQuery(nextQuery: EvidenceListRequest) {
+    setEvidenceQuery(nextQuery);
+    void loadEvidencePage(nextQuery);
+  }
+
+  function selectEvidence(evidenceId: string) {
+    setSelectedEvidenceId(evidenceId);
+    void loadEvidenceDetail(evidenceId);
+  }
+
+  async function previewEvidenceScreenshot(evidenceId: string) {
+    setEvidenceDetailError("");
+    try {
+      setEvidencePreview(await getEvidenceScreenshotPreview(evidenceId));
+    } catch (error) {
+      setEvidencePreview(null);
+      setEvidenceDetailError(commandMessage(error));
+    }
+  }
+
+  async function revealEvidence(evidenceId: string) {
+    setEvidenceDetailError("");
+    try {
+      await revealEvidenceArtifact(evidenceId);
+    } catch (error) {
+      setEvidenceDetailError(commandMessage(error));
+    }
+  }
+
+  async function exportSelectedEvidence(evidenceIds: string[]) {
+    setEvidenceDetailError("");
+    try {
+      setEvidenceExportResult(await exportEvidenceBundle({ evidence_ids: evidenceIds }));
+    } catch (error) {
+      setEvidenceDetailError(commandMessage(error));
+    }
+  }
+
   function navigateFromOverview(target: OperationsNavigationTarget) {
     if (target.type === "workflow") {
       void openWorkflow(target.workflow_id);
@@ -1043,6 +1149,10 @@ function App() {
       setAppError("");
       void loadSchedules();
       void loadScheduleHistory(target.schedule_id);
+      return;
+    }
+    if (target.type === "evidence") {
+      openEvidence({ focus_evidence_id: target.evidence_id });
     }
   }
 
@@ -1235,12 +1345,15 @@ function App() {
             ? "schedules"
             : screen === "runs"
               ? "runs"
+              : screen === "evidence"
+                ? "evidence"
               : screen === "overview"
                 ? "overview"
                 : "workflows"
       }
       sidebarCollapsed={sidebarCollapsed}
       onOpenOverview={openOverview}
+      onOpenEvidence={() => openEvidence({})}
       onOpenSchedules={openSchedules}
       onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
@@ -1254,6 +1367,26 @@ function App() {
           error={appError}
           onRefresh={loadOperationsOverview}
           onOpenWorkflows={backToList}
+          onNavigate={navigateFromOverview}
+        />
+      ) : screen === "evidence" ? (
+        <EvidenceExplorerPage
+          page={evidencePage}
+          detail={evidenceDetail}
+          preview={evidencePreview}
+          loading={evidenceLoading}
+          detailLoading={evidenceDetailLoading}
+          error={appError}
+          detailError={evidenceDetailError}
+          query={evidenceQuery}
+          selectedEvidenceId={selectedEvidenceId}
+          exportResult={evidenceExportResult}
+          onQueryChange={updateEvidenceQuery}
+          onRefresh={() => loadEvidencePage(evidenceQuery)}
+          onSelectEvidence={selectEvidence}
+          onPreviewScreenshot={previewEvidenceScreenshot}
+          onRevealArtifact={revealEvidence}
+          onExportSelection={exportSelectedEvidence}
           onNavigate={navigateFromOverview}
         />
       ) : screen === "settings" ? (
@@ -1280,6 +1413,7 @@ function App() {
           focusedRunDetail={focusedRunDetail}
           error={appError}
           onStopRun={(runId) => stopRun(runId)}
+          onOpenEvidence={(runId) => openEvidence({ run_id: runId })}
         />
       ) : screen === "detail" && detail ? (
         <>

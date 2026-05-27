@@ -12,6 +12,11 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Operations Overview is the default Mission Control workspace. It combines
   current run snapshots with durable run, schedule, launch-block attention, and
   evidence metadata so the app remains operationally meaningful after restart.
+- Evidence Explorer is the durable investigation workspace for persisted run
+  evidence. It lists safe typed evidence items across runs, loads bounded
+  details on demand, previews screenshots only through validated backend file
+  commands, reveals artifacts in their folder, and exports sanitized manifest
+  bundles without exposing absolute paths or raw browser storage.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
@@ -48,6 +53,9 @@ Users can:
 - Open Runs to monitor concurrent workflow run snapshots and stop a selected active run by run id.
 - Open Overview to scan active runs, successful runs today, attention items,
   execution activity, recent evidence metadata, and upcoming schedules.
+- Open Evidence to search/filter persisted screenshot, download, browser
+  identity, action trace, and evidence manifest items across historical runs,
+  then navigate back to the related run or workflow.
 
 ## Current Source Files
 
@@ -69,6 +77,8 @@ Users can:
 - Workflow repository: `electron/backend/persistence/workflowRepository.ts`
 - Schedule repository and engine: `electron/backend/scheduling/workflowScheduleRepository.ts`, `electron/backend/scheduling/scheduler.ts`
 - Operations read model: `electron/backend/operations/operationsRepository.ts`
+- Evidence read model and artifact boundary:
+  `electron/backend/evidence/evidenceRepository.ts`
 
 ## Invariant
 
