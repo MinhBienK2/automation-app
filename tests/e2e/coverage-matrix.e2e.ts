@@ -62,6 +62,7 @@ const requiredBehaviorDomains = [
   "network_behavior",
   "package_batch_audit",
   "page_navigation",
+  "real_external_web",
   "run_outcome",
   "session_continuity",
   "workflow_authoring",

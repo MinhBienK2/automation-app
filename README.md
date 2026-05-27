@@ -92,6 +92,13 @@ interaction, form, and keyboard behavior:
 npm run test:e2e:flake
 ```
 
+Run the opt-in public real-web workflow lane. This uses external demo/read-only
+sites and is intentionally separate from the deterministic fixture-backed lane:
+
+```bash
+npm run test:e2e:real-web
+```
+
 Run the real CloakBrowser smoke test separately. First run may download the
 browser runtime:
 

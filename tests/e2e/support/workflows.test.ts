@@ -70,4 +70,14 @@ describe("E2E workflow runtime overrides", () => {
     expect(packageJson.scripts["test:e2e:staging"]).toBeUndefined();
     expect(packageJson.scripts["test:e2e:staging:preflight"]).toBeUndefined();
   });
+
+  test("exposes real-web workflow E2E only through an explicit opt-in lane", () => {
+    const script = packageJson.scripts["test:e2e:real-web"];
+    const specPath = path.join(process.cwd(), "tests/e2e/real-world-web.e2e.ts");
+
+    expect(fs.existsSync(specPath), "real-web workflow spec should exist").toBe(true);
+    expect(script).toContain("E2E_REAL_WEB=1");
+    expect(script).toContain("tests/e2e/real-world-web.e2e.ts");
+    expect(packageJson.scripts["test:e2e:full"]).not.toContain("E2E_REAL_WEB=1");
+  });
 });

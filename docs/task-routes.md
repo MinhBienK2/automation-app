@@ -164,3 +164,4 @@ Common E2E commands:
 - Full local desktop: `npm run test:e2e:full`
 - Visible local browser review/debug: `npm run test:e2e:visible`
 - Flake detection: `npm run test:e2e:flake`
+- Opt-in public real-web workflow checks: `npm run test:e2e:real-web`

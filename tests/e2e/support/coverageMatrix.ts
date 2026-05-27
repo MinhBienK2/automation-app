@@ -26,19 +26,20 @@ const runValidation = ["tests/e2e/run-validation-and-stop.e2e.ts"];
 const batchEvidence = ["tests/e2e/batch-evidence.e2e.ts"];
 const workflowJourneys = ["tests/e2e/workflow-user-journeys.e2e.ts"];
 const workflowPackage = ["tests/e2e/workflow-package.e2e.ts"];
+const realWorldWeb = ["tests/e2e/real-world-web.e2e.ts"];
 const compilerTests = ["electron/backend/graph/compiler.test.ts"];
 const runnerTests = ["electron/backend/runtime/runner.test.ts"];
 const graphEditorTests = ["src/features/workflows/components/WorkflowGraphEditor.test.tsx"];
 
 export const actionCoverage = {
-  navigate: entry([...coreExecution, ...navigationActions, ...waitAssertion]),
-  wait: entry([...coreExecution, ...waitAssertion, ...keyboardDialog]),
+  navigate: entry([...coreExecution, ...navigationActions, ...waitAssertion, ...realWorldWeb]),
+  wait: entry([...coreExecution, ...waitAssertion, ...keyboardDialog, ...realWorldWeb]),
   random_wait: entry(waitAssertion),
-  input_text: entry([...coreExecution, ...humanBehavior]),
+  input_text: entry([...coreExecution, ...humanBehavior, ...realWorldWeb]),
   clear_input: entry(coreExecution),
-  click: entry([...coreExecution, ...pointerActions, ...keyboardDialog, ...humanBehavior]),
+  click: entry([...coreExecution, ...pointerActions, ...keyboardDialog, ...humanBehavior, ...realWorldWeb]),
   scroll: entry([...pointerActions, ...humanBehavior]),
-  select_option: entry(coreExecution),
+  select_option: entry([...coreExecution, ...realWorldWeb]),
   press_key: entry(keyboardDialog),
   hotkey: entry(keyboardDialog),
   hover: entry([...pointerActions, ...humanBehavior]),
@@ -65,19 +66,20 @@ export const actionCoverage = {
     ...navigationActions,
     ...pointerActions,
     ...waitAssertion,
+    ...realWorldWeb,
   ]),
-  extract_attribute: entry(captureNetwork),
+  extract_attribute: entry([...captureNetwork, ...realWorldWeb]),
   extract_input_value: entry([...coreExecution, ...captureNetwork, ...keyboardDialog, ...humanBehavior]),
   extract_table: entry(captureNetwork),
-  extract_list: entry(captureNetwork),
+  extract_list: entry([...captureNetwork, ...realWorldWeb]),
   take_screenshot: entry(captureNetwork),
   go_back: entry(navigationActions),
   go_forward: entry(navigationActions),
   reload: entry(navigationActions),
-  open_new_tab: entry(navigationActions),
-  switch_tab: entry(navigationActions),
-  close_tab: entry(navigationActions),
-  accept_dialog: entry(keyboardDialog),
+  open_new_tab: entry([...navigationActions, ...realWorldWeb]),
+  switch_tab: entry([...navigationActions, ...realWorldWeb]),
+  close_tab: entry([...navigationActions, ...realWorldWeb]),
+  accept_dialog: entry([...keyboardDialog, ...realWorldWeb]),
   dismiss_dialog: entry(keyboardDialog),
   wait_for_download: entry(captureNetwork),
   set_variable: entry(controlFlow),
@@ -627,6 +629,51 @@ export const behaviorScenarios: BehaviorScenario[] = [
     capability_status: "covered",
     evidence: { files: [...workflowPackage, ...batchEvidence] },
   },
+  {
+    id: "real_external_web_journeys",
+    domain: "real_external_web",
+    user_intent:
+      "Run workflow-authored browser automation against public real websites across reference, documentation, demo commerce, content catalog, quote directory, login, dynamic loading, and alert flows.",
+    preconditions: [
+      "Explicit E2E_REAL_WEB=1 opt-in",
+      "Outbound network access",
+      "Public automation/demo or read-only websites are reachable",
+      "Graph domain allowlist names every external navigation domain",
+    ],
+    workflow_authoring: [
+      "Four desktop workflow graphs covering multiple external websites and topics",
+      "Domain allowlist node added to every graph",
+      "No account creation, paid action, posting to third-party services, or non-demo mutation",
+    ],
+    browser_behavior: [
+      "External pages load in the CloakBrowser-backed runner",
+      "Tabs, form auth, checkout demo state, pagination, dynamic loading, and JavaScript alert handling behave through real browser APIs",
+    ],
+    actions_and_fields: [
+      "navigate.wait_until=dom_content_loaded",
+      "domain_allowlist.domains",
+      "input_text.clear_before_input",
+      "click.target",
+      "select_option.match_by=value",
+      "wait.condition=url_contains",
+      "wait.condition=text_visible",
+      "extract_text.output_name",
+      "extract_attribute.attribute",
+      "extract_list.output_name",
+      "open_new_tab.url",
+      "switch_tab.index",
+      "close_tab.index",
+      "accept_dialog",
+    ],
+    expected_outcomes: [
+      "Outputs contain stable public page headings, hrefs, catalog lists, quote authors/tags, demo order summary, login flash, dynamic text, and alert result",
+    ],
+    capability_status: "covered",
+    evidence: {
+      files: realWorldWeb,
+      notes: "Runs only through npm run test:e2e:real-web because third-party site availability is intentionally outside the deterministic full E2E lane.",
+    },
+  },
 ];
 
 export const capabilityTraceability: CapabilityTraceabilityEntry[] = [
@@ -649,6 +696,7 @@ export const capabilityTraceability: CapabilityTraceabilityEntry[] = [
   trace("session_continuity", ["session_retained_run_from_selected"], "covered", ["tests/e2e/run-from-selected-real.e2e.ts"]),
   trace("package_batch_audit", ["package_batch_evidence_audit"], "covered", [...workflowPackage, ...batchEvidence]),
   trace("router_merge_local_journey", ["decision_router_merge_recovery_path"], "covered", controlFlow),
+  trace("real_external_web", ["real_external_web_journeys"], "covered", realWorldWeb),
 ];
 
 export const behaviorFieldVariants: BehaviorFieldVariant[] = [
