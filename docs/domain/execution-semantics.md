@@ -23,6 +23,9 @@
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
 - Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. `run_policy.run_from_selected_mode` controls whether the sub-plan stops after the selected node or continues through the downstream main path. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
 - Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled top-level step evidence and executed nested action traces to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
+- Run persistence records durable `source` provenance as `manual` or
+  `schedule` at run creation so historical evidence filtering remains
+  meaningful after restart.
 - Scheduled runs start through the same saved-workflow command path as manual full runs. If the scheduled workflow conflicts with an active workflow, active persistent profile, or active batch, the scheduler records a skipped occurrence instead of queueing it; isolated due schedules can start in the same scheduler tick.
 - Manual full-run launch attempts that fail graph or Workflow Settings
   validation before a run row exists write sanitized operational attention for
@@ -62,6 +65,10 @@
 - Overview only reads metadata from sanitized structured evidence; artifact
   opening, raw output inspection, and arbitrary file paths stay outside this
   phase.
+- Evidence Explorer reads typed evidence summaries and bounded details from
+  persisted outputs and run steps. Screenshot preview, artifact reveal, and
+  evidence-bundle export are backend commands that revalidate run-scoped
+  artifact paths under the app evidence directory before touching files.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 

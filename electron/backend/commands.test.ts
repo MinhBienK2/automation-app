@@ -2043,6 +2043,218 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("lists details previews reveals and exports safe persisted evidence", async () => {
+    const bundleRoot = await fs.mkdtemp(path.join(os.tmpdir(), "evidence-bundle-"));
+    tempRoots.push(bundleRoot);
+    const revealEvidenceArtifact = vi.fn();
+    const { handlers, database, appPaths } = await createTestHandlers({
+      revealEvidenceArtifact,
+      selectEvidenceBundleDirectory: vi.fn(async () => bundleRoot),
+    });
+    const workflow = handlers.createWorkflow("Evidence Explorer flow");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        identity_id: "bi_historical",
+        display_name: "Historical QA identity",
+      },
+    });
+    const evidencePath = "runs/run-evidence/screenshots/001-visit.png";
+    await fs.mkdir(path.dirname(path.join(appPaths.evidenceDir, evidencePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(appPaths.evidenceDir, evidencePath), Buffer.from("png-data"));
+
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-evidence",
+        workflow.id,
+        "schedule",
+        "success",
+        "2026-05-27T09:00:00.000Z",
+        "2026-05-27T09:02:00.000Z",
+        JSON.stringify({
+          browser_launch: {
+            identity_id: "bi_historical",
+            display_name: "Historical QA identity",
+          },
+        }),
+        JSON.stringify({
+          browser_identity: {
+            identity_id: "bi_historical",
+            display_name: "Historical QA identity",
+            fingerprint_seed_hash: "seed-hash",
+            proxy_password: "should-not-leak",
+          },
+          __action_traces: [
+            {
+              node_id: "visit",
+              label: "Visit owned site",
+              action_type: "navigate",
+              status: "success",
+              mode: "browser",
+              started_at: "2026-05-27T09:00:10.000Z",
+              finished_at: "2026-05-27T09:00:11.000Z",
+              evidence_summary: [{ kind: "screenshot", path: evidencePath }],
+            },
+          ],
+          __evidence: [
+            {
+              node_id: "visit",
+              step_number: 1,
+              artifact_kind: "screenshot",
+              path: evidencePath,
+              created_at: "2026-05-27T09:01:00.000Z",
+            },
+            {
+              artifact_kind: "screenshot",
+              path: "../escape.png",
+            },
+            {
+              node_id: "visit",
+              artifact_kind: "screenshot",
+              path: evidencePath,
+              created_at: "2026-05-27T09:01:00.000Z",
+            },
+          ],
+          __evidence_model: {
+            outputs: [
+              {
+                key: "browser_identity",
+                category: "browser_identity",
+                redacted: false,
+                truncated: false,
+                approximate_bytes: 120,
+              },
+              {
+                key: "secret_token",
+                category: "sensitive_redacted",
+                redacted: true,
+                truncated: false,
+                approximate_bytes: 0,
+              },
+            ],
+          },
+        }),
+      );
+    database
+      .prepare(
+        `INSERT INTO run_steps (
+          id, run_id, node_id, step_number, action_type, status, started_at, finished_at, trace_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "step-run-evidence-1",
+        "run-evidence",
+        "visit",
+        1,
+        "navigate",
+        "success",
+        "2026-05-27T09:00:10.000Z",
+        "2026-05-27T09:00:11.000Z",
+        JSON.stringify({ node_id: "visit", action_type: "navigate", status: "success" }),
+      );
+
+    const page = handlers.listEvidenceItems({
+      sources: ["schedule"],
+      identity_id: "bi_historical",
+      limit: 10,
+    });
+    expect(page.items.map((item) => item.kind)).toEqual(
+      expect.arrayContaining([
+        "screenshot",
+        "browser_identity",
+        "action_trace",
+        "evidence_manifest",
+      ]),
+    );
+    expect(page.warnings).toMatchObject({ skipped_artifacts: 1 });
+    expect(page.items.filter((item) => item.kind === "screenshot")).toHaveLength(1);
+    const screenshot = page.items.find((item) => item.kind === "screenshot");
+    expect(screenshot).toMatchObject({
+      label: "001-visit.png",
+      run: { id: "run-evidence", source: "schedule", status: "success" },
+      workflow: { id: workflow.id, name: "Evidence Explorer flow" },
+      identity: { id: "bi_historical", display_name: "Historical QA identity" },
+      node_id: "visit",
+      step_number: 1,
+      relative_path: evidencePath,
+      file_state: "unchecked",
+    });
+    const screenshotId = screenshot?.evidence_id ?? "";
+
+    const screenshotDetail = handlers.getEvidenceDetail(screenshotId);
+    expect(screenshotDetail).toMatchObject({
+      item: expect.objectContaining({ evidence_id: screenshotId, kind: "screenshot" }),
+      payload: expect.objectContaining({
+        kind: "screenshot",
+        relative_path: evidencePath,
+        file_state: "available",
+      }),
+    });
+    expect(JSON.stringify(screenshotDetail)).not.toContain("proxy_password");
+
+    await expect(handlers.getEvidenceScreenshotPreview(screenshotId)).resolves.toEqual({
+      evidence_id: screenshotId,
+      mime_type: "image/png",
+      base64_data: Buffer.from("png-data").toString("base64"),
+      file_state: "available",
+    });
+
+    await handlers.revealEvidenceArtifact(screenshotId);
+    expect(revealEvidenceArtifact).toHaveBeenCalledWith(path.join(appPaths.evidenceDir, evidencePath));
+
+    const identityDetail = handlers.getEvidenceDetail(
+      page.items.find((item) => item.kind === "browser_identity")?.evidence_id ?? "",
+    );
+    expect(identityDetail.payload).toMatchObject({
+      kind: "browser_identity",
+      fields: expect.arrayContaining([
+        { key: "identity_id", value: "bi_historical" },
+        { key: "display_name", value: "Historical QA identity" },
+      ]),
+    });
+    expect(JSON.stringify(identityDetail)).not.toContain("should-not-leak");
+
+    const exportResult = await handlers.exportEvidenceBundle({
+      evidence_ids: page.items.map((item) => item.evidence_id),
+    });
+    expect(exportResult).toMatchObject({
+      exported_count: 4,
+      omitted_file_count: 0,
+      bundle_dir: expect.stringContaining("evidence-bundle-"),
+    });
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(String(exportResult?.bundle_dir), "manifest.json"), "utf8"),
+    );
+    expect(JSON.stringify(manifest)).not.toContain(appPaths.evidenceDir);
+    expect(JSON.stringify(manifest)).not.toContain("should-not-leak");
+    expect(manifest.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          evidence_id: screenshotId,
+          kind: "screenshot",
+          artifact: expect.objectContaining({
+            relative_path: evidencePath,
+            copied_path: expect.stringContaining("artifacts/"),
+          }),
+        }),
+      ]),
+    );
+    await expect(
+      fs.readFile(path.join(String(exportResult?.bundle_dir), "artifacts", "001-visit.png"), "utf8"),
+    ).resolves.toBe("png-data");
+  });
+
   test("starts isolated workflow runs concurrently and lists each run snapshot", async () => {
     const finishByRunId = new Map<string, (state: RunState) => void>();
     const observedSignals = new Map<string, AbortSignal>();

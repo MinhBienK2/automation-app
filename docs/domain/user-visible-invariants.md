@@ -16,6 +16,10 @@ Preserve these unless the task explicitly changes them.
 - Overview is the default Mission Control entry point. It shows backend-owned
   durable metrics, live operations, attention, activity, recent evidence
   metadata, and upcoming schedules for the operator's local day.
+- Evidence is a separate sidebar page between Runs and Schedules. It is the
+  only broad historical evidence browser; Overview recent evidence opens
+  Evidence focused on the selected evidence id, and Runs selected run details
+  can open Evidence filtered to that run.
 - Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
@@ -86,6 +90,10 @@ Preserve these unless the task explicitly changes them.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
 - Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
+- Evidence is a separate app screen reachable from the sidebar. It lists only
+  typed persisted evidence summaries and bounded typed details for screenshot,
+  download, browser identity, action trace, and evidence manifest items. It
+  does not expose raw arbitrary output browsing.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
@@ -125,6 +133,10 @@ Preserve these unless the task explicitly changes them.
 - Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
+- Evidence artifact preview/reveal/export commands accept evidence ids, not
+  paths. The backend resolves the item from persisted metadata, validates it is
+  under `evidence/runs/<run_id>/...`, and never returns absolute original paths
+  to the renderer. Downloads are not previewed or executed in-app.
 - `browser_identity` output evidence includes a fingerprint seed hash, configured fingerprint font hash when available, sanitized persona metadata/rationale, timezone/locale source, supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, configured humanization status and preset, and CloakBrowser wrapper/binary version evidence.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 

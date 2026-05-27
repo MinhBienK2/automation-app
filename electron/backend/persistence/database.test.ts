@@ -28,6 +28,9 @@ describe("Electron database initialization", () => {
     expect(indexSql(database, "idx_runs_workflow_started_at")).toBe(
       "CREATE INDEX idx_runs_workflow_started_at ON runs(workflow_id, started_at DESC)",
     );
+    expect(indexSql(database, "idx_runs_source_started_at")).toBe(
+      "CREATE INDEX idx_runs_source_started_at ON runs(source, started_at DESC)",
+    );
     expect(indexSql(database, "idx_run_steps_run_step_number")).toBe(
       "CREATE INDEX idx_run_steps_run_step_number ON run_steps(run_id, step_number)",
     );
@@ -50,6 +53,9 @@ describe("Electron database initialization", () => {
     expect(queryPlan(database, "SELECT id FROM runs WHERE workflow_id = ? ORDER BY started_at DESC", [
       "workflow-1",
     ])).toContain("idx_runs_workflow_started_at");
+    expect(queryPlan(database, "SELECT id FROM runs WHERE source = ? ORDER BY started_at DESC", [
+      "schedule",
+    ])).toContain("idx_runs_source_started_at");
     expect(
       queryPlan(database, "SELECT id FROM run_steps WHERE run_id = ? ORDER BY step_number", [
         "run-1",
@@ -120,6 +126,100 @@ describe("Electron database initialization", () => {
         .prepare("INSERT INTO workflows (id, name, graph_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
         .run("workflow-1", "Legacy", "{}", "1", "1"),
     ).not.toThrow();
+    database.close();
+  });
+
+  test("migrates legacy run source provenance from schedule events and manual fallback", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-db-"));
+    tempRoots.push(tempRoot);
+    const paths = createAppPaths(tempRoot);
+    await fs.mkdir(paths.rootDir, { recursive: true });
+    const legacy = new DatabaseSync(paths.databasePath);
+    legacy.exec(`
+      PRAGMA foreign_keys = ON;
+
+      CREATE TABLE workflows (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        graph_json TEXT NOT NULL,
+        settings_json TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE runs (
+        id TEXT PRIMARY KEY,
+        workflow_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        finished_at TEXT,
+        settings_snapshot_json TEXT,
+        graph_snapshot_json TEXT,
+        outputs_json TEXT,
+        error_json TEXT,
+        FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE workflow_schedules (
+        id TEXT PRIMARY KEY,
+        workflow_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        enabled INTEGER NOT NULL,
+        kind_json TEXT NOT NULL,
+        next_run_at TEXT,
+        last_event_at TEXT,
+        last_status TEXT,
+        last_reason TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE workflow_schedule_events (
+        id TEXT PRIMARY KEY,
+        schedule_id TEXT NOT NULL,
+        workflow_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        run_id TEXT,
+        scheduled_for TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        reason TEXT,
+        details_json TEXT,
+        FOREIGN KEY (schedule_id) REFERENCES workflow_schedules(id) ON DELETE CASCADE,
+        FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+      );
+
+      INSERT INTO workflows (id, name, graph_json, created_at, updated_at)
+      VALUES ('workflow-1', 'Legacy', '{}', '2026-05-27T00:00:00.000Z', '2026-05-27T00:00:00.000Z');
+      INSERT INTO runs (id, workflow_id, status, started_at)
+      VALUES ('manual-run', 'workflow-1', 'success', '2026-05-27T01:00:00.000Z');
+      INSERT INTO runs (id, workflow_id, status, started_at)
+      VALUES ('scheduled-run', 'workflow-1', 'success', '2026-05-27T02:00:00.000Z');
+      INSERT INTO workflow_schedules (id, workflow_id, name, enabled, kind_json, created_at, updated_at)
+      VALUES ('schedule-1', 'workflow-1', 'Daily', 1, '{}', '2026-05-27T00:00:00.000Z', '2026-05-27T00:00:00.000Z');
+      INSERT INTO workflow_schedule_events (
+        id, schedule_id, workflow_id, event_type, run_id, scheduled_for, created_at
+      ) VALUES (
+        'event-1', 'schedule-1', 'workflow-1', 'started', 'scheduled-run',
+        '2026-05-27T02:00:00.000Z', '2026-05-27T02:00:01.000Z'
+      );
+    `);
+    legacy.close();
+
+    const database = initializeDatabase(paths);
+    const sources = database
+      .prepare("SELECT id, source FROM runs ORDER BY id")
+      .all() as Array<{ id: string; source: string }>;
+
+    expect(sources).toEqual([
+      { id: "manual-run", source: "manual" },
+      { id: "scheduled-run", source: "schedule" },
+    ]);
+    expect(indexSql(database, "idx_runs_source_started_at")).toBe(
+      "CREATE INDEX idx_runs_source_started_at ON runs(source, started_at DESC)",
+    );
     database.close();
   });
 });

@@ -37,6 +37,11 @@ const methodNames: BridgeMethodName[] = [
   "listRunStates",
   "getOperationsOverview",
   "getOperationalRunDetail",
+  "listEvidenceItems",
+  "getEvidenceDetail",
+  "getEvidenceScreenshotPreview",
+  "revealEvidenceArtifact",
+  "exportEvidenceBundle",
   "listSchedules",
   "getSchedule",
   "createSchedule",
@@ -78,6 +83,13 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   if (!(command in commands)) {
     if (command === "get_operations_overview") return defaultOperationsOverview();
     if (command === "get_operational_run_detail") return null;
+    if (command === "list_evidence_items") return defaultEvidencePage();
+    if (command === "get_evidence_detail") return null;
+    if (command === "get_evidence_screenshot_preview") {
+      throw new Error("Unexpected command: get_evidence_screenshot_preview");
+    }
+    if (command === "reveal_evidence_artifact") return null;
+    if (command === "export_evidence_bundle") return null;
     throw new Error(`Unexpected command: ${command}`);
   }
 
@@ -85,6 +97,21 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   return typeof handler === "function"
     ? (handler as CommandHandler)(args)
     : handler;
+}
+
+function defaultEvidencePage() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    items: [],
+    next_cursor: null,
+    has_more: false,
+    warnings: {
+      skipped_artifacts: 0,
+      skipped_reports: 0,
+      skipped_traces: 0,
+      skipped_manifests: 0,
+    },
+  };
 }
 
 function defaultOperationsOverview() {
@@ -210,6 +237,21 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getOperationalRunDetail.mockImplementation((runId: string) =>
     resolveCommand(commands, "get_operational_run_detail", { runId }),
+  );
+  workflowBridgeMock.listEvidenceItems.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "list_evidence_items", { request }),
+  );
+  workflowBridgeMock.getEvidenceDetail.mockImplementation((evidenceId: string) =>
+    resolveCommand(commands, "get_evidence_detail", { evidenceId }),
+  );
+  workflowBridgeMock.getEvidenceScreenshotPreview.mockImplementation((evidenceId: string) =>
+    resolveCommand(commands, "get_evidence_screenshot_preview", { evidenceId }),
+  );
+  workflowBridgeMock.revealEvidenceArtifact.mockImplementation((evidenceId: string) =>
+    resolveCommand(commands, "reveal_evidence_artifact", { evidenceId }),
+  );
+  workflowBridgeMock.exportEvidenceBundle.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "export_evidence_bundle", { request }),
   );
   workflowBridgeMock.listSchedules.mockImplementation(() =>
     resolveCommand(commands, "list_schedules", undefined),

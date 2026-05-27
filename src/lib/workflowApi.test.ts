@@ -22,6 +22,11 @@ import {
   getCloakBrowserDiagnostics,
   getOperationalRunDetail,
   getOperationsOverview,
+  listEvidenceItems,
+  getEvidenceDetail,
+  getEvidenceScreenshotPreview,
+  revealEvidenceArtifact,
+  exportEvidenceBundle,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
@@ -83,6 +88,11 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.dryRunValidateConfig.mockResolvedValue(undefined);
     workflowBridgeMock.getOperationsOverview.mockResolvedValue(undefined);
     workflowBridgeMock.getOperationalRunDetail.mockResolvedValue(undefined);
+    workflowBridgeMock.listEvidenceItems.mockResolvedValue(undefined);
+    workflowBridgeMock.getEvidenceDetail.mockResolvedValue(undefined);
+    workflowBridgeMock.getEvidenceScreenshotPreview.mockResolvedValue(undefined);
+    workflowBridgeMock.revealEvidenceArtifact.mockResolvedValue(undefined);
+    workflowBridgeMock.exportEvidenceBundle.mockResolvedValue(undefined);
 
     await validateSchedule({
       workflow_id: "workflow-1",
@@ -128,6 +138,16 @@ describe("workflow API phase ten commands", () => {
       timezone_label: "UTC",
     });
     await getOperationalRunDetail("run-1");
+    await listEvidenceItems({
+      types: ["screenshot"],
+      sources: ["manual"],
+      search: "checkout",
+      limit: 25,
+    });
+    await getEvidenceDetail("ev-1");
+    await getEvidenceScreenshotPreview("ev-1");
+    await revealEvidenceArtifact("ev-1");
+    await exportEvidenceBundle({ evidence_ids: ["ev-1"] });
     await getCloakBrowserDiagnostics();
     await installCloakBrowserBinary();
     await cleanupOrphanedBrowserProfiles();
@@ -187,6 +207,18 @@ describe("workflow API phase ten commands", () => {
       timezone_label: "UTC",
     });
     expect(workflowBridgeMock.getOperationalRunDetail).toHaveBeenCalledWith("run-1");
+    expect(workflowBridgeMock.listEvidenceItems).toHaveBeenCalledWith({
+      types: ["screenshot"],
+      sources: ["manual"],
+      search: "checkout",
+      limit: 25,
+    });
+    expect(workflowBridgeMock.getEvidenceDetail).toHaveBeenCalledWith("ev-1");
+    expect(workflowBridgeMock.getEvidenceScreenshotPreview).toHaveBeenCalledWith("ev-1");
+    expect(workflowBridgeMock.revealEvidenceArtifact).toHaveBeenCalledWith("ev-1");
+    expect(workflowBridgeMock.exportEvidenceBundle).toHaveBeenCalledWith({
+      evidence_ids: ["ev-1"],
+    });
     expect(workflowBridgeMock.getCloakBrowserDiagnostics).toHaveBeenCalled();
     expect(workflowBridgeMock.installCloakBrowserBinary).toHaveBeenCalled();
     expect(workflowBridgeMock.cleanupOrphanedBrowserProfiles).toHaveBeenCalled();

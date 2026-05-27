@@ -34,6 +34,17 @@ Frontend and backend must agree on:
 - `OperationalRunDetail`: bounded selected-run summary for Overview-to-Runs
   navigation, including sanitized error text, capped step summaries, and safe
   evidence metadata.
+- `EvidenceListRequest`: bounded evidence filters for search, type, run status,
+  durable source, workflow, run, historical identity, time range, cursor, limit,
+  and optional focused evidence id.
+- `EvidencePage`: backend-owned evidence result page with typed list items,
+  opaque cursor, `has_more`, and skipped-item warning counts.
+- `EvidenceDetail`: one typed safe payload for screenshot, download, browser
+  identity, action trace, or evidence manifest evidence.
+- `EvidenceScreenshotPreview`: validated screenshot preview payload containing
+  PNG base64 data only after backend path/file checks.
+- `EvidenceBundleExportRequest` / `EvidenceBundleExportResult`: explicit
+  selected evidence bundle export request and manifest-bundle result.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
@@ -234,6 +245,17 @@ workflow graph/settings to be runnable.
 Scheduler skip reasons include workflow/profile/batch run conflicts such as
 `active_workflow`, `active_profile`, and `active_batch`; isolated due schedules
 can start concurrently and each started event records its run id.
+
+## Evidence Shape
+
+Evidence items are derived from persisted run outputs and run steps rather than
+a separate projection table. Supported item kinds are `screenshot`, `download`,
+`browser_identity`, `action_trace`, and `evidence_manifest`. File artifact items
+carry only safe run-scoped relative paths such as `runs/<run_id>/screenshots/...`;
+artifact preview/reveal/export commands accept evidence ids and revalidate path
+containment in the Electron backend. Historical identity fields come from the
+run-time settings snapshot and sanitized `browser_identity` output, not the
+workflow's current identity after later rotation.
 
 ## Graph Shape
 

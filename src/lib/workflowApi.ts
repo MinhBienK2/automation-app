@@ -1,6 +1,8 @@
 import type {
   ActionConfig,
   BatchRunRequest,
+  EvidenceBundleExportRequest,
+  EvidenceListRequest,
   ElementSnapshot,
   OrchestrationSchedule,
   OperationsOverviewRequest,
@@ -149,6 +151,26 @@ export function getOperationsOverview(request: OperationsOverviewRequest) {
 
 export function getOperationalRunDetail(runId: string) {
   return bridge().getOperationalRunDetail(runId);
+}
+
+export function listEvidenceItems(request: EvidenceListRequest = {}) {
+  return bridge().listEvidenceItems(request);
+}
+
+export function getEvidenceDetail(evidenceId: string) {
+  return bridge().getEvidenceDetail(evidenceId);
+}
+
+export function getEvidenceScreenshotPreview(evidenceId: string) {
+  return bridge().getEvidenceScreenshotPreview(evidenceId);
+}
+
+export function revealEvidenceArtifact(evidenceId: string) {
+  return bridge().revealEvidenceArtifact(evidenceId);
+}
+
+export function exportEvidenceBundle(request: EvidenceBundleExportRequest) {
+  return bridge().exportEvidenceBundle(request);
 }
 
 export function listSchedules() {

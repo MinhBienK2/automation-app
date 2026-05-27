@@ -6,6 +6,7 @@
 React renderer
   -> src/App.tsx orchestration
   -> src/features/overview/pages/OperationsOverviewPage.tsx durable operations dashboard
+  -> src/features/evidence/pages/EvidenceExplorerPage.tsx evidence investigation workspace
   -> src/features/workflows/* screens and components
   -> src/lib/personaCatalog.ts shared workflow identity persona catalog
   -> visual graph editor for graph authoring and canvas run state
@@ -28,6 +29,7 @@ Node/TypeScript backend
   -> electron/backend/graph/compiler.ts graph compilation
   -> electron/backend/persistence/workflowRepository.ts workflow repository
   -> electron/backend/operations/operationsRepository.ts operations read model
+  -> electron/backend/evidence/evidenceRepository.ts evidence read model and artifact commands
   -> electron/backend/scheduling/workflowScheduleRepository.ts schedule repository
   -> electron/backend/scheduling/scheduler.ts in-app schedule engine
   -> electron/backend/persistence/database.ts SQLite bootstrap
@@ -38,6 +40,7 @@ SQLite
   -> workflow_schedules
   -> workflow_schedule_events
   -> operational_attention_events
+  -> run outputs used as evidence source
 ```
 
 ## Runtime State
@@ -50,6 +53,10 @@ The Operations Overview read model is also backend-owned: it merges current
 process run snapshots with persisted runs, schedule decisions, launch-block
 attention, and sanitized evidence metadata before returning a bounded DTO to
 the renderer.
+The Evidence read model is backend-owned as well: it derives typed evidence
+items from persisted run outputs/run steps, validates artifact references under
+the app evidence directory, and owns screenshot preview, reveal, and sanitized
+bundle export commands.
 
 ## Boundaries
 
@@ -73,6 +80,9 @@ the renderer.
 - Operations repository code owns dashboard aggregation, attention
   correlation, local-day activity buckets, bounded persisted run detail, and
   safe evidence metadata extraction.
+- Evidence repository code owns historical evidence listing, filtering,
+  deterministic evidence ids, typed detail payloads, artifact path containment,
+  native reveal, screenshot preview, and manifest-based bundle export.
 - Schedule repository/engine code owns schedule SQL, next-run calculation, due-schedule scanning, and schedule event audit history.
 - Graph validation code owns structural/semantic workflow graph checks before persistence or compilation.
 - Graph compiler code owns validated graph-to-action compilation and settings prelude insertion.

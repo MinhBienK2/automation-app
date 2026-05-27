@@ -48,6 +48,9 @@ specific run:
 
 The snapshot also mirrors the top-level run-state fields for compatibility with
 older UI helpers that expect a direct `RunState`.
+The same `manual`/`schedule` source is persisted on SQLite `runs.source` when a
+run row begins. Session snapshots and durable history therefore use the same
+source vocabulary for Runs, Overview, and Evidence filtering.
 
 ## Lifecycle
 

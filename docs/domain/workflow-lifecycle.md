@@ -73,6 +73,12 @@
 - Overview loads a bounded operations aggregate through `getOperationsOverview`
   and can navigate persisted run references into Runs through
   `getOperationalRunDetail`.
+- Evidence loads durable persisted run evidence through `listEvidenceItems`.
+  Overview recent evidence can focus a specific evidence id, and Runs selected
+  durable run detail can open Evidence with a `run_id` filter.
+- Persisted run rows record durable `source` provenance as `manual` or
+  `schedule`; older local rows are migrated deterministically from started
+  schedule events when possible and otherwise treated as manual.
 - Graph runs share the same run-state lifecycle as full workflow runs, with each active workflow run tracked by its run id.
 - Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`. Top-level run-step rows remain compatible with existing history queries, while executed nested branch/body traces are appended with parent node and sequence metadata for path reconstruction.
 - End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Run Policy browser retention decides whether terminal runs retain or close the browser session.

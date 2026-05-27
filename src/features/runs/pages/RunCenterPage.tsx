@@ -8,6 +8,7 @@ type RunCenterPageProps = {
   focusedRunDetail?: OperationalRunDetail | null;
   error: string;
   onStopRun: (runId: string) => void;
+  onOpenEvidence?: (runId: string) => void;
 };
 
 export function RunCenterPage({
@@ -15,6 +16,7 @@ export function RunCenterPage({
   focusedRunDetail,
   error,
   onStopRun,
+  onOpenEvidence,
 }: RunCenterPageProps) {
   const sortedRuns = [...runSnapshots].sort((left, right) =>
     right.started_at.localeCompare(left.started_at),
@@ -64,6 +66,15 @@ export function RunCenterPage({
                 <dd>{focusedRunDetail.sanitized_error_summary ?? "-"}</dd>
               </div>
             </dl>
+            {onOpenEvidence ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onOpenEvidence(focusedRunDetail.run_id)}
+              >
+                Open Evidence
+              </Button>
+            ) : null}
             <div className="run-step-summary-list">
               {focusedRunDetail.step_summaries.map((step) => (
                 <div key={`${step.step_number}-${step.node_id ?? "step"}`} className="run-step-summary">

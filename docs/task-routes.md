@@ -101,6 +101,32 @@ Checks: `npm test -- electron/backend/persistence/database.test.ts electron/back
 
 Update docs: product model, user-visible invariants, workflow lifecycle, execution semantics, architecture overview, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, README smoke checklist, and this route when Overview ownership or checks change.
 
+## Change Evidence Explorer
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
+`domain/workflow-lifecycle.md`, `domain/execution-semantics.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`architecture/persistence.md`, `architecture/command-boundary.md`,
+`contracts/electron-ipc.md`, `contracts/workflow-types.md`,
+`contracts/run-state.md`
+
+Verify: `src/App.tsx`, `src/features/evidence/`, `src/features/overview/`,
+`src/features/runs/`, `src/layouts/`, `src/lib/workflowApi.ts`,
+`src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`,
+`electron/preload.cts`, `electron/backend/evidence/evidenceRepository.ts`,
+`electron/backend/persistence/database.ts`, `electron/backend/runtime/runManager.ts`,
+`electron/backend/commands.ts`, `electron/main.ts`
+
+Checks: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts`,
+`npm test -- src/lib/workflowApi.test.ts src/layouts/AppShell.test.tsx src/App.test.tsx src/AppCss.test.ts`,
+`npx tsc --noEmit`, `npm run build:electron`, `npm test`, `npm run build`
+
+Update docs: product model, user-visible invariants, workflow lifecycle,
+execution semantics, architecture overview, frontend architecture, persistence
+architecture, command boundary, Electron IPC contract, workflow types,
+run-state contract, README smoke checklist, and this route when Evidence
+ownership or checks change.
+
 ## Change Runner Behavior
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`

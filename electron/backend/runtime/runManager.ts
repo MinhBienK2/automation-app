@@ -218,7 +218,7 @@ export class RunManager {
     const workflowId = workflow.id;
     const profileName = browserProfileKey(settings);
     const abortController = new AbortController();
-    const runId = this.beginRunRecord(workflowId, settings, graphSnapshot);
+    const runId = this.beginRunRecord(workflowId, settings, graphSnapshot, source);
     const runningState: RunState = {
       ...idleRunState,
       status: "running",
@@ -424,8 +424,13 @@ export class RunManager {
     this.currentBatchRunId = null;
   }
 
-  beginRunRecord(workflowId: string, settings: WorkflowSettings, graph: WorkflowGraph) {
-    return beginRun(this.options.database, workflowId, settings, graph);
+  beginRunRecord(
+    workflowId: string,
+    settings: WorkflowSettings,
+    graph: WorkflowGraph,
+    source: WorkflowRunSource = "manual",
+  ) {
+    return beginRun(this.options.database, workflowId, settings, graph, source);
   }
 
   finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState) {
@@ -612,6 +617,7 @@ function beginRun(
   workflowId: string,
   settings: WorkflowSettings,
   graph: WorkflowGraph,
+  source: WorkflowRunSource = "manual",
 ) {
   const runId = randomUUID();
   database
@@ -619,15 +625,17 @@ function beginRun(
       `INSERT INTO runs (
         id,
         workflow_id,
+        source,
         status,
         started_at,
         settings_snapshot_json,
         graph_snapshot_json
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       runId,
       workflowId,
+      source,
       "running",
       new Date().toISOString(),
       JSON.stringify(settings),

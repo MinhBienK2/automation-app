@@ -246,7 +246,7 @@ function EvidenceRow({
     <button
       className="overview-row"
       type="button"
-      onClick={() => onNavigate(item.navigation_targets.run ?? item.navigation_targets.workflow ?? { type: "workflow", workflow_id: item.workflow.id })}
+      onClick={() => onNavigate(item.navigation_targets.evidence ?? item.navigation_targets.run ?? item.navigation_targets.workflow ?? { type: "workflow", workflow_id: item.workflow.id })}
     >
       <span>
         <strong>{item.artifact_kind}</strong>
