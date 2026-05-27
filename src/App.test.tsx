@@ -9,6 +9,7 @@ import {
 } from "./tests/mocks/electron";
 import { workflow } from "./tests/mocks/workflowFixtures";
 import {
+  emptyOperationsOverview,
   idleRunState,
   listWorkflowScenario,
   workflowDetailScenario,
@@ -26,6 +27,10 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
     const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
+  }
+
+  async function openWorkflows() {
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
   }
 
   test("opens settings from the sidebar and persists the autosave preference", async () => {
@@ -53,6 +58,125 @@ describe("App settings and graph autosave", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
+  test("lands on Overview with operational panels and refreshes the durable aggregate", async () => {
+    let overviewCalls = 0;
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_operations_overview: () => {
+        overviewCalls += 1;
+        return {
+          ...emptyOperationsOverview(),
+          generated_at: `2026-05-27T00:00:0${overviewCalls}.000Z`,
+          metrics: {
+            active_runs: 1,
+            succeeded_today: 2,
+            attention_today: 3,
+            upcoming_schedules: 4,
+          },
+          live_runs: {
+            items: [
+              {
+                run_id: "run-1",
+                workflow_id: workflow.id,
+                workflow_name: workflow.name,
+                source: "manual",
+                status: "running",
+                current_step_id: "visit",
+                current_step_number: 2,
+                started_at: "2026-05-27T00:00:00.000Z",
+                identity_display_name: "Login identity",
+                navigation_target: { type: "run", run_id: "run-1" },
+              },
+            ],
+            total: 1,
+            has_more: false,
+          },
+          attention: {
+            items: [
+              {
+                id: "attention-1",
+                source_kind: "launch_blocked",
+                severity: "failure",
+                occurred_at: "2026-05-27T00:00:00.000Z",
+                title: "Launch blocked",
+                summary: "Graph needs a start node",
+                workflow: { id: workflow.id, name: workflow.name },
+                navigation_target: { type: "workflow", workflow_id: workflow.id },
+              },
+            ],
+            total: 1,
+            has_more: false,
+          },
+          activity: [
+            {
+              bucket_start_utc: "2026-05-27T00:00:00.000Z",
+              bucket_end_utc: "2026-05-27T01:00:00.000Z",
+              succeeded: 2,
+              failed: 1,
+              blocked: 1,
+              schedule_attention: 1,
+            },
+          ],
+          recent_evidence: {
+            items: [
+              {
+                evidence_id: "ev-1",
+                artifact_kind: "screenshot",
+                relative_path_or_label: "runs/run-1/screenshots/001.png",
+                created_at: "2026-05-27T00:01:00.000Z",
+                run_id: "run-1",
+                workflow: { id: workflow.id, name: workflow.name },
+                node_id: "visit",
+                navigation_targets: {
+                  run: { type: "run", run_id: "run-1" },
+                  workflow: { type: "workflow", workflow_id: workflow.id },
+                },
+              },
+            ],
+            total: 1,
+            has_more: false,
+          },
+          upcoming_schedules: {
+            items: [
+              {
+                schedule_id: "schedule-1",
+                workflow_id: workflow.id,
+                workflow_name: workflow.name,
+                schedule_name: "Daily audit",
+                next_run_at: "2026-05-27T05:00:00.000Z",
+                last_status: "started",
+                last_reason: null,
+                navigation_target: { type: "schedule", schedule_id: "schedule-1" },
+              },
+            ],
+            total: 1,
+            has_more: false,
+          },
+        };
+      },
+    });
+
+    renderApp();
+
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Workflows" })).toBeInTheDocument();
+    expect(screen.getByText("Active Runs")).toBeInTheDocument();
+    expect(screen.getByText("Succeeded Today")).toBeInTheDocument();
+    expect(screen.getByText("Attention Needed")).toBeInTheDocument();
+    expect(screen.getAllByText("Upcoming Schedules").length).toBeGreaterThan(0);
+    expect(screen.getByRole("region", { name: "Live Operations" })).toHaveTextContent("Login identity");
+    expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Graph needs a start node");
+    expect(screen.getByRole("region", { name: "Execution Activity" })).toHaveTextContent("2 success");
+    expect(screen.getByRole("region", { name: "Recent Evidence" })).toHaveTextContent("runs/run-1/screenshots/001.png");
+    expect(screen.getByRole("region", { name: "Upcoming Schedules" })).toHaveTextContent("Daily audit");
+
+    await userEvent.click(screen.getByRole("button", { name: "Refresh Overview" }));
+
+    await waitFor(() => {
+      expect(overviewCalls).toBeGreaterThan(1);
+    });
+  });
+
   test("shows graph keyboard and mouse guidance in settings", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
@@ -78,6 +202,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
+    await openWorkflows();
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
@@ -125,6 +250,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
+    await openWorkflows();
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
@@ -158,6 +284,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
+    await openWorkflows();
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const header = await screen.findByRole("region", { name: "Workflow detail header" });
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
@@ -210,6 +337,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
+    await openWorkflows();
     await userEvent.click(await screen.findByRole("button", { name: "Run Login flow" }));
 
     await waitFor(() => {

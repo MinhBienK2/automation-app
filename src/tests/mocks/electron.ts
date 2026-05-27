@@ -35,6 +35,8 @@ const methodNames: BridgeMethodName[] = [
   "stopRun",
   "getRunState",
   "listRunStates",
+  "getOperationsOverview",
+  "getOperationalRunDetail",
   "listSchedules",
   "getSchedule",
   "createSchedule",
@@ -74,6 +76,8 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   workflowCommandCallMock(command, args);
 
   if (!(command in commands)) {
+    if (command === "get_operations_overview") return defaultOperationsOverview();
+    if (command === "get_operational_run_detail") return null;
     throw new Error(`Unexpected command: ${command}`);
   }
 
@@ -81,6 +85,29 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   return typeof handler === "function"
     ? (handler as CommandHandler)(args)
     : handler;
+}
+
+function defaultOperationsOverview() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    range: {
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    },
+    metrics: {
+      active_runs: 0,
+      succeeded_today: 0,
+      attention_today: 0,
+      upcoming_schedules: 0,
+    },
+    live_runs: { items: [], total: 0, has_more: false },
+    attention: { items: [], total: 0, has_more: false },
+    activity: [],
+    recent_evidence: { items: [], total: 0, has_more: false },
+    upcoming_schedules: { items: [], total: 0, has_more: false },
+    data_warnings: { evidence_items_skipped: 0 },
+  };
 }
 
 export function mockWorkflowBridgeCommands(commands: CommandMap) {
@@ -177,6 +204,12 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.listRunStates.mockImplementation(() =>
     resolveCommand(commands, "list_run_states", undefined),
+  );
+  workflowBridgeMock.getOperationsOverview.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "get_operations_overview", { request }),
+  );
+  workflowBridgeMock.getOperationalRunDetail.mockImplementation((runId: string) =>
+    resolveCommand(commands, "get_operational_run_detail", { runId }),
   );
   workflowBridgeMock.listSchedules.mockImplementation(() =>
     resolveCommand(commands, "list_schedules", undefined),

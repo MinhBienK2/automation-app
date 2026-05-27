@@ -31,6 +31,10 @@ describe("Workflow list integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
+  async function openWorkflows() {
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+  }
+
   test("hides step counts and raw updated timestamps from workflow cards", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([
@@ -43,6 +47,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
 
@@ -62,6 +68,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     expect(await screen.findByText("No workflows yet")).toBeInTheDocument();
     expect(screen.getByText("Mission Control Workspace")).toBeInTheDocument();
@@ -87,6 +95,8 @@ describe("Workflow list integration", () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
+
+    await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
 
@@ -151,6 +161,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     await userEvent.click(await screen.findByRole("button", {
       name: "Run Login flow",
     }));
@@ -186,6 +198,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     expect(await screen.findByRole("button", { name: "Run Login flow" }))
       .toBeDisabled();
   });
@@ -210,6 +224,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
     expect(within(workflowCard as HTMLElement).getByRole("button", {
@@ -259,6 +275,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     const loginCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
     const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
@@ -321,6 +339,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     await userEvent.click(await screen.findByRole("button", { name: "Runs" }));
 
     const runCenter = await screen.findByRole("region", { name: "Runs" });
@@ -343,6 +363,8 @@ describe("Workflow list integration", () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
+
+    await openWorkflows();
 
     await userEvent.click(await screen.findByRole("button", { name: "Delete Login flow" }));
 
@@ -396,6 +418,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     await userEvent.click(await screen.findByRole("button", {
       name: "Duplicate Login flow",
     }));
@@ -434,6 +458,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     await userEvent.click(await screen.findByRole("button", {
       name: "Export Login flow",
@@ -524,6 +550,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     const file = new File([JSON.stringify(workflowPackage)], "workflow.json", {
       type: "application/json",
     });
@@ -557,6 +585,8 @@ describe("Workflow list integration", () => {
   test("rejects oversized workflow packages before reading JSON", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
     renderApp();
+
+    await openWorkflows();
 
     const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "huge.workflow.json", {
       type: "application/json",
@@ -593,6 +623,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     expect((await screen.findByText("Login flow")).closest("[data-slot='card']"))
       .toBeInTheDocument();
@@ -655,6 +687,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const header = await screen.findByRole("region", {

@@ -40,6 +40,12 @@ describe("Electron database initialization", () => {
     expect(indexSql(database, "idx_workflow_schedule_events_workflow_created_at")).toBe(
       "CREATE INDEX idx_workflow_schedule_events_workflow_created_at ON workflow_schedule_events(workflow_id, created_at DESC)",
     );
+    expect(indexSql(database, "idx_operational_attention_events_created_at")).toBe(
+      "CREATE INDEX idx_operational_attention_events_created_at ON operational_attention_events(created_at DESC)",
+    );
+    expect(indexSql(database, "idx_operational_attention_events_workflow_created_at")).toBe(
+      "CREATE INDEX idx_operational_attention_events_workflow_created_at ON operational_attention_events(workflow_id, created_at DESC)",
+    );
 
     expect(queryPlan(database, "SELECT id FROM runs WHERE workflow_id = ? ORDER BY started_at DESC", [
       "workflow-1",
@@ -72,6 +78,13 @@ describe("Electron database initialization", () => {
         ["workflow-1"],
       ),
     ).toContain("idx_workflow_schedule_events_workflow_created_at");
+    expect(
+      queryPlan(
+        database,
+        "SELECT id FROM operational_attention_events ORDER BY created_at DESC LIMIT 50",
+        [],
+      ),
+    ).toContain("idx_operational_attention_events_created_at");
 
     database.close();
   });

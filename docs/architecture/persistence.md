@@ -2,25 +2,28 @@
 
 ## Purpose
 
-Persistence stores workflows, versioned workflow graph authoring data, per-workflow settings, schedules, schedule events, runs, and run steps in SQLite. Electron/Node now owns the production persistence layer.
+Persistence stores workflows, versioned workflow graph authoring data, per-workflow settings, schedules, schedule events, runs, run steps, and operational attention events in SQLite. Electron/Node now owns the production persistence layer.
 
 ## Key Files
 
 - Electron SQLite bootstrap: `electron/backend/persistence/database.ts`
 - Electron workflow repository: `electron/backend/persistence/workflowRepository.ts`
 - Electron schedule repository: `electron/backend/scheduling/workflowScheduleRepository.ts`
+- Electron operations read model: `electron/backend/operations/operationsRepository.ts`
 - Electron command handlers: `electron/backend/commands.ts`
 
 ## Current Behavior
 
 - Electron app data uses `appData/automation-app`.
-- The current schema creates document-shaped `workflows`, queryable `runs` and `run_steps`, plus `workflow_schedules` and `workflow_schedule_events`.
+- The current schema creates document-shaped `workflows`, queryable `runs` and `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and `operational_attention_events`.
 - Database initialization idempotently creates indexes for the core lookup paths:
   `runs(workflow_id, started_at DESC)`,
   `run_steps(run_id, step_number)`,
   `workflow_schedules(enabled, next_run_at)`,
   `workflow_schedule_events(schedule_id, created_at DESC)`, and
-  `workflow_schedule_events(workflow_id, created_at DESC)`.
+  `workflow_schedule_events(workflow_id, created_at DESC)`,
+  `operational_attention_events(created_at DESC)`, and
+  `operational_attention_events(workflow_id, created_at DESC)`.
 - `listWorkflows` returns workflow summaries used by the workflow list.
 - Summaries sort by `updated_at DESC`, then name ascending.
 - `getWorkflow` returns workflow metadata; product graph authoring data is loaded from `getWorkflowGraph`.
@@ -34,7 +37,9 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Run evidence outputs store app-local artifact paths under run-scoped evidence directories; run rows persist the resulting output JSON and step error/trace JSON for audit. `run_steps` keeps the existing top-level compiled graph rows and appends executed nested action trace rows with parent control node id and sequence metadata inside `trace_json`, allowing branch, loop, and retry paths to be reconstructed from durable storage.
 - Schedule rows store schedule config JSON, enabled state, next run time, and the latest schedule event summary.
 - Schedule event rows store scheduling decisions such as started, skipped, missed, failed-to-start, and disabled. Skipped/missed events exist even when no run row is created. Schedule event history by schedule id or workflow id uses descending created-time indexes.
-- Deleting a workflow cascades to its schedules and schedule events.
+- Operational attention rows store sanitized manual full-run launch blocks that happen before a run row exists. They keep workflow references and concise issue summaries, not browser storage, cookies, proxy credentials, or raw page outputs.
+- Deleting a workflow cascades to its schedules, schedule events, and operational attention events.
+- `OperationsRepository` owns bounded Overview SQL reads for run metrics, attention, upcoming schedules, and metadata-only evidence extracted from sanitized run outputs. The renderer supplies local-day UTC boundaries; persisted timestamps remain UTC.
 - Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here
@@ -47,6 +52,7 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Serialization/deserialization of stored workflow graph JSON.
 - Persistence of Workflow Settings rows.
 - Persistence of workflow schedule rows and schedule event rows.
+- Persistence of operational attention rows and bounded operations read queries.
 
 ## Does Not Belong Here
 

@@ -26,6 +26,14 @@ Frontend and backend must agree on:
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
 - `RunState.retained_session`: optional retained browser session availability metadata used by debug run-from-selected UI.
 - `WorkflowRunSnapshot`: run-id scoped status wrapper with `run_id`, `workflow_id`, `workflow_name`, `source` (`manual` or `schedule`), `started_at`, and nested `state: RunState`, plus mirrored top-level run-state fields for compatibility.
+- `OperationsOverviewRequest`: local-day UTC range plus optional bounded list
+  limits and attention filters for the Overview read model.
+- `OperationsOverview`: backend-owned dashboard DTO with metrics, live runs,
+  unified attention, activity buckets, recent evidence metadata, upcoming
+  schedules, and data warnings.
+- `OperationalRunDetail`: bounded selected-run summary for Overview-to-Runs
+  navigation, including sanitized error text, capped step summaries, and safe
+  evidence metadata.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.

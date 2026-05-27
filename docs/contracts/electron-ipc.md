@@ -60,6 +60,8 @@ string map.
 - `stopRun`
 - `getRunState`
 - `listRunStates`
+- `getOperationsOverview`
+- `getOperationalRunDetail`
 - `listSchedules`
 - `getSchedule`
 - `createSchedule`
@@ -99,6 +101,14 @@ new `run_id`, workflow metadata, source, start time, and nested run state.
 the run id is valid only when exactly one workflow run is active. `listRunStates`
 returns the current app-session run snapshots for multi-run monitoring.
 
+`getOperationsOverview({ day_start_utc, day_end_utc, timezone_label?, attention_filter?, limits? })`
+returns the bounded `OperationsOverview` read model for the operator's local
+day expressed as UTC boundaries. The backend validates the range, applies list
+limits, computes KPI/activity/attention meaning, and returns only safe evidence
+metadata. `getOperationalRunDetail(runId)` returns one bounded persisted run
+summary for Overview-to-Runs navigation; it is not an unbounded run-history or
+artifact-opening API.
+
 ## Payload Rules
 
 - Renderer wrapper names remain camelCase.
@@ -124,6 +134,10 @@ Workflow schedule CRUD, schedule validation, enable-time workflow readiness
 checks, schedule event history, and the in-app scheduler tick are owned by the
 Electron backend. The renderer manages schedule form state and calls the typed
 bridge; it does not own timers or schedule SQL.
+
+Operations Overview aggregation is owned by the Electron backend. The renderer
+can refresh and navigate from returned references, but it does not compute KPI
+meaning from raw SQL rows or expose arbitrary run outputs.
 
 CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit

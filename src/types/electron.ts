@@ -6,6 +6,9 @@ import type {
   ElementSnapshot,
   GraphValidationIssue,
   OrchestrationSchedule,
+  OperationalRunDetail,
+  OperationsOverview,
+  OperationsOverviewRequest,
   RecordedEvent,
   RunState,
   RunValidationIssue,
@@ -74,6 +77,10 @@ export type WorkflowElectronBridge = {
   stopRun(runId?: string | null): Promise<WorkflowRunSnapshot>;
   getRunState(): Promise<RunState>;
   listRunStates(): Promise<WorkflowRunSnapshot[]>;
+  getOperationsOverview(
+    request: OperationsOverviewRequest,
+  ): Promise<OperationsOverview>;
+  getOperationalRunDetail(runId: string): Promise<OperationalRunDetail>;
   listSchedules(): Promise<WorkflowSchedule[]>;
   getSchedule(scheduleId: string): Promise<WorkflowSchedule>;
   createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule>;

@@ -24,6 +24,10 @@
 - Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. `run_policy.run_from_selected_mode` controls whether the sub-plan stops after the selected node or continues through the downstream main path. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
 - Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled top-level step evidence and executed nested action traces to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
 - Scheduled runs start through the same saved-workflow command path as manual full runs. If the scheduled workflow conflicts with an active workflow, active persistent profile, or active batch, the scheduler records a skipped occurrence instead of queueing it; isolated due schedules can start in the same scheduler tick.
+- Manual full-run launch attempts that fail graph or Workflow Settings
+  validation before a run row exists write sanitized operational attention for
+  Overview. Scheduled validation failures continue to use schedule events and
+  are not duplicated into operational attention rows.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup actions before graph actions.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
@@ -55,6 +59,9 @@
 - Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
 - Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`. At finish time, command persistence keeps compatible top-level `run_steps` rows and appends executed nested trace rows, so the stored rows can reconstruct which branch, loop iteration, or retry attempt actually ran.
+- Overview only reads metadata from sanitized structured evidence; artifact
+  opening, raw output inspection, and arbitrary file paths stay outside this
+  phase.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 

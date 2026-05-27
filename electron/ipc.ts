@@ -25,6 +25,8 @@ export const workflowIpcChannels = {
   stopRun: "workflow:stopRun",
   getRunState: "workflow:getRunState",
   listRunStates: "workflow:listRunStates",
+  getOperationsOverview: "workflow:getOperationsOverview",
+  getOperationalRunDetail: "workflow:getOperationalRunDetail",
   listSchedules: "workflow:listSchedules",
   getSchedule: "workflow:getSchedule",
   createSchedule: "workflow:createSchedule",

@@ -224,7 +224,8 @@ artifacts and required only when publishing signed/notarized builds.
 
 Use a simple page with an input, button, iframe, dialog trigger, download link, list, table, link, tall body, and an HTTP fixture that echoes request headers and geolocation.
 
-1. Create a workflow.
+1. Confirm the app opens on Overview, shows Active Runs, Succeeded Today, Attention Needed, Upcoming Schedules, Live Operations, Attention Queue, Execution Activity, Recent Evidence, and Upcoming Schedules, and that Open Workflows navigates to the workflow list.
+2. Create a workflow.
 2. Confirm the new workflow graph starts with `Start -> New node`.
 3. Open Settings from the sidebar, turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
 4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll Direction/Pixels fields and Scroll To Element/Wait Then Scroll To Element target fields with Timeout ms defaulting to 60000, without low-level target constraint or scroll tuning controls.

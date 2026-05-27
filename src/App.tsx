@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { RunCenterPage } from "./features/runs/pages/RunCenterPage";
+import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
@@ -15,6 +16,8 @@ import {
   enableSchedule,
   exportWorkflowPackage,
   getWorkflowGraph,
+  getOperationalRunDetail,
+  getOperationsOverview,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
@@ -63,6 +66,9 @@ import {
 import type {
   GraphValidationIssue,
   GraphNodeType,
+  OperationalRunDetail,
+  OperationsNavigationTarget,
+  OperationsOverview,
   RunState,
   WorkflowGraph,
   WorkflowDetail,
@@ -78,7 +84,7 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "list" | "detail" | "settings" | "schedules" | "runs";
+type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "runs";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -284,13 +290,31 @@ function legacyRunId(workflowId: string | null) {
   return `legacy-${workflowId ?? "run"}`;
 }
 
+function todayOperationsRange() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return {
+    day_start_utc: start.toISOString(),
+    day_end_utc: end.toISOString(),
+    timezone_label: Intl.DateTimeFormat().resolvedOptions().timeZone || "Local",
+  };
+}
+
 function App() {
-  const [screen, setScreen] = useState<AppScreen>("list");
+  const [screen, setScreen] = useState<AppScreen>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(false);
+  const [operationsOverview, setOperationsOverview] =
+    useState<OperationsOverview | null>(null);
+  const [operationsOverviewLoading, setOperationsOverviewLoading] = useState(false);
+  const [focusedRunDetail, setFocusedRunDetail] =
+    useState<OperationalRunDetail | null>(null);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -358,6 +382,7 @@ function App() {
     void loadWorkflows();
     void loadSchedules();
     void refreshRunStates();
+    void loadOperationsOverview();
   }, []);
 
   useEffect(() => {
@@ -425,6 +450,26 @@ function App() {
       setAppError(commandMessage(error));
     } finally {
       setSchedulesLoading(false);
+    }
+  }
+
+  async function loadOperationsOverview() {
+    setOperationsOverviewLoading(true);
+    try {
+      setOperationsOverview(await getOperationsOverview(todayOperationsRange()));
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setOperationsOverviewLoading(false);
+    }
+  }
+
+  async function loadFocusedRunDetail(runId: string) {
+    try {
+      setFocusedRunDetail(await getOperationalRunDetail(runId));
+    } catch (error) {
+      setFocusedRunDetail(null);
+      setAppError(commandMessage(error));
     }
   }
 
@@ -859,8 +904,10 @@ function App() {
         workflowId: detail.workflow.id,
         workflowName: detail.workflow.name,
       });
+      await loadOperationsOverview();
     } catch (error) {
       setAppError(commandMessage(error));
+      await loadOperationsOverview();
       if (workflowGraph) {
         try {
           setGraphIssues(await validateWorkflowGraph(workflowGraph));
@@ -882,8 +929,10 @@ function App() {
         workflowId: workflow.id,
         workflowName: workflow.name,
       });
+      await loadOperationsOverview();
     } catch (error) {
       setAppError(commandMessage(error));
+      await loadOperationsOverview();
     }
   }
 
@@ -953,6 +1002,12 @@ function App() {
     void loadWorkflows();
   }
 
+  function openOverview() {
+    setScreen("overview");
+    setAppError("");
+    void loadOperationsOverview();
+  }
+
   function openSettings() {
     setScreen("settings");
     setAppError("");
@@ -967,7 +1022,28 @@ function App() {
   function openRunCenter() {
     setScreen("runs");
     setAppError("");
+    setFocusedRunDetail(null);
     void refreshRunStates();
+  }
+
+  function navigateFromOverview(target: OperationsNavigationTarget) {
+    if (target.type === "workflow") {
+      void openWorkflow(target.workflow_id);
+      return;
+    }
+    if (target.type === "run") {
+      setScreen("runs");
+      setAppError("");
+      void refreshRunStates();
+      void loadFocusedRunDetail(target.run_id);
+      return;
+    }
+    if (target.type === "schedule") {
+      setScreen("schedules");
+      setAppError("");
+      void loadSchedules();
+      void loadScheduleHistory(target.schedule_id);
+    }
   }
 
   async function submitCreateSchedule(input: WorkflowScheduleInput) {
@@ -1159,16 +1235,28 @@ function App() {
             ? "schedules"
             : screen === "runs"
               ? "runs"
-            : "workflows"
+              : screen === "overview"
+                ? "overview"
+                : "workflows"
       }
       sidebarCollapsed={sidebarCollapsed}
+      onOpenOverview={openOverview}
       onOpenSchedules={openSchedules}
       onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
       onOpenWorkflows={backToList}
       onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
     >
-      {screen === "settings" ? (
+      {screen === "overview" ? (
+        <OperationsOverviewPage
+          overview={operationsOverview}
+          loading={operationsOverviewLoading}
+          error={appError}
+          onRefresh={loadOperationsOverview}
+          onOpenWorkflows={backToList}
+          onNavigate={navigateFromOverview}
+        />
+      ) : screen === "settings" ? (
         <SettingsPage
           graphAutosaveEnabled={graphAutosaveEnabled}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
@@ -1189,6 +1277,7 @@ function App() {
       ) : screen === "runs" ? (
         <RunCenterPage
           runSnapshots={runSnapshots}
+          focusedRunDetail={focusedRunDetail}
           error={appError}
           onStopRun={(runId) => stopRun(runId)}
         />

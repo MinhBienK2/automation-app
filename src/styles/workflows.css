@@ -907,3 +907,225 @@
   color: #667d8d;
   font-size: 13px;
 }
+
+.operations-overview-screen {
+  gap: 24px;
+}
+
+.overview-header .muted {
+  margin-top: 8px;
+}
+
+.overview-kpi-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-card {
+  background: linear-gradient(180deg, rgba(23, 36, 49, 0.92), rgba(18, 28, 38, 0.94));
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  min-height: 112px;
+  padding: 18px;
+}
+
+.metric-card span {
+  color: var(--app-muted);
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.metric-card strong {
+  color: var(--app-text);
+  display: block;
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-top: 18px;
+}
+
+.metric-card-active {
+  border-color: rgba(50, 211, 230, 0.45);
+}
+
+.metric-card-success {
+  border-color: rgba(57, 217, 138, 0.45);
+}
+
+.metric-card-attention {
+  border-color: rgba(244, 183, 64, 0.48);
+}
+
+.overview-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
+
+.overview-panel {
+  min-height: 260px;
+}
+
+.overview-panel-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.overview-panel-header h2 {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.overview-panel-header svg {
+  color: var(--app-accent);
+  height: 18px;
+  width: 18px;
+}
+
+.overview-list {
+  display: grid;
+  gap: 8px;
+}
+
+.overview-row {
+  align-items: center;
+  background: rgba(11, 16, 22, 0.36);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto;
+  min-height: 58px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.overview-row:hover {
+  border-color: var(--app-border-hover);
+}
+
+.overview-row strong,
+.overview-row small {
+  display: block;
+}
+
+.overview-row small {
+  color: var(--app-muted);
+  margin-top: 3px;
+}
+
+.activity-strip {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-bucket {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 52px minmax(110px, 1fr) minmax(190px, 1.6fr);
+}
+
+.activity-hour,
+.activity-caption {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.activity-bar {
+  background: rgba(35, 50, 64, 0.74);
+  border-radius: var(--app-radius-sm);
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+}
+
+.activity-bar i {
+  min-width: 4px;
+}
+
+.activity-success {
+  background: #39d98a;
+}
+
+.activity-failed {
+  background: #f06467;
+}
+
+.activity-blocked {
+  background: #f4b740;
+}
+
+.activity-schedule {
+  background: #32d3e6;
+}
+
+.status-pill-danger {
+  border-color: rgba(240, 100, 103, 0.5);
+  color: #f06467;
+}
+
+.overview-error {
+  border-color: rgba(240, 100, 103, 0.52);
+}
+
+.focused-run-detail {
+  background: rgba(23, 36, 49, 0.78);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.focused-run-detail header,
+.detail-list {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.focused-run-detail h2 {
+  margin: 0;
+}
+
+.detail-list {
+  justify-content: start;
+  margin: 14px 0;
+}
+
+.detail-list div {
+  min-width: 150px;
+}
+
+.detail-list dt {
+  color: var(--app-muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.detail-list dd {
+  margin: 4px 0 0;
+}
+
+.run-step-summary-list {
+  display: grid;
+  gap: 8px;
+}
+
+.run-step-summary {
+  align-items: center;
+  border-top: 1px solid var(--app-border);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 36px minmax(0, 1fr) 90px minmax(0, 1.2fr);
+  padding-top: 8px;
+}

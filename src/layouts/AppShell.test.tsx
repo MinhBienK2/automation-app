@@ -50,7 +50,19 @@ describe("App shell", () => {
       "data-slot",
       "button",
     );
+    const navItems = within(screen.getByRole("navigation", { name: "Main navigation" }))
+      .getAllByRole("button")
+      .map((item) => item.textContent);
+    expect(navItems).toEqual([
+      "Overview",
+      "Workflows",
+      "Runs",
+      "Schedules",
+      "Settings",
+    ]);
     expect(screen.queryByRole("button", { name: "Run Center" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Evidence" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Identities" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Application content" }))
       .toHaveClass("app-content");
   });

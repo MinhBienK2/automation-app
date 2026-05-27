@@ -3,6 +3,7 @@ import type {
   BatchRunRequest,
   ElementSnapshot,
   OrchestrationSchedule,
+  OperationsOverviewRequest,
   RecordedEvent,
   WorkflowBrowserConfig,
   WorkflowDeleteOptions,
@@ -140,6 +141,14 @@ export function getRunState() {
 
 export function listRunStates() {
   return bridge().listRunStates();
+}
+
+export function getOperationsOverview(request: OperationsOverviewRequest) {
+  return bridge().getOperationsOverview(request);
+}
+
+export function getOperationalRunDetail(runId: string) {
+  return bridge().getOperationalRunDetail(runId);
 }
 
 export function listSchedules() {

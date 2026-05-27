@@ -1015,6 +1015,140 @@ export type WorkflowScheduleEventFilter = {
   limit?: number | null;
 };
 
+export type OperationsNavigationTarget =
+  | { type: "workflow"; workflow_id: string }
+  | { type: "run"; run_id: string }
+  | { type: "schedule"; schedule_id: string };
+
+export type OperationsOverviewRequest = {
+  day_start_utc: string;
+  day_end_utc: string;
+  timezone_label?: string | null;
+  attention_filter?: {
+    source_kind?: Array<"launch_blocked" | "run_failed" | "schedule_event"> | null;
+    severity?: Array<"warning" | "failure"> | null;
+  } | null;
+  limits?: {
+    live_runs?: number | null;
+    attention?: number | null;
+    recent_evidence?: number | null;
+    upcoming_schedules?: number | null;
+  } | null;
+};
+
+export type OverviewMetrics = {
+  active_runs: number;
+  succeeded_today: number;
+  attention_today: number;
+  upcoming_schedules: number;
+};
+
+export type OverviewLiveRun = {
+  run_id: string;
+  workflow_id: string;
+  workflow_name: string;
+  source: WorkflowRunSource;
+  status: RunStatus;
+  current_step_id?: string | null;
+  current_step_number?: number | null;
+  started_at: string;
+  identity_display_name: string | null;
+  navigation_target: OperationsNavigationTarget;
+};
+
+export type OverviewAttentionItem = {
+  id: string;
+  source_kind: "launch_blocked" | "run_failed" | "schedule_event";
+  severity: "warning" | "failure";
+  occurred_at: string;
+  title: string;
+  summary: string;
+  workflow: { id: string; name: string };
+  run_id?: string | null;
+  schedule_id?: string | null;
+  schedule_event_type?: WorkflowScheduleStatus | null;
+  navigation_target: OperationsNavigationTarget;
+};
+
+export type OverviewActivityBucket = {
+  bucket_start_utc: string;
+  bucket_end_utc: string;
+  succeeded: number;
+  failed: number;
+  blocked: number;
+  schedule_attention: number;
+};
+
+export type OverviewEvidenceItem = {
+  evidence_id: string;
+  artifact_kind: string;
+  relative_path_or_label: string;
+  created_at?: string | null;
+  run_id: string;
+  workflow: { id: string; name: string };
+  node_id?: string | null;
+  navigation_targets: {
+    run?: OperationsNavigationTarget;
+    workflow?: OperationsNavigationTarget;
+  };
+};
+
+export type OverviewUpcomingSchedule = {
+  schedule_id: string;
+  workflow_id: string;
+  workflow_name: string;
+  schedule_name: string;
+  next_run_at: string;
+  last_status?: WorkflowScheduleStatus | null;
+  last_reason?: string | null;
+  navigation_target: OperationsNavigationTarget;
+};
+
+export type BoundedOperationsList<T> = {
+  items: T[];
+  total: number;
+  has_more: boolean;
+};
+
+export type OperationsOverview = {
+  generated_at: string;
+  range: {
+    day_start_utc: string;
+    day_end_utc: string;
+    timezone_label: string;
+  };
+  metrics: OverviewMetrics;
+  live_runs: BoundedOperationsList<OverviewLiveRun>;
+  attention: BoundedOperationsList<OverviewAttentionItem>;
+  activity: OverviewActivityBucket[];
+  recent_evidence: BoundedOperationsList<OverviewEvidenceItem>;
+  upcoming_schedules: BoundedOperationsList<OverviewUpcomingSchedule>;
+  data_warnings: { evidence_items_skipped: number };
+};
+
+export type OperationalRunStepSummary = {
+  node_id: string | null;
+  step_number: number;
+  action_type: string;
+  status: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  sanitized_error_summary?: string | null;
+};
+
+export type OperationalRunDetail = {
+  run_id: string;
+  workflow: { id: string; name: string };
+  status: RunStatus;
+  started_at: string;
+  finished_at?: string | null;
+  sanitized_error_summary?: string | null;
+  step_summaries: OperationalRunStepSummary[];
+  step_summaries_has_more: boolean;
+  evidence_metadata: OverviewEvidenceItem[];
+  evidence_metadata_has_more: boolean;
+};
+
 export type ScheduleValidationIssue = {
   field: string;
   message: string;

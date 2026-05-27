@@ -13,13 +13,16 @@ Preserve these unless the task explicitly changes them.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
+- Overview is the default Mission Control entry point. It shows backend-owned
+  durable metrics, live operations, attention, activity, recent evidence
+  metadata, and upcoming schedules for the operator's local day.
 - Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
 - Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
 - Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and local fingerprint font directories.
-- Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. Run is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
+- Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. `Launch Run` is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
 - Workflow Settings Run Policy exposes maximum workflow duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control. When Run from selected is enabled, the group shows a scope select with `selected_only` for running only the selected node and `from_selected` for running from that node through the downstream main path. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Graph exposes the new link wait default for newly created graph links in one grouped control. It supports no default wait, fixed duration milliseconds, or random min/max milliseconds, and changing it must not rewrite existing links.
@@ -89,6 +92,10 @@ Preserve these unless the task explicitly changes them.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
 - Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. `Run from selected` remains the direct retained-session debugging command.
+- A real manual full-run launch attempt blocked by graph or Workflow Settings
+  validation before browser launch creates one sanitized durable
+  `launch_blocked` attention item visible on Overview. Manual Validate alone
+  does not create attention.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.

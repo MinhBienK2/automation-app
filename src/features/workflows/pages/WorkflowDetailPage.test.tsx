@@ -24,11 +24,21 @@ describe("Workflow detail integration", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
+  async function openWorkflows() {
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+  }
+
+  async function openWorkflowDetails() {
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+  }
+
   test("opens workflow details on a separate screen and returns to the list", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
+    await openWorkflows();
     expect(await screen.findByRole("heading", { name: "Workflows" })).toBeInTheDocument();
     expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Main navigation" }))
@@ -54,7 +64,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
 
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
@@ -116,7 +126,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     await userEvent.click(await screen.findByRole("button", { name: "Launch Run" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
@@ -187,7 +197,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
     expect(runFromSelected).toBeEnabled();
     await userEvent.click(runFromSelected);
@@ -246,7 +256,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
     expect(runFromSelected).toBeEnabled();
     await userEvent.click(runFromSelected);
@@ -281,7 +291,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
 
     expect(screen.queryByRole("button", { name: "Run from selected" }))
       .not.toBeInTheDocument();
@@ -339,7 +349,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
       .not.toBeInTheDocument();
 
@@ -417,7 +427,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -459,7 +469,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -497,7 +507,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     await userEvent.click(screen.getByRole("button", { name: "Validate" }));
 
     const panel = await screen.findByRole("region", { name: "Run issues" });
@@ -526,7 +536,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     await userEvent.click(screen.getByRole("button", { name: "Validate" }));
     const panel = await screen.findByRole("region", { name: "Run issues" });
 
@@ -612,7 +622,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -686,6 +696,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
+    await openWorkflows();
     const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
     await userEvent.click(within(supportCard as HTMLElement).getByRole("button", {
       name: "View Details",
@@ -732,7 +743,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });

@@ -26,11 +26,19 @@
 
   .workflow-graph-layout,
   .graph-shortcut-guide,
+  .overview-kpi-grid,
+  .overview-grid,
   .workflow-settings-body,
   .workflow-settings-grid,
   .settings-field-group-grid,
   .workflow-settings-identity-row,
   .settings-panel .graph-shortcut-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-row,
+  .activity-bucket,
+  .run-step-summary {
     grid-template-columns: 1fr;
   }
 

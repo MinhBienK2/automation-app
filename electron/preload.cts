@@ -83,6 +83,10 @@ const workflowApi: WorkflowElectronBridge = {
   stopRun: (runId) => invokeWorkflow("stopRun", runId),
   getRunState: () => invokeWorkflow("getRunState"),
   listRunStates: () => invokeWorkflow("listRunStates"),
+  getOperationsOverview: (request) =>
+    invokeWorkflow("getOperationsOverview", request),
+  getOperationalRunDetail: (runId) =>
+    invokeWorkflow("getOperationalRunDetail", runId),
   listSchedules: () => invokeWorkflow("listSchedules"),
   getSchedule: (scheduleId) =>
     invokeWorkflow("getSchedule", scheduleId),
