@@ -1637,6 +1637,66 @@ describe("Electron workflow command handlers", () => {
     expect(context.closed).toBe(true);
   });
 
+  test("generates a recording draft without persisting a workflow", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const { handlers, database } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded fixture",
+      initial_url: "https://fixture.owned.test/form",
+    });
+    await page.emitRecorderPayload({
+      kind: "input",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "input",
+        input_type: "email",
+        accessible_name: "Email",
+        locators: [
+          { kind: "test_id", value: "email", score: 1, reason: "Stable test id" },
+        ],
+      },
+      value: { text: "qa@example.test" },
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+    await handlers.stopRecordingSession(session.id);
+
+    const draft = handlers.generateRecordingDraft(session.id, {
+      include_event_ids: null,
+      add_terminal_success: true,
+    });
+
+    expect(draft).toMatchObject({
+      id: expect.stringMatching(/^draft_/),
+      session_id: session.id,
+      workflow_id: null,
+      mode: "new_workflow",
+      status: "draft",
+      steps: [
+        { action: { type: "navigate" } },
+        { action: { type: "input_text" } },
+      ],
+      validation_issues: [],
+    });
+    expect(draft.graph.nodes.map((node) => node.node_type)).toEqual([
+      "start",
+      "action",
+      "action",
+      "end_success",
+    ]);
+    expect(handlers.getRecordingDraft(draft.id)).toEqual(draft);
+    expect(handlers.listWorkflows()).toEqual([]);
+    expect(database.prepare("SELECT COUNT(*) AS count FROM workflows").get()).toEqual({
+      count: 0,
+    });
+  });
+
   test("runs saved workflow graph through the Electron browser runner", async () => {
     const runnerCalls: Array<{
       graph: CompiledWorkflowGraph;

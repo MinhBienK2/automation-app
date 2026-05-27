@@ -5,9 +5,11 @@ import type {
   CompiledWorkflowGraph,
   GraphValidationIssue,
   OrchestrationSchedule,
+  RecordingGenerateDraftOptions,
   RecorderStartSessionInput,
   RecordingEvent,
   RecordingSession,
+  RecordingWorkflowDraft,
   RunState,
   RunValidationIssue,
   ScheduleValidationIssue,
@@ -112,6 +114,11 @@ export type WorkflowElectronBridge = {
   stopRecordingSession(sessionId: string): Promise<RecordingSession>;
   listRecordingEvents(sessionId: string): Promise<RecordingEvent[]>;
   discardRecordingSession(sessionId: string): Promise<RecordingSession>;
+  generateRecordingDraft(
+    sessionId: string,
+    options: RecordingGenerateDraftOptions,
+  ): Promise<RecordingWorkflowDraft>;
+  getRecordingDraft(draftId: string): Promise<RecordingWorkflowDraft>;
   dryRunValidateConfig(config: ActionConfig): Promise<void>;
   saveWorkflowPackageFile(packageValue: WorkflowPackage): Promise<string | null>;
 };

@@ -1214,6 +1214,25 @@ export type ReviewedRecordingStep = {
   warnings: RecordingWarning[];
 };
 
+export type RecordingGenerateDraftOptions = {
+  include_event_ids?: string[] | null;
+  add_terminal_success: boolean;
+};
+
+export type RecordingWorkflowDraft = {
+  id: string;
+  session_id: string;
+  workflow_id: string | null;
+  mode: RecordingSessionMode;
+  status: "draft" | "saving" | "saved" | "discarded";
+  generated_at: string;
+  workflow_settings_snapshot: WorkflowSettings;
+  steps: ReviewedRecordingStep[];
+  graph: WorkflowGraph;
+  validation_issues: GraphValidationIssue[];
+  warnings: RecordingWarning[];
+};
+
 export type RunState = {
   status: RunStatus;
   mode: RunMode;

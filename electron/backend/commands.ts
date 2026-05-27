@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import type { DatabaseSync } from "node:sqlite";
 import type {
@@ -13,9 +13,11 @@ import type {
   CompiledWorkflowGraph,
   GraphValidationIssue,
   OrchestrationSchedule,
+  RecordingGenerateDraftOptions,
   RecorderStartSessionInput,
   RecordingEvent,
   RecordingSession,
+  RecordingWorkflowDraft,
   RunValidationIssue,
   ScheduleValidationIssue,
   SettingsValidationIssue,
@@ -78,6 +80,8 @@ import {
   RecorderSessionInputError,
   RecorderSessionManager,
 } from "./recording/recorderSessionManager.js";
+import { generateRecordingGraph } from "./recording/graphGenerator.js";
+import { normalizeRecordingEvents } from "./recording/timelineNormalizer.js";
 
 export { finishRun } from "./runtime/runManager.js";
 export { defaultWorkflowSettings, deriveFingerprintSeedFromIdentityId } from "./services/workflowSettingsService.js";
@@ -155,6 +159,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       });
     },
   });
+  const recordingDrafts = new Map<string, RecordingWorkflowDraft>();
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
@@ -339,6 +344,45 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       throw commandError("Recording session not found", field);
     }
     return value;
+  }
+
+  function createRecordingDraft(
+    sessionId: string,
+    options: RecordingGenerateDraftOptions,
+  ): RecordingWorkflowDraft {
+    const session = requireRecordingResult(recorderSessionManager.getSession(sessionId));
+    if (session.status !== "stopped") {
+      throw commandError("Stop recording before generating a draft", "sessionId");
+    }
+    const includeEventIds = new Set(options.include_event_ids ?? []);
+    const events = requireRecordingResult(recorderSessionManager.listEvents(sessionId))
+      .filter((event) => !includeEventIds.size || includeEventIds.has(event.id));
+    const steps = normalizeRecordingEvents(events);
+    if (!steps.some((step) => step.included)) {
+      throw commandError("No meaningful actions recorded", "events");
+    }
+    const graph = generateRecordingGraph(steps, {
+      addTerminalSuccess: options.add_terminal_success,
+    });
+    const validationIssues = validateGraph(graph);
+    const draft: RecordingWorkflowDraft = {
+      id: `draft_${randomUUID().replace(/-/g, "")}`,
+      session_id: session.id,
+      workflow_id: session.workflow_id,
+      mode: session.mode,
+      status: "draft",
+      generated_at: new Date().toISOString(),
+      workflow_settings_snapshot: session.workflow_settings_snapshot,
+      steps,
+      graph,
+      validation_issues: validationIssues,
+      warnings: [
+        ...session.warnings,
+        ...steps.flatMap((step) => step.warnings),
+      ],
+    };
+    recordingDrafts.set(draft.id, draft);
+    return draft;
   }
 
   function createWorkflow(name: string): Workflow {
@@ -1039,6 +1083,17 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     async discardRecordingSession(sessionId: string): Promise<RecordingSession> {
       return requireRecordingResult(await recorderSessionManager.discardSession(sessionId));
+    },
+
+    generateRecordingDraft(
+      sessionId: string,
+      options: RecordingGenerateDraftOptions,
+    ): RecordingWorkflowDraft {
+      return createRecordingDraft(sessionId, options);
+    },
+
+    getRecordingDraft(draftId: string): RecordingWorkflowDraft {
+      return requireRecordingResult(recordingDrafts.get(draftId) ?? null, "draftId");
     },
 
     dryRunValidateConfig(config: ActionConfig) {

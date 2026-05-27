@@ -81,6 +81,8 @@ string map.
 - `stopRecordingSession`
 - `listRecordingEvents`
 - `discardRecordingSession`
+- `generateRecordingDraft`
+- `getRecordingDraft`
 - `dryRunValidateConfig`
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
@@ -112,6 +114,13 @@ and optionally navigates to `initial_url`. `listRecordingEvents` returns the
 in-memory raw event stream for the session. `stopRecordingSession` and
 `discardRecordingSession` close the recorder browser context. Commands operate
 by session id and serialize errors as `{ message, field? }`.
+
+`generateRecordingDraft(sessionId, options)` normalizes the selected session
+events, creates a review-only `RecordingWorkflowDraft`, generates a standard v2
+`WorkflowGraph`, validates it through backend graph validation, stores the draft
+in backend memory, and returns it without creating workflow rows or replacing an
+existing graph. `getRecordingDraft(draftId)` returns the stored review draft.
+Persistence happens only through the later explicit save-draft command.
 
 The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
 are no longer part of the production Electron bridge. Selector generation and

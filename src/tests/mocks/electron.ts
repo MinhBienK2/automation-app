@@ -55,6 +55,8 @@ const methodNames: BridgeMethodName[] = [
   "stopRecordingSession",
   "listRecordingEvents",
   "discardRecordingSession",
+  "generateRecordingDraft",
+  "getRecordingDraft",
   "dryRunValidateConfig",
   "saveWorkflowPackageFile",
 ];
@@ -252,6 +254,13 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.discardRecordingSession.mockImplementation((sessionId: string) =>
     resolveCommand(commands, "discard_recording_session", { sessionId }),
+  );
+  workflowBridgeMock.generateRecordingDraft.mockImplementation(
+    (sessionId: string, options: unknown) =>
+      resolveCommand(commands, "generate_recording_draft", { sessionId, options }),
+  );
+  workflowBridgeMock.getRecordingDraft.mockImplementation((draftId: string) =>
+    resolveCommand(commands, "get_recording_draft", { draftId }),
   );
   workflowBridgeMock.dryRunValidateConfig.mockImplementation((config: unknown) =>
     resolveCommand(commands, "dry_run_validate_config", { config }),

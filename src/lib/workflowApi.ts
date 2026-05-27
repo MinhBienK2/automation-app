@@ -2,6 +2,7 @@ import type {
   ActionConfig,
   BatchRunRequest,
   OrchestrationSchedule,
+  RecordingGenerateDraftOptions,
   RecorderStartSessionInput,
   WorkflowBrowserConfig,
   WorkflowDeleteOptions,
@@ -232,6 +233,17 @@ export function listRecordingEvents(sessionId: string) {
 
 export function discardRecordingSession(sessionId: string) {
   return bridge().discardRecordingSession(sessionId);
+}
+
+export function generateRecordingDraft(
+  sessionId: string,
+  options: RecordingGenerateDraftOptions,
+) {
+  return bridge().generateRecordingDraft(sessionId, options);
+}
+
+export function getRecordingDraft(draftId: string) {
+  return bridge().getRecordingDraft(draftId);
 }
 
 export function dryRunValidateConfig(config: ActionConfig) {

@@ -283,6 +283,15 @@ prefers `test_id`, role/name, labels, placeholders, short text, attributes, CSS,
 and XPath in that order. Low-confidence locator output remains draftable but
 adds a `weak_locator` review warning.
 
+`RecordingWorkflowDraft` is a review-only backend-memory draft. It contains the
+session id, optional workflow id, recorder mode, generated timestamp, sanitized
+Workflow Settings snapshot, normalized `ReviewedRecordingStep[]`, generated
+`WorkflowGraph`, graph validation issues, and aggregate warnings. Draft
+generation does not create workflow rows, persist Workflow Settings, or replace
+an existing graph. The generated graph uses the normal v2 graph shape:
+`Start -> recorded action nodes -> optional End Success`, with deterministic
+left-to-right positions and ordinary action node configs.
+
 ## Graph Shape
 
 Workflow graph data is the product authoring surface. New workflows create a v2 `Start -> New node` draft graph, where `New node` is an action node with `config: null`. Existing Start-only saved graphs remain valid drafts.

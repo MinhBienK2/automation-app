@@ -53,8 +53,9 @@ Users can:
   inject page-side capture, observe navigation, and collect raw navigation,
   click, input, select, checkbox/radio, and scroll events in memory. Backend
   normalization turns that raw stream into reviewable action-intent steps with
-  ordered locator candidates and weak-locator warnings. Graph draft generation
-  and save UI are added by later recorder phases.
+  ordered locator candidates and weak-locator warnings. Draft generation creates
+  a validated review-only v2 workflow graph without persisting a workflow or
+  replacing an existing saved graph. Save UI is added by a later recorder phase.
 
 ## Current Source Files
 

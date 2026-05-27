@@ -126,6 +126,10 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("listRecordingEvents", sessionId),
   discardRecordingSession: (sessionId) =>
     invokeWorkflow("discardRecordingSession", sessionId),
+  generateRecordingDraft: (sessionId, options) =>
+    invokeWorkflow("generateRecordingDraft", sessionId, options),
+  getRecordingDraft: (draftId) =>
+    invokeWorkflow("getRecordingDraft", draftId),
   dryRunValidateConfig: (config) =>
     invokeWorkflow("dryRunValidateConfig", config),
   saveWorkflowPackageFile: (packageValue) =>

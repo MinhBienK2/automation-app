@@ -16,6 +16,8 @@ import {
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  generateRecordingDraft,
+  getRecordingDraft,
   getRecordingSession,
   resetWorkflowBrowserIdentity,
   listScheduleEvents,
@@ -85,6 +87,8 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.stopRecordingSession.mockResolvedValue(undefined);
     workflowBridgeMock.listRecordingEvents.mockResolvedValue(undefined);
     workflowBridgeMock.discardRecordingSession.mockResolvedValue(undefined);
+    workflowBridgeMock.generateRecordingDraft.mockResolvedValue(undefined);
+    workflowBridgeMock.getRecordingDraft.mockResolvedValue(undefined);
 
     await validateSchedule({
       workflow_id: "workflow-1",
@@ -120,6 +124,11 @@ describe("workflow API phase ten commands", () => {
     await stopRecordingSession("recording-1");
     await listRecordingEvents("recording-1");
     await discardRecordingSession("recording-1");
+    await generateRecordingDraft("recording-1", {
+      include_event_ids: ["event-1"],
+      add_terminal_success: true,
+    });
+    await getRecordingDraft("draft-1");
     await dryRunValidateConfig({
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
@@ -171,6 +180,14 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.stopRecordingSession).toHaveBeenCalledWith("recording-1");
     expect(workflowBridgeMock.listRecordingEvents).toHaveBeenCalledWith("recording-1");
     expect(workflowBridgeMock.discardRecordingSession).toHaveBeenCalledWith("recording-1");
+    expect(workflowBridgeMock.generateRecordingDraft).toHaveBeenCalledWith(
+      "recording-1",
+      {
+        include_event_ids: ["event-1"],
+        add_terminal_success: true,
+      },
+    );
+    expect(workflowBridgeMock.getRecordingDraft).toHaveBeenCalledWith("draft-1");
     expect(workflowBridgeMock.dryRunValidateConfig).toHaveBeenCalledWith({
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
