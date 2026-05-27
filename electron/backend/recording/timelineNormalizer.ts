@@ -10,6 +10,8 @@ const recordingActionLabels: Partial<Record<ActionConfig["type"], string>> = {
   navigate: "Navigate",
   input_text: "Fill Field",
   click: "Click",
+  double_click: "Double Click",
+  right_click: "Right Click",
   select_option: "Select Option",
   check: "Check",
   uncheck: "Uncheck",
@@ -17,6 +19,14 @@ const recordingActionLabels: Partial<Record<ActionConfig["type"], string>> = {
   scroll: "Scroll",
   hotkey: "Hotkey",
   press_key: "Press Key",
+  upload_file: "Upload File",
+  switch_tab: "Switch Tab",
+  open_new_tab: "Open New Tab",
+  wait_for_download: "Wait For Download",
+  accept_dialog: "Accept Dialog",
+  dismiss_dialog: "Dismiss Dialog",
+  wait: "Wait",
+  take_screenshot: "Take Screenshot",
 };
 
 type PendingInput = {
@@ -74,6 +84,27 @@ function stepFromEvent(
   }
   if (event.kind === "click") {
     const locator = generateElementTarget(event.target);
+    const clickType = stringValue(event.raw.click_type);
+    if (clickType === "double" || numberValue(event.raw.detail) >= 2) {
+      return recordingStep([event], {
+        type: "double_click",
+        config: {
+          target: locator.target,
+          wait_until: "clickable",
+          timeout_ms: 60000,
+        },
+      }, locator);
+    }
+    if (clickType === "right" || numberValue(event.raw.button) === 2) {
+      return recordingStep([event], {
+        type: "right_click",
+        config: {
+          target: locator.target,
+          wait_until: "clickable",
+          timeout_ms: 60000,
+        },
+      }, locator);
+    }
     return recordingStep([event], {
       type: "click",
       config: {
@@ -137,6 +168,9 @@ function stepFromEvent(
       },
     });
   }
+  if ((event.kind === "input" || event.kind === "change") && event.value?.file_names) {
+    return uploadStep(event);
+  }
   if (event.kind === "keyboard") {
     if (event.value?.keys?.length && event.value.keys.length > 1) {
       return recordingStep([event], {
@@ -151,7 +185,107 @@ function stepFromEvent(
       config: { key },
     });
   }
+  if (event.kind === "tab") {
+    const action = stringValue(event.raw.action);
+    if (action === "open") {
+      return recordingStep([event], {
+        type: "open_new_tab",
+        config: { url: stringValue(event.raw.url) },
+      });
+    }
+    const index = numberValue(event.raw.index);
+    return recordingStep([event], {
+      type: "switch_tab",
+      config: { index: Number.isFinite(index) ? Math.max(0, Math.trunc(index)) : 0 },
+    });
+  }
+  if (event.kind === "download") {
+    return recordingStep([event], {
+      type: "wait_for_download",
+      config: {
+        output_name: outputNameForDownload(event),
+        timeout_ms: numberOrNull(event.raw.timeout_ms),
+      },
+    });
+  }
+  if (event.kind === "dialog") {
+    const action = stringValue(event.raw.action);
+    if (action === "accept") {
+      return recordingStep([event], {
+        type: "accept_dialog",
+        config: { prompt_text: stringValue(event.raw.prompt_text) },
+      });
+    }
+    return recordingStep([event], {
+      type: "dismiss_dialog",
+      config: {},
+    });
+  }
+  if (event.kind === "wait_marker") {
+    const action = stringValue(event.raw.action);
+    if (action === "screenshot") {
+      return recordingStep([event], {
+        type: "take_screenshot",
+        config: {
+          path: stringValue(event.raw.path) || `recorded-step-${event.sequence}.png`,
+          output_name: stringValue(event.raw.output_name),
+          full_page: booleanValue(event.raw.full_page) ?? false,
+        },
+      });
+    }
+    if (action === "submit") {
+      const locator = generateElementTarget(event.target);
+      return recordingStep([event], {
+        type: "submit_form",
+        config: {
+          target: locator.target,
+          wait_until: "visible",
+          timeout_ms: 60000,
+        },
+      }, locator);
+    }
+    if (action === "wait") {
+      return recordingStep([event], {
+        type: "wait",
+        config: {
+          condition: waitCondition(event.raw.condition),
+          duration_ms: numberOrNull(event.raw.duration_ms),
+          timeout_ms: numberOrNull(event.raw.timeout_ms),
+          text: stringValue(event.raw.text),
+          url: stringValue(event.raw.url),
+        },
+      });
+    }
+  }
   return null;
+}
+
+function uploadStep(
+  event: RecordingEvent,
+): Omit<ReviewedRecordingStep, "id"> | null {
+  const locator = generateElementTarget(event.target);
+  const files = stringArray(event.raw.reviewed_file_paths);
+  const warnings = files.length > 0
+    ? []
+    : [{
+        code: "upload_requires_reviewed_file_path",
+        message:
+          "Native file chooser paths are not captured; review and enter local upload file paths before replay.",
+        event_id: event.id,
+        severity: "warning" as const,
+      }];
+  return recordingStep([event], {
+    type: "upload_file",
+    config: {
+      target: locator.target,
+      files,
+      wait_until: "visible",
+      timeout_ms: 60000,
+    },
+  }, locator, {
+    included: files.length > 0,
+    warnings,
+  });
 }
 
 function inputStep(
@@ -177,16 +311,21 @@ function recordingStep(
   sourceEvents: RecordingEvent[],
   action: ActionConfig,
   locator?: LocatorGenerationResult,
+  options: {
+    included?: boolean;
+    warnings?: ReviewedRecordingStep["warnings"];
+  } = {},
 ): Omit<ReviewedRecordingStep, "id"> {
   return {
     source_event_ids: sourceEvents.map((event) => event.id),
     action,
     label: recordingActionLabels[action.type] ?? action.type,
-    included: true,
+    included: options.included ?? true,
     locator_confidence: locator?.confidence ?? null,
     warnings: [
       ...sourceEvents.flatMap((event) => event.warnings),
       ...(locator?.warnings ?? []),
+      ...(options.warnings ?? []),
     ],
   };
 }
@@ -220,4 +359,54 @@ function targetKey(target: RecordingTarget | null) {
     target.accessible_name ?? "",
     target.text_sample ?? "",
   ].join("\u0000");
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : Number.NaN;
+}
+
+function numberOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function booleanValue(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+    : [];
+}
+
+function outputNameForDownload(event: RecordingEvent) {
+  const explicit = stringValue(event.raw.output_name);
+  if (explicit) return explicit;
+  const filename = stringValue(event.raw.suggested_filename) ?? event.value?.file_names?.[0] ?? "download";
+  const normalized = filename
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalized || "download";
+}
+
+function waitCondition(value: unknown): Extract<
+  ActionConfig,
+  { type: "wait" }
+>["config"]["condition"] {
+  return value === "element_visible" ||
+    value === "element_hidden" ||
+    value === "element_attached" ||
+    value === "element_detached" ||
+    value === "text_visible" ||
+    value === "url_contains" ||
+    value === "page_load" ||
+    value === "element_enabled" ||
+    value === "element_disabled"
+    ? value
+    : "duration";
 }

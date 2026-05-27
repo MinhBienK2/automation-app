@@ -317,6 +317,30 @@ function valueEditorForAction(
         </Label>
       );
     }
+    case "upload_file": {
+      const action = step.action;
+      return (
+        <Label htmlFor={inputId}>
+          Upload file paths
+          <Input
+            id={inputId}
+            value={action.config.files.join(", ")}
+            onChange={(event) =>
+              onChange({
+                ...step,
+                action: {
+                  type: "upload_file",
+                  config: {
+                    ...action.config,
+                    files: splitFilePathInput(event.currentTarget.value),
+                  },
+                },
+              })
+            }
+          />
+        </Label>
+      );
+    }
     default:
       return null;
   }
@@ -344,6 +368,22 @@ function actionLabel(action: ActionConfig) {
       return "Key";
     case "hotkey":
       return "Hotkey";
+    case "upload_file":
+      return "Upload";
+    case "double_click":
+      return "Double Click";
+    case "right_click":
+      return "Right Click";
+    case "switch_tab":
+      return "Tab";
+    case "wait_for_download":
+      return "Download";
+    case "accept_dialog":
+      return "Accept Dialog";
+    case "dismiss_dialog":
+      return "Dismiss Dialog";
+    case "take_screenshot":
+      return "Screenshot";
     default:
       return action.type;
   }
@@ -363,7 +403,22 @@ function recordedValueSummary(action: ActionConfig) {
       return action.config.key;
     case "hotkey":
       return action.config.keys.join(" + ");
+    case "upload_file":
+      return action.config.files.length
+        ? action.config.files.join(", ")
+        : "Requires reviewed local file paths";
+    case "wait_for_download":
+      return action.config.output_name;
+    case "take_screenshot":
+      return action.config.output_name ?? action.config.path;
     default:
       return null;
   }
+}
+
+function splitFilePathInput(value: string) {
+  return value
+    .split(/[\n,]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }

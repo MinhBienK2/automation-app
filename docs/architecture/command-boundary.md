@@ -35,8 +35,11 @@ Node/Electron backend.
   lists events for, and discards recorder sessions. Starting a session launches
   the recorder browser in the backend, applies supported recorder-safe launch
   overrides such as `headless`, injects capture with a page buffer fallback for
-  adapter binding failures, and records raw events; renderer code receives only
-  typed sanitized DTOs and never launches or instruments browsers directly.
+  adapter binding failures, observes backend tab/download/dialog events, and
+  records raw events; renderer code receives only typed sanitized DTOs and
+  never launches or instruments browsers directly. Dialog observation dismisses
+  native modal state with a review warning rather than leaving the recorder
+  browser blocked.
 - Browser recorder draft commands. Draft generation normalizes recorded events,
   builds a review-only workflow graph, validates it, and returns/stores the
   draft in backend memory without persistence. `saveRecordingDraft` consumes

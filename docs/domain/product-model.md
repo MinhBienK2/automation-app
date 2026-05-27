@@ -16,8 +16,11 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - A browser recording session is a backend-owned workflow-authoring draft. It
   starts from either a new unsaved Workflow Settings draft or an existing
   workflow's saved Workflow Settings, exposes only sanitized session/settings
-  metadata through IPC, and is not a saved workflow until a reviewed recording
-  draft is explicitly saved.
+  metadata through IPC, captures browser usage into reviewable action configs,
+  and is not a saved workflow until a reviewed recording draft is explicitly
+  saved. Native file chooser paths are not trusted from browser capture; upload
+  recorder steps stay excluded until the reviewer enters explicit local file
+  paths that can replay through the normal `upload_file` action.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.

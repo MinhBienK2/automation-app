@@ -49,9 +49,12 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
   uses the same Workflow Settings browser identity baseline, injects page-side
   capture through the Playwright-compatible page adapter, supports a limited
   recorder-safe `headless` launch override for verification runs, observes
-  navigation, drains buffered in-page events when an adapter binding cannot
-  call back, stores raw recording events in memory, and closes the recorder
-  context on stop or discard.
+  navigation plus backend tab/download/dialog events, drains buffered in-page
+  events when an adapter binding cannot call back, stores raw recording events
+  in memory, and closes the recorder context on stop or discard. Recorder
+  normalization maps only to existing runner actions; upload replay requires
+  reviewer-entered local file paths, and native file chooser captures remain
+  warnings until reviewed.
 - Before graph actions run, the command layer prepends Environment initial variables from Workflow Settings.
 - Graph settings are not runner-facing settings. The runner only receives edge waits after the graph compiler has emitted them as ordinary fixed or random wait steps.
 - Default action timeouts and interaction fidelity settings are not part of the runner-facing settings contract.

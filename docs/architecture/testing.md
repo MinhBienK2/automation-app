@@ -111,6 +111,11 @@ E2E lanes:
 
 Lower-level coverage:
 
+- Recorder action-family coverage lives in `eventCollector.test.ts`,
+  `timelineNormalizer.test.ts`, backend command tests, and review UI tests. It
+  covers keyboard/hotkeys, double/right click, tab, download, auto-dismissed
+  dialogs, wait/screenshot/submit markers, and reviewed upload paths before
+  workflow save.
 - Graph-internal control-flow action configs remain covered by runner and graph compiler tests while user authoring uses graph-native nodes; Router and Merge additionally have a local desktop E2E convergence scenario.
 - Browser identity settings are covered through Workflow Settings and runner launch contracts, not in-run action nodes.
 - Full structured `ElementTarget` locator kinds, constraints, and iframe targeting are covered through runner tests, with common `test_id` flows exercised in desktop E2E.

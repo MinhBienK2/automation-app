@@ -64,6 +64,7 @@ export class RecorderSessionManager {
       ? await this.dependencies.launchBrowser({ settings, workflowId })
       : null;
     if (launched) {
+      await collector.attachContext(launched.context);
       await collector.attachPage(launched.page);
     }
     if (launched && normalizedOptionalText(input.initial_url)) {

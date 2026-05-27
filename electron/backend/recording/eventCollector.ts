@@ -5,7 +5,10 @@ import type {
   RecordingValue,
   RecordingWarning,
 } from "../../../src/types/workflow.js";
-import type { BrowserDriverPage } from "../browser/sessionManager.js";
+import type {
+  BrowserDriverContext,
+  BrowserDriverPage,
+} from "../browser/sessionManager.js";
 
 type RecordingEventCollectorOptions = {
   now?: () => Date;
@@ -26,12 +29,24 @@ type BrowserFrame = {
   url(): string;
 };
 
+type BrowserDownload = {
+  suggestedFilename?(): string;
+};
+
+type BrowserDialog = {
+  accept?(promptText?: string): Promise<void>;
+  dismiss?(): Promise<void>;
+  type?(): string;
+  message?(): string;
+  defaultValue?(): string;
+};
+
 type RecorderCapablePage = BrowserDriverPage & {
   exposeFunction?(
     name: string,
     callback: (payload: RecorderPayload) => void | Promise<void>,
   ): Promise<void>;
-  on?(eventName: "framenavigated", handler: (frame: BrowserFrame) => void): void;
+  on?(eventName: string, handler: (...args: never[]) => void | Promise<void>): void;
 };
 
 const RECORDER_CAPTURE_BINDING = "__wamRecorderCapture";
@@ -56,6 +71,7 @@ export class RecordingEventCollector {
   private readonly events: RecordingEvent[] = [];
   private readonly now: () => Date;
   private readonly pollers: Array<ReturnType<typeof setInterval>> = [];
+  private readonly attachedPages = new WeakSet<BrowserDriverPage>();
 
   constructor(
     private readonly sessionId: string,
@@ -65,6 +81,8 @@ export class RecordingEventCollector {
   }
 
   async attachPage(page: BrowserDriverPage) {
+    if (this.attachedPages.has(page)) return;
+    this.attachedPages.add(page);
     const recorderPage = page as RecorderCapablePage;
     await recorderPage.exposeFunction?.(RECORDER_CAPTURE_BINDING, (payload) => {
       this.recordPagePayload(payload);
@@ -76,12 +94,70 @@ export class RecordingEventCollector {
     }, 100);
     poller.unref?.();
     this.pollers.push(poller);
-    recorderPage.on?.("framenavigated", (frame) => {
+    recorderPage.on?.("framenavigated", ((frame: BrowserFrame) => {
       const url = frame.url();
       if (!url || url === "about:blank") return;
       this.recordNavigation(url);
       void this.installPageCapture(page);
-    });
+    }) as (...args: never[]) => void);
+    recorderPage.on?.("download", ((download: BrowserDownload) => {
+      const suggestedFilename = download.suggestedFilename?.() ?? "download";
+      this.recordPagePayload({
+        kind: "download",
+        frame_url: null,
+        page_url: null,
+        target: null,
+        value: { file_names: [suggestedFilename] },
+        raw: { suggested_filename: suggestedFilename },
+        confidence: "medium",
+        warnings: [],
+      });
+    }) as (...args: never[]) => void);
+    recorderPage.on?.("dialog", (async (dialog: BrowserDialog) => {
+      const dialogType = dialog.type?.() ?? null;
+      const message = dialog.message?.() ?? null;
+      this.recordPagePayload({
+        kind: "dialog",
+        frame_url: null,
+        page_url: null,
+        target: null,
+        value: null,
+        raw: {
+          action: "dismiss",
+          dialog_type: dialogType,
+          message,
+          default_value: dialog.defaultValue?.() ?? null,
+        },
+        confidence: "medium",
+        warnings: [
+          {
+            code: "dialog_auto_dismissed",
+            message:
+              "Recorder dismissed a native browser dialog automatically; review the generated dialog action before replay.",
+            severity: "warning",
+          },
+        ],
+      });
+      await dialog.dismiss?.().catch(() => undefined);
+    }) as (...args: never[]) => Promise<void>);
+  }
+
+  async attachContext(context: BrowserDriverContext) {
+    context.on?.("page", ((page: BrowserDriverPage) => {
+      const pages = context.pages();
+      const index = Math.max(0, pages.indexOf(page));
+      this.recordPagePayload({
+        kind: "tab",
+        frame_url: null,
+        page_url: null,
+        target: null,
+        value: null,
+        raw: { action: "switch", index },
+        confidence: "medium",
+        warnings: [],
+      });
+      void this.attachPage(page);
+    }) as (...args: never[]) => void);
   }
 
   listEvents(): RecordingEvent[] {
@@ -365,11 +441,46 @@ function recorderCaptureScript() {
       bufferEvent(event);
     };
     document.addEventListener("click", (event) => {
+      if (event.detail && event.detail > 1) return;
       push({
         kind: "click",
         target: targetFor(event.target),
         value: null,
-        raw: { button: event.button, detail: event.detail }
+        raw: { button: event.button, detail: event.detail, click_type: "single" }
+      });
+    }, true);
+    document.addEventListener("dblclick", (event) => {
+      push({
+        kind: "click",
+        target: targetFor(event.target),
+        value: null,
+        raw: { button: event.button, detail: event.detail, click_type: "double" }
+      });
+    }, true);
+    document.addEventListener("contextmenu", (event) => {
+      push({
+        kind: "click",
+        target: targetFor(event.target),
+        value: null,
+        raw: { button: event.button, detail: event.detail, click_type: "right" }
+      });
+    }, true);
+    document.addEventListener("keydown", (event) => {
+      const key = event.key === " " ? "Space" : event.key;
+      if (!key) return;
+      const hasModifier = Boolean(event.ctrlKey || event.metaKey || event.altKey || event.shiftKey);
+      if (!hasModifier && key.length === 1) return;
+      const keys = [];
+      if (event.ctrlKey) keys.push("Control");
+      if (event.metaKey) keys.push("Meta");
+      if (event.altKey) keys.push("Alt");
+      if (event.shiftKey && key !== "Shift") keys.push("Shift");
+      if (!["Control", "Meta", "Alt", "Shift"].includes(key)) keys.push(key);
+      push({
+        kind: "keyboard",
+        target: targetFor(event.target),
+        value: keys.length > 1 ? { keys } : { key: keys[0] || key },
+        raw: { key, code: event.code || null, repeat: Boolean(event.repeat) }
       });
     }, true);
     document.addEventListener("input", (event) => {
@@ -377,6 +488,21 @@ function recorderCaptureScript() {
       if (!target) return;
       const tag = target.tagName ? target.tagName.toLowerCase() : "";
       const type = target.type || "";
+      if (type === "file") {
+        const fileNames = target.files ? Array.from(target.files).map((file) => file.name) : [];
+        push({
+          kind: "change",
+          target: targetFor(target),
+          value: { file_names: fileNames },
+          raw: { input_type: "file", file_count: fileNames.length },
+          warnings: [{
+            code: "upload_requires_reviewed_file_path",
+            message: "Native file chooser paths are not captured; review and enter local upload file paths before replay.",
+            severity: "warning"
+          }]
+        });
+        return;
+      }
       if (tag === "select") {
         push({
           kind: "select",
@@ -412,7 +538,20 @@ function recorderCaptureScript() {
       if (!target) return;
       const tag = target.tagName ? target.tagName.toLowerCase() : "";
       const type = target.type || "";
-      if (tag === "select") {
+      if (type === "file") {
+        const fileNames = target.files ? Array.from(target.files).map((file) => file.name) : [];
+        push({
+          kind: "change",
+          target: targetFor(target),
+          value: { file_names: fileNames },
+          raw: { source: "change", input_type: "file", file_count: fileNames.length },
+          warnings: [{
+            code: "upload_requires_reviewed_file_path",
+            message: "Native file chooser paths are not captured; review and enter local upload file paths before replay.",
+            severity: "warning"
+          }]
+        });
+      } else if (tag === "select") {
         push({
           kind: "select",
           target: targetFor(target),
@@ -432,6 +571,14 @@ function recorderCaptureScript() {
           raw: { source: "change" }
         });
       }
+    }, true);
+    document.addEventListener("submit", (event) => {
+      push({
+        kind: "wait_marker",
+        target: targetFor(event.target),
+        value: null,
+        raw: { action: "submit" }
+      });
     }, true);
     let lastScrollAt = 0;
     window.addEventListener("scroll", () => {

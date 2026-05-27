@@ -139,6 +139,88 @@ describe("Workflow list integration", () => {
     });
   });
 
+  test("lets reviewers add explicit upload file paths before saving a recording", async () => {
+    const session = recordingSession();
+    const draft: RecordingWorkflowDraft = {
+      ...recordingDraft(session.id),
+      steps: [
+        {
+          id: "recording-step-upload",
+          source_event_ids: ["event-upload"],
+          action: {
+            type: "upload_file",
+            config: {
+              target: { locators: [{ kind: "label", value: "Avatar" }] },
+              files: [],
+              wait_until: "visible",
+              timeout_ms: 60000,
+            },
+          },
+          label: "Upload File",
+          included: false,
+          locator_confidence: "high",
+          warnings: [
+            {
+              code: "upload_requires_reviewed_file_path",
+              message:
+                "Native file chooser paths are not captured; review and enter local upload file paths before replay.",
+              severity: "warning",
+            },
+          ],
+        },
+      ],
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      start_recording_session: session,
+      stop_recording_session: { ...session, status: "stopped" },
+      generate_recording_draft: draft,
+      save_recording_draft: { workflow: newWorkflow, steps: [] },
+      get_workflow: { workflow: newWorkflow, steps: [] },
+      get_workflow_graph: draft.graph,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Record Workflow",
+    }));
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Stop Recording",
+    }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Recording" });
+    expect(within(dialog).getByText(/Native file chooser paths are not captured/))
+      .toBeInTheDocument();
+    await userEvent.type(
+      within(dialog).getByLabelText("Upload file paths"),
+      "/tmp/automation-app-fixtures/fixture-upload.txt",
+    );
+    await userEvent.click(within(dialog).getByRole("checkbox", {
+      name: "Include Upload File",
+    }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Workflow" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.saveRecordingDraft).toHaveBeenCalledWith(
+        draft.id,
+        expect.objectContaining({
+          reviewed_steps: [
+            expect.objectContaining({
+              included: true,
+              action: {
+                type: "upload_file",
+                config: expect.objectContaining({
+                  files: ["/tmp/automation-app-fixtures/fixture-upload.txt"],
+                }),
+              },
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
   test("shows icon-only workflow card actions with duplicate", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 

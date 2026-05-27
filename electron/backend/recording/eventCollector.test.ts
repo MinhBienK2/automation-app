@@ -52,6 +52,19 @@ describe("RecordingEventCollector", () => {
     ]);
   });
 
+  test("injects capture listeners for keyboard, upload, and click variants", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_capture");
+
+    await collector.attachPage(page);
+
+    expect(page.initScripts[0]).toContain('"keydown"');
+    expect(page.initScripts[0]).toContain('"dblclick"');
+    expect(page.initScripts[0]).toContain('"contextmenu"');
+    expect(page.initScripts[0]).toContain('"submit"');
+    expect(page.initScripts[0]).toContain('type === "file"');
+  });
+
   test("observes main-frame navigation events from the backend page adapter", async () => {
     const page = new FakeCollectorPage();
     const collector = new RecordingEventCollector("rec_nav", {
@@ -74,7 +87,83 @@ describe("RecordingEventCollector", () => {
       },
     ]);
   });
+
+  test("observes backend tab, download, and dialog events", async () => {
+    const page = new FakeCollectorPage();
+    const context = new FakeCollectorContext(page);
+    const collector = new RecordingEventCollector("rec_backend", {
+      now: () => new Date("2026-05-27T10:00:00.000Z"),
+    });
+
+    await collector.attachContext(context);
+    await collector.attachPage(page);
+    const popup = new FakeCollectorPage();
+    context.emitPage(popup);
+    page.emitDownload("owned-report.csv");
+    await page.emitDialog("confirm", "Continue?");
+
+    expect(collector.listEvents()).toMatchObject([
+      {
+        id: "rec_backend_evt_1",
+        sequence: 1,
+        kind: "tab",
+        raw: { action: "switch", index: 1 },
+      },
+      {
+        id: "rec_backend_evt_2",
+        sequence: 2,
+        kind: "download",
+        value: { file_names: ["owned-report.csv"] },
+      },
+      {
+        id: "rec_backend_evt_3",
+        sequence: 3,
+        kind: "dialog",
+        raw: { action: "dismiss", dialog_type: "confirm", message: "Continue?" },
+        warnings: [
+          expect.objectContaining({
+            code: "dialog_auto_dismissed",
+          }),
+        ],
+      },
+    ]);
+    expect(popup.initScripts).toHaveLength(1);
+  });
 });
+
+class FakeCollectorContext {
+  private pagesList: FakeCollectorPage[];
+  private pageHandler: ((page: FakeCollectorPage) => void) | null = null;
+
+  constructor(page: FakeCollectorPage) {
+    this.pagesList = [page];
+  }
+
+  pages() {
+    return this.pagesList;
+  }
+
+  async newPage() {
+    const page = new FakeCollectorPage();
+    this.emitPage(page);
+    return page;
+  }
+
+  async close() {
+    return undefined;
+  }
+
+  on(eventName: string, handler: (page: FakeCollectorPage) => void) {
+    if (eventName === "page") {
+      this.pageHandler = handler;
+    }
+  }
+
+  emitPage(page: FakeCollectorPage) {
+    this.pagesList.push(page);
+    this.pageHandler?.(page);
+  }
+}
 
 class FakeCollectorPage implements BrowserDriverPage {
   initScripts: string[] = [];
@@ -83,6 +172,8 @@ class FakeCollectorPage implements BrowserDriverPage {
     | ((payload: Record<string, unknown>) => void | Promise<void>)
     | null = null;
   private frameNavigated: ((frame: { url(): string }) => void) | null = null;
+  private downloadHandler: ((download: FakeDownload) => void) | null = null;
+  private dialogHandler: ((dialog: FakeDialog) => void | Promise<void>) | null = null;
 
   async goto() {
     return undefined;
@@ -112,9 +203,15 @@ class FakeCollectorPage implements BrowserDriverPage {
     }
   }
 
-  on(eventName: "framenavigated", handler: (frame: { url(): string }) => void) {
+  on(eventName: string, handler: (...args: never[]) => void | Promise<void>) {
     if (eventName === "framenavigated") {
-      this.frameNavigated = handler;
+      this.frameNavigated = handler as (frame: { url(): string }) => void;
+    }
+    if (eventName === "download") {
+      this.downloadHandler = handler as unknown as (download: FakeDownload) => void;
+    }
+    if (eventName === "dialog") {
+      this.dialogHandler = handler as unknown as (dialog: FakeDialog) => void | Promise<void>;
     }
   }
 
@@ -125,5 +222,44 @@ class FakeCollectorPage implements BrowserDriverPage {
 
   navigate(url: string) {
     this.frameNavigated?.({ url: () => url });
+  }
+
+  emitDownload(suggestedFilename: string) {
+    this.downloadHandler?.({
+      suggestedFilename: () => suggestedFilename,
+    });
+  }
+
+  async emitDialog(type: string, message: string) {
+    await this.dialogHandler?.(new FakeDialog(type, message));
+  }
+}
+
+type FakeDownload = {
+  suggestedFilename(): string;
+};
+
+class FakeDialog {
+  dismissed = false;
+
+  constructor(
+    private readonly dialogType: string,
+    private readonly dialogMessage: string,
+  ) {}
+
+  type() {
+    return this.dialogType;
+  }
+
+  message() {
+    return this.dialogMessage;
+  }
+
+  async accept() {
+    return undefined;
+  }
+
+  async dismiss() {
+    this.dismissed = true;
   }
 }

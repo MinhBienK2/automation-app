@@ -276,18 +276,23 @@ credentials must not be sent to renderer code in recorder snapshots.
 
 `RecordingEvent.kind` currently allows navigation, click, input/change/select,
 checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
-The stable MVP capture path records navigation, click, text entry, select,
-checkbox/radio, and throttled scroll raw events. Unsupported captured behavior
-must become `RecordingWarning` entries rather than silently producing graph
-nodes.
+Capture records navigation, click variants, text entry, select, checkbox/radio,
+file-input change names, throttled scroll, non-text keys/hotkeys, form submit
+markers, tab creation/switch, downloads, and dialogs. Unsupported captured
+behavior must become `RecordingWarning` entries rather than silently producing
+graph nodes.
 
 The recorder normalizer collapses repeated input/change events for the same
-target into one `input_text` step with the final value, maps navigation, click,
-select, checkbox/radio, scroll, and basic keyboard events into existing action
-configs, and carries source event ids forward for review. Locator generation
-prefers `test_id`, role/name, labels, placeholders, short text, attributes, CSS,
-and XPath in that order. Low-confidence locator output remains draftable but
-adds a `weak_locator` review warning.
+target into one `input_text` step with the final value, maps navigation, click
+variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
+wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
+into existing action configs, and carries source event ids forward for review.
+Native file chooser captures only expose file names; generated `upload_file`
+steps remain excluded and carry `upload_requires_reviewed_file_path` until a
+reviewer supplies explicit local file paths. Locator generation prefers
+`test_id`, role/name, labels, placeholders, short text, attributes, CSS, and
+XPath in that order. Low-confidence locator output remains draftable but adds a
+`weak_locator` review warning.
 
 `RecordingWorkflowDraft` is a review-only backend-memory draft. It contains the
 session id, optional workflow id, recorder mode, generated timestamp, sanitized
