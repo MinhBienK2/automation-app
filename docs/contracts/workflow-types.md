@@ -29,6 +29,14 @@ Frontend and backend must agree on:
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
+- `RecordingSession`: backend-owned recorder lifecycle DTO with session id,
+  optional workflow id, mode, status, timestamps, sanitized browser identity
+  metadata, sanitized Workflow Settings snapshot, page URL, event count, and
+  warnings.
+- `RecordingEvent`: ordered browser-recording event DTO with kind, page/frame
+  URLs, target metadata, captured value, bounded raw diagnostics, confidence,
+  and warnings. Phase 1 exposes an empty in-memory event list; later phases fill
+  it through backend-owned browser instrumentation.
 
 ## Workflow Settings Shape
 
@@ -226,6 +234,37 @@ workflow graph/settings to be runnable.
 Scheduler skip reasons include workflow/profile/batch run conflicts such as
 `active_workflow`, `active_profile`, and `active_batch`; isolated due schedules
 can start concurrently and each started event records its run id.
+
+## Recording Shape
+
+Recorder session commands serialize as:
+
+```text
+startRecordingSession({
+  mode: "new_workflow" | "replace_current_graph",
+  workflow_id?: string | null,
+  workflow_name?: string | null,
+  initial_url?: string | null,
+  browser_launch_overrides?: object | null
+}) -> RecordingSession
+```
+
+`new_workflow` starts from a backend-owned unsaved Workflow Settings draft with
+a fresh browser identity and `workflow_id: null` on the public session.
+`replace_current_graph` starts from the existing workflow's saved Workflow
+Settings and returns the workflow id on the public session. Public
+`workflow_settings_snapshot` values are sanitized for renderer display; the
+backend retains the internal settings snapshot for later save phases.
+
+`RecordingBrowserIdentitySnapshot` includes `identity_id`, display/profile
+metadata, a `fingerprint_seed_hash` rather than the raw seed, persona metadata,
+humanization settings, and headless state. Proxy passwords and proxy URL
+credentials must not be sent to renderer code in recorder snapshots.
+
+`RecordingEvent.kind` currently allows navigation, click, input/change/select,
+checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
+Unsupported captured behavior must become `RecordingWarning` entries rather
+than silently producing graph nodes.
 
 ## Graph Shape
 

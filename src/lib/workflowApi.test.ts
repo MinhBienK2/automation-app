@@ -16,26 +16,29 @@ import {
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  getRecordingSession,
   resetWorkflowBrowserIdentity,
   listScheduleEvents,
   listSchedules,
+  listRecordingEvents,
   getCloakBrowserDiagnostics,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
   importWorkflowPackage,
-  normalizeRecordedEvents,
   runWorkflow,
   runWorkflowFromNode,
   listRunStates,
   saveWorkflowSettings,
+  startRecordingSession,
   installCloakBrowserBinary,
   saveWorkflowSettingsSection,
   saveWorkflowBrowserConfig,
   saveWorkflowGraph,
+  stopRecordingSession,
+  discardRecordingSession,
   runBatchWorkflow,
   stopRun,
-  suggestSelectors,
   validateWorkflowSettings,
   validateWorkflowGraph,
   validateWorkflowRun,
@@ -76,9 +79,12 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.exportWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.importWorkflow.mockResolvedValue(undefined);
     workflowBridgeMock.runBatchWorkflow.mockResolvedValue(undefined);
-    workflowBridgeMock.suggestSelectors.mockResolvedValue(undefined);
-    workflowBridgeMock.normalizeRecordedEvents.mockResolvedValue(undefined);
     workflowBridgeMock.dryRunValidateConfig.mockResolvedValue(undefined);
+    workflowBridgeMock.startRecordingSession.mockResolvedValue(undefined);
+    workflowBridgeMock.getRecordingSession.mockResolvedValue(undefined);
+    workflowBridgeMock.stopRecordingSession.mockResolvedValue(undefined);
+    workflowBridgeMock.listRecordingEvents.mockResolvedValue(undefined);
+    workflowBridgeMock.discardRecordingSession.mockResolvedValue(undefined);
 
     await validateSchedule({
       workflow_id: "workflow-1",
@@ -105,15 +111,15 @@ describe("workflow API phase ten commands", () => {
       concurrency_limit: 1,
       headless: false,
     });
-    await suggestSelectors({
-      tag: "button",
-      id: "save",
-      test_id: "save-button",
-      name: null,
-      text: "Save",
-      classes: [],
+    await startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded checkout",
+      initial_url: "https://owned.test/checkout",
     });
-    await normalizeRecordedEvents([{ type: "click", xpath: "//*[@id='save']" }]);
+    await getRecordingSession("recording-1");
+    await stopRecordingSession("recording-1");
+    await listRecordingEvents("recording-1");
+    await discardRecordingSession("recording-1");
     await dryRunValidateConfig({
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
@@ -156,17 +162,15 @@ describe("workflow API phase ten commands", () => {
         headless: false,
       },
     );
-    expect(workflowBridgeMock.suggestSelectors).toHaveBeenCalledWith({
-        tag: "button",
-        id: "save",
-        test_id: "save-button",
-        name: null,
-        text: "Save",
-        classes: [],
+    expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
+      mode: "new_workflow",
+      workflow_name: "Recorded checkout",
+      initial_url: "https://owned.test/checkout",
     });
-    expect(workflowBridgeMock.normalizeRecordedEvents).toHaveBeenCalledWith([
-      { type: "click", xpath: "//*[@id='save']" },
-    ]);
+    expect(workflowBridgeMock.getRecordingSession).toHaveBeenCalledWith("recording-1");
+    expect(workflowBridgeMock.stopRecordingSession).toHaveBeenCalledWith("recording-1");
+    expect(workflowBridgeMock.listRecordingEvents).toHaveBeenCalledWith("recording-1");
+    expect(workflowBridgeMock.discardRecordingSession).toHaveBeenCalledWith("recording-1");
     expect(workflowBridgeMock.dryRunValidateConfig).toHaveBeenCalledWith({
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },

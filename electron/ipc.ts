@@ -40,8 +40,11 @@ export const workflowIpcChannels = {
   previewWorkflowPackage: "workflow:previewWorkflowPackage",
   importWorkflowPackage: "workflow:importWorkflowPackage",
   runBatchWorkflow: "workflow:runBatchWorkflow",
-  suggestSelectors: "workflow:suggestSelectors",
-  normalizeRecordedEvents: "workflow:normalizeRecordedEvents",
+  startRecordingSession: "workflow:startRecordingSession",
+  getRecordingSession: "workflow:getRecordingSession",
+  stopRecordingSession: "workflow:stopRecordingSession",
+  listRecordingEvents: "workflow:listRecordingEvents",
+  discardRecordingSession: "workflow:discardRecordingSession",
   dryRunValidateConfig: "workflow:dryRunValidateConfig",
   saveWorkflowPackageFile: "workflow:saveWorkflowPackageFile",
 } as const;

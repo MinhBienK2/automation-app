@@ -1086,25 +1086,123 @@ export type WorkflowPackagePreview = {
   omitted_fields: string[];
 };
 
-export type ElementSnapshot = {
-  tag: string;
-  id?: string | null;
-  test_id?: string | null;
-  name?: string | null;
-  text?: string | null;
-  classes: string[];
+export type RecordingSessionMode = "new_workflow" | "replace_current_graph";
+export type RecordingSessionStatus =
+  | "starting"
+  | "recording"
+  | "stopping"
+  | "stopped"
+  | "failed"
+  | "discarded";
+
+export type RecordingWarning = {
+  code: string;
+  message: string;
+  event_id?: string | null;
+  severity: "info" | "warning" | "error";
 };
 
-export type SelectorCandidate = {
-  selector_type: string;
-  selector: string;
+export type RecordingLocatorCandidate = {
+  kind: ElementLocatorKind;
+  value: string;
+  name?: string | null;
+  role?: string | null;
+  attribute?: string | null;
   score: number;
   reason: string;
 };
 
-export type RecordedEvent =
-  | { type: "click"; xpath: string }
-  | { type: "input_text"; xpath: string; text: string };
+export type RecordingTarget = {
+  tag_name: string;
+  input_type?: string | null;
+  text_sample?: string | null;
+  role?: string | null;
+  accessible_name?: string | null;
+  iframe?: RecordingTarget | null;
+  locators: RecordingLocatorCandidate[];
+  bounding_box?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+};
+
+export type RecordingValue = {
+  text?: string | null;
+  checked?: boolean | null;
+  selected_value?: string | null;
+  selected_label?: string | null;
+  key?: string | null;
+  keys?: string[] | null;
+  scroll?: { x: number; y: number } | null;
+  file_names?: string[] | null;
+};
+
+export type RecordingEventKind =
+  | "navigation"
+  | "click"
+  | "input"
+  | "change"
+  | "select"
+  | "checkbox"
+  | "radio"
+  | "scroll"
+  | "keyboard"
+  | "download"
+  | "dialog"
+  | "tab"
+  | "wait_marker";
+
+export type RecordingEvent = {
+  id: string;
+  session_id: string;
+  sequence: number;
+  timestamp: string;
+  kind: RecordingEventKind;
+  frame_url: string | null;
+  page_url: string | null;
+  target: RecordingTarget | null;
+  value: RecordingValue | null;
+  raw: Record<string, unknown>;
+  confidence: "high" | "medium" | "low";
+  warnings: RecordingWarning[];
+};
+
+export type RecordingBrowserIdentitySnapshot = {
+  identity_id: string;
+  display_name: string;
+  profile_dir: string | null;
+  profile_name?: string | null;
+  fingerprint_seed_hash: string;
+  persona_id?: string | null;
+  persona_label?: string | null;
+  humanize: boolean;
+  human_preset: WorkflowHumanPreset;
+  headless: boolean;
+};
+
+export type RecorderStartSessionInput = {
+  workflow_id?: string | null;
+  workflow_name?: string | null;
+  initial_url?: string | null;
+  browser_launch_overrides?: Record<string, unknown> | null;
+  mode: RecordingSessionMode;
+};
+
+export type RecordingSession = {
+  id: string;
+  workflow_id: string | null;
+  mode: RecordingSessionMode;
+  status: RecordingSessionStatus;
+  started_at: string;
+  stopped_at?: string | null;
+  browser_identity: RecordingBrowserIdentitySnapshot;
+  workflow_settings_snapshot: WorkflowSettings;
+  page_url?: string | null;
+  event_count: number;
+  warnings: RecordingWarning[];
+};
 
 export type RunState = {
   status: RunStatus;

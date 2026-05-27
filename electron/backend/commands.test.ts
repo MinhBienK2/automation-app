@@ -1470,78 +1470,93 @@ describe("Electron workflow command handlers", () => {
     ).toThrow("JSON variables must be an object");
   });
 
-  test("escapes selector suggestion attribute values", async () => {
+  test("starts, reports, stops, and discards a new-workflow recording session", async () => {
     const { handlers } = await createTestHandlers();
 
-    expect(
-      handlers.suggestSelectors({
-        tag: "button",
-        id: "save:primary",
-        test_id: 'save"primary',
-        text: "Save",
-        classes: [],
-        attributes: {},
-      })[0],
-    ).toMatchObject({
-      selector_type: "test_id",
-      selector: '[data-testid="save\\"primary"]',
+    const session = handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded checkout",
+      initial_url: "https://owned.test/checkout",
     });
-    expect(
-      handlers.suggestSelectors({
-        tag: "button",
-        id: 'save"primary',
-        test_id: null,
-        text: "Save",
-        classes: [],
-        attributes: {},
-      })[0],
-    ).toMatchObject({
-      selector_type: "id",
-      selector: '[id="save\\"primary"]',
+
+    expect(session).toMatchObject({
+      workflow_id: null,
+      mode: "new_workflow",
+      status: "recording",
+      page_url: "https://owned.test/checkout",
+      event_count: 0,
+      warnings: [],
+    });
+    expect(session.id).toMatch(/^rec_/);
+    expect(session.browser_identity).toMatchObject({
+      identity_id: expect.stringMatching(/^bi_/),
+      profile_dir: expect.stringMatching(/^bi_/),
+      fingerprint_seed_hash: expect.any(String),
+    });
+    expect(session.workflow_settings_snapshot).toMatchObject({
+      general: { name: "Recorded checkout" },
+      browser_launch: {
+        identity_id: session.browser_identity.identity_id,
+        profile_dir: session.browser_identity.profile_dir,
+        proxy_password: null,
+      },
+    });
+    expect(handlers.getRecordingSession(session.id)).toEqual(session);
+    expect(handlers.listRecordingEvents(session.id)).toEqual([]);
+
+    const stopped = handlers.stopRecordingSession(session.id);
+    expect(stopped).toMatchObject({
+      id: session.id,
+      status: "stopped",
+      stopped_at: expect.any(String),
+    });
+
+    const discarded = handlers.discardRecordingSession(session.id);
+    expect(discarded).toMatchObject({
+      id: session.id,
+      status: "discarded",
     });
   });
 
-  test("normalizes recorded events into structured target action configs", async () => {
+  test("starts replace-current-graph recording from saved workflow settings without leaking secrets", async () => {
     const { handlers } = await createTestHandlers();
-
-    expect(
-      handlers.normalizeRecordedEvents([
-        { type: "click", xpath: "//*[@data-testid='save']" },
-        { type: "input_text", xpath: "//*[@name='email']", text: "qa@example.test" },
-      ]),
-    ).toEqual([
-      {
-        type: "click",
-        config: {
-          target: {
-            locators: [{ kind: "xpath", value: "//*[@data-testid='save']" }],
-          },
-        },
+    const workflow = handlers.createWorkflow("Saved identity");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    const savedSettings = handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        display_name: "Owned staging account",
+        proxy_enabled: true,
+        proxy_server: "http://proxy.owned.test:8080",
+        proxy_username: "operator",
+        proxy_password: "secret",
       },
-      {
-        type: "input_text",
-        config: {
-          target: {
-            locators: [{ kind: "xpath", value: "//*[@name='email']" }],
-          },
-          text: "qa@example.test",
-          clear_before_input: true,
-        },
-      },
-    ]);
-  });
+    });
 
-  test("rejects unknown recorded event types", async () => {
-    const { handlers } = await createTestHandlers();
+    const session = handlers.startRecordingSession({
+      mode: "replace_current_graph",
+      workflow_id: workflow.id,
+    });
 
-    expect(() =>
-      handlers.normalizeRecordedEvents([
-        { type: "hover", xpath: "//*[@data-testid='save']" },
-      ] as unknown as Parameters<typeof handlers.normalizeRecordedEvents>[0]),
-    ).toThrow(expect.objectContaining({
-      message: "Unsupported recorded event type: hover",
-      field: "events.type",
-    }));
+    expect(session).toMatchObject({
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+      status: "recording",
+      event_count: 0,
+    });
+    expect(session.browser_identity).toMatchObject({
+      identity_id: savedSettings.browser_launch.identity_id,
+      display_name: "Owned staging account",
+      profile_dir: savedSettings.browser_launch.profile_dir,
+    });
+    expect(session.workflow_settings_snapshot.browser_launch).toMatchObject({
+      identity_id: savedSettings.browser_launch.identity_id,
+      proxy_enabled: true,
+      proxy_server: "http://proxy.owned.test:8080",
+      proxy_username: "operator",
+      proxy_password: null,
+    });
   });
 
   test("runs saved workflow graph through the Electron browser runner", async () => {

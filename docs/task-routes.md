@@ -61,6 +61,20 @@ Checks: `npm test -- src/lib/workflowApi.test.ts`, focused Electron backend comm
 
 Update docs: command boundary, Electron IPC contract, workflow types when response/payload shapes change.
 
+## Change Browser Recorder
+
+Use when changing recorder session lifecycle, browser event capture, recording
+normalization, graph draft generation, review/save flow, or record-to-replay
+tests.
+
+Read: `domain/product-model.md`, `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/overview.md`, `architecture/command-boundary.md`, `architecture/frontend.md` when UI changes, `architecture/runner.md` when browser launch/capture/replay changes, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
+
+Verify: `src/types/workflow.ts`, `src/types/electron.ts`, `src/lib/workflowApi.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/backend/commands.ts`, `electron/backend/recording/`, `electron/backend/services/workflowSettingsService.ts`, `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, recorder UI files under `src/features/workflows/` when present, and recorder E2E fixtures/tests when present.
+
+Checks: `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/commands.test.ts`, focused tests under `electron/backend/recording/`, focused workflow page/component tests when UI changes, `npx tsc --noEmit`, `npm run build:electron`; run recorder E2E and smoke commands once browser capture/replay is implemented.
+
+Update docs: product model, workflow lifecycle, user-visible invariants, frontend architecture, command boundary, Electron IPC contract, workflow types, runner docs, action config docs, README smoke checklist, and this route when the touched behavior changes those areas.
+
 ## Change Domain Validation
 
 Read: `architecture/domain.md`, `contracts/action-configs.md`, `domain/user-visible-invariants.md`

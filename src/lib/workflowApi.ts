@@ -1,9 +1,8 @@
 import type {
   ActionConfig,
   BatchRunRequest,
-  ElementSnapshot,
   OrchestrationSchedule,
-  RecordedEvent,
+  RecorderStartSessionInput,
   WorkflowBrowserConfig,
   WorkflowDeleteOptions,
   WorkflowExport,
@@ -215,12 +214,24 @@ export function runBatchWorkflow(workflowId: string, request: BatchRunRequest) {
   return bridge().runBatchWorkflow(workflowId, request);
 }
 
-export function suggestSelectors(snapshot: ElementSnapshot) {
-  return bridge().suggestSelectors(snapshot);
+export function startRecordingSession(input: RecorderStartSessionInput) {
+  return bridge().startRecordingSession(input);
 }
 
-export function normalizeRecordedEvents(events: RecordedEvent[]) {
-  return bridge().normalizeRecordedEvents(events);
+export function getRecordingSession(sessionId: string) {
+  return bridge().getRecordingSession(sessionId);
+}
+
+export function stopRecordingSession(sessionId: string) {
+  return bridge().stopRecordingSession(sessionId);
+}
+
+export function listRecordingEvents(sessionId: string) {
+  return bridge().listRecordingEvents(sessionId);
+}
+
+export function discardRecordingSession(sessionId: string) {
+  return bridge().discardRecordingSession(sessionId);
 }
 
 export function dryRunValidateConfig(config: ActionConfig) {

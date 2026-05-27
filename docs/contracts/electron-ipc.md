@@ -76,8 +76,11 @@ string map.
 - `importWorkflowPackage`
 - `saveWorkflowPackageFile`
 - `runBatchWorkflow`
-- `suggestSelectors`
-- `normalizeRecordedEvents`
+- `startRecordingSession`
+- `getRecordingSession`
+- `stopRecordingSession`
+- `listRecordingEvents`
+- `discardRecordingSession`
 - `dryRunValidateConfig`
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
@@ -99,6 +102,20 @@ new `run_id`, workflow metadata, source, start time, and nested run state.
 the run id is valid only when exactly one workflow run is active. `listRunStates`
 returns the current app-session run snapshots for multi-run monitoring.
 
+Recorder session lifecycle commands are backend-owned. `startRecordingSession`
+accepts `{ mode, workflow_id?, workflow_name?, initial_url?,
+browser_launch_overrides? }` and returns a `RecordingSession` with sanitized
+browser identity metadata and a sanitized Workflow Settings snapshot. In Phase
+1, sessions keep an in-memory event list and report lifecycle state only;
+browser event capture and graph draft generation are added behind the same
+session boundary. `stopRecordingSession`, `getRecordingSession`,
+`listRecordingEvents`, and `discardRecordingSession` operate by session id and
+serialize command errors as `{ message, field? }`.
+
+The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
+are no longer part of the production Electron bridge. Selector generation and
+timeline normalization belong behind the `Recording*` session/draft contract.
+
 ## Payload Rules
 
 - Renderer wrapper names remain camelCase.
@@ -109,6 +126,8 @@ returns the current app-session run snapshots for multi-run monitoring.
 - Native save-dialog and file-writing behavior is owned by Electron main through
   `saveWorkflowPackageFile`; package JSON is not written from the renderer.
 - Command errors serialize as `{ message: string, field?: string | null }`.
+- Recorder DTOs use the `Recording*` prefix. Session snapshots sent to the
+  renderer must not include browser secrets such as proxy passwords.
 
 ## Persistence And Command Parity
 
@@ -140,4 +159,5 @@ sizes are bounded approximations, not unbounded recursive storage scans.
 - Keep Electron main handlers returning the result envelope so preload can
   preserve serializable command errors.
 - Update this document and `docs/task-routes.md` when command names, payloads,
-  native dialog behavior, or verification commands change.
+  native dialog behavior, recorder lifecycle behavior, or verification commands
+  change.

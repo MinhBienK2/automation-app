@@ -13,6 +13,11 @@ Workflow Automation Manager is an Electron desktop app for building and running 
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy.
+- A browser recording session is a backend-owned workflow-authoring draft. It
+  starts from either a new unsaved Workflow Settings draft or an existing
+  workflow's saved Workflow Settings, exposes only sanitized session/settings
+  metadata through IPC, and is not a saved workflow until a reviewed recording
+  draft is explicitly saved.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.
@@ -43,6 +48,10 @@ Users can:
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
 - Open Run Center to monitor concurrent workflow run snapshots and stop a selected active run by run id.
+- Start, inspect, stop, and discard backend-owned browser recording sessions.
+  Phase 1 sessions expose lifecycle state and sanitized Workflow Settings
+  snapshots only; browser event capture, graph draft generation, and save UI are
+  added by later recorder phases.
 
 ## Current Source Files
 
@@ -53,6 +62,7 @@ Users can:
 - Electron bridge type: `src/types/electron.ts`
 - Electron main/preload: `electron/main.ts`, `electron/preload.cts`
 - Node command handlers: `electron/backend/commands.ts`
+- Browser recorder sessions: `electron/backend/recording/recorderSessionManager.ts`
 - Run lifecycle manager: `electron/backend/runtime/runManager.ts`
 - Browser session manager: `electron/backend/browser/sessionManager.ts`
 - Workflow Settings service: `electron/backend/services/workflowSettingsService.ts`

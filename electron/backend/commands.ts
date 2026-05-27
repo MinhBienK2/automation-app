@@ -11,13 +11,13 @@ import type {
   BrowserProfileDiagnostics,
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
-  ElementSnapshot,
   GraphValidationIssue,
   OrchestrationSchedule,
-  RecordedEvent,
+  RecorderStartSessionInput,
+  RecordingEvent,
+  RecordingSession,
   RunValidationIssue,
   ScheduleValidationIssue,
-  SelectorCandidate,
   SettingsValidationIssue,
   Workflow,
   WorkflowBrowserConfig,
@@ -61,7 +61,7 @@ import {
   type RunnerCommandPort,
 } from "./runtime/runManager.js";
 import { sanitizePathSegment } from "./evidence/artifacts.js";
-import { elementTargetFromXpath, migrateWorkflowGraph } from "./graph/migration.js";
+import { migrateWorkflowGraph } from "./graph/migration.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
@@ -70,6 +70,10 @@ import {
   deriveFingerprintSeedFromIdentityId,
   WorkflowSettingsService,
 } from "./services/workflowSettingsService.js";
+import {
+  RecorderSessionInputError,
+  RecorderSessionManager,
+} from "./recording/recorderSessionManager.js";
 
 export { finishRun } from "./runtime/runManager.js";
 export { defaultWorkflowSettings, deriveFingerprintSeedFromIdentityId } from "./services/workflowSettingsService.js";
@@ -118,6 +122,21 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     validateGraph,
     validateSettings: (settings) => settingsService.validateSettings(settings),
     defaultSettings: settingsService.defaultWorkflowSettings,
+  });
+  const recorderSessionManager = new RecorderSessionManager({
+    getWorkflow: (workflowId) => repository.getWorkflowSummary(workflowId),
+    getWorkflowSettings: (workflowId) => getSettings(workflowId),
+    createNewWorkflowSettingsDraft({ name, draftWorkflowId, now }) {
+      return settingsService.defaultWorkflowSettings(
+        {
+          id: draftWorkflowId,
+          name,
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        },
+        { randomizeIdentity: true },
+      );
+    },
   });
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
@@ -285,6 +304,24 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     };
     repository.saveWorkflowSettings(workflowId, normalized);
     return normalized;
+  }
+
+  function runRecorderCommand<T>(operation: () => T): T {
+    try {
+      return operation();
+    } catch (error) {
+      if (error instanceof RecorderSessionInputError) {
+        throw commandError(error.message, error.field ?? undefined);
+      }
+      throw error;
+    }
+  }
+
+  function requireRecordingResult<T>(value: T | null, field = "sessionId"): T {
+    if (value == null) {
+      throw commandError("Recording session not found", field);
+    }
+    return value;
   }
 
   function createWorkflow(name: string): Workflow {
@@ -967,47 +1004,24 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       };
     },
 
-    suggestSelectors(snapshot: ElementSnapshot): SelectorCandidate[] {
-      const selector = snapshot.test_id
-        ? cssAttributeSelector("data-testid", snapshot.test_id)
-        : snapshot.id
-          ? cssAttributeSelector("id", snapshot.id)
-          : snapshot.tag;
-      return [
-        {
-          selector_type: snapshot.test_id ? "test_id" : snapshot.id ? "id" : "tag",
-          selector,
-          score: 1,
-          reason: "Generated from stable element attributes.",
-        },
-      ];
+    startRecordingSession(input: RecorderStartSessionInput): RecordingSession {
+      return runRecorderCommand(() => recorderSessionManager.startSession(input));
     },
 
-    normalizeRecordedEvents(events: RecordedEvent[]): ActionConfig[] {
-      return events.map((event) => {
-        if (event.type === "click") {
-          return {
-            type: "click",
-            config: {
-              target: elementTargetFromXpath(event.xpath),
-            },
-          };
-        }
-        if (event.type === "input_text") {
-          return {
-            type: "input_text",
-            config: {
-              target: elementTargetFromXpath(event.xpath),
-              text: event.text,
-              clear_before_input: true,
-            },
-          };
-        }
-        throw commandError(
-          `Unsupported recorded event type: ${(event as { type?: unknown }).type}`,
-          "events.type",
-        );
-      }) as ActionConfig[];
+    getRecordingSession(sessionId: string): RecordingSession {
+      return requireRecordingResult(recorderSessionManager.getSession(sessionId));
+    },
+
+    stopRecordingSession(sessionId: string): RecordingSession {
+      return requireRecordingResult(recorderSessionManager.stopSession(sessionId));
+    },
+
+    listRecordingEvents(sessionId: string): RecordingEvent[] {
+      return requireRecordingResult(recorderSessionManager.listEvents(sessionId));
+    },
+
+    discardRecordingSession(sessionId: string): RecordingSession {
+      return requireRecordingResult(recorderSessionManager.discardSession(sessionId));
     },
 
     dryRunValidateConfig(config: ActionConfig) {
@@ -1037,17 +1051,6 @@ function isOptionalModuleAvailable(name: string) {
   } catch {
     return false;
   }
-}
-
-function cssAttributeSelector(attribute: string, value: string) {
-  return `[${attribute}="${cssStringValue(value)}"]`;
-}
-
-function cssStringValue(value: string) {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\A ");
 }
 
 function directoryReadable(value: string) {

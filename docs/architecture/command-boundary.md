@@ -31,6 +31,9 @@ Node/Electron backend.
 - Workflow Settings load/save/section-save commands, run validation, and validation before persistence or execution.
 - Legacy workflow browser runtime config commands map to Workflow Settings Browser.
 - Import/export, duplicate, batch run, builder assist command logic.
+- Browser recorder lifecycle commands. The backend starts, reports, stops,
+  lists events for, and discards recorder sessions; renderer code receives only
+  typed sanitized DTOs and never launches or instruments browsers directly.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
@@ -50,6 +53,10 @@ Node/Electron backend.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.
 - List-step authoring commands remain retired from the production command surface.
+- The old prototype recorder helpers `suggestSelectors` and
+  `normalizeRecordedEvents` are retired from the production bridge. New recorder
+  behavior must use the `Recording*` session DTOs and backend-owned recorder
+  modules.
 
 ## Does Not Belong Here
 

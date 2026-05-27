@@ -23,6 +23,7 @@ Node/TypeScript backend
   -> electron/backend/browser/sessionManager.ts browser session manager
   -> electron/backend/services/workflowSettingsService.ts workflow settings service
   -> electron/backend/services/workflowPackageService.ts package service
+  -> electron/backend/recording/recorderSessionManager.ts browser recorder session lifecycle
   -> electron/backend/graph/validateGraph.ts graph validation
   -> electron/backend/graph/compiler.ts graph compilation
   -> electron/backend/persistence/workflowRepository.ts workflow repository
@@ -42,7 +43,8 @@ SQLite
 The renderer command boundary is Electron IPC. The TypeScript backend owns
 workflow CRUD, graph document storage, Workflow Settings,
 package import/export, graph validation/compilation, workflow scheduling, SQLite
-persistence, run lifecycle orchestration, and CloakBrowser execution.
+  persistence, backend-owned browser recorder session lifecycle, run lifecycle
+  orchestration, and CloakBrowser execution.
 
 ## Boundaries
 
@@ -62,6 +64,11 @@ persistence, run lifecycle orchestration, and CloakBrowser execution.
   settings, and browser identity seed helpers.
 - Workflow package service owns workflow package preview, import preparation,
   selected-section validation, and export sanitization.
+- Browser recorder session manager owns active in-memory recorder sessions,
+  including new-workflow settings drafts, existing-workflow settings snapshots,
+  sanitized browser identity metadata, stop/discard lifecycle state, and
+  recording event buffers. Browser event capture and graph draft generation are
+  layered behind this backend-owned session boundary.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
 - Schedule repository/engine code owns schedule SQL, next-run calculation, due-schedule scanning, and schedule event audit history.
 - Graph validation code owns structural/semantic workflow graph checks before persistence or compilation.

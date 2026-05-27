@@ -3,14 +3,14 @@ import type {
   BatchRunRequest,
   BatchRunSummary,
   CompiledWorkflowGraph,
-  ElementSnapshot,
   GraphValidationIssue,
   OrchestrationSchedule,
-  RecordedEvent,
+  RecorderStartSessionInput,
+  RecordingEvent,
+  RecordingSession,
   RunState,
   RunValidationIssue,
   ScheduleValidationIssue,
-  SelectorCandidate,
   SettingsValidationIssue,
   BrowserProfileCleanupResult,
   CloakBrowserDiagnostics,
@@ -107,8 +107,11 @@ export type WorkflowElectronBridge = {
     workflowId: string,
     request: BatchRunRequest,
   ): Promise<BatchRunSummary>;
-  suggestSelectors(snapshot: ElementSnapshot): Promise<SelectorCandidate[]>;
-  normalizeRecordedEvents(events: RecordedEvent[]): Promise<ActionConfig[]>;
+  startRecordingSession(input: RecorderStartSessionInput): Promise<RecordingSession>;
+  getRecordingSession(sessionId: string): Promise<RecordingSession>;
+  stopRecordingSession(sessionId: string): Promise<RecordingSession>;
+  listRecordingEvents(sessionId: string): Promise<RecordingEvent[]>;
+  discardRecordingSession(sessionId: string): Promise<RecordingSession>;
   dryRunValidateConfig(config: ActionConfig): Promise<void>;
   saveWorkflowPackageFile(packageValue: WorkflowPackage): Promise<string | null>;
 };
