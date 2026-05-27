@@ -71,6 +71,10 @@ import {
   WorkflowSettingsService,
 } from "./services/workflowSettingsService.js";
 import {
+  BrowserSessionManager,
+  type BrowserDriver,
+} from "./browser/sessionManager.js";
+import {
   RecorderSessionInputError,
   RecorderSessionManager,
 } from "./recording/recorderSessionManager.js";
@@ -103,6 +107,8 @@ type CommandContext = {
   appPaths: AppPaths;
   database: DatabaseSync;
   runner?: RunnerCommandPort;
+  recorderDriver?: BrowserDriver;
+  recorderUsesDefaultDriver?: boolean;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
@@ -111,6 +117,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
   const scheduleRepository = new WorkflowScheduleRepository(context.database);
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
+  const recorderBrowserSessionManager = new BrowserSessionManager({
+    appPaths: context.appPaths,
+    driver: context.recorderDriver,
+    usesDefaultDriver: context.recorderUsesDefaultDriver,
+  });
   const runManager = new RunManager({ database: context.database, runner });
   const settingsService = new WorkflowSettingsService({
     directoryReadable,
@@ -136,6 +147,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         },
         { randomizeIdentity: true },
       );
+    },
+    launchBrowser({ settings, workflowId }) {
+      return recorderBrowserSessionManager.launchFreshSession({
+        settings,
+        retainedSessionWorkflowId: workflowId,
+      });
     },
   });
 
@@ -306,9 +323,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return normalized;
   }
 
-  function runRecorderCommand<T>(operation: () => T): T {
+  async function runRecorderCommand<T>(operation: () => T | Promise<T>): Promise<T> {
     try {
-      return operation();
+      return await operation();
     } catch (error) {
       if (error instanceof RecorderSessionInputError) {
         throw commandError(error.message, error.field ?? undefined);
@@ -1004,7 +1021,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       };
     },
 
-    startRecordingSession(input: RecorderStartSessionInput): RecordingSession {
+    async startRecordingSession(input: RecorderStartSessionInput): Promise<RecordingSession> {
       return runRecorderCommand(() => recorderSessionManager.startSession(input));
     },
 
@@ -1012,16 +1029,16 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return requireRecordingResult(recorderSessionManager.getSession(sessionId));
     },
 
-    stopRecordingSession(sessionId: string): RecordingSession {
-      return requireRecordingResult(recorderSessionManager.stopSession(sessionId));
+    async stopRecordingSession(sessionId: string): Promise<RecordingSession> {
+      return requireRecordingResult(await recorderSessionManager.stopSession(sessionId));
     },
 
     listRecordingEvents(sessionId: string): RecordingEvent[] {
       return requireRecordingResult(recorderSessionManager.listEvents(sessionId));
     },
 
-    discardRecordingSession(sessionId: string): RecordingSession {
-      return requireRecordingResult(recorderSessionManager.discardSession(sessionId));
+    async discardRecordingSession(sessionId: string): Promise<RecordingSession> {
+      return requireRecordingResult(await recorderSessionManager.discardSession(sessionId));
     },
 
     dryRunValidateConfig(config: ActionConfig) {

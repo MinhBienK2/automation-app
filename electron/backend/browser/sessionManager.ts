@@ -89,6 +89,11 @@ export type BrowserDriverPage = {
     pageFunction: string | ((arg?: A) => R | Promise<R>),
     arg?: A,
   ): Promise<R>;
+  exposeFunction?(
+    name: string,
+    callback: (payload: Record<string, unknown>) => void | Promise<void>,
+  ): Promise<void>;
+  on?(eventName: "framenavigated", handler: (frame: { url(): string }) => void): void;
   evaluateHandle?(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown): Promise<unknown>;
   addInitScript?(script: string): Promise<unknown>;
   setViewportSize?(viewport: { width: number; height: number }): Promise<void>;

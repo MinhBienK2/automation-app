@@ -44,6 +44,12 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Browser launch settings come from Workflow Settings Browser Launch. `browser_launch.headless` switches CloakBrowser between headed and headless mode.
 - Browser identities use CloakBrowser persistent contexts under the user's app data directory at `automation-app/browser-profiles/<profile_dir>` when Reuse login session is enabled. Runs without persistent storage use temporary contexts while keeping the configured fingerprint seed, and terminal retention still follows Run Policy and terminal node `close_browser` settings.
 - `BrowserSessionManager` provides the sanitized `browser_identity` record with run id, identity id/display name, profile directory or temporary marker, selected persona id/label/rationale and population buckets, fingerprint seed hash, configured fingerprint font hash when a readable font bundle is present, timezone/locale and source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, configured humanization status and preset, and CloakBrowser wrapper/binary evidence.
+- Browser recorder sessions also launch through `BrowserSessionManager`, but
+  they do not execute compiled workflow steps. The recorder session manager
+  uses the same Workflow Settings browser identity baseline, injects page-side
+  capture through the Playwright-compatible page adapter, observes navigation,
+  stores raw recording events in memory, and closes the recorder context on stop
+  or discard.
 - Before graph actions run, the command layer prepends Environment initial variables from Workflow Settings.
 - Graph settings are not runner-facing settings. The runner only receives edge waits after the graph compiler has emitted them as ordinary fixed or random wait steps.
 - Default action timeouts and interaction fidelity settings are not part of the runner-facing settings contract.

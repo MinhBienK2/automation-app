@@ -32,8 +32,10 @@ Node/Electron backend.
 - Legacy workflow browser runtime config commands map to Workflow Settings Browser.
 - Import/export, duplicate, batch run, builder assist command logic.
 - Browser recorder lifecycle commands. The backend starts, reports, stops,
-  lists events for, and discards recorder sessions; renderer code receives only
-  typed sanitized DTOs and never launches or instruments browsers directly.
+  lists events for, and discards recorder sessions. Starting a session launches
+  the recorder browser in the backend, injects capture, and records raw events;
+  renderer code receives only typed sanitized DTOs and never launches or
+  instruments browsers directly.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.

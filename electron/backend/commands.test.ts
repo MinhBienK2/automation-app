@@ -22,6 +22,11 @@ import type {
   WorkflowPackage,
   WorkflowSettings,
 } from "../../src/types/workflow";
+import type {
+  BrowserDriver,
+  BrowserDriverContext,
+  BrowserDriverPage,
+} from "./browser/sessionManager";
 
 vi.mock("electron", () => ({
   dialog: {
@@ -1473,7 +1478,7 @@ describe("Electron workflow command handlers", () => {
   test("starts, reports, stops, and discards a new-workflow recording session", async () => {
     const { handlers } = await createTestHandlers();
 
-    const session = handlers.startRecordingSession({
+    const session = await handlers.startRecordingSession({
       mode: "new_workflow",
       workflow_name: "Recorded checkout",
       initial_url: "https://owned.test/checkout",
@@ -1484,7 +1489,7 @@ describe("Electron workflow command handlers", () => {
       mode: "new_workflow",
       status: "recording",
       page_url: "https://owned.test/checkout",
-      event_count: 0,
+      event_count: 1,
       warnings: [],
     });
     expect(session.id).toMatch(/^rec_/);
@@ -1502,16 +1507,21 @@ describe("Electron workflow command handlers", () => {
       },
     });
     expect(handlers.getRecordingSession(session.id)).toEqual(session);
-    expect(handlers.listRecordingEvents(session.id)).toEqual([]);
+    expect(handlers.listRecordingEvents(session.id)).toMatchObject([
+      {
+        kind: "navigation",
+        page_url: "https://owned.test/checkout",
+      },
+    ]);
 
-    const stopped = handlers.stopRecordingSession(session.id);
+    const stopped = await handlers.stopRecordingSession(session.id);
     expect(stopped).toMatchObject({
       id: session.id,
       status: "stopped",
       stopped_at: expect.any(String),
     });
 
-    const discarded = handlers.discardRecordingSession(session.id);
+    const discarded = await handlers.discardRecordingSession(session.id);
     expect(discarded).toMatchObject({
       id: session.id,
       status: "discarded",
@@ -1534,7 +1544,7 @@ describe("Electron workflow command handlers", () => {
       },
     });
 
-    const session = handlers.startRecordingSession({
+    const session = await handlers.startRecordingSession({
       mode: "replace_current_graph",
       workflow_id: workflow.id,
     });
@@ -1557,6 +1567,74 @@ describe("Electron workflow command handlers", () => {
       proxy_username: "operator",
       proxy_password: null,
     });
+  });
+
+  test("starts a backend-owned recorder browser and collects page interaction events", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const driver = new FakeRecordingDriver(context);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: driver,
+    });
+
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded fixture",
+      initial_url: "https://fixture.owned.test/form",
+    });
+    await page.emitRecorderPayload({
+      kind: "click",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "button",
+        text_sample: "Save",
+        locators: [],
+      },
+      value: null,
+      raw: { trusted: true },
+      confidence: "high",
+      warnings: [],
+    });
+    await page.emitRecorderPayload({
+      kind: "input",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "input",
+        input_type: "email",
+        locators: [],
+      },
+      value: { text: "qa@example.test" },
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+
+    const events = handlers.listRecordingEvents(session.id);
+
+    expect(driver.launches).toHaveLength(1);
+    expect(page.initScripts).toHaveLength(1);
+    expect(page.gotoCalls).toEqual(["https://fixture.owned.test/form"]);
+    expect(events.map((event) => event.kind)).toEqual([
+      "navigation",
+      "click",
+      "input",
+    ]);
+    expect(events[0]).toMatchObject({
+      session_id: session.id,
+      sequence: 1,
+      kind: "navigation",
+      page_url: "https://fixture.owned.test/form",
+    });
+    expect(events[2]).toMatchObject({
+      sequence: 3,
+      value: { text: "qa@example.test" },
+    });
+
+    await handlers.stopRecordingSession(session.id);
+
+    expect(context.closed).toBe(true);
   });
 
   test("runs saved workflow graph through the Electron browser runner", async () => {
@@ -3009,6 +3087,86 @@ describe("Electron workflow schedule commands", () => {
   });
 });
 
+class FakeRecordingDriver implements BrowserDriver {
+  launches: Array<{ kind: "temporary" | "persistent"; options: Record<string, unknown> }> = [];
+
+  constructor(private readonly context: FakeRecordingContext) {}
+
+  async launch(options: Record<string, unknown>) {
+    this.launches.push({ kind: "temporary", options });
+    return this.context;
+  }
+
+  async launchPersistent(options: Record<string, unknown> & { userDataDir: string }) {
+    this.launches.push({ kind: "persistent", options });
+    return this.context;
+  }
+}
+
+class FakeRecordingContext implements BrowserDriverContext {
+  closed = false;
+
+  constructor(readonly page: FakeRecordingPage) {}
+
+  pages() {
+    return [this.page];
+  }
+
+  async newPage() {
+    return this.page;
+  }
+
+  async close() {
+    this.closed = true;
+  }
+}
+
+class FakeRecordingPage implements BrowserDriverPage {
+  initScripts: string[] = [];
+  gotoCalls: string[] = [];
+  private exposedCapture:
+    | ((payload: Record<string, unknown>) => void | Promise<void>)
+    | null = null;
+  private frameNavigated: ((frame: { url(): string }) => void) | null = null;
+
+  async goto(url: string) {
+    this.gotoCalls.push(url);
+    this.frameNavigated?.({ url: () => url });
+  }
+
+  locator() {
+    throw new Error("Not implemented");
+  }
+
+  async evaluate() {
+    return undefined;
+  }
+
+  async addInitScript(script: string) {
+    this.initScripts.push(script);
+  }
+
+  async exposeFunction(
+    name: string,
+    callback: (payload: Record<string, unknown>) => void | Promise<void>,
+  ) {
+    if (name === "__wamRecorderCapture") {
+      this.exposedCapture = callback;
+    }
+  }
+
+  on(eventName: "framenavigated", handler: (frame: { url(): string }) => void) {
+    if (eventName === "framenavigated") {
+      this.frameNavigated = handler;
+    }
+  }
+
+  async emitRecorderPayload(payload: Record<string, unknown>) {
+    if (!this.exposedCapture) throw new Error("Recorder capture binding was not exposed");
+    await this.exposedCapture(payload);
+  }
+}
+
 function runnableGraph(): WorkflowGraph {
   return {
     version: 1,
@@ -3086,10 +3244,12 @@ async function createTestHandlers(
   tempRoots.push(tempRoot);
   const appPaths = createAppPaths(tempRoot);
   const database = initializeDatabase(appPaths);
+  const recorderContext = new FakeRecordingContext(new FakeRecordingPage());
   const handlers = createWorkflowCommandHandlers({
     appPaths,
     database,
     defaultFingerprintFontsDir: null,
+    recorderDriver: new FakeRecordingDriver(recorderContext),
     ...overrides,
   });
   return { appPaths, database, handlers };

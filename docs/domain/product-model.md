@@ -49,9 +49,10 @@ Users can:
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
 - Open Run Center to monitor concurrent workflow run snapshots and stop a selected active run by run id.
 - Start, inspect, stop, and discard backend-owned browser recording sessions.
-  Phase 1 sessions expose lifecycle state and sanitized Workflow Settings
-  snapshots only; browser event capture, graph draft generation, and save UI are
-  added by later recorder phases.
+  Recorder sessions launch through backend browser/session infrastructure,
+  inject page-side capture, observe navigation, and collect raw navigation,
+  click, input, select, checkbox/radio, and scroll events in memory. Graph
+  draft generation and save UI are added by later recorder phases.
 
 ## Current Source Files
 

@@ -35,8 +35,8 @@ Frontend and backend must agree on:
   warnings.
 - `RecordingEvent`: ordered browser-recording event DTO with kind, page/frame
   URLs, target metadata, captured value, bounded raw diagnostics, confidence,
-  and warnings. Phase 1 exposes an empty in-memory event list; later phases fill
-  it through backend-owned browser instrumentation.
+  and warnings. Recorder event capture currently fills an in-memory event list
+  through backend-owned browser instrumentation and page-side capture.
 
 ## Workflow Settings Shape
 
@@ -254,7 +254,10 @@ a fresh browser identity and `workflow_id: null` on the public session.
 `replace_current_graph` starts from the existing workflow's saved Workflow
 Settings and returns the workflow id on the public session. Public
 `workflow_settings_snapshot` values are sanitized for renderer display; the
-backend retains the internal settings snapshot for later save phases.
+backend retains the internal settings snapshot for later save phases. Starting a
+session launches the recorder browser in the backend, injects capture before
+optional `initial_url` navigation, and records navigation events from the page
+adapter.
 
 `RecordingBrowserIdentitySnapshot` includes `identity_id`, display/profile
 metadata, a `fingerprint_seed_hash` rather than the raw seed, persona metadata,
@@ -263,8 +266,10 @@ credentials must not be sent to renderer code in recorder snapshots.
 
 `RecordingEvent.kind` currently allows navigation, click, input/change/select,
 checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
-Unsupported captured behavior must become `RecordingWarning` entries rather
-than silently producing graph nodes.
+The stable MVP capture path records navigation, click, text entry, select,
+checkbox/radio, and throttled scroll raw events. Unsupported captured behavior
+must become `RecordingWarning` entries rather than silently producing graph
+nodes.
 
 ## Graph Shape
 

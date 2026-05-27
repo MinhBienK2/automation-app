@@ -1,13 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
 import type {
   RecorderStartSessionInput,
-  RecordingBrowserIdentitySnapshot,
   RecordingEvent,
+  RecordingBrowserIdentitySnapshot,
   RecordingSession,
   RecordingWarning,
   WorkflowSettings,
   WorkflowSummary,
 } from "../../../src/types/workflow.js";
+import type {
+  BrowserDriverContext,
+  BrowserDriverPage,
+} from "../browser/sessionManager.js";
+import { RecordingEventCollector } from "./eventCollector.js";
 
 type RecorderSessionManagerDependencies = {
   getWorkflow(workflowId: string): WorkflowSummary | null;
@@ -15,13 +20,22 @@ type RecorderSessionManagerDependencies = {
   createNewWorkflowSettingsDraft(
     input: { name: string; draftWorkflowId: string; now: Date },
   ): WorkflowSettings;
+  launchBrowser?: (input: {
+    settings: WorkflowSettings;
+    workflowId: string | null;
+  }) => Promise<{
+    context: BrowserDriverContext;
+    page: BrowserDriverPage;
+    temporary: boolean;
+  }>;
   now?: () => Date;
 };
 
 type RecordingSessionRecord = {
   publicSession: RecordingSession;
   settingsSnapshot: WorkflowSettings;
-  events: RecordingEvent[];
+  collector: RecordingEventCollector | null;
+  browserContext: BrowserDriverContext | null;
 };
 
 export class RecorderSessionManager {
@@ -29,7 +43,7 @@ export class RecorderSessionManager {
 
   constructor(private readonly dependencies: RecorderSessionManagerDependencies) {}
 
-  startSession(input: RecorderStartSessionInput): RecordingSession {
+  async startSession(input: RecorderStartSessionInput): Promise<RecordingSession> {
     const now = this.currentDate();
     const id = `rec_${randomUUID().replace(/-/g, "")}`;
     const warnings: RecordingWarning[] = [];
@@ -46,9 +60,21 @@ export class RecorderSessionManager {
       });
     }
 
+    const workflowId = input.mode === "replace_current_graph" ? input.workflow_id ?? null : null;
+    const collector = new RecordingEventCollector(id);
+    const launched = this.dependencies.launchBrowser
+      ? await this.dependencies.launchBrowser({ settings, workflowId })
+      : null;
+    if (launched) {
+      await collector.attachPage(launched.page);
+    }
+    if (launched && normalizedOptionalText(input.initial_url)) {
+      await launched.page.goto(normalizedOptionalText(input.initial_url) as string);
+    }
+
     const publicSession: RecordingSession = {
       id,
-      workflow_id: input.mode === "replace_current_graph" ? input.workflow_id ?? null : null,
+      workflow_id: workflowId,
       mode: input.mode,
       status: "recording",
       started_at: now.toISOString(),
@@ -56,14 +82,15 @@ export class RecorderSessionManager {
       browser_identity: browserIdentitySnapshot(settings),
       workflow_settings_snapshot: sanitizeWorkflowSettingsSnapshot(settings),
       page_url: normalizedOptionalText(input.initial_url),
-      event_count: 0,
+      event_count: launched ? collector.listEvents().length : 0,
       warnings,
     };
 
     this.sessions.set(id, {
       publicSession,
       settingsSnapshot: settings,
-      events: [],
+      collector: launched ? collector : null,
+      browserContext: launched?.context ?? null,
     });
 
     return clone(publicSession);
@@ -71,29 +98,31 @@ export class RecorderSessionManager {
 
   getSession(sessionId: string): RecordingSession | null {
     const record = this.sessions.get(sessionId);
-    return record ? clone(record.publicSession) : null;
+    return record ? this.publicSession(record) : null;
   }
 
   listEvents(sessionId: string): RecordingEvent[] | null {
     const record = this.sessions.get(sessionId);
-    return record ? clone(record.events) : null;
+    return record ? record.collector?.listEvents() ?? [] : null;
   }
 
-  stopSession(sessionId: string): RecordingSession | null {
+  async stopSession(sessionId: string): Promise<RecordingSession | null> {
     const record = this.sessions.get(sessionId);
     if (!record) return null;
-    if (record.publicSession.status === "discarded") return clone(record.publicSession);
+    if (record.publicSession.status === "discarded") return this.publicSession(record);
     if (record.publicSession.status !== "stopped") {
       record.publicSession = {
         ...record.publicSession,
         status: "stopped",
         stopped_at: this.currentDate().toISOString(),
       };
+      await record.browserContext?.close();
+      record.browserContext = null;
     }
-    return clone(record.publicSession);
+    return this.publicSession(record);
   }
 
-  discardSession(sessionId: string): RecordingSession | null {
+  async discardSession(sessionId: string): Promise<RecordingSession | null> {
     const record = this.sessions.get(sessionId);
     if (!record) return null;
     record.publicSession = {
@@ -101,8 +130,10 @@ export class RecorderSessionManager {
       status: "discarded",
       stopped_at: record.publicSession.stopped_at ?? this.currentDate().toISOString(),
     };
-    record.events = [];
-    return clone(record.publicSession);
+    await record.browserContext?.close();
+    record.browserContext = null;
+    record.collector = null;
+    return this.publicSession(record);
   }
 
   getInternalSettingsSnapshot(sessionId: string): WorkflowSettings | null {
@@ -138,6 +169,13 @@ export class RecorderSessionManager {
 
   private currentDate() {
     return this.dependencies.now?.() ?? new Date();
+  }
+
+  private publicSession(record: RecordingSessionRecord): RecordingSession {
+    return clone({
+      ...record.publicSession,
+      event_count: record.collector?.listEvents().length ?? 0,
+    });
   }
 }
 
