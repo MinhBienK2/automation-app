@@ -99,10 +99,12 @@ Desktop coverage map:
 - `batch-evidence.e2e.ts`: graph-backed batch execution, row variable interpolation, persisted SQLite `runs`/`run_steps`, screenshot evidence files, and `__evidence` metadata.
 - `run-from-selected-real.e2e.ts`: retained persistent-session workflow run, visual graph node selection in the real browser, enabled Run from selected detail action, and selected-node rerun through the retained session.
 - `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
+- `browser-recorder.e2e.ts`: backend-owned recorder session, deterministic
+  fixture capture, review draft save, and replay through the normal run manager.
 - `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
 E2E lanes:
 
-- `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, and coverage matrix.
+- `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, coverage matrix, and recorder record-to-replay stability.
 - `npm run test:e2e:full`: all local deterministic desktop E2E. This lane intentionally uses helper defaults that run workflow browsers headless and close them after each workflow so CI and local verification stay deterministic.
 - `npm run test:e2e:visible`: local browser-observable review/debug lane. It runs only suites with meaningful browser-page behavior, excluding coverage, package, Electron-isolation, and UI-only journeys that would otherwise only show the desktop app. It sets `E2E_VISIBLE_BROWSER=1`, runs Playwright headed, makes helper-created workflow browsers non-headless, retains the workflow browser at terminal state, and waits briefly after helper-driven runs. Set `E2E_OBSERVE_MS=<milliseconds>` to change the post-run observation pause.
 - `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing, humanized pointer, form, and keyboard regressions.

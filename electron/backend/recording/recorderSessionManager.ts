@@ -47,18 +47,16 @@ export class RecorderSessionManager {
     const now = this.currentDate();
     const id = `rec_${randomUUID().replace(/-/g, "")}`;
     const warnings: RecordingWarning[] = [];
-    const settings =
+    let settings =
       input.mode === "replace_current_graph"
         ? this.savedWorkflowSettings(input.workflow_id)
         : this.newWorkflowSettingsDraft(input, id, now);
 
-    if (input.browser_launch_overrides && Object.keys(input.browser_launch_overrides).length > 0) {
-      warnings.push({
-        code: "browser_launch_overrides_ignored",
-        message: "Recorder browser launch overrides are not supported in this phase.",
-        severity: "warning",
-      });
-    }
+    settings = applyRecorderBrowserLaunchOverrides(
+      settings,
+      input.browser_launch_overrides,
+      warnings,
+    );
 
     const workflowId = input.mode === "replace_current_graph" ? input.workflow_id ?? null : null;
     const collector = new RecordingEventCollector(id);
@@ -70,6 +68,7 @@ export class RecorderSessionManager {
     }
     if (launched && normalizedOptionalText(input.initial_url)) {
       await launched.page.goto(normalizedOptionalText(input.initial_url) as string);
+      await collector.installPageCapture(launched.page);
     }
 
     const publicSession: RecordingSession = {
@@ -116,6 +115,7 @@ export class RecorderSessionManager {
         status: "stopped",
         stopped_at: this.currentDate().toISOString(),
       };
+      record.collector?.dispose();
       await record.browserContext?.close();
       record.browserContext = null;
     }
@@ -132,6 +132,7 @@ export class RecorderSessionManager {
     };
     await record.browserContext?.close();
     record.browserContext = null;
+    record.collector?.dispose();
     record.collector = null;
     return this.publicSession(record);
   }
@@ -232,6 +233,40 @@ function sanitizeProxyServer(value: string | null | undefined) {
 function normalizedOptionalText(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function applyRecorderBrowserLaunchOverrides(
+  settings: WorkflowSettings,
+  overrides: Record<string, unknown> | null | undefined,
+  warnings: RecordingWarning[],
+): WorkflowSettings {
+  if (!overrides || Object.keys(overrides).length === 0) return settings;
+  let nextSettings = settings;
+  if (typeof overrides.headless === "boolean") {
+    nextSettings = {
+      ...nextSettings,
+      browser_launch: {
+        ...nextSettings.browser_launch,
+        headless: overrides.headless,
+      },
+    };
+  } else if ("headless" in overrides) {
+    warnings.push({
+      code: "invalid_browser_launch_override",
+      message: "Recorder browser launch override headless must be a boolean.",
+      severity: "warning",
+    });
+  }
+
+  const unsupported = Object.keys(overrides).filter((key) => key !== "headless");
+  if (unsupported.length > 0) {
+    warnings.push({
+      code: "unsupported_browser_launch_overrides",
+      message: `Recorder browser launch overrides are not supported for: ${unsupported.join(", ")}.`,
+      severity: "warning",
+    });
+  }
+  return nextSettings;
 }
 
 function clone<T>(value: T): T {

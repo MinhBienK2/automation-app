@@ -61,6 +61,9 @@ describe("RecordingEventCollector", () => {
     await collector.attachPage(page);
     page.navigate("https://fixture.owned.test/next");
 
+    expect(
+      page.evaluatedScripts.filter((script) => script.includes("__wamRecorderInstalled")),
+    ).toHaveLength(2);
     expect(collector.listEvents()).toMatchObject([
       {
         id: "rec_nav_evt_1",
@@ -75,6 +78,7 @@ describe("RecordingEventCollector", () => {
 
 class FakeCollectorPage implements BrowserDriverPage {
   initScripts: string[] = [];
+  evaluatedScripts: string[] = [];
   private exposedCapture:
     | ((payload: Record<string, unknown>) => void | Promise<void>)
     | null = null;
@@ -88,7 +92,10 @@ class FakeCollectorPage implements BrowserDriverPage {
     throw new Error("Not implemented");
   }
 
-  async evaluate() {
+  async evaluate(script?: string | (() => unknown)) {
+    if (typeof script === "string") {
+      this.evaluatedScripts.push(script);
+    }
     return undefined;
   }
 

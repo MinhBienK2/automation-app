@@ -23,7 +23,7 @@
     "release:manifest": "node scripts/generate-release-manifest.mjs release",
     "test": "vitest run",
     "test:e2e": "npm run test:e2e:full",
-    "test:e2e:smoke": "npm run build:electron && playwright test tests/e2e/electron-isolation.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/workflow-user-journeys.e2e.ts tests/e2e/coverage-matrix.e2e.ts",
+    "test:e2e:smoke": "npm run build:electron && playwright test tests/e2e/electron-isolation.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/workflow-user-journeys.e2e.ts tests/e2e/coverage-matrix.e2e.ts tests/e2e/browser-recorder.e2e.ts",
     "test:e2e:full": "npm run build:electron && playwright test",
     "test:e2e:visible": "npm run build:electron && E2E_VISIBLE_BROWSER=1 playwright test --headed tests/e2e/browser-context-storage.e2e.ts tests/e2e/capture-network.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/extended-form-actions.e2e.ts tests/e2e/human-behavior.e2e.ts tests/e2e/keyboard-dialog.e2e.ts tests/e2e/navigation-actions.e2e.ts tests/e2e/pointer-actions.e2e.ts tests/e2e/wait-assertion-actions.e2e.ts",
     "test:e2e:flake": "npm run build:electron && playwright test tests/e2e/pointer-actions.e2e.ts tests/e2e/human-behavior.e2e.ts tests/e2e/core-execution.e2e.ts tests/e2e/extended-form-actions.e2e.ts tests/e2e/keyboard-dialog.e2e.ts --repeat-each=5",

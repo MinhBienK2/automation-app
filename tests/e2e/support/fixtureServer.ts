@@ -13,6 +13,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, formPage());
       return;
     }
+    if (url.pathname === "/recorder-replay") {
+      respondHtml(response, recorderReplayPage(url.searchParams.get("record") === "1"));
+      return;
+    }
     if (url.pathname === "/basic") {
       respondHtml(response, basicPage());
       return;
@@ -181,6 +185,65 @@ function formPage() {
         renderSummary('submitted');
       });
       renderSummary('idle');
+    </script>
+  </body>
+</html>`;
+}
+
+function recorderReplayPage(record: boolean) {
+  return `<!doctype html>
+<html>
+  <head><title>Recorder replay fixture</title></head>
+  <body>
+    <form data-testid="recorder-form">
+      <label>Email <input data-testid="email" name="email" value=""></label>
+      <label>Plan
+        <select data-testid="plan" name="plan">
+          <option>Free</option>
+          <option>Team</option>
+        </select>
+      </label>
+      <label><input data-testid="agree" type="checkbox" name="agree"> Agree</label>
+      <button data-testid="submit" type="submit">Submit</button>
+    </form>
+    <div data-testid="status">idle</div>
+    <div data-testid="summary"></div>
+    <script>
+      const form = document.querySelector('[data-testid="recorder-form"]');
+      const summary = document.querySelector('[data-testid="summary"]');
+      const status = document.querySelector('[data-testid="status"]');
+      const email = document.querySelector('[data-testid="email"]');
+      const plan = document.querySelector('[data-testid="plan"]');
+      const agree = document.querySelector('[data-testid="agree"]');
+      const submit = document.querySelector('[data-testid="submit"]');
+      function renderSummary(nextStatus) {
+        const data = new FormData(form);
+        summary.textContent = [
+          'email=' + data.get('email'),
+          'plan=' + data.get('plan'),
+          'agree=' + agree.checked,
+          'status=' + nextStatus,
+        ].join('|');
+      }
+      form.addEventListener('input', () => renderSummary('editing'));
+      form.addEventListener('change', () => renderSummary('editing'));
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        status.textContent = 'submitted';
+        renderSummary('submitted');
+      });
+      renderSummary('idle');
+      if (${JSON.stringify(record)}) {
+        window.setTimeout(() => {
+          email.value = 'qa-recorder@example.test';
+          email.dispatchEvent(new Event('input', { bubbles: true }));
+          plan.value = 'Team';
+          plan.dispatchEvent(new Event('change', { bubbles: true }));
+          agree.checked = true;
+          agree.dispatchEvent(new Event('change', { bubbles: true }));
+          submit.click();
+        }, 700);
+      }
     </script>
   </body>
 </html>`;

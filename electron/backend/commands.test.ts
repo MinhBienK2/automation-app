@@ -1569,6 +1569,27 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("applies safe recorder browser launch overrides to the recording settings snapshot", async () => {
+    const context = new FakeRecordingContext(new FakeRecordingPage());
+    const driver = new FakeRecordingDriver(context);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: driver,
+    });
+
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Headless recorder",
+      browser_launch_overrides: { headless: true },
+    });
+
+    expect(session.warnings).toEqual([]);
+    expect(session.browser_identity.headless).toBe(true);
+    expect(session.workflow_settings_snapshot.browser_launch.headless).toBe(true);
+    expect(driver.launches[0]?.options).toMatchObject({
+      headless: true,
+    });
+  });
+
   test("starts a backend-owned recorder browser and collects page interaction events", async () => {
     const page = new FakeRecordingPage();
     const context = new FakeRecordingContext(page);

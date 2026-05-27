@@ -251,7 +251,7 @@ startRecordingSession({
   workflow_id?: string | null,
   workflow_name?: string | null,
   initial_url?: string | null,
-  browser_launch_overrides?: object | null
+  browser_launch_overrides?: { headless?: boolean } | object | null
 }) -> RecordingSession
 ```
 
@@ -263,7 +263,11 @@ Settings and returns the workflow id on the public session. Public
 backend retains the internal settings snapshot for later save phases. Starting a
 session launches the recorder browser in the backend, injects capture before
 optional `initial_url` navigation, and records navigation events from the page
-adapter.
+adapter. `browser_launch_overrides.headless` is applied to the recorder settings
+snapshot for deterministic headless verification; unsupported override keys are
+reported as warnings and ignored. Page-side capture buffers events when the
+adapter binding exists but cannot call back into the backend, and the backend
+poller drains that buffer into the session event stream.
 
 `RecordingBrowserIdentitySnapshot` includes `identity_id`, display/profile
 metadata, a `fingerprint_seed_hash` rather than the raw seed, persona metadata,

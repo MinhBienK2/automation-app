@@ -55,6 +55,7 @@ const RECORDABLE_EVENT_KINDS = new Set<RecordingEventKind>([
 export class RecordingEventCollector {
   private readonly events: RecordingEvent[] = [];
   private readonly now: () => Date;
+  private readonly pollers: Array<ReturnType<typeof setInterval>> = [];
 
   constructor(
     private readonly sessionId: string,
@@ -69,16 +70,33 @@ export class RecordingEventCollector {
       this.recordPagePayload(payload);
     });
     await page.addInitScript?.(recorderCaptureScript());
-    await page.evaluate(recorderCaptureScript()).catch(() => undefined);
+    await this.installPageCapture(page);
+    const poller = setInterval(() => {
+      void this.flushBufferedPageEvents(page);
+    }, 100);
+    poller.unref?.();
+    this.pollers.push(poller);
     recorderPage.on?.("framenavigated", (frame) => {
       const url = frame.url();
       if (!url || url === "about:blank") return;
       this.recordNavigation(url);
+      void this.installPageCapture(page);
     });
   }
 
   listEvents(): RecordingEvent[] {
     return clone(this.events);
+  }
+
+  dispose() {
+    for (const poller of this.pollers.splice(0)) {
+      clearInterval(poller);
+    }
+  }
+
+  async installPageCapture(page: BrowserDriverPage) {
+    await page.evaluate(recorderCaptureScript()).catch(() => undefined);
+    await this.flushBufferedPageEvents(page);
   }
 
   recordNavigation(url: string) {
@@ -141,6 +159,22 @@ export class RecordingEventCollector {
       timestamp: this.now().toISOString(),
       ...input,
     });
+  }
+
+  private async flushBufferedPageEvents(page: BrowserDriverPage) {
+    try {
+      const payloads = await page.evaluate<RecorderPayload[]>(`(() => {
+        const buffered = Array.isArray(window.__wamRecorderBufferedEvents)
+          ? window.__wamRecorderBufferedEvents.splice(0)
+          : [];
+        return buffered;
+      })()`);
+      for (const payload of Array.isArray(payloads) ? payloads : []) {
+        this.recordPagePayload(payload);
+      }
+    } catch {
+      // Page may be navigating or already closed; the next poll or session stop will handle it.
+    }
   }
 }
 
@@ -302,17 +336,33 @@ function recorderCaptureScript() {
           : null
       };
     };
+    const bufferEvent = (event) => {
+      window.__wamRecorderBufferedEvents = Array.isArray(window.__wamRecorderBufferedEvents)
+        ? window.__wamRecorderBufferedEvents
+        : [];
+      window.__wamRecorderBufferedEvents.push(event);
+    };
     const push = (payload) => {
       const capture = window.__wamRecorderCapture;
+      const event = {
+        frame_url: window.location.href,
+        page_url: window.location.href,
+        confidence: "high",
+        warnings: [],
+        ...payload
+      };
       if (typeof capture === "function") {
-        capture({
-          frame_url: window.location.href,
-          page_url: window.location.href,
-          confidence: "high",
-          warnings: [],
-          ...payload
-        });
+        try {
+          const result = capture(event);
+          if (result && typeof result.catch === "function") {
+            result.catch(() => bufferEvent(event));
+          }
+        } catch {
+          bufferEvent(event);
+        }
+        return;
       }
+      bufferEvent(event);
     };
     document.addEventListener("click", (event) => {
       push({

@@ -108,11 +108,14 @@ returns the current app-session run snapshots for multi-run monitoring.
 Recorder session commands are backend-owned. `startRecordingSession`
 accepts `{ mode, workflow_id?, workflow_name?, initial_url?,
 browser_launch_overrides? }` and returns a `RecordingSession` with sanitized
-browser identity metadata and a sanitized Workflow Settings snapshot. Starting
-a session launches a backend-owned recorder browser through the existing browser
-session infrastructure, injects bounded page-side capture, observes navigation,
-and optionally navigates to `initial_url`. `listRecordingEvents` returns the
-in-memory raw event stream for the session. `stopRecordingSession` and
+browser identity metadata and a sanitized Workflow Settings snapshot. The
+recorder accepts the safe `browser_launch_overrides.headless` boolean for
+headless verification runs and warns on unsupported override keys. Starting a
+session launches a backend-owned recorder browser through the existing browser
+session infrastructure, injects bounded page-side capture with an in-page buffer
+fallback for adapter binding failures, observes navigation, and optionally
+navigates to `initial_url`. `listRecordingEvents` returns the in-memory raw
+event stream for the session. `stopRecordingSession` and
 `discardRecordingSession` close the recorder browser context. Commands operate
 by session id and serialize errors as `{ message, field? }`.
 
