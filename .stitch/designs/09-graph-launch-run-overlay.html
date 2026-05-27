@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mission Control - Graph Builder &amp; Launch Run</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Geist Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        control: "8px",
+                        card: "12px",
+                        panel: "16px",
+                        pill: "9999px"
+                    },
+                    spacing: {
+                        base: "8px",
+                        compact: "12px",
+                        panel: "16px",
+                        page: "24px",
+                        section: "32px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0B1016; color: #E7EEF5; }
+        .tech-font { font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .icon-fill { font-variation-settings: 'FILL' 1; }
+        
+        /* Grid Background for Graph Builder */
+        .bg-grid-pattern {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(35, 50, 64, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(35, 50, 64, 0.3) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="antialiased overflow-hidden h-screen w-screen flex selection:bg-primary-wash selection:text-primary">
+<!-- JSON Component: SideNavBar -->
+<aside class="bg-[#0E151D] w-[232px] h-screen fixed left-0 top-0 border-r border-[#233240] flex flex-col h-full py-6 z-10 shrink-0">
+<!-- Header / Brand -->
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[#32D3E6]" style="font-size: 20px;">rocket_launch</span>
+</div>
+<div>
+<h1 class="text-xl font-headline font-bold text-[#E7EEF5] tracking-tight leading-tight">Mission Control</h1>
+<p class="text-[12px] text-text-secondary">Automation Lab</p>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#32D3E6] bg-[rgba(50,211,230,0.12)] border-l-2 border-[#32D3E6] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="text-sm font-medium">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">play_circle</span>
+<span class="text-sm font-medium">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Evidence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-sm font-medium">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">fingerprint</span>
+<span class="text-sm font-medium">Identities</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-200 group active:scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<!-- CTA & Profile -->
+<div class="px-4 mt-auto space-y-4">
+<button class="w-full flex items-center justify-center gap-2 bg-[#32D3E6] hover:bg-[#2bc2d4] text-[#0B1016] py-2 px-4 rounded-control text-sm font-medium transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                New Workflow
+            </button>
+<div class="flex items-center gap-3 px-2 py-2 border-t border-border mt-4">
+<img alt="Operator Profile" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJ8Xynuz8bIaRN2NzGDFHVwgmfgqrDUjdFJMeKSMKtPew1ifZjelUu50vhTlXpk5cOCCjPW_V1bN__StcsasPODceqFVwPnt9GnSHnufmNa56VvW3YcId0dW7Y7s06QkWrQ_zmLmORypNcAQ7XBObraaBA10-5YNydZ_bn0n8iJKgQY275z8b77DgOmMA3xcg0wNcSTUj_LQkAtJhVRXLpzpuhNCGwBcKE5jS0VVzo24H9_SZZx5J_QT0ynfRZvXnnq99aD5hnSjMv"/>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-text-primary truncate">Operator</p>
+<p class="text-xs text-text-muted truncate">Active Session</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[232px] flex-1 flex flex-col h-screen relative bg-grid-pattern">
+<!-- JSON Component: TopNavBar -->
+<header class="bg-[#0B1016] h-16 border-b border-[#233240] flex justify-between items-center px-6 w-full z-10 shrink-0">
+<!-- Breadcrumbs / Page Context -->
+<div class="flex items-center gap-2 text-sm">
+<span class="text-text-secondary hover:text-text-primary cursor-pointer transition-colors">Workflows</span>
+<span class="text-text-muted material-symbols-outlined" style="font-size: 16px;">chevron_right</span>
+<span class="text-text-secondary hover:text-text-primary cursor-pointer transition-colors">Daily Account Reconciliation</span>
+<span class="text-text-muted material-symbols-outlined" style="font-size: 16px;">chevron_right</span>
+<span class="text-[#32D3E6] font-medium">Graph Builder</span>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<!-- Search -->
+<div class="relative group hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" style="font-size: 18px;">search</span>
+<input class="bg-surface border border-border rounded-control py-1.5 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-[#32D3E6] focus:border-[#32D3E6] transition-all w-48 focus:w-64" placeholder="Search components..." type="text"/>
+</div>
+<!-- Environment Badge -->
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-control text-[13px] font-medium text-text-primary">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+                    Production
+                </div>
+<!-- Icon Actions -->
+<div class="flex items-center gap-1 border-l border-border pl-4">
+<button class="p-2 text-text-secondary hover:text-text-primary hover:bg-[#172431] rounded-lg transition-all relative">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-text-primary hover:bg-[#172431] rounded-lg transition-all relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-warning rounded-full border border-background"></span>
+</button>
+</div>
+<!-- Primary Action -->
+<button class="bg-[#32D3E6] hover:bg-[#2bc2d4] text-[#0B1016] px-4 py-1.5 rounded-control text-[13px] font-medium transition-colors flex items-center gap-2 ml-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">play_arrow</span>
+                    Execute
+                </button>
+</div>
+</header>
+<!-- Background Workspace (Graph Builder) - Dimmed visually behind overlay -->
+<div class="flex-1 relative overflow-hidden opacity-30 pointer-events-none">
+<!-- Simulated Nodes and Connections -->
+<!-- Connection Line -->
+<svg class="absolute top-0 left-0 w-full h-full" style="z-index: 1;">
+<path d="M 300 200 C 450 200, 350 400, 500 400" fill="none" stroke="#314758" stroke-dasharray="4 4" stroke-width="2"></path>
+<!-- Active indicator moving along path could go here -->
+</svg>
+<!-- Node 1: Fetch Data -->
+<div class="absolute top-[160px] left-[100px] bg-surface border border-border rounded-card w-64 shadow-sm" style="z-index: 2;">
+<div class="px-4 py-3 border-b border-border flex items-center justify-between bg-elevated-surface rounded-t-card">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">cloud_download</span>
+<span class="text-sm font-medium text-text-primary">Fetch Data</span>
+</div>
+<span class="tech-font text-text-secondary">ND-1A</span>
+</div>
+<div class="p-4 space-y-2">
+<div class="text-xs text-text-muted">Target API:</div>
+<div class="text-sm text-text-primary truncate">api.internal.corp/v2/ledger</div>
+<div class="flex items-center gap-2 mt-2">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-xs text-text-secondary">Configured</span>
+</div>
+</div>
+<!-- Output Port -->
+<div class="absolute right-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-panel border-2 border-primary rounded-full"></div>
+</div>
+<!-- Node 2: Ledger Write -->
+<div class="absolute top-[360px] left-[500px] bg-surface border border-border rounded-card w-64 shadow-sm" style="z-index: 2;">
+<div class="px-4 py-3 border-b border-border flex items-center justify-between bg-elevated-surface rounded-t-card">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-sm">edit_document</span>
+<span class="text-sm font-medium text-text-primary">Ledger Write</span>
+</div>
+<span class="tech-font text-text-secondary">ND-2B</span>
+</div>
+<div class="p-4 space-y-2">
+<div class="text-xs text-text-muted">Operation:</div>
+<div class="text-sm text-text-primary">Batch Insert</div>
+</div>
+<!-- Input Port -->
+<div class="absolute left-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-panel border-2 border-border-emphasis rounded-full"></div>
+</div>
+</div>
+<!-- OVERLAY: Semi-transparent Backdrop -->
+<div class="absolute inset-0 bg-background/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+<!-- Dialog: Launch Run -->
+<div class="bg-surface border border-border rounded-panel w-full max-w-[560px] shadow-2xl flex flex-col max-h-[921px]">
+<!-- Dialog Header -->
+<div class="px-6 py-5 border-b border-border flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-wash border border-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">rocket_launch</span>
+</div>
+<div>
+<h2 class="text-[19px] font-medium text-text-primary leading-tight">Launch Run</h2>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-sm text-text-secondary">Daily Account Reconciliation</span>
+<span class="tech-font text-text-muted">WRK-7B2C</span>
+</div>
+</div>
+</div>
+<button class="p-1.5 text-text-muted hover:text-text-primary hover:bg-elevated-surface rounded-lg transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">close</span>
+</button>
+</div>
+<!-- Dialog Content (Scrollable) -->
+<div class="p-6 overflow-y-auto space-y-6">
+<!-- Environment & Identity Row -->
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="block text-[13px] font-medium text-text-secondary">Environment</label>
+<div class="relative">
+<select class="w-full bg-elevated-surface border border-border rounded-control py-2 pl-3 pr-10 text-sm text-text-primary appearance-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer">
+<option selected="" value="production">Production</option>
+<option value="staging">Staging</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" style="font-size: 18px;">expand_more</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="block text-[13px] font-medium text-text-secondary">Identity / Session</label>
+<div class="relative">
+<select class="w-full bg-elevated-surface border border-border rounded-control py-2 pl-3 pr-10 text-sm text-text-primary appearance-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer">
+<option value="svc-loader-01">svc-loader-01 (Active)</option>
+<option value="svc-loader-02">svc-loader-02</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" style="font-size: 18px;">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Run Policy -->
+<div class="space-y-3">
+<label class="block text-[13px] font-medium text-text-secondary">Run Policy</label>
+<div class="grid grid-cols-1 gap-2">
+<label class="flex items-start gap-3 p-3 border border-border-emphasis bg-elevated-surface rounded-card cursor-pointer group">
+<div class="relative flex items-center mt-0.5">
+<input checked="" class="w-4 h-4 text-primary bg-surface border-border focus:ring-primary focus:ring-offset-background" name="run_policy" type="radio"/>
+</div>
+<div class="flex-1">
+<div class="text-sm font-medium text-text-primary mb-1">Standard Execution</div>
+<div class="text-xs text-text-muted">Execute all nodes and persist side effects to targets.</div>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 border border-border bg-surface hover:border-border-emphasis hover:bg-elevated-surface rounded-card cursor-pointer transition-colors group">
+<div class="relative flex items-center mt-0.5">
+<input class="w-4 h-4 text-primary bg-surface border-border focus:ring-primary focus:ring-offset-background" name="run_policy" type="radio"/>
+</div>
+<div class="flex-1">
+<div class="text-sm font-medium text-text-primary mb-1">Dry Run (No Side Effects)</div>
+<div class="text-xs text-text-muted">Simulate execution without committing changes to external systems.</div>
+</div>
+</label>
+</div>
+</div>
+<hr class="border-border"/>
+<!-- Evidence Capture Summary -->
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-text-muted mt-0.5" style="font-size: 18px;">videocam</span>
+<div>
+<div class="text-[13px] font-medium text-text-primary">Evidence Capture</div>
+<div class="text-sm text-text-secondary mt-1">Capture all HTTP traces and screenshot on failure.</div>
+</div>
+</div>
+<!-- Schedule Conflict Warning -->
+<div class="bg-warning/10 border border-warning/20 rounded-card p-3 flex items-start gap-3">
+<span class="material-symbols-outlined text-warning mt-0.5" style="font-size: 18px;">calendar_month</span>
+<div>
+<div class="text-[13px] font-medium text-warning">Schedule Overlap Detected</div>
+<div class="text-sm text-warning/80 mt-1">Overlap detected with Weekly Audit (Starts in 4h).</div>
+</div>
+</div>
+</div>
+<!-- Dialog Footer / Validation -->
+<div class="px-6 py-4 border-t border-border bg-elevated-surface rounded-b-panel shrink-0">
+<!-- Risk/Validation Status -->
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
+</span>
+<span class="text-sm font-medium text-text-primary">Ready to Launch</span>
+</div>
+<div class="flex items-center gap-1.5 text-warning" title="1 Warning: Retry policy not set for Ledger Write">
+<span class="material-symbols-outlined" style="font-size: 16px;">warning</span>
+<span class="text-xs font-medium">1 Warning</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-between">
+<a class="text-[13px] font-medium text-text-secondary hover:text-primary transition-colors flex items-center gap-1.5" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">settings</span>
+                            Workflow Settings
+                        </a>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-[13px] font-medium text-text-secondary hover:text-text-primary bg-surface border border-border hover:border-border-emphasis hover:bg-elevated-surface rounded-control transition-colors">
+                                Cancel
+                            </button>
+<button class="px-4 py-2 text-[13px] font-medium text-[#0B1016] bg-primary hover:bg-[#2bc2d4] rounded-control transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">play_arrow</span>
+                                Launch Run
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
