@@ -221,6 +221,59 @@ describe("Workflow list integration", () => {
     });
   });
 
+  test("records a replacement draft from workflow detail and saves it as replace graph", async () => {
+    const session: RecordingSession = {
+      ...recordingSession(),
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+    };
+    const draft: RecordingWorkflowDraft = {
+      ...recordingDraft(session.id),
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      ...listWorkflowScenario([workflow]),
+      start_recording_session: session,
+      stop_recording_session: { ...session, status: "stopped" },
+      generate_recording_draft: draft,
+      save_recording_draft: { workflow, steps: [] },
+      get_workflow: { workflow, steps: [] },
+      get_workflow_graph: draft.graph,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Record Replacement",
+    }));
+
+    expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
+      mode: "replace_current_graph",
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+    });
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Stop Recording",
+    }));
+    const dialog = await screen.findByRole("dialog", { name: "Review Recording" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Replace Graph" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.saveRecordingDraft).toHaveBeenCalledWith(
+        draft.id,
+        expect.objectContaining({
+          workflow_name: workflow.name,
+          save_mode: "replace_graph",
+          reviewed_steps: draft.steps,
+        }),
+      );
+    });
+  });
+
   test("shows icon-only workflow card actions with duplicate", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 

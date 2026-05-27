@@ -102,7 +102,7 @@ export function RecordingReviewDialog({
             <DialogFooter className="form-actions recording-review-actions">
               <Button shape="pill" type="submit" disabled={busy}>
                 <Save aria-hidden="true" />
-                Save Workflow
+                {draft.mode === "replace_current_graph" ? "Replace Graph" : "Save Workflow"}
               </Button>
               <Button
                 variant="secondary"
