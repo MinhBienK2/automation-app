@@ -83,6 +83,7 @@ string map.
 - `discardRecordingSession`
 - `generateRecordingDraft`
 - `getRecordingDraft`
+- `saveRecordingDraft`
 - `dryRunValidateConfig`
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
@@ -120,7 +121,11 @@ events, creates a review-only `RecordingWorkflowDraft`, generates a standard v2
 `WorkflowGraph`, validates it through backend graph validation, stores the draft
 in backend memory, and returns it without creating workflow rows or replacing an
 existing graph. `getRecordingDraft(draftId)` returns the stored review draft.
-Persistence happens only through the later explicit save-draft command.
+`saveRecordingDraft(draftId, input)` is the only recorder command that persists
+reviewed output. It consumes renderer-reviewed step labels, inclusion flags, and
+supported action value edits, regenerates and validates the graph, then either
+creates a normal workflow with the recorder browser settings snapshot or
+replaces the linked workflow graph for `replace_current_graph` drafts.
 
 The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
 are no longer part of the production Electron bridge. Selector generation and

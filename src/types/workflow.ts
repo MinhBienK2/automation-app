@@ -1219,6 +1219,13 @@ export type RecordingGenerateDraftOptions = {
   add_terminal_success: boolean;
 };
 
+export type RecordingSaveDraftInput = {
+  workflow_name: string;
+  save_mode: "create_new" | "replace_graph";
+  reviewed_steps: ReviewedRecordingStep[];
+  add_terminal_success: boolean;
+};
+
 export type RecordingWorkflowDraft = {
   id: string;
   session_id: string;

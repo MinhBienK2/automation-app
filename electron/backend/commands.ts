@@ -14,6 +14,7 @@ import type {
   GraphValidationIssue,
   OrchestrationSchedule,
   RecordingGenerateDraftOptions,
+  RecordingSaveDraftInput,
   RecorderStartSessionInput,
   RecordingEvent,
   RecordingSession,
@@ -383,6 +384,100 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     };
     recordingDrafts.set(draft.id, draft);
     return draft;
+  }
+
+  function saveRecordingDraft(
+    draftId: string,
+    input: RecordingSaveDraftInput,
+  ): WorkflowDetail {
+    const draft = requireRecordingResult(recordingDrafts.get(draftId) ?? null, "draftId");
+    if (draft.status !== "draft") {
+      throw commandError("Recording draft has already been saved", "draftId");
+    }
+    const reviewedSteps = input.reviewed_steps ?? [];
+    if (!reviewedSteps.some((step) => step.included)) {
+      throw commandError("At least one recorded step must be included", "reviewed_steps");
+    }
+    const graph = generateRecordingGraph(reviewedSteps, {
+      addTerminalSuccess: input.add_terminal_success,
+    });
+    const validationIssues = validateGraph(graph);
+    const firstError = validationIssues.find((issue) => issue.level === "error");
+    if (firstError) {
+      throw commandError(firstError.message, firstError.node_id ?? firstError.edge_id ?? "reviewed_steps");
+    }
+
+    const normalizedName = input.workflow_name.trim();
+    if (input.save_mode === "create_new" && !normalizedName) {
+      throw commandError("Workflow name is required", "workflow_name");
+    }
+    if (input.save_mode === "replace_graph" && !draft.workflow_id) {
+      throw commandError("Recording draft is not linked to a workflow", "draftId");
+    }
+
+    context.database.exec("BEGIN IMMEDIATE");
+    try {
+      const detail =
+        input.save_mode === "create_new"
+          ? saveRecordingAsNewWorkflow(draft, graph, normalizedName)
+          : replaceRecordingWorkflowGraph(draft, graph);
+      recordingDrafts.set(draft.id, {
+        ...draft,
+        status: "saved",
+        steps: reviewedSteps,
+        graph,
+        validation_issues: validationIssues,
+        warnings: [
+          ...draft.warnings,
+          ...reviewedSteps.flatMap((step) => step.warnings),
+        ],
+      });
+      context.database.exec("COMMIT");
+      return detail;
+    } catch (error) {
+      context.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  function saveRecordingAsNewWorkflow(
+    draft: RecordingWorkflowDraft,
+    graph: WorkflowGraph,
+    workflowName: string,
+  ): WorkflowDetail {
+    const workflow = createWorkflow(workflowName);
+    repository.saveWorkflowGraph(workflow.id, graph);
+    const settingsSnapshot =
+      recorderSessionManager.getInternalSettingsSnapshot(draft.session_id) ??
+      draft.workflow_settings_snapshot;
+    saveSettings(workflow.id, {
+      ...settingsSnapshot,
+      workflow_id: workflow.id,
+      general: {
+        ...settingsSnapshot.general,
+        name: workflowName,
+        created_at: workflow.created_at,
+        updated_at: workflow.updated_at,
+      },
+      created_at: workflow.created_at,
+      updated_at: workflow.updated_at,
+    });
+    return repository.getWorkflow(workflow.id) ?? { workflow, steps: [] };
+  }
+
+  function replaceRecordingWorkflowGraph(
+    draft: RecordingWorkflowDraft,
+    graph: WorkflowGraph,
+  ): WorkflowDetail {
+    const workflowId = draft.workflow_id;
+    if (!workflowId) {
+      throw commandError("Recording draft is not linked to a workflow", "draftId");
+    }
+    requireWorkflow(workflowId);
+    repository.saveWorkflowGraph(workflowId, graph);
+    const detail = repository.getWorkflow(workflowId);
+    if (!detail) throw commandError("Workflow not found", "workflowId");
+    return detail;
   }
 
   function createWorkflow(name: string): Workflow {
@@ -1095,6 +1190,8 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     getRecordingDraft(draftId: string): RecordingWorkflowDraft {
       return requireRecordingResult(recordingDrafts.get(draftId) ?? null, "draftId");
     },
+
+    saveRecordingDraft,
 
     dryRunValidateConfig(config: ActionConfig) {
       const validation = validateActionConfig(config);

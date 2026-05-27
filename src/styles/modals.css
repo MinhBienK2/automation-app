@@ -33,6 +33,137 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.recording-review-dialog {
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(760px, calc(100vw - 48px));
+  max-height: min(760px, calc(100dvh - 48px));
+  overflow: hidden;
+}
+
+.recording-review-form,
+.recording-session-panel {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+}
+
+.recording-step-list {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  max-height: min(430px, calc(100dvh - 310px));
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.recording-step {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  background: #0f0f0f;
+}
+
+.recording-step[data-included="false"] {
+  opacity: 0.62;
+}
+
+.recording-step-header,
+.recording-step-meta,
+.recording-session-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.recording-step-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.recording-step-include {
+  display: flex;
+  min-width: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  color: #fafafa;
+  font-size: 14px;
+}
+
+.recording-step-include input {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
+  accent-color: #3ecf8e;
+}
+
+.recording-step-include span,
+.recording-step-value,
+.recording-step-meta dd,
+.recording-session-summary dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recording-action-pill {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(62, 207, 142, 0.38);
+  border-radius: 6px;
+  color: #3ecf8e;
+  font-size: 12px;
+}
+
+.recording-step-value {
+  padding: 9px 11px;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  background: #171717;
+  color: #b4b4b4;
+  font-size: 13px;
+}
+
+.recording-step-meta,
+.recording-session-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recording-session-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recording-step-meta dt,
+.recording-session-summary dt {
+  color: #898989;
+  font-size: 12px;
+}
+
+.recording-step-meta dd,
+.recording-session-summary dd {
+  margin: 3px 0 0;
+  color: #fafafa;
+  font-size: 13px;
+}
+
+.recording-warning-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border: 1px solid rgba(255, 99, 71, 0.32);
+  border-radius: 8px;
+  color: #ffb4a8;
+  font-size: 13px;
+}
+
+.recording-review-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .action-help-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

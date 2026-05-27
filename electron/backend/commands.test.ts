@@ -1697,6 +1697,133 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("saves a reviewed new-workflow recording draft with the recorder browser identity", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded fixture",
+      initial_url: "https://fixture.owned.test/form",
+    });
+    await page.emitRecorderPayload({
+      kind: "input",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "input",
+        input_type: "email",
+        accessible_name: "Email",
+        locators: [
+          { kind: "test_id", value: "email", score: 1, reason: "Stable test id" },
+        ],
+      },
+      value: { text: "qa@example.test" },
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+    await handlers.stopRecordingSession(session.id);
+    const draft = handlers.generateRecordingDraft(session.id, {
+      include_event_ids: null,
+      add_terminal_success: true,
+    });
+    const reviewedSteps = draft.steps.map((step, index) => ({
+      ...step,
+      label: index === 1 ? "Fill recorded email" : step.label,
+      included: index !== 0,
+    }));
+
+    const saved = handlers.saveRecordingDraft(draft.id, {
+      workflow_name: "Saved recording",
+      save_mode: "create_new",
+      reviewed_steps: reviewedSteps,
+      add_terminal_success: true,
+    });
+
+    expect(saved.workflow.name).toBe("Saved recording");
+    expect(handlers.listWorkflows()).toHaveLength(1);
+    expect(handlers.getWorkflowGraph(saved.workflow.id).nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Fill recorded email",
+          config: expect.objectContaining({ type: "input_text" }),
+        }),
+      ]),
+    );
+    expect(
+      handlers.getWorkflowGraph(saved.workflow.id).nodes.some((node) =>
+        node.config && typeof node.config === "object" && "type" in node.config &&
+        node.config.type === "navigate"
+      ),
+    ).toBe(false);
+    expect(handlers.getWorkflowSettings(saved.workflow.id).browser_launch.identity_id)
+      .toBe(draft.workflow_settings_snapshot.browser_launch.identity_id);
+    expect(handlers.getRecordingDraft(draft.id).status).toBe("saved");
+  });
+
+  test("replaces the current workflow graph without creating a new workflow", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+    const workflow = handlers.createWorkflow("Existing flow");
+    const originalIdentity = handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id;
+    const session = await handlers.startRecordingSession({
+      mode: "replace_current_graph",
+      workflow_id: workflow.id,
+    });
+    await page.emitRecorderPayload({
+      kind: "click",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "button",
+        accessible_name: "Save",
+        locators: [
+          {
+            kind: "role",
+            value: "button",
+            name: "Save",
+            score: 0.9,
+            reason: "Accessible role",
+          },
+        ],
+      },
+      value: null,
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+    await handlers.stopRecordingSession(session.id);
+    const draft = handlers.generateRecordingDraft(session.id, {
+      include_event_ids: null,
+      add_terminal_success: true,
+    });
+
+    const saved = handlers.saveRecordingDraft(draft.id, {
+      workflow_name: "Ignored for replace",
+      save_mode: "replace_graph",
+      reviewed_steps: draft.steps,
+      add_terminal_success: true,
+    });
+
+    expect(saved.workflow.id).toBe(workflow.id);
+    expect(handlers.listWorkflows()).toHaveLength(1);
+    expect(handlers.getWorkflowGraph(workflow.id).nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          config: expect.objectContaining({ type: "click" }),
+        }),
+      ]),
+    );
+    expect(handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id)
+      .toBe(originalIdentity);
+  });
+
   test("runs saved workflow graph through the Electron browser runner", async () => {
     const runnerCalls: Array<{
       graph: CompiledWorkflowGraph;

@@ -38,8 +38,9 @@ Node/Electron backend.
   instruments browsers directly.
 - Browser recorder draft commands. Draft generation normalizes recorded events,
   builds a review-only workflow graph, validates it, and returns/stores the
-  draft in backend memory without persistence. Workflow creation or graph
-  replacement must happen through an explicit save-draft command.
+  draft in backend memory without persistence. `saveRecordingDraft` consumes
+  reviewed steps, regenerates and validates the graph, and is the only recorder
+  path that creates a workflow or replaces a linked workflow graph.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.

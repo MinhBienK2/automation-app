@@ -55,7 +55,10 @@ Users can:
   normalization turns that raw stream into reviewable action-intent steps with
   ordered locator candidates and weak-locator warnings. Draft generation creates
   a validated review-only v2 workflow graph without persisting a workflow or
-  replacing an existing saved graph. Save UI is added by a later recorder phase.
+  replacing an existing saved graph. The workflow list exposes Record Workflow,
+  then a review dialog lets operators edit the workflow name, step labels,
+  step inclusion, and supported captured values before `saveRecordingDraft`
+  creates a normal workflow or replaces the linked graph.
 
 ## Current Source Files
 

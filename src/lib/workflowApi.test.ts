@@ -32,6 +32,7 @@ import {
   runWorkflowFromNode,
   listRunStates,
   saveWorkflowSettings,
+  saveRecordingDraft,
   startRecordingSession,
   installCloakBrowserBinary,
   saveWorkflowSettingsSection,
@@ -89,6 +90,7 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.discardRecordingSession.mockResolvedValue(undefined);
     workflowBridgeMock.generateRecordingDraft.mockResolvedValue(undefined);
     workflowBridgeMock.getRecordingDraft.mockResolvedValue(undefined);
+    workflowBridgeMock.saveRecordingDraft.mockResolvedValue(undefined);
 
     await validateSchedule({
       workflow_id: "workflow-1",
@@ -129,6 +131,12 @@ describe("workflow API phase ten commands", () => {
       add_terminal_success: true,
     });
     await getRecordingDraft("draft-1");
+    await saveRecordingDraft("draft-1", {
+      workflow_name: "Recorded checkout",
+      save_mode: "create_new",
+      reviewed_steps: [],
+      add_terminal_success: true,
+    });
     await dryRunValidateConfig({
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },
@@ -188,6 +196,15 @@ describe("workflow API phase ten commands", () => {
       },
     );
     expect(workflowBridgeMock.getRecordingDraft).toHaveBeenCalledWith("draft-1");
+    expect(workflowBridgeMock.saveRecordingDraft).toHaveBeenCalledWith(
+      "draft-1",
+      {
+        workflow_name: "Recorded checkout",
+        save_mode: "create_new",
+        reviewed_steps: [],
+        add_terminal_success: true,
+      },
+    );
     expect(workflowBridgeMock.dryRunValidateConfig).toHaveBeenCalledWith({
       type: "wait",
       config: { condition: "duration", duration_ms: 1000 },

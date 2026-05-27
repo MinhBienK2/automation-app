@@ -41,6 +41,8 @@ Frontend and backend must agree on:
   an existing `ActionConfig`, label, inclusion flag, locator confidence, and
   review warnings. Graph draft generation consumes these steps instead of raw
   browser events.
+- `RecordingSaveDraftInput`: reviewed recorder save payload with workflow name,
+  explicit save mode, reviewed steps, and terminal success preference.
 
 ## Workflow Settings Shape
 
@@ -291,6 +293,22 @@ generation does not create workflow rows, persist Workflow Settings, or replace
 an existing graph. The generated graph uses the normal v2 graph shape:
 `Start -> recorded action nodes -> optional End Success`, with deterministic
 left-to-right positions and ordinary action node configs.
+
+Draft save commands serialize as:
+
+```text
+saveRecordingDraft(draftId, {
+  workflow_name: string,
+  save_mode: "create_new" | "replace_graph",
+  reviewed_steps: ReviewedRecordingStep[],
+  add_terminal_success: boolean
+}) -> WorkflowDetail
+```
+
+`create_new` persists a normal workflow row, generated graph, and the backend's
+internal recorder settings snapshot with the reviewed workflow name. `replace_graph`
+requires a draft linked to an existing workflow and replaces only that workflow's
+graph; saved Workflow Settings and browser identity remain unchanged.
 
 ## Graph Shape
 

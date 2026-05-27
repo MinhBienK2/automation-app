@@ -1,4 +1,4 @@
-import { Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
+import { CircleDot, Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
 import type { RunState, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
@@ -32,6 +32,7 @@ type WorkflowListPageProps = {
   onStopRun: (runId: string) => void;
   onOpenExportWorkflow: (workflow: WorkflowSummary) => void;
   onImportWorkflowPackageFile: (file: File | null) => void;
+  onRecordWorkflow: () => void;
   onCloseWorkflowDialog: () => void;
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
@@ -54,6 +55,7 @@ export function WorkflowListPage({
   onStopRun,
   onOpenExportWorkflow,
   onImportWorkflowPackageFile,
+  onRecordWorkflow,
   onCloseWorkflowDialog,
   onOpenWorkflow,
   onDeleteWorkflow,
@@ -101,6 +103,10 @@ export function WorkflowListPage({
               }}
             />
           </label>
+          <Button variant="secondary" shape="pill" type="button" onClick={onRecordWorkflow}>
+            <CircleDot aria-hidden="true" />
+            Record Workflow
+          </Button>
           <Button shape="pill" type="button" onClick={onOpenCreateWorkflow}>
             Create Workflow
           </Button>

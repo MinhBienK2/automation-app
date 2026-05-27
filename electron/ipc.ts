@@ -47,6 +47,7 @@ export const workflowIpcChannels = {
   discardRecordingSession: "workflow:discardRecordingSession",
   generateRecordingDraft: "workflow:generateRecordingDraft",
   getRecordingDraft: "workflow:getRecordingDraft",
+  saveRecordingDraft: "workflow:saveRecordingDraft",
   dryRunValidateConfig: "workflow:dryRunValidateConfig",
   saveWorkflowPackageFile: "workflow:saveWorkflowPackageFile",
 } as const;

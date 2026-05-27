@@ -6,6 +6,7 @@ import type {
   GraphValidationIssue,
   OrchestrationSchedule,
   RecordingGenerateDraftOptions,
+  RecordingSaveDraftInput,
   RecorderStartSessionInput,
   RecordingEvent,
   RecordingSession,
@@ -119,6 +120,10 @@ export type WorkflowElectronBridge = {
     options: RecordingGenerateDraftOptions,
   ): Promise<RecordingWorkflowDraft>;
   getRecordingDraft(draftId: string): Promise<RecordingWorkflowDraft>;
+  saveRecordingDraft(
+    draftId: string,
+    input: RecordingSaveDraftInput,
+  ): Promise<WorkflowDetail>;
   dryRunValidateConfig(config: ActionConfig): Promise<void>;
   saveWorkflowPackageFile(packageValue: WorkflowPackage): Promise<string | null>;
 };

@@ -10,10 +10,12 @@ import {
   createSchedule,
   deleteWorkflow as deleteWorkflowCommand,
   deleteSchedule,
+  discardRecordingSession,
   disableSchedule,
   duplicateWorkflow as duplicateWorkflowCommand,
   enableSchedule,
   exportWorkflowPackage,
+  generateRecordingDraft,
   getWorkflowGraph,
   getRunState,
   getWorkflow,
@@ -28,9 +30,12 @@ import {
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
   runWorkflowFromNode as runWorkflowFromNodeCommand,
+  saveRecordingDraft,
   saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
+  startRecordingSession,
+  stopRecordingSession,
   stopRun as stopRunCommand,
   updateSchedule,
   validateWorkflowGraph,
@@ -45,6 +50,7 @@ import {
 import {
   defaultWorkflowSettings,
 } from "./features/workflows/lib/workflowSettings";
+import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
 import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
 import { Button } from "./components/ui/button";
 import {
@@ -63,6 +69,9 @@ import {
 import type {
   GraphValidationIssue,
   GraphNodeType,
+  RecordingSession,
+  RecordingWorkflowDraft,
+  ReviewedRecordingStep,
   RunState,
   WorkflowGraph,
   WorkflowDetail,
@@ -327,6 +336,13 @@ function App() {
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
+  const [recordingSession, setRecordingSession] =
+    useState<RecordingSession | null>(null);
+  const [recordingDraft, setRecordingDraft] =
+    useState<RecordingWorkflowDraft | null>(null);
+  const [recordingWorkflowName, setRecordingWorkflowName] =
+    useState("Recorded workflow");
+  const [recordingBusy, setRecordingBusy] = useState(false);
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] =
     useState<WorkflowSummary | null>(null);
   const [deleteBrowserProfileData, setDeleteBrowserProfileData] = useState(false);
@@ -652,6 +668,106 @@ function App() {
       await loadWorkflows();
     } catch (error) {
       setAppError(commandMessage(error));
+    }
+  }
+
+  async function startWorkflowRecording() {
+    setAppError("");
+    setRecordingDraft(null);
+    setRecordingWorkflowName("Recorded workflow");
+    setRecordingBusy(true);
+
+    try {
+      const session = await startRecordingSession({
+        mode: "new_workflow",
+        workflow_name: "Recorded workflow",
+      });
+      setRecordingSession(session);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setRecordingBusy(false);
+    }
+  }
+
+  async function stopWorkflowRecording() {
+    if (!recordingSession) return;
+    setAppError("");
+    setRecordingBusy(true);
+
+    try {
+      const stopped = await stopRecordingSession(recordingSession.id);
+      setRecordingSession(stopped);
+      const draft = await generateRecordingDraft(stopped.id, {
+        include_event_ids: null,
+        add_terminal_success: true,
+      });
+      setRecordingDraft(draft);
+      setRecordingWorkflowName(
+        draft.workflow_settings_snapshot.general.name || "Recorded workflow",
+      );
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setRecordingBusy(false);
+    }
+  }
+
+  async function discardWorkflowRecording() {
+    const sessionId = recordingSession?.id ?? recordingDraft?.session_id ?? null;
+    setAppError("");
+    setRecordingBusy(true);
+    try {
+      if (sessionId) {
+        await discardRecordingSession(sessionId);
+      }
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setRecordingSession(null);
+      setRecordingDraft(null);
+      setRecordingWorkflowName("Recorded workflow");
+      setRecordingBusy(false);
+    }
+  }
+
+  function updateRecordingStep(step: ReviewedRecordingStep) {
+    setRecordingDraft((current) =>
+      current
+        ? {
+            ...current,
+            steps: current.steps.map((candidate) =>
+              candidate.id === step.id ? step : candidate,
+            ),
+          }
+        : current,
+    );
+  }
+
+  async function saveReviewedRecording() {
+    if (!recordingDraft) return;
+    setAppError("");
+    setRecordingBusy(true);
+
+    try {
+      const saved = await saveRecordingDraft(recordingDraft.id, {
+        workflow_name: recordingWorkflowName,
+        save_mode:
+          recordingDraft.mode === "replace_current_graph"
+            ? "replace_graph"
+            : "create_new",
+        reviewed_steps: recordingDraft.steps,
+        add_terminal_success: true,
+      });
+      setRecordingSession(null);
+      setRecordingDraft(null);
+      setRecordingWorkflowName("Recorded workflow");
+      await loadWorkflows();
+      await openWorkflow(saved.workflow.id);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setRecordingBusy(false);
     }
   }
 
@@ -1236,11 +1352,34 @@ function App() {
           onStopRun={(runId) => stopRun(runId)}
           onOpenExportWorkflow={openExportPackageDialog}
           onImportWorkflowPackageFile={importWorkflowPackageFile}
+          onRecordWorkflow={startWorkflowRecording}
           onCloseWorkflowDialog={closeWorkflowDialog}
           onOpenWorkflow={openWorkflow}
           onDeleteWorkflow={deleteWorkflow}
         />
       )}
+      <RecordingReviewDialog
+        open={Boolean(recordingSession)}
+        session={recordingSession}
+        draft={recordingDraft}
+        workflowName={recordingWorkflowName}
+        busy={recordingBusy}
+        error={appError}
+        onWorkflowNameChange={setRecordingWorkflowName}
+        onStopRecording={stopWorkflowRecording}
+        onDiscard={() => {
+          void discardWorkflowRecording();
+        }}
+        onSave={() => {
+          void saveReviewedRecording();
+        }}
+        onStepChange={updateRecordingStep}
+        onOpenChange={(open) => {
+          if (!open) {
+            void discardWorkflowRecording();
+          }
+        }}
+      />
       <WorkflowSettingsDialog
         open={workflowSettingsDialogOpen}
         settings={workflowSettings}

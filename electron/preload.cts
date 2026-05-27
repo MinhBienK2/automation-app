@@ -130,6 +130,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("generateRecordingDraft", sessionId, options),
   getRecordingDraft: (draftId) =>
     invokeWorkflow("getRecordingDraft", draftId),
+  saveRecordingDraft: (draftId, input) =>
+    invokeWorkflow("saveRecordingDraft", draftId, input),
   dryRunValidateConfig: (config) =>
     invokeWorkflow("dryRunValidateConfig", config),
   saveWorkflowPackageFile: (packageValue) =>
