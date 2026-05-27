@@ -6,9 +6,12 @@ Date: 2026-05-27
 
 Approved design for a written specification on 2026-05-27.
 
-This document is ready for user review before implementation planning. It is
-the first implementation-oriented specification in the wider Mission Control
-production adoption program.
+Approved by the user on 2026-05-27.
+
+It is the first implementation-oriented specification in the wider Mission
+Control production adoption program. The user subsequently selected a program
+gate: all Mission Control specifications listed below must be written and
+approved before implementation planning or production code changes begin.
 
 ## Goal
 
@@ -65,7 +68,8 @@ The full production adoption program is intentionally split into bounded specs:
 
 This specification covers sequence item 1 only. It creates a production UI
 foundation that later specs can extend without mixing unapproved capability
-work into a styling migration.
+work into a styling migration. Sequence does not authorize implementation
+before the remaining program specifications have been approved.
 
 ## Chosen Approach
 
@@ -615,9 +619,9 @@ This specification is successfully implemented when:
 
 ## Next Specifications
 
-After this foundation is implemented and accepted, the next design cycle should
-define `Operations Overview` using explicitly approved operational data
-sources. `Evidence Explorer` and `Identity Lab` follow as separately bounded
-capability/workspace specs, then a final cross-workspace traceability and
-polish phase can reconcile the complete production experience with the
+Before implementation planning starts, the remaining design cycles must define
+and receive user approval for `Operations Overview`, `Evidence Explorer`,
+`Identity Lab`, and `Cross-Workspace Traceability And Polish`. Once the full
+specification set is approved, implementation planning can sequence these
+bounded changes and reconcile the complete production experience with the
 original Stitch suite.
