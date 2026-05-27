@@ -51,8 +51,10 @@ Users can:
 - Start, inspect, stop, and discard backend-owned browser recording sessions.
   Recorder sessions launch through backend browser/session infrastructure,
   inject page-side capture, observe navigation, and collect raw navigation,
-  click, input, select, checkbox/radio, and scroll events in memory. Graph
-  draft generation and save UI are added by later recorder phases.
+  click, input, select, checkbox/radio, and scroll events in memory. Backend
+  normalization turns that raw stream into reviewable action-intent steps with
+  ordered locator candidates and weak-locator warnings. Graph draft generation
+  and save UI are added by later recorder phases.
 
 ## Current Source Files
 

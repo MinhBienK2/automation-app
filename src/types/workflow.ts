@@ -1204,6 +1204,16 @@ export type RecordingSession = {
   warnings: RecordingWarning[];
 };
 
+export type ReviewedRecordingStep = {
+  id: string;
+  source_event_ids: string[];
+  action: ActionConfig;
+  label: string;
+  included: boolean;
+  locator_confidence?: "high" | "medium" | "low" | null;
+  warnings: RecordingWarning[];
+};
+
 export type RunState = {
   status: RunStatus;
   mode: RunMode;

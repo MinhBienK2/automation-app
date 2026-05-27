@@ -262,20 +262,41 @@ function recorderCaptureScript() {
     window.__wamRecorderInstalled = true;
     const trim = (value, limit = 500) =>
       typeof value === "string" ? value.trim().slice(0, limit) : null;
+    const attrSelector = (name, value) =>
+      "[" + name + "='" + String(value).replace(/'/g, "\\\\'") + "']";
+    const locatorCandidatesFor = (element, tag, textSample, accessibleName) => {
+      const locators = [];
+      const testId = element.getAttribute && (element.getAttribute("data-testid") || element.getAttribute("data-test"));
+      const role = element.getAttribute && element.getAttribute("role");
+      const label = element.labels && element.labels.length ? trim(element.labels[0].innerText || element.labels[0].textContent || "", 160) : null;
+      const placeholder = element.getAttribute && element.getAttribute("placeholder");
+      const name = element.getAttribute && element.getAttribute("name");
+      if (testId) locators.push({ kind: "test_id", value: testId, score: 1, reason: "Element test id" });
+      if (role && accessibleName) locators.push({ kind: "role", value: role, name: accessibleName, score: 0.86, reason: "Accessible role and name" });
+      if (label) locators.push({ kind: "label", value: label, score: 0.84, reason: "Associated label" });
+      if (placeholder) locators.push({ kind: "placeholder", value: placeholder, score: 0.78, reason: "Field placeholder" });
+      if (textSample && textSample.length <= 80) locators.push({ kind: "text", value: textSample, score: 0.62, reason: "Short visible text" });
+      if (element.id) locators.push({ kind: "css", value: attrSelector("id", element.id), score: 0.55, reason: "Element id fallback" });
+      if (name) locators.push({ kind: "attribute", attribute: "name", value: name, score: 0.52, reason: "Name attribute fallback" });
+      locators.push({ kind: "css", value: tag, score: 0.2, reason: "Tag fallback" });
+      return locators;
+    };
     const targetFor = (element) => {
       if (!element || !element.tagName) return null;
       const rect = element.getBoundingClientRect ? element.getBoundingClientRect() : null;
       const tag = element.tagName.toLowerCase();
+      const textSample = trim(element.innerText || element.textContent || element.value || "", 160);
+      const accessibleName = trim(
+        (element.getAttribute && (element.getAttribute("aria-label") || element.getAttribute("name") || element.getAttribute("placeholder"))) || "",
+        160
+      );
       return {
         tag_name: tag,
         input_type: trim(element.getAttribute && element.getAttribute("type"), 80),
-        text_sample: trim(element.innerText || element.textContent || element.value || "", 160),
+        text_sample: textSample,
         role: trim(element.getAttribute && element.getAttribute("role"), 80),
-        accessible_name: trim(
-          (element.getAttribute && (element.getAttribute("aria-label") || element.getAttribute("name") || element.getAttribute("placeholder"))) || "",
-          160
-        ),
-        locators: [],
+        accessible_name: accessibleName,
+        locators: locatorCandidatesFor(element, tag, textSample, accessibleName),
         bounding_box: rect
           ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
           : null

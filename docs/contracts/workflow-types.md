@@ -37,6 +37,10 @@ Frontend and backend must agree on:
   URLs, target metadata, captured value, bounded raw diagnostics, confidence,
   and warnings. Recorder event capture currently fills an in-memory event list
   through backend-owned browser instrumentation and page-side capture.
+- `ReviewedRecordingStep`: normalized recorder step DTO with source event ids,
+  an existing `ActionConfig`, label, inclusion flag, locator confidence, and
+  review warnings. Graph draft generation consumes these steps instead of raw
+  browser events.
 
 ## Workflow Settings Shape
 
@@ -270,6 +274,14 @@ The stable MVP capture path records navigation, click, text entry, select,
 checkbox/radio, and throttled scroll raw events. Unsupported captured behavior
 must become `RecordingWarning` entries rather than silently producing graph
 nodes.
+
+The recorder normalizer collapses repeated input/change events for the same
+target into one `input_text` step with the final value, maps navigation, click,
+select, checkbox/radio, scroll, and basic keyboard events into existing action
+configs, and carries source event ids forward for review. Locator generation
+prefers `test_id`, role/name, labels, placeholders, short text, attributes, CSS,
+and XPath in that order. Low-confidence locator output remains draftable but
+adds a `weak_locator` review warning.
 
 ## Graph Shape
 
