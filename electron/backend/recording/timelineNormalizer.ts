@@ -12,6 +12,8 @@ const recordingActionLabels: Partial<Record<ActionConfig["type"], string>> = {
   click: "Click",
   double_click: "Double Click",
   right_click: "Right Click",
+  set_clipboard: "Set Clipboard",
+  paste_clipboard: "Paste Clipboard",
   select_option: "Select Option",
   check: "Check",
   uncheck: "Uncheck",
@@ -45,6 +47,7 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
   const steps: ReviewedRecordingStep[] = [];
   let pendingInput: PendingInput | null = null;
   let pendingDedupedEvent: PendingDedupedEvent | null = null;
+  let lastClipboardPasteTargetKey: string | null = null;
   let previousScrollPosition = { x: 0, y: 0 };
 
   const flushInput = () => {
@@ -70,6 +73,11 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
 
   for (const event of sortedEvents) {
     if (isInputEvent(event)) {
+      if (lastClipboardPasteTargetKey === targetKey(event.target)) {
+        lastClipboardPasteTargetKey = null;
+        continue;
+      }
+      lastClipboardPasteTargetKey = null;
       flushDedupedEvent();
       const key = targetKey(event.target);
       if (pendingInput && pendingInput.key === key) {
@@ -80,8 +88,27 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       }
       continue;
     }
+    lastClipboardPasteTargetKey = null;
 
     if (isIgnorableKeyboardEvent(event, pendingInput)) {
+      continue;
+    }
+
+    if (event.kind === "clipboard") {
+      flushPending();
+      if (
+        stringValue(event.raw.action) === "copy" &&
+        isCopyHotkeyStep(steps[steps.length - 1])
+      ) {
+        continue;
+      }
+      const clipboardSteps = clipboardStepsFromEvent(event);
+      for (const step of clipboardSteps) {
+        steps.push(withStepId(step, steps.length + 1));
+      }
+      if (stringValue(event.raw.action) === "paste") {
+        lastClipboardPasteTargetKey = targetKey(event.target);
+      }
       continue;
     }
 
@@ -148,6 +175,51 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
   flushPending();
 
   return steps;
+}
+
+function isCopyHotkeyStep(step: ReviewedRecordingStep | undefined) {
+  if (step?.action.type !== "hotkey") return false;
+  const keys = step.action.config.keys.map((key) => key.toLowerCase());
+  return keys.includes("c") && (keys.includes("control") || keys.includes("meta"));
+}
+
+function clipboardStepsFromEvent(
+  event: RecordingEvent,
+): Array<Omit<ReviewedRecordingStep, "id">> {
+  const action = stringValue(event.raw.action);
+  if (action === "copy") {
+    return [
+      recordingStep([event], {
+        type: "hotkey",
+        config: { keys: ["Control", "C"] },
+      }),
+    ];
+  }
+  if (action !== "paste") return [];
+  const text = event.value?.text;
+  if (text == null) return [];
+  const locator = generateElementTarget(event.target);
+  const sensitiveRedacted =
+    event.warnings.some((warning) => warning.code === "sensitive_input_redacted") ||
+    event.raw.value_redacted === true;
+  return [
+    recordingStep([event], {
+      type: "set_clipboard",
+      config: { text },
+    }, undefined, {
+      included: !sensitiveRedacted,
+    }),
+    recordingStep([event], {
+      type: "paste_clipboard",
+      config: {
+        target: locator.target,
+        wait_until: "visible",
+        timeout_ms: 60000,
+      },
+    }, locator, {
+      included: !sensitiveRedacted,
+    }),
+  ];
 }
 
 function stepFromEvent(

@@ -102,7 +102,8 @@ Desktop coverage map:
 - `real-world-web.e2e.ts`: opt-in external website workflow suite covering read-only reference/docs pages, public demo commerce checkout, scraping sandbox catalog/quote pagination, and public automation-practice login/dynamic-loading/alert flows. Each graph includes a domain allowlist. It is excluded from the deterministic full lane because third-party availability and network behavior are outside repo control.
 - `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
 - `browser-recorder.e2e.ts`: backend-owned recorder session, deterministic
-  fixture capture, review draft save, and replay through the normal run manager.
+  fixture capture including clipboard paste, review draft save, and replay
+  through the normal run manager.
 - `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
 E2E lanes:
 

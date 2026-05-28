@@ -341,6 +341,27 @@ function valueEditorForAction(
         </Label>
       );
     }
+    case "set_clipboard": {
+      const action = step.action;
+      return (
+        <Label htmlFor={inputId}>
+          Clipboard text
+          <Input
+            id={inputId}
+            value={action.config.text}
+            onChange={(event) =>
+              onChange({
+                ...step,
+                action: {
+                  type: "set_clipboard",
+                  config: { ...action.config, text: event.currentTarget.value },
+                },
+              })
+            }
+          />
+        </Label>
+      );
+    }
     default:
       return null;
   }
@@ -368,6 +389,10 @@ function actionLabel(action: ActionConfig) {
       return "Key";
     case "hotkey":
       return "Hotkey";
+    case "set_clipboard":
+      return "Set Clipboard";
+    case "paste_clipboard":
+      return "Paste";
     case "upload_file":
       return "Upload";
     case "double_click":
@@ -403,6 +428,10 @@ function recordedValueSummary(action: ActionConfig) {
       return action.config.key;
     case "hotkey":
       return action.config.keys.join(" + ");
+    case "set_clipboard":
+      return action.config.text;
+    case "paste_clipboard":
+      return "Paste clipboard";
     case "upload_file":
       return action.config.files.length
         ? action.config.files.join(", ")

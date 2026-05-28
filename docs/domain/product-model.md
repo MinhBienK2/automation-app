@@ -75,15 +75,18 @@ Users can:
   Recorder sessions launch through backend browser/session infrastructure,
   inject page-side capture, observe top-level page navigation, and collect raw
   navigation, click, literal text input including clearing/whitespace,
-  contenteditable input, select, checkbox/radio, keyboard, tab, and scroll events in memory. Capture
+  contenteditable input, select, checkbox/radio, clipboard copy/paste,
+  keyboard, tab, and scroll events in memory. Capture
   drops malformed locator candidates, bounds locator strings, and redacts
   password or secret-like text field values before they enter the event stream;
   redacted input steps are generated excluded with a review warning until an
   operator supplies a safe value or variable. Backend normalization turns that
   raw stream into reviewable action-intent steps with ordered locator candidates,
   weak-locator warnings, deduped form-control clicks, text-editing keyboard
-  noise suppression, and stable grouping for editable targets whose visible text
-  changes while typing. Stopping a recorder session drains any buffered
+  noise suppression, stable grouping for editable targets whose visible text
+  changes while typing, and paste replay as Set Clipboard followed by Paste
+  Clipboard while suppressing the duplicate input event caused by the paste.
+  Stopping a recorder session drains any buffered
   page-side fallback events before draft generation. Draft generation creates a
   validated review-only v2 workflow graph with deterministic row-wrapped layout
   and fixed edge delays for recorded inter-step pacing without persisting a

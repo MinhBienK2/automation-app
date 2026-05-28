@@ -497,6 +497,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
             files: stringArrayReviewValue(reviewedAction.config.files),
           },
         };
+      case "set_clipboard":
+        if (reviewedAction.type !== "set_clipboard") return draftAction;
+        return {
+          type: "set_clipboard",
+          config: {
+            ...draftAction.config,
+            text: stringReviewValue(reviewedAction.config.text, draftAction.config.text),
+          },
+        };
       default:
         return draftAction;
     }

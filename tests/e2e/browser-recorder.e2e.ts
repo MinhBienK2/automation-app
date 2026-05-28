@@ -141,10 +141,18 @@ test.describe("desktop browser recorder", () => {
     );
 
     expect(saved.eventKinds).toEqual(
-      expect.arrayContaining(["navigation", "input", "select", "checkbox", "click"]),
+      expect.arrayContaining(["navigation", "input", "clipboard", "select", "checkbox", "click"]),
     );
     expect(saved.actionTypes).toEqual(
-      expect.arrayContaining(["navigate", "input_text", "select_option", "check", "click"]),
+      expect.arrayContaining([
+        "navigate",
+        "input_text",
+        "set_clipboard",
+        "paste_clipboard",
+        "select_option",
+        "check",
+        "click",
+      ]),
     );
 
     await expect
@@ -152,6 +160,7 @@ test.describe("desktop browser recorder", () => {
       .toMatchObject({ status: "success" });
     const state = await runState(appWindow);
     expect(state.outputs.recorder_summary).toContain("email=qa-recorder@example.test");
+    expect(state.outputs.recorder_summary).toContain("paste=clipboard-recorded");
     expect(state.outputs.recorder_summary).toContain("plan=Team");
     expect(state.outputs.recorder_summary).toContain("agree=true");
     expect(state.outputs.recorder_summary).toContain("status=submitted");
