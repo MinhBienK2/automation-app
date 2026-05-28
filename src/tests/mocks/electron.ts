@@ -60,8 +60,14 @@ const methodNames: BridgeMethodName[] = [
   "previewWorkflowPackage",
   "importWorkflowPackage",
   "runBatchWorkflow",
-  "suggestSelectors",
-  "normalizeRecordedEvents",
+  "startRecordingSession",
+  "getRecordingSession",
+  "stopRecordingSession",
+  "listRecordingEvents",
+  "discardRecordingSession",
+  "generateRecordingDraft",
+  "getRecordingDraft",
+  "saveRecordingDraft",
   "dryRunValidateConfig",
   "saveWorkflowPackageFile",
 ];
@@ -344,11 +350,31 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
     (workflowId: string, request: unknown) =>
       resolveCommand(commands, "run_batch_workflow", { workflowId, request }),
   );
-  workflowBridgeMock.suggestSelectors.mockImplementation((snapshot: unknown) =>
-    resolveCommand(commands, "suggest_selectors", { snapshot }),
+  workflowBridgeMock.startRecordingSession.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "start_recording_session", { input }),
   );
-  workflowBridgeMock.normalizeRecordedEvents.mockImplementation((events: unknown) =>
-    resolveCommand(commands, "normalize_recorded_events", { events }),
+  workflowBridgeMock.getRecordingSession.mockImplementation((sessionId: string) =>
+    resolveCommand(commands, "get_recording_session", { sessionId }),
+  );
+  workflowBridgeMock.stopRecordingSession.mockImplementation((sessionId: string) =>
+    resolveCommand(commands, "stop_recording_session", { sessionId }),
+  );
+  workflowBridgeMock.listRecordingEvents.mockImplementation((sessionId: string) =>
+    resolveCommand(commands, "list_recording_events", { sessionId }),
+  );
+  workflowBridgeMock.discardRecordingSession.mockImplementation((sessionId: string) =>
+    resolveCommand(commands, "discard_recording_session", { sessionId }),
+  );
+  workflowBridgeMock.generateRecordingDraft.mockImplementation(
+    (sessionId: string, options: unknown) =>
+      resolveCommand(commands, "generate_recording_draft", { sessionId, options }),
+  );
+  workflowBridgeMock.getRecordingDraft.mockImplementation((draftId: string) =>
+    resolveCommand(commands, "get_recording_draft", { draftId }),
+  );
+  workflowBridgeMock.saveRecordingDraft.mockImplementation(
+    (draftId: string, input: unknown) =>
+      resolveCommand(commands, "save_recording_draft", { draftId, input }),
   );
   workflowBridgeMock.dryRunValidateConfig.mockImplementation((config: unknown) =>
     resolveCommand(commands, "dry_run_validate_config", { config }),

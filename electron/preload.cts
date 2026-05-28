@@ -136,10 +136,22 @@ const workflowApi: WorkflowElectronBridge = {
     ),
   runBatchWorkflow: (workflowId, request) =>
     invokeWorkflow("runBatchWorkflow", workflowId, request),
-  suggestSelectors: (snapshot) =>
-    invokeWorkflow("suggestSelectors", snapshot),
-  normalizeRecordedEvents: (events) =>
-    invokeWorkflow("normalizeRecordedEvents", events),
+  startRecordingSession: (input) =>
+    invokeWorkflow("startRecordingSession", input),
+  getRecordingSession: (sessionId) =>
+    invokeWorkflow("getRecordingSession", sessionId),
+  stopRecordingSession: (sessionId) =>
+    invokeWorkflow("stopRecordingSession", sessionId),
+  listRecordingEvents: (sessionId) =>
+    invokeWorkflow("listRecordingEvents", sessionId),
+  discardRecordingSession: (sessionId) =>
+    invokeWorkflow("discardRecordingSession", sessionId),
+  generateRecordingDraft: (sessionId, options) =>
+    invokeWorkflow("generateRecordingDraft", sessionId, options),
+  getRecordingDraft: (draftId) =>
+    invokeWorkflow("getRecordingDraft", draftId),
+  saveRecordingDraft: (draftId, input) =>
+    invokeWorkflow("saveRecordingDraft", draftId, input),
   dryRunValidateConfig: (config) =>
     invokeWorkflow("dryRunValidateConfig", config),
   saveWorkflowPackageFile: (packageValue) =>

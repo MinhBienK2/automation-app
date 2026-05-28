@@ -112,6 +112,7 @@ const visibleNodeStagger = {
   step: 24,
   cycle: 5,
 };
+const graphMiniMapNodeLimit = 300;
 
 function initialSelectedNodeId(graph: WorkflowGraph) {
   return (
@@ -287,6 +288,7 @@ export function WorkflowGraphEditor({
   const selectedNode = selectedNodeId
     ? graph.nodes.find((node) => node.id === selectedNodeId) ?? null
     : null;
+  const showGraphMiniMap = graph.nodes.length <= graphMiniMapNodeLimit;
 
   useEffect(() => {
     onSelectedNodeChange?.(selectedNodeId);
@@ -971,6 +973,7 @@ export function WorkflowGraphEditor({
               nodes={reactFlowNodes}
               nodesConnectable
               nodeTypes={workflowNodeTypes}
+              onlyRenderVisibleElements={graph.nodes.length > graphMiniMapNodeLimit}
               onConnect={handleConnect}
               onEdgeClick={handleEdgeClick}
               onEdgeContextMenu={(event, edge) => {
@@ -1006,13 +1009,15 @@ export function WorkflowGraphEditor({
             >
               <Background color="rgba(62, 207, 142, 0.14)" gap={32} />
               <Controls position="bottom-left" />
-              <MiniMap
-                ariaLabel="Graph minimap"
-                nodeBorderRadius={8}
-                pannable
-                position="bottom-right"
-                zoomable
-              />
+              {showGraphMiniMap ? (
+                <MiniMap
+                  ariaLabel="Graph minimap"
+                  nodeBorderRadius={8}
+                  pannable
+                  position="bottom-right"
+                  zoomable
+                />
+              ) : null}
             </ReactFlow>
             {contextMenu ? (
               <NodeContextMenu

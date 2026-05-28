@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
@@ -18,7 +18,11 @@ import {
 } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
 import { linearGraphFromSteps } from "../lib/workflowGraph";
-import type { WorkflowPackage } from "../../../types/workflow";
+import type {
+  RecordingSession,
+  RecordingWorkflowDraft,
+  WorkflowPackage,
+} from "../../../types/workflow";
 
 describe("Workflow list integration", () => {
   beforeEach(() => {
@@ -89,6 +93,275 @@ describe("Workflow list integration", () => {
     });
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
+  });
+
+  test("records a workflow from the list and saves a reviewed draft", async () => {
+    const session = recordingSession();
+    const draft = recordingDraft(session.id);
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      start_recording_session: session,
+      stop_recording_session: { ...session, status: "stopped" },
+      generate_recording_draft: draft,
+      save_recording_draft: { workflow: newWorkflow, steps: [] },
+      get_workflow: { workflow: newWorkflow, steps: [] },
+      get_workflow_graph: draft.graph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Record Workflow",
+    }));
+    expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
+      mode: "new_workflow",
+      workflow_name: "Recorded workflow",
+    });
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Stop Recording",
+    }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Recording" });
+    expect(within(dialog).getByText("qa@example.test")).toBeInTheDocument();
+    await userEvent.clear(within(dialog).getByLabelText("Workflow name"));
+    await userEvent.type(within(dialog).getByLabelText("Workflow name"), "Recorded signup");
+    await userEvent.clear(within(dialog).getByLabelText("Step label Fill Field"));
+    await userEvent.type(within(dialog).getByLabelText("Step label Fill Field"), "Fill recorded email");
+    await userEvent.click(within(dialog).getByRole("checkbox", {
+      name: "Include Navigate",
+    }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Workflow" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.saveRecordingDraft).toHaveBeenCalledWith(
+        draft.id,
+        expect.objectContaining({
+          workflow_name: "Recorded signup",
+          save_mode: "create_new",
+          add_terminal_success: true,
+          reviewed_steps: expect.arrayContaining([
+            expect.objectContaining({
+              label: "Fill recorded email",
+              included: true,
+            }),
+            expect.objectContaining({
+              label: "Navigate",
+              included: false,
+            }),
+          ]),
+        }),
+      );
+    });
+  });
+
+  test("lets reviewers add explicit upload file paths before saving a recording", async () => {
+    const session = recordingSession();
+    const draft: RecordingWorkflowDraft = {
+      ...recordingDraft(session.id),
+      steps: [
+        {
+          id: "recording-step-upload",
+          source_event_ids: ["event-upload"],
+          action: {
+            type: "upload_file",
+            config: {
+              target: { locators: [{ kind: "label", value: "Avatar" }] },
+              files: [],
+              wait_until: "visible",
+              timeout_ms: 60000,
+            },
+          },
+          label: "Upload File",
+          included: false,
+          locator_confidence: "high",
+          warnings: [
+            {
+              code: "upload_requires_reviewed_file_path",
+              message:
+                "Native file chooser paths are not captured; review and enter local upload file paths before replay.",
+              severity: "warning",
+            },
+          ],
+        },
+      ],
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      start_recording_session: session,
+      stop_recording_session: { ...session, status: "stopped" },
+      generate_recording_draft: draft,
+      save_recording_draft: { workflow: newWorkflow, steps: [] },
+      get_workflow: { workflow: newWorkflow, steps: [] },
+      get_workflow_graph: draft.graph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Record Workflow",
+    }));
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Stop Recording",
+    }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Recording" });
+    expect(within(dialog).getByText(/Native file chooser paths are not captured/))
+      .toBeInTheDocument();
+    await userEvent.type(
+      within(dialog).getByLabelText("Upload file paths"),
+      "/tmp/automation-app-fixtures/fixture-upload.txt",
+    );
+    await userEvent.click(within(dialog).getByRole("checkbox", {
+      name: "Include Upload File",
+    }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Workflow" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.saveRecordingDraft).toHaveBeenCalledWith(
+        draft.id,
+        expect.objectContaining({
+          reviewed_steps: [
+            expect.objectContaining({
+              included: true,
+              action: {
+                type: "upload_file",
+                config: expect.objectContaining({
+                  files: ["/tmp/automation-app-fixtures/fixture-upload.txt"],
+                }),
+              },
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
+  test("records a replacement draft from workflow detail and saves it as replace graph", async () => {
+    const session: RecordingSession = {
+      ...recordingSession(),
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+    };
+    const draft: RecordingWorkflowDraft = {
+      ...recordingDraft(session.id),
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      ...listWorkflowScenario([workflow]),
+      start_recording_session: session,
+      stop_recording_session: { ...session, status: "stopped" },
+      generate_recording_draft: draft,
+      save_recording_draft: { workflow, steps: [] },
+      get_workflow: { workflow, steps: [] },
+      get_workflow_graph: draft.graph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Record Replacement",
+    }));
+
+    expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
+      mode: "replace_current_graph",
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+    });
+
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Stop Recording",
+    }));
+    const dialog = await screen.findByRole("dialog", { name: "Review Recording" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Replace Graph" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.saveRecordingDraft).toHaveBeenCalledWith(
+        draft.id,
+        expect.objectContaining({
+          workflow_name: workflow.name,
+          save_mode: "replace_graph",
+          reviewed_steps: draft.steps,
+        }),
+      );
+    });
+  });
+
+  test("saves dirty workflow settings before starting replacement recording", async () => {
+    const scenario = workflowDetailScenario([]);
+    const saveSettingsSection = vi.fn(
+      ({
+        section,
+        sectionValue,
+      }: {
+        section: keyof typeof scenario.get_workflow_settings;
+        sectionValue: unknown;
+      }) => ({
+        ...scenario.get_workflow_settings,
+        [section]: sectionValue,
+      }),
+    );
+    const session: RecordingSession = {
+      ...recordingSession(),
+      workflow_id: workflow.id,
+      mode: "replace_current_graph",
+      workflow_settings_snapshot: scenario.get_workflow_settings,
+    };
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      ...listWorkflowScenario([workflow]),
+      save_workflow_settings_section: saveSettingsSection,
+      start_recording_session: session,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    await userEvent.click(within(controlsRow).getByRole("button", { name: "Settings" }));
+    const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
+    await userEvent.click(within(settingsDialog).getByRole("switch", {
+      name: "Headless browser",
+    }));
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Record Replacement",
+      hidden: true,
+    }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
+        mode: "replace_current_graph",
+        workflow_id: workflow.id,
+        workflow_name: workflow.name,
+      });
+    });
+    expect(workflowBridgeMock.saveWorkflowSettingsSection).toHaveBeenCalledWith(
+      workflow.id,
+      "browser_launch",
+      expect.objectContaining({ headless: true }),
+    );
+    expect(
+      workflowBridgeMock.saveWorkflowSettingsSection.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      workflowBridgeMock.startRecordingSession.mock.invocationCallOrder[0],
+    );
   });
 
   test("shows icon-only workflow card actions with duplicate", async () => {
@@ -716,3 +989,75 @@ describe("Workflow list integration", () => {
       .not.toBeInTheDocument();
   });
 });
+
+function recordingSession(): RecordingSession {
+  return {
+    id: "rec_1",
+    workflow_id: null,
+    mode: "new_workflow",
+    status: "recording",
+    started_at: "2026-05-27T10:00:00.000Z",
+    stopped_at: null,
+    browser_identity: {
+      identity_id: "bi_recording",
+      display_name: "Recorded identity",
+      profile_dir: "bi_recording",
+      profile_name: "bi_recording",
+      fingerprint_seed_hash: "seed-hash",
+      persona_id: "persona",
+      persona_label: "Persona",
+      humanize: true,
+      human_preset: "default",
+      headless: false,
+    },
+    workflow_settings_snapshot: workflowDetailScenario([]).get_workflow_settings,
+    page_url: null,
+    event_count: 2,
+    warnings: [],
+  };
+}
+
+function recordingDraft(sessionId: string): RecordingWorkflowDraft {
+  return {
+    id: "draft-1",
+    session_id: sessionId,
+    workflow_id: null,
+    mode: "new_workflow",
+    status: "draft",
+    generated_at: "2026-05-27T10:01:00.000Z",
+    workflow_settings_snapshot: workflowDetailScenario([]).get_workflow_settings,
+    steps: [
+      {
+        id: "recording-step-1",
+        source_event_ids: ["event-1"],
+        action: {
+          type: "navigate",
+          config: { url: "https://fixture.owned.test/form" },
+        },
+        label: "Navigate",
+        included: true,
+        locator_confidence: null,
+        warnings: [],
+      },
+      {
+        id: "recording-step-2",
+        source_event_ids: ["event-2"],
+        action: {
+          type: "input_text",
+          config: {
+            target: { locators: [{ kind: "test_id", value: "email" }] },
+            text: "qa@example.test",
+            clear_before_input: true,
+          },
+        },
+        label: "Fill Field",
+        included: true,
+        locator_confidence: "high",
+        warnings: [],
+      },
+    ],
+    graph: linearGraphFromSteps([]),
+    validation_issues: [],
+    warnings: [],
+  };
+}

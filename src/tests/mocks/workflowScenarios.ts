@@ -1,5 +1,11 @@
-import type { RunState, WorkflowStep, WorkflowSummary } from "../../types/workflow";
+import type {
+  RunState,
+  WorkflowSettings,
+  WorkflowStep,
+  WorkflowSummary,
+} from "../../types/workflow";
 import { linearGraphFromSteps } from "../../features/workflows/lib/workflowGraph";
+import { personaForSeed } from "../../lib/personaCatalog";
 import { workflow } from "./workflowFixtures";
 
 export const idleRunState: RunState = {
@@ -47,6 +53,63 @@ export function listWorkflowScenario(workflows: WorkflowSummary[] = [workflow]) 
 }
 
 export function workflowDetailScenario(steps: WorkflowStep[]) {
+  const persona = personaForSeed("bi_workflow-1");
+  const workflowSettings: WorkflowSettings = {
+    workflow_id: workflow.id,
+    version: 2,
+    general: {
+      name: workflow.name,
+      description: "",
+      tags: [],
+      notes: "",
+      created_at: workflow.created_at,
+      updated_at: workflow.updated_at,
+    },
+    run_policy: {
+      max_workflow_duration_ms: null,
+      browser_retention: "retain",
+      execute_js_enabled: true,
+      run_from_selected_enabled: false,
+      run_from_selected_mode: "from_selected",
+      batch_concurrency_limit: 1,
+      batch_headless: false,
+      batch_stop_on_first_failed_row: false,
+    },
+    browser_launch: {
+      session_mode: "persistent_profile",
+      identity_id: "bi_workflow-1",
+      display_name: `${workflow.name} identity`,
+      persona_id: persona.id,
+      persona,
+      profile_dir: "bi_workflow-1",
+      fingerprint_seed: "14523",
+      profile_name: "bi_workflow-1",
+      fingerprint_fonts_dir: null,
+      timezone: null,
+      locale: null,
+      geoip: false,
+      proxy_bypass: null,
+      webrtc_policy: "default",
+      webrtc_ip: null,
+      proxy_enabled: false,
+      proxy_server: null,
+      proxy_username: null,
+      proxy_password: null,
+      headless: false,
+      humanize: true,
+      human_preset: "default",
+    },
+    graph_defaults: {
+      default_edge_delay: null,
+    },
+    environment: {
+      initial_variables: [],
+    },
+    migration_notes: [],
+    created_at: workflow.created_at,
+    updated_at: workflow.updated_at,
+  };
+
   return {
     ...listWorkflowScenario([workflow]),
     get_workflow: { workflow, steps },
@@ -58,56 +121,7 @@ export function workflowDetailScenario(steps: WorkflowStep[]) {
       proxy_username: null,
       proxy_password: null,
     },
-    get_workflow_settings: {
-      workflow_id: workflow.id,
-      version: 2,
-      general: {
-        name: workflow.name,
-        description: "",
-        tags: [],
-        notes: "",
-        created_at: workflow.created_at,
-        updated_at: workflow.updated_at,
-      },
-      run_policy: {
-        max_workflow_duration_ms: null,
-        browser_retention: "retain",
-        execute_js_enabled: true,
-        run_from_selected_enabled: false,
-        run_from_selected_mode: "from_selected",
-        batch_concurrency_limit: 1,
-        batch_headless: false,
-        batch_stop_on_first_failed_row: false,
-      },
-      browser_launch: {
-        session_mode: "persistent_profile",
-        identity_id: "bi_workflow-1",
-        display_name: `${workflow.name} identity`,
-        profile_dir: "bi_workflow-1",
-        fingerprint_seed: "14523",
-        profile_name: "bi_workflow-1",
-        fingerprint_fonts_dir: null,
-        timezone: null,
-        locale: null,
-        geoip: false,
-        proxy_bypass: null,
-        webrtc_policy: "default",
-        webrtc_ip: null,
-        proxy_enabled: false,
-        proxy_server: null,
-        proxy_username: null,
-        proxy_password: null,
-        headless: false,
-        humanize: true,
-        human_preset: "default",
-      },
-      environment: {
-        initial_variables: [],
-      },
-      migration_notes: [],
-      created_at: workflow.created_at,
-      updated_at: workflow.updated_at,
-    },
+    get_workflow_settings: workflowSettings,
     get_workflow_graph: linearGraphFromSteps(steps),
   };
 }

@@ -101,10 +101,12 @@ Desktop coverage map:
 - `run-from-selected-real.e2e.ts`: retained persistent-session workflow run, visual graph node selection in the real browser, enabled Run from selected detail action, and selected-node rerun through the retained session.
 - `real-world-web.e2e.ts`: opt-in external website workflow suite covering read-only reference/docs pages, public demo commerce checkout, scraping sandbox catalog/quote pagination, and public automation-practice login/dynamic-loading/alert flows. Each graph includes a domain allowlist. It is excluded from the deterministic full lane because third-party availability and network behavior are outside repo control.
 - `workflow-user-journeys.e2e.ts`: user-facing workflow create, graph/settings affordances, list-run status, and delete confirmation.
+- `browser-recorder.e2e.ts`: backend-owned recorder session, deterministic
+  fixture capture, review draft save, and replay through the normal run manager.
 - `workflow-package.e2e.ts`: workflow package export, preview, import-as-new-workflow, flow preservation, and sensitive setting sanitization through the Electron bridge.
 E2E lanes:
 
-- `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, and coverage matrix.
+- `npm run test:e2e:smoke`: fast desktop confidence lane for Electron boot, core run, user journeys, coverage matrix, and recorder record-to-replay stability.
 - `npm run test:e2e:full`: all local deterministic desktop E2E. This lane intentionally uses helper defaults that run workflow browsers headless and close them after each workflow so CI and local verification stay deterministic.
 - `npm run test:e2e:visible`: local browser-observable review/debug lane. It runs only suites with meaningful browser-page behavior, excluding coverage, package, Electron-isolation, and UI-only journeys that would otherwise only show the desktop app. It sets `E2E_VISIBLE_BROWSER=1`, runs Playwright headed, makes helper-created workflow browsers non-headless, retains the workflow browser at terminal state, and waits briefly after helper-driven runs. Set `E2E_OBSERVE_MS=<milliseconds>` to change the post-run observation pause.
 - `npm run test:e2e:flake`: repeat high-risk interaction suites to catch timing, humanized pointer, form, and keyboard regressions.
@@ -112,6 +114,11 @@ E2E lanes:
 
 Lower-level coverage:
 
+- Recorder action-family coverage lives in `eventCollector.test.ts`,
+  `timelineNormalizer.test.ts`, backend command tests, and review UI tests. It
+  covers keyboard/hotkeys, double/right click, tab, download, auto-dismissed
+  dialogs, wait/screenshot/submit markers, and reviewed upload paths before
+  workflow save.
 - Graph-internal control-flow action configs remain covered by runner and graph compiler tests while user authoring uses graph-native nodes; Router and Merge additionally have a local desktop E2E convergence scenario.
 - Browser identity settings are covered through Workflow Settings and runner launch contracts, not in-run action nodes.
 - Full structured `ElementTarget` locator kinds, constraints, and iframe targeting are covered through runner tests, with common `test_id` flows exercised in desktop E2E.

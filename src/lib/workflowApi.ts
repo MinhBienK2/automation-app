@@ -1,14 +1,15 @@
 import type {
   ActionConfig,
   BatchRunRequest,
+  OrchestrationSchedule,
+  RecordingGenerateDraftOptions,
+  RecordingSaveDraftInput,
+  RecorderStartSessionInput,
   EvidenceBundleExportRequest,
   EvidenceListRequest,
   IdentityLabOverviewRequest,
   IdentityLabTarget,
-  ElementSnapshot,
-  OrchestrationSchedule,
   OperationsOverviewRequest,
-  RecordedEvent,
   WorkflowBrowserConfig,
   WorkflowDeleteOptions,
   WorkflowExport,
@@ -260,12 +261,42 @@ export function runBatchWorkflow(workflowId: string, request: BatchRunRequest) {
   return bridge().runBatchWorkflow(workflowId, request);
 }
 
-export function suggestSelectors(snapshot: ElementSnapshot) {
-  return bridge().suggestSelectors(snapshot);
+export function startRecordingSession(input: RecorderStartSessionInput) {
+  return bridge().startRecordingSession(input);
 }
 
-export function normalizeRecordedEvents(events: RecordedEvent[]) {
-  return bridge().normalizeRecordedEvents(events);
+export function getRecordingSession(sessionId: string) {
+  return bridge().getRecordingSession(sessionId);
+}
+
+export function stopRecordingSession(sessionId: string) {
+  return bridge().stopRecordingSession(sessionId);
+}
+
+export function listRecordingEvents(sessionId: string) {
+  return bridge().listRecordingEvents(sessionId);
+}
+
+export function discardRecordingSession(sessionId: string) {
+  return bridge().discardRecordingSession(sessionId);
+}
+
+export function generateRecordingDraft(
+  sessionId: string,
+  options: RecordingGenerateDraftOptions,
+) {
+  return bridge().generateRecordingDraft(sessionId, options);
+}
+
+export function getRecordingDraft(draftId: string) {
+  return bridge().getRecordingDraft(draftId);
+}
+
+export function saveRecordingDraft(
+  draftId: string,
+  input: RecordingSaveDraftInput,
+) {
+  return bridge().saveRecordingDraft(draftId, input);
 }
 
 export function dryRunValidateConfig(config: ActionConfig) {

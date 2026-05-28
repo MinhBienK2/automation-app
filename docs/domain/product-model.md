@@ -31,6 +31,16 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
 - A compiled workflow graph is a generated executable plan that maps graph nodes to action configs and run-scope metadata such as domain policy.
+- A browser recording session is a backend-owned workflow-authoring draft. It
+  starts from either a new unsaved Workflow Settings draft or an existing
+  workflow's saved Workflow Settings, exposes only sanitized session/settings
+  metadata through IPC, captures browser usage into reviewable action configs,
+  and is not a saved workflow until a reviewed recording draft is explicitly
+  saved. Reviewed steps keep backend-held first/last event timing so saved
+  recording graphs can replay positive inter-step gaps through ordinary edge
+  delays. Native file chooser paths are not trusted from browser capture; upload
+  recorder steps stay excluded until the reviewer enters explicit local file
+  paths that can replay through the normal `upload_file` action.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.
@@ -61,6 +71,31 @@ Users can:
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
 - Open Runs to monitor concurrent workflow run snapshots and stop a selected active run by run id.
+- Start, inspect, stop, and discard backend-owned browser recording sessions.
+  Recorder sessions launch through backend browser/session infrastructure,
+  inject page-side capture, observe top-level page navigation, and collect raw
+  navigation, click, input, select, checkbox/radio, and scroll events in memory. Capture
+  drops malformed locator candidates, bounds locator strings, and redacts
+  password or secret-like text field values before they enter the event stream;
+  redacted input steps are generated excluded with a review warning until an
+  operator supplies a safe value or variable. Backend normalization turns that
+  raw stream into reviewable action-intent steps with ordered locator candidates
+  and weak-locator warnings. Stopping a recorder session drains any buffered
+  page-side fallback events before draft generation. Draft generation creates a
+  validated review-only v2 workflow graph with deterministic row-wrapped layout
+  and fixed edge delays for recorded inter-step pacing without persisting a
+  workflow or replacing an existing saved graph. The workflow list exposes Record Workflow
+  for creating a new workflow from a recording, while the workflow detail header
+  exposes Record Replacement for replacing that workflow's graph; replacement
+  recording is rejected while the target workflow, browser profile, or batch
+  runner is active. The review dialog lets operators edit the workflow name,
+  step labels, step inclusion, and supported captured values before
+  `saveRecordingDraft` creates a normal workflow or explicitly replaces the
+  linked graph. Draft save reconciles those edits against the backend-held draft
+  by step id and ignores renderer-supplied action type, locator replacement, or
+  timing replacement.
+  Discarding a recorder session removes its in-memory session and drafts, and
+  saving a draft consumes the draft/session after successful persistence.
 - Open Overview to scan active runs, successful runs today, attention items,
   execution activity, recent evidence metadata, and upcoming schedules.
 - Open Evidence to search/filter persisted screenshot, download, browser
@@ -88,6 +123,7 @@ Users can:
 - Electron bridge type: `src/types/electron.ts`
 - Electron main/preload: `electron/main.ts`, `electron/preload.cts`
 - Node command handlers: `electron/backend/commands.ts`
+- Browser recorder sessions: `electron/backend/recording/recorderSessionManager.ts`
 - Run lifecycle manager: `electron/backend/runtime/runManager.ts`
 - Browser session manager: `electron/backend/browser/sessionManager.ts`
 - Workflow Settings service: `electron/backend/services/workflowSettingsService.ts`

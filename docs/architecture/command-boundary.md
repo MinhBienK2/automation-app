@@ -34,6 +34,28 @@ Node/Electron backend.
 - Workflow Settings load/save/section-save commands, run validation, and validation before persistence or execution.
 - Legacy workflow browser runtime config commands map to Workflow Settings Browser.
 - Import/export, duplicate, batch run, builder assist command logic.
+- Browser recorder lifecycle commands. The backend starts, reports, stops,
+  lists events for, and discards recorder sessions. Starting a session launches
+  the recorder browser in the backend, applies supported recorder-safe launch
+  overrides such as `headless`, injects capture with a page buffer fallback for
+  adapter binding failures, observes backend top-level page navigation plus
+  tab/download/dialog events, and records raw events; renderer code receives only typed sanitized DTOs and
+  never launches or instruments browsers directly. Recorder setup failures close
+  any launched browser context before returning the command error. Dialog
+  observation dismisses native modal state with a review warning rather than
+  leaving the recorder browser blocked. Replacement recording checks the same
+  active workflow/profile/batch conflicts as workflow runs before launching.
+  Stopping a session drains buffered page-side fallback events before closing
+  the recorder context.
+- Browser recorder draft commands. Draft generation normalizes recorded events,
+  builds a review-only workflow graph, validates it, and returns/stores the
+  draft in backend memory without persistence. `saveRecordingDraft` consumes
+  reviewed labels, inclusion flags, and supported value edits by reconciling
+  renderer input against the backend-held draft steps, regenerates and validates
+  the graph, and is the only recorder path that creates a workflow or replaces a
+  linked workflow graph. Renderer-supplied action type or locator replacement is
+  ignored. Successful save consumes the in-memory draft/session; discarding a
+  session also removes any drafts generated from that session.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
 - Operations aggregate reads through `getOperationsOverview` and
   `getOperationalRunDetail`; metric meanings, attention dedupe, evidence
@@ -68,6 +90,10 @@ Node/Electron backend.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.
 - List-step authoring commands remain retired from the production command surface.
+- The old prototype recorder helpers `suggestSelectors` and
+  `normalizeRecordedEvents` are retired from the production bridge. New recorder
+  behavior must use the `Recording*` session DTOs and backend-owned recorder
+  modules.
 
 ## Does Not Belong Here
 

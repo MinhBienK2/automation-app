@@ -3,9 +3,14 @@ import type {
   BatchRunRequest,
   BatchRunSummary,
   CompiledWorkflowGraph,
-  ElementSnapshot,
   GraphValidationIssue,
   OrchestrationSchedule,
+  RecordingGenerateDraftOptions,
+  RecordingSaveDraftInput,
+  RecorderStartSessionInput,
+  RecordingEvent,
+  RecordingSession,
+  RecordingWorkflowDraft,
   OperationalRunDetail,
   OperationsOverview,
   OperationsOverviewRequest,
@@ -19,11 +24,9 @@ import type {
   IdentityLabOverview,
   IdentityLabOverviewRequest,
   IdentityLabTarget,
-  RecordedEvent,
   RunState,
   RunValidationIssue,
   ScheduleValidationIssue,
-  SelectorCandidate,
   SettingsValidationIssue,
   BrowserProfileCleanupResult,
   CloakBrowserDiagnostics,
@@ -141,8 +144,20 @@ export type WorkflowElectronBridge = {
     workflowId: string,
     request: BatchRunRequest,
   ): Promise<BatchRunSummary>;
-  suggestSelectors(snapshot: ElementSnapshot): Promise<SelectorCandidate[]>;
-  normalizeRecordedEvents(events: RecordedEvent[]): Promise<ActionConfig[]>;
+  startRecordingSession(input: RecorderStartSessionInput): Promise<RecordingSession>;
+  getRecordingSession(sessionId: string): Promise<RecordingSession>;
+  stopRecordingSession(sessionId: string): Promise<RecordingSession>;
+  listRecordingEvents(sessionId: string): Promise<RecordingEvent[]>;
+  discardRecordingSession(sessionId: string): Promise<RecordingSession>;
+  generateRecordingDraft(
+    sessionId: string,
+    options: RecordingGenerateDraftOptions,
+  ): Promise<RecordingWorkflowDraft>;
+  getRecordingDraft(draftId: string): Promise<RecordingWorkflowDraft>;
+  saveRecordingDraft(
+    draftId: string,
+    input: RecordingSaveDraftInput,
+  ): Promise<WorkflowDetail>;
   dryRunValidateConfig(config: ActionConfig): Promise<void>;
   saveWorkflowPackageFile(packageValue: WorkflowPackage): Promise<string | null>;
 };

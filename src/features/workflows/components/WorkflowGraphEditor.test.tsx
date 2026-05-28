@@ -162,6 +162,8 @@ describe("Workflow graph editor integration", () => {
       "[completePortConnection, selectNodeFromEvent, startPortConnection]",
     );
     expect(workflowGraphEditorSource).toContain("nodes={reactFlowNodes}");
+    expect(workflowGraphEditorSource).toContain("onlyRenderVisibleElements");
+    expect(workflowGraphEditorSource).toContain("showGraphMiniMap");
     expect(workflowGraphEditorSource).toContain(
       "mergeReactFlowNodeRuntimeState(flowGraph.nodes, currentNodes)",
     );

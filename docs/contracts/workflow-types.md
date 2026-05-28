@@ -74,6 +74,20 @@ Frontend and backend must agree on:
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
+- `RecordingSession`: backend-owned recorder lifecycle DTO with session id,
+  optional workflow id, mode, status, timestamps, sanitized browser identity
+  metadata, sanitized Workflow Settings snapshot, page URL, event count, and
+  warnings.
+- `RecordingEvent`: ordered browser-recording event DTO with kind, page/frame
+  URLs, target metadata, captured value, bounded raw diagnostics, confidence,
+  and warnings. Recorder event capture currently fills an in-memory event list
+  through backend-owned browser instrumentation and page-side capture.
+- `ReviewedRecordingStep`: normalized recorder step DTO with source event ids,
+  an existing `ActionConfig`, label, inclusion flag, locator confidence, and
+  review warnings. Graph draft generation consumes these steps instead of raw
+  browser events.
+- `RecordingSaveDraftInput`: reviewed recorder save payload with workflow name,
+  explicit save mode, reviewed steps, and terminal success preference.
 
 ## Workflow Settings Shape
 
@@ -272,6 +286,107 @@ Scheduler skip reasons include workflow/profile/batch run conflicts such as
 `active_workflow`, `active_profile`, and `active_batch`; isolated due schedules
 can start concurrently and each started event records its run id.
 
+## Recording Shape
+
+Recorder session commands serialize as:
+
+```text
+startRecordingSession({
+  mode: "new_workflow" | "replace_current_graph",
+  workflow_id?: string | null,
+  workflow_name?: string | null,
+  initial_url?: string | null,
+  browser_launch_overrides?: { headless?: boolean } | object | null
+}) -> RecordingSession
+```
+
+`new_workflow` starts from a backend-owned unsaved Workflow Settings draft with
+a fresh browser identity and `workflow_id: null` on the public session.
+`replace_current_graph` starts from the existing workflow's saved Workflow
+Settings and returns the workflow id on the public session. It rejects active
+workflow, active profile, and active batch conflicts before launch. Public
+`workflow_settings_snapshot` values are sanitized for renderer display; the
+backend retains the internal settings snapshot for later save phases. Starting a
+session launches the recorder browser in the backend, injects capture before
+optional `initial_url` navigation, and records top-level navigation events from
+the page adapter while ignoring embedded frame navigations. `browser_launch_overrides.headless` is applied to the recorder settings
+snapshot for deterministic headless verification; unsupported override keys are
+reported as warnings and ignored. Page-side capture buffers events when the
+adapter binding exists but cannot call back into the backend, and the backend
+poller drains that buffer into the session event stream. Stopping a recorder
+session also drains the buffer before closing the browser context.
+
+`RecordingBrowserIdentitySnapshot` includes `identity_id`, display/profile
+metadata, a `fingerprint_seed_hash` rather than the raw seed, persona metadata,
+humanization settings, and headless state. Proxy passwords and proxy URL
+credentials must not be sent to renderer code in recorder snapshots.
+
+`RecordingEvent.kind` currently allows navigation, click, input/change/select,
+checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
+Capture records navigation, click variants, text entry, select, checkbox/radio,
+file-input change names, throttled scroll, non-text keys/hotkeys, form submit
+markers, tab creation/switch, downloads, and dialogs. Capture drops malformed
+locator candidates, bounds locator strings, bounds raw page-controlled payloads,
+and redacts password or secret-like text field values before events are returned
+through IPC. Raw payload fields with secret-like keys are redacted even when a
+page calls the recorder binding directly. Redacted input events carry a
+`sensitive_input_redacted` warning and `raw.value_redacted` marker. Unsupported
+captured behavior must become `RecordingWarning` entries rather than silently
+producing graph nodes.
+
+The recorder normalizer collapses repeated input/change events for the same
+target into one `input_text` step with the final value, maps navigation, click
+variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
+wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
+into existing action configs, ignores text-composition and modifier-only
+keyboard noise such as `Process`/`Shift` so it does not split text entry, and
+carries source event ids forward for review.
+Each reviewed step also carries first/last source-event timestamps; graph
+generation turns positive gaps between included recorded steps into fixed
+duration edge delays so normal graph runs preserve the operator's recorded
+pacing between actions.
+Sensitive redacted input steps are generated with an empty value, excluded by
+default, and must be reviewed with a safe literal or variable before replay.
+Native file chooser captures only expose file names; generated `upload_file`
+steps remain excluded and carry `upload_requires_reviewed_file_path` until a
+reviewer supplies explicit local file paths. Locator generation prefers
+`test_id`, role/name, labels, placeholders, short text, attributes, CSS, and
+XPath in that order. Low-confidence locator output remains draftable but adds a
+`weak_locator` review warning.
+
+`RecordingWorkflowDraft` is a review-only backend-memory draft. It contains the
+session id, optional workflow id, recorder mode, generated timestamp, sanitized
+Workflow Settings snapshot, normalized `ReviewedRecordingStep[]`, generated
+`WorkflowGraph`, graph validation issues, and aggregate warnings. Draft
+generation does not create workflow rows, persist Workflow Settings, or replace
+an existing graph. The generated graph uses the normal v2 graph shape:
+`Start -> recorded action nodes -> optional End Success`, with deterministic
+row-wrapped positions for long recordings, fixed edge delays for captured
+operator pacing between included steps, and ordinary action node configs.
+
+Draft save commands serialize as:
+
+```text
+saveRecordingDraft(draftId, {
+  workflow_name: string,
+  save_mode: "create_new" | "replace_graph",
+  reviewed_steps: ReviewedRecordingStep[],
+  add_terminal_success: boolean
+}) -> WorkflowDetail
+```
+
+`create_new` persists a normal workflow row, generated graph, and the backend's
+internal recorder settings snapshot with the reviewed workflow name. `replace_graph`
+requires a draft linked to an existing workflow and replaces only that workflow's
+graph; saved Workflow Settings and browser identity remain unchanged.
+Before generating the saved graph, the backend reconciles `reviewed_steps`
+against the backend-held draft by step id. It honors reviewed labels, inclusion
+flags, and supported captured value edits such as navigated URL, input text,
+select value, scroll pixels, and reviewed upload file paths; action type,
+locator, source event, and warning replacement from renderer input is ignored.
+Successful save consumes the backend-memory draft and source session. Discarding
+a recorder session also removes generated drafts for that session.
+
 ## Evidence Shape
 
 Evidence items are derived from persisted run outputs and run steps rather than
@@ -319,7 +434,7 @@ Graph validation issues serialize as `{ level, node_id, edge_id, message }`, whe
 
 Graph links are directed execution edges. The frontend replaces any existing edge that shares the same source output or target input when a port is reconnected, except Merge `in` keeps multiple incoming branch links. Links may carry an optional duration-only `delay`; the compiler emits it as a synthetic fixed or random wait before the target node. Edge order labels are display-only and follow the same stable port traversal shape as graph compilation rather than raw edge array order. Backend validation is authoritative and rejects self-links, duplicate edges, invalid edge wait ranges, more than one outgoing edge from the same output port, more than one incoming edge to the same non-Merge input port, missing ports/nodes, unreachable non-start nodes, unsupported free cycles, and loop-control nodes reachable outside a loop body. Validation may return warnings for optional branches or continuations that are missing but still executable.
 
-Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Manual auto arrange updates node positions into deterministic left-to-right execution columns and remains a normal graph edit. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
+Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Manual auto arrange updates node positions into deterministic execution lanes that stay left-to-right for compact graphs and wrap long main paths into rows so large recordings do not become one unreachable line; it remains a normal graph edit. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
 
 Current frontend graph authoring supports explicit port connection, edge deletion, multi-selection bulk edit commands, action config editing, and structured config editing for:
 

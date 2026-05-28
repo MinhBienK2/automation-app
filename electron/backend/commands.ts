@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import type { DatabaseSync } from "node:sqlite";
 import type {
@@ -11,18 +11,22 @@ import type {
   BrowserProfileDiagnostics,
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
-  ElementSnapshot,
+  GraphValidationIssue,
+  OrchestrationSchedule,
+  RecordingGenerateDraftOptions,
+  RecordingSaveDraftInput,
+  RecorderStartSessionInput,
+  RecordingEvent,
+  RecordingSession,
+  RecordingWorkflowDraft,
+  ReviewedRecordingStep,
   EvidenceBundleExportRequest,
   EvidenceListRequest,
   IdentityLabOverviewRequest,
   IdentityLabTarget,
-  GraphValidationIssue,
-  OrchestrationSchedule,
   OperationsOverviewRequest,
-  RecordedEvent,
   RunValidationIssue,
   ScheduleValidationIssue,
-  SelectorCandidate,
   SettingsValidationIssue,
   Workflow,
   WorkflowBrowserConfig,
@@ -68,7 +72,7 @@ import {
 import { sanitizePathSegment } from "./evidence/artifacts.js";
 import { EvidenceRepository } from "./evidence/evidenceRepository.js";
 import { IdentityRepository } from "./identity/identityRepository.js";
-import { elementTargetFromXpath, migrateWorkflowGraph } from "./graph/migration.js";
+import { migrateWorkflowGraph } from "./graph/migration.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
@@ -78,6 +82,16 @@ import {
   deriveFingerprintSeedFromIdentityId,
   WorkflowSettingsService,
 } from "./services/workflowSettingsService.js";
+import {
+  BrowserSessionManager,
+  type BrowserDriver,
+} from "./browser/sessionManager.js";
+import {
+  RecorderSessionInputError,
+  RecorderSessionManager,
+} from "./recording/recorderSessionManager.js";
+import { generateRecordingGraph } from "./recording/graphGenerator.js";
+import { normalizeRecordingEvents } from "./recording/timelineNormalizer.js";
 
 export { finishRun } from "./runtime/runManager.js";
 export { defaultWorkflowSettings, deriveFingerprintSeedFromIdentityId } from "./services/workflowSettingsService.js";
@@ -107,6 +121,8 @@ type CommandContext = {
   appPaths: AppPaths;
   database: DatabaseSync;
   runner?: RunnerCommandPort;
+  recorderDriver?: BrowserDriver;
+  recorderUsesDefaultDriver?: boolean;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
   revealEvidenceArtifact?: (absolutePath: string) => void | Promise<void>;
   selectEvidenceBundleDirectory?: () => Promise<string | null>;
@@ -124,6 +140,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     selectEvidenceBundleDirectory: context.selectEvidenceBundleDirectory,
   });
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
+  const recorderBrowserSessionManager = new BrowserSessionManager({
+    appPaths: context.appPaths,
+    driver: context.recorderDriver,
+    usesDefaultDriver: context.recorderUsesDefaultDriver,
+  });
   const runManager = new RunManager({ database: context.database, runner });
   const identityRepository = new IdentityRepository({
     database: context.database,
@@ -150,6 +171,28 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     validateSettings: (settings) => settingsService.validateSettings(settings),
     defaultSettings: settingsService.defaultWorkflowSettings,
   });
+  const recorderSessionManager = new RecorderSessionManager({
+    getWorkflow: (workflowId) => repository.getWorkflowSummary(workflowId),
+    getWorkflowSettings: (workflowId) => getSettings(workflowId),
+    createNewWorkflowSettingsDraft({ name, draftWorkflowId, now }) {
+      return settingsService.defaultWorkflowSettings(
+        {
+          id: draftWorkflowId,
+          name,
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        },
+        { randomizeIdentity: true },
+      );
+    },
+    launchBrowser({ settings, workflowId }) {
+      return recorderBrowserSessionManager.launchFreshSession({
+        settings,
+        retainedSessionWorkflowId: workflowId,
+      });
+    },
+  });
+  const recordingDrafts = new Map<string, RecordingWorkflowDraft>();
 
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
@@ -316,6 +359,271 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     };
     repository.saveWorkflowSettings(workflowId, normalized);
     return normalized;
+  }
+
+  async function runRecorderCommand<T>(operation: () => T | Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof RecorderSessionInputError) {
+        throw commandError(error.message, error.field ?? undefined);
+      }
+      throw error;
+    }
+  }
+
+  function requireRecordingResult<T>(
+    value: T | null,
+    field = "sessionId",
+    message = "Recording session not found",
+  ): T {
+    if (value == null) {
+      throw commandError(message, field);
+    }
+    return value;
+  }
+
+  function createRecordingDraft(
+    sessionId: string,
+    options: RecordingGenerateDraftOptions,
+  ): RecordingWorkflowDraft {
+    const session = requireRecordingResult(recorderSessionManager.getSession(sessionId));
+    if (session.status !== "stopped") {
+      throw commandError("Stop recording before generating a draft", "sessionId");
+    }
+    const includeEventIds = new Set(options.include_event_ids ?? []);
+    const events = requireRecordingResult(recorderSessionManager.listEvents(sessionId))
+      .filter((event) => !includeEventIds.size || includeEventIds.has(event.id));
+    const steps = normalizeRecordingEvents(events);
+    if (!steps.some((step) => step.included)) {
+      throw commandError("No meaningful actions recorded", "events");
+    }
+    const graph = generateRecordingGraph(steps, {
+      addTerminalSuccess: options.add_terminal_success,
+    });
+    const validationIssues = validateGraph(graph);
+    const draft: RecordingWorkflowDraft = {
+      id: `draft_${randomUUID().replace(/-/g, "")}`,
+      session_id: session.id,
+      workflow_id: session.workflow_id,
+      mode: session.mode,
+      status: "draft",
+      generated_at: new Date().toISOString(),
+      workflow_settings_snapshot: session.workflow_settings_snapshot,
+      steps,
+      graph,
+      validation_issues: validationIssues,
+      warnings: [
+        ...session.warnings,
+        ...steps.flatMap((step) => step.warnings),
+      ],
+    };
+    recordingDrafts.set(draft.id, draft);
+    return draft;
+  }
+
+  function reconcileReviewedRecordingSteps(
+    draftSteps: ReviewedRecordingStep[],
+    reviewedInput: unknown,
+  ): ReviewedRecordingStep[] {
+    const reviewedById = new Map(
+      reviewedStepRecords(reviewedInput).map((step) => [step.id, step]),
+    );
+    return draftSteps.map((draftStep) => {
+      const reviewed = reviewedById.get(draftStep.id);
+      if (!reviewed) return draftStep;
+      return {
+        ...draftStep,
+        label: typeof reviewed.label === "string" ? reviewed.label : draftStep.label,
+        included:
+          typeof reviewed.included === "boolean"
+            ? reviewed.included
+            : draftStep.included,
+        action: mergeReviewedRecordingAction(draftStep.action, reviewed.action),
+      };
+    });
+  }
+
+  function mergeReviewedRecordingAction(
+    draftAction: ActionConfig,
+    reviewedActionInput: unknown,
+  ): ActionConfig {
+    const reviewedAction = actionConfigOrNull(reviewedActionInput);
+    if (!reviewedAction) return draftAction;
+    if (draftAction.type !== reviewedAction.type) return draftAction;
+    switch (draftAction.type) {
+      case "navigate":
+        if (reviewedAction.type !== "navigate") return draftAction;
+        return {
+          type: "navigate",
+          config: {
+            ...draftAction.config,
+            url: stringReviewValue(reviewedAction.config.url, draftAction.config.url),
+          },
+        };
+      case "input_text":
+        if (reviewedAction.type !== "input_text") return draftAction;
+        return {
+          type: "input_text",
+          config: {
+            ...draftAction.config,
+            text: stringReviewValue(reviewedAction.config.text, draftAction.config.text),
+          },
+        };
+      case "select_option":
+        if (reviewedAction.type !== "select_option") return draftAction;
+        return {
+          type: "select_option",
+          config: {
+            ...draftAction.config,
+            value: stringReviewValue(reviewedAction.config.value, draftAction.config.value),
+          },
+        };
+      case "scroll":
+        if (reviewedAction.type !== "scroll") return draftAction;
+        return {
+          type: "scroll",
+          config: {
+            ...draftAction.config,
+            pixels: finiteReviewNumber(reviewedAction.config.pixels, draftAction.config.pixels),
+          },
+        };
+      case "upload_file":
+        if (reviewedAction.type !== "upload_file") return draftAction;
+        return {
+          type: "upload_file",
+          config: {
+            ...draftAction.config,
+            files: stringArrayReviewValue(reviewedAction.config.files),
+          },
+        };
+      default:
+        return draftAction;
+    }
+  }
+
+  function stringReviewValue(value: unknown, fallback: string) {
+    return typeof value === "string" ? value : fallback;
+  }
+
+  function finiteReviewNumber(value: unknown, fallback: number | undefined) {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  }
+
+  function stringArrayReviewValue(value: unknown) {
+    return Array.isArray(value)
+      ? value.filter((entry): entry is string =>
+          typeof entry === "string" && entry.trim().length > 0
+        )
+      : [];
+  }
+
+  function reviewedStepRecords(value: unknown): ReviewedRecordingStep[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter((entry): entry is ReviewedRecordingStep =>
+      Boolean(
+        entry &&
+          typeof entry === "object" &&
+          typeof (entry as { id?: unknown }).id === "string",
+      )
+    );
+  }
+
+  function actionConfigOrNull(value: unknown): ActionConfig | null {
+    if (!value || typeof value !== "object") return null;
+    const candidate = value as { type?: unknown; config?: unknown };
+    return typeof candidate.type === "string" && "config" in candidate
+      ? value as ActionConfig
+      : null;
+  }
+
+  function saveRecordingDraft(
+    draftId: string,
+    input: RecordingSaveDraftInput,
+  ): WorkflowDetail {
+    const draft = requireRecordingResult(
+      recordingDrafts.get(draftId) ?? null,
+      "draftId",
+      "Recording draft not found",
+    );
+    if (draft.status !== "draft") {
+      throw commandError("Recording draft has already been saved", "draftId");
+    }
+    const reviewedSteps = reconcileReviewedRecordingSteps(draft.steps, input.reviewed_steps ?? []);
+    if (!reviewedSteps.some((step) => step.included)) {
+      throw commandError("At least one recorded step must be included", "reviewed_steps");
+    }
+    const graph = generateRecordingGraph(reviewedSteps, {
+      addTerminalSuccess: input.add_terminal_success,
+    });
+    const validationIssues = validateGraph(graph);
+    const firstError = validationIssues.find((issue) => issue.level === "error");
+    if (firstError) {
+      throw commandError(firstError.message, firstError.node_id ?? firstError.edge_id ?? "reviewed_steps");
+    }
+
+    const normalizedName = input.workflow_name.trim();
+    if (input.save_mode === "create_new" && !normalizedName) {
+      throw commandError("Workflow name is required", "workflow_name");
+    }
+    if (input.save_mode === "replace_graph" && !draft.workflow_id) {
+      throw commandError("Recording draft is not linked to a workflow", "draftId");
+    }
+
+    context.database.exec("BEGIN IMMEDIATE");
+    try {
+      const detail =
+        input.save_mode === "create_new"
+          ? saveRecordingAsNewWorkflow(draft, graph, normalizedName)
+          : replaceRecordingWorkflowGraph(draft, graph);
+      context.database.exec("COMMIT");
+      recordingDrafts.delete(draft.id);
+      recorderSessionManager.deleteSession(draft.session_id);
+      return detail;
+    } catch (error) {
+      context.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  function saveRecordingAsNewWorkflow(
+    draft: RecordingWorkflowDraft,
+    graph: WorkflowGraph,
+    workflowName: string,
+  ): WorkflowDetail {
+    const workflow = createWorkflow(workflowName);
+    repository.saveWorkflowGraph(workflow.id, graph);
+    const settingsSnapshot =
+      recorderSessionManager.getInternalSettingsSnapshot(draft.session_id) ??
+      draft.workflow_settings_snapshot;
+    saveSettings(workflow.id, {
+      ...settingsSnapshot,
+      workflow_id: workflow.id,
+      general: {
+        ...settingsSnapshot.general,
+        name: workflowName,
+        created_at: workflow.created_at,
+        updated_at: workflow.updated_at,
+      },
+      created_at: workflow.created_at,
+      updated_at: workflow.updated_at,
+    });
+    return repository.getWorkflow(workflow.id) ?? { workflow, steps: [] };
+  }
+
+  function replaceRecordingWorkflowGraph(
+    draft: RecordingWorkflowDraft,
+    graph: WorkflowGraph,
+  ): WorkflowDetail {
+    const workflowId = draft.workflow_id;
+    if (!workflowId) {
+      throw commandError("Recording draft is not linked to a workflow", "draftId");
+    }
+    requireWorkflow(workflowId);
+    repository.saveWorkflowGraph(workflowId, graph);
+    const detail = repository.getWorkflow(workflowId);
+    if (!detail) throw commandError("Workflow not found", "workflowId");
+    return detail;
   }
 
   function createWorkflow(name: string): Workflow {
@@ -1053,48 +1361,55 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       };
     },
 
-    suggestSelectors(snapshot: ElementSnapshot): SelectorCandidate[] {
-      const selector = snapshot.test_id
-        ? cssAttributeSelector("data-testid", snapshot.test_id)
-        : snapshot.id
-          ? cssAttributeSelector("id", snapshot.id)
-          : snapshot.tag;
-      return [
-        {
-          selector_type: snapshot.test_id ? "test_id" : snapshot.id ? "id" : "tag",
-          selector,
-          score: 1,
-          reason: "Generated from stable element attributes.",
-        },
-      ];
+    async startRecordingSession(input: RecorderStartSessionInput): Promise<RecordingSession> {
+      return runRecorderCommand(() => {
+        if (input.mode === "replace_current_graph" && input.workflow_id) {
+          const settings = getSettings(input.workflow_id);
+          const conflict = activeRunConflict(input.workflow_id, settings);
+          if (conflict) throw commandError(conflict.message, conflict.field);
+        }
+        return recorderSessionManager.startSession(input);
+      });
     },
 
-    normalizeRecordedEvents(events: RecordedEvent[]): ActionConfig[] {
-      return events.map((event) => {
-        if (event.type === "click") {
-          return {
-            type: "click",
-            config: {
-              target: elementTargetFromXpath(event.xpath),
-            },
-          };
-        }
-        if (event.type === "input_text") {
-          return {
-            type: "input_text",
-            config: {
-              target: elementTargetFromXpath(event.xpath),
-              text: event.text,
-              clear_before_input: true,
-            },
-          };
-        }
-        throw commandError(
-          `Unsupported recorded event type: ${(event as { type?: unknown }).type}`,
-          "events.type",
-        );
-      }) as ActionConfig[];
+    getRecordingSession(sessionId: string): RecordingSession {
+      return requireRecordingResult(recorderSessionManager.getSession(sessionId));
     },
+
+    async stopRecordingSession(sessionId: string): Promise<RecordingSession> {
+      return requireRecordingResult(await recorderSessionManager.stopSession(sessionId));
+    },
+
+    listRecordingEvents(sessionId: string): RecordingEvent[] {
+      return requireRecordingResult(recorderSessionManager.listEvents(sessionId));
+    },
+
+    async discardRecordingSession(sessionId: string): Promise<RecordingSession> {
+      const discarded = requireRecordingResult(await recorderSessionManager.discardSession(sessionId));
+      for (const [draftId, draft] of recordingDrafts) {
+        if (draft.session_id === sessionId) {
+          recordingDrafts.delete(draftId);
+        }
+      }
+      return discarded;
+    },
+
+    generateRecordingDraft(
+      sessionId: string,
+      options: RecordingGenerateDraftOptions,
+    ): RecordingWorkflowDraft {
+      return createRecordingDraft(sessionId, options);
+    },
+
+    getRecordingDraft(draftId: string): RecordingWorkflowDraft {
+      return requireRecordingResult(
+        recordingDrafts.get(draftId) ?? null,
+        "draftId",
+        "Recording draft not found",
+      );
+    },
+
+    saveRecordingDraft,
 
     dryRunValidateConfig(config: ActionConfig) {
       const validation = validateActionConfig(config);
@@ -1123,17 +1438,6 @@ function isOptionalModuleAvailable(name: string) {
   } catch {
     return false;
   }
-}
-
-function cssAttributeSelector(attribute: string, value: string) {
-  return `[${attribute}="${cssStringValue(value)}"]`;
-}
-
-function cssStringValue(value: string) {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\A ");
 }
 
 function directoryReadable(value: string) {

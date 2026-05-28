@@ -239,6 +239,7 @@ function graphEdgeOrders(graph: WorkflowGraph) {
   const orders = new Map<string, number>();
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const edgesBySourcePort = new Map<string, typeof graph.edges>();
+  const visitedNodeIds = new Set<string>();
   graph.edges.forEach((edge) => {
     const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
     edgesBySourcePort.set(key, [
@@ -255,12 +256,15 @@ function graphEdgeOrders(graph: WorkflowGraph) {
   const start = graph.nodes.find((node) => node.node_type === "start");
   if (!start) return orders;
 
-  function visitNode(nodeId: string, path: Set<string>) {
-    if (path.has(nodeId)) return;
+  const stack = [start.id];
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (!nodeId || visitedNodeIds.has(nodeId)) continue;
     const node = nodeById.get(nodeId);
-    if (!node) return;
-    path.add(nodeId);
+    if (!node) continue;
+    visitedNodeIds.add(nodeId);
 
+    const nextNodeIds: string[] = [];
     for (const portId of orderedOutputPortIds(node)) {
       const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
       if (!edge) continue;
@@ -268,11 +272,15 @@ function graphEdgeOrders(graph: WorkflowGraph) {
         orders.set(edge.id, order);
         order += 1;
       }
-      visitNode(edge.target_node_id, new Set(path));
+      if (!visitedNodeIds.has(edge.target_node_id)) {
+        nextNodeIds.push(edge.target_node_id);
+      }
+    }
+    for (let index = nextNodeIds.length - 1; index >= 0; index -= 1) {
+      const nextNodeId = nextNodeIds[index];
+      if (nextNodeId) stack.push(nextNodeId);
     }
   }
-
-  visitNode(start.id, new Set());
 
   return orders;
 }
@@ -386,6 +394,7 @@ export function fromReactFlowGraph(
 ): WorkflowGraph {
   const nodePositions = new Map(nodes.map((node) => [node.id, node.position]));
   const graphNodes = new Map(graph.nodes.map((node) => [node.id, node]));
+  const graphEdges = new Map(graph.edges.map((edge) => [edge.id, edge]));
 
   return {
     ...graph,
@@ -394,7 +403,7 @@ export function fromReactFlowGraph(
       position: nodePositions.get(node.id) ?? node.position,
     })),
     edges: edges.map((edge) => {
-      const existingEdge = graph.edges.find((graphEdge) => graphEdge.id === edge.id);
+      const existingEdge = graphEdges.get(edge.id);
       return {
         id: edge.id,
         source_node_id: edge.source,

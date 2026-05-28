@@ -26,6 +26,7 @@ Node/TypeScript backend
   -> electron/backend/browser/sessionManager.ts browser session manager
   -> electron/backend/services/workflowSettingsService.ts workflow settings service
   -> electron/backend/services/workflowPackageService.ts package service
+  -> electron/backend/recording/recorderSessionManager.ts browser recorder session lifecycle
   -> electron/backend/graph/validateGraph.ts graph validation
   -> electron/backend/graph/compiler.ts graph compilation
   -> electron/backend/persistence/workflowRepository.ts workflow repository
@@ -50,7 +51,8 @@ SQLite
 The renderer command boundary is Electron IPC. The TypeScript backend owns
 workflow CRUD, graph document storage, Workflow Settings,
 package import/export, graph validation/compilation, workflow scheduling, SQLite
-persistence, run lifecycle orchestration, and CloakBrowser execution.
+persistence, backend-owned browser recorder session lifecycle, run lifecycle
+orchestration, and CloakBrowser execution.
 The Operations Overview read model is also backend-owned: it merges current
 process run snapshots with persisted runs, schedule decisions, launch-block
 attention, and sanitized evidence metadata before returning a bounded DTO to
@@ -87,6 +89,22 @@ payloads.
   settings, and browser identity seed helpers.
 - Workflow package service owns workflow package preview, import preparation,
   selected-section validation, and export sanitization.
+- Browser recorder session manager owns active in-memory recorder sessions,
+  including new-workflow settings drafts, existing-workflow settings snapshots,
+  sanitized browser identity metadata, backend browser launch/cleanup,
+  stop/discard lifecycle state, and recording event buffers. Failed recorder
+  launch/setup/navigation closes any browser context before surfacing the error,
+  and replacement recording rejects active workflow/profile/batch conflicts
+  before launch. The event collector injects bounded page-side capture, drains
+  buffered fallback events on stop, redacts sensitive text field values and
+  secret-like raw keys, drops malformed locator candidates, and observes backend
+  top-level page navigation before the locator generator and timeline normalizer convert
+  raw events into stable review steps. Graph draft generation converts those
+  steps into a standard v2 `WorkflowGraph` and validates it without persistence.
+  Draft save reconciles reviewed labels, inclusion, and supported value edits
+  against backend-held steps through `saveRecordingDraft`, creating a normal
+  workflow with the recorder settings snapshot or replacing the linked graph,
+  then consumes the in-memory draft/session.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
 - Operations repository code owns dashboard aggregation, attention
   correlation, local-day activity buckets, bounded persisted run detail, and

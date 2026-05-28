@@ -47,7 +47,7 @@ export type BrowserDriverContext = {
   pages(): BrowserDriverPage[];
   newPage(): Promise<BrowserDriverPage>;
   close(): Promise<void>;
-  on?(eventName: "close", handler: () => void): void;
+  on?(eventName: string, handler: (...args: never[]) => void): void;
   addCookies?(cookies: Array<Record<string, unknown>>): Promise<void>;
   clearCookies?(options?: Record<string, unknown>): Promise<void>;
   grantPermissions?(permissions: string[], options?: { origin?: string }): Promise<void>;
@@ -89,6 +89,11 @@ export type BrowserDriverPage = {
     pageFunction: string | ((arg?: A) => R | Promise<R>),
     arg?: A,
   ): Promise<R>;
+  exposeFunction?(
+    name: string,
+    callback: (payload: Record<string, unknown>) => void | Promise<void>,
+  ): Promise<void>;
+  on?(eventName: string, handler: (...args: never[]) => void | Promise<void>): void;
   evaluateHandle?(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown): Promise<unknown>;
   addInitScript?(script: string): Promise<unknown>;
   setViewportSize?(viewport: { width: number; height: number }): Promise<void>;
@@ -148,6 +153,9 @@ export type BrowserDriverLocator = {
 type BrowserDialog = {
   accept(promptText?: string): Promise<void>;
   dismiss(): Promise<void>;
+  type?(): string;
+  message?(): string;
+  defaultValue?(): string;
 };
 
 type BrowserDownload = {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, Save, Settings } from "lucide-react";
+import { CheckCircle2, CircleDot, Save, Settings } from "lucide-react";
 import type {
   GraphValidationIssue,
   GraphEdgeDelay,
@@ -44,6 +44,7 @@ type WorkflowDetailPageProps = {
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
   onRunGraphFromSelected: () => void;
+  onRecordReplacement: () => void;
   onSelectedGraphNodeChange: (nodeId: string | null) => void;
   showRunGraphFromSelected: boolean;
   canRunGraphFromSelected: boolean;
@@ -70,6 +71,7 @@ export function WorkflowDetailPage({
   onGraphChange,
   onRunGraph,
   onRunGraphFromSelected,
+  onRecordReplacement,
   onSelectedGraphNodeChange,
   showRunGraphFromSelected,
   canRunGraphFromSelected,
@@ -169,6 +171,17 @@ export function WorkflowDetailPage({
                 Run from selected
               </Button>
             ) : null}
+            <Button
+              className="workflow-command-secondary"
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={onRecordReplacement}
+              disabled={isRunning}
+            >
+              <CircleDot aria-hidden="true" />
+              Record Replacement
+            </Button>
             <Button
               className="workflow-command-primary"
               size="sm"
