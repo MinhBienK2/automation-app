@@ -141,4 +141,30 @@ describe("foundation product patterns", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete Workflow" }));
     expect(onConfirm).toHaveBeenCalled();
   });
+
+  test("shows confirmation preservation, pending, and command error states", () => {
+    render(
+      <ConfirmActionDialog
+        open
+        actionName="Cleanup Orphaned Profiles"
+        affectedScope="2 inactive browser profiles"
+        consequence="Only orphaned inactive profiles are removed."
+        preserved="Workflows, evidence, settings, and active profiles are preserved."
+        confirmLabel="Cleanup Profiles"
+        pendingLabel="Cleaning up..."
+        pending
+        error="Cleanup failed after backend validation."
+        tone="destructive"
+        onOpenChange={() => {}}
+        onConfirm={() => {}}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Cleanup Orphaned Profiles" });
+    expect(within(dialog).getByText("2 inactive browser profiles")).toBeInTheDocument();
+    expect(within(dialog).getByText(/active profiles are preserved/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Cleanup failed");
+    expect(within(dialog).getByRole("button", { name: "Cleaning up..." })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
 });

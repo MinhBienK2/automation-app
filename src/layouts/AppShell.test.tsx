@@ -175,4 +175,51 @@ describe("App shell", () => {
     await userEvent.click(within(popover).getByRole("button", { name: "Open Attention Queue" }));
     expect(onOpenAlerts).toHaveBeenCalled();
   });
+
+  test("guards command search shortcuts while alerts are open", async () => {
+    render(
+      <AppShell
+        activeItem="overview"
+        sidebarCollapsed={false}
+        commandSearchQuery=""
+        commandSearchGroups={[]}
+        commandSearchLoading={false}
+        commandSearchError={null}
+        alertCount={1}
+        alertItems={[
+          {
+            id: "attention-1",
+            severity: "warning",
+            title: "Schedule skipped",
+            summary: "A workflow is already running.",
+          },
+        ]}
+        onCommandSearchQueryChange={() => {}}
+        onCommandSearchResultSelect={() => {}}
+        onOpenAlerts={() => {}}
+        onOpenOverview={() => {}}
+        onOpenEvidence={() => {}}
+        onOpenIdentities={() => {}}
+        onOpenRunCenter={() => {}}
+        onOpenSchedules={() => {}}
+        onOpenSettings={() => {}}
+        onOpenWorkflows={() => {}}
+        onToggleSidebar={() => {}}
+      >
+        <div>Workspace</div>
+      </AppShell>,
+    );
+
+    const search = screen.getByRole("searchbox", { name: "Search Mission Control" });
+    await userEvent.click(screen.getByRole("button", { name: "Alerts 1" }));
+    expect(screen.getByRole("dialog", { name: "Alerts preview" })).toBeInTheDocument();
+
+    await userEvent.keyboard("/");
+    expect(search).not.toHaveFocus();
+    expect(screen.queryByRole("dialog", { name: "Mission Control command palette" }))
+      .not.toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Alerts preview" })).not.toBeInTheDocument();
+  });
 });

@@ -97,8 +97,18 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
+    function hasOpenOverlay() {
+      return Boolean(document.querySelector("[role='dialog'], [data-popover='true']"));
+    }
+
     function handleGlobalKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setCommandPaletteOpen(false);
+        setAlertsOpen(false);
+        return;
+      }
       if (isInputLikeShortcutTarget(event.target)) return;
+      if (hasOpenOverlay()) return;
       if (event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
         event.preventDefault();
         searchInputRef.current?.focus();

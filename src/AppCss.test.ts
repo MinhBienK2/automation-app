@@ -18,6 +18,7 @@ const cssFiles = [
   "src/styles/components.css",
   "src/styles/layout.css",
   "src/styles/workflows.css",
+  "src/styles/schedules.css",
   "src/styles/workflow-graph.css",
   "src/styles/modals.css",
   "src/styles/responsive.css",
@@ -33,6 +34,15 @@ function cssRule(selector: string) {
 }
 
 describe("App CSS", () => {
+  test("audits every stylesheet imported by App.css", () => {
+    const importedStyleFiles = Array.from(
+      appCss.matchAll(/@import "\.\/styles\/([^"]+)";/g),
+      (match) => `src/styles/${match[1]}`,
+    );
+
+    expect(cssFiles).toEqual(expect.arrayContaining(importedStyleFiles));
+  });
+
   test("uses App.css as a small style entrypoint", () => {
     expect(appCss).toContain('@import "./styles/base.css";');
     expect(appCss).toContain('@import "./styles/tokens.css";');

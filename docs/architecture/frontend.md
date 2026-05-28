@@ -55,12 +55,15 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   as command regions, status clusters, state panels, table/detail shells,
   key-value metadata, command palettes, alert previews, stale target panels,
   collapsed error details, empty states, data toolbars, and confirmation
-  dialogs. These components do not call IPC or know workflow, run, evidence,
-  identity, schedule, or settings DTOs.
+  dialogs with affected-scope, preserved-data, pending, and error slots. These
+  components do not call IPC or know workflow, run, evidence, identity,
+  schedule, or settings DTOs.
 - `src/styles/tokens.css`: shared Mission Control color, focus, radius, and
   z-index variables.
 - `src/styles/components.css`: shared CSS hooks for reusable product patterns
   that are not feature-specific.
+- `docs/architecture/ui-hardening-audit.md`: latest cross-workspace UI
+  hardening verification matrix and residual visual risks.
 - `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, Workflow Settings warning/identity presentation helpers, and bilingual settings help content.
 - `src/features/workflows/lib/workflowLibrary.ts`: pure Workflow Library
   helpers for active-run lookup, schedule lookup, search/filter/sort,
@@ -122,8 +125,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   arbitrary diagnostic payloads. Identity results derived from evidence route
   to read-only historical identity context with workflow/run/evidence metadata.
   The shell presents results in a grouped command palette with guarded `/` and
-  Ctrl/Meta+K focus shortcuts. Alerts opens a preview popover, and its primary
-  action focuses Overview's Attention Queue.
+  Ctrl/Meta+K focus shortcuts that are blocked while dialogs or popovers are
+  open. Alerts opens a preview popover, `Esc` closes shell overlays, and the
+  alert preview primary action focuses Overview's Attention Queue.
 - Evidence owns historical evidence browsing UI state. It calls
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,

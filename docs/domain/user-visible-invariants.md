@@ -41,10 +41,11 @@ Preserve these unless the task explicitly changes them.
   Identity results derived from persisted evidence open read-only historical
   context tied to the evidence run. The shell presents results in a grouped
   command palette with guarded keyboard focus shortcuts that do not fire inside
-  inputs, dialogs, or popovers.
+  inputs, dialogs, popovers, or while an overlay is already open.
 - The shell Alerts button opens an alerts preview popover. The preview's Open
   Attention Queue action opens Overview and marks the Attention Queue as the
-  focused target.
+  focused target. `Esc` closes shell overlays such as Alerts preview and the
+  command palette.
 - Evidence is a separate sidebar page between Runs and Schedules. It is the
   only broad historical evidence browser; Overview recent evidence opens
   Evidence focused on the selected evidence id, and Runs selected run details
@@ -144,6 +145,8 @@ Preserve these unless the task explicitly changes them.
   bounded reason instead of broad detail fetches or placeholder data.
 - Workflow list does not expose raw `updated_at` values; graph editing state belongs in the detail screen.
 - Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
+- Shared high-impact confirmation dialogs name the affected scope and can show
+  preserved data, pending state, and command errors inside the dialog.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar. Create/edit

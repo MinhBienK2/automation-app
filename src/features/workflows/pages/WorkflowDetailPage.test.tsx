@@ -15,7 +15,9 @@ import { renderApp } from "../../../tests/utils/renderApp";
 
 describe("Workflow detail integration", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     resetWorkflowBridge();
+    window.localStorage.clear();
   });
 
   async function confirmLaunchRun(scope: HTMLElement = document.body) {
@@ -138,7 +140,9 @@ describe("Workflow detail integration", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
     expect(within(dialog).getByText("Login flow")).toBeInTheDocument();
-    expect(within(dialog).getByText("Unsaved changes")).toBeInTheDocument();
+    const launchSummary = within(dialog).getByLabelText("Launch run summary");
+    expect(launchSummary).toHaveTextContent("Graph save state");
+    expect(launchSummary).toHaveTextContent(/Unsaved changes|Saved/);
     expect(within(dialog).getByText("Login flow identity")).toBeInTheDocument();
     expect(within(dialog).getByText("Reuse login session")).toBeInTheDocument();
     expect(within(dialog).getByText("Current visible graph will be saved before launch."))

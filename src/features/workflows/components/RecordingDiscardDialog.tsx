@@ -17,6 +17,7 @@ export function RecordingDiscardDialog({
       actionName="Discard Recording"
       affectedScope="Current recorder session and unsaved generated draft"
       consequence="Discarded captured events cannot be recovered. Saved workflows and settings are not changed."
+      preserved="Saved workflows, Workflow Settings, evidence, and browser profiles are preserved."
       confirmLabel="Discard Recording"
       cancelLabel="Keep Reviewing"
       tone="destructive"
