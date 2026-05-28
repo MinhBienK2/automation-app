@@ -189,6 +189,32 @@ describe("App CSS", () => {
     expect(validTargetHandle).toContain("background: #39d98a");
   });
 
+  test("keeps workflow edge kind styling subordinate to semantic state colors", () => {
+    const mainEdge = cssRule(".graph-canvas .graph-edge-main .react-flow__edge-path");
+    const branchEdge = cssRule(".graph-canvas .graph-edge-branch .react-flow__edge-path");
+    const continuationEdge = cssRule(
+      ".graph-canvas .graph-edge-continuation .react-flow__edge-path",
+    );
+    const loopRecoveryEdge = cssRule(
+      ".graph-canvas .graph-edge-loop .react-flow__edge-path,\n.graph-canvas .graph-edge-recovery .react-flow__edge-path",
+    );
+    const completedEdge = cssRule(".graph-canvas .graph-edge-completed .react-flow__edge-path");
+    const issueEdge = cssRule(".graph-canvas .graph-edge-has-issue .react-flow__edge-path");
+    const failedEdge = cssRule(".graph-canvas .graph-edge-failed .react-flow__edge-path");
+
+    expect(mainEdge).toContain("stroke: #4c6a7f");
+    expect(branchEdge).toContain("stroke-dasharray: 7 5");
+    expect(continuationEdge).toContain("stroke-dasharray: 3 4");
+    expect(loopRecoveryEdge).toContain("stroke-dasharray: 9 4 2 4");
+    expect(branchEdge).not.toContain("#39d98a");
+    expect(continuationEdge).not.toContain("#39d98a");
+    expect(loopRecoveryEdge).not.toContain("#39d98a");
+    expect(css.indexOf(".graph-edge-main")).toBeLessThan(css.indexOf(".graph-edge-completed"));
+    expect(completedEdge).toContain("stroke: #39d98a");
+    expect(issueEdge).toContain("stroke: #f4b740");
+    expect(failedEdge).toContain("stroke: #f06467");
+  });
+
   test("keeps graph node body drags above labels and below ports", () => {
     const graphNodeButton = cssRule(".graph-node-button");
     const graphDragSurface = cssRule(".graph-node-drag-surface");

@@ -90,7 +90,7 @@ Preserve these unless the task explicitly changes them.
 - Graph validation issues are shown before graph execution. Unsupported graph semantics must be reported clearly.
 - A Start-only graph can be saved as a draft but cannot start a runner execution.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
-- The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, auto arrange, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. Auto arrange repositions nodes into deterministic execution lanes, wrapping long main paths into rows so large graphs stay reachable, and is part of graph undo history. It does not expose Add Output.
+- The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, auto arrange, arrange selection, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. Auto arrange repositions nodes through layered workflow layout into deterministic execution lanes, wrapping long main paths into left-to-right rows so large graphs stay reachable, and is part of graph undo history. Arrange selection is available for multi-node selections, keeps unselected nodes fixed, and is also part of graph undo history. It does not expose Add Output.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
 - Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible. Branching includes If, Switch, Router, and Merge.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
@@ -153,6 +153,7 @@ Preserve these unless the task explicitly changes them.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
 - Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure.
 - Selecting a graph node or link must not replace amber validation or red failure color with cyan selection color. Selection can add a secondary ring or emphasis while preserving the issue/failure color.
+- Graph links expose editor-only visual kinds for main path, branch, continuation, loop, and recovery routing. These kinds may adjust stroke weight or pattern, but failed, validation issue, running, selected, and completed semantic states take visual priority.
 
 ## Command Boundary
 

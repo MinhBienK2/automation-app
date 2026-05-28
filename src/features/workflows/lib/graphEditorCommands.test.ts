@@ -247,8 +247,8 @@ describe("graph editor commands", () => {
     expect(positions.get("start")).toEqual({ x: 0, y: 0 });
     expect(positions.get("node-1")).toEqual({ x: 260, y: 0 });
     expect(positions.get("node-8")).toEqual({ x: 2080, y: 0 });
-    expect(positions.get("node-9")).toEqual({ x: 2080, y: 180 });
-    expect(positions.get("node-16")).toEqual({ x: 260, y: 180 });
+    expect(positions.get("node-9")).toEqual({ x: 260, y: 180 });
+    expect(positions.get("node-16")).toEqual({ x: 2080, y: 180 });
     expect(positions.get("node-17")).toEqual({ x: 260, y: 360 });
     expect(positions.get("node-18")?.x).toBeLessThanOrEqual(2080);
   });

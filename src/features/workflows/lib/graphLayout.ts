@@ -1,0 +1,456 @@
+import ELK from "elkjs/lib/elk.bundled.js";
+import type { ElkNode } from "elkjs/lib/elk-api";
+import type {
+  GraphEdge,
+  GraphNode,
+  GraphPosition,
+  WorkflowGraph,
+} from "../../../types/workflow";
+
+export type WorkflowGraphEdgeKind =
+  | "main"
+  | "branch"
+  | "continuation"
+  | "loop"
+  | "recovery";
+
+export type GraphLayoutMode =
+  | { type: "full" }
+  | { type: "selection"; nodeIds: string[] };
+
+export type GraphLayoutResult = {
+  graph: WorkflowGraph;
+  edgeKinds: Map<string, WorkflowGraphEdgeKind>;
+};
+
+const graphNodeWidth = 160;
+const graphNodeHeight = 64;
+const layoutColumnGap = 260;
+const layoutRowGap = 120;
+const layoutLaneGap = 180;
+const layoutColumnsPerRow = 8;
+const selectionColumnGap = 220;
+
+const elk = new ELK({
+  defaultLayoutOptions: {
+    "elk.algorithm": "layered",
+    "elk.direction": "RIGHT",
+    "elk.spacing.nodeNode": "80",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "120",
+    "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+    "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+    "elk.portConstraints": "FIXED_SIDE",
+  },
+});
+
+export async function layoutWorkflowGraph(
+  graph: WorkflowGraph,
+  mode: GraphLayoutMode,
+): Promise<GraphLayoutResult> {
+  const edgeKinds = new Map(
+    graph.edges.map((edge) => [edge.id, classifyWorkflowGraphEdge(graph, edge)]),
+  );
+
+  if (mode.type === "selection") {
+    const elkPositions = await runElkLayoutForGraph(graph, new Set(mode.nodeIds));
+    return {
+      graph: layoutSelectedNodes(graph, mode.nodeIds, elkPositions),
+      edgeKinds,
+    };
+  }
+
+  const elkPositions = await runElkLayoutForGraph(graph);
+  const positions = usesWrappedMainRows(graph)
+    ? fullGraphPositions(graph)
+    : normalizeElkPositions(elkPositions);
+  return {
+    graph: {
+      ...graph,
+      nodes: graph.nodes.map((node) => ({
+        ...node,
+        position: positions.get(node.id) ?? node.position,
+      })),
+    },
+    edgeKinds,
+  };
+}
+
+export function classifyWorkflowGraphEdge(
+  graph: WorkflowGraph,
+  edge: GraphEdge,
+): WorkflowGraphEdgeKind {
+  const source = graph.nodes.find((node) => node.id === edge.source_node_id);
+  if (!source) return "main";
+
+  if (isLoopPort(source, edge.source_port)) return "loop";
+  if (isRecoveryPort(source, edge.source_port)) return "recovery";
+  if (isContinuationPort(source, edge.source_port)) return "continuation";
+  if (isBranchPort(source, edge.source_port)) return "branch";
+  return "main";
+}
+
+function layoutSelectedNodes(
+  graph: WorkflowGraph,
+  nodeIds: string[],
+  elkPositions: Map<string, GraphPosition>,
+): WorkflowGraph {
+  const selected = new Set(nodeIds);
+  const selectedNodes = graph.nodes.filter((node) => selected.has(node.id));
+  if (selectedNodes.length === 0) return graph;
+
+  const minX = Math.min(...selectedNodes.map((node) => node.position.x));
+  const minY = Math.min(...selectedNodes.map((node) => node.position.y));
+  const selectedGraph: WorkflowGraph = {
+    ...graph,
+    nodes: selectedNodes,
+    edges: graph.edges.filter(
+      (edge) => selected.has(edge.source_node_id) && selected.has(edge.target_node_id),
+    ),
+  };
+  const selectedPositions = usesWrappedMainRows(selectedGraph)
+    ? fullGraphPositions(selectedGraph)
+    : normalizeElkPositions(elkPositions);
+  const selectedPositionValues = [...selectedPositions.values()];
+  const selectedMinX = Math.min(...selectedPositionValues.map((position) => position.x));
+  const selectedMinY = Math.min(...selectedPositionValues.map((position) => position.y));
+  const positions = new Map(
+    [...selectedPositions].map(([nodeId, position]) => [
+      nodeId,
+      {
+        x: Math.round(minX + position.x - selectedMinX + selectionColumnGap),
+        y: Math.round(minY + position.y - selectedMinY),
+      },
+    ]),
+  );
+
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node) => ({
+      ...node,
+      position: positions.get(node.id) ?? node.position,
+    })),
+  };
+}
+
+function fullGraphPositions(graph: WorkflowGraph) {
+  const orderedNodeIds = graphExecutionNodeOrder(graph);
+  const orderedNodeIdSet = new Set(orderedNodeIds);
+  const nodeOrder = [
+    ...orderedNodeIds,
+    ...graph.nodes
+      .map((node) => node.id)
+      .filter((nodeId) => !orderedNodeIdSet.has(nodeId)),
+  ];
+  const nodeOrderIndex = new Map(nodeOrder.map((nodeId, index) => [nodeId, index]));
+  const depths = graphNodeDepths(graph, nodeOrder);
+  const columns = new Map<number, string[]>();
+
+  for (const nodeId of nodeOrder) {
+    const column = depths.get(nodeId) ?? 0;
+    columns.set(column, [...(columns.get(column) ?? []), nodeId]);
+  }
+
+  for (const [column, nodeIds] of columns) {
+    columns.set(
+      column,
+      [...nodeIds].sort(
+        (left, right) =>
+          (nodeOrderIndex.get(left) ?? 0) - (nodeOrderIndex.get(right) ?? 0),
+      ),
+    );
+  }
+
+  const positions = new Map<string, GraphPosition>();
+  for (const [column, nodeIds] of columns) {
+    nodeIds.forEach((nodeId, row) => {
+      const lane = column <= 0 ? 0 : Math.floor((column - 1) / layoutColumnsPerRow);
+      const columnInLane = column <= 0 ? 0 : (column - 1) % layoutColumnsPerRow;
+      const displayColumn = column <= 0 ? 0 : columnInLane + 1;
+      positions.set(nodeId, {
+        x: displayColumn * layoutColumnGap,
+        y: lane * layoutLaneGap + row * layoutRowGap,
+      });
+    });
+  }
+
+  return positions;
+}
+
+async function runElkLayoutForGraph(
+  graph: WorkflowGraph,
+  selectedNodeIds?: Set<string>,
+): Promise<Map<string, GraphPosition>> {
+  const result = await elk.layout(toElkGraph(graph, selectedNodeIds));
+  return new Map(
+    (result.children ?? []).map((node) => [
+      node.id,
+      { x: Math.round(node.x ?? 0), y: Math.round(node.y ?? 0) },
+    ]),
+  );
+}
+
+function usesWrappedMainRows(graph: WorkflowGraph) {
+  if (graph.nodes.length === 0) return true;
+  return graph.edges.every((edge) => classifyWorkflowGraphEdge(graph, edge) === "main");
+}
+
+function normalizeElkPositions(positions: Map<string, GraphPosition>) {
+  if (positions.size === 0) return positions;
+  const positionValues = [...positions.values()];
+  const minX = Math.min(...positionValues.map((position) => position.x));
+  const minY = Math.min(...positionValues.map((position) => position.y));
+  return new Map(
+    [...positions].map(([nodeId, position]) => [
+      nodeId,
+      {
+        x: Math.round(position.x - minX),
+        y: Math.round(position.y - minY),
+      },
+    ]),
+  );
+}
+
+function toElkGraph(graph: WorkflowGraph, selectedNodeIds?: Set<string>): ElkNode {
+  const includedNodeIds = selectedNodeIds ?? new Set(graph.nodes.map((node) => node.id));
+  const nodes = graph.nodes.filter((node) => includedNodeIds.has(node.id));
+
+  return {
+    id: "workflow-graph",
+    layoutOptions: {
+      "elk.algorithm": "layered",
+      "elk.direction": "RIGHT",
+      "elk.portConstraints": "FIXED_SIDE",
+    },
+    children: nodes.map((node) => ({
+      id: node.id,
+      width: graphNodeWidth,
+      height: Math.max(graphNodeHeight, 32 + node.ports.length * 20),
+      ports: node.ports.map((port) => ({
+        id: elkPortId(node.id, port.id),
+        width: 8,
+        height: 8,
+        layoutOptions: {
+          "elk.port.side": port.direction === "input" ? "WEST" : "EAST",
+        },
+      })),
+      layoutOptions: {
+        "elk.portConstraints": "FIXED_SIDE",
+      },
+    })),
+    edges: graph.edges
+      .filter(
+        (edge) =>
+          includedNodeIds.has(edge.source_node_id) &&
+          includedNodeIds.has(edge.target_node_id),
+      )
+      .map((edge) => ({
+        id: edge.id,
+        sources: [elkPortId(edge.source_node_id, edge.source_port)],
+        targets: [elkPortId(edge.target_node_id, edge.target_port)],
+      })),
+  };
+}
+
+function elkPortId(nodeId: string, portId: string) {
+  return `${nodeId}__${portId}`;
+}
+
+function graphExecutionNodeOrder(graph: WorkflowGraph) {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const edgesBySourcePort = new Map<string, GraphEdge[]>();
+  const orderedNodeIds: string[] = [];
+  const seenNodeIds = new Set<string>();
+  const start = graph.nodes.find((node) => node.node_type === "start");
+  if (!start) return orderedNodeIds;
+
+  for (const edge of graph.edges) {
+    const key = edgeSourcePortKey(edge.source_node_id, edge.source_port);
+    edgesBySourcePort.set(key, [...(edgesBySourcePort.get(key) ?? []), edge]);
+  }
+  for (const edges of edgesBySourcePort.values()) {
+    edges.sort((left, right) => left.id.localeCompare(right.id));
+  }
+
+  const stack = [start.id];
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (!nodeId) continue;
+    const node = nodeById.get(nodeId);
+    if (!node || seenNodeIds.has(node.id)) continue;
+    seenNodeIds.add(node.id);
+    orderedNodeIds.push(node.id);
+
+    const nextNodeIds: string[] = [];
+    for (const portId of orderedOutputPortIds(node)) {
+      const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
+      if (edge && !seenNodeIds.has(edge.target_node_id)) {
+        nextNodeIds.push(edge.target_node_id);
+      }
+    }
+    for (let index = nextNodeIds.length - 1; index >= 0; index -= 1) {
+      const nextNodeId = nextNodeIds[index];
+      if (nextNodeId) stack.push(nextNodeId);
+    }
+  }
+  return orderedNodeIds;
+}
+
+function graphNodeDepths(graph: WorkflowGraph, orderedNodeIds: string[]) {
+  const depths = new Map<string, number>();
+  const nodeOrderSet = new Set(orderedNodeIds);
+  const edgesBySource = new Map<string, GraphEdge[]>();
+  const start = graph.nodes.find((node) => node.node_type === "start");
+  if (start) depths.set(start.id, 0);
+
+  for (const edge of graph.edges) {
+    if (!nodeOrderSet.has(edge.source_node_id) || !nodeOrderSet.has(edge.target_node_id)) {
+      continue;
+    }
+    edgesBySource.set(edge.source_node_id, [
+      ...(edgesBySource.get(edge.source_node_id) ?? []),
+      edge,
+    ]);
+  }
+
+  const queue = start ? [start.id] : [];
+  const relaxCounts = new Map<string, number>();
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const nodeId = queue[queueIndex];
+    if (!nodeId) continue;
+    const sourceDepth = depths.get(nodeId);
+    if (sourceDepth == null) continue;
+    for (const edge of edgesBySource.get(nodeId) ?? []) {
+      const nextDepth = sourceDepth + 1;
+      if ((depths.get(edge.target_node_id) ?? -1) < nextDepth) {
+        depths.set(edge.target_node_id, nextDepth);
+        const relaxCount = (relaxCounts.get(edge.target_node_id) ?? 0) + 1;
+        relaxCounts.set(edge.target_node_id, relaxCount);
+        if (relaxCount <= graph.nodes.length) {
+          queue.push(edge.target_node_id);
+        }
+      }
+    }
+  }
+
+  const maxReachableDepth = Math.max(0, ...depths.values());
+  orderedNodeIds.forEach((nodeId, index) => {
+    if (!depths.has(nodeId)) {
+      depths.set(nodeId, maxReachableDepth + 1 + index);
+    }
+  });
+  return depths;
+}
+
+function edgeSourcePortKey(sourceNodeId: string, sourcePort: string) {
+  return `${sourceNodeId}\u0000${sourcePort}`;
+}
+
+function orderedOutputPortIds(node: GraphNode) {
+  const outputPortIds = node.ports
+    .filter((port) => port.direction === "output")
+    .map((port) => port.id);
+  const preferred = preferredOutputPortOrder(node);
+  return [
+    ...preferred.filter((portId) => outputPortIds.includes(portId)),
+    ...outputPortIds.filter((portId) => !preferred.includes(portId)),
+  ];
+}
+
+function preferredOutputPortOrder(node: GraphNode) {
+  switch (node.node_type) {
+    case "start":
+    case "action":
+    case "merge":
+    case "set_variable":
+    case "set_json_variables":
+    case "transform_variable":
+    case "assert_output":
+    case "domain_allowlist":
+      return ["out"];
+    case "if":
+      return ["true", "false", "done"];
+    case "switch":
+      return [
+        ...casePortIds(node),
+        "default",
+        "done",
+      ];
+    case "router":
+      return [
+        ...routerCasePortIds(node),
+        "default",
+        "done",
+      ];
+    case "repeat_times":
+    case "repeat_for_each":
+    case "while":
+      return ["loop", "done"];
+    case "repeat_until":
+      return ["loop", "timeout", "done"];
+    case "retry":
+      return ["try", "failed", "success"];
+    case "try_catch":
+      return ["try", "success", "error", "finally", "done"];
+    case "fallback":
+      return ["primary", "fallback", "done"];
+    default:
+      return [];
+  }
+}
+
+function casePortIds(node: GraphNode) {
+  return node.ports
+    .filter((port) => port.direction === "output" && /^case_\d+$/.test(port.id))
+    .map((port) => port.id)
+    .sort((left, right) => Number(left.slice(5)) - Number(right.slice(5)));
+}
+
+function routerCasePortIds(node: GraphNode) {
+  const cases = Array.isArray((node.config as { cases?: unknown } | null)?.cases)
+    ? ((node.config as { cases: Array<{ id?: unknown }> }).cases)
+    : [];
+  const configured = cases
+    .map((caseValue) => typeof caseValue.id === "string" ? `case_${caseValue.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
+}
+
+function isLoopPort(node: GraphNode, portId: string) {
+  return (
+    ["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(node.node_type) &&
+    portId === "loop"
+  );
+}
+
+function isRecoveryPort(node: GraphNode, portId: string) {
+  if (node.node_type === "retry") return portId === "try" || portId === "failed";
+  if (node.node_type === "try_catch") {
+    return portId === "try" || portId === "error" || portId === "finally";
+  }
+  if (node.node_type === "fallback") return portId === "fallback";
+  return node.node_type === "repeat_until" && portId === "timeout";
+}
+
+function isContinuationPort(node: GraphNode, portId: string) {
+  if (["if", "switch", "router", "try_catch", "fallback"].includes(node.node_type)) {
+    return portId === "done";
+  }
+  if (["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(node.node_type)) {
+    return portId === "done";
+  }
+  return node.node_type === "retry" && portId === "success";
+}
+
+function isBranchPort(node: GraphNode, portId: string) {
+  if (node.node_type === "if") return portId === "true" || portId === "false";
+  if (node.node_type === "switch" || node.node_type === "router") {
+    return portId === "default" || portId.startsWith("case_");
+  }
+  return node.node_type === "fallback" && portId === "primary";
+}

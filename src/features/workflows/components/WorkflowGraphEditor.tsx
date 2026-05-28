@@ -41,7 +41,6 @@ import {
   type WorkflowFlowNode,
 } from "../lib/workflowGraph";
 import {
-  arrangeWorkflowGraph,
   copyGraphSelection,
   deleteGraphSelection,
   duplicateGraphSelection,
@@ -53,6 +52,7 @@ import {
   type GraphHistoryState,
   type GraphSelection,
 } from "../lib/graphEditorCommands";
+import { layoutWorkflowGraph, type WorkflowGraphEdgeKind } from "../lib/graphLayout";
 import type { GraphNodeHelpLanguage } from "../lib/graphNodeHelpContent";
 import { actionLabels } from "../../../lib/workflowUi";
 import {
@@ -63,7 +63,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { GraphShortcutGuide } from "./GraphShortcutGuide";
-import { WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
+import { WorkflowGraphEdge, WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
 import {
   ActionNodePalette,
@@ -145,6 +145,48 @@ export function replacePortEdge(
     }),
     nextEdge,
   ];
+}
+
+function edgeKindForFlowSource(
+  nodes: WorkflowFlowNode[],
+  sourceNodeId: string,
+  sourcePortId: string,
+): WorkflowGraphEdgeKind {
+  const sourceNodeType = nodes.find((node) => node.id === sourceNodeId)?.data.nodeType;
+  if (!sourceNodeType) return "main";
+  if (
+    ["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(sourceNodeType) &&
+    sourcePortId === "loop"
+  ) {
+    return "loop";
+  }
+  if (
+    (sourceNodeType === "retry" && (sourcePortId === "try" || sourcePortId === "failed")) ||
+    (sourceNodeType === "try_catch" &&
+      ["try", "error", "finally"].includes(sourcePortId)) ||
+    (sourceNodeType === "fallback" && sourcePortId === "fallback") ||
+    (sourceNodeType === "repeat_until" && sourcePortId === "timeout")
+  ) {
+    return "recovery";
+  }
+  if (
+    (["if", "switch", "router", "try_catch", "fallback"].includes(sourceNodeType) &&
+      sourcePortId === "done") ||
+    (["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(sourceNodeType) &&
+      sourcePortId === "done") ||
+    (sourceNodeType === "retry" && sourcePortId === "success")
+  ) {
+    return "continuation";
+  }
+  if (
+    (sourceNodeType === "if" && (sourcePortId === "true" || sourcePortId === "false")) ||
+    ((sourceNodeType === "switch" || sourceNodeType === "router") &&
+      (sourcePortId === "default" || sourcePortId.startsWith("case_"))) ||
+    (sourceNodeType === "fallback" && sourcePortId === "primary")
+  ) {
+    return "branch";
+  }
+  return "main";
 }
 
 function edgePortsExist(graph: WorkflowGraph, edge: WorkflowGraph["edges"][number]) {
@@ -248,6 +290,8 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
+  const [isArrangingGraph, setIsArrangingGraph] = useState(false);
+  const [arrangeError, setArrangeError] = useState<string | null>(null);
   const [isToolbarPanMode, setIsToolbarPanMode] = useState(false);
   const [isSpacePanActive, setIsSpacePanActive] = useState(false);
   const isPanMode = isToolbarPanMode || isSpacePanActive;
@@ -433,6 +477,7 @@ export function WorkflowGraphEditor({
         data: {
           hasIssue: false,
           status: "idle",
+          kind: edgeKindForFlowSource(currentFlowGraph.nodes, source.nodeId, source.portId),
           delay: cloneGraphEdgeDelay(defaultEdgeDelay),
         },
       };
@@ -480,6 +525,12 @@ export function WorkflowGraphEditor({
       ),
     }),
     [completePortConnection, selectNodeFromEvent, startPortConnection],
+  );
+  const workflowEdgeTypes = useMemo(
+    () => ({
+      workflow: WorkflowGraphEdge,
+    }),
+    [],
   );
 
   useEffect(() => {
@@ -818,6 +869,11 @@ export function WorkflowGraphEditor({
       data: {
         hasIssue: false,
         status: "idle",
+        kind: edgeKindForFlowSource(
+          reactFlowNodesRef.current,
+          connection.source,
+          connection.sourceHandle,
+        ),
         delay: cloneGraphEdgeDelay(defaultEdgeDelay),
       },
     };
@@ -844,11 +900,47 @@ export function WorkflowGraphEditor({
     );
   }
 
-  function autoArrangeGraph() {
-    if (runState.status === "running") return;
-    const nextGraph = arrangeWorkflowGraph(graphRef.current);
-    commitGraphChange(nextGraph, selectionRef.current);
-    reactFlowInstance?.fitView({ duration: 240 });
+  async function autoArrangeGraph() {
+    if (runState.status === "running" || isArrangingGraph) return;
+    await arrangeGraph({ type: "full" });
+    reactFlowInstance?.fitView({ duration: 240, padding: 0.18 });
+  }
+
+  async function arrangeSelection() {
+    if (
+      runState.status === "running" ||
+      isArrangingGraph ||
+      selectionRef.current.nodeIds.length < 2
+    ) {
+      return;
+    }
+    await arrangeGraph({
+      type: "selection",
+      nodeIds: selectionRef.current.nodeIds,
+    });
+    const arrangedNodes = graphRef.current.nodes.filter((node) =>
+      selectionRef.current.nodeIds.includes(node.id),
+    );
+    if (arrangedNodes.length === 1) {
+      focusNode(arrangedNodes[0]);
+    }
+  }
+
+  async function arrangeGraph(
+    mode: { type: "full" } | { type: "selection"; nodeIds: string[] },
+  ) {
+    setIsArrangingGraph(true);
+    setArrangeError(null);
+    const layoutSource = graphRef.current;
+    try {
+      const result = await layoutWorkflowGraph(layoutSource, mode);
+      if (graphRef.current !== layoutSource) return;
+      commitGraphChange(result.graph, selectionRef.current);
+    } catch {
+      setArrangeError("Could not arrange graph. Existing positions were kept.");
+    } finally {
+      setIsArrangingGraph(false);
+    }
   }
 
   function deleteNode(nodeId: string) {
@@ -939,9 +1031,14 @@ export function WorkflowGraphEditor({
       }}
     >
       <WorkflowGraphToolbar
+        isArrangeSelectionDisabled={
+          runState.status === "running" || selection.nodeIds.length < 2
+        }
+        isArranging={isArrangingGraph}
         isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
+        onArrangeSelection={arrangeSelection}
         onAutoArrange={autoArrangeGraph}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}
@@ -967,6 +1064,7 @@ export function WorkflowGraphEditor({
               colorMode="dark"
               defaultViewport={flowGraph.viewport}
               edges={reactFlowEdges}
+              edgeTypes={workflowEdgeTypes}
               fitView
               connectionDragThreshold={0}
               connectionRadius={32}
@@ -1053,6 +1151,12 @@ export function WorkflowGraphEditor({
           </div>
           <div className="graph-minimap" aria-label="Graph summary">
             {graph.nodes.length} nodes / {graph.edges.length} edges
+            {isArrangingGraph ? (
+              <span role="status">Arranging graph...</span>
+            ) : null}
+            {arrangeError ? (
+              <span className="graph-arrange-error" role="status">{arrangeError}</span>
+            ) : null}
           </div>
         </div>
 
