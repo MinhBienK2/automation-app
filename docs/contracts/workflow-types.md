@@ -293,15 +293,17 @@ Run metrics match exact current `workflow_id` and `identity_id` from the run
 settings snapshot, with a safe fallback to sanitized `browser_identity` output
 only when the run association is unambiguous. Runs from previous identities are
 historical and do not count toward the current identity's last run, recent
-failure, evidence item total, or latest observed report after reset.
+failure, valid run-scoped evidence item total, or latest observed report after
+reset.
 
 Historical identity references are read-only. They may carry safe workflow,
 run, or evidence context. Stale managed identity targets that no longer match
 current Workflow Settings resolve through the same historical lookup so old run
 context remains inspectable. Historical lookup is not capped to the newest run
 rows before matching identity ids, but the returned detail remains bounded and
-sanitized. Historical references do not expose diagnostics, reset, close
-session, or settings mutation actions.
+sanitized. When a matched historical run exists, its persisted workflow id is
+the source of truth for the displayed workflow context. Historical references
+do not expose diagnostics, reset, close session, or settings mutation actions.
 
 Identity diagnostics in the DTO are sanitized. They report installed/version
 state, GeoIP/display availability, bounded profile size/session state, and

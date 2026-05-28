@@ -57,9 +57,11 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
   separate projection table, and validates run-scoped artifact paths before
   preview/reveal/export.
 - `IdentityRepository` derives managed identity run/evidence summaries by
-  matching workflow id plus persisted identity snapshots. Historical identity
-  lookup scans matching workflow runs before choosing a bounded detail so old
-  rotated identity references are not hidden behind newer runs.
+  matching workflow id plus persisted identity snapshots and counting only
+  valid run-scoped evidence metadata. Historical identity lookup scans matching
+  workflow runs before choosing a bounded detail so old rotated identity
+  references are not hidden behind newer runs; matched run rows provide the
+  workflow context for historical details.
 - Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here

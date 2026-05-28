@@ -76,15 +76,20 @@ export class IdentityRepository {
     const diagnosticsSnapshot = diagnostics ?? await this.options.diagnostics();
     if (target.type === "historical") {
       const historical = this.historicalRun(target);
+      const browserIdentity = parseBrowserIdentityOutput(historical);
+      const workflowId = historical?.workflow_id ?? target.workflow_id ?? null;
       return {
         kind: "historical",
-        identity_ref: { id: target.identity_id },
-        workflow_ref: target.workflow_id
-          ? this.options.workflows().find((workflow) => workflow.id === target.workflow_id) ?? null
+        identity_ref: {
+          id: target.identity_id,
+          display_name: stringValue(browserIdentity?.display_name),
+        },
+        workflow_ref: workflowId
+          ? this.options.workflows().find((workflow) => workflow.id === workflowId) ?? null
           : null,
-        run_id: target.run_id ?? historical?.id ?? null,
-        evidence_id: target.evidence_id ?? null,
-        observed_fields: safeFields(parseBrowserIdentityOutput(historical)),
+        run_id: historical?.id ?? null,
+        evidence_id: historical ? target.evidence_id ?? null : null,
+        observed_fields: safeFields(browserIdentity),
       };
     }
     const workflow = this.options.workflows().find((item) => item.id === target.workflow_id);
@@ -251,8 +256,26 @@ function recentFailures(rows: RunRow[]) {
 function evidenceItemCount(rows: RunRow[]) {
   return rows.reduce((total, row) => {
     const evidence = parseJsonRecord(row.outputs_json)?.__evidence;
-    return total + (Array.isArray(evidence) ? evidence.length : 0);
+    if (!Array.isArray(evidence)) return total;
+    return total + evidence.filter((item) => isSafeEvidenceItem(row.id, item)).length;
   }, 0);
+}
+
+function isSafeEvidenceItem(runId: string, value: unknown) {
+  const record = parseJsonRecord(value);
+  const artifactKind = stringValue(record?.artifact_kind) ?? stringValue(record?.kind);
+  const relativePath = stringValue(record?.path) ?? stringValue(record?.relative_path);
+  return (
+    (artifactKind === "screenshot" || artifactKind === "download") &&
+    Boolean(relativePath && safeRunScopedEvidencePath(runId, relativePath))
+  );
+}
+
+function safeRunScopedEvidencePath(runId: string, value: string) {
+  if (value.startsWith("/") || value.startsWith("\\") || /^[A-Za-z]:/.test(value)) {
+    return false;
+  }
+  return value.startsWith(`runs/${runId}/`) && !value.split(/[\\/]+/).includes("..");
 }
 
 function configuredPosture(settings: WorkflowSettings) {

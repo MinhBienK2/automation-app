@@ -542,13 +542,22 @@ function App() {
             target: { type: "evidence", evidence_id: item.evidence_id },
           });
           if (item.identity?.id) {
+            const historicalIdentityResultId = [
+              "identity",
+              "historical",
+              item.workflow?.id ?? "unknown",
+              item.identity.id,
+              item.run.id,
+              item.evidence_id,
+            ].join(":");
+            const historicalIdentityContext = item.workflow?.name
+              ? `Historical evidence / ${item.workflow.name}`
+              : `Historical evidence / ${item.run.id}`;
             remoteResults.push({
-              id: item.workflow?.id
-                ? `identity:${item.workflow.id}:${item.identity.id}`
-                : `identity:historical:${item.identity.id}:${item.evidence_id}`,
+              id: historicalIdentityResultId,
               type: "Identity",
               label: commandText(item.identity.display_name ?? item.identity.id, "Identity"),
-              context: commandText(item.workflow?.name, "Historical evidence"),
+              context: commandText(historicalIdentityContext, "Historical evidence"),
               target: {
                 type: "identity",
                 target: {

@@ -424,6 +424,7 @@ export class OperationsRepository {
          FROM runs
          INNER JOIN workflows ON workflows.id = runs.workflow_id
          WHERE runs.outputs_json IS NOT NULL
+           AND runs.outputs_json LIKE '%"__evidence"%'
          ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC
         `,
       )
@@ -581,7 +582,7 @@ function safeRelativeEvidenceReference(value: string) {
   if (
     value.startsWith("/") ||
     value.startsWith("\\") ||
-    /^[A-Za-z]:[\\/]/.test(value)
+    /^[A-Za-z]:/.test(value)
   ) {
     return false;
   }

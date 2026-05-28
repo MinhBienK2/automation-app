@@ -673,7 +673,12 @@ describe("App settings and graph autosave", () => {
     const search = await screen.findByRole("searchbox", { name: "Search Mission Control" });
     await userEvent.type(search, "QA");
 
-    await userEvent.click(await screen.findByRole("button", { name: /Identity QA identity/i }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: /Identity QA identity/i })).toHaveLength(2);
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /Identity QA identity.*Historical evidence/i }),
+    );
     expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
     await waitFor(() => {
       expect(getIdentityLabOverview).toHaveBeenLastCalledWith({

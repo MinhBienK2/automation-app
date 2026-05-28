@@ -449,6 +449,10 @@ describe("Electron workflow command handlers", () => {
               artifact_kind: "download",
               path: "runs/run-current/downloads/two.csv",
             },
+            {
+              artifact_kind: "screenshot",
+              path: "C:Users\\operator\\secret.png",
+            },
           ],
         }),
         JSON.stringify({ reason: "Assertion failed" }),
@@ -593,6 +597,44 @@ describe("Electron workflow command handlers", () => {
       kind: "historical",
       run_id: "run-archived-identity",
       observed_fields: expect.arrayContaining([{ key: "identity_id", value: "bi_archived" }]),
+    });
+  });
+
+  test("derives historical identity workflow context from the matched run", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const historicalWorkflow = handlers.createWorkflow("Historical identity source");
+    const otherWorkflow = handlers.createWorkflow("Unrelated current workflow");
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-cross-workflow-history",
+        historicalWorkflow.id,
+        "manual",
+        "success",
+        "2026-05-27T07:00:00.000Z",
+        "2026-05-27T07:01:00.000Z",
+        JSON.stringify({ browser_launch: { identity_id: "bi_cross_history" } }),
+        JSON.stringify({ browser_identity: { identity_id: "bi_cross_history" } }),
+      );
+
+    const overview = await handlers.getIdentityLabOverview({
+      selected_target: {
+        type: "historical",
+        workflow_id: otherWorkflow.id,
+        identity_id: "bi_cross_history",
+        run_id: "run-cross-workflow-history",
+      },
+    });
+
+    expect(overview.selected).toMatchObject({
+      kind: "historical",
+      workflow_ref: { id: historicalWorkflow.id, name: "Historical identity source" },
+      run_id: "run-cross-workflow-history",
     });
   });
 
@@ -2394,6 +2436,11 @@ describe("Electron workflow command handlers", () => {
               path: "\\\\server\\share\\secret.csv",
               created_at: "2026-05-27T08:00:40.000Z",
             },
+            {
+              artifact_kind: "screenshot",
+              path: "C:Users\\operator\\secret.png",
+              created_at: "2026-05-27T08:00:50.000Z",
+            },
           ],
         }),
       );
@@ -2405,7 +2452,7 @@ describe("Electron workflow command handlers", () => {
     });
 
     expect(overview.recent_evidence.items).toEqual([]);
-    expect(overview.data_warnings.evidence_items_skipped).toBe(2);
+    expect(overview.data_warnings.evidence_items_skipped).toBe(3);
   });
 
   test("lists details previews reveals and exports safe persisted evidence", async () => {
