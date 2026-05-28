@@ -171,8 +171,8 @@ day expressed as UTC boundaries. The backend validates the range, rejects
 ranges over 48 hours before building hourly buckets, applies list limits,
 computes KPI/activity/attention meaning, and returns only safe evidence
 metadata. `getOperationalRunDetail(runId)` returns one bounded persisted run
-summary for Overview-to-Runs navigation; it is not an unbounded run-history or
-artifact-opening API.
+summary for Overview-to-Runs navigation, including durable run source
+provenance; it is not an unbounded run-history or artifact-opening API.
 
 `listEvidenceItems(request?)` returns a bounded historical evidence page derived
 from all matching persisted run outputs and run steps.

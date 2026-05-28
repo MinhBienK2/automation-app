@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
-import type { ActionType } from "../types/workflow";
-import { actionGroups, actionOptions, allActionOptions } from "./workflowUi";
+import type { ActionType, GraphValidationIssue } from "../types/workflow";
+import {
+  actionGroups,
+  actionOptions,
+  allActionOptions,
+  buildRunIssues,
+  initialRunState,
+} from "./workflowUi";
 
 describe("workflow UI action taxonomy", () => {
   const removedActions = [
@@ -90,5 +96,82 @@ describe("workflow UI action taxonomy", () => {
       expect(actionOptions).not.toContain(actionType as ActionType);
       expect(allActionOptions).toContain(actionType as ActionType);
     });
+  });
+});
+
+describe("run issue presentation priority", () => {
+  const blockingIssue: GraphValidationIssue = {
+    level: "error",
+    node_id: "step-1",
+    edge_id: null,
+    message: "Choose an action type before running this node",
+  };
+
+  test("keeps blocking validation issues ahead of runtime and system state", () => {
+    const issues = buildRunIssues({
+      appError: "Could not save graph",
+      graphIssues: [blockingIssue],
+      runState: {
+        ...initialRunState,
+        status: "failed",
+        error: {
+          step_id: "step-1",
+          step_number: 1,
+          step_name: "Navigate",
+          action_type: "navigate",
+          reason: "Navigation failed",
+        },
+      },
+    });
+
+    expect(issues[0]).toMatchObject({
+      severity: "blocking",
+      title: "Choose an action type before running this node",
+    });
+  });
+
+  test("shows startup and save errors before stale runtime failures once validation is clear", () => {
+    const issues = buildRunIssues({
+      appError: "Could not save graph",
+      graphIssues: [],
+      runState: {
+        ...initialRunState,
+        status: "failed",
+        error: {
+          step_id: "step-1",
+          step_number: 1,
+          step_name: "Navigate",
+          action_type: "navigate",
+          reason: "Previous navigation failed",
+        },
+      },
+    });
+
+    expect(issues.map((issue) => issue.severity)).toEqual(["system", "runtime"]);
+    expect(issues[0]).toMatchObject({
+      title: "Could not start run",
+      message: "Could not save graph",
+    });
+  });
+
+  test("keeps stale validation issues behind the current runtime failure", () => {
+    const issues = buildRunIssues({
+      appError: "",
+      graphIssuesNeedRecheck: true,
+      graphIssues: [blockingIssue],
+      runState: {
+        ...initialRunState,
+        status: "failed",
+        error: {
+          step_id: "step-1",
+          step_number: 1,
+          step_name: "Navigate",
+          action_type: "navigate",
+          reason: "Current navigation failed",
+        },
+      },
+    });
+
+    expect(issues.map((issue) => issue.severity)).toEqual(["runtime", "blocking"]);
   });
 });

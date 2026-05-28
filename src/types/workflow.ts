@@ -1169,6 +1169,7 @@ export type OperationalRunStepSummary = {
 export type OperationalRunDetail = {
   run_id: string;
   workflow: { id: string; name: string };
+  source: WorkflowRunSource;
   identity?: { id: string; display_name?: string | null } | null;
   status: RunStatus;
   started_at: string;

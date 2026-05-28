@@ -110,8 +110,9 @@ payloads.
 - Operations repository code owns dashboard aggregation, attention
   correlation, local-day activity buckets, bounded persisted run detail, and
   safe evidence metadata extraction. Persisted run detail includes the
-  workflow identity reference from the run settings snapshot when available so
-  the renderer can offer traceability without inspecting raw run outputs.
+  durable run source plus workflow identity reference from the run settings
+  snapshot when available so the renderer can offer traceability without
+  inspecting raw run outputs.
 - Evidence repository code owns historical evidence listing, filtering,
   deterministic evidence ids, typed detail payloads, artifact path containment,
   native reveal, screenshot preview, and manifest-based bundle export.

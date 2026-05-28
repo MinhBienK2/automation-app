@@ -751,7 +751,7 @@ describe("Workflow list integration", () => {
       .toBeInTheDocument();
     expect(within(runCenter).getByText("Login flow")).toBeInTheDocument();
     expect(within(runCenter).getByText("Support flow")).toBeInTheDocument();
-    expect(within(runCenter).getByText("schedule")).toBeInTheDocument();
+    expect(within(runCenter).getByText("Schedule")).toBeInTheDocument();
 
     const supportRow = within(runCenter).getByText("Support flow").closest("tr");
     await userEvent.click(within(supportRow as HTMLElement).getByRole("button", {

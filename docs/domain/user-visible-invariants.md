@@ -138,11 +138,12 @@ Preserve these unless the task explicitly changes them.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
-- Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
+- Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run. It shows newest runs first with workflow, labeled source, text status, current step, started time, short sanitized issue summary, and row-scoped Stop actions.
 - Runs can render one selected persisted run detail opened from Overview or
   shell navigation. Selected run details can open related Evidence, Workflow,
-  and Identity targets, and stale run targets render an unavailable target
-  message.
+  and Identity targets, show only bounded source/status/timing/identity/issue
+  and step-summary metadata, and stale run targets render an unavailable target
+  state while the current run table stays visible.
 - Evidence is a separate app screen reachable from the sidebar. It lists only
   typed persisted evidence summaries and bounded typed details for screenshot,
   download, browser identity, action trace, and evidence manifest items. It
@@ -160,13 +161,13 @@ Preserve these unless the task explicitly changes them.
   bounded horizontal scrolling.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
-- Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. `Run from selected` remains the direct retained-session debugging command.
+- Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. The dialog names the workflow, graph save state, browser identity, and session context; it states that the visible graph and dirty Workflow Settings are saved first and that validation/browser launch checks run before execution; it shows only a compact blocking-issue warning when known. `Run from selected` remains the direct retained-session debugging command.
 - A real manual full-run launch attempt blocked by graph or Workflow Settings
   validation before browser launch creates one sanitized durable
   `launch_blocked` attention item visible on Overview. Manual Validate alone
   does not create attention.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
-- Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
+- Run issues distinguish blocking graph validation issues, system/startup errors, runtime failures, and stale-after-edit validation context. Blocking validation issues lead unless marked stale; current system/startup errors lead over stale runtime state; runtime failures identify the failed step/action and can select the failed node. Issues with graph context can select the affected node or link.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
 - Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure.

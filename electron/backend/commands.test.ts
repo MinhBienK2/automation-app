@@ -2799,12 +2799,13 @@ describe("Electron workflow command handlers", () => {
     database
       .prepare(
         `INSERT INTO runs (
-          id, workflow_id, status, started_at, finished_at, error_json
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+          id, workflow_id, source, status, started_at, finished_at, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         "run-failed",
         workflow.id,
+        "schedule",
         "failed",
         "2026-05-27T10:00:00.000Z",
         "2026-05-27T10:03:00.000Z",
@@ -2877,6 +2878,7 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getOperationalRunDetail("run-failed")).toMatchObject({
       run_id: "run-failed",
       workflow: { id: workflow.id, name: "Evidence flow" },
+      source: "schedule",
       status: "failed",
       sanitized_error_summary: "Assertion failed",
       step_summaries: [

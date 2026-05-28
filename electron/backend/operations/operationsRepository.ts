@@ -11,6 +11,7 @@ import type {
   OverviewUpcomingSchedule,
   RunStatus,
   RunValidationIssue,
+  WorkflowRunSource,
   WorkflowRunSnapshot,
   WorkflowScheduleStatus,
   WorkflowSummary,
@@ -20,6 +21,7 @@ type RunRow = {
   id: string;
   workflow_id: string;
   workflow_name: string;
+  source?: WorkflowRunSource | null;
   status: RunStatus;
   started_at: string;
   finished_at: string | null;
@@ -168,6 +170,7 @@ export class OperationsRepository {
           runs.id,
           runs.workflow_id,
           workflows.name AS workflow_name,
+          runs.source,
           runs.status,
           runs.started_at,
           runs.finished_at,
@@ -195,6 +198,7 @@ export class OperationsRepository {
     return {
       run_id: row.id,
       workflow: { id: row.workflow_id, name: row.workflow_name },
+      source: row.source ?? "manual",
       identity: runIdentity(row),
       status: row.status,
       started_at: row.started_at,

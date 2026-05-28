@@ -317,38 +317,45 @@ export function buildRunIssues({
     return blockingRunIssues;
   }
 
-  if (runState.status === "failed" && runState.error) {
-    const actionLabel = actionLabelForRunError(runState.error.action_type);
-    const stepLabel = runState.error.step_name?.trim() || actionLabel;
-    return [
-      {
-        id: `runtime-${runState.error.step_id ?? runState.error.step_number}`,
-        severity: "runtime",
-        title: `Run failed at step ${runState.error.step_number}: ${stepLabel}`,
-        message: runState.error.reason,
-        node_id: runState.error.step_id,
-        step_number: runState.error.step_number,
-        action_type: runState.error.action_type,
-        suggestions: suggestionsFor(
-          runState.error.reason,
-          runState.error.action_type,
-        ),
-      },
-      ...blockingRunIssues,
-    ];
+  const systemRunIssues: RunIssue[] = appError.trim()
+    ? [
+        {
+          id: "system-error",
+          severity: "system",
+          title: "Could not start run",
+          message: appError.trim(),
+          suggestions: [],
+        },
+      ]
+    : [];
+
+  const runtimeRunIssues: RunIssue[] = runState.status === "failed" && runState.error
+    ? [
+        {
+          id: `runtime-${runState.error.step_id ?? runState.error.step_number}`,
+          severity: "runtime",
+          title: `Run failed at step ${runState.error.step_number}: ${
+            runState.error.step_name?.trim() ||
+            actionLabelForRunError(runState.error.action_type)
+          }`,
+          message: runState.error.reason,
+          node_id: runState.error.step_id,
+          step_number: runState.error.step_number,
+          action_type: runState.error.action_type,
+          suggestions: suggestionsFor(
+            runState.error.reason,
+            runState.error.action_type,
+          ),
+        },
+      ]
+    : [];
+
+  if (systemRunIssues.length) {
+    return [...systemRunIssues, ...runtimeRunIssues, ...blockingRunIssues];
   }
 
-  if (appError.trim()) {
-    return [
-      {
-        id: "system-error",
-        severity: "system",
-        title: "Could not start run",
-        message: appError.trim(),
-        suggestions: [],
-      },
-      ...blockingRunIssues,
-    ];
+  if (runtimeRunIssues.length) {
+    return [...runtimeRunIssues, ...blockingRunIssues];
   }
 
   if (blockingRunIssues.length) {

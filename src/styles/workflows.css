@@ -1144,6 +1144,16 @@
   overflow-wrap: anywhere;
 }
 
+.launch-run-notes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .panel-heading {
   display: flex;
   align-items: center;
@@ -1346,6 +1356,7 @@
 .detail-list {
   align-items: start;
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   justify-content: space-between;
 }

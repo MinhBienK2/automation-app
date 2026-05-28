@@ -41,9 +41,9 @@ Frontend and backend must agree on:
   after the backend has matched persisted evidence metadata; newer output-only
   run rows must not hide older evidence items.
 - `OperationalRunDetail`: bounded selected-run summary for Overview-to-Runs
-  navigation, including workflow reference, optional identity reference from
-  the run settings snapshot, sanitized error text, capped step summaries, and
-  safe evidence metadata.
+  navigation, including workflow reference, durable `manual`/`schedule` source,
+  optional identity reference from the run settings snapshot, sanitized error
+  text, capped step summaries, and safe evidence metadata.
 - `EvidenceListRequest`: evidence filters for search, type, run status,
   durable source, workflow, run, historical identity, time range, cursor, limit,
   and optional focused evidence id. Result pages remain bounded, but matching

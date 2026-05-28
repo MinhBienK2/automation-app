@@ -22,7 +22,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   guarded reset, and navigation to Evidence/Runs/Workflow Settings.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave, environment readiness diagnostics, guarded maintenance commands, and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
-- `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
+- `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, explicit missing-run target state, and run-to-workflow/identity/evidence links.
+- `src/features/runs/lib/runCenterPresentation.ts`: pure Runs page summary, sorting, source/status, date, and bounded issue-summary helpers.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: Workflow Library
   composition screen with a dense table/detail workspace, local search/filter
   and sort state, direct Run/Stop row actions, consequence-aware lifecycle
@@ -53,7 +54,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/lib/workflowLibrary.ts`: pure Workflow Library
   helpers for active-run lookup, schedule lookup, search/filter/sort,
   action availability, selected workflow fallback, and safe date formatting.
-- `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, runtime failure, and system/startup issue presentation with copyable collapsed raw details for long errors.
+- `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, system/startup, and runtime failure presentation with copyable collapsed raw details for long errors.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
 - `src/features/workflows/components/HelpDisclosure.tsx`: shared native disclosure wrapper for collapsible workflow help sections and nested help groups.
@@ -143,9 +144,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   calling `saveRecordingDraft`. Backend-held step timing is not editable in the
   renderer; saved recording graphs use it to create fixed inter-step edge
   delays and row-wrapped node positions for long recordings.
-- Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
+- Run issue summaries that route graph-backed issues back to the affected node or link. Blocking validation issues take precedence unless they are stale after edits; current system/startup errors take precedence over stale runtime failures; stale validation context remains visible behind the current failure. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
-- Runs owns the cross-workflow session monitor. It lists run snapshots, shows source/status/current step/error context, calls `stopRun(runId)` for selected active runs, and can render one bounded persisted-run detail loaded from an Overview navigation target.
+- Runs owns the cross-workflow session monitor. It lists run snapshots newest first, shows labeled source/status/current step/error context without raw outputs, calls `stopRun(runId)` for selected active runs, keeps the table visible during refresh errors or missing targets, and can render one bounded persisted-run detail loaded from an Overview navigation target with source, identity, timing, issue, step summaries, and Evidence/Workflow/Identity actions.
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
 - Selected-node port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - Canvas port tooltip copy for every graph node type. Tooltip text explains input vs output direction plus branch, continuation, terminal, retry, merge, loop, and recovery semantics before users create a link. Port handles use custom canvas tooltip rendering without native `title` tooltips, delay display by 1 second, and raise the hovered React Flow node wrapper so the tooltip stays above neighboring nodes.

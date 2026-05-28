@@ -8,6 +8,14 @@ import type {
   WorkflowRunSnapshot,
 } from "../../../types/workflow";
 import { runStatusLabel } from "../../../lib/workflowUi";
+import {
+  buildRunCenterSummary,
+  compactRunIssueSummary,
+  formatRunDateTime,
+  runSourceLabel,
+  runStatusTone,
+  sortRunSnapshotsByStartedAt,
+} from "../lib/runCenterPresentation";
 
 type RunCenterPageProps = {
   runSnapshots: WorkflowRunSnapshot[];
@@ -40,9 +48,12 @@ export function RunCenterPage({
   onOpenWorkflow,
   onOpenIdentity,
 }: RunCenterPageProps) {
-  const sortedRuns = [...runSnapshots].sort((left, right) =>
-    right.started_at.localeCompare(left.started_at),
-  );
+  const sortedRuns = sortRunSnapshotsByStartedAt(runSnapshots);
+  const summary = buildRunCenterSummary(runSnapshots);
+  const focusedRunSnapshot = focusedRunDetail
+    ? sortedRuns.find((run) => run.run_id === focusedRunDetail.run_id)
+    : null;
+  const focusedRunSource = focusedRunDetail?.source ?? focusedRunSnapshot?.source ?? null;
 
   return (
     <section className="app-screen run-center-screen" aria-label="Runs">
@@ -52,8 +63,8 @@ export function RunCenterPage({
           <h1>Runs</h1>
         </div>
         <div className="header-stats" aria-label="Run summary">
-          <span>{sortedRuns.filter((run) => run.state.status === "running").length} active</span>
-          <span>{sortedRuns.length} session runs</span>
+          <span>{summary.activeLabel}</span>
+          <span>{summary.sessionLabel}</span>
         </div>
         {error ? (
           <p className="field-error" role="alert">
@@ -72,7 +83,28 @@ export function RunCenterPage({
             onClear={onClearStaleTarget}
           />
         ) : !focusedRunDetail && missingRunId ? (
-          <p className="muted">Run target unavailable: {missingRunId}</p>
+          <article
+            className="focused-run-detail focused-run-missing"
+            aria-label="Run target unavailable"
+          >
+            <header>
+              <div>
+                <p className="eyebrow">Stale target</p>
+                <h2>Run target unavailable</h2>
+              </div>
+              <span className="status-pill">Needs refresh</span>
+            </header>
+            <p className="muted">
+              The requested run is not available in the current bounded session
+              list. Existing session runs remain visible below.
+            </p>
+            <dl className="detail-list">
+              <div>
+                <dt>Requested id</dt>
+                <dd>{missingRunId}</dd>
+              </div>
+            </dl>
+          </article>
         ) : null}
         {focusedRunDetail ? (
           <article className="focused-run-detail" aria-label="Selected run detail">
@@ -91,8 +123,30 @@ export function RunCenterPage({
                 <dd>{focusedRunDetail.run_id}</dd>
               </div>
               <div>
+                <dt>Source</dt>
+                <dd>
+                  {focusedRunSource ? runSourceLabel(focusedRunSource) : "Unavailable"}
+                </dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{focusedRunDetail.status}</dd>
+              </div>
+              <div>
                 <dt>Started</dt>
-                <dd>{formatDateTime(focusedRunDetail.started_at)}</dd>
+                <dd>{formatRunDateTime(focusedRunDetail.started_at)}</dd>
+              </div>
+              <div>
+                <dt>Finished</dt>
+                <dd>{formatRunDateTime(focusedRunDetail.finished_at)}</dd>
+              </div>
+              <div>
+                <dt>Identity</dt>
+                <dd>
+                  {focusedRunDetail.identity?.display_name ||
+                    focusedRunDetail.identity?.id ||
+                    "Unavailable"}
+                </dd>
               </div>
               <div>
                 <dt>Issue</dt>
@@ -172,15 +226,19 @@ export function RunCenterPage({
                       <strong>{run.workflow_name}</strong>
                       <small>{run.run_id}</small>
                     </td>
-                    <td>{run.source}</td>
+                    <td>{runSourceLabel(run.source)}</td>
                     <td>
-                      <span className={run.state.status === "running" ? "status-pill status-pill-on" : "status-pill"}>
+                      <span className={statusPillClassName(run)}>
                         {runStatusLabel(run.state)}
                       </span>
                     </td>
                     <td>{run.state.current_step_number ?? "-"}</td>
-                    <td>{formatDateTime(run.started_at)}</td>
-                    <td>{run.state.error?.reason ? compactIssue(run.state.error.reason) : "-"}</td>
+                    <td>{formatRunDateTime(run.started_at)}</td>
+                    <td>
+                      {run.state.error?.reason
+                        ? compactRunIssueSummary(run.state.error.reason)
+                        : "-"}
+                    </td>
                     <td>
                       {run.state.status === "running" ? (
                         <Button
@@ -205,13 +263,9 @@ export function RunCenterPage({
   );
 }
 
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
-
-function compactIssue(reason: string) {
-  const firstLine = reason.split("\n")[0] ?? reason;
-  return firstLine.length > 90 ? `${firstLine.slice(0, 87)}...` : firstLine;
+function statusPillClassName(run: WorkflowRunSnapshot) {
+  const tone = runStatusTone(run);
+  if (tone === "active") return "status-pill status-pill-on";
+  if (tone === "danger") return "status-pill status-pill-danger";
+  return "status-pill";
 }

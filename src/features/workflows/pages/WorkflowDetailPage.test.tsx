@@ -138,6 +138,15 @@ describe("Workflow detail integration", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
     expect(within(dialog).getByText("Login flow")).toBeInTheDocument();
+    expect(within(dialog).getByText("Unsaved changes")).toBeInTheDocument();
+    expect(within(dialog).getByText("Login flow identity")).toBeInTheDocument();
+    expect(within(dialog).getByText("Reuse login session")).toBeInTheDocument();
+    expect(within(dialog).getByText("Current visible graph will be saved before launch."))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText("Dirty Workflow Settings are saved before launch."))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText("Validation and browser launch checks run before execution."))
+      .toBeInTheDocument();
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
       workflowId: "workflow-1",
     });
@@ -525,6 +534,12 @@ describe("Workflow detail integration", () => {
       .toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Select node" }))
       .toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Launch Run" }));
+    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
+    expect(within(dialog).getByText(
+      "1 blocking issue is known. Run Validate again or use the Run issues panel before launch.",
+    )).toBeInTheDocument();
   });
 
   test("keeps graph issues visible after an edit and marks them for recheck", async () => {

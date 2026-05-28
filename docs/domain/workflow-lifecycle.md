@@ -46,7 +46,7 @@
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
-- Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
+- Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them. Blocking validation issues lead the panel unless stale, system/startup save errors lead over stale runtime state, and runtime failures keep the failed step/action plus node selection available.
 - `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects same-workflow/profile/batch conflicts, creates a run-id scoped SQLite run record, and starts the Electron CloakBrowser runner.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 
@@ -63,6 +63,10 @@
 ## Run Full Workflow
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
+- Graph Builder opens a lightweight Launch Run confirmation before invoking
+  `run_workflow`. The dialog shows workflow, graph save state, browser
+  identity, session context, save/settings/validation/browser-launch gate notes,
+  and only a compact known-blocker warning.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
 - `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
 - Reset identity in Workflow Settings is an in-app confirmation that names the workflow/current identity, explains pending settings are saved first, lists changed identity/profile/seed values, confirms historical runs/evidence are preserved, and delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, disables Run from selected, and returns saved settings to the dialog.

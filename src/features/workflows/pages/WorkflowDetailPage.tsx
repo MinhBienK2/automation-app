@@ -94,6 +94,9 @@ export function WorkflowDetailPage({
   );
   const totalBlockingIssues = graphIssues.filter((issue) => issue.level === "error").length;
   const hasBlockingIssues = totalBlockingIssues > 0;
+  const blockingIssueText = `${totalBlockingIssues} blocking ${
+    totalBlockingIssues === 1 ? "issue is" : "issues are"
+  } known. Run Validate again or use the Run issues panel before launch.`;
   const requestNodeSelection = (nodeId: string) => {
     setSelectionRequest({
       requestId: Date.now(),
@@ -266,11 +269,14 @@ export function WorkflowDetailPage({
             </dl>
             {hasBlockingIssues ? (
               <p className="field-warning">
-                Current validation has {totalBlockingIssues} blocking issue
-                {totalBlockingIssues === 1 ? "" : "s"}; launch will still use
-                the existing validation gate before browser startup.
+                {blockingIssueText}
               </p>
             ) : null}
+            <ul className="launch-run-notes">
+              <li>Current visible graph will be saved before launch.</li>
+              <li>Dirty Workflow Settings are saved before launch.</li>
+              <li>Validation and browser launch checks run before execution.</li>
+            </ul>
           </div>
           <DialogFooter>
             <Button
