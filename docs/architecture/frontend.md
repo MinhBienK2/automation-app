@@ -16,6 +16,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/evidence/pages/EvidenceExplorerPage.tsx`: durable evidence
   workspace with filters, list/grid results, selection, typed detail payloads,
   screenshot preview, artifact reveal, and bundle export actions.
+- `src/features/evidence/pages/evidencePresentation.ts`: pure Evidence
+  Explorer labels, active-filter summaries, warning/export copy, file-size
+  formatting, and safe-field filtering for typed evidence payloads.
 - `src/features/identities/pages/IdentityLabPage.tsx`: current managed browser
   identity workspace with list/detail posture, latest observed evidence,
   sanitized diagnostics, historical identity references, retained-session close,
@@ -117,9 +120,12 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,
   delegates file reveal/export through backend commands, and navigates related
-  runs/workflows back into existing destinations. Identity evidence opens
-  Identity Lab as a read-only historical target carrying workflow, run, and
-  evidence context.
+  runs/workflows back into existing destinations. It presents active filter
+  chips, list/grid result modes, explicit loading/no-data/no-match/focused-item
+  states, selection-count export actions, malformed-evidence warnings, and
+  manifest-bundle export counts without rendering original absolute paths.
+  Identity evidence opens Identity Lab as a read-only historical target carrying
+  workflow, run, and evidence context.
 - Workflow Library direct Run, active-row Stop, More-menu lifecycle actions,
   selected detail preview, duplicate confirmation, delete confirmation, and
   Workflow Package import/export interaction. List Run calls the existing

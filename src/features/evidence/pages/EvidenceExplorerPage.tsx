@@ -12,6 +12,18 @@ import type {
   IdentityLabTarget,
   OperationsNavigationTarget,
 } from "../../../types/workflow";
+import {
+  buildEvidenceFilterSummary,
+  buildEvidenceWarningText,
+  evidenceSelectionLabel,
+  fileStateLabel,
+  formatEvidenceBytes,
+  formatEvidenceDateTime,
+  isSafeEvidenceFieldKey,
+  labelForEvidenceKind,
+  runSourceLabel,
+  shouldShowEvidenceEmptyAsFiltered,
+} from "./evidencePresentation";
 
 type EvidenceExplorerPageProps = {
   page: EvidencePage | null;
@@ -63,7 +75,12 @@ export function EvidenceExplorerPage({
   onOpenIdentity,
 }: EvidenceExplorerPageProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchValue, setSearchValue] = useState(query.search ?? "");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+
+  useEffect(() => {
+    setSearchValue(query.search ?? "");
+  }, [query.search]);
 
   useEffect(() => {
     setSelectedIds((current) =>
@@ -72,6 +89,9 @@ export function EvidenceExplorerPage({
   }, [page]);
 
   const activeItem = detail?.item ?? page?.items.find((item) => item.evidence_id === selectedEvidenceId) ?? null;
+  const activeFilters = buildEvidenceFilterSummary(query);
+  const pageWarning = buildEvidenceWarningText(page?.warnings);
+  const exportLabel = evidenceSelectionLabel(selectedIds.length);
 
   function toggleSelected(evidenceId: string) {
     setSelectedIds((current) =>
@@ -89,7 +109,7 @@ export function EvidenceExplorerPage({
           <h1>Evidence Explorer</h1>
           <p className="muted">
             {page
-              ? `Last refreshed ${formatDateTime(page.generated_at)}.`
+              ? `Last refreshed ${formatEvidenceDateTime(page.generated_at)}.`
               : "Loading persisted run evidence."}
           </p>
         </div>
@@ -104,7 +124,7 @@ export function EvidenceExplorerPage({
             onClick={() => onExportSelection(selectedIds)}
           >
             <Download aria-hidden="true" />
-            Export Selection
+            {exportLabel}
           </Button>
         </div>
       </header>
@@ -115,10 +135,12 @@ export function EvidenceExplorerPage({
           <input
             aria-label="Search evidence"
             type="search"
-            value={query.search ?? ""}
-            onChange={(event) =>
-              onQueryChange({ ...query, search: event.target.value, cursor: null })
-            }
+            value={searchValue}
+            onChange={(event) => {
+              const nextSearch = event.target.value;
+              setSearchValue(nextSearch);
+              onQueryChange({ ...query, search: nextSearch, cursor: null });
+            }}
           />
         </label>
         <label className="field">
@@ -136,7 +158,7 @@ export function EvidenceExplorerPage({
           >
             <option value="">All types</option>
             {evidenceTypes.map((type) => (
-              <option value={type} key={type}>{labelForKind(type)}</option>
+              <option value={type} key={type}>{labelForEvidenceKind(type)}</option>
             ))}
           </select>
         </label>
@@ -147,7 +169,7 @@ export function EvidenceExplorerPage({
             onClick={() => setViewMode("list")}
           >
             <List aria-hidden="true" />
-            List
+            List view
           </button>
           <button
             type="button"
@@ -155,22 +177,37 @@ export function EvidenceExplorerPage({
             onClick={() => setViewMode("grid")}
           >
             <Grid2X2 aria-hidden="true" />
-            Grid
+            Grid view
           </button>
         </div>
+        {activeFilters.length ? (
+          <div className="evidence-filter-summary" aria-label="Active evidence filters">
+            {activeFilters.map((filter) => (
+              <span className="evidence-filter-chip" key={filter}>
+                {filter}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {error ? <div className="panel overview-error" role="alert">{error}</div> : null}
-      {warningText(page) ? <p className="field-warning">{warningText(page)}</p> : null}
-      {exportResult?.bundle_dir ? (
-        <p className="status-message">Evidence bundle exported to {exportResult.bundle_dir}</p>
+      {pageWarning ? <p className="field-warning">{pageWarning}</p> : null}
+      {exportResult ? (
+        <p className="status-message evidence-export-status">
+          {exportStatusText(exportResult)}
+        </p>
       ) : null}
 
       <div className="evidence-workspace">
         <section className="panel evidence-results" aria-label="Evidence results">
           {loading ? <EmptyEvidence title="Loading evidence" /> : null}
           {page?.items.length ? (
-            <div className={viewMode === "grid" ? "evidence-grid" : "evidence-list"}>
+            <div
+              className={viewMode === "grid" ? "evidence-grid" : "evidence-list"}
+              role="list"
+              aria-label={viewMode === "grid" ? "Evidence result grid" : "Evidence result list"}
+            >
               {page.items.map((item) => (
                 <EvidenceResult
                   key={item.evidence_id}
@@ -183,8 +220,13 @@ export function EvidenceExplorerPage({
               ))}
             </div>
           ) : loading ? null : (
-            <EmptyEvidence title="No evidence found" />
+            <EmptyEvidence title={emptyEvidenceTitle(query)} />
           )}
+          {page?.has_more ? (
+            <p className="evidence-status-note">
+              More evidence is available. Refine filters or load the next page when pagination is enabled.
+            </p>
+          ) : null}
         </section>
 
         <section className="panel evidence-detail" aria-label="Evidence detail">
@@ -221,8 +263,14 @@ function EvidenceResult({
   onSelect: () => void;
   onToggle: () => void;
 }) {
+  const className = [
+    "evidence-result",
+    selected ? "evidence-result-active" : "",
+    checked ? "evidence-result-selected" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <article className={selected ? "evidence-result evidence-result-active" : "evidence-result"}>
+    <article className={className} role="listitem">
       <label className="evidence-select">
         <input
           aria-label={`Select ${item.label}`}
@@ -233,8 +281,17 @@ function EvidenceResult({
       </label>
       <button type="button" onClick={onSelect}>
         <strong>{item.label}</strong>
-        <span>{labelForKind(item.kind)} / {item.run.source} / {item.run.status}</span>
-        <small>{item.workflow?.name ?? "Workflow unavailable"} / {item.identity?.display_name ?? item.identity?.id ?? "Identity unavailable"}</small>
+        <span className="evidence-result-metadata">
+          <span>{labelForEvidenceKind(item.kind)}</span>
+          <span>{runSourceLabel(item.run.source)}</span>
+          <span>{item.run.status}</span>
+          <span>{fileStateLabel(item.file_state ?? "unchecked")}</span>
+        </span>
+        <small>
+          {item.workflow?.name ?? "Workflow unavailable"} /{" "}
+          {item.identity?.display_name ?? item.identity?.id ?? "Identity unavailable"} /{" "}
+          {formatEvidenceDateTime(item.created_at)}
+        </small>
       </button>
     </article>
   );
@@ -256,20 +313,29 @@ function EvidenceDetailView({
   onOpenIdentity: (target: IdentityLabTarget) => void;
 }) {
   const item = detail.item;
+  const detailFileState =
+    "file_state" in detail.payload ? detail.payload.file_state : item.file_state ?? "unchecked";
   return (
     <div className="evidence-detail-body">
       <header>
         <Files aria-hidden="true" />
         <div>
           <h2>{item.label}</h2>
-          <p className="muted">{labelForKind(item.kind)} / {formatDateTime(item.created_at)}</p>
+          <p className="muted evidence-detail-kicker">
+            <span>{labelForEvidenceKind(item.kind)}</span>
+            <span>{formatEvidenceDateTime(item.created_at)}</span>
+          </p>
         </div>
       </header>
       <dl className="evidence-metadata">
         <div><dt>Run</dt><dd>{item.run.id}</dd></div>
+        <div><dt>Source</dt><dd>{runSourceLabel(item.run.source)}</dd></div>
+        <div><dt>Status</dt><dd>{item.run.status}</dd></div>
         <div><dt>Workflow</dt><dd>{item.workflow?.name ?? "Unavailable"}</dd></div>
         <div><dt>Identity</dt><dd>{item.identity?.display_name ?? item.identity?.id ?? "Unavailable"}</dd></div>
         {item.node_id ? <div><dt>Node</dt><dd>{item.node_id}</dd></div> : null}
+        {item.step_number ? <div><dt>Step</dt><dd>{item.step_number}</dd></div> : null}
+        <div><dt>File state</dt><dd>{fileStateLabel(detailFileState)}</dd></div>
         {item.relative_path ? <div><dt>Path</dt><dd>{item.relative_path}</dd></div> : null}
       </dl>
       <div className="evidence-actions">
@@ -306,15 +372,15 @@ function EvidenceDetailView({
             Open Identity
           </Button>
         ) : null}
-        {(item.kind === "screenshot" || item.kind === "download") ? (
+        {(detail.payload.kind === "screenshot" || detail.payload.kind === "download") ? (
           <Button type="button" variant="secondary" onClick={() => onRevealArtifact(item.evidence_id)}>
             Reveal in Folder
           </Button>
         ) : null}
-        {item.kind === "screenshot" ? (
+        {detail.payload.kind === "screenshot" ? (
           <Button type="button" variant="secondary" onClick={() => onPreviewScreenshot(item.evidence_id)}>
             <Eye aria-hidden="true" />
-            Preview
+            Preview screenshot
           </Button>
         ) : null}
       </div>
@@ -332,10 +398,11 @@ function EvidenceDetailView({
 
 function EvidencePayload({ payload }: { payload: EvidenceDetail["payload"] }) {
   if (payload.kind === "browser_identity") {
+    const fields = payload.fields.filter((field) => isSafeEvidenceFieldKey(field.key));
     return (
       <table className="evidence-table">
         <tbody>
-          {payload.fields.map((field) => (
+          {fields.map((field) => (
             <tr key={field.key}><th>{field.key}</th><td>{String(field.value)}</td></tr>
           ))}
         </tbody>
@@ -344,14 +411,20 @@ function EvidencePayload({ payload }: { payload: EvidenceDetail["payload"] }) {
   }
   if (payload.kind === "action_trace") {
     return (
-      <div className="evidence-timeline">
-        {payload.entries.map((entry, index) => (
-          <article key={`${entry.node_id}-${index}`}>
-            <strong>{String(entry.label ?? entry.node_id ?? `Trace ${index + 1}`)}</strong>
-            <span>{String(entry.action_type ?? "action")} / {String(entry.status ?? "unknown")}</span>
-          </article>
-        ))}
-      </div>
+      <>
+        <div className="evidence-timeline">
+          {payload.entries.map((entry, index) => (
+            <article key={`${String(entry.node_id ?? "trace")}-${index}`}>
+              <strong>{String(entry.label ?? entry.node_id ?? `Trace ${index + 1}`)}</strong>
+              <span>{`${String(entry.action_type ?? "action")} / ${String(entry.status ?? "unknown")}`}</span>
+              {entry.failure_reason ? <small>{String(entry.failure_reason)}</small> : null}
+            </article>
+          ))}
+        </div>
+        {payload.has_more ? (
+          <p className="evidence-status-note">Showing first trace entries only.</p>
+        ) : null}
+      </>
     );
   }
   if (payload.kind === "evidence_manifest") {
@@ -370,10 +443,18 @@ function EvidencePayload({ payload }: { payload: EvidenceDetail["payload"] }) {
       </table>
     );
   }
+  if (payload.kind === "download") {
+    return (
+      <dl className="evidence-payload-summary">
+        <div><dt>Size</dt><dd>{formatEvidenceBytes(payload.size_bytes)}</dd></div>
+        <div><dt>Path</dt><dd>{payload.relative_path}</dd></div>
+      </dl>
+    );
+  }
   return (
-    <p className="evidence-path-state">
-      {payload.relative_path} / {payload.file_state}
-    </p>
+    <dl className="evidence-payload-summary">
+      <div><dt>Path</dt><dd>{payload.relative_path}</dd></div>
+    </dl>
   );
 }
 
@@ -385,21 +466,16 @@ function EmptyEvidence({ title }: { title: string }) {
   );
 }
 
-function warningText(page: EvidencePage | null) {
-  const skipped = page?.warnings.skipped_artifacts ?? 0;
-  if (!skipped) return "";
-  return `${skipped} malformed evidence item${skipped === 1 ? "" : "s"} skipped.`;
+function emptyEvidenceTitle(query: EvidenceListRequest) {
+  if (query.focus_evidence_id) return "Focused evidence unavailable";
+  if (shouldShowEvidenceEmptyAsFiltered(query)) return "No evidence matches these filters";
+  return "No evidence recorded yet";
 }
 
-function labelForKind(kind: EvidenceKind) {
-  return kind
-    .split("_")
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+function exportStatusText(exportResult: NonNullable<EvidenceBundleExportResult>) {
+  const exported = `${exportResult.exported_count} item${exportResult.exported_count === 1 ? "" : "s"}`;
+  const omitted = `${exportResult.omitted_file_count} omitted file${
+    exportResult.omitted_file_count === 1 ? "" : "s"
+  }`;
+  return `Evidence bundle exported: ${exported}, ${omitted}.`;
 }

@@ -344,7 +344,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("button", { name: "Export Selection" })).toBeDisabled();
     expect(screen.getByRole("region", { name: "Evidence results" })).toHaveTextContent("001-visit.png");
     expect(screen.getByRole("region", { name: "Evidence detail" })).toHaveTextContent("runs/run-1/screenshots/001-visit.png");
-    expect(screen.getByText("1 malformed evidence item skipped.")).toBeInTheDocument();
+    expect(screen.getByText("Skipped malformed evidence: 1 artifact.")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Overview" }));
     await userEvent.click(await screen.findByRole("button", { name: /001-visit\.png/ }));

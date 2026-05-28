@@ -401,11 +401,16 @@ a separate projection table. Supported item kinds are `screenshot`, `download`,
 `browser_identity`, `action_trace`, and `evidence_manifest`. File artifact items
 carry only safe run-scoped relative paths such as `runs/<run_id>/screenshots/...`;
 artifact preview/reveal/export commands accept evidence ids and revalidate path
-containment in the Electron backend. Historical identity fields come from the
-run-time settings snapshot and sanitized `browser_identity` output, not the
-workflow's current identity after later rotation. Evidence-to-Identity
-navigation opens a read-only historical identity target with workflow, run, and
-evidence context so rotated identity observations remain inspectable.
+containment in the Electron backend. The renderer treats evidence pages as
+bounded typed DTOs: list pages may report malformed artifact/report/trace/
+manifest counts, selected bundle export shows only exported/omitted counts, and
+typed details render safe fields only instead of raw outputs, browser storage,
+tokens, proxy credentials, or original absolute paths. Historical identity
+fields come from the run-time settings snapshot and sanitized
+`browser_identity` output, not the workflow's current identity after later
+rotation. Evidence-to-Identity navigation opens a read-only historical identity
+target with workflow, run, and evidence context so rotated identity observations
+remain inspectable.
 
 ## Identity Lab Shape
 
