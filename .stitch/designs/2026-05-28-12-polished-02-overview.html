@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mission Control - Operations Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#111f21",
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px",
+                        control: "8px",
+                        card: "12px",
+                        panel: "16px",
+                        pill: "9999px"
+                    },
+                    spacing: {
+                        base: "8px",
+                        compact: "12px",
+                        panel: "16px",
+                        page: "24px",
+                        section: "32px"
+                    },
+                    fontFamily: {
+                        headline: ["Public Sans", "sans-serif"],
+                        display: ["Public Sans", "sans-serif"],
+                        body: ["Public Sans", "sans-serif"],
+                        label: ["Geist Mono", "monospace"],
+                        technical: ["Geist Mono", "monospace"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; background-color: #0B1016; color: #E7EEF5; }
+        .technical-text { font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+        .metric-text { font-family: 'Public Sans', sans-serif; font-size: 34px; font-weight: 600; line-height: 40px; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0B1016; }
+        ::-webkit-scrollbar-thumb { background: #233240; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #314758; }
+
+        /* Skeleton Animation */
+        @keyframes skeleton-shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #172431 25%, #233240 50%, #172431 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 2s infinite linear;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary antialiased h-screen overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="w-[232px] h-full fixed left-0 top-0 border-r border-border bg-panel flex flex-col py-6 z-20">
+<div class="px-6 mb-8">
+<h1 class="text-[19px] font-semibold text-text-primary tracking-tight font-headline">Mission Control</h1>
+<p class="text-text-secondary text-sm">Automation Lab</p>
+</div>
+<div class="flex-1 overflow-y-auto px-4 space-y-1">
+<!-- Active Tab: Overview -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-primary bg-primary-wash border-l-2 border-primary active:scale-[0.98] transition-transform font-body text-[14px] leading-[20px]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Inactive Tabs -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-200 active:scale-[0.98] font-body text-[14px] leading-[20px] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span>Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-200 active:scale-[0.98] font-body text-[14px] leading-[20px] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span>Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-200 active:scale-[0.98] font-body text-[14px] leading-[20px] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span>Evidence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-200 active:scale-[0.98] font-body text-[14px] leading-[20px] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span>Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-200 active:scale-[0.98] font-body text-[14px] leading-[20px] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+<span>Identities</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-200 active:scale-[0.98] font-body text-[14px] leading-[20px] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+</div>
+<div class="px-4 mt-auto pt-4 border-t border-border">
+<button class="w-full bg-primary text-background font-medium py-2 rounded-control hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Workflow
+            </button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="ml-[232px] flex-1 flex flex-col h-full bg-background relative">
+<!-- TopNavBar -->
+<header class="h-16 fixed top-0 right-0 left-[232px] bg-background border-b border-border flex justify-between items-center px-6 z-10">
+<div class="flex flex-col justify-center h-full">
+<span class="text-text-muted text-[11px] font-semibold uppercase tracking-wider mb-0.5">Operations Dashboard</span>
+<div class="flex items-center gap-3">
+<h2 class="font-headline text-[19px] font-medium text-text-primary leading-none">Overview</h2>
+<span class="text-text-secondary text-xs border-l border-border pl-3 flex items-center gap-1.5 leading-none">
+<span class="material-symbols-outlined text-[14px]">public</span> UTC+0 | Last Refreshed: 10:42:15
+                </span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-text-secondary hover:text-text-primary transition-colors p-1.5 rounded-control hover:bg-surface border border-transparent hover:border-border">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+</button>
+<div class="flex gap-2">
+<button class="bg-surface border border-border text-text-primary font-medium px-4 py-1.5 rounded-control hover:bg-elevated-surface transition-colors text-sm">
+                    Open Workflows
+                </button>
+<button class="bg-primary text-background font-medium px-4 py-1.5 rounded-control hover:bg-opacity-90 transition-colors text-sm">
+                    Launch Run
+                </button>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Canvas -->
+<main class="flex-1 mt-16 p-6 overflow-y-auto">
+<div class="max-w-[1600px] mx-auto space-y-6">
+<!-- KPI Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-compact h-[116px]">
+<!-- KPI Card 1 -->
+<div class="bg-surface border border-border rounded-card p-4 flex flex-col justify-between h-full">
+<div class="flex items-center justify-between text-text-secondary">
+<span class="text-sm font-medium">Active Runs</span>
+<span class="material-symbols-outlined text-primary text-[20px]">play_circle</span>
+</div>
+<div class="flex items-baseline gap-2 mt-auto">
+<span class="metric-text text-text-primary">12</span>
+<span class="text-xs text-primary bg-primary-wash px-2 py-0.5 rounded-pill">+2 vs 1h ago</span>
+</div>
+</div>
+<!-- KPI Card 2 -->
+<div class="bg-surface border border-border rounded-card p-4 flex flex-col justify-between h-full">
+<div class="flex items-center justify-between text-text-secondary">
+<span class="text-sm font-medium">Succeeded Today</span>
+<span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+</div>
+<div class="flex items-baseline gap-2 mt-auto">
+<span class="metric-text text-text-primary">148</span>
+</div>
+</div>
+<!-- KPI Card 3 -->
+<div class="bg-surface border border-warning rounded-card p-4 flex flex-col justify-between relative overflow-hidden h-full">
+<div class="absolute inset-0 bg-warning opacity-5 pointer-events-none"></div>
+<div class="flex items-center justify-between text-text-secondary relative z-10">
+<span class="text-sm font-medium text-warning">Attention Needed</span>
+<span class="material-symbols-outlined text-warning text-[20px]">warning</span>
+</div>
+<div class="flex items-baseline gap-2 mt-auto relative z-10">
+<span class="metric-text text-text-primary">3</span>
+<span class="text-xs text-text-secondary">Requires operator input</span>
+</div>
+</div>
+<!-- KPI Card 4 (Skeleton Loading State) -->
+<div class="bg-surface border border-border rounded-card p-4 flex flex-col justify-between h-full">
+<div class="flex items-center justify-between text-text-secondary">
+<div class="skeleton h-4 w-24"></div>
+<div class="skeleton h-5 w-5 rounded-full"></div>
+</div>
+<div class="flex items-baseline gap-2 mt-auto">
+<div class="skeleton h-10 w-12"></div>
+<div class="skeleton h-4 w-20 rounded-pill"></div>
+</div>
+</div>
+</div>
+<!-- Main Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column: Live Operations -->
+<div class="lg:col-span-2 bg-surface border border-border rounded-panel flex flex-col h-[400px]">
+<div class="p-4 border-b border-border flex justify-between items-center bg-panel rounded-t-panel">
+<h3 class="text-[16px] font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">monitoring</span>
+                                Live Operations
+                            </h3>
+<button class="text-text-secondary hover:text-text-primary text-sm font-medium">View All</button>
+</div>
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface z-10 border-b border-border">
+<tr>
+<th class="py-3 px-4 text-xs font-medium text-text-secondary uppercase tracking-wider">Workflow</th>
+<th class="py-3 px-4 text-xs font-medium text-text-secondary uppercase tracking-wider">Identity</th>
+<th class="py-3 px-4 text-xs font-medium text-text-secondary uppercase tracking-wider hidden md:table-cell">Step</th>
+<th class="py-3 px-4 text-xs font-medium text-text-secondary uppercase tracking-wider hidden md:table-cell">Duration</th>
+<th class="py-3 px-4 text-xs font-medium text-text-secondary uppercase tracking-wider text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<tr class="hover:bg-elevated-surface transition-colors cursor-pointer border-l-2 border-primary">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[16px]">account_tree</span>
+<span class="font-medium text-sm text-text-primary">Data Ingestion Pipeline</span>
+</div>
+<div class="technical-text text-text-muted mt-1 text-[10px]">RUN-7A9B2</div>
+</td>
+<td class="py-3 px-4">
+<span class="bg-elevated-surface border border-border px-2 py-1 rounded text-xs text-text-secondary font-mono">svc-loader-01</span>
+</td>
+<td class="py-3 px-4 hidden md:table-cell text-sm text-text-secondary">Validation</td>
+<td class="py-3 px-4 hidden md:table-cell text-sm text-text-secondary font-mono">04:12s</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-primary-wash border border-primary text-primary text-xs font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                Running
+                                            </span>
+</td>
+</tr>
+<tr class="hover:bg-elevated-surface transition-colors cursor-pointer border-l-2 border-primary">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[16px]">account_tree</span>
+<span class="font-medium text-sm text-text-primary">Daily Account Reconciliation</span>
+</div>
+<div class="technical-text text-text-muted mt-1 text-[10px]">RUN-8C2F5</div>
+</td>
+<td class="py-3 px-4">
+<span class="bg-elevated-surface border border-border px-2 py-1 rounded text-xs text-text-secondary font-mono">user-admin-42</span>
+</td>
+<td class="py-3 px-4 hidden md:table-cell text-sm text-text-secondary">Ledger Write</td>
+<td class="py-3 px-4 hidden md:table-cell text-sm text-text-secondary font-mono">01:45s</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-primary-wash border border-primary text-primary text-xs font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                Running
+                                            </span>
+</td>
+</tr>
+<tr class="hover:bg-elevated-surface transition-colors cursor-pointer border-l-2 border-warning">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[16px]">account_tree</span>
+<span class="font-medium text-sm text-text-primary">Security Audit Scan</span>
+</div>
+<div class="technical-text text-text-muted mt-1 text-[10px]">RUN-1E4D9</div>
+</td>
+<td class="py-3 px-4">
+<span class="bg-elevated-surface border border-border px-2 py-1 rounded text-xs text-text-secondary font-mono">sec-bot</span>
+</td>
+<td class="py-3 px-4 hidden md:table-cell text-sm text-text-secondary">Network Mapping</td>
+<td class="py-3 px-4 hidden md:table-cell text-sm text-text-secondary font-mono">12:30s</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-[rgba(244,183,64,0.12)] border border-warning text-warning text-xs font-medium">
+<span class="material-symbols-outlined text-[12px]">pause</span>
+                                                Paused
+                                            </span>
+</td>
+</tr>
+<!-- Skeleton Row -->
+<tr class="border-l-2 border-transparent">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<div class="skeleton h-4 w-4 rounded-full"></div>
+<div class="skeleton h-4 w-32"></div>
+</div>
+<div class="skeleton h-3 w-16 mt-2"></div>
+</td>
+<td class="py-3 px-4">
+<div class="skeleton h-6 w-24 rounded"></div>
+</td>
+<td class="py-3 px-4 hidden md:table-cell">
+<div class="skeleton h-4 w-20"></div>
+</td>
+<td class="py-3 px-4 hidden md:table-cell">
+<div class="skeleton h-4 w-12"></div>
+</td>
+<td class="py-3 px-4 text-right">
+<div class="skeleton h-6 w-20 rounded-pill ml-auto"></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Column: Attention Queue -->
+<div class="bg-surface border border-border rounded-panel flex flex-col h-[400px]">
+<div class="p-4 border-b border-border flex justify-between items-center bg-panel rounded-t-panel">
+<h3 class="text-[16px] font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">rule</span>
+                                Attention Queue
+                            </h3>
+<span class="bg-warning text-background text-xs font-bold px-2 py-0.5 rounded-pill">3</span>
+</div>
+<div class="flex-1 overflow-auto p-3 space-y-3">
+<!-- Queue Item 1 -->
+<div class="bg-elevated-surface border-l-4 border-y border-r border-warning border-y-border border-r-border rounded-card p-3 flex flex-col hover:bg-[rgba(244,183,64,0.02)] transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[16px]">fingerprint</span>
+<h4 class="text-sm font-medium text-text-primary">Identity Challenge</h4>
+</div>
+<span class="bg-[rgba(244,183,64,0.12)] text-warning text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Action Required</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">MFA required for workflow <span class="font-mono text-text-primary">Data Ingestion</span></p>
+<div class="flex gap-2">
+<button class="text-xs bg-surface border border-border px-3 py-1.5 rounded hover:border-warning text-text-primary transition-colors font-medium">Resolve Challenge</button>
+</div>
+</div>
+<!-- Queue Item 2 -->
+<div class="bg-elevated-surface border-l-4 border-y border-r border-danger border-y-border border-r-border rounded-card p-3 flex flex-col hover:bg-[rgba(240,100,103,0.02)] transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-danger text-[16px]">error</span>
+<h4 class="text-sm font-medium text-text-primary">Workflow Failure</h4>
+</div>
+<span class="bg-[rgba(240,100,103,0.12)] text-danger text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Failed</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">Data Sync stopped unexpectedly at step 4 in <span class="font-mono text-text-primary">Nightly Backup</span></p>
+<div class="flex gap-2">
+<button class="text-xs bg-surface border border-border px-3 py-1.5 rounded hover:border-danger text-text-primary transition-colors font-medium">View Error Log</button>
+</div>
+</div>
+<!-- Queue Item 3 -->
+<div class="bg-elevated-surface border-l-4 border-y border-r border-warning border-y-border border-r-border rounded-card p-3 flex flex-col hover:bg-[rgba(244,183,64,0.02)] transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[16px]">calendar_clock</span>
+<h4 class="text-sm font-medium text-text-primary">Schedule Conflict</h4>
+</div>
+<span class="bg-[rgba(244,183,64,0.12)] text-warning text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Warning</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">Overlap detected between <span class="font-mono text-text-primary">Nightly Backup</span> and DB Maintenance.</p>
+<div class="flex gap-2">
+<button class="text-xs bg-surface border border-border px-3 py-1.5 rounded hover:border-warning text-text-primary transition-colors font-medium">Review Schedule</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Supporting Regions Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Execution Activity Chart Placeholder -->
+<div class="bg-surface border border-border rounded-panel p-4 flex flex-col h-64 lg:col-span-1">
+<h3 class="text-sm font-medium text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-text-secondary">stacked_line_chart</span>
+                            Execution Activity (24h)
+                        </h3>
+<div class="flex-1 relative w-full border-b border-l border-border flex items-end pt-4 pr-2">
+<!-- Abstract bar chart representation using pure CSS/HTML -->
+<div class="w-full flex justify-between items-end h-full px-2 gap-1">
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[20%]"></div>
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[35%]"></div>
+<div class="w-full bg-danger opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[15%]"></div>
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[60%]"></div>
+<div class="w-full bg-warning opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[45%]"></div>
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[80%]"></div>
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[30%]"></div>
+<div class="w-full bg-danger opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[25%]"></div>
+<div class="w-full bg-primary hover:bg-opacity-80 transition-colors rounded-t-sm h-[90%] shadow-[0_0_8px_rgba(50,211,230,0.4)] relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-elevated-surface text-xs px-2 py-1 rounded border border-border whitespace-nowrap hidden group-hover:block z-10">Now</div>
+</div>
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[50%]"></div>
+<div class="w-full bg-warning opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[40%]"></div>
+<div class="w-full bg-success opacity-70 hover:opacity-100 transition-opacity rounded-t-sm h-[65%]"></div>
+</div>
+</div>
+<div class="flex justify-between text-[10px] text-text-muted mt-2 px-2">
+<span>24h ago</span>
+<span>Now</span>
+</div>
+</div>
+<!-- Recent Evidence -->
+<div class="bg-surface border border-border rounded-panel p-4 flex flex-col h-64 lg:col-span-1">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-sm font-medium text-text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-text-secondary">description</span>
+                                Recent Evidence
+                            </h3>
+<button class="text-xs text-text-secondary hover:text-text-primary">View Vault</button>
+</div>
+<div class="grid grid-cols-1 gap-2 flex-1 overflow-y-auto pr-2">
+<!-- Artifact 1 -->
+<div class="bg-elevated-surface border border-border rounded-card p-2.5 flex items-center justify-between hover:border-border-emphasis transition-colors cursor-pointer group">
+<div class="flex items-center gap-3 min-w-0">
+<div class="bg-surface p-2 rounded-control text-primary group-hover:bg-primary-wash transition-colors">
+<span class="text-xs font-bold">PDF</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-text-primary truncate">Invoice_Export_Q3.pdf</p>
+<div class="flex gap-2 items-center mt-0.5">
+<span class="technical-text text-text-muted text-[9px]">RUN-7A9B2</span>
+<span class="text-[10px] text-text-secondary">2m ago</span>
+</div>
+</div>
+</div>
+<button class="text-xs text-primary bg-primary-wash px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View</button>
+</div>
+<!-- Artifact 2 -->
+<div class="bg-elevated-surface border border-border rounded-card p-2.5 flex items-center justify-between hover:border-border-emphasis transition-colors cursor-pointer group">
+<div class="flex items-center gap-3 min-w-0">
+<div class="bg-surface p-2 rounded-control text-text-secondary group-hover:bg-surface transition-colors">
+<span class="text-xs font-bold">LOG</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-text-primary truncate">config_dump_prod.log</p>
+<div class="flex gap-2 items-center mt-0.5">
+<span class="technical-text text-text-muted text-[9px]">RUN-1E4D9</span>
+<span class="text-[10px] text-text-secondary">15m ago</span>
+</div>
+</div>
+</div>
+<button class="text-xs text-primary bg-primary-wash px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View</button>
+</div>
+<!-- Artifact 3 -->
+<div class="bg-elevated-surface border border-border rounded-card p-2.5 flex items-center justify-between hover:border-border-emphasis transition-colors cursor-pointer group">
+<div class="flex items-center gap-3 min-w-0">
+<div class="bg-surface p-2 rounded-control text-success group-hover:bg-[rgba(57,217,138,0.12)] transition-colors">
+<span class="text-xs font-bold">CSV</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-text-primary truncate">user_data_export.csv</p>
+<div class="flex gap-2 items-center mt-0.5">
+<span class="technical-text text-text-muted text-[9px]">RUN-9F8A1</span>
+<span class="text-[10px] text-text-secondary">1h ago</span>
+</div>
+</div>
+</div>
+<button class="text-xs text-primary bg-primary-wash px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">View</button>
+</div>
+</div>
+</div>
+<!-- Upcoming Schedules -->
+<div class="bg-surface border border-border rounded-panel p-4 flex flex-col h-64 lg:col-span-1">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-sm font-medium text-text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-text-secondary">update</span>
+                                Upcoming Schedules
+                            </h3>
+</div>
+<div class="space-y-4 flex-1 overflow-y-auto pr-2 relative before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-border">
+<!-- Schedule 1 -->
+<div class="relative pl-8">
+<div class="absolute left-2 top-1.5 w-2 h-2 rounded-full bg-primary ring-4 ring-surface z-10"></div>
+<div class="flex items-start justify-between">
+<div>
+<p class="text-sm font-medium text-text-primary">Nightly Backup</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+<p class="text-xs text-text-secondary">Last run successful</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-sm font-medium text-primary">In 45m</span>
+</div>
+</div>
+</div>
+<!-- Schedule 2 -->
+<div class="relative pl-8">
+<div class="absolute left-2 top-1.5 w-2 h-2 rounded-full bg-text-secondary ring-4 ring-surface z-10"></div>
+<div class="flex items-start justify-between">
+<div>
+<p class="text-sm font-medium text-text-primary">Log Rotation</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+<p class="text-xs text-text-secondary">Last run warning</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-sm text-text-secondary">In 2h 15m</span>
+</div>
+</div>
+</div>
+<!-- Schedule 3 -->
+<div class="relative pl-8">
+<div class="absolute left-2 top-1.5 w-2 h-2 rounded-full bg-text-secondary ring-4 ring-surface z-10"></div>
+<div class="flex items-start justify-between">
+<div>
+<p class="text-sm font-medium text-text-primary">Weekly Report Gen</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+<p class="text-xs text-text-secondary">Last run successful</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-sm text-text-secondary">In 5h 30m</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

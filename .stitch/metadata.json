@@ -122,7 +122,7 @@
       "screenshotPath": ".stitch/designs/06-schedules.png",
       "screenTitle": "Schedules Workspace - Mission Control Dark Theme",
       "screenStatus": "COMPLETE",
-      "aiText": "I've converted the Schedules Workspace to the Mission Control dark theme. \n\nThe interface now uses the specified obsidian and slate palette:\n- **Core Surfaces**: Deep obsidian (`#0B1016`) for the main workspace with panel-level depth (`#0E151D`) for the sidebar.\n- **Data Layers**: Cards and the main schedule table are now anchored in slate (`#121C26`), with elevated details in the event history panel (`#172431`).\n- **Functional Accents**: Updated all status indicators—teal for active controls, emerald for success, amber for warnings/paused states, and coral for failures—ensuring they pop against the dark canvas while maintaining legibility.\n\nThe layout, navigation, and desktop-first density remain exactly as they were, now fully integrated into the dark Mission Control aesthetic.",
+      "aiText": "I've converted the Schedules Workspace to the Mission Control dark theme. \n\nThe interface now uses the specified obsidian and slate palette:\n- **Core Surfaces**: Deep obsidian (`#0B1016`) for the main workspace with panel-level depth (`#0E151D`) for the sidebar.\n- **Data Layers**: Cards and the main schedule table are now anchored in slate (`#121C26`), with elevated details in the event history panel (`#172431`).\n- **Functional Accents**: Updated all status indicators\u2014teal for active controls, emerald for success, amber for warnings/paused states, and coral for failures\u2014ensuring they pop against the dark canvas while maintaining legibility.\n\nThe layout, navigation, and desktop-first density remain exactly as they were, now fully integrated into the dark Mission Control aesthetic.",
       "suggestions": [
         "Apply this dark theme to the Identity Lab screen",
         "Refine the timeline contrast for better visibility",
@@ -208,6 +208,455 @@
         "Expand the Policy panel with more security rules",
         "Change the color theme to a lighter 'Lab' aesthetic"
       ]
+    },
+    "2026-05-28-01-app-shell-command-bar": {
+      "title": "App Shell And Command Bar",
+      "promptPath": ".stitch/prompts/2026-05-28-01-app-shell-command-bar.md",
+      "sourceScreen": "projects/17656305095080667375/screens/70c1d143b9ea47ea8defdcd3a9d0c5a9",
+      "screenId": "70c1d143b9ea47ea8defdcd3a9d0c5a9",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-01-app-shell-command-bar.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-01-app-shell-command-bar.png",
+      "screenTitle": "Mission Control - Operations Overview Shell",
+      "screenStatus": "COMPLETE",
+      "aiText": "I've redesigned the Mission Control Electron app shell into a high-density, operational workspace. \n\nKey architectural components implemented:\n- **Persistent Sidebar Navigation**: Enforced the invariant product order (Overview, Workflows, Runs, Evidence, Schedules, Identities, Settings) with distinct active states for clear spatial orientation.\n- **Global Command Bar**: Integrated a sticky top header containing the Lab status, global search, and real-time alert notifications. \n- **Dynamic Search States**: Created a command-menu popover that handles categorized results (Workflows, Runs, Identities) and a clear empty state for failed queries.\n- **1024x768 Adaptation**: Validated the compact mode with a collapsed icon rail and responsive metadata compression, ensuring the app remains fully functional on smaller desktop displays.\n\nThe entire shell uses the Mission Control dark design system (#0B1016 / #121C26) to provide a focused, low-glare environment for technical operators.\n\nWould you like to refine the search result density or explore the 'Settings' workspace specifically within this new shell?",
+      "suggestions": [
+        "Refine search result density",
+        "Show Settings workspace in new shell",
+        "Adjust Sidebar collapse animation"
+      ]
+    },
+    "2026-05-28-02-overview": {
+      "title": "Overview",
+      "promptPath": ".stitch/prompts/2026-05-28-02-overview.md",
+      "sourceScreen": "projects/17656305095080667375/screens/f96bc5999349461f8abc2bbe7b1a395a",
+      "screenId": "f96bc5999349461f8abc2bbe7b1a395a",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-02-overview.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-02-overview.png",
+      "screenTitle": "Operations Overview - Dashboard Redesign",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Operations Overview** as a high-density dashboard, optimized for monitoring browser automation runs.\n\n### Key Dashboard Features:\n- **Operational Command Center**: Added a refined header with a refresh action and quick access to the Workflow Library.\n- **KPI Metrics**: Implemented a stable row of key indicators (Active, Succeeded, Attention, Upcoming) with consistent dimensions to ensure no layout shift during data updates.\n- **Prioritized Attention Queue**: Designed a dedicated panel for items requiring immediate operator input, using color-coded severity markers and direct \"Resolve\" actions for faster incident response.\n- **Live Execution Feed**: A comprehensive table showing real-time workflow steps, identity session usage, and precise run durations.\n- **Telemetry & Traceability**: Integrated a 24-hour execution activity chart and a recent evidence vault to maintain a clear audit trail of all automated browser sessions.\n- **System States**: Applied a unified component language for loading skeletons and operational placeholders, ensuring a professional feel even when data is fetching.\n\nThe interface adheres strictly to the Mission Control obsidian palette, ensuring visual continuity with the rest of your automation suite.",
+      "suggestions": [
+        "Add a loading skeleton state to the Evidence panel",
+        "Show a 'No Results' empty state for the Attention Queue",
+        "Expand the Execution Activity chart with a detailed legend"
+      ]
+    },
+    "2026-05-28-03-workflow-library": {
+      "title": "Workflow Library",
+      "promptPath": ".stitch/prompts/2026-05-28-03-workflow-library.md",
+      "sourceScreen": "projects/17656305095080667375/screens/ae6fab45cdce4b80953a686004fd1316",
+      "screenId": "ae6fab45cdce4b80953a686004fd1316",
+      "width": "3024",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-03-workflow-library.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-03-workflow-library.png",
+      "screenTitle": "Workflow Library - Management Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Workflows** screen into a high-density management workspace, optimized for rapid operator intervention and system monitoring.\n\n### Key Workspace Features:\n- **High-Density Hybrid Library**: Replaced the card-based layout with a compact list-table hybrid. This allows for a much higher information density, surfacing workflow health, active run status, and identity context in a single scan.\n- **Granular Row Control**: Implemented a suite of contextual actions directly in the table row. Operators can now **Run**, **Stop**, **Edit**, **Duplicate**, **Export**, or **Delete** workflows without leaving the main view.\n- **Active Run Scoping**: For workflows currently in execution, the interface provides clear visual feedback. The 'Stop' action is highlighted for immediate access, while destructive or conflicting actions (like Delete or Run) are gracefully disabled to prevent operational errors.\n- **Integrated Preview Panel**: Added a sidebar for the selected workflow that surfaces deep-link shortcuts to the **Graph Builder**, recent health telemetry, and the current identity posture, providing a comprehensive snapshot without a full page transition.\n- **Visual Hierarchy**: Maintained strict adherence to the Mission Control obsidian palette, ensuring that critical status signals (Running, Degraded, Critical) stand out clearly against the professional dark background.\n\nThis layout is designed to handle large-scale workflow libraries while keeping the most critical operational controls at the operator's fingertips.",
+      "suggestions": [
+        "Add a filter bar for tags and owners",
+        "Design the 'Create Workflow' dialog",
+        "Show the empty state for new workspaces"
+      ]
+    },
+    "2026-05-28-04-graph-builder": {
+      "title": "Graph Builder",
+      "promptPath": ".stitch/prompts/2026-05-28-04-graph-builder.md",
+      "sourceScreen": "projects/17656305095080667375/screens/521b3f756e1b4a9e8e02b74736738dff",
+      "screenId": "521b3f756e1b4a9e8e02b74736738dff",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-04-graph-builder.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-04-graph-builder.png",
+      "screenTitle": "Graph Builder - Authoring Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Graph Builder** into a high-density authoring workspace, specifically engineered for complex automation logic and real-time operational feedback.\n\n### Key Workspace Enhancements:\n- **Command & Status Header**: Consolidated all authoring controls (Save, Validate, Settings) and execution triggers (Launch, Stop) into a single high-contrast toolbar. It features a persistent save-state indicator and a running status bar for immediate feedback.\n- **Integrated Issue Panel**: Added a dedicated, scannable panel below the header that surfaces validation and runtime errors. This allows operators to quickly identify, navigate to, and resolve blocking issues without losing graph context.\n- **Precision Canvas & Toolbar**: Refined the central graph area with a subtle grid and a floating toolbar for mode switching (Select, Pan, Zoom) and node creation. The layout ensures that the canvas remains the primary focus while keeping essential tools within reach.\n- **Contextual Inspector**: Implemented a robust right-side panel that dynamically updates based on selection. It provides deep configuration fields for nodes and links, alongside execution telemetry when a node is active or has failed.\n- **Semantic State Logic**: Optimized node visual states so that failure and validation markers are never obscured by selection highlights, maintaining critical diagnostic visibility at all times.\n\nThe interface adheres to the Mission Control obsidian palette, providing a professional, low-fatigue environment for long-duration authoring sessions.",
+      "suggestions": [
+        "Add a node palette for adding logic and variables",
+        "Show the 'Validation Failure' state with the issue panel expanded",
+        "Configure the 'Launch Run' confirmation dialog"
+      ]
+    },
+    "2026-05-28-05-workflow-settings-dialog": {
+      "title": "Workflow Settings Dialog",
+      "promptPath": ".stitch/prompts/2026-05-28-05-workflow-settings-dialog.md",
+      "sourceScreen": "projects/17656305095080667375/screens/f41220f1bcc4437a9aca28dac7632c80",
+      "screenId": "f41220f1bcc4437a9aca28dac7632c80",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-05-workflow-settings-dialog.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-05-workflow-settings-dialog.png",
+      "screenTitle": "Settings Workspace - Mission Control Redesign",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Workflow Settings** as a high-density operator workspace, moving away from a simple dialog to a structured, multi-section command center.\n\n### Key Redesign Features:\n- **Hierarchical Navigation**: Organized complex configuration into five logical domains (**General, Graph, Run Policy, Browser Launch, and Environment**). This reduces cognitive load by surfacing only relevant controls for the current task.\n- **Precision Browser Identity Controls**: The 'Browser Launch' section features granular groups for network routing, localization spoofing, and privacy settings. Critical actions, like **Reset Identity**, are visually isolated with destructive styling and clear operational warnings.\n- **Environment Variable Management**: Implemented a typed-row table for environment variables, allowing operators to manage system injections with precise key-value controls.\n- **Operational Safety Framework**: Integrated a persistent \"unsaved changes\" system that tracks edits across sections. The sticky header and footer ensure that the **Save Changes** action is always accessible, while preventing accidental data loss through dirty-state indicators.\n- **Integrated Knowledge Base**: Added a contextual help drawer with a dual-language toggle (**English / Vietnamese**), providing immediate guidance on complex execution policies without forcing the operator to leave the workspace.\n\nThe interface adheres to the high-density, low-fatigue Mission Control obsidian palette, ensuring a professional and consistent experience across the entire automation suite.",
+      "suggestions": [
+        "Show the Environment variables table edit state",
+        "Add a validation error to the Run Policy section",
+        "Expand the help documentation for GeoIP spoofing"
+      ]
+    },
+    "2026-05-28-06-recording-review-help-popups": {
+      "title": "Recording Review And Help Popups",
+      "promptPath": ".stitch/prompts/2026-05-28-06-recording-review-help-popups.md",
+      "sourceScreen": "projects/17656305095080667375/screens/aeffa041c15841d5841a683cd2cc54f3",
+      "screenId": "aeffa041c15841d5841a683cd2cc54f3",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-06-recording-review-help-popups.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-06-recording-review-help-popups.png",
+      "screenTitle": "Add Step Palette",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have designed a unified popup and modal system for the Mission Control workspace, standardizing your graph-adjacent interactions into a coherent, high-density visual language.\n\n### System Highlights:\n- **Shared Modal Anatomy**: Established a consistent structure for all dialogs, featuring a header with descriptive eyebrows, a scrollable high-density body, and a sticky footer for primary and secondary actions.\n- **Unified Recording Review**: Transformed the recording review into a professional operator tool. It surfaces critical session summaries and a scannable step list with integrated checkboxes for selective inclusion, masking sensitive secrets with semantic warning states.\n- **Streamlined 'Add Step' Palette**: Designed a categorized, searchable command palette. The split-pane layout allows for rapid navigation through Actions, Logic, and Variables while providing an instant preview of operator intent for the selected item.\n- **Structured Help System**: Redesigned contextual help as a series of disclosure groups. Operators can now easily scan required fields, advanced configurations, and common pitfalls, with technical examples housed in contained monospace blocks for maximum readability.\n- **Keyboard Shortcuts Interface**: Created a compact reference guide for power users, grouping commands by functional area (Navigation, Selection, Editing) to support faster authoring workflows.\n\nThese components utilize the deep obsidian surfaces and high-contrast slate typography of your core design system, ensuring they feel like native extensions of the Mission Control authoring experience.\n\nWould you like to refine the specific logic for the step filters in the Recording Review, or shall we move on to the confirmation and error dialog states?",
+      "suggestions": [
+        "Refine Recording Review filters",
+        "Design confirmation dialogs",
+        "Adjust 'Add Step' category icons"
+      ]
+    },
+    "2026-05-28-07-runs": {
+      "title": "Runs",
+      "promptPath": ".stitch/prompts/2026-05-28-07-runs.md",
+      "sourceScreen": "projects/17656305095080667375/screens/ae55b649a7a842f7bafc7f8d6f6fa187",
+      "screenId": "ae55b649a7a842f7bafc7f8d6f6fa187",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-07-runs.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-07-runs.png",
+      "screenTitle": "Run Center - Operations Workspace Redesign",
+      "screenStatus": "COMPLETE",
+      "aiText": "I've redesigned the **Run Center** into a high-density operations workspace, optimized for real-time monitoring and forensic traceability of your automation runs.\n\n### Key Workspace Features:\n- **Master-Detail Command Center**: Introduced a robust master-detail layout that allows you to scan the entire execution fleet while diving deep into a specific run's telemetry without losing context.\n- **Live Execution Trace**: The focused detail panel features a vertical timeline of every step in the workflow, showing real-time progress, captured artifacts, and detailed error summaries for faster debugging.\n- **Deep-Link Traceability**: Integrated direct actions to open related **Evidence**, **Workflows**, and **Identities**, ensuring that operators can move from a failed run to the root cause in a single click.\n- **Active Run Control**: Visualized active executions with clear \"Running\" states and scoped destructive actions, allowing you to stop specific runs safely without affecting the rest of the queue.\n- **Visual Consistency**: Adhered strictly to the Mission Control obsidian palette, using deep slate surfaces and high-contrast typography to ensure a professional, low-fatigue monitoring environment.\n\nWould you like to refine the detail view for specific error types or adjust the data density of the master list?",
+      "suggestions": [
+        "Show a failed run state in the detail panel",
+        "Adjust column density for compact desktop views",
+        "Add bulk actions to the master list"
+      ]
+    },
+    "2026-05-28-08-evidence-explorer": {
+      "title": "Evidence Explorer",
+      "promptPath": ".stitch/prompts/2026-05-28-08-evidence-explorer.md",
+      "sourceScreen": "projects/17656305095080667375/screens/dcb7861652984a70b0d020f3c3fc3959",
+      "screenId": "dcb7861652984a70b0d020f3c3fc3959",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-08-evidence-explorer.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-08-evidence-explorer.png",
+      "screenTitle": "Evidence Explorer - Investigation Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Evidence Explorer** into a high-density investigation workspace, optimized for forensic traceability and rapid artifact review.\n\n### Key Workspace Features:\n- **Master-Detail Investigation Flow**: Introduced a persistent detail panel that allows you to inspect metadata and screenshot previews without losing your place in the evidence list.\n- **Visual Artifact Grid**: Implemented data-dense artifact cards that provide immediate visual context for screenshots while maintaining scannability for logs and data exports.\n- **Deep Traceability**: Every piece of evidence is now linked to its origin, with direct actions to open the related **Workflow**, **Run**, or **Identity** session.\n- **Bulk Action Workflow**: Added a dedicated selection state and export controls, enabling operators to bundle multiple evidence files for external reporting or auditing.\n- **Operational Clarity**: Integrated a \"Last Refreshed\" heartbeat and standardized type filtering to help operators manage large volumes of automation output efficiently.\n\nThis redesign ensures that whether you're performing a routine audit or investigating a critical runtime failure, the forensic evidence you need is always one click away.",
+      "suggestions": [
+        "Switch to List view for comparison",
+        "Add a 'Compare Screenshots' mode",
+        "Refine the metadata details in the sidebar"
+      ]
+    },
+    "2026-05-28-09-identity-lab": {
+      "title": "Identity Lab",
+      "promptPath": ".stitch/prompts/2026-05-28-09-identity-lab.md",
+      "sourceScreen": "projects/17656305095080667375/screens/e493e155025b46589752f2ef5017b7e1",
+      "screenId": "e493e155025b46589752f2ef5017b7e1",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-09-identity-lab.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-09-identity-lab.png",
+      "screenTitle": "Identity Lab - Posture & Management Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Identity Lab** into a comprehensive browser identity and session management workspace.\n\n### Key Workspace Features:\n- **Master-Detail Posture Workspace**: Implemented a dense identity navigator on the left with a deep-dive detail panel on the right, allowing you to monitor session continuity and network posture without switching contexts.\n- **KPI Metrics**: Surfaced high-level telemetry for **Managed Identities**, **Retained Sessions**, and **Recent Failures** to provide an immediate pulse on fleet health.\n- **Forensic Traceability**: The detail panel now includes dedicated sections for **Configured Posture** (User Agent, Proxy, Viewport) and **Latest Observed** telemetry (IP, ASN, Fingerprint hashes), ensuring every session is fully auditable.\n- **Session Continuity Management**: Added granular controls to **Close Retained Sessions** or **Reset Identities**. Destructive actions are visually isolated to prevent accidental disruption of active browser runs.\n- **Rotation & Diagnostic History**: Integrated a monospace log of rotation events and sanitized diagnostics, providing a clear timeline of identity lifecycle events and fingerprint updates.\n\nThis interface maintains strict visual continuity with the Mission Control suite, providing a professional, forensic-grade environment for managing complex browser automation identities.",
+      "suggestions": [
+        "Add the Reset Identity confirmation dialog",
+        "Show the historical read-only identity state",
+        "Adjust the density of the network posture section"
+      ]
+    },
+    "2026-05-28-10-schedules": {
+      "title": "Schedules",
+      "promptPath": ".stitch/prompts/2026-05-28-10-schedules.md",
+      "sourceScreen": "projects/17656305095080667375/screens/9ff9bcce314f4339afc4d07f4a5c052b",
+      "screenId": "9ff9bcce314f4339afc4d07f4a5c052b",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-10-schedules.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-10-schedules.png",
+      "screenTitle": "Schedules - Automation Management Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Schedules** workspace into a high-density automation management center, optimized for cross-workflow visibility and rapid operational control.\n\n### Key Workspace Enhancements:\n- **High-Density Schedule Fleet**: Replaced the sparse card layout with a robust, data-dense table. This allows operators to monitor status, cron schedules, next run countdowns, and last execution results for the entire fleet in a single view.\n- **Contextual Operational Control**: Implemented granular row actions that allow for immediate **Pause/Resume**, **Edit**, **History**, and **Delete** operations. The visual language clearly distinguishes between active and disabled schedules through specialized typography treatments.\n- **Traceable Execution History**: Surfaced the \"Last Result\" with descriptive reasons (e.g., \"Timeout on Node 4\") directly in the table, enabling faster triage without needing to dive into deep logs for every check.\n- **Scalable Interaction Design**: Designed the \"New Schedule\" and \"Edit\" workflows to handle complex scheduling logic\u2014ranging from intervals to weekly patterns\u2014while maintaining the strict obsidian aesthetic of the Mission Control suite.\n- **Responsive Management**: The workspace is engineered to preserve table usability and action clarity on compact desktop screens, ensuring the operator's tools remain accessible in multi-window environments.\n\nWould you like to explore the specific configurations for the \"New Schedule\" dialog or refine the detail density of the event history panel?",
+      "suggestions": [
+        "Open Create Schedule dialog",
+        "View event history for 'Daily ETL Sync'",
+        "Adjust table density for larger fleets"
+      ]
+    },
+    "2026-05-28-11-app-settings": {
+      "title": "App Settings",
+      "promptPath": ".stitch/prompts/2026-05-28-11-app-settings.md",
+      "sourceScreen": "projects/17656305095080667375/screens/5d9a4a208283443eb5cf54875122e832",
+      "screenId": "5d9a4a208283443eb5cf54875122e832",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-11-app-settings.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-11-app-settings.png",
+      "screenTitle": "Settings - Operations & Diagnostics Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have redesigned the **Settings** workspace into a high-density operations and diagnostics center, moving away from generic preferences toward a more tactical maintenance environment.\n\n### Key Redesign Features:\n- **Environment Readiness Dashboard**: Replaced flat list items with a robust diagnostics grid. This provides real-time health checks for the **CloakBrowser Engine**, **GeoIP** routing, and **Profile** states, using high-contrast semantic tones to flag issues like high latency or stale contexts.\n- **Local Maintenance Center**: Grouped critical runtime commands\u2014**CloakBrowser Binary installation** and **Profile Cleanup**\u2014into a guarded maintenance panel. This ensures operators understand these actions directly impact the local lab environment.\n- **Integrated Shortcut Reference**: Surfaced a comprehensive keyboard shortcut guide directly in the workspace, categorized by Navigation, Selection, and Editing to accelerate power-user workflows.\n- **Tactical Information Density**: Used the Mission Control obsidian palette and monospace typography for technical values, ensuring the screen feels like a professional engineering tool rather than a consumer settings page.\n- **Proactive Status Monitoring**: Added a \"Refresh Diagnostics\" heartbeat and a dedicated maintenance log area to surface local lab issues immediately upon entering the workspace.\n\nDoes this data-dense layout meet your operational requirements, or would you like to adjust the prominence of specific maintenance actions?",
+      "suggestions": [
+        "Add diagnostic details for GeoIP latency",
+        "Refine the shortcut guide categories",
+        "Expand the maintenance status log area"
+      ]
+    },
+    "2026-05-28-12-polished-01-workflow-library": {
+      "title": "Polished 01 Workflow Library",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/b64ef4b0b3c348ee843dcd1cbf9feda7",
+      "screenId": "b64ef4b0b3c348ee843dcd1cbf9feda7",
+      "width": "3024",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-01-workflow-library.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-01-workflow-library.png",
+      "screenTitle": "Workflow Library - Management Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-01"
+    },
+    "2026-05-28-12-polished-02-overview": {
+      "title": "Polished 02 Overview",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/d5e1a03309164d899021f6b7dc366ca7",
+      "screenId": "d5e1a03309164d899021f6b7dc366ca7",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-02-overview.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-02-overview.png",
+      "screenTitle": "Operations Overview - Dashboard Redesign",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-02"
+    },
+    "2026-05-28-12-polished-03-graph-builder": {
+      "title": "Polished 03 Graph Builder",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/7473c06d0daf40db8163e26c1fc3dfa2",
+      "screenId": "7473c06d0daf40db8163e26c1fc3dfa2",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-03-graph-builder.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-03-graph-builder.png",
+      "screenTitle": "Graph Builder - Authoring Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-03"
+    },
+    "2026-05-28-12-polished-04-runs": {
+      "title": "Polished 04 Runs",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/3e652124a8d14c4599ba7cfed6e016df",
+      "screenId": "3e652124a8d14c4599ba7cfed6e016df",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-04-runs.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-04-runs.png",
+      "screenTitle": "Run Center - Operations Workspace Redesign",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-04"
+    },
+    "2026-05-28-12-polished-05-identity-lab": {
+      "title": "Polished 05 Identity Lab",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/cff77ed7038d49559a22468b27bf2413",
+      "screenId": "cff77ed7038d49559a22468b27bf2413",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-05-identity-lab.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-05-identity-lab.png",
+      "screenTitle": "Identity Lab - Posture & Management Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-05"
+    },
+    "2026-05-28-12-polished-06-schedules": {
+      "title": "Polished 06 Schedules",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/dce9efa45d9d4580b506b96ef5f52814",
+      "screenId": "dce9efa45d9d4580b506b96ef5f52814",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-06-schedules.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-06-schedules.png",
+      "screenTitle": "Schedules - Automation Management Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-06"
+    },
+    "2026-05-28-12-polished-07-evidence-explorer": {
+      "title": "Polished 07 Evidence Explorer",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/766dbdff964347c3b9a42b02dd03fd0d",
+      "screenId": "766dbdff964347c3b9a42b02dd03fd0d",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-07-evidence-explorer.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-07-evidence-explorer.png",
+      "screenTitle": "Evidence Explorer - Investigation Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-07"
+    },
+    "2026-05-28-12-polished-08-app-settings": {
+      "title": "Polished 08 App Settings",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/65c7ccf6c4b047cebebee97026335f54",
+      "screenId": "65c7ccf6c4b047cebebee97026335f54",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-08-app-settings.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-08-app-settings.png",
+      "screenTitle": "Settings - Operations & Diagnostics Workspace",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-08"
+    },
+    "2026-05-28-12-polished-09-add-step-palette": {
+      "title": "Polished 09 Add Step Palette",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/7dd458f399164993b6967fc5b027feff",
+      "screenId": "7dd458f399164993b6967fc5b027feff",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-09-add-step-palette.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-09-add-step-palette.png",
+      "screenTitle": "Add Step Palette",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-09"
+    },
+    "2026-05-28-12-polished-10-recording-review-modal": {
+      "title": "Polished 10 Recording Review Modal",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/eeafaf82f16041d9b860c690551e7115",
+      "screenId": "eeafaf82f16041d9b860c690551e7115",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-10-recording-review-modal.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-10-recording-review-modal.png",
+      "screenTitle": "Recording Review Modal",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-10"
+    },
+    "2026-05-28-12-polished-11-app-shell-command-bar": {
+      "title": "Polished 11 App Shell Command Bar",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/1c0974b3eb45401e87bc1bd5c3cb7789",
+      "screenId": "1c0974b3eb45401e87bc1bd5c3cb7789",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-11-app-shell-command-bar.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-11-app-shell-command-bar.png",
+      "screenTitle": "Mission Control - Operations Overview Shell",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-11"
+    },
+    "2026-05-28-12-polished-12-workflow-settings-dialog": {
+      "title": "Polished 12 Workflow Settings Dialog",
+      "promptPath": ".stitch/prompts/2026-05-28-12-css-responsive-polish.md",
+      "sourceScreen": "projects/17656305095080667375/screens/b3cd62dbb4a0479c97085259007e6cef",
+      "screenId": "b3cd62dbb4a0479c97085259007e6cef",
+      "width": "2560",
+      "height": "2048",
+      "deviceType": "DESKTOP",
+      "htmlPath": ".stitch/designs/2026-05-28-12-polished-12-workflow-settings-dialog.html",
+      "screenshotPath": ".stitch/designs/2026-05-28-12-polished-12-workflow-settings-dialog.png",
+      "screenTitle": "Settings Workspace - Mission Control Redesign",
+      "screenStatus": "COMPLETE",
+      "aiText": "I have completed a comprehensive UI consistency and responsive polish pass across the entire Mission Control suite. This final iteration standardizes every workspace and global component to ensure a seamless, professional experience for browser automation operators.\n\n### Standardized System Updates:\n- **Unified Header Anatomy**: Every workspace now features a standardized header structure, including contextual breadcrumbs/eyebrows, consistent page titles, and global action placements.\n- **Component Geometry**: Standardized corner radii, padding, and elevation treatments for all cards, panels, and master-detail layouts. Legacy visual treatments have been replaced with the obsidian design system.\n- **Dialog & Overlay Standardization**: The **Add Step Palette**, **Recording Review**, and **Settings** modals now share a common anatomy\u2014viewport-clamped with internal scrolling, standardized headers, and a consistent button hierarchy.\n- **Operational Semantic Tones**: Status pills, error states, and semantic warnings (Running, Success, Failed, Warning) have been synchronized across all tables and feeds to provide immediate, unambiguous feedback.\n- **Responsive & Content Integrity**: \n    - Verified that long technical strings (IDs, URLs, error logs) truncate or wrap intentionally without breaking layouts.\n    - Ensured that high-density tables and sidebars behave predictably on compact desktop widths without horizontal overflow.\n    - Standardized monospace typography for technical data across all inspectors and diagnostics.\n\nThe suite now reads as a single, cohesive visual system, optimized for high-density monitoring and precise authoring.\n\nIs there a specific workspace or responsive edge case you'd like to stress-test further?",
+      "suggestions": [
+        "Review compact desktop navigation behavior",
+        "Inspect standardized dialog button hierarchy",
+        "Stress-test table responsiveness with long IDs"
+      ],
+      "polishes": "2026-05-28-12-css-responsive-polish-12"
     }
   },
   "project": {
@@ -219,5 +668,5 @@
     "deviceType": "DESKTOP",
     "updateTime": "2026-05-27T13:39:25.016930Z"
   },
-  "screenCount": 10
+  "screenCount": 33
 }

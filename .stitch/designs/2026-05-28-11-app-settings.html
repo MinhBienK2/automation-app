@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings Workspace - Mission Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        mc: {
+                            bg: "#0B1016",
+                            panel: "#0E151D",
+                            surface: "#121C26",
+                            elevated: "#172431",
+                            border: "#233240",
+                            border_emph: "#314758",
+                            text_pri: "#E7EEF5",
+                            text_sec: "#9AAEBD",
+                            text_mut: "#667D8D",
+                            cyan: "#32D3E6",
+                            cyan_wash: "rgba(50, 211, 230, 0.12)",
+                            success: "#39D98A",
+                            warning: "#F4B740",
+                            danger: "#F06467"
+                        }
+                    },
+                    fontFamily: {
+                        body: ["Inter", "sans-serif"],
+                        headline: ["Inter", "sans-serif"],
+                        technical: ["Geist Mono", "monospace"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0B1016; color: #E7EEF5; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0B1016; }
+        ::-webkit-scrollbar-thumb { background: #233240; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #314758; }
+
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked { right: 0; border-color: #32D3E6; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #32D3E6; }
+        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
+    </style>
+</head>
+<body class="font-body antialiased flex h-screen overflow-hidden text-[14px]">
+<!-- Shared Component: SideNavBar -->
+<nav class="w-[232px] h-full fixed left-0 top-0 bg-[#0E151D] border-r border-[#233240] flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<div class="text-[19px] font-semibold text-[#E7EEF5] tracking-tight">Mission Control</div>
+<div class="font-technical text-[11px] text-[#9AAEBD] mt-1 tracking-widest uppercase">Automation Lab v1.0</div>
+</div>
+<div class="flex-1 flex flex-col gap-1 px-3">
+<!-- Active Tab: General (Semantic match for Settings) -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-md transition-all text-[#32D3E6] border-l-2 border-[#32D3E6] bg-[#32D3E6]/10 font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-headline text-[14px] leading-[20px]">General</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-200 text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-headline text-[14px] leading-[20px]">Graph</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-200 text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">policy</span>
+<span class="font-headline text-[14px] leading-[20px]">Run Policy</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-200 text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">browser_updated</span>
+<span class="font-headline text-[14px] leading-[20px]">Browser Launch</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-200 text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] border-l-2 border-transparent" href="#">
+<span class="material-symbols-outlined text-[20px]">language</span>
+<span class="font-headline text-[14px] leading-[20px]">Environment</span>
+</a>
+</div>
+<div class="px-6 mt-auto flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-mc-surface border border-mc-border flex items-center justify-center text-mc-text_pri font-technical text-xs overflow-hidden">
+                OP
+            </div>
+<div class="flex-1 min-w-0">
+<div class="text-[13px] font-medium text-mc-text_pri truncate">Operator Profile</div>
+<div class="text-[11px] text-mc-text_mut truncate">Local Session</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col ml-[232px] h-full relative w-[calc(100%-232px)]">
+<!-- Shared Component: TopAppBar -->
+<header class="sticky top-0 w-full z-40 bg-[#0B1016]/95 backdrop-blur-md border-b border-[#314758] shadow-sm flex justify-between items-center h-[64px] px-6">
+<div class="flex items-center gap-6">
+<div class="text-[12px] font-bold text-[#32D3E6] tracking-[0.08em] uppercase">Settings Workspace</div>
+<nav class="hidden md:flex gap-4">
+<a class="text-[#9AAEBD] hover:text-[#E7EEF5] text-[13px] font-medium transition-colors" href="#">Dashboard</a>
+<a class="text-[#9AAEBD] hover:text-[#E7EEF5] text-[13px] font-medium transition-colors" href="#">Workflows</a>
+<a class="text-[#9AAEBD] hover:text-[#E7EEF5] text-[13px] font-medium transition-colors" href="#">Identity</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 flex items-center justify-center text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#172431] rounded-lg transition-all">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#172431] rounded-lg transition-all">
+<span class="material-symbols-outlined text-[18px]">notifications</span>
+</button>
+</div>
+<div class="h-4 w-px bg-mc-border"></div>
+<button class="text-[13px] font-medium text-mc-text_sec hover:text-mc-text_pri px-3 py-1.5 rounded transition-colors">Discard</button>
+<button class="bg-[#32D3E6] hover:bg-[#32D3E6]/90 text-[#0B1016] text-[13px] font-semibold px-4 py-1.5 rounded-md transition-colors shadow-sm">Save Changes</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 overflow-y-auto p-6 md:p-8 pb-24">
+<!-- Page Header -->
+<div class="mb-8">
+<div class="font-technical text-[11px] text-mc-text_mut tracking-widest uppercase mb-1">Application</div>
+<h1 class="font-headline text-[30px] font-semibold tracking-tight text-mc-text_pri">Settings</h1>
+</div>
+<!-- Two Column Dashboard Layout -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+<!-- Left Column (Primary Config) -->
+<div class="xl:col-span-8 flex flex-col gap-6">
+<!-- Graph Persistence Panel -->
+<section class="bg-mc-panel border border-mc-border rounded-[12px] p-5">
+<div class="flex items-start justify-between">
+<div>
+<h2 class="font-headline text-[16px] font-medium text-mc-text_pri mb-1">Graph Persistence</h2>
+<p class="text-mc-text_sec text-[13px] leading-relaxed max-w-2xl">
+                                    Configure autosave behavior for workflow graph authoring. When enabled, local changes are committed to the lab database every 30 seconds to prevent data loss during browser crashes.
+                                </p>
+</div>
+<div class="flex items-center mt-1">
+<label class="flex items-center cursor-pointer">
+<div class="relative">
+<input checked="" class="sr-only toggle-checkbox" type="checkbox"/>
+<div class="block bg-mc-surface border border-mc-border w-10 h-6 rounded-full transition-colors toggle-label"></div>
+<div class="dot absolute left-1 top-1 bg-mc-text_pri w-4 h-4 rounded-full transition-transform duration-200"></div>
+</div>
+<span class="ml-3 text-[13px] font-medium text-mc-text_pri">Autosave Active</span>
+</label>
+</div>
+</div>
+</section>
+<!-- Environment Readiness Diagnostics -->
+<section class="bg-mc-panel border border-mc-border rounded-[12px] flex flex-col overflow-hidden">
+<div class="px-5 py-4 border-b border-mc-border flex items-center justify-between bg-mc-bg/50">
+<h2 class="font-headline text-[16px] font-medium text-mc-text_pri flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-mc-text_sec">health_and_safety</span>
+                                Environment Readiness
+                            </h2>
+<button class="flex items-center gap-1.5 text-[12px] font-medium text-mc-text_sec hover:text-mc-cyan px-3 py-1.5 rounded-md border border-mc-border hover:border-mc-border_emph transition-colors">
+<span class="material-symbols-outlined text-[14px]">refresh</span>
+                                Refresh Diagnostics
+                            </button>
+</div>
+<div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Metric Card 1 -->
+<div class="bg-mc-surface border border-mc-border rounded-lg p-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="text-[13px] font-medium text-mc-text_sec">CloakBrowser Engine</span>
+<span class="material-symbols-outlined text-[16px] text-mc-cyan">check_circle</span>
+</div>
+<div>
+<div class="font-technical text-[14px] text-mc-text_pri">v2.4.1-STABLE</div>
+<div class="text-[12px] text-mc-cyan font-medium mt-0.5 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-mc-cyan animate-pulse"></span> Active Runtime
+                                    </div>
+</div>
+</div>
+<!-- Metric Card 2 -->
+<div class="bg-mc-surface border border-mc-warning/30 rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-mc-warning"></div>
+<div class="flex justify-between items-start pl-2">
+<span class="text-[13px] font-medium text-mc-text_sec">GeoIP Node</span>
+<span class="material-symbols-outlined text-[16px] text-mc-warning">warning</span>
+</div>
+<div class="pl-2">
+<div class="font-technical text-[14px] text-mc-text_pri">FRA-01 (Frankfurt)</div>
+<div class="text-[12px] text-mc-warning font-medium mt-0.5">Latency High (245ms)</div>
+</div>
+</div>
+<!-- Metric Card 3 -->
+<div class="bg-mc-surface border border-mc-border rounded-lg p-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="text-[13px] font-medium text-mc-text_sec">Headed Display</span>
+<span class="material-symbols-outlined text-[16px] text-mc-cyan">check_circle</span>
+</div>
+<div>
+<div class="font-technical text-[14px] text-mc-text_pri">Nvidia RTX Virtual</div>
+<div class="text-[12px] text-mc-text_mut font-medium mt-0.5">Hardware Acceleration Ready</div>
+</div>
+</div>
+<!-- Metric Card 4 -->
+<div class="bg-mc-surface border border-mc-border rounded-lg p-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="text-[13px] font-medium text-mc-text_sec">Fingerprint Fonts</span>
+<span class="material-symbols-outlined text-[16px] text-mc-cyan">check_circle</span>
+</div>
+<div>
+<div class="font-technical text-[14px] text-mc-text_pri">142 Sets Loaded</div>
+<div class="text-[12px] text-mc-text_mut font-medium mt-0.5">Integrity Check Passed</div>
+</div>
+</div>
+<!-- Metric Card 5 -->
+<div class="bg-mc-surface border border-mc-warning/30 rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-mc-warning"></div>
+<div class="flex justify-between items-start pl-2">
+<span class="text-[13px] font-medium text-mc-text_sec">Inactive Profiles</span>
+<span class="material-symbols-outlined text-[16px] text-mc-warning">info</span>
+</div>
+<div class="pl-2">
+<div class="font-technical text-[14px] text-mc-text_pri">12 Stale Contexts</div>
+<div class="text-[12px] text-mc-warning font-medium mt-0.5">Cleanup Recommended</div>
+</div>
+</div>
+<!-- Metric Card 6 -->
+<div class="bg-mc-surface border border-mc-success/30 rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-mc-success"></div>
+<div class="flex justify-between items-start pl-2">
+<span class="text-[13px] font-medium text-mc-text_sec">Smoke Check</span>
+<span class="material-symbols-outlined text-[16px] text-mc-success">verified</span>
+</div>
+<div class="pl-2">
+<div class="font-technical text-[14px] text-mc-text_pri">All Systems Nominal</div>
+<div class="text-[12px] text-mc-success font-medium mt-0.5">Passed, Just Now</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (Maintenance & Reference) -->
+<div class="xl:col-span-4 flex flex-col gap-6">
+<!-- Maintenance Panel -->
+<section class="bg-mc-panel border border-mc-border rounded-[12px] p-5">
+<h2 class="font-headline text-[16px] font-medium text-mc-text_pri mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-mc-text_sec">build</span>
+                            Lab Maintenance
+                        </h2>
+<p class="text-mc-text_mut text-[12px] leading-relaxed mb-5">
+                            These actions directly impact the local lab runtime. Ensure no critical workflows are currently executing before proceeding with binary updates or cache purges.
+                        </p>
+<div class="flex flex-col gap-3">
+<button class="w-full flex items-center justify-center gap-2 bg-mc-surface border border-mc-border hover:border-mc-border_emph text-mc-text_pri text-[13px] font-medium py-2 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                                Install CloakBrowser Binary
+                            </button>
+<button class="w-full flex items-center justify-center gap-2 bg-mc-danger/10 border border-mc-danger/20 hover:border-mc-danger/40 text-mc-danger text-[13px] font-medium py-2 rounded-md transition-colors">
+<span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+                                Cleanup Orphaned Profiles
+                            </button>
+</div>
+<div class="mt-5 bg-mc-bg border border-mc-border border-dashed rounded-md p-3 flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-mc-text_sec mt-0.5">terminal</span>
+<div class="font-technical text-[12px] text-mc-text_sec leading-relaxed">
+                                &gt; System check complete.<br/>
+                                &gt; <span class="text-mc-warning">12 orphaned profiles detected.</span><br/>
+                                &gt; Waiting for operator action...
+                            </div>
+</div>
+</section>
+<!-- Graph Shortcuts Panel -->
+<section class="bg-mc-panel border border-mc-border rounded-[12px] p-5">
+<h2 class="font-headline text-[16px] font-medium text-mc-text_pri mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-mc-text_sec">keyboard</span>
+                            Graph Shortcuts
+                        </h2>
+<div class="space-y-4">
+<!-- Group 1 -->
+<div>
+<div class="font-technical text-[11px] text-mc-text_mut uppercase tracking-widest mb-2 border-b border-mc-border pb-1">Navigation</div>
+<ul class="space-y-2">
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Dashboard</span>
+<div class="flex gap-1">
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">G</kbd>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">D</kbd>
+</div>
+</li>
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Executions</span>
+<div class="flex gap-1">
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">G</kbd>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">E</kbd>
+</div>
+</li>
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Settings</span>
+<div class="flex gap-1">
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">G</kbd>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">S</kbd>
+</div>
+</li>
+</ul>
+</div>
+<!-- Group 2 -->
+<div>
+<div class="font-technical text-[11px] text-mc-text_mut uppercase tracking-widest mb-2 border-b border-mc-border pb-1">Selection &amp; Editing</div>
+<ul class="space-y-2">
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Select All</span>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">A</kbd>
+</li>
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Deselect</span>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">ESC</kbd>
+</li>
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Undo</span>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">Z</kbd>
+</li>
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Duplicate Node</span>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">D</kbd>
+</li>
+</ul>
+</div>
+<!-- Group 3 -->
+<div>
+<div class="font-technical text-[11px] text-mc-text_mut uppercase tracking-widest mb-2 border-b border-mc-border pb-1">Actions</div>
+<ul class="space-y-2">
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-text_sec">Save Graph</span>
+<kbd class="bg-mc-surface border border-mc-border rounded px-1.5 py-0.5 font-technical text-[11px] text-mc-text_pri">S</kbd>
+</li>
+<li class="flex items-center justify-between">
+<span class="text-[13px] text-mc-cyan">Launch Run</span>
+<kbd class="bg-mc-cyan/10 border border-mc-cyan/30 text-mc-cyan rounded px-1.5 py-0.5 font-technical text-[11px]">R</kbd>
+</li>
+</ul>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Shared Component: Footer -->
+<footer class="fixed bottom-0 right-0 w-[calc(100%-232px)] z-50 bg-[#121C26] border-t border-[#F4B740] shadow-lg flex justify-between items-center px-8 py-4 transition-opacity duration-300">
+<div class="font-body text-[13px] text-[#9AAEBD] flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#F4B740]">warning</span>
+                © 2024 Mission Control Automation - Unsaved changes detected
+            </div>
+<div class="flex gap-6">
+<a class="font-body text-[13px] text-[#667D8D] hover:text-[#E7EEF5] transition-colors" href="#">System Status</a>
+<a class="font-body text-[13px] text-[#667D8D] hover:text-[#E7EEF5] transition-colors" href="#">API Docs</a>
+<a class="font-body text-[13px] text-[#667D8D] hover:text-[#E7EEF5] transition-colors" href="#">Privacy Policy</a>
+</div>
+</footer>
+</div>
+<script>
+        // Simple toggle interactivity for demonstration
+        document.querySelector('input[type="checkbox"]').addEventListener('change', function(e) {
+            const dot = this.parentElement.querySelector('.dot');
+            const label = this.parentElement.parentElement.querySelector('span');
+            if(this.checked) {
+                dot.style.transform = 'translateX(100%)';
+                dot.style.backgroundColor = '#0B1016';
+                label.textContent = 'Autosave Active';
+                label.classList.add('text-mc-cyan');
+            } else {
+                dot.style.transform = 'translateX(0)';
+                dot.style.backgroundColor = '#E7EEF5';
+                label.textContent = 'Autosave Disabled';
+                label.classList.remove('text-mc-cyan');
+            }
+        });
+    </script>
+</body></html>

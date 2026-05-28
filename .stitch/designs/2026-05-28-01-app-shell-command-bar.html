@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mission Control - Operations Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px",
+                        control: "8px",
+                        card: "12px",
+                        panel: "16px",
+                        pill: "9999px"
+                    },
+                    spacing: {
+                        base: "8px",
+                        compact: "12px",
+                        panel: "16px",
+                        page: "24px",
+                        section: "32px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Geist Mono", "monospace"],
+                        inter: ["Inter", "sans-serif"],
+                        "geist-mono": ["Geist Mono", "monospace"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .tech-label { font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+        .metric-value { font-family: 'Inter', sans-serif; font-size: 34px; font-weight: 600; line-height: 40px; }
+        .page-title { font-family: 'Inter', sans-serif; font-size: 30px; font-weight: 600; line-height: 38px; }
+        .section-title { font-family: 'Inter', sans-serif; font-size: 19px; font-weight: 500; line-height: 26px; }
+    </style>
+</head>
+<body class="bg-background text-text-primary h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-panel dark:bg-panel w-[232px] h-screen sticky left-0 top-0 border-r border-border dark:border-border flex flex-col h-full py-panel shrink-0 z-50">
+<!-- Brand -->
+<div class="px-panel mb-section">
+<div class="flex items-center gap-compact">
+<div class="w-8 h-8 rounded-control bg-primary-wash border border-border flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div>
+<h1 class="text-lg font-headline font-semibold text-primary dark:text-primary leading-tight">Mission Control</h1>
+<p class="text-xs text-text-secondary">Automation Lab</p>
+</div>
+</div>
+</div>
+<!-- Navigation -->
+<nav class="flex-1 px-base space-y-1 overflow-y-auto">
+<!-- Active Tab -->
+<a class="flex items-center gap-compact px-compact py-compact rounded-control bg-primary-wash text-primary border-l-2 border-primary Active: scale-95 duration-150 font-inter text-sm font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Inactive Tabs -->
+<a class="flex items-center gap-compact px-compact py-compact rounded-control text-secondary hover:text-primary hover:bg-surface transition-colors font-inter text-sm font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span>Workflows</span>
+</a>
+<a class="flex items-center gap-compact px-compact py-compact rounded-control text-secondary hover:text-primary hover:bg-surface transition-colors font-inter text-sm font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span>Runs</span>
+</a>
+<a class="flex items-center gap-compact px-compact py-compact rounded-control text-secondary hover:text-primary hover:bg-surface transition-colors font-inter text-sm font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span>Evidence</span>
+</a>
+<a class="flex items-center gap-compact px-compact py-compact rounded-control text-secondary hover:text-primary hover:bg-surface transition-colors font-inter text-sm font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span>Schedules</span>
+</a>
+<a class="flex items-center gap-compact px-compact py-compact rounded-control text-secondary hover:text-primary hover:bg-surface transition-colors font-inter text-sm font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+<span>Identities</span>
+</a>
+<a class="flex items-center gap-compact px-compact py-compact rounded-control text-secondary hover:text-primary hover:bg-surface transition-colors font-inter text-sm font-medium tracking-normal mt-section" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<!-- CTA & User Profile -->
+<div class="px-panel mt-auto pt-panel border-t border-border">
+<button class="w-full bg-primary text-background hover:bg-opacity-90 transition-colors rounded-control py-2 px-4 text-sm font-semibold flex items-center justify-center gap-2 mb-panel shadow-[0_0_10px_rgba(50,211,230,0.2)]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Workflow
+            </button>
+<div class="flex items-center gap-compact">
+<img alt="Operator Profile" class="w-8 h-8 rounded-full border border-border" data-alt="A small, circular avatar portrait of a professional system operator, brightly lit against a neutral background. The image should be suitable for a high-tech interface, maintaining a clean, realistic, and modern appearance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYmRi2vlOvpCJ_Es4JQXyWfhMvA-DQtC2Nqalj7S0Rmz6KVMnW5OjF7ddW1rHpa01CNOGSDShL1_j1htbecJhHeeIlmYKn5GSIi0jvlWXNGQWQ0lW3zIbQuVmKLeJ-bfS52o6Fvp1U-MmIlk49pxyTbA30_tBoeF-IRRb60saUXCLimkZfvGSnYzH5U8VEvdQqcCmu0_IOAJPfy2T2H9jWFAeAHx-L4cLUKWodxQuWLOpoUZGU1rDkb9Piq-7SIoDQOOebsW_pC4xK"/>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-medium text-text-primary truncate">Operator-01</p>
+<p class="text-xs text-text-muted truncate">System Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+<!-- TopNavBar -->
+<header class="bg-background/80 dark:bg-background/80 backdrop-blur-md sticky top-0 w-full h-14 border-b border-border dark:border-border flex justify-between items-center px-page z-40 shrink-0">
+<!-- Search -->
+<div class="flex-1 flex items-center">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[18px]">search</span>
+<input class="w-full bg-surface border border-border rounded-control py-1.5 pl-9 pr-4 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="Search operations..." type="text"/>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-compact">
+<div class="flex items-center gap-base border-r border-border pr-compact mr-compact">
+<button class="text-secondary hover:text-primary transition-colors p-1 rounded-control hover:bg-surface">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-secondary hover:text-primary transition-colors p-1 rounded-control hover:bg-surface">
+<span class="material-symbols-outlined text-warning">emergency</span>
+</button>
+<button class="text-secondary hover:text-primary transition-colors p-1 rounded-control hover:bg-surface">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<button class="bg-surface border border-border-emphasis hover:border-primary text-text-primary px-3 py-1.5 rounded-control text-sm font-medium transition-colors">
+                    Validate
+                </button>
+<button class="bg-primary text-background hover:bg-opacity-90 px-3 py-1.5 rounded-control text-sm font-semibold transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                    Execute
+                </button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-page">
+<div class="flex justify-between items-end mb-section">
+<div>
+<h2 class="page-title text-text-primary">Operations Overview</h2>
+<p class="text-text-secondary mt-1 text-sm">Real-time status of all automation environments.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+<span class="tech-label text-primary">SYSTEM ACTIVE</span>
+</div>
+</div>
+<!-- Bento Grid Dashboard -->
+<div class="grid grid-cols-12 gap-compact max-w-7xl mx-auto">
+<!-- Main KPI Card - Active Runs -->
+<div class="col-span-12 lg:col-span-4 bg-surface border border-border rounded-card p-panel flex flex-col justify-between relative overflow-hidden group hover:border-border-emphasis transition-colors">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-wash to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex justify-between items-start z-10">
+<div>
+<p class="tech-label text-text-secondary mb-2">ACTIVE RUNS</p>
+<div class="metric-value text-text-primary">24</div>
+</div>
+<div class="w-10 h-10 rounded-control bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<div class="mt-6 flex items-center gap-2 text-sm z-10">
+<span class="material-symbols-outlined text-success text-[16px]">trending_up</span>
+<span class="text-success font-medium">+12%</span>
+<span class="text-text-muted">vs last hour</span>
+</div>
+</div>
+<!-- KPI Card - Success Rate -->
+<div class="col-span-12 sm:col-span-6 lg:col-span-4 bg-surface border border-border rounded-card p-panel flex flex-col justify-between relative overflow-hidden group hover:border-border-emphasis transition-colors">
+<div class="flex justify-between items-start z-10">
+<div>
+<p class="tech-label text-text-secondary mb-2">SUCCESS RATE</p>
+<div class="metric-value text-text-primary">98.2%</div>
+</div>
+<div class="w-10 h-10 rounded-control bg-success/10 border border-success/20 flex items-center justify-center text-success">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<div class="mt-6 flex items-center gap-2 text-sm z-10">
+<div class="flex-1 h-1 bg-elevated-surface rounded-full overflow-hidden">
+<div class="h-full bg-success w-[98.2%]"></div>
+</div>
+</div>
+</div>
+<!-- KPI Card - Alerts -->
+<div class="col-span-12 sm:col-span-6 lg:col-span-4 bg-surface border border-border rounded-card p-panel flex flex-col justify-between relative overflow-hidden group hover:border-border-emphasis transition-colors">
+<div class="flex justify-between items-start z-10">
+<div>
+<p class="tech-label text-text-secondary mb-2">ACTIVE ALERTS</p>
+<div class="metric-value text-text-primary">3</div>
+</div>
+<div class="w-10 h-10 rounded-control bg-warning/10 border border-warning/20 flex items-center justify-center text-warning">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+</div>
+<div class="mt-6 flex items-center gap-2 text-sm z-10">
+<span class="px-2 py-0.5 rounded-pill bg-danger/10 text-danger text-xs font-medium border border-danger/20">1 Critical</span>
+<span class="px-2 py-0.5 rounded-pill bg-warning/10 text-warning text-xs font-medium border border-warning/20">2 Warnings</span>
+</div>
+</div>
+<!-- Live Execution Feed -->
+<div class="col-span-12 lg:col-span-8 bg-surface border border-border rounded-card overflow-hidden flex flex-col h-[400px]">
+<div class="px-panel py-compact border-b border-border flex justify-between items-center bg-elevated-surface">
+<h3 class="section-title text-text-primary text-[15px]">Live Execution Feed</h3>
+<button class="text-text-secondary hover:text-primary text-xs flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[14px]">filter_list</span> Filter
+                        </button>
+</div>
+<div class="flex-1 overflow-y-auto p-0">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface z-10">
+<tr class="border-b border-border text-xs text-text-muted">
+<th class="py-2 px-panel font-medium">RUN ID</th>
+<th class="py-2 px-panel font-medium">WORKFLOW</th>
+<th class="py-2 px-panel font-medium">STATUS</th>
+<th class="py-2 px-panel font-medium text-right">DURATION</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<!-- Row 1 - Running -->
+<tr class="border-b border-border hover:bg-elevated-surface transition-colors cursor-pointer group">
+<td class="py-3 px-panel tech-label text-primary">RN-8921</td>
+<td class="py-3 px-panel text-text-primary">Data Extraction Pipeline</td>
+<td class="py-3 px-panel">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-primary text-xs font-medium">Running</span>
+</div>
+</td>
+<td class="py-3 px-panel text-text-secondary text-right font-mono text-xs">02:14</td>
+</tr>
+<!-- Row 2 - Success -->
+<tr class="border-b border-border hover:bg-elevated-surface transition-colors cursor-pointer group">
+<td class="py-3 px-panel tech-label text-text-secondary">RN-8920</td>
+<td class="py-3 px-panel text-text-primary">Nightly Backup Verify</td>
+<td class="py-3 px-panel">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-success text-xs font-medium">Success</span>
+</div>
+</td>
+<td class="py-3 px-panel text-text-secondary text-right font-mono text-xs">45:12</td>
+</tr>
+<!-- Row 3 - Failed -->
+<tr class="border-b border-border hover:bg-elevated-surface transition-colors cursor-pointer group">
+<td class="py-3 px-panel tech-label text-text-secondary">RN-8919</td>
+<td class="py-3 px-panel text-text-primary">Auth Token Refresh</td>
+<td class="py-3 px-panel">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-danger"></span>
+<span class="text-danger text-xs font-medium">Failed</span>
+</div>
+</td>
+<td class="py-3 px-panel text-text-secondary text-right font-mono text-xs">00:45</td>
+</tr>
+<!-- Row 4 - Warning -->
+<tr class="hover:bg-elevated-surface transition-colors cursor-pointer group">
+<td class="py-3 px-panel tech-label text-text-secondary">RN-8918</td>
+<td class="py-3 px-panel text-text-primary">UI Regression Suite</td>
+<td class="py-3 px-panel">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+<span class="text-warning text-xs font-medium">Warning</span>
+</div>
+</td>
+<td class="py-3 px-panel text-text-secondary text-right font-mono text-xs">12:30</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- System Health & Quick Actions -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-compact">
+<!-- Environment Posture -->
+<div class="bg-surface border border-border rounded-card p-panel flex-1">
+<h3 class="section-title text-text-primary text-[15px] mb-4">Identity Posture</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">vpn_key</span>
+<span class="text-sm text-text-primary">Proxies Active</span>
+</div>
+<span class="tech-label text-success">14/14</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">cookie</span>
+<span class="text-sm text-text-primary">Session Pools</span>
+</div>
+<span class="tech-label text-text-primary">8 HEALTHY</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">fingerprint</span>
+<span class="text-sm text-text-primary">Fingerprints</span>
+</div>
+<span class="tech-label text-warning">ROTATING</span>
+</div>
+</div>
+</div>
+<!-- Mini Graph Preview (Placeholder for complex visualization) -->
+<div class="bg-surface border border-border rounded-card p-panel h-48 relative overflow-hidden flex flex-col">
+<h3 class="section-title text-text-primary text-[15px] mb-2 z-10">Network Load</h3>
+<div class="flex-1 w-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-elevated-surface via-surface to-surface rounded-control border border-border flex items-end justify-between px-2 pb-2 gap-1 opacity-80">
+<!-- Pseudo Bar Chart -->
+<div class="w-1/6 bg-border-emphasis rounded-t-sm h-[30%]"></div>
+<div class="w-1/6 bg-border-emphasis rounded-t-sm h-[50%]"></div>
+<div class="w-1/6 bg-primary/40 border-t border-primary rounded-t-sm h-[80%] relative">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+</div>
+<div class="w-1/6 bg-border-emphasis rounded-t-sm h-[40%]"></div>
+<div class="w-1/6 bg-border-emphasis rounded-t-sm h-[60%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

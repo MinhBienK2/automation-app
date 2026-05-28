@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Session Review</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          background: "#0B1016",
+          panel: "#0E151D",
+          surface: "#121C26",
+          "elevated-surface": "#172431",
+          border: "#233240",
+          "border-emphasis": "#314758",
+          "text-primary": "#E7EEF5",
+          "text-secondary": "#9AAEBD",
+          "text-muted": "#667D8D",
+          primary: "#32D3E6",
+          "primary-wash": "rgba(50, 211, 230, 0.12)",
+          success: "#39D98A",
+          warning: "#F4B740",
+          danger: "#F06467"
+        },
+        borderRadius: {
+          DEFAULT: "0.25rem",
+          lg: "0.5rem",
+          xl: "0.75rem",
+          full: "9999px",
+          control: "8px",
+          card: "12px",
+          panel: "16px",
+          pill: "9999px"
+        },
+        spacing: {
+          base: "8px",
+          compact: "12px",
+          panel: "16px",
+          page: "24px",
+          section: "32px"
+        },
+        fontFamily: {
+          headline: ["Inter", "sans-serif"],
+          display: ["Inter", "sans-serif"],
+          body: ["Inter", "sans-serif"],
+          label: ["Geist Mono", "monospace"]
+        },
+        fontSize: {
+          "page-title": ["30px", { lineHeight: "38px", letterSpacing: "0", fontWeight: "600" }],
+          "section-title": ["19px", { lineHeight: "26px", letterSpacing: "0", fontWeight: "500" }],
+          "body": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+          "control": ["13px", { lineHeight: "18px", letterSpacing: "0", fontWeight: "500" }],
+          "technical": ["12px", { lineHeight: "16px", letterSpacing: "0.08em", fontWeight: "600" }],
+          "metric": ["34px", { lineHeight: "40px", letterSpacing: "0", fontWeight: "600" }]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    background-color: theme('colors.background');
+    color: theme('colors.text-primary');
+    font-family: theme('fontFamily.body');
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .modal-backdrop {
+    background-color: rgba(11, 16, 22, 0.8);
+    backdrop-filter: blur(4px);
+  }
+  /* Custom Scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: theme('colors.surface');
+  }
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.border-emphasis');
+    border-radius: theme('borderRadius.full');
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.text-muted');
+  }
+</style>
+</head>
+<body class="bg-background text-text-primary antialiased font-body">
+<!-- Modal Backdrop -->
+<div class="fixed inset-0 modal-backdrop z-40 flex items-center justify-center p-page">
+<!-- Modal Container -->
+<div class="bg-elevated-surface rounded-panel shadow-2xl w-full max-w-4xl max-h-[921px] flex flex-col overflow-hidden z-50">
+<!-- Modal Header -->
+<div class="px-section py-section pb-page flex flex-col gap-base shrink-0">
+<span class="font-label text-technical text-text-secondary uppercase">Session Review</span>
+<div class="flex justify-between items-center">
+<h2 class="font-headline text-page-title text-text-primary">Review Recorded Automation</h2>
+<button class="text-text-muted hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-full p-1">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Summary Row -->
+<div class="flex items-center gap-compact mt-compact bg-surface p-compact rounded-card border border-border">
+<div class="flex items-center gap-base">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="account_tree">account_tree</span>
+<span class="font-body text-body text-text-secondary">Workflow:</span>
+<span class="font-body text-body text-text-primary font-medium">Data Extraction Pipeline</span>
+</div>
+<div class="w-px h-4 bg-border"></div>
+<div class="flex items-center gap-base">
+<span class="font-label text-technical text-text-secondary">12 STEPS</span>
+</div>
+<div class="w-px h-4 bg-border"></div>
+<div class="flex items-center gap-base text-warning">
+<span class="material-symbols-outlined text-[16px]" data-icon="warning">warning</span>
+<span class="font-label text-technical">2 WARNINGS</span>
+</div>
+</div>
+</div>
+<!-- Modal Body (Scrollable List) -->
+<div class="flex-1 overflow-y-auto px-section pb-section bg-elevated-surface flex flex-col gap-base border-t border-b border-border py-section">
+<!-- Step 01 -->
+<div class="bg-surface border border-border rounded-card p-panel flex items-start gap-compact transition-colors hover:border-border-emphasis">
+<div class="pt-0.5">
+<input checked="" class="form-checkbox h-4 w-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-offset-surface focus:ring-offset-1" type="checkbox"/>
+</div>
+<div class="flex-1 flex flex-col gap-compact">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-compact">
+<span class="font-label text-technical text-primary">STEP 01</span>
+<span class="font-headline text-control text-text-primary">Navigate to URL</span>
+</div>
+</div>
+<div class="bg-background rounded-control p-compact font-label text-technical text-text-secondary break-all">
+              https://dashboard.example.com/reports/q3
+            </div>
+</div>
+</div>
+<!-- Step 02 -->
+<div class="bg-surface border border-border rounded-card p-panel flex items-start gap-compact transition-colors hover:border-border-emphasis">
+<div class="pt-0.5">
+<input checked="" class="form-checkbox h-4 w-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-offset-surface focus:ring-offset-1" type="checkbox"/>
+</div>
+<div class="flex-1 flex flex-col gap-compact">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-compact">
+<span class="font-label text-technical text-primary">STEP 02</span>
+<span class="font-headline text-control text-text-primary">Click Button</span>
+</div>
+</div>
+<div class="flex items-center gap-base text-text-secondary">
+<span class="material-symbols-outlined text-[16px]" data-icon="mouse">mouse</span>
+<span class="font-label text-technical">Selector: #export-csv-btn</span>
+</div>
+</div>
+</div>
+<!-- Step 03 (Warning) -->
+<div class="bg-surface border border-warning/50 rounded-card p-panel flex items-start gap-compact transition-colors relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning"></div>
+<div class="pt-0.5 pl-2">
+<input checked="" class="form-checkbox h-4 w-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-offset-surface focus:ring-offset-1" type="checkbox"/>
+</div>
+<div class="flex-1 flex flex-col gap-compact">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-compact">
+<span class="font-label text-technical text-primary">STEP 03</span>
+<span class="font-headline text-control text-text-primary">Input Text</span>
+<div class="flex items-center gap-1 bg-warning/10 text-warning px-2 py-0.5 rounded-pill border border-warning/30">
+<span class="material-symbols-outlined text-[14px]" data-icon="warning">warning</span>
+<span class="font-label text-[10px] uppercase tracking-widest font-semibold">Masked Secret</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-base text-text-secondary">
+<span class="material-symbols-outlined text-[16px]" data-icon="keyboard">keyboard</span>
+<span class="font-label text-technical">Target: input[name="api_key"]</span>
+</div>
+<div class="bg-background rounded-control p-compact font-label text-technical text-text-secondary flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="password">password</span>
+              ************************
+            </div>
+</div>
+</div>
+<!-- Step 04 (Excluded/Muted) -->
+<div class="bg-surface border border-border border-dashed rounded-card p-panel flex items-start gap-compact opacity-50 transition-opacity hover:opacity-100">
+<div class="pt-0.5">
+<input class="form-checkbox h-4 w-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-offset-surface focus:ring-offset-1" type="checkbox"/>
+</div>
+<div class="flex-1 flex flex-col gap-compact">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-compact">
+<span class="font-label text-technical text-text-muted">STEP 04</span>
+<span class="font-headline text-control text-text-muted line-through decoration-text-muted">Hover Element</span>
+</div>
+<span class="font-label text-[10px] text-text-muted uppercase border border-border px-2 py-0.5 rounded-pill">Excluded</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer -->
+<div class="px-section py-page bg-elevated-surface flex justify-between items-center shrink-0">
+<button class="font-headline text-control text-danger border border-danger/30 hover:bg-danger/10 hover:border-danger transition-colors px-4 py-2 rounded-control flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-elevated-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+          Discard
+        </button>
+<div class="flex gap-compact">
+<button class="font-headline text-control text-text-primary bg-surface border border-border hover:bg-border transition-colors px-4 py-2 rounded-control focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-elevated-surface">
+            Cancel
+          </button>
+<button class="font-headline text-control text-background bg-primary hover:bg-primary/90 transition-colors px-6 py-2 rounded-control flex items-center gap-2 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-elevated-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="check_circle">check_circle</span>
+            Replace Graph
+          </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

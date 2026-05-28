@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Evidence Explorer - Mission Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@400;500;600&amp;family=Geist+Mono:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#32D3E6",
+          "background-light": "#f6f8f8",
+          "background-dark": "#111f21",
+          "panel": "#0E151D",
+          "surface": "#121C26",
+          "elevated-surface": "#172431",
+          "border": "#233240",
+          "border-emphasis": "#314758",
+          "text-primary": "#E7EEF5",
+          "text-secondary": "#9AAEBD",
+          "text-muted": "#667D8D",
+          "primary-wash": "rgba(50, 211, 230, 0.12)",
+          "success": "#39D98A",
+          "warning": "#F4B740",
+          "danger": "#F06467"
+        },
+        fontFamily: {
+          "display": ["Public Sans"],
+          "headline": ["Public Sans", "sans-serif"],
+          "body": ["Public Sans", "sans-serif"],
+          "label": ["Geist Mono", "monospace"],
+          "mono": ["Geist Mono", "monospace"]
+        },
+        borderRadius: {
+            "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px",
+            "control": "0.25rem",
+            "card": "0.5rem",
+            "panel": "0.75rem",
+            "pill": "9999px"
+        },
+        spacing: {
+            "base": "8px",
+            "compact": "12px",
+            "panel": "16px",
+            "page": "24px",
+            "section": "32px"
+        }
+      },
+    },
+  }
+</script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+            background-color: #111f21;
+            color: #E7EEF5;
+        }
+        .font-mono {
+            font-family: 'Geist Mono', monospace;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #233240;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #314758;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-text-primary h-screen w-screen overflow-hidden flex font-body text-sm selection:bg-primary-wash selection:text-primary">
+<!-- SideNavBar -->
+<nav class="w-[232px] h-screen fixed left-0 top-0 border-r border-border bg-panel flex flex-col h-full py-4 z-50">
+<div class="px-6 mb-6">
+<h1 class="font-display text-[19px] font-semibold text-text-primary mb-1">Mission Control</h1>
+<p class="text-text-secondary text-xs font-label uppercase tracking-wider">v2.4.0-stable</p>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-medium">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span class="font-medium">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-primary bg-primary-wash border-l-2 border-primary transition-colors duration-150 relative -left-[2px] w-[calc(100%+2px)] pl-[14px]" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-medium">Evidence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="font-medium">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+<span class="font-medium">Identities</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+</div>
+<div class="px-3 mt-auto space-y-1 pt-4 border-t border-border">
+<button class="w-full bg-primary text-background-dark font-medium py-2 rounded mb-4 hover:opacity-90 active:scale-[0.99] transition-all">
+                Launch Run
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="font-medium">Diagnostics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-medium">Support</span>
+</a>
+<div class="mt-4 px-3 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border overflow-hidden">
+<img alt="Operator Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATA2AseYfm2V1d-oYD-IpmRV9kSYOodCcWymCYkvfhCMYXvBZeqymrWZuEw_VW55F4jwMlrEfmlJ1R1wQah1nakY7XmAlWOwe86QWrFq_EPAqcNfkBUY4c6SRM0Zyyfz1eH7hH11mlqUDyhb5prgT8SzSP9w9Sibt8SX0HD2pDYbkUb0KcFYXUVMwVZJ5EFmFymgzLUR_Qp6MXBL3D99VLS23asJMTZUmoQi6XwSEjexlOOeEiYrz86JLQ816cjhWAy6jEoVvK9stw"/>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="font-medium text-text-primary truncate">SysAdmin</p>
+<p class="text-xs text-text-muted truncate">Active</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- TopNavBar & Main Content Wrapper -->
+<div class="flex-1 ml-[232px] flex flex-col h-screen">
+<!-- TopNavBar -->
+<header class="h-14 border-b border-border bg-background-dark flex items-center justify-between px-6 shrink-0 z-40">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[18px]">search</span>
+<input class="w-full bg-surface border border-border rounded py-1.5 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Search across environment..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-text-secondary hover:text-text-primary hover:bg-surface p-1.5 rounded transition-colors relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="text-text-secondary hover:text-text-primary hover:bg-surface p-1.5 rounded transition-colors">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</button>
+<div class="h-6 w-px bg-border mx-1"></div>
+<button class="px-3 py-1.5 bg-surface border border-border-emphasis text-text-primary font-medium rounded hover:bg-elevated-surface transition-colors">
+                    Export Selection
+                </button>
+<button class="px-3 py-1.5 bg-primary text-background-dark font-medium rounded hover:opacity-90 transition-opacity">
+                    Launch Run
+                </button>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Page Header -->
+<div class="px-6 py-6 border-b border-border shrink-0 flex items-end justify-between bg-background-dark">
+<div>
+<p class="text-text-secondary text-xs font-label uppercase tracking-wider mb-1">Evidence Workspace</p>
+<div class="flex items-center gap-4 mb-4">
+<h2 class="text-2xl font-semibold font-display">Evidence Explorer</h2>
+<span class="text-text-muted text-sm mt-2">Last refreshed: 10:42 AM</span>
+</div>
+<!-- Filters -->
+<div class="flex items-center gap-3 flex-wrap">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px]">search</span>
+<input class="w-64 bg-surface border border-border rounded py-1 pl-8 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Search across environment..." type="text"/>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px]">filter_list</span>
+<select class="appearance-none bg-surface border border-border rounded py-1 pl-8 pr-8 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none custom-select">
+<option>All Types</option>
+<option>PNG</option>
+<option>LOG</option>
+<option>CSV</option>
+<option>JSON</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px] pointer-events-none">arrow_drop_down</span>
+</div>
+<div class="flex items-center bg-surface border border-border rounded p-0.5">
+<button class="p-1 rounded-sm bg-elevated-surface text-text-primary shadow-sm"><span class="material-symbols-outlined text-[18px] block">grid_view</span></button>
+<button class="p-1 rounded-sm text-text-muted hover:text-text-primary transition-colors"><span class="material-symbols-outlined text-[18px] block">view_list</span></button>
+</div>
+<div class="bg-primary-wash text-primary border border-primary/30 px-3 py-1 rounded-full flex items-center gap-1.5 text-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> 3 items selected
+                        </div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded bg-surface border border-border hover:bg-elevated-surface transition-colors text-text-secondary hover:text-text-primary">
+<span class="material-symbols-outlined text-[20px] block">refresh</span>
+</button>
+<button class="px-4 py-2 bg-primary text-background-dark font-medium rounded hover:opacity-90 transition-opacity">
+                    Export Selection
+                </button>
+</div>
+</div>
+<!-- Split View -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Pane: Evidence Gallery -->
+<div class="w-[70%] h-full overflow-y-auto custom-scrollbar p-6 bg-background-dark">
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+<!-- Artifact Card 1: Selected Screenshot -->
+<div class="bg-surface border-2 border-primary rounded-lg overflow-hidden cursor-pointer relative shadow-sm group">
+<div class="absolute top-2 left-2 z-10">
+<input checked="" class="w-4 h-4 rounded border-border bg-background-dark text-primary focus:ring-primary focus:ring-offset-background" type="checkbox"/>
+</div>
+<div class="absolute top-2 right-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-1.5 py-0.5 rounded flex items-center text-[10px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[12px] mr-1">image</span> PNG
+                                </span>
+</div>
+<div class="h-28 bg-[#1A2634] w-full border-b border-border relative overflow-hidden">
+<!-- Placeholder for Screenshot -->
+<div class="absolute inset-0 bg-cover bg-center opacity-70" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCmtjPCtqhnXjigWvsjcqRnP1jBvEn6BRkg8502AiUN0CFBvvEeEla0Z3L416dgHxrt0xqf7akAaD5PqIzcX-ivBaXaYcgVj8WZqRSrrplYoMAdCNMvbIuG6rSCEt9kAnEh06riQ49zzie7SOfSWJ9hc0VgDNJNLhH1kXgyqrG9SavPw1AW1vEOof22HfQK4Uv311_1jNyTzPOK2SM3pUtypEhMOubco09Bp4OHnilGjZoUvyjFr6obSrP0q8uhgostvrI-57w_r-o4');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent"></div>
+</div>
+<div class="p-3">
+<h4 class="font-medium text-text-primary truncate mb-1 text-xs" title="checkout_confirmation_step.png">checkout_confirma...</h4>
+<div class="flex justify-between items-center text-[10px] text-text-muted mt-2">
+<span class="font-mono bg-elevated-surface px-1 py-0.5 rounded text-text-secondary">RUN-8X22</span>
+<span>2m ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 2: Log -->
+<div class="bg-surface border border-border rounded-lg overflow-hidden cursor-pointer hover:border-border-emphasis transition-colors group relative">
+<div class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+<input class="w-4 h-4 rounded border-border bg-background-dark text-primary focus:ring-primary focus:ring-offset-background" type="checkbox"/>
+</div>
+<div class="absolute top-2 right-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-1.5 py-0.5 rounded flex items-center text-[10px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[12px] mr-1">description</span> LOG
+                                </span>
+</div>
+<div class="h-28 bg-[#111f21] w-full border-b border-border relative overflow-hidden p-3 pt-8">
+<div class="font-mono text-[10px] text-text-muted leading-tight truncate">
+                                    [14:02:45] WARN DOM element<br/>
+                                    [14:02:46] INFO Trace start<br/>
+                                    [14:02:47] INFO Network idle<br/>
+                                    [14:02:47] ERR Timeout 5000ms
+                                </div>
+</div>
+<div class="p-3">
+<h4 class="font-medium text-text-primary truncate mb-1 text-xs" title="nav_interaction_trace.log">nav_interaction_t...</h4>
+<div class="flex justify-between items-center text-[10px] text-text-muted mt-2">
+<span class="font-mono bg-elevated-surface px-1 py-0.5 rounded text-text-secondary">RUN-9Y11</span>
+<span>15m ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 3: CSV Selected -->
+<div class="bg-surface border-2 border-primary rounded-lg overflow-hidden cursor-pointer relative shadow-sm group">
+<div class="absolute top-2 left-2 z-10">
+<input checked="" class="w-4 h-4 rounded border-border bg-background-dark text-primary focus:ring-primary focus:ring-offset-background" type="checkbox"/>
+</div>
+<div class="absolute top-2 right-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-1.5 py-0.5 rounded flex items-center text-[10px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[12px] mr-1">download</span> CSV
+                                </span>
+</div>
+<div class="h-28 bg-elevated-surface w-full border-b border-border relative overflow-hidden flex items-center justify-center">
+<span class="material-symbols-outlined text-[32px] text-text-muted opacity-50">table_view</span>
+</div>
+<div class="p-3">
+<h4 class="font-medium text-text-primary truncate mb-1 text-xs" title="q3_financial_export.csv">q3_financial_expo...</h4>
+<div class="flex justify-between items-center text-[10px] text-text-muted mt-2">
+<span class="font-mono bg-elevated-surface px-1 py-0.5 rounded text-text-secondary">RUN-7Z00</span>
+<span>1h ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 4: Failed Screenshot Selected -->
+<div class="bg-surface border-2 border-primary rounded-lg overflow-hidden cursor-pointer relative shadow-sm group">
+<div class="absolute top-2 left-2 z-10">
+<input checked="" class="w-4 h-4 rounded border-border bg-background-dark text-primary focus:ring-primary focus:ring-offset-background" type="checkbox"/>
+</div>
+<div class="absolute top-2 right-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-1.5 py-0.5 rounded flex items-center text-[10px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[12px] mr-1">image</span> PNG
+                                </span>
+</div>
+<div class="h-28 bg-[#1A2634] w-full border-b border-border relative overflow-hidden flex items-center justify-center">
+<span class="material-symbols-outlined text-danger text-[28px] opacity-50">broken_image</span>
+</div>
+<div class="p-3">
+<h4 class="font-medium text-text-primary truncate mb-1 text-xs" title="login_error_capture.png">login_error_captu...</h4>
+<div class="flex justify-between items-center text-[10px] text-text-muted mt-2">
+<span class="font-mono bg-elevated-surface px-1 py-0.5 rounded text-text-secondary">RUN-8X22</span>
+<span>2h ago</span>
+</div>
+</div>
+</div>
+<!-- Artifact Card 5: JSON -->
+<div class="bg-surface border border-border rounded-lg overflow-hidden cursor-pointer hover:border-border-emphasis transition-colors group relative">
+<div class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+<input class="w-4 h-4 rounded border-border bg-background-dark text-primary focus:ring-primary focus:ring-offset-background" type="checkbox"/>
+</div>
+<div class="absolute top-2 right-2 z-10 flex gap-2">
+<span class="bg-surface/80 backdrop-blur-sm border border-border px-1.5 py-0.5 rounded flex items-center text-[10px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[12px] mr-1">data_object</span> JSON
+                                </span>
+</div>
+<div class="h-28 bg-[#111f21] w-full border-b border-border relative overflow-hidden p-3 pt-8">
+<div class="font-mono text-[10px] text-text-muted leading-tight truncate">
+                                    {<br/>
+                                      "status": "ok",<br/>
+                                      "payload": {<br/>
+                                        "id": "10492"
+                                </div>
+</div>
+<div class="p-3">
+<h4 class="font-medium text-text-primary truncate mb-1 text-xs" title="api_response_payload.json">api_response_payl...</h4>
+<div class="flex justify-between items-center text-[10px] text-text-muted mt-2">
+<span class="font-mono bg-elevated-surface px-1 py-0.5 rounded text-text-secondary">RUN-8X22</span>
+<span>3h ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Pane: Artifact Details Panel -->
+<div class="w-[30%] min-w-[340px] max-w-[400px] h-full border-l border-border bg-panel flex flex-col overflow-hidden shadow-[-4px_0_15px_rgba(0,0,0,0.1)] z-10">
+<div class="p-4 border-b border-border bg-elevated-surface flex justify-between items-center shrink-0">
+<h3 class="font-medium text-text-primary text-[16px]">Evidence Details</h3>
+<button class="text-text-secondary hover:text-text-primary p-1 rounded transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+<!-- Top Section -->
+<div>
+<h2 class="text-[18px] font-medium text-text-primary mb-2 break-all leading-tight">checkout_confirmation_step.png</h2>
+<div class="flex items-center gap-2">
+<span class="bg-surface border border-border px-2 py-0.5 rounded flex items-center gap-1 text-[11px] font-label text-text-primary">
+<span class="material-symbols-outlined text-[14px]">image</span> PNG
+                                </span>
+<span class="bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-full flex items-center gap-1 text-[11px] font-label">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Completed
+                                </span>
+</div>
+</div>
+<!-- Preview Box -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<span class="text-text-secondary font-medium text-[12px]">Preview</span>
+<button class="text-primary text-xs font-label hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">open_in_new</span> Expand
+                                </button>
+</div>
+<div class="bg-surface border border-border rounded-lg p-1 relative flex items-center justify-center overflow-hidden min-h-[160px]">
+<img alt="Detailed screenshot of a checkout confirmation step showing successful transaction processing" class="max-w-full max-h-[240px] object-contain rounded border border-border/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAstTdLRtsIF4g99_apz7nncCwuVSeD73EnAbf-9QmG-u5VYXKsgXK3vHJfpJ3BEhq0F-mQldKnwM0jv-kmAJ8TkG7UJuHp5x-eJ3gI0Hh7ZyUkiXYK7MxPj9atwwub0ObQWPYsbWW1rWuZbbhdGZg1-PMmgpJATJ1U1z25yy085pW4w1GCoyUTVw7c5S4Tdiz0DeYiYv1c3oKtqeMjTFkAUYfhqIeYOPN46RGDuuYdWPRbmiJyl9YtBqzohv3mkb75QahjzllLzNOz"/>
+</div>
+</div>
+<!-- Traceability Section -->
+<div class="space-y-3">
+<h4 class="text-text-secondary font-medium uppercase tracking-wider text-[11px]">Traceability</h4>
+<dl class="bg-surface border border-border rounded-lg divide-y divide-border text-[13px]">
+<div class="p-3 flex items-start gap-4">
+<dt class="text-text-muted w-24 shrink-0 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">account_tree</span> Workflow
+                                    </dt>
+<dd class="text-text-primary font-medium flex-1 truncate">Daily Account Reconciliation</dd>
+</div>
+<div class="p-3 flex items-start gap-4">
+<dt class="text-text-muted w-24 shrink-0 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">play_circle</span> Run
+                                    </dt>
+<dd class="text-text-primary font-mono text-[12px] flex-1">RUN-8X22</dd>
+</div>
+<div class="p-3 flex items-start gap-4">
+<dt class="text-text-muted w-24 shrink-0 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">fingerprint</span> Identity
+                                    </dt>
+<dd class="text-text-primary font-mono text-[12px] flex-1">svc-etl-prod</dd>
+</div>
+<div class="p-3 flex items-start gap-4">
+<dt class="text-text-muted w-24 shrink-0 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">route</span> Step
+                                    </dt>
+<dd class="text-text-primary flex-1">Ledger Write</dd>
+</div>
+<div class="p-3 flex items-start gap-4">
+<dt class="text-text-muted w-24 shrink-0 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">category</span> Kind
+                                    </dt>
+<dd class="text-text-primary flex-1">Screenshot Capture</dd>
+</div>
+</dl>
+</div>
+<!-- File Metadata Section -->
+<div class="space-y-3">
+<h4 class="text-text-secondary font-medium uppercase tracking-wider text-[11px]">Metadata</h4>
+<dl class="bg-surface border border-border rounded-lg p-3 space-y-2 text-[12px]">
+<div class="flex justify-between items-center">
+<dt class="text-text-muted">Created</dt>
+<dd class="text-text-primary">Oct 24, 2023, 10:40 AM</dd>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-border/50">
+<dt class="text-text-muted">Size</dt>
+<dd class="font-mono text-text-primary">1.2 MB</dd>
+</div>
+<div class="flex flex-col gap-1 pt-2 border-t border-border/50">
+<dt class="text-text-muted">Storage Path</dt>
+<dd class="font-mono text-text-primary break-all bg-elevated-surface p-2 rounded border border-border/50 mt-1">s3://mc-prod-evidence/2023/10/24/RUN-8X22/checkout.png</dd>
+</div>
+</dl>
+</div>
+</div>
+<!-- Panel Footer Actions -->
+<div class="p-4 border-t border-border bg-elevated-surface shrink-0 flex flex-wrap gap-2"><button class="flex-1 flex justify-center items-center gap-2 px-3 py-2 bg-primary text-background-dark font-medium rounded hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">download</span> Download
+</button>
+<button class="flex-1 flex justify-center items-center gap-2 px-3 py-2 bg-surface border border-border-emphasis text-text-primary font-medium rounded hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">content_copy</span> Copy Path
+</button>
+<button class="w-full flex justify-center items-center gap-2 px-3 py-2 mt-2 bg-surface border border-border-emphasis text-text-primary font-medium rounded hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">play_circle</span> Open Run
+</button>
+<button class="w-full flex justify-center items-center gap-2 px-3 py-2 bg-surface border border-border-emphasis text-text-primary font-medium rounded hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">account_tree</span> Open Workflow
+</button></div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Identity Lab - Mission Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Geist Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "control": "8px",
+                        "card": "12px",
+                        "panel": "16px",
+                        "pill": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "compact": "12px",
+                        "panel": "16px",
+                        "page": "24px",
+                        "section": "32px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0B1016; color: #E7EEF5; }
+        .font-mono { font-family: 'Geist Mono', monospace; }
+
+        /* Custom scrollbar for data density */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #233240; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #314758; }
+
+        .nav-active { background-color: rgba(50, 211, 230, 0.12); color: #32D3E6; border-left-width: 2px; border-color: #32D3E6; }
+        .nav-inactive { color: #9AAEBD; }
+        .nav-inactive:hover { color: #E7EEF5; background-color: #121C26; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden antialiased selection:bg-primary-wash selection:text-primary">
+<!-- JSON: SideNavBar -->
+<nav class="w-[232px] h-full fixed left-0 top-0 bg-[#0E151D] border-r border-[#233240] flex flex-col py-6 px-4 z-20">
+<div class="mb-8 px-2 flex items-center gap-3">
+<div class="w-8 h-8 rounded-control bg-primary-wash flex items-center justify-center text-primary border border-primary/20">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+</div>
+<div>
+<div class="text-[19px] font-semibold text-[#E7EEF5] tracking-tight leading-tight">Mission Control</div>
+<div class="font-label text-[10px] text-text-secondary uppercase tracking-wider">Automation Lab</div>
+</div>
+</div>
+<button class="mb-6 w-full py-2 px-3 bg-primary text-background font-medium text-[13px] rounded-control hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">add</span>
+            New Project
+        </button>
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                Overview
+            </a>
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+                Workflows
+            </a>
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+                Runs
+            </a>
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                Evidence
+            </a>
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                Schedules
+            </a>
+<a class="nav-active flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">fingerprint</span>
+                Identities
+            </a>
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                Settings
+            </a>
+</div>
+<div class="mt-auto pt-4 border-t border-border-emphasis flex flex-col gap-1">
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+                Diagnostics
+            </a>
+<a class="nav-inactive flex items-center gap-3 px-3 py-2 rounded-control font-headline text-[14px] font-medium tracking-normal transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+                Help
+            </a>
+<div class="mt-2 px-3 py-2 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-text-secondary">person</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="text-[13px] text-text-primary font-medium truncate">Operator</div>
+<div class="text-[11px] text-text-secondary truncate">Mission Control</div>
+</div>
+</div>
+</div>
+</nav>
+<!-- JSON: TopAppBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-232px)] h-16 bg-[#0B1016] border-b border-[#233240] flex justify-between items-center px-6 z-10">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[18px]">search</span>
+<input class="w-full bg-surface border border-border rounded-control py-1.5 pl-9 pr-3 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow" placeholder="Search identities..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 border-r border-border pr-4">
+<div class="w-2 h-2 rounded-full bg-success"></div>
+<span class="text-[12px] text-text-secondary font-medium">Environment: Production</span>
+</div>
+<button class="text-text-secondary hover:text-text-primary transition-colors p-1.5 rounded-control hover:bg-surface">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="bg-surface border border-border-emphasis text-text-primary px-3 py-1.5 rounded-control text-[13px] font-medium hover:bg-elevated-surface transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">rocket_launch</span>
+                Launch Run
+            </button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-[232px] mt-16 flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-background">
+<!-- Page Header & KPIs (Fixed) -->
+<div class="px-page py-section border-b border-border bg-background flex-shrink-0 z-0 relative">
+<!-- Atmospheric background pattern -->
+<div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: radial-gradient(#32D3E6 1px, transparent 1px); background-size: 24px 24px;"></div>
+<div class="relative flex justify-between items-end mb-section">
+<div>
+<div class="font-label text-[11px] text-text-muted uppercase tracking-widest mb-1">Identity Workspace</div>
+<div class="flex items-center gap-3">
+<h1 class="font-display text-[30px] font-semibold leading-tight text-text-primary">Identity Lab</h1>
+<span class="px-2 py-0.5 rounded-full bg-primary-wash text-primary font-label text-[10px] uppercase tracking-wider border border-primary/20">Active</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label text-[12px] text-text-secondary">Last refreshed: 14:02:45 UTC</span>
+<button class="p-1.5 rounded-control bg-surface border border-border text-text-secondary hover:text-primary hover:border-primary transition-all active:scale-95" title="Refresh data">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<!-- KPI Row -->
+<div class="relative grid grid-cols-3 gap-panel">
+<div class="bg-surface border border-border rounded-card p-panel flex flex-col relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-primary text-[24px]">fingerprint</span>
+</div>
+<span class="font-headline text-[13px] text-text-secondary font-medium mb-2">Managed</span>
+<div class="font-display text-[34px] font-semibold text-text-primary leading-none">142</div>
+<div class="mt-2 flex items-center gap-1 text-[12px] text-success">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+12 this week</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded-card p-panel flex flex-col relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-text-secondary text-[24px]">cookie</span>
+</div>
+<span class="font-headline text-[13px] text-text-secondary font-medium mb-2">Retained Sessions</span>
+<div class="font-display text-[34px] font-semibold text-text-primary leading-none">89</div>
+<div class="mt-2 flex items-center gap-1 text-[12px] text-text-muted">
+<span class="material-symbols-outlined text-[14px]">horizontal_rule</span>
+<span>Stable</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded-card p-panel flex flex-col relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-danger text-[24px]">warning</span>
+</div>
+<span class="font-headline text-[13px] text-text-secondary font-medium mb-2">Recent Failures</span>
+<div class="font-display text-[34px] font-semibold text-danger leading-none">3</div>
+<div class="mt-2 flex items-center gap-1 text-[12px] text-warning">
+<span class="material-symbols-outlined text-[14px]">history</span>
+<span>In last 24h</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Master-Detail Workspace -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left: Identity List -->
+<div class="w-1/3 min-w-[320px] max-w-[400px] bg-panel border-r border-border flex flex-col">
+<div class="p-compact border-b border-border flex gap-2">
+<div class="flex-1 relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary text-[16px]">filter_list</span>
+<input class="w-full bg-surface border border-border rounded-control py-1.5 pl-8 pr-3 text-[12px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-emphasis" placeholder="Filter identities..." type="text"/>
+</div>
+<button class="px-2 py-1.5 bg-surface border border-border rounded-control text-text-secondary hover:text-text-primary text-[12px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">sort</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+<!-- Selected Row -->
+<div class="bg-primary-wash border border-primary/30 rounded-control p-3 cursor-pointer group">
+<div class="flex justify-between items-start mb-1">
+<div class="font-headline text-[14px] font-medium text-primary truncate pr-2">Scraper-Retail-US-01</div>
+<span class="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-medium border border-success/20">
+<div class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div> Active
+                            </span>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-text-secondary">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+<span class="truncate">Price_Monitor_Daily</span>
+</div>
+<div class="mt-2 pt-2 border-t border-primary/10 flex justify-between items-center font-label text-[10px] text-text-muted">
+<span>ID: idt_8f92a1</span>
+<span>2 mins ago</span>
+</div>
+</div>
+<!-- Idle Row -->
+<div class="hover:bg-surface border border-transparent hover:border-border rounded-control p-3 cursor-pointer transition-colors group">
+<div class="flex justify-between items-start mb-1">
+<div class="font-headline text-[14px] font-medium text-text-primary group-hover:text-primary transition-colors truncate pr-2">Social-Auth-Pool-B</div>
+<span class="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-secondary text-[10px] font-medium">
+<div class="w-1.5 h-1.5 rounded-full bg-text-muted"></div> Idle
+                            </span>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-text-secondary">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+<span class="truncate">Token_Refresh_Job</span>
+</div>
+<div class="mt-2 pt-2 border-t border-border/50 flex justify-between items-center font-label text-[10px] text-text-muted">
+<span>ID: idt_3b47c9</span>
+<span>4 hrs ago</span>
+</div>
+</div>
+<!-- Failed Row -->
+<div class="bg-danger/5 border border-danger/20 hover:bg-danger/10 rounded-control p-3 cursor-pointer transition-colors group">
+<div class="flex justify-between items-start mb-1">
+<div class="font-headline text-[14px] font-medium text-text-primary truncate pr-2">Fin-Extract-EU-03</div>
+<span class="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-danger/10 text-danger text-[10px] font-medium border border-danger/20">
+<span class="material-symbols-outlined text-[10px]">error</span> Failed
+                            </span>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-text-secondary">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+<span class="truncate">Statement_Download</span>
+</div>
+<div class="mt-2 pt-2 border-t border-danger/10 flex justify-between items-center font-label text-[10px] text-text-muted">
+<span>ID: idt_e9d2f1</span>
+<span class="text-danger">12 mins ago</span>
+</div>
+</div>
+<!-- Idle Row 2 -->
+<div class="hover:bg-surface border border-transparent hover:border-border rounded-control p-3 cursor-pointer transition-colors group">
+<div class="flex justify-between items-start mb-1">
+<div class="font-headline text-[14px] font-medium text-text-primary group-hover:text-primary transition-colors truncate pr-2">Scraper-Retail-US-02</div>
+<span class="flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-secondary text-[10px] font-medium">
+<div class="w-1.5 h-1.5 rounded-full bg-text-muted"></div> Idle
+                            </span>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-text-secondary">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+<span class="truncate">Price_Monitor_Daily</span>
+</div>
+<div class="mt-2 pt-2 border-t border-border/50 flex justify-between items-center font-label text-[10px] text-text-muted">
+<span>ID: idt_1a2b3c</span>
+<span>1 day ago</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: Detail Panel (Selected: Scraper-Retail-US-01) -->
+<div class="flex-1 bg-background overflow-y-auto relative">
+<!-- Detail Header -->
+<div class="sticky top-0 bg-background/90 backdrop-blur-sm border-b border-border p-page z-10">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-3 mb-1">
+<h2 class="font-headline text-[19px] font-semibold text-text-primary">Scraper-Retail-US-01</h2>
+<span class="px-2 py-0.5 rounded-full bg-success/10 text-success font-label text-[11px] uppercase tracking-wider border border-success/20 flex items-center gap-1.5">
+<div class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div> Live Session
+                                </span>
+</div>
+<div class="flex items-center gap-4 text-[13px] text-text-secondary">
+<span class="font-label text-[11px]">ID: idt_8f92a1_xyz99</span>
+<a class="flex items-center gap-1 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+                                    Price_Monitor_Daily
+                                </a>
+</div>
+</div>
+<!-- Action Row -->
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 bg-surface border border-border rounded-control text-[13px] font-medium text-text-primary hover:bg-elevated-surface hover:border-border-emphasis transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">description</span> Evidence
+                            </button>
+<button class="px-3 py-1.5 bg-surface border border-border rounded-control text-[13px] font-medium text-text-primary hover:bg-elevated-surface hover:border-border-emphasis transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">play_circle</span> Last Run
+                            </button>
+<div class="w-px h-6 bg-border mx-1"></div>
+<button class="px-3 py-1.5 bg-surface border border-border rounded-control text-[13px] font-medium text-text-secondary hover:text-text-primary transition-all" title="Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+<button class="px-3 py-1.5 bg-danger/10 border border-danger/20 rounded-control text-[13px] font-medium text-danger hover:bg-danger hover:text-background transition-all flex items-center gap-1.5 ml-2" onclick="document.getElementById('reset-modal').classList.remove('hidden')">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span> Reset Identity
+                            </button>
+</div>
+</div>
+</div>
+<!-- Detail Content -->
+<div class="p-page flex flex-col gap-section max-w-5xl mx-auto">
+<!-- Posture & Observation Bento Grid -->
+<div class="grid grid-cols-2 gap-panel">
+<!-- Configured Posture -->
+<div class="bg-surface border border-border rounded-card overflow-hidden">
+<div class="p-compact border-b border-border bg-elevated-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">tune</span>
+<h3 class="font-headline text-[14px] font-medium text-text-primary">Configured Posture</h3>
+</div>
+<div class="p-panel flex flex-col gap-4">
+<div>
+<div class="text-[12px] text-text-secondary mb-1">User Agent Profile</div>
+<div class="font-label text-[12px] text-text-primary bg-background p-2 rounded border border-border break-all">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<div class="text-[12px] text-text-secondary mb-1">Proxy Region</div>
+<div class="flex items-center gap-2 text-[13px] text-text-primary">
+<span class="material-symbols-outlined text-[16px] text-primary">public</span>
+                                            US-East (Virginia)
+                                        </div>
+</div>
+<div>
+<div class="text-[12px] text-text-secondary mb-1">Viewport</div>
+<div class="font-label text-[12px] text-text-primary bg-background px-2 py-1 rounded border border-border inline-block">1920x1080</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Latest Observed -->
+<div class="bg-surface border border-border rounded-card overflow-hidden">
+<div class="p-compact border-b border-border bg-elevated-surface flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">visibility</span>
+<h3 class="font-headline text-[14px] font-medium text-text-primary">Latest Observed</h3>
+</div>
+<span class="font-label text-[10px] text-text-muted">LIVE</span>
+</div>
+<div class="p-panel flex flex-col gap-4">
+<div class="grid grid-cols-2 gap-4">
+<div>
+<div class="text-[12px] text-text-secondary mb-1">Egress IP</div>
+<div class="font-label text-[13px] text-primary">198.51.100.42</div>
+</div>
+<div>
+<div class="text-[12px] text-text-secondary mb-1">ASN</div>
+<div class="font-label text-[13px] text-text-primary">AS16509 (AMAZON-02)</div>
+</div>
+</div>
+<div>
+<div class="text-[12px] text-text-secondary mb-1">Fingerprint Hash (Canvas/WebGL)</div>
+<div class="flex items-center gap-2">
+<div class="font-label text-[12px] text-text-muted bg-background px-2 py-1 rounded border border-border flex-1 truncate">sha256:8f3a9b2c1e...</div>
+<button class="p-1 text-text-secondary hover:text-text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Session Continuity -->
+<div class="bg-surface border border-border rounded-card overflow-hidden">
+<div class="p-compact border-b border-border flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">cookie</span>
+<h3 class="font-headline text-[14px] font-medium text-text-primary">Session Continuity</h3>
+</div>
+<button class="text-[12px] text-warning hover:text-warning/80 border border-warning/30 px-2 py-1 rounded flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[14px]">close</span> Close Retained Session
+                            </button>
+</div>
+<div class="p-panel">
+<table class="w-full text-left text-[13px]">
+<thead>
+<tr class="text-text-secondary border-b border-border">
+<th class="pb-2 font-medium">Domain</th>
+<th class="pb-2 font-medium">Storage Types</th>
+<th class="pb-2 font-medium">Last Accessed</th>
+<th class="pb-2 font-medium text-right">Size</th>
+</tr>
+</thead>
+<tbody class="font-label text-[12px]">
+<tr class="border-b border-border/50 hover:bg-elevated-surface">
+<td class="py-3 text-text-primary">.example-retail.com</td>
+<td class="py-3 text-text-secondary">Cookies, LocalStorage</td>
+<td class="py-3 text-text-muted">2 mins ago</td>
+<td class="py-3 text-text-secondary text-right">24 KB</td>
+</tr>
+<tr class="hover:bg-elevated-surface">
+<td class="py-3 text-text-primary">auth.provider.net</td>
+<td class="py-3 text-text-secondary">Cookies</td>
+<td class="py-3 text-text-muted">45 mins ago</td>
+<td class="py-3 text-text-secondary text-right">4 KB</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Rotation & Diagnostics Timeline -->
+<div>
+<h3 class="font-headline text-[16px] font-medium text-text-primary mb-compact">Rotation &amp; Diagnostics</h3>
+<div class="bg-panel border border-border rounded-card p-4 font-mono text-[12px] text-text-secondary h-64 overflow-y-auto leading-relaxed flex flex-col gap-1">
+<div class="flex gap-4"><span class="text-text-muted w-24 flex-shrink-0">14:00:12Z</span><span class="text-success">[INFO]</span><span class="text-text-primary">Session verification successful for .example-retail.com</span></div>
+<div class="flex gap-4"><span class="text-text-muted w-24 flex-shrink-0">13:45:00Z</span><span class="text-primary">[ROUTINE]</span><span>IP rotation triggered by schedule. New egress: 198.51.100.42</span></div>
+<div class="flex gap-4"><span class="text-text-muted w-24 flex-shrink-0">13:44:58Z</span><span class="text-warning">[WARN]</span><span>Rate limit backoff initiated on /api/v1/inventory (429 Too Many Requests)</span></div>
+<div class="flex gap-4"><span class="text-text-muted w-24 flex-shrink-0">12:00:05Z</span><span class="text-success">[INFO]</span><span class="text-text-primary">Cookies restored from persistent vault.</span></div>
+<div class="flex gap-4"><span class="text-text-muted w-24 flex-shrink-0">12:00:00Z</span><span class="text-primary">[INIT]</span><span>Identity loaded into execution node n-prod-88</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Destructive Modal: Reset Identity -->
+<div class="fixed inset-0 z-50 hidden" id="reset-modal">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-background/80 backdrop-blur-sm" onclick="document.getElementById('reset-modal').classList.add('hidden')"></div>
+<!-- Dialog -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-elevated-surface border border-border-emphasis rounded-panel shadow-2xl overflow-hidden">
+<div class="p-6 border-b border-border flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-danger/10 border border-danger/20 flex items-center justify-center flex-shrink-0 mt-1">
+<span class="material-symbols-outlined text-danger text-[24px]">warning</span>
+</div>
+<div>
+<h2 class="font-headline text-[19px] font-semibold text-text-primary mb-2">Reset Identity State?</h2>
+<p class="text-[14px] text-text-secondary leading-relaxed">
+                        This action will immediately invalidate all retained session cookies, clear LocalStorage, and generate a new browser fingerprint for <strong class="text-text-primary font-mono text-[13px]">Scraper-Retail-US-01</strong>.
+                    </p>
+<div class="mt-4 p-3 bg-background border border-danger/20 rounded-control font-mono text-[12px] text-danger">
+                        WARNING: Any workflows currently relying on this identity's active session will likely fail authentication on their next run.
+                    </div>
+</div>
+</div>
+<div class="p-4 bg-surface flex justify-end gap-3">
+<button class="px-4 py-2 rounded-control text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-elevated-surface transition-colors" onclick="document.getElementById('reset-modal').classList.add('hidden')">
+                    Cancel
+                </button>
+<button class="px-4 py-2 rounded-control text-[13px] font-medium bg-danger text-background hover:bg-danger/90 transition-colors shadow-lg shadow-danger/20" onclick="document.getElementById('reset-modal').classList.add('hidden')">
+                    Confirm Reset
+                </button>
+</div>
+</div>
+</div>
+</body></html>

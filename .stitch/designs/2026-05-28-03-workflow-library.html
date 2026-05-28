@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Workflows - Mission Control Automation System</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "background": "#0B1016",
+                        "panel": "#0E151D",
+                        "surface": "#121C26",
+                        "elevated-surface": "#172431",
+                        "border": "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        "primary": "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        "success": "#39D98A",
+                        "warning": "#F4B740",
+                        "danger": "#F06467"
+                    },
+                    borderRadius: {
+                        "control": "8px",
+                        "card": "12px",
+                        "panel": "16px",
+                        "pill": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "compact": "12px",
+                        "panel": "16px",
+                        "page": "24px",
+                        "section": "32px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Geist Mono", "monospace"]
+                    },
+                    fontSize: {
+                        "page-title": ["30px", { lineHeight: "38px", letterSpacing: "0", fontWeight: "600" }],
+                        "section-title": ["19px", { lineHeight: "26px", letterSpacing: "0", fontWeight: "500" }],
+                        "body": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+                        "control": ["13px", { lineHeight: "18px", letterSpacing: "0", fontWeight: "500" }],
+                        "technical": ["12px", { lineHeight: "16px", letterSpacing: "0.08em", fontWeight: "600" }],
+                        "metric": ["34px", { lineHeight: "40px", letterSpacing: "0", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Custom scrollbar for dense data views */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B1016;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233240;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #314758;
+        }
+
+        .pulse-dot {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary font-body antialiased selection:bg-primary-wash selection:text-primary min-h-screen overflow-hidden flex">
+<!-- JSON Component: SideNavBar -->
+<nav class="w-[232px] h-screen fixed left-0 top-0 border-r border-border bg-panel flex flex-col h-full py-4 z-40 hidden md:flex">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-control bg-surface border border-border-emphasis flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div>
+<h1 class="font-headline text-[19px] font-semibold text-text-primary tracking-tight">Mission Control</h1>
+<p class="font-label text-technical text-text-muted">v2.4.0-stable</p>
+</div>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-background rounded-control font-control h-10 px-4 flex items-center justify-center gap-2 hover:bg-[#2bc3d5] transition-colors focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-panel outline-none shadow-[0_0_15px_rgba(50,211,230,0.15)]">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                Launch Run
+            </button>
+</div>
+<ul class="flex-1 px-3 space-y-1 overflow-y-auto">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">dashboard</span>
+                    Overview
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-primary bg-primary-wash border-l-2 border-primary font-body text-[13px] font-medium tracking-normal" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+                    Workflows
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">play_circle</span>
+                    Runs
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">description</span>
+                    Evidence
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">calendar_today</span>
+                    Schedules
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">fingerprint</span>
+                    Identities
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+<div class="mt-auto px-3 pt-4 border-t border-border space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">analytics</span>
+                Diagnostics
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface transition-colors duration-150 font-body text-[13px] font-medium tracking-normal group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-text-primary transition-colors">help</span>
+                Support
+            </a>
+</div>
+<div class="mt-4 px-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border overflow-hidden flex-shrink-0">
+<img alt="Operator Profile" class="w-full h-full object-cover" data-alt="A close-up portrait of a male tech professional looking focused, set against a dark, moody background with subtle cyan lighting illuminating the edge of his face. The overall vibe is serious, modern, and high-tech, fitting seamlessly into a dark mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDocPMWP21Cs3vDU97Jfb_FOdVfSKR7yeDC-O7sttmI0WyWUKm009K3XqqD7u7-29I1mUGmM2d5iMUuxMH9J9oHoPYkRisPHQAyY4E-RuqTAt57PPfZTeIJBuSgY3bkivY5XVy0OFd3v_W_fD1UTpvYdCtA0NzNqeJ3Yh4ypdM3POpS-Ru5eKVksl1-p_oJXllB_MGMUi-geYT-EERE957-GpPElhuA9BJSh8cTZdK7LyNqfVjugglibXXXmsBkOkRHTwGAcdaZvGzV"/>
+</div>
+<div class="min-w-0">
+<p class="font-control text-text-primary truncate">System Operator</p>
+<p class="font-body text-[11px] text-success flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span> Connected</p>
+</div>
+</div>
+</nav>
+<!-- JSON Component: TopNavBar -->
+<header class="h-14 fixed top-0 right-0 left-0 md:left-[232px] bg-background border-b border-border flex items-center justify-between px-6 w-full z-30">
+<!-- Search/Command (on_left) -->
+<div class="flex-1 max-w-md">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px] group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface border border-border rounded-control h-9 pl-9 pr-4 font-body text-[13px] text-text-primary placeholder:text-text-muted focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Search workflows, runs, or resources... (Cmd+K)" type="text"/>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4 ml-auto">
+<div class="flex items-center gap-2 border-r border-border pr-4">
+<button aria-label="Notifications" class="w-8 h-8 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface flex items-center justify-center transition-colors relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-warning rounded-full"></span>
+</button>
+<button aria-label="Terminal" class="w-8 h-8 rounded-control text-text-secondary hover:text-text-primary hover:bg-surface flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-8 px-3 bg-surface border border-border-emphasis rounded-control font-control text-text-primary hover:bg-elevated-surface transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+                    Export Selection
+                </button>
+<button class="h-8 px-3 bg-primary text-background rounded-control font-control flex items-center gap-2 hover:bg-[#2bc3d5] transition-colors focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none">
+<span class="material-symbols-outlined text-[16px]">rocket_launch</span>
+                    Launch Run
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Workspace Content -->
+<main class="flex-1 ml-0 md:ml-[232px] mt-14 flex flex-col h-[calc(100vh-3.5rem)] relative">
+<!-- Workspace Header -->
+<div class="px-page py-section flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
+<div>
+<p class="font-label text-technical text-text-muted mb-1 uppercase tracking-widest">Mission Control Workspace</p>
+<h2 class="font-headline text-page-title text-text-primary mb-3">Workflows</h2>
+<div class="flex flex-wrap items-center gap-2">
+<div class="h-6 px-2.5 rounded-full bg-surface border border-border flex items-center gap-1.5">
+<span class="font-label text-text-secondary text-[11px]">TOTAL</span>
+<span class="font-control text-text-primary">32</span>
+</div>
+<div class="h-6 px-2.5 rounded-full bg-primary-wash border border-primary/30 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary pulse-dot"></span>
+<span class="font-label text-primary text-[11px]">ACTIVE RUNS</span>
+<span class="font-control text-text-primary">4</span>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-compact">
+<button class="h-9 px-4 bg-surface border border-border-emphasis rounded-control font-control text-text-primary hover:bg-elevated-surface transition-colors flex items-center gap-2 focus:ring-2 focus:ring-border-emphasis outline-none">
+<span class="material-symbols-outlined text-[18px]">file_upload</span>
+                    Import Workflow
+                </button>
+<button class="h-9 px-4 bg-surface border border-border-emphasis rounded-control font-control text-text-primary hover:bg-elevated-surface transition-colors flex items-center gap-2 focus:ring-2 focus:ring-border-emphasis outline-none">
+<span class="material-symbols-outlined text-[18px]">videocam</span>
+                    Record Workflow
+                </button>
+<button class="h-9 px-4 bg-primary text-background rounded-control font-control flex items-center gap-2 hover:bg-[#2bc3d5] transition-colors focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background outline-none shadow-[0_0_10px_rgba(50,211,230,0.1)]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Create Workflow
+                </button>
+</div>
+</div>
+<!-- Density Layout -->
+<div class="flex-1 px-page pb-page flex gap-panel overflow-hidden">
+<!-- Workflow Library Table Panel -->
+<div class="flex-1 bg-surface border border-border rounded-panel flex flex-col overflow-hidden min-w-[600px]">
+<!-- Table Header Row (Sticky equivalent) -->
+<div class="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_180px] gap-4 px-4 py-3 bg-panel border-b border-border items-center shrink-0">
+<div class="font-label text-technical text-text-secondary pl-2">Workflow Name</div>
+<div class="font-label text-technical text-text-secondary">Status</div>
+<div class="font-label text-technical text-text-secondary">Context</div>
+<div class="font-label text-technical text-text-secondary">Health</div>
+<div class="font-label text-technical text-text-secondary text-right pr-2">Actions</div>
+</div>
+<!-- Table Body -->
+<div class="flex-1 overflow-y-auto">
+<!-- Active Row: Data Ingestion Pipeline -->
+<div class="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_180px] gap-4 px-4 py-3 border-b border-border hover:bg-elevated-surface transition-colors items-center bg-primary-wash/5 relative group cursor-default">
+<div class="absolute left-0 top-0 bottom-0 w-0.5 bg-primary"></div>
+<!-- Name -->
+<div class="pl-2 flex flex-col min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-headline text-[14px] font-semibold text-text-primary truncate">Data Ingestion Pipeline</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted hover:text-text-primary cursor-pointer transition-colors" title="View Details">open_in_new</span>
+</div>
+<span class="font-label text-technical text-text-muted truncate">ID: WF-9823-XYZ</span>
+</div>
+<!-- Status -->
+<div class="flex items-center gap-2">
+<div class="h-6 px-2.5 bg-primary-wash border border-primary/20 rounded-full flex items-center gap-1.5 w-fit">
+<span class="material-symbols-outlined text-[14px] text-primary pulse-dot">sync</span>
+<span class="font-label text-[11px] text-primary">RUNNING</span>
+</div>
+<span class="font-label text-technical text-text-primary">04:12s</span>
+</div>
+<!-- Context -->
+<div class="flex flex-col">
+<span class="font-body text-[13px] text-text-primary flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px] text-text-muted">schedule</span> Hourly</span>
+<span class="font-label text-[11px] text-text-muted mt-0.5 flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">fingerprint</span> svc-prod-data</span>
+</div>
+<!-- Health -->
+<div class="flex items-center gap-1.5 text-success">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="font-control text-[13px]">Healthy</span>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-end gap-1 pr-2 opacity-100">
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-muted cursor-not-allowed opacity-50" disabled="" title="Workflow currently running">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+<button class="w-7 h-7 rounded bg-danger/10 text-danger hover:bg-danger/20 flex items-center justify-center transition-colors border border-danger/20" title="Stop Run">
+<span class="material-symbols-outlined text-[18px]">stop</span>
+</button>
+<div class="w-px h-4 bg-border mx-1"></div>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Settings">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-muted cursor-not-allowed opacity-50" disabled="" title="Workflow currently running">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-muted cursor-not-allowed opacity-50" disabled="" title="Workflow currently running">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-muted cursor-not-allowed opacity-50" disabled="" title="Workflow currently running">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Idle Row: Invoice Processor -->
+<div class="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_180px] gap-4 px-4 py-3 border-b border-border hover:bg-elevated-surface transition-colors items-center group cursor-default">
+<div class="absolute left-0 w-0.5 bg-transparent group-hover:bg-border-emphasis transition-colors h-full"></div>
+<!-- Name -->
+<div class="pl-2 flex flex-col min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-headline text-[14px] font-semibold text-text-primary truncate">Invoice Processor</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted hover:text-text-primary cursor-pointer transition-colors" title="View Details">open_in_new</span>
+</div>
+<span class="font-label text-technical text-text-muted truncate">ID: WF-2241-INV</span>
+</div>
+<!-- Status -->
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-0.5">
+<div class="w-2 h-2 rounded-full bg-success"></div>
+<span class="font-body text-[13px] text-text-primary">Idle</span>
+</div>
+<span class="font-label text-technical text-text-muted">Success 15m ago</span>
+</div>
+<!-- Context -->
+<div class="flex flex-col">
+<span class="font-body text-[13px] text-text-primary flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px] text-text-muted">event</span> Daily</span>
+<span class="font-label text-[11px] text-text-muted mt-0.5 flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">fingerprint</span> svc-fin-ops</span>
+</div>
+<!-- Health -->
+<div class="flex items-center gap-1.5 text-warning">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span class="font-control text-[13px]">Degraded</span>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-end gap-1 pr-2 opacity-50 group-hover:opacity-100 transition-opacity">
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-primary hover:bg-primary-wash transition-colors" title="Launch Run">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-muted cursor-not-allowed opacity-50" disabled="" title="Not running">
+<span class="material-symbols-outlined text-[18px]">stop</span>
+</button>
+<div class="w-px h-4 bg-border mx-1"></div>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Settings">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Duplicate">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Export">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-danger hover:bg-danger/10 transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Idle Row: Auth Sync -->
+<div class="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_180px] gap-4 px-4 py-3 border-b border-border hover:bg-elevated-surface transition-colors items-center group cursor-default">
+<!-- Name -->
+<div class="pl-2 flex flex-col min-w-0">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="font-headline text-[14px] font-semibold text-text-primary truncate">Auth Token Sync</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted hover:text-text-primary cursor-pointer transition-colors" title="View Details">open_in_new</span>
+</div>
+<span class="font-label text-technical text-text-muted truncate">ID: WF-1099-ATH</span>
+</div>
+<!-- Status -->
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-0.5">
+<div class="w-2 h-2 rounded-full bg-text-muted"></div>
+<span class="font-body text-[13px] text-text-primary">Idle</span>
+</div>
+<span class="font-label text-technical text-text-muted">Failed 2h ago</span>
+</div>
+<!-- Context -->
+<div class="flex flex-col">
+<span class="font-body text-[13px] text-text-primary flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px] text-text-muted">webhook</span> Webhook</span>
+<span class="font-label text-[11px] text-text-muted mt-0.5 flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">fingerprint</span> svc-sec-core</span>
+</div>
+<!-- Health -->
+<div class="flex items-center gap-1.5 text-danger">
+<span class="material-symbols-outlined text-[16px]">error</span>
+<span class="font-control text-[13px]">Critical</span>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-end gap-1 pr-2 opacity-50 group-hover:opacity-100 transition-opacity">
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-primary hover:bg-primary-wash transition-colors" title="Launch Run">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-muted cursor-not-allowed opacity-50" disabled="" title="Not running">
+<span class="material-symbols-outlined text-[18px]">stop</span>
+</button>
+<div class="w-px h-4 bg-border mx-1"></div>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Settings">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Duplicate">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Export">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-text-secondary hover:text-danger hover:bg-danger/10 transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right-side Preview Inspector -->
+<div class="w-[320px] bg-elevated-surface border border-border rounded-panel flex flex-col shrink-0 hidden lg:flex">
+<div class="p-4 border-b border-border flex items-center justify-between">
+<h3 class="font-headline text-[15px] font-semibold text-text-primary">Workflow Detail</h3>
+<button class="text-text-muted hover:text-text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="p-4 flex-1 overflow-y-auto">
+<!-- Context Header -->
+<div class="mb-6">
+<div class="flex items-center gap-2 mb-2">
+<div class="h-5 px-2 bg-primary-wash border border-primary/20 rounded-full flex items-center gap-1 w-fit">
+<span class="material-symbols-outlined text-[12px] text-primary pulse-dot">sync</span>
+<span class="font-label text-[10px] text-primary tracking-wider">RUNNING</span>
+</div>
+</div>
+<h4 class="font-headline text-[18px] font-semibold text-text-primary mb-1 leading-tight">Data Ingestion Pipeline</h4>
+<p class="font-label text-technical text-text-secondary">WF-9823-XYZ</p>
+</div>
+<!-- Health Chart Mock -->
+<div class="mb-6 bg-surface border border-border rounded-card p-3">
+<h5 class="font-control text-text-secondary mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">monitor_heart</span>
+                            Health (Last 7 Days)
+                        </h5>
+<div class="flex items-end gap-1 h-12 w-full">
+<!-- Simulated bar chart -->
+<div class="w-full bg-success h-full rounded-t-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title="100% Success"></div>
+<div class="w-full bg-success h-[90%] rounded-t-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title="90% Success"></div>
+<div class="w-full bg-danger h-[20%] rounded-t-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title="Failed"></div>
+<div class="w-full bg-success h-full rounded-t-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title="100% Success"></div>
+<div class="w-full bg-warning h-[60%] rounded-t-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title="Degraded"></div>
+<div class="w-full bg-success h-full rounded-t-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title="100% Success"></div>
+<div class="w-full bg-primary h-[40%] rounded-t-sm opacity-80 pulse-dot cursor-pointer" title="Currently Running"></div>
+</div>
+<div class="flex justify-between mt-2 font-label text-[10px] text-text-muted">
+<span>May 10</span>
+<span>Today</span>
+</div>
+</div>
+<!-- Identity Posture -->
+<div class="mb-6">
+<h5 class="font-control text-text-secondary mb-2 uppercase tracking-wider text-[11px]">Identity Posture</h5>
+<div class="bg-surface border border-border rounded-control p-3 flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-elevated-surface border border-border-emphasis flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-text-primary">fingerprint</span>
+</div>
+<div class="min-w-0">
+<p class="font-control text-text-primary truncate">svc-prod-data</p>
+<p class="font-body text-[12px] text-success flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+                                    Session Active
+                                </p>
+</div>
+</div>
+</div>
+<!-- Configuration Summary -->
+<div class="mb-6">
+<h5 class="font-control text-text-secondary mb-2 uppercase tracking-wider text-[11px]">Configuration</h5>
+<div class="space-y-2">
+<div class="flex justify-between items-center py-1 border-b border-border border-dashed">
+<span class="font-body text-[13px] text-text-muted">Target Environment</span>
+<span class="font-label text-technical text-text-primary">Production</span>
+</div>
+<div class="flex justify-between items-center py-1 border-b border-border border-dashed">
+<span class="font-body text-[13px] text-text-muted">Timeout Strategy</span>
+<span class="font-label text-technical text-text-primary">Hard-Kill (5m)</span>
+</div>
+<div class="flex justify-between items-center py-1 border-b border-border border-dashed">
+<span class="font-body text-[13px] text-text-muted">Last Modified</span>
+<span class="font-label text-technical text-text-primary">2 days ago</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border bg-panel">
+<button class="w-full h-9 bg-surface border border-border-emphasis rounded-control font-control text-text-primary hover:bg-[#1f2e3d] hover:border-primary transition-colors flex items-center justify-center gap-2 group">
+<span class="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">schema</span>
+                        Open Graph Builder
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

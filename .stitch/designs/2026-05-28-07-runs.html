@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mission Control - Runs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "control": "8px",
+                        "card": "12px",
+                        "panel": "16px",
+                        "pill": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "compact": "12px",
+                        "panel": "16px",
+                        "page": "24px",
+                        "section": "32px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "display": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Geist Mono"],
+                        "sans": ["Inter", "sans-serif"],
+                        "mono": ["Geist Mono", "monospace"]
+                    },
+                    fontSize: {
+                        "page-title": ["30px", { lineHeight: "38px", fontWeight: "600", letterSpacing: "0" }],
+                        "section-title": ["19px", { lineHeight: "26px", fontWeight: "500", letterSpacing: "0" }],
+                        "body": ["14px", { lineHeight: "20px", fontWeight: "400", letterSpacing: "0" }],
+                        "control": ["13px", { lineHeight: "18px", fontWeight: "500", letterSpacing: "0" }],
+                        "technical": ["12px", { lineHeight: "16px", fontWeight: "600", letterSpacing: "0.08em" }],
+                        "metric": ["34px", { lineHeight: "40px", fontWeight: "600", letterSpacing: "0" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B1016;
+            color: #E7EEF5;
+        }
+        .tech-text { font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+        .pulse-cyan { animation: pulseCyan 2s infinite; }
+        @keyframes pulseCyan {
+            0% { box-shadow: 0 0 0 0 rgba(50, 211, 230, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(50, 211, 230, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(50, 211, 230, 0); }
+        }
+
+        /* Custom Scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0E151D; }
+        ::-webkit-scrollbar-thumb { background: #233240; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #314758; }
+    </style>
+</head>
+<body class="bg-background text-text-primary h-screen w-full flex overflow-hidden antialiased">
+<!-- JSON: SideNavBar -->
+<nav class="w-[232px] h-screen flex-shrink-0 bg-[#0E151D] border-r border-[#233240] flex flex-col py-4 z-40 hidden md:flex">
+<div class="px-6 mb-8">
+<h1 class="text-lg font-semibold text-[#E7EEF5] tracking-tight">Mission Control</h1>
+<p class="text-text-muted text-xs tech-text mt-1">v4.2.0-stable</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-[#0B1016] rounded-control py-2 px-4 flex items-center justify-center space-x-2 font-control transition-transform hover:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New Workflow</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto px-3">
+<ul class="space-y-1">
+<!-- Overview -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-headline text-sm font-medium tracking-tight">Overview</span>
+</a>
+</li>
+<!-- Workflows -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-headline text-sm font-medium tracking-tight">Workflows</span>
+</a>
+</li>
+<!-- Runs (ACTIVE) -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control bg-white/10 text-[#32D3E6] border-l-2 border-[#32D3E6] font-headline text-sm font-medium tracking-tight scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px] fill">play_circle</span>
+<span>Runs</span>
+</a>
+</li>
+<!-- Evidence -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">folder_shared</span>
+<span class="font-headline text-sm font-medium tracking-tight">Evidence</span>
+</a>
+</li>
+<!-- Schedules -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">schedule</span>
+<span class="font-headline text-sm font-medium tracking-tight">Schedules</span>
+</a>
+</li>
+<!-- Identities -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+<span class="font-headline text-sm font-medium tracking-tight">Identities</span>
+</a>
+</li>
+<!-- Settings -->
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-headline text-sm font-medium tracking-tight">Settings</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="px-3 mt-auto pt-4 border-t border-[#233240]">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="font-headline text-sm font-medium tracking-tight">Diagnostics</span>
+</a>
+</li>
+<li>
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+<span class="font-headline text-sm font-medium tracking-tight">Help</span>
+</a>
+</li>
+</ul>
+<div class="mt-4 px-3 flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center">
+<span class="material-symbols-outlined text-text-secondary text-[18px]">person</span>
+</div>
+<div>
+<p class="text-xs font-medium text-text-primary">Operator Profile</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+<!-- JSON: TopNavBar (Mobile only since desktop uses SideNav, but keeping header context) -->
+<header class="h-14 w-full bg-[#0B1016] border-b border-[#233240] flex justify-between items-center px-6 sticky top-0 z-30 md:hidden">
+<h1 class="text-xl font-bold text-[#E7EEF5]">Mission Control</h1>
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-[#9AAEBD]">notifications</span>
+<span class="material-symbols-outlined text-[#9AAEBD]">menu</span>
+</div>
+</header>
+<!-- Runs Workspace Header -->
+<div class="px-page py-page border-b border-border bg-background flex-shrink-0">
+<div class="flex justify-between items-end">
+<div>
+<p class="text-text-secondary text-technical mb-1">EXECUTION</p>
+<h2 class="text-page-title text-text-primary">Runs</h2>
+</div>
+<div class="flex space-x-compact">
+<div class="flex items-center space-x-2 bg-surface border border-border rounded-pill px-3 py-1.5">
+<div class="w-2 h-2 rounded-full bg-primary pulse-cyan"></div>
+<span class="text-technical text-text-primary">Active: 12</span>
+</div>
+<div class="flex items-center space-x-2 bg-surface border border-border rounded-pill px-3 py-1.5">
+<span class="material-symbols-outlined text-[16px] text-text-secondary">history</span>
+<span class="text-technical text-text-secondary">Session Total: 148</span>
+</div>
+<button class="bg-primary text-background px-4 py-1.5 rounded-control font-control flex items-center space-x-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">rocket_launch</span>
+<span>Launch Run</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Master-Detail Split Layout -->
+<div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+<!-- Left Side: Master Table (Runs List) -->
+<div class="flex-1 border-r border-border bg-panel flex flex-col min-w-0 overflow-hidden">
+<!-- Table Controls / Filters -->
+<div class="p-compact border-b border-border flex items-center space-x-compact bg-background flex-shrink-0">
+<div class="relative flex-1 max-w-sm">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[18px]">search</span>
+<input class="w-full bg-surface border border-border text-body text-text-primary rounded-control pl-9 pr-3 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted outline-none transition-all" placeholder="Search runs by ID, workflow, or identity..." type="text"/>
+</div>
+<button class="flex items-center space-x-1 text-text-secondary hover:text-text-primary px-3 py-1.5 border border-border rounded-control bg-surface transition-colors">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+<span class="font-control">Filter</span>
+</button>
+</div>
+<!-- Table Content -->
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-panel z-10 border-b border-border">
+<tr>
+<th class="py-2 px-4 font-technical text-text-secondary font-medium w-8"></th>
+<th class="py-2 px-4 font-technical text-text-secondary font-medium">Workflow</th>
+<th class="py-2 px-4 font-technical text-text-secondary font-medium hidden sm:table-cell">Identity</th>
+<th class="py-2 px-4 font-technical text-text-secondary font-medium">Status / Step</th>
+<th class="py-2 px-4 font-technical text-text-secondary font-medium hidden md:table-cell">Started</th>
+<th class="py-2 px-4 font-technical text-text-secondary font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- Row 1: Selected / Running -->
+<tr class="bg-primary-wash border-l-2 border-primary cursor-pointer hover:bg-surface/80 transition-colors group">
+<td class="py-3 px-4">
+<div class="w-2 h-2 rounded-full bg-primary pulse-cyan"></div>
+</td>
+<td class="py-3 px-4">
+<div class="font-body font-medium text-text-primary">Nightly ETL Ledger Sync</div>
+<div class="text-technical text-text-secondary mt-0.5">RUN-982A-F4</div>
+</td>
+<td class="py-3 px-4 hidden sm:table-cell">
+<div class="flex items-center space-x-1.5 bg-background border border-border rounded px-2 py-0.5 inline-flex">
+<span class="material-symbols-outlined text-[14px] text-text-secondary">fingerprint</span>
+<span class="text-technical text-text-secondary">svc-loader-01</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center space-x-2 mb-1">
+<span class="text-technical text-primary font-medium">Running</span>
+</div>
+<div class="text-xs text-text-muted">Ledger Write (4/7)</div>
+</td>
+<td class="py-3 px-4 hidden md:table-cell text-body text-text-secondary">
+                                    14m 22s ago
+                                </td>
+<td class="py-3 px-4 text-right">
+<button class="text-danger hover:bg-danger/10 border border-transparent hover:border-danger/30 px-2 py-1 rounded text-control transition-colors" title="Stop Run">
+                                        Stop
+                                    </button>
+</td>
+</tr>
+<!-- Row 2: Failed -->
+<tr class="cursor-pointer hover:bg-surface transition-colors border-l-2 border-transparent">
+<td class="py-3 px-4">
+<span class="material-symbols-outlined text-[14px] text-danger">error</span>
+</td>
+<td class="py-3 px-4">
+<div class="font-body text-text-primary">CRM Data Extraction</div>
+<div class="text-technical text-text-secondary mt-0.5">RUN-881C-E2</div>
+</td>
+<td class="py-3 px-4 hidden sm:table-cell">
+<div class="flex items-center space-x-1.5 bg-background border border-border rounded px-2 py-0.5 inline-flex">
+<span class="material-symbols-outlined text-[14px] text-text-secondary">fingerprint</span>
+<span class="text-technical text-text-secondary">ext-agent-04</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center space-x-2 mb-1">
+<span class="text-technical text-danger font-medium">Failed</span>
+</div>
+<div class="text-xs text-text-muted">Auth Challenge (2/5)</div>
+</td>
+<td class="py-3 px-4 hidden md:table-cell text-body text-text-secondary">
+                                    42m ago
+                                </td>
+<td class="py-3 px-4 text-right">
+<button class="text-text-secondary hover:text-text-primary px-2 py-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Success -->
+<tr class="cursor-pointer hover:bg-surface transition-colors border-l-2 border-transparent">
+<td class="py-3 px-4">
+<span class="material-symbols-outlined text-[14px] text-success">check_circle</span>
+</td>
+<td class="py-3 px-4">
+<div class="font-body text-text-primary">Weekly Report Gen</div>
+<div class="text-technical text-text-secondary mt-0.5">RUN-710B-A1</div>
+</td>
+<td class="py-3 px-4 hidden sm:table-cell">
+<div class="flex items-center space-x-1.5 bg-background border border-border rounded px-2 py-0.5 inline-flex">
+<span class="material-symbols-outlined text-[14px] text-text-secondary">fingerprint</span>
+<span class="text-technical text-text-secondary">svc-report-02</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center space-x-2 mb-1">
+<span class="text-technical text-success font-medium">Success</span>
+</div>
+<div class="text-xs text-text-muted">Completed (8/8)</div>
+</td>
+<td class="py-3 px-4 hidden md:table-cell text-body text-text-secondary">
+                                    2h 15m ago
+                                </td>
+<td class="py-3 px-4 text-right">
+<button class="text-text-secondary hover:text-text-primary px-2 py-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Side: Focused Run Detail -->
+<div class="w-full lg:w-[500px] xl:w-[600px] bg-background flex flex-col flex-shrink-0 overflow-y-auto">
+<!-- Detail Header -->
+<div class="p-page border-b border-border bg-panel">
+<div class="flex items-start justify-between mb-4">
+<div>
+<div class="flex items-center space-x-2 mb-1">
+<span class="text-technical text-primary">RUNNING</span>
+<span class="w-1 h-1 rounded-full bg-border-emphasis"></span>
+<span class="text-technical text-text-secondary font-mono">RUN-982A-F4</span>
+</div>
+<h3 class="text-section-title text-text-primary font-semibold">Nightly ETL Ledger Sync</h3>
+</div>
+<div class="bg-surface border border-primary/30 text-primary px-3 py-1 rounded-pill flex items-center space-x-1.5 shadow-[0_0_10px_rgba(50,211,230,0.1)]">
+<span class="material-symbols-outlined text-[16px] pulse-cyan">autorenew</span>
+<span class="font-control font-medium">Active</span>
+</div>
+</div>
+<!-- Meta Grid -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-surface rounded-card p-3 border border-border">
+<p class="text-technical text-text-secondary mb-1">STARTED</p>
+<p class="text-body text-text-primary">Oct 24, 02:14:22 UTC</p>
+</div>
+<div class="bg-surface rounded-card p-3 border border-border">
+<p class="text-technical text-text-secondary mb-1">IDENTITY</p>
+<div class="flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[14px] text-primary">fingerprint</span>
+<span class="text-body text-text-primary">svc-loader-01</span>
+</div>
+</div>
+</div>
+<!-- Traceability Actions -->
+<div class="flex space-x-3">
+<button class="flex-1 bg-surface border border-border hover:border-border-emphasis text-text-primary py-2 px-3 rounded-control flex items-center justify-center space-x-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">folder_shared</span>
+<span class="font-control">Evidence</span>
+</button>
+<button class="flex-1 bg-surface border border-border hover:border-border-emphasis text-text-primary py-2 px-3 rounded-control flex items-center justify-center space-x-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">account_tree</span>
+<span class="font-control">Workflow</span>
+</button>
+<button class="flex-1 bg-surface border border-border hover:border-border-emphasis text-text-primary py-2 px-3 rounded-control flex items-center justify-center space-x-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span class="font-control">Identity</span>
+</button>
+</div>
+</div>
+<!-- Execution Timeline -->
+<div class="p-page flex-1 bg-background">
+<h4 class="text-section-title text-text-primary mb-6">Execution Trace</h4>
+<div class="relative space-y-0 pl-2">
+<!-- Timeline Line -->
+<div class="absolute top-4 bottom-4 left-[15px] w-[2px] bg-border"></div>
+<!-- Step 1: Completed -->
+<div class="relative flex items-start group pb-6">
+<div class="absolute left-0 w-[14px] h-[14px] bg-background border-2 border-success rounded-full mt-1.5 z-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-success font-bold">check</span>
+</div>
+<div class="ml-8 w-full bg-surface border border-border rounded-card p-4 group-hover:border-border-emphasis transition-colors">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center space-x-2">
+<span class="text-technical text-text-secondary">01</span>
+<span class="text-body font-medium text-text-primary">Initialize Session</span>
+</div>
+<span class="text-technical text-text-muted">4s</span>
+</div>
+<div class="flex items-center space-x-2 text-text-secondary text-sm">
+<span class="material-symbols-outlined text-[16px]">terminal</span>
+<span>Script Execution</span>
+</div>
+</div>
+</div>
+<!-- Step 2: Completed with Artifact -->
+<div class="relative flex items-start group pb-6">
+<div class="absolute left-0 w-[14px] h-[14px] bg-background border-2 border-success rounded-full mt-1.5 z-10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-success font-bold">check</span>
+</div>
+<div class="ml-8 w-full bg-surface border border-border rounded-card p-4 group-hover:border-border-emphasis transition-colors">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center space-x-2">
+<span class="text-technical text-text-secondary">02</span>
+<span class="text-body font-medium text-text-primary">Auth Gateway Bypass</span>
+</div>
+<span class="text-technical text-text-muted">12s</span>
+</div>
+<div class="flex items-center space-x-2 text-text-secondary text-sm mb-3">
+<span class="material-symbols-outlined text-[16px]">http</span>
+<span>HTTP Request sequence</span>
+</div>
+<!-- Artifact Marker -->
+<div class="inline-flex items-center space-x-2 bg-background border border-border rounded px-2 py-1">
+<span class="material-symbols-outlined text-[14px] text-primary">cookie</span>
+<span class="text-technical text-text-primary">session_token captured</span>
+</div>
+</div>
+</div>
+<!-- Step 3: Active -->
+<div class="relative flex items-start group pb-6">
+<!-- Animated Active Dot -->
+<div class="absolute left-[-2px] w-[18px] h-[18px] bg-background rounded-full mt-1 z-10 flex items-center justify-center">
+<div class="w-[10px] h-[10px] bg-primary rounded-full pulse-cyan"></div>
+</div>
+<div class="ml-8 w-full bg-elevated-surface border border-primary/50 shadow-[0_0_15px_rgba(50,211,230,0.05)] rounded-card p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center space-x-2">
+<span class="text-technical text-primary">03</span>
+<span class="text-body font-medium text-text-primary">Ledger Write</span>
+</div>
+<span class="text-technical text-primary flex items-center"><span class="material-symbols-outlined text-[14px] mr-1 animate-spin">sync</span> Running</span>
+</div>
+<div class="flex items-center space-x-2 text-text-secondary text-sm mb-3">
+<span class="material-symbols-outlined text-[16px]">database</span>
+<span>Data Injection</span>
+</div>
+<div class="w-full bg-background rounded-full h-1.5 mt-2">
+<div class="bg-primary h-1.5 rounded-full w-[65%]"></div>
+</div>
+<p class="text-technical text-text-secondary mt-2">Processing batch 4 of 6...</p>
+</div>
+</div>
+<!-- Step 4: Pending -->
+<div class="relative flex items-start group pb-2">
+<div class="absolute left-0 w-[14px] h-[14px] bg-background border-2 border-border rounded-full mt-1.5 z-10"></div>
+<div class="ml-8 w-full bg-transparent border border-border border-dashed rounded-card p-4 opacity-50">
+<div class="flex items-center space-x-2 mb-1">
+<span class="text-technical text-text-muted">04</span>
+<span class="text-body font-medium text-text-secondary">Verify Commitment</span>
+</div>
+<div class="flex items-center space-x-2 text-text-muted text-sm">
+<span class="material-symbols-outlined text-[16px]">rule</span>
+<span>Assertion</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

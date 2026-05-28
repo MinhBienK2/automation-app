@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schedules - Mission Control</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        geist: ['"Geist Mono"', 'monospace'],
+                    },
+                    fontSize: {
+                        "page-title": ["30px", { lineHeight: "38px", letterSpacing: "0", fontWeight: "600" }],
+                        "section-title": ["19px", { lineHeight: "26px", letterSpacing: "0", fontWeight: "500" }],
+                        "body": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+                        "control": ["13px", { lineHeight: "18px", letterSpacing: "0", fontWeight: "500" }],
+                        "technical": ["12px", { lineHeight: "16px", letterSpacing: "0.08em", fontWeight: "600" }],
+                        "metric": ["34px", { lineHeight: "40px", letterSpacing: "0", fontWeight: "600" }],
+                    },
+                    borderRadius: {
+                        "control": "8px",
+                        "card": "12px",
+                        "panel": "16px",
+                        "pill": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "compact": "12px",
+                        "panel": "16px",
+                        "page": "24px",
+                        "section": "32px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B1016;
+            color: #E7EEF5;
+        }
+        .technical-text {
+            font-family: 'Geist Mono', monospace;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        /* Custom scrollbar for data tables */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0E151D;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233240;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #314758;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-body">
+<!-- SideNavBar Component mapping -->
+<nav class="w-[232px] h-screen fixed left-0 top-0 bg-[#0E151D] border-r border-[#233240] flex flex-col py-6 z-20 hidden md:flex">
+<div class="px-6 mb-8 flex flex-col gap-1">
+<span class="text-xl font-bold text-[#E7EEF5] tracking-tight">Mission Control</span>
+<span class="text-[12px] text-[#9AAEBD] font-geist tracking-[0.08em] uppercase">Automation Lab</span>
+</div>
+<button class="mx-6 mb-6 px-4 py-2 bg-[#32D3E6] text-[#0B1016] rounded-control font-control hover:bg-[#E7EEF5] transition-colors flex items-center justify-center gap-2 font-medium">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            New Workflow
+        </button>
+<div class="flex-1 overflow-y-auto px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-control">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-control">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span class="font-control">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-control">Evidence</span>
+</a>
+<!-- Active State Navigation -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#32D3E6] bg-[rgba(50,211,230,0.12)] border-l-2 border-[#32D3E6] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+<span class="font-control font-medium">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+<span class="font-control">Identities</span>
+</a>
+</div>
+<div class="mt-auto px-3">
+<a class="flex items-center gap-3 px-3 py-2 rounded-control text-[#9AAEBD] hover:text-[#E7EEF5] hover:bg-[#121C26] transition-colors active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-control">Settings</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar Component Mapping -->
+<header class="h-16 fixed top-0 right-0 left-0 md:left-[232px] bg-[#0B1016] border-b border-[#233240] flex justify-between items-center px-6 z-10">
+<div class="flex items-center gap-4">
+<!-- Mobile Menu Toggle -->
+<button class="md:hidden text-text-secondary hover:text-text-primary p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="relative group hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface border border-border text-control rounded-control py-1.5 pl-9 pr-4 w-[280px] text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="Search commands, IDs, resources..." type="text"/>
+<div class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+<kbd class="technical-text text-[10px] bg-elevated-surface px-1.5 py-0.5 rounded border border-border text-text-muted">⌘</kbd>
+<kbd class="technical-text text-[10px] bg-elevated-surface px-1.5 py-0.5 rounded border border-border text-text-muted">K</kbd>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-compact">
+<div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-control bg-elevated-surface border border-border">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-control text-text-secondary">Environment: Production</span>
+</div>
+<div class="h-6 w-px bg-border mx-2 hidden sm:block"></div>
+<button class="p-2 text-text-secondary hover:text-text-primary hover:bg-surface rounded-control transition-colors relative">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-text-primary hover:bg-surface rounded-control transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full"></span>
+</button>
+<div class="h-6 w-px bg-border mx-2"></div>
+<button class="h-8 w-8 rounded-full bg-elevated-surface border border-border flex items-center justify-center overflow-hidden hover:border-primary transition-colors">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD37UII2Xg77l2_O4s_2KeTqBE_HYO6mELmEzg_G6FJk3bcPUfapdlTUtI0BLJfuRFtjO50mrKYc7-HsD8K0ixFgcqFqW1wcwjz8Mfoi0gSzysztiOL_T7Ef0y43TKpG0lsP_QKj4H6bwqeTM-lPQGwPum4zulUX6skh-3Vt2mTpzUoF68Ywl1sjY2elz_t39k2RAyfGSpCy2GnErRoalVe7Tt295XkRLzCgP3p-A6ZVc0LQ77D76OWoJ8fNCx75z2HqpH9-lWKg2xb"/>
+</button>
+</div>
+</header>
+<!-- Main Workspace Content -->
+<main class="flex-1 w-full md:pl-[232px] pt-16 flex flex-col bg-background h-screen overflow-hidden">
+<!-- Page Header Area -->
+<div class="px-page py-section flex flex-col gap-base border-b border-border bg-background shrink-0">
+<div class="flex items-center justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="technical-text text-text-muted text-[11px]">Automation</span>
+<span class="text-text-muted text-[11px] material-symbols-outlined">chevron_right</span>
+<span class="technical-text text-primary text-[11px]">Execution</span>
+</div>
+<div class="flex items-center gap-4">
+<h1 class="text-page-title text-text-primary m-0">Schedules</h1>
+<span class="px-2.5 py-0.5 rounded-pill bg-elevated-surface border border-border text-text-secondary font-control text-[12px] flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_4px_rgba(50,211,230,0.5)]"></span>
+                            24 Active
+                        </span>
+</div>
+</div>
+<div class="flex items-center gap-compact">
+<button class="px-4 py-2 bg-surface text-text-primary border border-border hover:border-border-emphasis rounded-control font-control transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Filter
+                    </button>
+<button class="px-4 py-2 bg-primary text-background rounded-control font-control hover:bg-opacity-90 transition-colors flex items-center gap-2 font-medium">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        New Schedule
+                    </button>
+</div>
+</div>
+</div>
+<!-- Density Data Table Area -->
+<div class="flex-1 overflow-auto p-page">
+<div class="bg-surface rounded-card border border-border overflow-hidden flex flex-col h-full shadow-lg">
+<!-- Table Header -->
+<div class="grid grid-cols-[48px_minmax(180px,1fr)_minmax(180px,1fr)_140px_160px_180px] items-center px-4 py-3 border-b border-border bg-elevated-surface sticky top-0 z-10">
+<div class="text-text-muted text-[11px] uppercase tracking-wider font-semibold pl-2">State</div>
+<div class="text-text-muted text-[11px] uppercase tracking-wider font-semibold">Workflow</div>
+<div class="text-text-muted text-[11px] uppercase tracking-wider font-semibold">Schedule (Cron)</div>
+<div class="text-text-muted text-[11px] uppercase tracking-wider font-semibold">Next Run</div>
+<div class="text-text-muted text-[11px] uppercase tracking-wider font-semibold">Last Result</div>
+<div class="text-text-muted text-[11px] uppercase tracking-wider font-semibold text-right pr-2">Actions</div>
+</div>
+<!-- Table Body -->
+<div class="flex-1 overflow-y-auto">
+<!-- Row 1: Active -->
+<div class="group grid grid-cols-[48px_minmax(180px,1fr)_minmax(180px,1fr)_140px_160px_180px] items-center px-4 py-3 border-b border-border hover:bg-elevated-surface transition-colors cursor-default relative">
+<div class="absolute left-0 top-0 bottom-0 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="pl-2 flex items-center justify-center w-8">
+<span class="material-symbols-outlined text-primary text-[20px] shadow-[0_0_8px_rgba(50,211,230,0.3)] rounded-full">play_circle</span>
+</div>
+<div class="flex flex-col pr-4">
+<span class="text-text-primary font-medium text-[13px]">Daily ETL Sync</span>
+<span class="text-text-muted technical-text text-[10px] truncate mt-0.5">WF-8924-A</span>
+</div>
+<div class="flex flex-col pr-4">
+<span class="technical-text text-primary text-[12px] bg-primary-wash px-2 py-0.5 rounded inline-block w-fit">0 0 * * *</span>
+<span class="text-text-secondary text-[12px] mt-0.5">Daily at Midnight UTC</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-text-secondary text-[14px]">schedule</span>
+<span class="technical-text text-text-primary text-[12px]">IN 45M</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<div class="flex flex-col">
+<span class="text-text-primary text-[12px]">Success</span>
+<span class="text-text-muted text-[11px] truncate">1.2m duration</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-1 pr-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-2.5 py-1 text-text-secondary hover:text-text-primary font-control text-[12px] border border-transparent hover:border-border rounded bg-transparent hover:bg-surface transition-all">Pause</button>
+<button class="p-1.5 text-text-muted hover:text-text-primary rounded hover:bg-surface transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-text-muted hover:text-text-primary rounded hover:bg-surface transition-colors" title="History">
+<span class="material-symbols-outlined text-[18px]">history</span>
+</button>
+<button class="p-1.5 text-text-muted hover:text-danger rounded hover:bg-[rgba(240,100,103,0.1)] transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Row 2: Paused -->
+<div class="group grid grid-cols-[48px_minmax(180px,1fr)_minmax(180px,1fr)_140px_160px_180px] items-center px-4 py-3 border-b border-border hover:bg-elevated-surface transition-colors cursor-default bg-[rgba(11,16,22,0.4)]">
+<div class="pl-2 flex items-center justify-center w-8">
+<span class="material-symbols-outlined text-text-muted text-[20px]">pause_circle</span>
+</div>
+<div class="flex flex-col pr-4 opacity-60">
+<span class="text-text-primary font-medium text-[13px]">Weekly Report Gen</span>
+<span class="text-text-muted technical-text text-[10px] truncate mt-0.5">WF-7731-R</span>
+</div>
+<div class="flex flex-col pr-4 opacity-60">
+<span class="technical-text text-text-muted text-[12px] bg-surface border border-border px-2 py-0.5 rounded inline-block w-fit">0 8 * * 1</span>
+<span class="text-text-secondary text-[12px] mt-0.5">Weekly on Monday</span>
+</div>
+<div class="flex items-center gap-1.5 opacity-60">
+<span class="technical-text text-text-muted text-[12px]">—</span>
+</div>
+<div class="flex items-center gap-2 opacity-60">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<div class="flex flex-col">
+<span class="text-text-primary text-[12px]">Success</span>
+<span class="text-text-muted text-[11px] truncate">12d ago</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-1 pr-2 opacity-40 group-hover:opacity-100 transition-opacity">
+<button class="px-2.5 py-1 text-primary hover:text-text-primary font-control text-[12px] border border-transparent hover:border-border rounded bg-transparent hover:bg-surface transition-all">Resume</button>
+<button class="p-1.5 text-text-muted hover:text-text-primary rounded hover:bg-surface transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-text-muted hover:text-text-primary rounded hover:bg-surface transition-colors" title="History">
+<span class="material-symbols-outlined text-[18px]">history</span>
+</button>
+<button class="p-1.5 text-text-muted hover:text-danger rounded hover:bg-[rgba(240,100,103,0.1)] transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Row 3: Active - Error Last -->
+<div class="group grid grid-cols-[48px_minmax(180px,1fr)_minmax(180px,1fr)_140px_160px_180px] items-center px-4 py-3 border-b border-border hover:bg-elevated-surface transition-colors cursor-default relative">
+<div class="absolute left-0 top-0 bottom-0 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="pl-2 flex items-center justify-center w-8">
+<span class="material-symbols-outlined text-primary text-[20px] shadow-[0_0_8px_rgba(50,211,230,0.3)] rounded-full">play_circle</span>
+</div>
+<div class="flex flex-col pr-4">
+<span class="text-text-primary font-medium text-[13px]">Compliance Scan</span>
+<span class="text-text-muted technical-text text-[10px] truncate mt-0.5">WF-1102-C</span>
+</div>
+<div class="flex flex-col pr-4">
+<span class="technical-text text-primary text-[12px] bg-primary-wash px-2 py-0.5 rounded inline-block w-fit">*/30 * * * *</span>
+<span class="text-text-secondary text-[12px] mt-0.5">Every 30 Minutes</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-text-secondary text-[14px]">schedule</span>
+<span class="technical-text text-text-primary text-[12px]">IN 2H 15M</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-danger"></span>
+<div class="flex flex-col">
+<span class="text-danger text-[12px]">Failed</span>
+<span class="text-text-muted text-[11px] truncate" title="Timeout on Node 4">Timeout on Node 4</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-1 pr-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-2.5 py-1 text-text-secondary hover:text-text-primary font-control text-[12px] border border-transparent hover:border-border rounded bg-transparent hover:bg-surface transition-all">Pause</button>
+<button class="p-1.5 text-text-muted hover:text-text-primary rounded hover:bg-surface transition-colors" title="Edit">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 text-text-muted hover:text-text-primary rounded hover:bg-surface transition-colors" title="History">
+<span class="material-symbols-outlined text-[18px]">history</span>
+</button>
+<button class="p-1.5 text-text-muted hover:text-danger rounded hover:bg-[rgba(240,100,103,0.1)] transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Table Footer / Pagination Area -->
+<div class="px-4 py-3 border-t border-border bg-elevated-surface flex items-center justify-between mt-auto">
+<span class="text-text-muted text-[12px]">Showing 1-3 of 24 schedules</span>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<span class="text-text-primary text-[12px] px-2 technical-text">1 / 8</span>
+<button class="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

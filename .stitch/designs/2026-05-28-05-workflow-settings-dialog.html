@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Workflow Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        base: "8px",
+                        compact: "12px",
+                        panel: "16px",
+                        page: "24px",
+                        section: "32px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Geist Mono", "monospace"],
+                        technical: ["Geist Mono", "monospace"]
+                    },
+                    fontSize: {
+                        "page-title": ["30px", { lineHeight: "38px", letterSpacing: "0", fontWeight: "600" }],
+                        "section-title": ["19px", { lineHeight: "26px", letterSpacing: "0", fontWeight: "500" }],
+                        "body": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "400" }],
+                        "control": ["13px", { lineHeight: "18px", letterSpacing: "0", fontWeight: "500" }],
+                        "technical": ["12px", { lineHeight: "16px", letterSpacing: "0.08em", fontWeight: "600" }],
+                        "metric": ["34px", { lineHeight: "40px", letterSpacing: "0", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist+Mono:wght@600&display=swap');
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233240;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #314758;
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary font-body antialiased h-screen w-screen overflow-hidden flex items-center justify-center p-6">
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-page">
+<!-- Modal Container -->
+<div class="bg-panel w-full max-w-[1280px] h-full max-h-[900px] rounded-[16px] border border-border shadow-2xl flex flex-col overflow-hidden relative z-50">
+<!-- Header -->
+<header class="flex-none h-[72px] border-b border-border bg-surface px-page flex items-center justify-between shrink-0">
+<div class="flex items-center gap-4">
+<div>
+<div class="font-technical text-technical text-text-secondary uppercase mb-1">Workflow Settings</div>
+<div class="flex items-center gap-3">
+<h1 class="font-headline text-section-title text-text-primary">Data Ingestion Pipeline</h1>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/10 border border-warning/20 text-warning text-[12px] font-medium leading-none">
+<span class="w-1.5 h-1.5 rounded-full bg-warning animate-pulse"></span>
+                                Unsaved changes
+                            </span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-panel">
+<button class="h-8 px-4 rounded-lg bg-primary text-background font-control hover:bg-primary/90 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                        Save Changes
+                    </button>
+<div class="w-[1px] h-6 bg-border"></div>
+<button aria-label="Close" class="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Navigation (SideNavBar) -->
+<nav class="w-[232px] flex-none border-r border-border bg-panel py-6 overflow-y-auto">
+<ul class="space-y-1 px-3">
+<li>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors text-left" onclick="switchTab('general')">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-control">General</span>
+</button>
+</li>
+<li>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors text-left" onclick="switchTab('graph')">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-control">Graph</span>
+</button>
+</li>
+<li>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors text-left" onclick="switchTab('policy')">
+<span class="material-symbols-outlined text-[20px]">policy</span>
+<span class="font-control">Run Policy</span>
+</button>
+</li>
+<li>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-primary bg-primary/10 border-l-2 border-primary transition-all text-left" onclick="switchTab('browser')">
+<span class="material-symbols-outlined text-[20px]">browser_updated</span>
+<span class="font-control">Browser Launch</span>
+</button>
+</li>
+<li>
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors text-left" onclick="switchTab('environment')">
+<span class="material-symbols-outlined text-[20px]">language</span>
+<span class="font-control">Environment</span>
+</button>
+</li>
+</ul>
+</nav>
+<!-- Center Content Canvas -->
+<main class="flex-1 overflow-y-auto bg-background relative">
+<div class="p-section max-w-4xl mx-auto space-y-section">
+<div class="mb-8">
+<h2 class="font-headline text-page-title text-text-primary mb-2">Browser Launch Configuration</h2>
+<p class="text-text-secondary text-body">Manage the browser instance identity, network routing, and stealth capabilities for this workflow.</p>
+</div>
+<!-- Identity Summary Panel -->
+<section class="bg-surface border border-border rounded-[12px] p-panel">
+<h3 class="font-headline text-section-title text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-primary">fingerprint</span>
+                                Identity Summary
+                            </h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-panel">
+<div>
+<div class="text-text-secondary text-technical mb-1">ID</div>
+<div class="font-technical text-text-primary">ID-8829</div>
+</div>
+<div>
+<div class="text-text-secondary text-technical mb-1">NAME</div>
+<div class="font-body text-text-primary font-medium">Finance-Runner-01</div>
+</div>
+<div>
+<div class="text-text-secondary text-technical mb-1">SEED</div>
+<div class="font-technical text-text-primary text-muted">Seed_7b2c_8a1</div>
+</div>
+<div>
+<div class="text-text-secondary text-technical mb-1">PERSONA</div>
+<div class="font-body text-text-primary">Prof/Res</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid for Settings -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-panel">
+<!-- Proxy Settings -->
+<section class="bg-surface border border-border rounded-[12px] p-panel flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline text-section-title text-text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-text-secondary">router</span>
+                                        Network Routing
+                                    </h3>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-elevated-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-primary after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="space-y-4 flex-1">
+<div>
+<label class="block text-control text-text-secondary mb-1.5">Proxy Host</label>
+<input class="w-full bg-background border border-border rounded-lg px-3 py-2 text-body text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none font-technical" type="text" value="proxy.internal.net"/>
+</div>
+<div class="flex gap-4">
+<div class="flex-1">
+<label class="block text-control text-text-secondary mb-1.5">Port</label>
+<input class="w-full bg-background border border-border rounded-lg px-3 py-2 text-body text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none font-technical" type="text" value="8080"/>
+</div>
+<div class="flex-1 flex items-end">
+<button class="w-full h-[38px] bg-elevated-surface border border-border rounded-lg text-control text-text-primary hover:bg-border-emphasis transition-colors">
+                                                Configure Auth
+                                             </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Localization -->
+<section class="bg-surface border border-border rounded-[12px] p-panel flex flex-col">
+<h3 class="font-headline text-section-title text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-text-secondary">public</span>
+                                    Localization
+                                </h3>
+<div class="space-y-4 flex-1">
+<div class="flex gap-4">
+<div class="flex-1">
+<label class="block text-control text-text-secondary mb-1.5">Timezone</label>
+<select class="w-full bg-background border border-border rounded-lg px-3 py-2 text-body text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none appearance-none">
+<option>Auto (Detected: UTC-5)</option>
+<option>UTC</option>
+<option>America/New_York</option>
+</select>
+</div>
+<div class="flex-1">
+<label class="block text-control text-text-secondary mb-1.5">Locale</label>
+<select class="w-full bg-background border border-border rounded-lg px-3 py-2 text-body text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none appearance-none">
+<option>en-US</option>
+<option>en-GB</option>
+</select>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-background rounded-lg border border-border mt-auto">
+<div>
+<div class="text-control text-text-primary">GeoIP Spoofing</div>
+<div class="text-body text-text-muted text-[12px]">Align GPS API to proxy IP</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-elevated-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-primary after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Privacy & Device -->
+<section class="bg-surface border border-border rounded-[12px] p-panel flex flex-col xl:col-span-2">
+<h3 class="font-headline text-section-title text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-text-secondary">security</span>
+                                    Privacy &amp; Stealth
+                                </h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="p-3 bg-background border border-border rounded-lg flex items-center justify-between">
+<div>
+<div class="text-control text-text-primary">WebRTC</div>
+<div class="text-[12px] text-text-muted">Disabled</div>
+</div>
+<span class="material-symbols-outlined text-text-secondary">block</span>
+</div>
+<div class="p-3 bg-background border border-border rounded-lg flex items-center justify-between">
+<div>
+<div class="text-control text-text-primary">Fonts</div>
+<div class="text-[12px] text-text-muted">System-default</div>
+</div>
+<span class="material-symbols-outlined text-text-secondary">font_download</span>
+</div>
+<div class="p-3 bg-background border border-border rounded-lg flex items-center justify-between border-primary/30 bg-primary/5">
+<div>
+<div class="text-control text-primary">Humanize Inputs</div>
+<div class="text-[12px] text-text-secondary">Enabled</div>
+</div>
+<span class="material-symbols-outlined text-primary">smart_toy</span>
+</div>
+</div>
+</section>
+<!-- Display -->
+<section class="bg-surface border border-border rounded-[12px] p-panel flex flex-col xl:col-span-2">
+<h3 class="font-headline text-section-title text-text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-text-secondary">desktop_windows</span>
+                                    Display Policy
+                                </h3>
+<div class="w-full md:w-1/2">
+<select class="w-full bg-background border border-border rounded-lg px-3 py-2 text-body text-text-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none appearance-none">
+<option>Headless (Performance Mode)</option>
+<option>Headed (Debug Mode)</option>
+</select>
+</div>
+</section>
+</div>
+<!-- Destructive Area -->
+<section class="mt-8 border border-danger/30 bg-danger/5 rounded-[12px] p-panel">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h3 class="font-headline text-section-title text-danger mb-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+                                        Reset Identity
+                                    </h3>
+<p class="text-body text-text-secondary">Clears all session data, cookies, local storage, and regenerates fingerprint. This cannot be undone.</p>
+</div>
+<button class="shrink-0 h-9 px-4 bg-danger/10 border border-danger/30 text-danger rounded-lg font-control hover:bg-danger hover:text-background transition-colors">
+                                    Reset Identity
+                                </button>
+</div>
+</section>
+<!-- Spacer for sticky footer -->
+<div class="h-[80px]"></div>
+</div>
+</main>
+<!-- Right Help Drawer -->
+<aside class="w-[280px] flex-none border-l border-border bg-surface hidden lg:flex flex-col">
+<div class="p-4 border-b border-border flex items-center justify-between">
+<h3 class="font-headline text-section-title text-text-primary">Help &amp; Context</h3>
+<button class="text-text-secondary hover:text-text-primary text-[12px] font-technical uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">translate</span>
+                            EN / VN
+                        </button>
+</div>
+<div class="p-4 space-y-4 overflow-y-auto flex-1">
+<!-- Accordion Item 1 -->
+<div class="border border-border rounded-lg overflow-hidden bg-background">
+<button class="w-full p-3 flex items-center justify-between bg-elevated-surface text-control text-text-primary hover:bg-border-emphasis transition-colors text-left">
+                                Identity Management
+                                <span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<div class="p-3 text-body text-text-secondary text-[13px] border-t border-border">
+                                The browser identity determines how target servers perceive this automated session. Changing the seed will invalidate existing session cookies.
+                            </div>
+</div>
+<!-- Accordion Item 2 -->
+<div class="border border-border rounded-lg overflow-hidden bg-background">
+<button class="w-full p-3 flex items-center justify-between bg-elevated-surface text-control text-text-primary hover:bg-border-emphasis transition-colors text-left">
+                                Execution Policy
+                                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</aside>
+</div>
+<!-- Sticky Footer (Footer Component) -->
+<footer class="absolute bottom-0 left-[232px] right-0 h-[64px] bg-surface/95 backdrop-blur-md border-t border-border flex items-center justify-between px-6 z-30 lg:right-[280px]">
+<div class="flex items-center gap-2 text-warning">
+<span class="material-symbols-outlined text-[18px]">error</span>
+<span class="text-control">3 unsaved changes</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-8 px-4 rounded-lg bg-transparent border border-border text-text-primary font-control hover:bg-elevated-surface transition-colors">
+                        Cancel
+                    </button>
+<button class="h-8 px-4 rounded-lg bg-primary text-background font-control hover:bg-primary/90 transition-colors">
+                        Save Changes
+                    </button>
+</div>
+</footer>
+</div>
+</div>
+<script>
+        function switchTab(tabId) {
+            // Placeholder for tab switching logic
+            console.log('Switching to tab:', tabId);
+        }
+    </script>
+</body></html>
