@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
 import { RunCenterPage } from "./features/runs/pages/RunCenterPage";
 import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
+import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { AppShell } from "./layouts/AppShell";
 import {
+  closeIdentityRetainedSession,
   createWorkflow as createWorkflowCommand,
   createSchedule,
   deleteWorkflow as deleteWorkflowCommand,
@@ -19,6 +21,7 @@ import {
   exportEvidenceBundle,
   getEvidenceDetail,
   getEvidenceScreenshotPreview,
+  getIdentityLabOverview,
   getWorkflowGraph,
   getOperationalRunDetail,
   getOperationsOverview,
@@ -77,6 +80,8 @@ import type {
   EvidenceListRequest,
   EvidencePage,
   EvidenceScreenshotPreview,
+  IdentityLabOverview,
+  IdentityLabTarget,
   OperationalRunDetail,
   OperationsNavigationTarget,
   OperationsOverview,
@@ -95,7 +100,7 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "runs" | "evidence";
+type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "runs" | "evidence" | "identities";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -336,6 +341,11 @@ function App() {
   const [evidencePreview, setEvidencePreview] = useState<EvidenceScreenshotPreview | null>(null);
   const [evidenceExportResult, setEvidenceExportResult] =
     useState<EvidenceBundleExportResult>(null);
+  const [identityLabOverview, setIdentityLabOverview] =
+    useState<IdentityLabOverview | null>(null);
+  const [identityLabTarget, setIdentityLabTarget] =
+    useState<IdentityLabTarget | null>(null);
+  const [identityLabLoading, setIdentityLabLoading] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -531,6 +541,38 @@ function App() {
       setEvidenceDetailError(commandMessage(error));
     } finally {
       setEvidenceDetailLoading(false);
+    }
+  }
+
+  async function loadIdentityLabOverview(nextTarget: IdentityLabTarget | null = identityLabTarget) {
+    setIdentityLabLoading(true);
+    try {
+      const overview = await getIdentityLabOverview(
+        nextTarget ? { selected_target: nextTarget } : {},
+      );
+      setIdentityLabOverview(overview);
+      if (overview.selected?.kind === "managed") {
+        setIdentityLabTarget({
+          type: "managed",
+          workflow_id: overview.selected.workflow_ref.id,
+          identity_id: overview.selected.identity_ref.id,
+        });
+      } else if (overview.selected?.kind === "historical") {
+        setIdentityLabTarget({
+          type: "historical",
+          identity_id: overview.selected.identity_ref.id,
+          workflow_id: overview.selected.workflow_ref?.id ?? null,
+          run_id: overview.selected.run_id ?? null,
+          evidence_id: overview.selected.evidence_id ?? null,
+        });
+      } else {
+        setIdentityLabTarget(nextTarget);
+      }
+      setAppError("");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    } finally {
+      setIdentityLabLoading(false);
     }
   }
 
@@ -1094,6 +1136,69 @@ function App() {
     void loadEvidencePage(nextQuery);
   }
 
+  function openIdentities(target: IdentityLabTarget | null = identityLabTarget) {
+    setScreen("identities");
+    setAppError("");
+    setIdentityLabTarget(target);
+    void loadIdentityLabOverview(target);
+  }
+
+  function openIdentityTarget(target: IdentityLabTarget) {
+    openIdentities(target);
+  }
+
+  function selectIdentity(workflowId: string, identityId: string) {
+    openIdentities({ type: "managed", workflow_id: workflowId, identity_id: identityId });
+  }
+
+  function openIdentityEvidence(workflowId: string, identityId: string) {
+    openEvidence({ workflow_id: workflowId, identity_id: identityId });
+  }
+
+  function openIdentityRun(runId: string) {
+    setScreen("runs");
+    setAppError("");
+    void refreshRunStates();
+    void loadFocusedRunDetail(runId);
+  }
+
+  async function openIdentityWorkflowSettings(workflowId: string) {
+    const workflow = workflows.find((item) => item.id === workflowId);
+    if (!workflow) {
+      setAppError("Workflow not found");
+      return;
+    }
+    await openWorkflowSettings(workflow, "browser_launch");
+  }
+
+  async function closeIdentitySession(workflowId: string, profileName: string) {
+    setAppError("");
+    try {
+      await closeIdentityRetainedSession(workflowId, profileName);
+      await loadIdentityLabOverview(identityLabTarget);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function resetIdentityFromLab(workflowId: string) {
+    setAppError("");
+    try {
+      const rotated = await resetWorkflowBrowserIdentityCommand(workflowId);
+      const nextTarget: IdentityLabTarget = {
+        type: "managed",
+        workflow_id: workflowId,
+        identity_id: rotated.browser_launch.identity_id,
+      };
+      await loadWorkflows();
+      await loadIdentityLabOverview(nextTarget);
+      setToastMessage("Browser identity reset.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
   function updateEvidenceQuery(nextQuery: EvidenceListRequest) {
     setEvidenceQuery(nextQuery);
     void loadEvidencePage(nextQuery);
@@ -1347,6 +1452,8 @@ function App() {
               ? "runs"
               : screen === "evidence"
                 ? "evidence"
+                : screen === "identities"
+                  ? "identities"
               : screen === "overview"
                 ? "overview"
                 : "workflows"
@@ -1354,6 +1461,7 @@ function App() {
       sidebarCollapsed={sidebarCollapsed}
       onOpenOverview={openOverview}
       onOpenEvidence={() => openEvidence({})}
+      onOpenIdentities={() => openIdentities(null)}
       onOpenSchedules={openSchedules}
       onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
@@ -1388,6 +1496,29 @@ function App() {
           onRevealArtifact={revealEvidence}
           onExportSelection={exportSelectedEvidence}
           onNavigate={navigateFromOverview}
+          onOpenIdentity={openIdentityTarget}
+        />
+      ) : screen === "identities" ? (
+        <IdentityLabPage
+          overview={identityLabOverview}
+          loading={identityLabLoading}
+          error={appError}
+          selectedIdentityId={identityLabOverview?.selected?.identity_ref.id ?? identityLabTarget?.identity_id ?? null}
+          onRefresh={() => loadIdentityLabOverview(identityLabTarget)}
+          onSelect={selectIdentity}
+          onOpenEvidence={openIdentityEvidence}
+          onOpenRun={openIdentityRun}
+          onOpenWorkflow={(workflowId) => {
+            void openWorkflow(workflowId);
+          }}
+          onOpenWorkflowSettings={(workflowId) => {
+            void openIdentityWorkflowSettings(workflowId);
+          }}
+          onCloseRetainedSession={(workflowId, profileName) => {
+            void closeIdentitySession(workflowId, profileName);
+          }}
+          onResetIdentity={(workflowId) => resetIdentityFromLab(workflowId)}
+          onOpenIdentityTarget={openIdentityTarget}
         />
       ) : screen === "settings" ? (
         <SettingsPage

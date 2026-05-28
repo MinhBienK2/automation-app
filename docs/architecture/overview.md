@@ -7,6 +7,7 @@ React renderer
   -> src/App.tsx orchestration
   -> src/features/overview/pages/OperationsOverviewPage.tsx durable operations dashboard
   -> src/features/evidence/pages/EvidenceExplorerPage.tsx evidence investigation workspace
+  -> src/features/identities/pages/IdentityLabPage.tsx identity posture workspace
   -> src/features/workflows/* screens and components
   -> src/lib/personaCatalog.ts shared workflow identity persona catalog
   -> visual graph editor for graph authoring and canvas run state
@@ -30,6 +31,7 @@ Node/TypeScript backend
   -> electron/backend/persistence/workflowRepository.ts workflow repository
   -> electron/backend/operations/operationsRepository.ts operations read model
   -> electron/backend/evidence/evidenceRepository.ts evidence read model and artifact commands
+  -> electron/backend/identity/identityRepository.ts identity read model
   -> electron/backend/scheduling/workflowScheduleRepository.ts schedule repository
   -> electron/backend/scheduling/scheduler.ts in-app schedule engine
   -> electron/backend/persistence/database.ts SQLite bootstrap
@@ -57,6 +59,10 @@ The Evidence read model is backend-owned as well: it derives typed evidence
 items from persisted run outputs/run steps, validates artifact references under
 the app evidence directory, and owns screenshot preview, reveal, and sanitized
 bundle export commands.
+The Identity Lab read model is backend-owned: it derives current managed
+identity rows from Workflow Settings, matches persisted runs/evidence by
+workflow and identity snapshot, returns read-only historical references for old
+identity ids, and sanitizes diagnostics before renderer display.
 
 ## Boundaries
 
@@ -83,6 +89,9 @@ bundle export commands.
 - Evidence repository code owns historical evidence listing, filtering,
   deterministic evidence ids, typed detail payloads, artifact path containment,
   native reveal, screenshot preview, and manifest-based bundle export.
+- Identity repository code owns current identity listing, managed/historical
+  detail resolution, run/evidence matching, rotation history, diagnostic
+  sanitization, and Identity Lab data warnings.
 - Schedule repository/engine code owns schedule SQL, next-run calculation, due-schedule scanning, and schedule event audit history.
 - Graph validation code owns structural/semantic workflow graph checks before persistence or compilation.
 - Graph compiler code owns validated graph-to-action compilation and settings prelude insertion.

@@ -127,6 +127,31 @@ architecture, command boundary, Electron IPC contract, workflow types,
 run-state contract, README smoke checklist, and this route when Evidence
 ownership or checks change.
 
+## Change Identity Lab
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
+`domain/workflow-lifecycle.md`, `domain/execution-semantics.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`architecture/command-boundary.md`, `architecture/runner.md`,
+`contracts/electron-ipc.md`, `contracts/workflow-types.md`,
+`contracts/run-state.md`
+
+Verify: `src/App.tsx`, `src/features/identities/`,
+`src/features/evidence/`, `src/layouts/`, `src/lib/workflowApi.ts`,
+`src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`,
+`electron/preload.cts`, `electron/backend/identity/identityRepository.ts`,
+`electron/backend/runtime/runManager.ts`, `electron/backend/runtime/runner.ts`,
+`electron/backend/commands.ts`
+
+Checks: `npm test -- electron/backend/commands.test.ts src/lib/workflowApi.test.ts src/layouts/AppShell.test.tsx src/App.test.tsx`,
+`npx tsc --noEmit`, `npm run build:electron`, `npm test`, `npm run build`
+
+Update docs: product model, user-visible invariants, workflow lifecycle,
+execution semantics, architecture overview, frontend architecture, command
+boundary, Electron IPC contract, workflow types, run-state contract, runner
+architecture, README smoke checklist, and this route when Identity Lab
+ownership or checks change.
+
 ## Change Runner Behavior
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`

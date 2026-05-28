@@ -17,6 +17,11 @@ Mission Control is an Electron desktop app for building and running browser auto
   details on demand, previews screenshots only through validated backend file
   commands, reveals artifacts in their folder, and exports sanitized manifest
   bundles without exposing absolute paths or raw browser storage.
+- Identity Lab is the durable workspace for workflow-owned browser identities.
+  It derives current managed identity rows from Workflow Settings, shows
+  session continuity, configured posture, latest observed browser identity
+  evidence, matching run/evidence summaries, rotation history, sanitized
+  diagnostics, and read-only historical identity references.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
@@ -56,6 +61,10 @@ Users can:
 - Open Evidence to search/filter persisted screenshot, download, browser
   identity, action trace, and evidence manifest items across historical runs,
   then navigate back to the related run or workflow.
+- Open Identities to inspect current managed browser identities, close an
+  active retained session without deleting profile data, reset a guarded
+  workflow identity through the existing backend rotation command, and navigate
+  to related Evidence, Runs, or Workflow Settings.
 
 ## Current Source Files
 
@@ -79,6 +88,7 @@ Users can:
 - Operations read model: `electron/backend/operations/operationsRepository.ts`
 - Evidence read model and artifact boundary:
   `electron/backend/evidence/evidenceRepository.ts`
+- Identity read model: `electron/backend/identity/identityRepository.ts`
 
 ## Invariant
 

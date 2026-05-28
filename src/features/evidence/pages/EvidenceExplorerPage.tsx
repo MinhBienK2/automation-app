@@ -9,6 +9,7 @@ import type {
   EvidenceListRequest,
   EvidencePage,
   EvidenceScreenshotPreview,
+  IdentityLabTarget,
   OperationsNavigationTarget,
 } from "../../../types/workflow";
 
@@ -30,6 +31,7 @@ type EvidenceExplorerPageProps = {
   onRevealArtifact: (evidenceId: string) => void;
   onExportSelection: (evidenceIds: string[]) => void;
   onNavigate: (target: OperationsNavigationTarget) => void;
+  onOpenIdentity: (target: IdentityLabTarget) => void;
 };
 
 const evidenceTypes: EvidenceKind[] = [
@@ -58,6 +60,7 @@ export function EvidenceExplorerPage({
   onRevealArtifact,
   onExportSelection,
   onNavigate,
+  onOpenIdentity,
 }: EvidenceExplorerPageProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
@@ -194,6 +197,7 @@ export function EvidenceExplorerPage({
               onPreviewScreenshot={onPreviewScreenshot}
               onRevealArtifact={onRevealArtifact}
               onNavigate={onNavigate}
+              onOpenIdentity={onOpenIdentity}
             />
           ) : detailLoading ? null : (
             <EmptyEvidence title="Select evidence" />
@@ -242,12 +246,14 @@ function EvidenceDetailView({
   onPreviewScreenshot,
   onRevealArtifact,
   onNavigate,
+  onOpenIdentity,
 }: {
   detail: EvidenceDetail;
   preview: EvidenceScreenshotPreview | null;
   onPreviewScreenshot: (evidenceId: string) => void;
   onRevealArtifact: (evidenceId: string) => void;
   onNavigate: (target: OperationsNavigationTarget) => void;
+  onOpenIdentity: (target: IdentityLabTarget) => void;
 }) {
   const item = detail.item;
   return (
@@ -281,6 +287,30 @@ function EvidenceDetailView({
             onClick={() => onNavigate({ type: "workflow", workflow_id: item.workflow?.id ?? "" })}
           >
             Open Workflow
+          </Button>
+        ) : null}
+        {item.identity?.id ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              onOpenIdentity(
+                item.workflow?.id
+                  ? {
+                      type: "managed",
+                      workflow_id: item.workflow.id,
+                      identity_id: item.identity?.id ?? "",
+                    }
+                  : {
+                      type: "historical",
+                      identity_id: item.identity?.id ?? "",
+                      run_id: item.run.id,
+                      evidence_id: item.evidence_id,
+                    },
+              )
+            }
+          >
+            Open Identity
           </Button>
         ) : null}
         {(item.kind === "screenshot" || item.kind === "download") ? (

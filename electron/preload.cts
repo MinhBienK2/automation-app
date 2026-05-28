@@ -97,6 +97,12 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("revealEvidenceArtifact", evidenceId),
   exportEvidenceBundle: (request) =>
     invokeWorkflow("exportEvidenceBundle", request),
+  getIdentityLabOverview: (request) =>
+    invokeWorkflow("getIdentityLabOverview", request),
+  getIdentityLabDetail: (target) =>
+    invokeWorkflow("getIdentityLabDetail", target),
+  closeIdentityRetainedSession: (workflowId, profileName) =>
+    invokeWorkflow("closeIdentityRetainedSession", workflowId, profileName),
   listSchedules: () => invokeWorkflow("listSchedules"),
   getSchedule: (scheduleId) =>
     invokeWorkflow("getSchedule", scheduleId),

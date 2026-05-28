@@ -11,6 +11,7 @@
 - Node command handlers: `electron/backend/commands.ts`
 - SQLite repository: `electron/backend/persistence/workflowRepository.ts`
 - Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
+- Identity read model: `electron/backend/identity/identityRepository.ts`
 
 ## Current Boundary
 
@@ -68,6 +69,9 @@ string map.
 - `getEvidenceScreenshotPreview`
 - `revealEvidenceArtifact`
 - `exportEvidenceBundle`
+- `getIdentityLabOverview`
+- `getIdentityLabDetail`
+- `closeIdentityRetainedSession`
 - `listSchedules`
 - `getSchedule`
 - `createSchedule`
@@ -123,6 +127,14 @@ one typed bounded detail payload. `getEvidenceScreenshotPreview(evidenceId)`,
 resolves and validates file artifact paths before preview, native reveal, or
 manifest-bundle export.
 
+`getIdentityLabOverview(request?)` returns a bounded Identity Lab read model
+for workflow-owned browser identities. `getIdentityLabDetail(target)` returns
+one managed identity detail or read-only historical identity reference.
+`closeIdentityRetainedSession(workflowId, profileName)` closes only the
+matching in-memory retained browser context after backend workflow/profile/run
+guards pass; it does not delete persistent profile data, settings, evidence,
+or historical runs.
+
 ## Payload Rules
 
 - Renderer wrapper names remain camelCase.
@@ -156,6 +168,13 @@ meaning from raw SQL rows or expose arbitrary run outputs.
 Evidence Explorer aggregation and artifact actions are owned by the Electron
 backend. The renderer never receives absolute original artifact paths and does
 not import filesystem, SQLite, Electron shell/dialog, or raw output readers.
+
+Identity Lab aggregation and retained-session close are owned by the Electron
+backend. The renderer receives current managed identity summaries, historical
+references, rotation history, run/evidence references, and sanitized
+diagnostics only; it never receives absolute profile/font/binary paths, proxy
+credentials, raw browser storage, cookies, tokens, or raw run outputs through
+the Identity Lab boundary.
 
 CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit

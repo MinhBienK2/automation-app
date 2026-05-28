@@ -13,6 +13,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/evidence/pages/EvidenceExplorerPage.tsx`: durable evidence
   workspace with filters, list/grid results, selection, typed detail payloads,
   screenshot preview, artifact reveal, and bundle export actions.
+- `src/features/identities/pages/IdentityLabPage.tsx`: current managed browser
+  identity workspace with list/detail posture, latest observed evidence,
+  sanitized diagnostics, historical identity references, retained-session close,
+  guarded reset, and navigation to Evidence/Runs/Workflow Settings.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, and event history view.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots.
@@ -81,6 +85,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview/Runs-to-Evidence handoff state.
+- Identity Lab navigation state in the app shell/sidebar, managed/historical
+  identity selection state, read-model refresh state, and Evidence-to-Identity
+  handoff state. Identity actions call typed backend commands; the renderer
+  does not derive identity posture from raw run outputs or diagnostics.
 - Schedules navigation state in the app shell/sidebar, plus schedule create/edit form state and schedule event history presentation.
 - Runs navigation state in the app shell/sidebar.
 - Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands. Workflow detail header commands keep Settings, Validate, and Save icon-only while Run, Stop, and Run from selected remain text commands.

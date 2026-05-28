@@ -21,6 +21,7 @@ Node/Electron backend.
 - Electron repository: `electron/backend/persistence/workflowRepository.ts`
 - Operations read model: `electron/backend/operations/operationsRepository.ts`
 - Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
+- Identity read model: `electron/backend/identity/identityRepository.ts`
 - Command contract: `docs/contracts/electron-ipc.md`
 
 ## Belongs Here
@@ -41,6 +42,11 @@ Node/Electron backend.
   `getEvidenceDetail`, `getEvidenceScreenshotPreview`,
   `revealEvidenceArtifact`, and `exportEvidenceBundle`; evidence extraction,
   path validation, native reveal, and bundle writing stay in the backend.
+- Identity Lab reads and session action through `getIdentityLabOverview`,
+  `getIdentityLabDetail`, and `closeIdentityRetainedSession`; current identity
+  aggregation, historical identity fallback, run/evidence matching, sanitized
+  diagnostics, rotation history, and retained-session close guards stay in the
+  backend.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
@@ -69,6 +75,8 @@ Node/Electron backend.
 - SQL implementation details.
 - Renderer-side KPI or evidence aggregation.
 - Renderer-side evidence extraction from raw outputs or filesystem paths.
+- Renderer-side identity aggregation from raw run outputs, diagnostics,
+  profile storage, or filesystem paths.
 - Browser action internals.
 - Active run/profile lock maps, run snapshots, batch state, and final run persistence internals outside calls into the run manager.
 

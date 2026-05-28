@@ -20,6 +20,10 @@ Preserve these unless the task explicitly changes them.
   only broad historical evidence browser; Overview recent evidence opens
   Evidence focused on the selected evidence id, and Runs selected run details
   can open Evidence filtered to that run.
+- Identities is a separate sidebar page after Schedules and before Settings.
+  It lists workflow-owned current browser identities, shows managed identity
+  posture/diagnostics/run context, and opens read-only historical references
+  for old identity ids from evidence or rotation history.
 - Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
@@ -38,6 +42,13 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings validation warns operators when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities. CloakBrowser diagnostics inspect configured font directories and report missing/unreadable directories, file counts, normalized hashes, expected family coverage, shared-directory warnings, and bounded approximate profile sizes instead of placeholder status.
 - Set Viewport is an in-run viewport-size action. Active authoring exposes width and height only; Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile viewport, or touch input controls.
 - Workflow Settings saves, backend identity reset, and workflow deletion must reject browser identity profile reset/delete while a workflow/profile run is active or a retained browser session is still active for that workflow/profile.
+- Identity Lab Close Retained Session closes only the matching in-memory
+  retained browser context after backend guards pass. It must not delete
+  profile data, cookies/login state, workflow settings, evidence, or
+  historical runs.
+- Identity Lab Reset Identity uses the existing guarded backend identity reset
+  command with in-app confirmation and is unavailable while an active run or
+  retained session blocks the backend command.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and uses nested collapsible sections for best-fit guidance, non-goals, precedence, field explanations, examples, related graph actions, common mistakes, and safety notes when present. Detailed field, example, related-action, and mistake items are also individually collapsible. It explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
@@ -94,6 +105,10 @@ Preserve these unless the task explicitly changes them.
   typed persisted evidence summaries and bounded typed details for screenshot,
   download, browser identity, action trace, and evidence manifest items. It
   does not expose raw arbitrary output browsing.
+- Identities is a separate app screen reachable from the sidebar. It receives
+  sanitized Identity Lab DTOs and does not expose raw profile paths, browser
+  storage, cookies, tokens, proxy credentials, absolute local font/binary paths,
+  or raw arbitrary run outputs.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.

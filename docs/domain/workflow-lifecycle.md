@@ -66,6 +66,12 @@
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
 - `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
 - Reset identity in Workflow Settings is an in-app confirmation that delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, and returns saved settings to the dialog.
+- Identity Lab can close the selected workflow/profile's retained session
+  through `closeIdentityRetainedSession`. Closing a retained session clears only
+  in-memory browser context state and leaves persistent profile data, settings,
+  cookies/login state, evidence, and historical runs intact. Identity Lab reset
+  uses the same guarded `resetWorkflowBrowserIdentity` command as Workflow
+  Settings.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
@@ -76,6 +82,11 @@
 - Evidence loads durable persisted run evidence through `listEvidenceItems`.
   Overview recent evidence can focus a specific evidence id, and Runs selected
   durable run detail can open Evidence with a `run_id` filter.
+- Identity Lab loads current workflow-owned browser identity posture through
+  `getIdentityLabOverview` / `getIdentityLabDetail`. Evidence details with an
+  identity id can open Identity Lab as a current managed identity when the
+  workflow still owns that identity, or as a read-only historical identity
+  reference when it no longer matches current settings.
 - Persisted run rows record durable `source` provenance as `manual` or
   `schedule`; older local rows are migrated deterministically from started
   schedule events when possible and otherwise treated as manual.

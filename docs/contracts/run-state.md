@@ -63,6 +63,10 @@ source vocabulary for Runs, Overview, and Evidence filtering.
 - Runner completion clears active run, clears current step, captures `window.__wamOutputs` from the browser session when present, sets terminal status, and asks `BrowserSessionManager` to retain or forget the CloakBrowser context according to the resolved terminal/browser-retention policy.
 - Terminal `get_run_state` preserves the terminal retained-session snapshot after the active run entry is removed. It refreshes retained-session status only by looking up the same workflow/profile, so a null-profile lookup cannot replace useful terminal session evidence.
 - If the operator manually closes the retained browser, the next retained-session check marks `retained_session.available` false and run-from-selected fails with a readable error instead of relaunching from the selected node.
+- If the operator closes a retained browser from Identity Lab, the backend
+  clears only that workflow/profile's retained in-memory session state. Future
+  run-from-selected checks report the missing retained session until the
+  workflow creates a new reusable session.
 - Terminal runs are persisted to SQLite `runs`; compiled top-level graph steps are persisted to `run_steps` with action type, status, trace JSON, and error JSON when available. Executed nested branch/body actions are also appended as `run_steps` rows from `__action_traces`; their trace JSON carries `parent_node_id`, `trace_sequence`, started/finished timestamps when emitted, output/evidence summaries, and trace failure reasons.
 - Infrastructure failure sets status to `failed` without retained session.
 - When Workflow Settings `execution.max_workflow_duration_ms` is set, the background run cancels through the normal cancellation token at that limit. The terminal state is `failed` with a workflow-level timeout reason such as `Workflow exceeded maximum duration of <ms> ms`.

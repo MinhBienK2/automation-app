@@ -1,13 +1,14 @@
 import { Button } from "../components/ui/button";
-import { Activity, CalendarClock, Files, Gauge, ListTree, Settings } from "lucide-react";
+import { Activity, CalendarClock, Files, Fingerprint, Gauge, ListTree, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "overview" | "workflows" | "runs" | "evidence" | "schedules" | "settings";
+type AppSidebarActiveItem = "overview" | "workflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
   onOpenOverview: () => void;
   onOpenEvidence: () => void;
+  onOpenIdentities: () => void;
   onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
@@ -54,6 +55,7 @@ export function AppSidebar({
   collapsed,
   onOpenOverview,
   onOpenEvidence,
+  onOpenIdentities,
   onOpenRunCenter,
   onOpenSchedules,
   onOpenSettings,
@@ -131,6 +133,19 @@ export function AppSidebar({
         >
           <CalendarClock aria-hidden="true" className="sidebar-item-icon" />
           <span>Schedules</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "identities"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenIdentities}
+        >
+          <Fingerprint aria-hidden="true" className="sidebar-item-icon" />
+          <span>Identities</span>
         </Button>
         <Button
           className={

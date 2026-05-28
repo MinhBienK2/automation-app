@@ -45,6 +45,21 @@ Frontend and backend must agree on:
   PNG base64 data only after backend path/file checks.
 - `EvidenceBundleExportRequest` / `EvidenceBundleExportResult`: explicit
   selected evidence bundle export request and manifest-bundle result.
+- `IdentityLabTarget`: managed identity target by current `workflow_id` plus
+  `identity_id`, or historical identity reference by `identity_id` with
+  optional workflow/run/evidence context.
+- `IdentityLabOverviewRequest`: bounded Identity Lab search, selected target,
+  and list/rotation limits.
+- `IdentityLabOverview`: backend-owned Identity Lab DTO with current managed
+  identity summaries, selected detail, counts, and data warnings.
+- `ManagedIdentitySummary`: one workflow-owned current browser identity row
+  with workflow/identity refs, session/profile reuse, retained-session state,
+  configured posture summary, last matching run, recent failure count, and
+  warning badges.
+- `IdentityLabDetail`: either a managed identity detail with configured
+  posture, latest observed browser identity evidence, matching run/evidence
+  summary, rotation history, sanitized diagnostics, and action availability,
+  or a read-only historical identity reference with safe source context.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
@@ -256,6 +271,26 @@ artifact preview/reveal/export commands accept evidence ids and revalidate path
 containment in the Electron backend. Historical identity fields come from the
 run-time settings snapshot and sanitized `browser_identity` output, not the
 workflow's current identity after later rotation.
+
+## Identity Lab Shape
+
+Identity Lab is a read model, not a new identity catalog table. Managed
+identity rows are derived from current Workflow Settings Browser Launch values.
+Run metrics match exact current `workflow_id` and `identity_id` from the run
+settings snapshot, with a safe fallback to sanitized `browser_identity` output
+only when the run association is unambiguous. Runs from previous identities are
+historical and do not count toward the current identity's last run, recent
+failure, or latest observed report after reset.
+
+Historical identity references are read-only. They may carry safe workflow,
+run, or evidence context, but they do not expose diagnostics, reset, close
+session, or settings mutation actions.
+
+Identity diagnostics in the DTO are sanitized. They report installed/version
+state, GeoIP/display availability, bounded profile size/session state, and
+font posture where available, while excluding absolute local paths, proxy
+credentials, cookies, localStorage, sessionStorage, profile contents, and raw
+arbitrary run outputs.
 
 ## Graph Shape
 
