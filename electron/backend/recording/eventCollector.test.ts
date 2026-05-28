@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import vm from "node:vm";
 import { describe, expect, test } from "vitest";
 import type { BrowserDriverPage } from "../browser/sessionManager";
 import { RecordingEventCollector } from "./eventCollector";
@@ -67,6 +68,34 @@ describe("RecordingEventCollector", () => {
     expect(page.initScripts[0]).toContain("__wamRecorderBufferedEvents.length < 1000");
   });
 
+  test("captures contenteditable input text from visible editor content", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_contenteditable");
+
+    await collector.attachPage(page);
+    const { documentListeners, payloads } = runRecorderCaptureScript(page.initScripts[0]);
+    documentListeners.get("input")?.[0]?.({
+      target: {
+        tagName: "DIV",
+        isContentEditable: true,
+        innerText: "Hello editor",
+        textContent: "Hello editor fallback",
+        id: "editor",
+        getAttribute: (name: string) => name === "contenteditable" ? "true" : null,
+        getBoundingClientRect: () => ({ x: 4, y: 8, width: 240, height: 120 }),
+      },
+    });
+
+    expect(payloads[0]).toMatchObject({
+      kind: "input",
+      target: {
+        tag_name: "div",
+        input_type: "contenteditable",
+      },
+      value: { text: "Hello editor" },
+    });
+  });
+
   test("observes main-frame navigation events from the backend page adapter", async () => {
     const page = new FakeCollectorPage();
     const collector = new RecordingEventCollector("rec_nav", {
@@ -130,7 +159,7 @@ describe("RecordingEventCollector", () => {
         id: "rec_backend_evt_1",
         sequence: 1,
         kind: "tab",
-        raw: { action: "switch", index: 1 },
+        raw: { action: "open", index: 1, url: null },
       },
       {
         id: "rec_backend_evt_2",
@@ -151,6 +180,31 @@ describe("RecordingEventCollector", () => {
       },
     ]);
     expect(popup.initScripts).toHaveLength(1);
+  });
+
+  test("records newly created pages as open-tab events instead of switching to missing tabs", async () => {
+    const page = new FakeCollectorPage();
+    const context = new FakeCollectorContext(page);
+    const collector = new RecordingEventCollector("rec_open_tab", {
+      now: () => new Date("2026-05-27T10:00:00.000Z"),
+    });
+
+    await collector.attachContext(context);
+    const popup = new FakeCollectorPage("https://fixture.owned.test/popup");
+    context.emitPage(popup);
+
+    expect(collector.listEvents()).toMatchObject([
+      {
+        id: "rec_open_tab_evt_1",
+        sequence: 1,
+        kind: "tab",
+        raw: {
+          action: "open",
+          index: 1,
+          url: "https://fixture.owned.test/popup",
+        },
+      },
+    ]);
   });
 
   test("redacts sensitive text input values before they enter recording events", async () => {
@@ -298,6 +352,45 @@ describe("RecordingEventCollector", () => {
       api_key: "[redacted]",
       nested: { password: "[redacted]" },
     });
+  });
+
+  test("preserves literal text input values including whitespace and clearing", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_literal_text");
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "input",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: { tag_name: "input", input_type: "text", locators: [] },
+      value: { text: "  qa value  " },
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+    await page.emit({
+      kind: "input",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: { tag_name: "input", input_type: "text", locators: [] },
+      value: { text: "" },
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+
+    const events = collector.listEvents();
+
+    expect(events.map((event) => event.value?.text)).toEqual(["  qa value  ", ""]);
+    expect(normalizeRecordingEvents(events)).toMatchObject([
+      {
+        action: {
+          type: "input_text",
+          config: { text: "" },
+        },
+      },
+    ]);
   });
 
   test("flushes buffered page events on demand before disposal", async () => {
@@ -490,6 +583,43 @@ class FakeCollectorContext {
   }
 }
 
+function runRecorderCaptureScript(script: string) {
+  const documentListeners = new Map<string, Array<(event: { target?: unknown }) => void>>();
+  const windowListeners = new Map<string, Array<() => void>>();
+  const payloads: Array<Record<string, unknown>> = [];
+  const addListener = <Args extends unknown[]>(
+    listeners: Map<string, Array<(...args: Args) => void>>,
+    eventName: string,
+    handler: (...args: Args) => void,
+  ) => {
+    listeners.set(eventName, [...(listeners.get(eventName) ?? []), handler]);
+  };
+  const windowObject = {
+    location: { href: "https://fixture.owned.test/editor" },
+    __wamRecorderCapture: (payload: Record<string, unknown>) => {
+      payloads.push(payload);
+    },
+    addEventListener: (eventName: string, handler: () => void) => {
+      addListener(windowListeners, eventName, handler);
+    },
+  };
+  const documentObject = {
+    addEventListener: (
+      eventName: string,
+      handler: (event: { target?: unknown }) => void,
+    ) => {
+      addListener(documentListeners, eventName, handler);
+    },
+  };
+
+  vm.runInNewContext(script, {
+    window: windowObject,
+    document: documentObject,
+  });
+
+  return { documentListeners, payloads, windowListeners };
+}
+
 class FakeCollectorPage implements BrowserDriverPage {
   initScripts: string[] = [];
   evaluatedScripts: string[] = [];
@@ -500,6 +630,8 @@ class FakeCollectorPage implements BrowserDriverPage {
   private frameNavigated: ((frame: { url(): string; parentFrame?(): unknown }) => void) | null = null;
   private downloadHandler: ((download: FakeDownload) => void) | null = null;
   private dialogHandler: ((dialog: FakeDialog) => void | Promise<void>) | null = null;
+
+  constructor(private readonly currentUrl = "about:blank") {}
 
   async goto() {
     return undefined;
@@ -530,6 +662,10 @@ class FakeCollectorPage implements BrowserDriverPage {
     if (name === "__wamRecorderCapture") {
       this.exposedCapture = callback;
     }
+  }
+
+  url() {
+    return this.currentUrl;
   }
 
   on(eventName: string, handler: (...args: never[]) => void | Promise<void>) {

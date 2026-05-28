@@ -49,6 +49,7 @@ type RecorderCapablePage = BrowserDriverPage & {
     callback: (payload: RecorderPayload) => void | Promise<void>,
   ): Promise<void>;
   on?(eventName: string, handler: (...args: never[]) => void | Promise<void>): void;
+  url?(): string;
 };
 
 const RECORDER_CAPTURE_BINDING = "__wamRecorderCapture";
@@ -172,13 +173,14 @@ export class RecordingEventCollector {
     context.on?.("page", ((page: BrowserDriverPage) => {
       const pages = context.pages();
       const index = Math.max(0, pages.indexOf(page));
+      const url = normalizedPageUrl(page);
       this.recordPagePayload({
         kind: "tab",
         frame_url: null,
         page_url: null,
         target: null,
         value: null,
-        raw: { action: "switch", index },
+        raw: { action: "open", index, url },
         confidence: "medium",
         warnings: [],
       });
@@ -315,6 +317,11 @@ function isRecordingEventKind(value: string): value is RecordingEventKind {
   return RECORDABLE_EVENT_KINDS.has(value as RecordingEventKind);
 }
 
+function normalizedPageUrl(page: BrowserDriverPage) {
+  const url = (page as RecorderCapablePage).url?.();
+  return url && url !== "about:blank" ? url : null;
+}
+
 function isMainFrame(frame: BrowserFrame) {
   if (typeof frame.parentFrame !== "function") return true;
   try {
@@ -376,7 +383,7 @@ function recordingValueOrNull(value: unknown): RecordingValue | null {
   const raw = objectRecord(value);
   if (!Object.keys(raw).length) return null;
   return {
-    text: boundedString(raw.text),
+    text: boundedText(raw.text),
     checked: typeof raw.checked === "boolean" ? raw.checked : null,
     selected_value: boundedString(raw.selected_value),
     selected_label: boundedString(raw.selected_label),
@@ -486,6 +493,10 @@ function boundedString(value: unknown, limit = 500) {
   return text ? text.slice(0, limit) : null;
 }
 
+function boundedText(value: unknown, limit = MAX_RAW_STRING_LENGTH) {
+  return typeof value === "string" ? value.slice(0, limit) : null;
+}
+
 function boundedDisplayValue(value: unknown, limit: number) {
   return String(value).slice(0, limit);
 }
@@ -584,6 +595,15 @@ function recorderCaptureScript() {
     };
     const attrSelector = (name, value) =>
       "[" + name + "='" + String(value).replace(/'/g, "\\\\'") + "']";
+    const inputTypeFor = (element, tag) => {
+      if (element && element.isContentEditable) return "contenteditable";
+      if (tag === "textarea") return "textarea";
+      return trim(element.getAttribute && element.getAttribute("type"), 80);
+    };
+    const textValueFor = (element, type) => {
+      if (type === "contenteditable") return element.innerText || element.textContent || "";
+      return element.value || "";
+    };
     const locatorCandidatesFor = (element, tag, textSample, accessibleName) => {
       const locators = [];
       const testId = element.getAttribute && (element.getAttribute("data-testid") || element.getAttribute("data-test"));
@@ -615,7 +635,7 @@ function recorderCaptureScript() {
       );
       return {
         tag_name: tag,
-        input_type: trim(element.getAttribute && element.getAttribute("type"), 80),
+        input_type: inputTypeFor(element, tag),
         text_sample: textSample,
         role: trim(element.getAttribute && element.getAttribute("role"), 80),
         accessible_name: accessibleName,
@@ -702,7 +722,7 @@ function recorderCaptureScript() {
       const target = event.target;
       if (!target) return;
       const tag = target.tagName ? target.tagName.toLowerCase() : "";
-      const type = target.type || "";
+      const type = inputTypeFor(target, tag) || "";
       if (type === "file") {
         const fileNames = target.files ? Array.from(target.files).map((file) => file.name) : [];
         push({
@@ -744,7 +764,7 @@ function recorderCaptureScript() {
       push({
         kind: "input",
         target: targetFor(target),
-        value: { text: isSensitiveInput(target) ? "" : target.value || "" },
+        value: { text: isSensitiveInput(target) ? "" : textValueFor(target, type) },
         raw: {
           input_type: type || null,
           value_redacted: isSensitiveInput(target) || undefined

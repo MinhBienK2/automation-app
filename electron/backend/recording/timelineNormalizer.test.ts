@@ -52,6 +52,32 @@ describe("normalizeRecordingEvents", () => {
     });
   });
 
+  test("collapses text input when editable target text locators change while typing", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("input-1", 1, "input", {
+        target: editableTargetWithDynamicText("h"),
+        value: { text: "h" },
+      }),
+      recordingEvent("input-2", 2, "input", {
+        target: editableTargetWithDynamicText("he"),
+        value: { text: "he" },
+      }),
+      recordingEvent("input-3", 3, "input", {
+        target: editableTargetWithDynamicText("hello"),
+        value: { text: "hello" },
+      }),
+    ]);
+
+    expect(steps).toHaveLength(1);
+    expect(steps[0]).toMatchObject({
+      source_event_ids: ["input-1", "input-2", "input-3"],
+      action: {
+        type: "input_text",
+        config: { text: "hello" },
+      },
+    });
+  });
+
   test("keeps text input together when composition keydown noise appears between events", () => {
     const steps = normalizeRecordingEvents([
       recordingEvent("input-1", 1, "input", {
@@ -93,6 +119,70 @@ describe("normalizeRecordingEvents", () => {
     });
     expect(steps[1]).toMatchObject({
       action: { type: "press_key", config: { key: "ArrowDown" } },
+    });
+  });
+
+  test("keeps text input together when deletion keys edit the same field", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("input-1", 1, "input", {
+        target: fieldTarget(),
+        value: { text: "abc" },
+      }),
+      recordingEvent("backspace-1", 2, "keyboard", {
+        target: fieldTarget(),
+        value: { key: "Backspace" },
+      }),
+      recordingEvent("input-2", 3, "input", {
+        target: fieldTarget(),
+        value: { text: "ab" },
+      }),
+      recordingEvent("click-1", 4, "click", {
+        target: buttonTarget(),
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action.type)).toEqual([
+      "input_text",
+      "click",
+    ]);
+    expect(steps[0]).toMatchObject({
+      source_event_ids: ["input-1", "input-2"],
+      action: {
+        type: "input_text",
+        config: { text: "ab" },
+      },
+    });
+  });
+
+  test("keeps text input together when edit hotkeys change the same field", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("select-all-1", 1, "keyboard", {
+        target: fieldTarget(),
+        value: { keys: ["Control", "A"] },
+      }),
+      recordingEvent("paste-1", 2, "keyboard", {
+        target: fieldTarget(),
+        value: { keys: ["Control", "V"] },
+      }),
+      recordingEvent("input-1", 3, "input", {
+        target: fieldTarget(),
+        value: { text: "replacement" },
+      }),
+      recordingEvent("click-1", 4, "click", {
+        target: buttonTarget(),
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action.type)).toEqual([
+      "input_text",
+      "click",
+    ]);
+    expect(steps[0]).toMatchObject({
+      source_event_ids: ["input-1"],
+      action: {
+        type: "input_text",
+        config: { text: "replacement" },
+      },
     });
   });
 
@@ -183,6 +273,28 @@ describe("normalizeRecordingEvents", () => {
     ]);
   });
 
+  test("resets absolute scroll deltas after opening a new tab", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("scroll-1", 1, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 800 } },
+      }),
+      recordingEvent("tab-1", 2, "tab", {
+        raw: { action: "open", index: 1 },
+      }),
+      recordingEvent("scroll-2", 3, "scroll", {
+        target: null,
+        value: { scroll: { x: 0, y: 200 } },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action)).toMatchObject([
+      { type: "scroll", config: { direction: "down", pixels: 800 } },
+      { type: "open_new_tab" },
+      { type: "scroll", config: { direction: "down", pixels: 200 } },
+    ]);
+  });
+
   test("deduplicates browser control events emitted by multiple DOM event phases", () => {
     const steps = normalizeRecordingEvents([
       recordingEvent("select-input", 1, "select", {
@@ -247,6 +359,44 @@ describe("normalizeRecordingEvents", () => {
     expect(steps[2]?.source_event_ids).toEqual(["radio-input", "radio-change"]);
     expect(steps[3]?.source_event_ids).toEqual(["file-input", "file-change"]);
     expect(steps[4]?.source_event_ids).toEqual(["click-before-double", "double-click"]);
+  });
+
+  test("drops generic clicks when form control events follow for the same target", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("checkbox-click", 1, "click", {
+        target: checkboxTarget(),
+        raw: { click_type: "single", detail: 1 },
+      }),
+      recordingEvent("checkbox-input", 2, "checkbox", {
+        target: checkboxTarget(),
+        value: { checked: true },
+      }),
+      recordingEvent("radio-click", 3, "click", {
+        target: radioTarget(),
+        raw: { click_type: "single", detail: 1 },
+      }),
+      recordingEvent("radio-input", 4, "radio", {
+        target: radioTarget(),
+        value: { checked: true },
+      }),
+      recordingEvent("select-click", 5, "click", {
+        target: selectTarget(),
+        raw: { click_type: "single", detail: 1 },
+      }),
+      recordingEvent("select-change", 6, "select", {
+        target: selectTarget(),
+        value: { selected_value: "team", selected_label: "Team" },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action.type)).toEqual([
+      "check",
+      "select_radio",
+      "select_option",
+    ]);
+    expect(steps[0]?.source_event_ids).toEqual(["checkbox-click", "checkbox-input"]);
+    expect(steps[1]?.source_event_ids).toEqual(["radio-click", "radio-input"]);
+    expect(steps[2]?.source_event_ids).toEqual(["select-click", "select-change"]);
   });
 
   test("maps keyboard and click variant events to existing actions", () => {
@@ -332,6 +482,23 @@ describe("normalizeRecordingEvents", () => {
           target: { locators: [{ kind: "test_id", value: "checkout-form" }] },
         },
       },
+    ]);
+  });
+
+  test("switches to a tab opened by a recorded click instead of opening another tab", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("link-click", 1, "click", {
+        target: buttonTarget(),
+        raw: { click_type: "single", detail: 1 },
+      }),
+      recordingEvent("tab-open", 2, "tab", {
+        raw: { action: "open", index: 1, url: "https://fixture.owned.test/popup" },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action)).toMatchObject([
+      { type: "click" },
+      { type: "switch_tab", config: { index: 1 } },
     ]);
   });
 
@@ -424,6 +591,18 @@ function fieldTarget(): RecordingEvent["target"] {
     accessible_name: "Email",
     locators: [
       { kind: "test_id", value: "email", score: 1, reason: "Stable test id" },
+    ],
+  };
+}
+
+function editableTargetWithDynamicText(text: string): RecordingEvent["target"] {
+  return {
+    tag_name: "div",
+    input_type: "contenteditable",
+    text_sample: text,
+    locators: [
+      { kind: "text", value: text, score: 0.62, reason: "Short visible text" },
+      { kind: "css", value: "[contenteditable='true']", score: 0.55, reason: "Editable fallback" },
     ],
   };
 }

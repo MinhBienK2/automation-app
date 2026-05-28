@@ -81,7 +81,7 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       continue;
     }
 
-    if (isIgnorableKeyboardEvent(event)) {
+    if (isIgnorableKeyboardEvent(event, pendingInput)) {
       continue;
     }
 
@@ -100,6 +100,18 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       flushInput();
       const key = dedupedEventKey(dedupedKind, event);
       if (
+        pendingDedupedEvent?.kind === "click" &&
+        dedupedKind !== "click" &&
+        pendingDedupedEvent.key === dedupedEventKey("click", event)
+      ) {
+        pendingDedupedEvent = {
+          kind: dedupedKind,
+          key,
+          events: [...pendingDedupedEvent.events, event],
+        };
+        continue;
+      }
+      if (
         pendingDedupedEvent &&
         canMergeDedupedEvent(pendingDedupedEvent, dedupedKind, key, event)
       ) {
@@ -111,8 +123,23 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       continue;
     }
 
+    if (
+      event.kind === "tab" &&
+      stringValue(event.raw.action) === "open" &&
+      pendingDedupedEvent?.kind === "click"
+    ) {
+      flushDedupedEvent();
+      previousScrollPosition = { x: 0, y: 0 };
+      const step = stepFromEvent({
+        ...event,
+        raw: { ...event.raw, action: "switch" },
+      });
+      if (step) steps.push(withStepId(step, steps.length + 1));
+      continue;
+    }
+
     flushPending();
-    if (event.kind === "navigation") {
+    if (event.kind === "navigation" || event.kind === "tab") {
       previousScrollPosition = { x: 0, y: 0 };
     }
     const step = stepFromEvent(event);
@@ -427,19 +454,47 @@ function isInputEvent(event: RecordingEvent) {
 
 const IGNORED_TEXT_COMPOSITION_KEYS = new Set(["Process", "Dead", "Unidentified"]);
 const MODIFIER_ONLY_KEYS = new Set(["Alt", "AltGraph", "Control", "Meta", "Shift"]);
+const TEXT_EDITING_KEYS = new Set(["Backspace", "Clear", "Delete"]);
+const TEXT_EDITING_HOTKEY_KEYS = new Set(["A", "V", "X", "Y", "Z"]);
 
-function isIgnorableKeyboardEvent(event: RecordingEvent) {
+function isIgnorableKeyboardEvent(
+  event: RecordingEvent,
+  pendingInput: PendingInput | null,
+) {
   if (event.kind !== "keyboard") return false;
   const keys = event.value?.keys;
   if (keys?.length) {
     const replayKeys = keys.filter((key) => !MODIFIER_ONLY_KEYS.has(key));
+    if (
+      (isEditableTextTarget(event.target) || pendingInput?.key === targetKey(event.target)) &&
+      keys.some((key) => key === "Control" || key === "Meta") &&
+      replayKeys.every((key) => TEXT_EDITING_HOTKEY_KEYS.has(key.toUpperCase()))
+    ) {
+      return true;
+    }
     return replayKeys.length === 0 ||
       replayKeys.every((key) => IGNORED_TEXT_COMPOSITION_KEYS.has(key));
   }
   const key = event.value?.key;
+  if (
+    key &&
+    TEXT_EDITING_KEYS.has(key) &&
+    (isEditableTextTarget(event.target) || pendingInput?.key === targetKey(event.target))
+  ) {
+    return true;
+  }
   return !key ||
     MODIFIER_ONLY_KEYS.has(key) ||
     IGNORED_TEXT_COMPOSITION_KEYS.has(key);
+}
+
+function isEditableTextTarget(target: RecordingTarget | null) {
+  const tagName = target?.tag_name.toLowerCase();
+  const inputType = target?.input_type?.toLowerCase() ?? "";
+  if (tagName === "textarea" || inputType === "contenteditable") return true;
+  if (tagName !== "input") return false;
+  return !inputType ||
+    !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"].includes(inputType);
 }
 
 function dedupedEventKind(event: RecordingEvent): PendingDedupedEvent["kind"] | null {
@@ -542,9 +597,11 @@ function scrollEventWithDelta(
 
 function targetKey(target: RecordingTarget | null) {
   if (!target) return "target:none";
-  const firstLocator = target.locators[0];
-  if (firstLocator) {
-    return `${firstLocator.kind}:${firstLocator.value}`;
+  const stableLocator = isEditableTextTarget(target)
+    ? target.locators.find((locator) => locator.kind !== "text") ?? target.locators[0]
+    : target.locators[0];
+  if (stableLocator) {
+    return `${stableLocator.kind}:${stableLocator.value}`;
   }
   return [
     target.tag_name,

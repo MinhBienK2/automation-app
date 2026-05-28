@@ -60,8 +60,10 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
   recording events in memory, closes partially launched contexts when
   setup/navigation fails, and closes the recorder context on stop or discard.
   Replacement recording rejects active workflow/profile/batch conflicts before
-  launch. Recorder normalization maps only to existing runner actions and
-  ignores text-composition/modifier-only keyboard noise before graph generation;
+  launch. Recorder normalization maps only to existing runner actions, preserves
+  literal text input values, captures contenteditable text, suppresses text-editing
+  keyboard noise and duplicate form-control clicks, and normalizes tab/scroll
+  transitions before graph generation;
   redacted sensitive inputs and upload replay require reviewer-entered safe
   values or local file paths, and native file chooser captures remain warnings
   until reviewed.

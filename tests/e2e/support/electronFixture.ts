@@ -54,7 +54,9 @@ export const test = base.extend<DesktopFixtures>({
   appWindow: async ({ electronApp }, use) => {
     const window = await electronApp.firstWindow();
     await window.waitForLoadState("domcontentloaded");
-    await expect(window.getByRole("heading", { name: "Workflows", exact: true })).toBeVisible();
+    const mainNavigation = window.getByRole("navigation", { name: "Main navigation" });
+    await expect(mainNavigation).toBeVisible();
+    await expect(mainNavigation.getByRole("button", { name: "Workflows", exact: true })).toBeVisible();
     await use(window);
   },
 });
