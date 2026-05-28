@@ -48,12 +48,18 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
   attention, upcoming schedules, and metadata-only evidence extracted from
   sanitized run outputs. The renderer supplies local-day UTC boundaries, the
   backend rejects Overview ranges over 48 hours before hourly bucket allocation,
-  and persisted timestamps remain UTC.
+  and persisted timestamps remain UTC. Overview recent evidence is bounded at
+  the returned DTO page, not by a fixed newest-run scan window that can hide
+  older matching evidence behind newer output-only runs.
 - `EvidenceRepository` owns bounded evidence result pages over matching
   persisted run outputs and run steps without a fixed newest-run ceiling before
   filtering. It derives typed evidence items on read rather than maintaining a
   separate projection table, and validates run-scoped artifact paths before
   preview/reveal/export.
+- `IdentityRepository` derives managed identity run/evidence summaries by
+  matching workflow id plus persisted identity snapshots. Historical identity
+  lookup scans matching workflow runs before choosing a bounded detail so old
+  rotated identity references are not hidden behind newer runs.
 - Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 
 ## Belongs Here

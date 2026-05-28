@@ -123,6 +123,8 @@ artifact-opening API.
 `listEvidenceItems(request?)` returns a bounded historical evidence page derived
 from all matching persisted run outputs and run steps.
 `getEvidenceDetail(evidenceId)` returns one typed bounded detail payload.
+Evidence time filters are validated as parseable UTC-normalized instants and
+invalid ranges return typed command errors instead of raw runtime exceptions.
 `getEvidenceScreenshotPreview(evidenceId)`,
 `revealEvidenceArtifact(evidenceId)`, and
 `exportEvidenceBundle({ evidence_ids })` accept evidence ids only; the backend

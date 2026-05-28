@@ -425,7 +425,7 @@ export class OperationsRepository {
          INNER JOIN workflows ON workflows.id = runs.workflow_id
          WHERE runs.outputs_json IS NOT NULL
          ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC
-         LIMIT 100`,
+        `,
       )
       .all() as RunRow[];
     const items = rows.flatMap((row) => evidenceItemsFromRun(row, limit + 1).items);
@@ -482,7 +482,7 @@ function evidenceItemsFromRun(row: RunRow, limit: number) {
     const record = parseJsonRecord(item);
     const path = stringValue(record?.path) ?? stringValue(record?.relative_path) ?? stringValue(record?.label);
     const artifactKind = stringValue(record?.artifact_kind) ?? stringValue(record?.kind);
-    if (!path || !artifactKind || path.startsWith("/") || path.includes("..")) {
+    if (!path || !artifactKind || !safeRelativeEvidenceReference(path)) {
       evidenceSkippedCount += 1;
       continue;
     }
@@ -575,6 +575,17 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function safeRelativeEvidenceReference(value: string) {
+  if (
+    value.startsWith("/") ||
+    value.startsWith("\\") ||
+    /^[A-Za-z]:[\\/]/.test(value)
+  ) {
+    return false;
+  }
+  return !value.split(/[\\/]+/).includes("..");
 }
 
 function sanitizeSummary(value: string) {

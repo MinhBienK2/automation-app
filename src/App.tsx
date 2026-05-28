@@ -549,24 +549,16 @@ function App() {
               type: "Identity",
               label: commandText(item.identity.display_name ?? item.identity.id, "Identity"),
               context: commandText(item.workflow?.name, "Historical evidence"),
-              target: item.workflow?.id
-                ? {
-                    type: "identity",
-                    target: {
-                      type: "managed",
-                      workflow_id: item.workflow.id,
-                      identity_id: item.identity.id,
-                    },
-                  }
-                : {
-                    type: "identity",
-                    target: {
-                      type: "historical",
-                      identity_id: item.identity.id,
-                      evidence_id: item.evidence_id,
-                      run_id: item.run.id,
-                    },
-                  },
+              target: {
+                type: "identity",
+                target: {
+                  type: "historical",
+                  identity_id: item.identity.id,
+                  workflow_id: item.workflow?.id ?? null,
+                  evidence_id: item.evidence_id,
+                  run_id: item.run.id,
+                },
+              },
             });
           }
         });
@@ -681,6 +673,7 @@ function App() {
     setOperationsOverviewLoading(true);
     try {
       setOperationsOverview(await getOperationsOverview(todayOperationsRange()));
+      setAppError("");
     } catch (error) {
       setAppError(commandMessage(error));
     } finally {

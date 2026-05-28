@@ -37,7 +37,9 @@ Frontend and backend must agree on:
   model.
 - `OperationsOverview`: backend-owned dashboard DTO with metrics, live runs,
   unified attention, activity buckets, recent evidence metadata, upcoming
-  schedules, and data warnings.
+  schedules, and data warnings. Recent evidence result pages remain bounded
+  after the backend has matched persisted evidence metadata; newer output-only
+  run rows must not hide older evidence items.
 - `OperationalRunDetail`: bounded selected-run summary for Overview-to-Runs
   navigation, including workflow reference, optional identity reference from
   the run settings snapshot, sanitized error text, capped step summaries, and
@@ -291,10 +293,14 @@ Run metrics match exact current `workflow_id` and `identity_id` from the run
 settings snapshot, with a safe fallback to sanitized `browser_identity` output
 only when the run association is unambiguous. Runs from previous identities are
 historical and do not count toward the current identity's last run, recent
-failure, or latest observed report after reset.
+failure, evidence item total, or latest observed report after reset.
 
 Historical identity references are read-only. They may carry safe workflow,
-run, or evidence context, but they do not expose diagnostics, reset, close
+run, or evidence context. Stale managed identity targets that no longer match
+current Workflow Settings resolve through the same historical lookup so old run
+context remains inspectable. Historical lookup is not capped to the newest run
+rows before matching identity ids, but the returned detail remains bounded and
+sanitized. Historical references do not expose diagnostics, reset, close
 session, or settings mutation actions.
 
 Identity diagnostics in the DTO are sanitized. They report installed/version

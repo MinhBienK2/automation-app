@@ -22,6 +22,8 @@ Preserve these unless the task explicitly changes them.
   identity read models only. Search results route through typed Mission Control
   targets and must not expose raw outputs, cookies, tokens, proxy credentials,
   profile contents, absolute local paths, or arbitrary diagnostic payloads.
+  Identity results derived from persisted evidence open read-only historical
+  context tied to the evidence run.
 - The shell Alerts button opens Overview and marks the Attention Queue as the
   focused target.
 - Evidence is a separate sidebar page between Runs and Schedules. It is the

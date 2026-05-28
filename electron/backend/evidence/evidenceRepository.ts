@@ -52,10 +52,11 @@ export class EvidenceRepository {
   ) {}
 
   listEvidenceItems(request: EvidenceListRequest = {}): EvidencePage {
-    const limit = limitValue(request.limit);
-    const { items, warnings } = this.buildEvidenceItems(request);
+    const normalizedRequest = normalizeEvidenceListRequest(request);
+    const limit = limitValue(normalizedRequest.limit);
+    const { items, warnings } = this.buildEvidenceItems(normalizedRequest);
     const sorted = items.sort(compareEvidenceItems);
-    const cursor = parseCursor(request.cursor);
+    const cursor = parseCursor(normalizedRequest.cursor);
     const cursorIndex = cursor
       ? sorted.findIndex(
           (item) =>
@@ -436,10 +437,10 @@ function matchesEvidenceRequest(item: EvidenceListItem, request: EvidenceListReq
   }
   if (request.types?.length && !request.types.includes(item.kind)) return false;
   if (request.identity_id && item.identity?.id !== request.identity_id) return false;
-  if (request.time_start_utc && item.created_at < new Date(request.time_start_utc).toISOString()) {
+  if (request.time_start_utc && item.created_at < request.time_start_utc) {
     return false;
   }
-  if (request.time_end_utc && item.created_at >= new Date(request.time_end_utc).toISOString()) {
+  if (request.time_end_utc && item.created_at >= request.time_end_utc) {
     return false;
   }
   const search = request.search?.trim().toLowerCase();
@@ -462,6 +463,28 @@ function matchesEvidenceRequest(item: EvidenceListItem, request: EvidenceListReq
 function limitValue(value: number | null | undefined) {
   if (!Number.isFinite(value ?? NaN)) return defaultPageLimit;
   return Math.max(1, Math.min(Math.floor(value as number), maxPageLimit));
+}
+
+function normalizeEvidenceListRequest(request: EvidenceListRequest): EvidenceListRequest {
+  const timeStart = normalizeEvidenceTimeFilter(request.time_start_utc, "time_start_utc");
+  const timeEnd = normalizeEvidenceTimeFilter(request.time_end_utc, "time_end_utc");
+  if (timeStart && timeEnd && timeEnd <= timeStart) {
+    throw commandError("Invalid evidence time filter", "time_end_utc");
+  }
+  return {
+    ...request,
+    time_start_utc: timeStart,
+    time_end_utc: timeEnd,
+  };
+}
+
+function normalizeEvidenceTimeFilter(value: string | null | undefined, field: string) {
+  if (!value) return null;
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) {
+    throw commandError("Invalid evidence time filter", field);
+  }
+  return new Date(time).toISOString();
 }
 
 function encodeCursor(item: EvidenceListItem) {
@@ -549,11 +572,23 @@ function safeFields(record: Record<string, unknown> | null) {
 function sanitizeStructured(value: unknown): Record<string, unknown> {
   const record = parseJsonRecord(value);
   if (!record) return {};
+  return sanitizeStructuredRecord(record);
+}
+
+function sanitizeStructuredRecord(record: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(record)
       .filter(([key]) => !isSensitiveKey(key))
-      .map(([key, item]) => [key, isScalar(item) || Array.isArray(item) ? item : sanitizeStructured(item)]),
+      .map(([key, item]) => [key, sanitizeStructuredValue(item)]),
   );
+}
+
+function sanitizeStructuredValue(value: unknown): unknown {
+  if (isScalar(value)) return value;
+  if (Array.isArray(value)) return value.map((item) => sanitizeStructuredValue(item));
+  const record = parseJsonRecord(value);
+  if (record) return sanitizeStructuredRecord(record);
+  return null;
 }
 
 function manifestRows(value: unknown) {

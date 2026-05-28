@@ -221,6 +221,28 @@ describe("App settings and graph autosave", () => {
     });
   });
 
+  test("clears Overview load errors after a successful retry", async () => {
+    let overviewCalls = 0;
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_operations_overview: () => {
+        overviewCalls += 1;
+        if (overviewCalls === 1) throw new Error("overview offline");
+        return emptyOperationsOverview();
+      },
+    });
+
+    renderApp();
+
+    expect(await screen.findByText("overview offline")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("overview offline")).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+  });
+
   test("opens Evidence Explorer from sidebar and focuses Overview evidence selections", async () => {
     const evidencePage = {
       generated_at: "2026-05-27T00:00:00.000Z",
@@ -596,6 +618,20 @@ describe("App settings and graph autosave", () => {
       },
       data_warnings: [],
     };
+    const getIdentityLabOverview = vi.fn((request?: { selected_target?: { type?: string } }) => ({
+      ...identityOverview,
+      selected:
+        request?.selected_target?.type === "historical"
+          ? {
+              kind: "historical",
+              identity_ref: { id: "bi_search", display_name: "QA identity" },
+              workflow_ref: { id: workflow.id, name: workflow.name },
+              run_id: "run-search",
+              evidence_id: "ev-search",
+              observed_fields: [{ key: "fingerprint_seed_hash", value: "safe-hash" }],
+            }
+          : identityOverview.selected,
+    }));
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
       list_evidence_items: () => evidencePage,
@@ -603,7 +639,8 @@ describe("App settings and graph autosave", () => {
         item: evidencePage.items[0],
         payload: { kind: "browser_identity", fields: [{ key: "fingerprint_seed_hash", value: "safe-hash" }] },
       }),
-      get_identity_lab_overview: () => identityOverview,
+      get_identity_lab_overview: ({ request }: { request?: { selected_target?: { type?: string } } }) =>
+        getIdentityLabOverview(request),
       get_operations_overview: () => ({
         ...emptyOperationsOverview(),
         metrics: {
@@ -638,6 +675,17 @@ describe("App settings and graph autosave", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Identity QA identity/i }));
     expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(getIdentityLabOverview).toHaveBeenLastCalledWith({
+        selected_target: {
+          type: "historical",
+          identity_id: "bi_search",
+          workflow_id: workflow.id,
+          run_id: "run-search",
+          evidence_id: "ev-search",
+        },
+      });
+    });
 
     await userEvent.click(screen.getByRole("button", { name: "Alerts" }));
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();

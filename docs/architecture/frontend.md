@@ -69,7 +69,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   workflow summaries, run snapshots, schedule summaries, evidence list items,
   and Identity Lab summaries. It must not render raw run outputs, browser
   storage, cookies, tokens, proxy credentials, local filesystem paths, or
-  arbitrary diagnostic payloads. Alerts focuses Overview's Attention Queue.
+  arbitrary diagnostic payloads. Identity results derived from evidence route
+  to read-only historical identity context with workflow/run/evidence metadata.
+  Alerts focuses Overview's Attention Queue.
 - Evidence owns historical evidence browsing UI state. It calls
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,

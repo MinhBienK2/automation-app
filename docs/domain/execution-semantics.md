@@ -63,8 +63,8 @@
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
 - Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`. At finish time, command persistence keeps compatible top-level `run_steps` rows and appends executed nested trace rows, so the stored rows can reconstruct which branch, loop iteration, or retry attempt actually ran.
 - Overview only reads metadata from sanitized structured evidence; artifact
-  opening, raw output inspection, and arbitrary file paths stay outside this
-  phase.
+  opening, raw output inspection, absolute local paths, and arbitrary file
+  paths stay outside this phase.
 - Evidence Explorer reads typed evidence summaries and bounded details from
   persisted outputs and run steps. Screenshot preview, artifact reveal, and
   evidence-bundle export are backend commands that revalidate run-scoped

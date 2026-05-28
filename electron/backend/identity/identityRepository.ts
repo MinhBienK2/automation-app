@@ -91,12 +91,11 @@ export class IdentityRepository {
     if (!workflow) throw { message: "Workflow not found", field: "workflowId" };
     const settings = this.options.settingsForWorkflow(workflow.id);
     if (settings.browser_launch.identity_id !== target.identity_id) {
-      return {
-        kind: "historical",
-        identity_ref: { id: target.identity_id },
-        workflow_ref: workflow,
-        observed_fields: [],
-      };
+      return this.getDetail({
+        type: "historical",
+        workflow_id: workflow.id,
+        identity_id: target.identity_id,
+      }, diagnosticsSnapshot);
     }
     const profileName = browserProfileKey(settings);
     const retained = profileName
@@ -138,7 +137,7 @@ export class IdentityRepository {
         : null,
       last_run: lastRun,
       recent_failures_24h: recentFailures(matchingRuns),
-      evidence_summary: { total: matchingRuns.filter((run) => run.outputs_json?.includes("__evidence")).length },
+      evidence_summary: { total: evidenceItemCount(matchingRuns) },
       rotation_history: rotationHistory(settings),
       diagnostics: {
         binary_installed: diagnosticsSnapshot.binary.installed,
@@ -195,8 +194,7 @@ export class IdentityRepository {
                 settings_snapshot_json, outputs_json, error_json
          FROM runs
          WHERE workflow_id = ?
-         ORDER BY started_at DESC, id DESC
-         LIMIT 200`,
+         ORDER BY started_at DESC, id DESC`,
       )
       .all(workflowId) as RunRow[];
     return rows.filter((row) => runIdentityId(row) === identityId);
@@ -248,6 +246,13 @@ function recentFailures(rows: RunRow[]) {
     const time = Date.parse(row.finished_at ?? row.started_at);
     return row.status === "failed" && Number.isFinite(time) && time >= cutoff;
   }).length;
+}
+
+function evidenceItemCount(rows: RunRow[]) {
+  return rows.reduce((total, row) => {
+    const evidence = parseJsonRecord(row.outputs_json)?.__evidence;
+    return total + (Array.isArray(evidence) ? evidence.length : 0);
+  }, 0);
 }
 
 function configuredPosture(settings: WorkflowSettings) {
