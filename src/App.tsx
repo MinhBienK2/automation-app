@@ -373,7 +373,10 @@ function App() {
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
   const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
+  const [focusedScheduleEventId, setFocusedScheduleEventId] = useState<string | null>(null);
   const [schedulesLoading, setSchedulesLoading] = useState(false);
+  const [scheduleEventsLoading, setScheduleEventsLoading] = useState(false);
+  const [scheduleEventsError, setScheduleEventsError] = useState("");
   const [operationsOverview, setOperationsOverview] =
     useState<OperationsOverview | null>(null);
   const [operationsOverviewLoading, setOperationsOverviewLoading] = useState(false);
@@ -1444,6 +1447,7 @@ function App() {
     setStaleTarget(null);
     setAppError("");
     setFocusedScheduleId(null);
+    setFocusedScheduleEventId(null);
     void loadSchedules();
   }
 
@@ -1582,6 +1586,7 @@ function App() {
   ) {
     setScreen("schedules");
     setFocusedScheduleId(scheduleId ?? null);
+    setFocusedScheduleEventId(scheduleEventId ?? null);
     setStaleTarget(null);
     setAppError("");
     const items = await loadSchedules();
@@ -1699,6 +1704,10 @@ function App() {
     setAppError("");
     try {
       await deleteSchedule(scheduleId);
+      if (focusedScheduleId === scheduleId) {
+        setFocusedScheduleId(null);
+        setFocusedScheduleEventId(null);
+      }
       await loadSchedules();
     } catch (error) {
       setAppError(commandMessage(error));
@@ -1722,10 +1731,19 @@ function App() {
 
   async function loadScheduleHistory(scheduleId: string) {
     setAppError("");
+    setScheduleEventsError("");
+    setScheduleEventsLoading(true);
     try {
-      setScheduleEvents(await listScheduleEvents({ schedule_id: scheduleId }));
+      const items = await listScheduleEvents({ schedule_id: scheduleId });
+      setScheduleEvents(items);
+      return items;
     } catch (error) {
-      setAppError(commandMessage(error));
+      const message = commandMessage(error);
+      setScheduleEventsError(message);
+      setAppError(message);
+      return [];
+    } finally {
+      setScheduleEventsLoading(false);
     }
   }
 
@@ -1977,8 +1995,11 @@ function App() {
           workflows={workflows}
           events={scheduleEvents}
           focusedScheduleId={focusedScheduleId}
+          focusedScheduleEventId={focusedScheduleEventId}
           staleTarget={scheduleStaleTarget}
           loading={schedulesLoading}
+          historyLoading={scheduleEventsLoading}
+          historyError={scheduleEventsError}
           error={appError}
           onCreateSchedule={submitCreateSchedule}
           onUpdateSchedule={submitUpdateSchedule}
@@ -1996,6 +2017,7 @@ function App() {
           onOpenOverview={() => openOverview()}
           onClearStaleTarget={() => {
             setFocusedScheduleId(null);
+            setFocusedScheduleEventId(null);
             setStaleTarget(null);
             setAppError("");
           }}

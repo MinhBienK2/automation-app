@@ -24,7 +24,11 @@ Preserve these unless the task explicitly changes them.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview with included sections and omitted/sanitized fields, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Browser recording never exposes captured password or secret-like text field values to the renderer. Top-level page navigations can become recorded `navigate` steps, but embedded frame navigations such as ad/user-sync iframes must not become workflow nodes. Text entry must preserve literal whitespace and clearing, contenteditable edits must capture visible editor text, and text-composition, edit-hotkey, deletion-key, or modifier-only keydown noise must not create workflow nodes or split one text entry into multiple Fill Field steps. Clipboard paste into non-sensitive targets records replayable Set Clipboard plus Paste steps and suppresses the duplicate input event caused by the paste; sensitive pasted values are redacted and excluded until reviewed. Generic clicks that only precede a checkbox/radio/select/upload control event must not create duplicate click nodes. A tab opened by a recorded click should replay as click plus tab switch; a tab created without a preceding click should replay as Open New Tab. Those generated input steps are excluded by default with a review warning until the operator supplies a safe literal or variable. Stopping a recorder drains buffered fallback events before review draft generation. Review shows only sanitized session identity metadata, summarizes included/excluded/needs-attention steps, blocks save until required review fixes are made, and confirms discard or close before consuming an unsaved session or draft. Generated recording graphs preserve positive captured gaps between included steps as fixed edge delays and wrap long recordings into readable rows instead of one horizontal line. Record Replacement cannot start while the target workflow, target browser profile, or batch runner is active. Saving a recording draft only honors reviewed labels, inclusion flags, supported captured value edits, and backend-held timing metadata against the backend-held draft steps; renderer-supplied action type, locator replacement, or timing replacement is ignored. Discarding a recording session and successfully saving a recording draft consume the backend in-memory recorder state instead of leaving reusable draft/session handles.
-- Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
+- Schedules is a separate sidebar page for creating and auditing workflow
+  schedules across workflows. It shows schedule totals, enabled/draft/attention
+  counts, readable cadence/next-run/last-decision labels, named destructive
+  confirmation for delete, and a focused history audit for scheduler decisions.
+  A workflow can have multiple schedules.
 - Overview is the default Mission Control entry point. It shows backend-owned
   durable metrics, live operations, attention, activity, recent evidence
   metadata, and upcoming schedules for the operator's local day.
@@ -53,7 +57,10 @@ Preserve these unless the task explicitly changes them.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
 - Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
-- Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
+- Schedule event history records started, skipped, missed, failed-to-start, and
+  disabled decisions independently from run evidence rows. The renderer presents
+  safe summaries for event details and validation findings instead of raw
+  `details_json`.
 - Schedule history entries with run ids can open the matching Runs target, and
   all schedule history entries can open the owning Workflow target. A stale or
   deleted schedule, run, or workflow target renders an unavailable target
@@ -137,7 +144,9 @@ Preserve these unless the task explicitly changes them.
 - Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
-- Schedules is a separate app screen reachable from the sidebar.
+- Schedules is a separate app screen reachable from the sidebar. Create/edit
+  dialogs explain local-time, active-app, saved-workflow, and disabled-draft
+  semantics while backend commands remain authoritative for enablement.
 - Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run. It shows newest runs first with workflow, labeled source, text status, current step, started time, short sanitized issue summary, and row-scoped Stop actions.
 - Runs can render one selected persisted run detail opened from Overview or
   shell navigation. Selected run details can open related Evidence, Workflow,

@@ -41,6 +41,9 @@
     .evidence-grid,
     .identity-kpi-grid,
     .identity-workspace,
+    .schedule-summary-strip,
+    .schedule-dialog-body,
+    .schedule-history-meta,
     .settings-readiness-grid,
     .workflow-settings-body,
   .workflow-settings-grid,
@@ -189,5 +192,14 @@
     grid-template-columns: repeat(4, 40px);
     justify-content: end;
     width: auto;
+  }
+
+  .schedule-kind-segmented {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .schedule-inline-fields,
+  .schedule-row-actions {
+    grid-template-columns: 1fr;
   }
 }

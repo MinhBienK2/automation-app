@@ -52,10 +52,18 @@
 
 ## Schedule Workflow
 
-- The Schedules sidebar page lists all workflow schedules with workflow name, enabled state, schedule summary, next run time, last status, and last reason.
-- Users can create disabled draft schedules, edit schedules, delete schedules, enable or disable schedules, and inspect schedule event history.
+- The Schedules sidebar page lists all workflow schedules with workflow name,
+  enabled state, friendly cadence summary, next run time, last decision, and
+  human-readable skip/failure reasons. It also surfaces enabled, draft, and
+  attention counts for cross-workflow operations scanning.
+- Users can create disabled draft schedules, edit schedules, delete schedules
+  through a named confirmation, enable or disable schedules with row-scoped
+  command errors, and inspect safe schedule event history.
 - Schedule kinds are one-time `once_at`, repeating `interval`, and friendly calendar presets for daily, weekly, and monthly local-time runs.
-- Enabling a schedule validates the schedule config and the current saved workflow run readiness. Invalid saved graph/settings block enablement with a command-facing error.
+- Enabling a schedule validates the schedule config and the current saved
+  workflow run readiness. Invalid saved graph/settings block enablement with a
+  command-facing error. The UI can show field/readiness hints, but backend
+  command results remain authoritative.
 - The Electron backend scheduler runs while the app process is open. It scans enabled schedules for `next_run_at <= now` through the schedule lookup index, processes due schedules in chronological order, and writes audit events for starts, skips, missed windows, failed validation/start, and automatic one-time disablement.
 - Scheduled runs call the same saved-workflow backend path as `run_workflow`; they do not save or run unsaved detail-page drafts.
 - If the scheduled workflow conflicts with an active run for the same workflow, an active run using the same persistent browser profile, or an active batch at the scheduled time, the occurrence is skipped and not queued. Due schedules for isolated workflows can start concurrently in the same tick.

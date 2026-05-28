@@ -27,7 +27,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   session labels, evidence-count copy, bounded byte formatting, date display,
   and safe observed-field filtering.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave, environment readiness diagnostics, guarded maintenance commands, and graph shortcut guidance.
-- `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
+- `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule
+  operations workspace with summary counts, readable schedule/decision labels,
+  create/edit readiness preview, row-scoped enable/disable errors, named delete
+  confirmation, focused schedule/event target state, and safe event history with
+  run/workflow traceability.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, explicit missing-run target state, and run-to-workflow/identity/evidence links.
 - `src/features/runs/lib/runCenterPresentation.ts`: pure Runs page summary, sorting, source/status, date, and bounded issue-summary helpers.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: Workflow Library
@@ -193,7 +197,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   non-destructive scope copy, keeps Reset Identity guarded, and renders
   historical identity references as read-only with related Evidence/Run/
   Workflow navigation only.
-- Schedules navigation state in the app shell/sidebar, plus schedule create/edit form state and schedule event history presentation.
+- Schedules navigation state in the app shell/sidebar, plus schedule
+  create/edit form state, schedule event loading/error/focus state, delete
+  confirmation state, and schedule event history presentation.
 - Runs navigation state in the app shell/sidebar.
 - Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands. Workflow detail header commands keep Settings, Validate, and Save icon-only while Run, Stop, and Run from selected remain text commands.
 
