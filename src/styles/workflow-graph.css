@@ -28,12 +28,29 @@
   background: #121c26;
 }
 
+.graph-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding-right: 8px;
+  border-right: 1px solid #233240;
+}
+
+.graph-toolbar-group:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
 .graph-icon-tools {
   display: flex;
   gap: 4px;
   align-items: center;
-  padding-right: 4px;
-  border-right: 1px solid #233240;
+}
+
+.graph-add-tools {
+  gap: 8px;
 }
 
 .graph-inspector {
@@ -438,11 +455,61 @@
   color: #f4b740;
 }
 
+.graph-empty-inspector,
 .graph-connection-summary,
 .graph-selected-edge,
 .graph-port-guidance {
   display: grid;
   gap: 6px;
+}
+
+.graph-empty-inspector {
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.graph-empty-inspector h2 {
+  margin: 0;
+}
+
+.graph-health-metrics,
+.graph-selection-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.graph-health-metrics div,
+.graph-selection-metrics div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #233240;
+  border-radius: 6px;
+}
+
+.graph-health-metrics dt,
+.graph-selection-metrics dt {
+  color: #667d8d;
+  font-size: 11px;
+}
+
+.graph-health-metrics dd,
+.graph-selection-metrics dd {
+  min-width: 0;
+  margin: 2px 0 0;
+  color: #e7eef5;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.graph-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .graph-connection-summary span,

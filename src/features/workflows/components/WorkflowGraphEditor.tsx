@@ -71,6 +71,7 @@ import {
   LinkContextMenu,
   NodeContextMenu,
   NodeHelpDialog,
+  logicNodeGroups,
 } from "./WorkflowGraphPalettes";
 import { WorkflowGraphToolbar } from "./WorkflowGraphToolbar";
 
@@ -78,6 +79,7 @@ type WorkflowGraphEditorProps = {
   graph: WorkflowGraph;
   runState: RunState;
   validationIssues: GraphValidationIssue[];
+  issuesNeedRecheck?: boolean;
   selectionRequest?: GraphSelectionRequest | null;
   onChange: (graph: WorkflowGraph) => void;
   onRunGraph?: () => void;
@@ -254,6 +256,7 @@ export function WorkflowGraphEditor({
   graph,
   runState,
   validationIssues,
+  issuesNeedRecheck = false,
   selectionRequest,
   defaultEdgeDelay = null,
   onChange,
@@ -314,19 +317,13 @@ export function WorkflowGraphEditor({
   const reactFlowNodesRef = useRef<WorkflowFlowNode[]>([]);
   const reactFlowEdgesRef = useRef<WorkflowFlowEdge[]>([]);
   const selectionCount = selection.nodeIds.length + selection.edgeIds.length;
-  const selectionSummary =
-    selectionCount > 1
-      ? {
-          nodeCount: selection.nodeIds.length,
-          edgeCount: selection.edgeIds.length,
-        }
-      : null;
+  const hasMultiSelection = selectionCount > 1;
   const selectedNodeId =
-    !selectionSummary && selection.nodeIds.length === 1 && selection.edgeIds.length === 0
+    !hasMultiSelection && selection.nodeIds.length === 1 && selection.edgeIds.length === 0
       ? selection.nodeIds[0]
       : null;
   const selectedEdgeId =
-    !selectionSummary && selection.edgeIds.length === 1 && selection.nodeIds.length === 0
+    !hasMultiSelection && selection.edgeIds.length === 1 && selection.nodeIds.length === 0
       ? selection.edgeIds[0]
       : null;
   const selectedNode = selectedNodeId
@@ -1001,6 +998,15 @@ export function WorkflowGraphEditor({
     setNodePalette({ title, eyebrow, searchLabel, groups });
   }
 
+  function openLogicPalette() {
+    openNodePalette(
+      "Choose a logic node",
+      "Add Logic Node",
+      "Search logic nodes",
+      logicNodeGroups,
+    );
+  }
+
   function deleteEdge(edgeId: string) {
     setLinkContextMenu((current) => (current?.edgeId === edgeId ? null : current));
     const result = deleteGraphSelection(graphRef.current, {
@@ -1163,18 +1169,25 @@ export function WorkflowGraphEditor({
         <WorkflowGraphInspector
           graph={graph}
           issueGroups={issueGroups}
+          issuesNeedRecheck={issuesNeedRecheck}
           nodeLabels={nodeLabels}
           runState={runState}
-          selectionSummary={selectionSummary}
+          selection={selection}
           selectedEdge={selectedEdge}
           selectedNode={selectedNode}
+          validationIssues={validationIssues}
+          onAddAction={() => setIsActionPaletteOpen(true)}
+          onAddLogic={openLogicPalette}
+          onAutoArrange={autoArrangeGraph}
           onCopySelection={copySelection}
           onDeleteSelection={deleteSelection}
           onDeleteSelectedEdge={deleteSelectedEdge}
           onDeleteSelectedNode={deleteSelectedNode}
           onDuplicateSelection={duplicateSelection}
+          onFitView={() => reactFlowInstance?.fitView()}
           onFocusSelectedNode={focusSelectedNode}
           onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
+          onValidateGraph={onValidateGraph ?? (() => undefined)}
           onUpdateEdge={updateEdge}
           onUpdateNode={updateNode}
         />

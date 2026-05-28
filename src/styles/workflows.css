@@ -76,6 +76,23 @@
   border-color: rgba(50, 211, 230, 0.48);
 }
 
+.palette-empty-state {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #121c26;
+  color: #9aaebd;
+  font-size: 13px;
+}
+
+.palette-empty-state p {
+  margin: 0;
+}
+
 .workflow-library {
   display: grid;
   gap: 10px;

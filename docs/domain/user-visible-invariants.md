@@ -6,6 +6,11 @@ Preserve these unless the task explicitly changes them.
 
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
+- Graph Builder keeps the canvas as the primary authoring surface. Its toolbar
+  groups History, Mode, View/Layout, Add, and Help controls; palettes focus and
+  preserve search while browsing categories; empty selection shows graph health;
+  Start selection explains protection; and multi-selection never copies,
+  duplicates, or deletes Start.
 - New workflows have a `Start -> New node` draft graph.
 - Workflow list `Settings` opens Workflow Settings at General.
 - Workflow Library uses a dense table/detail workspace. Row actions expose

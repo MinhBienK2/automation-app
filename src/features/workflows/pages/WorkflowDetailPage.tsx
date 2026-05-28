@@ -222,6 +222,7 @@ export function WorkflowDetailPage({
           graph={workflowGraph}
           runState={runState}
           validationIssues={graphIssues}
+          issuesNeedRecheck={graphIssuesNeedRecheck}
           selectionRequest={selectionRequest}
           defaultEdgeDelay={defaultEdgeDelay}
           onChange={onGraphChange}

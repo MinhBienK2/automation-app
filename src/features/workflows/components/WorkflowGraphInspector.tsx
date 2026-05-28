@@ -16,27 +16,32 @@ import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import { ConnectionSummary } from "./WorkflowGraphPalettes";
 import type { ActionConfig } from "../../../types/workflow";
 import type { VariableOption } from "./TemplateTextField";
-
-type SelectionSummary = {
-  nodeCount: number;
-  edgeCount: number;
-};
+import type { GraphSelection } from "../lib/graphEditorCommands";
+import { WorkflowGraphEmptyInspector } from "./WorkflowGraphEmptyInspector";
+import { WorkflowGraphSelectionSummary } from "./WorkflowGraphSelectionSummary";
 
 type WorkflowGraphInspectorProps = {
   graph: WorkflowGraph;
   issueGroups: Map<string, GraphValidationIssue[]>;
+  issuesNeedRecheck: boolean;
   nodeLabels: Map<string, string>;
   runState: RunState;
-  selectionSummary: SelectionSummary | null;
+  selection: GraphSelection;
   selectedEdge: GraphEdge | null;
   selectedNode: GraphNode | null;
+  validationIssues: GraphValidationIssue[];
+  onAddAction: () => void;
+  onAddLogic: () => void;
+  onAutoArrange: () => void;
   onCopySelection: () => void;
   onDeleteSelection: () => void;
   onDeleteSelectedEdge: () => void;
   onDeleteSelectedNode: () => void;
   onDuplicateSelection: () => void;
+  onFitView: () => void;
   onFocusSelectedNode: () => void;
   onOpenSelectedNodeHelp: () => void;
+  onValidateGraph: () => void;
   onUpdateEdge: (edge: GraphEdge) => void;
   onUpdateNode: (node: GraphNode) => void;
 };
@@ -44,18 +49,25 @@ type WorkflowGraphInspectorProps = {
 export function WorkflowGraphInspector({
   graph,
   issueGroups,
+  issuesNeedRecheck,
   nodeLabels,
   runState,
-  selectionSummary,
+  selection,
   selectedEdge,
   selectedNode,
+  validationIssues,
+  onAddAction,
+  onAddLogic,
+  onAutoArrange,
   onCopySelection,
   onDeleteSelection,
   onDeleteSelectedEdge,
   onDeleteSelectedNode,
   onDuplicateSelection,
+  onFitView,
   onFocusSelectedNode,
   onOpenSelectedNodeHelp,
+  onValidateGraph,
   onUpdateEdge,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
@@ -65,26 +77,18 @@ export function WorkflowGraphInspector({
     selectedNode && runState.error?.step_id === selectedNode.id
       ? runState.error
       : null;
+  const hasMultiSelection = selection.nodeIds.length + selection.edgeIds.length > 1;
 
   return (
     <aside className="graph-inspector" aria-label="Graph inspector">
-      {selectionSummary ? (
-        <section className="graph-selected-edge" aria-label="Graph selection summary">
-          <h2>Selection</h2>
-          <p>
-            {selectionSummary.nodeCount} nodes selected /{" "}
-            {selectionSummary.edgeCount} links selected
-          </p>
-          <Button type="button" variant="secondary" onClick={onDuplicateSelection}>
-            Duplicate selection
-          </Button>
-          <Button type="button" variant="secondary" onClick={onCopySelection}>
-            Copy selection
-          </Button>
-          <Button type="button" variant="destructive" onClick={onDeleteSelection}>
-            Delete selection
-          </Button>
-        </section>
+      {hasMultiSelection ? (
+        <WorkflowGraphSelectionSummary
+          graph={graph}
+          selection={selection}
+          onCopySelection={onCopySelection}
+          onDeleteSelection={onDeleteSelection}
+          onDuplicateSelection={onDuplicateSelection}
+        />
       ) : null}
       {selectedEdge ? (
         <section className="graph-selected-edge" aria-label="Selected link">
@@ -103,7 +107,7 @@ export function WorkflowGraphInspector({
           </Button>
         </section>
       ) : null}
-      {!selectionSummary && selectedNode ? (
+      {!hasMultiSelection && selectedNode ? (
         <>
           <div className="graph-inspector-header">
             <div>
@@ -121,6 +125,9 @@ export function WorkflowGraphInspector({
           </div>
           <ConnectionSummary graph={graph} node={selectedNode} />
           <PortGuidance graph={graph} node={selectedNode} />
+          {selectedNode.node_type === "start" ? (
+            <p className="muted">Start node is protected.</p>
+          ) : null}
           {issueGroups.get(selectedNode.id)?.length ? (
             <div className="graph-node-issues" aria-label="Selected node issues">
               {issueGroups.get(selectedNode.id)?.map((issue) => (
@@ -184,8 +191,18 @@ export function WorkflowGraphInspector({
             Delete Node
           </Button>
         </>
-      ) : !selectionSummary && !selectedEdge ? (
-        <p className="muted">Select a graph node.</p>
+      ) : !hasMultiSelection && !selectedEdge ? (
+        <WorkflowGraphEmptyInspector
+          graph={graph}
+          issues={validationIssues}
+          issuesNeedRecheck={issuesNeedRecheck}
+          runState={runState}
+          onAddAction={onAddAction}
+          onAddLogic={onAddLogic}
+          onAutoArrange={onAutoArrange}
+          onFitView={onFitView}
+          onValidateGraph={onValidateGraph}
+        />
       ) : null}
 
     </aside>

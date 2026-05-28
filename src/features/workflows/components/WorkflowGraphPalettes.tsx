@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type {
   ActionType,
@@ -105,6 +105,11 @@ export function GraphNodePalette({
   const normalizedQuery = query.trim().toLowerCase();
   const groups = palette?.groups ?? [];
   const nodeOptions = groups.flatMap((group) => group.nodes);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (palette) searchRef.current?.focus();
+  }, [palette]);
 
   const visibleNodes = useMemo(() => {
     const sourceNodes =
@@ -114,10 +119,12 @@ export function GraphNodePalette({
 
     if (!normalizedQuery) return sourceNodes;
 
-    return nodeOptions.filter((nodeType) => {
+    return sourceNodes.filter((nodeType) => {
       const label = graphNodeLabel(nodeType).toLowerCase();
       const description = (graphNodeDescriptions[nodeType] ?? "").toLowerCase();
-      return label.includes(normalizedQuery) || description.includes(normalizedQuery);
+      return label.includes(normalizedQuery) ||
+        description.includes(normalizedQuery) ||
+        nodeType.includes(normalizedQuery);
     });
   }, [activeCategory, groups, nodeOptions, normalizedQuery]);
 
@@ -144,6 +151,7 @@ export function GraphNodePalette({
         </DialogHeader>
 
         <Input
+          ref={searchRef}
           aria-label={palette?.searchLabel}
           placeholder="Search nodes..."
           value={query}
@@ -154,19 +162,16 @@ export function GraphNodePalette({
           <div aria-label="Node categories" className="action-category-list">
             {["All", ...groups.map((group) => group.label)].map((label) => (
               <Button
-                aria-pressed={activeCategory === label && !normalizedQuery}
+                aria-pressed={activeCategory === label}
                 className={
-                  activeCategory === label && !normalizedQuery
+                  activeCategory === label
                     ? "action-category action-category-active"
                     : "action-category"
                 }
                 key={label}
                 type="button"
                 variant="ghost"
-                onClick={() => {
-                  setActiveCategory(label);
-                  setQuery("");
-                }}
+                onClick={() => setActiveCategory(label)}
               >
                 {label}
               </Button>
@@ -175,7 +180,7 @@ export function GraphNodePalette({
 
           <div aria-label="Node results" className="action-result-list">
             {visibleNodes.length === 0 ? (
-              <p className="muted">No matching nodes</p>
+              <EmptyPaletteState noun="nodes" />
             ) : (
               visibleNodes.map((nodeType) => (
                 <Button
@@ -780,6 +785,11 @@ export function ActionNodePalette({
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const normalizedQuery = query.trim().toLowerCase();
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+  }, [open]);
 
   const visibleActions = useMemo(() => {
     const sourceActions =
@@ -791,10 +801,12 @@ export function ActionNodePalette({
 
     if (!normalizedQuery) return sourceActions;
 
-    return actionPickerOptions.filter((actionType) => {
+    return sourceActions.filter((actionType) => {
       const label = actionLabels[actionType].toLowerCase();
       const description = actionDescriptions[actionType].toLowerCase();
-      return label.includes(normalizedQuery) || description.includes(normalizedQuery);
+      return label.includes(normalizedQuery) ||
+        description.includes(normalizedQuery) ||
+        actionType.includes(normalizedQuery);
     });
   }, [activeCategory, normalizedQuery]);
 
@@ -821,6 +833,7 @@ export function ActionNodePalette({
         </DialogHeader>
 
         <Input
+          ref={searchRef}
           aria-label="Search actions"
           placeholder="Search actions..."
           value={query}
@@ -831,19 +844,16 @@ export function ActionNodePalette({
           <div aria-label="Action categories" className="action-category-list">
             {["All", "Common", ...actionPickerGroups.map((group) => group.label)].map((label) => (
               <Button
-                aria-pressed={activeCategory === label && !normalizedQuery}
+                aria-pressed={activeCategory === label}
                 className={
-                  activeCategory === label && !normalizedQuery
+                  activeCategory === label
                     ? "action-category action-category-active"
                     : "action-category"
                 }
                 key={label}
                 type="button"
                 variant="ghost"
-                onClick={() => {
-                  setActiveCategory(label);
-                  setQuery("");
-                }}
+                onClick={() => setActiveCategory(label)}
               >
                 {label}
               </Button>
@@ -852,7 +862,7 @@ export function ActionNodePalette({
 
           <div aria-label="Action results" className="action-result-list">
             {visibleActions.length === 0 ? (
-              <p className="muted">No matching actions</p>
+              <EmptyPaletteState noun="actions" />
             ) : (
               visibleActions.map((actionType) => (
                 <Button
@@ -875,6 +885,15 @@ export function ActionNodePalette({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EmptyPaletteState({ noun }: { noun: "actions" | "nodes" }) {
+  return (
+    <div className="palette-empty-state" role="status">
+      <p>No matching {noun}.</p>
+      <p>Clear search or choose another category.</p>
+    </div>
   );
 }
 

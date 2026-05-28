@@ -1128,6 +1128,76 @@ describe("Workflow graph editor integration", () => {
       .toHaveClass("graph-canvas-pan-mode");
   });
 
+  test("groups toolbar controls and shows graph health when nothing is selected", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const toolbar = within(editor).getByRole("toolbar", { name: "Graph tools" });
+
+    [
+      "History tools",
+      "Mode tools",
+      "View and layout tools",
+      "Add nodes",
+      "Graph help",
+    ].forEach((label) => {
+      expect(within(toolbar).getByLabelText(label)).toBeInTheDocument();
+    });
+
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Graph canvas node start" }),
+    );
+    expect(within(editor).getByText("Start node is protected.")).toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "Delete Node" })).toBeDisabled();
+
+    await userEvent.keyboard("{Escape}");
+    const health = within(editor).getByRole("region", { name: "Graph health" });
+    expect(within(health).getByText("3 nodes")).toBeInTheDocument();
+    expect(within(health).getByText("2 links")).toBeInTheDocument();
+    expect(within(health).getByText("0 unconfigured")).toBeInTheDocument();
+    expect(within(health).getByRole("button", { name: "Add Action" })).toBeInTheDocument();
+    expect(within(health).getByRole("button", { name: "Add Logic" })).toBeInTheDocument();
+    expect(within(health).getByRole("button", { name: "Validate" })).toBeInTheDocument();
+    expect(within(health).getByRole("button", { name: "Fit view" })).toBeInTheDocument();
+    expect(within(health).getByRole("button", { name: "Auto arrange" })).toBeInTheDocument();
+  });
+
+  test("keeps palette search focused, bounded, and stable across categories", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+
+    const palette = await screen.findByRole("dialog", { name: "Choose an action type" });
+    const search = within(palette).getByLabelText("Search actions");
+    expect(search).toHaveFocus();
+
+    await userEvent.type(search, "zzzz");
+    expect(within(palette).getByText("No matching actions."))
+      .toBeInTheDocument();
+    expect(within(palette).getByText("Clear search or choose another category."))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(palette).getByRole("button", { name: "Common" }));
+    expect(within(palette).getByLabelText("Search actions")).toHaveValue("zzzz");
+
+    await userEvent.clear(within(palette).getByLabelText("Search actions"));
+    await userEvent.type(within(palette).getByLabelText("Search actions"), "click");
+    expect(palette.querySelector('[data-value="click"]')).toBeInTheDocument();
+  });
+
   test("auto arranges graph nodes from the toolbar and saves the new positions", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),

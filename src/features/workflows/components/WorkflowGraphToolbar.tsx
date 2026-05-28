@@ -57,9 +57,15 @@ export function WorkflowGraphToolbar({
   onTogglePanMode,
   onUndo,
 }: WorkflowGraphToolbarProps) {
+  const arrangeSelectionReason = isArranging
+    ? "Arrange is already running."
+    : isArrangeSelectionDisabled
+    ? "Select at least two non-start nodes to arrange a selection."
+    : "Arrange selected nodes";
+
   return (
     <div className="graph-toolbar" role="toolbar" aria-label="Graph tools">
-      <div className="graph-icon-tools" aria-label="Graph edit and view tools">
+      <div className="graph-toolbar-group graph-icon-tools" aria-label="History tools">
         <IconButton
           label="Undo"
           type="button"
@@ -76,6 +82,8 @@ export function WorkflowGraphToolbar({
         >
           <Redo2 aria-hidden="true" />
         </IconButton>
+      </div>
+      <div className="graph-toolbar-group graph-icon-tools" aria-label="Mode tools">
         <IconButton
           label="Select canvas mode"
           aria-pressed={!isPanMode}
@@ -94,6 +102,11 @@ export function WorkflowGraphToolbar({
         >
           <Hand aria-hidden="true" />
         </IconButton>
+      </div>
+      <div
+        className="graph-toolbar-group graph-icon-tools"
+        aria-label="View and layout tools"
+      >
         <IconButton
           label="Fit graph view"
           type="button"
@@ -113,6 +126,7 @@ export function WorkflowGraphToolbar({
         </IconButton>
         <IconButton
           label="Arrange selection"
+          tooltip={arrangeSelectionReason}
           disabled={isArrangeSelectionDisabled || isArranging}
           type="button"
           variant="ghost"
@@ -121,62 +135,66 @@ export function WorkflowGraphToolbar({
           <AlignHorizontalDistributeCenter aria-hidden="true" />
         </IconButton>
       </div>
-      <Button type="button" variant="secondary" onClick={onAddNewNode}>
-        New node
-      </Button>
-      <Button type="button" variant="secondary" onClick={onAddAction}>
-        Add Action
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
-            "Choose a logic node",
-            "Add Logic Node",
-            "Search logic nodes",
-            logicNodeGroups,
-          )
-        }
-      >
-        Add Logic
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
-            "Choose a variable node",
-            "Add Variable Node",
-            "Search variable nodes",
-            variableNodeGroups,
-          )
-        }
-      >
-        Add Variable
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() =>
-          onOpenNodePalette(
-            "Choose an end node",
-            "Add End Node",
-            "Search end nodes",
-            endNodeGroups,
-          )
-        }
-      >
-        Add End
-      </Button>
-      <IconButton
-        label="Shortcuts"
-        type="button"
-        variant="ghost"
-        onClick={onOpenShortcuts}
-      >
-        <Keyboard aria-hidden="true" />
-      </IconButton>
+      <div className="graph-toolbar-group graph-add-tools" aria-label="Add nodes">
+        <Button type="button" variant="secondary" onClick={onAddNewNode}>
+          New node
+        </Button>
+        <Button type="button" variant="secondary" onClick={onAddAction}>
+          Add Action
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose a logic node",
+              "Add Logic Node",
+              "Search logic nodes",
+              logicNodeGroups,
+            )
+          }
+        >
+          Add Logic
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose a variable node",
+              "Add Variable Node",
+              "Search variable nodes",
+              variableNodeGroups,
+            )
+          }
+        >
+          Add Variable
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() =>
+            onOpenNodePalette(
+              "Choose an end node",
+              "Add End Node",
+              "Search end nodes",
+              endNodeGroups,
+            )
+          }
+        >
+          Add End
+        </Button>
+      </div>
+      <div className="graph-toolbar-group graph-icon-tools" aria-label="Graph help">
+        <IconButton
+          label="Shortcuts"
+          type="button"
+          variant="ghost"
+          onClick={onOpenShortcuts}
+        >
+          <Keyboard aria-hidden="true" />
+        </IconButton>
+      </div>
     </div>
   );
 }

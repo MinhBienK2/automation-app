@@ -31,7 +31,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   `WorkflowLibraryDetailPanel.tsx`, and `WorkflowLibraryFilters.tsx`: bounded
   Workflow Library table, selected preview panel, and local toolbar controls.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
-- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, empty inspector, selection summary, and inspector panels are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx` and sibling
   `Recording*` components: browser recorder status, guarded discard, summary
@@ -64,6 +64,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/lib/stepHelpTypes.ts`: shared action-help field/reference types consumed by help catalogs, palettes, and modal rendering so the generated action catalog does not own cross-component type contracts.
 - `src/features/workflows/lib/stepHelpFieldGuidance.ts`: shared action-help field details, option references, and locator-field helpers used by action help generation.
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
+- `src/features/workflows/lib/graphIssuePresentation.ts` and
+  `graphSelectionPresentation.ts`: pure graph health, issue grouping, selected
+  issue lookup, selection capability, Start protection, and link-wait
+  presentation helpers used by the graph inspector.
 - `src/features/workflows/lib/graphLayout.ts`: ELK-backed graph layout adapter and editor-only edge-kind classification for auto arrange, arrange selection, and workflow link routing hints.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/RunStatusBar.tsx`: run status and errors.
@@ -82,7 +86,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Form rendering and local validation display.
 - Visual graph editing state before persistence.
 - App-level graph autosave preference and graph save status presentation.
-- Graph validation/run controls and presentation of validation issues for the selected node or selected link.
+- Graph validation/run controls and presentation of validation issues for the
+  selected node, selected link, empty graph-health inspector, or multi-selection
+  summary.
 - Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
 - Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; the renderer does not create identity ids or fingerprint seeds.
 - Overview is the default app screen. It calls `getOperationsOverview` with
@@ -148,7 +154,12 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Action node creation from the semantic action palette, including fixed Wait and Random Wait actions in the Wait group, unconfigured `New node` draft creation from the toolbar, graph-control node creation from simplified grouped node pickers including Merge and Router, visible-canvas-centered placement for toolbar-created nodes, plus searchable type selection and config editing through the reusable action config editor.
 - Variable authoring UI for Set Variables, Set JSON Variables, Repeat For Each manual/array modes, and template token insertion/highlighting in supported text fields.
 - Variable picker catalogs known graph variables from Set Variables rows, Set JSON Variables keys, and output-producing action nodes when available.
-- Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and graph-scoped keyboard shortcuts without changing persisted `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside the active graph workspace.
+- Editor-only graph selection, clipboard, and history state. These drive
+  graph-health empty selection, Start-protected selection messaging,
+  multi-selection copyable/deletable summaries, bulk duplicate/delete/copy/paste,
+  undo/redo, and graph-scoped keyboard shortcuts without changing persisted
+  `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside
+  the active graph workspace.
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, auto arrange, arrange selection, and shortcuts icon controls.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
