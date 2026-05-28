@@ -81,6 +81,10 @@ export function normalizeRecordingEvents(events: RecordingEvent[]): ReviewedReco
       continue;
     }
 
+    if (isIgnorableKeyboardEvent(event)) {
+      continue;
+    }
+
     if (event.kind === "scroll") {
       flushPending();
       const scrollDelta = scrollEventWithDelta(event, previousScrollPosition);
@@ -419,6 +423,23 @@ function isInputEvent(event: RecordingEvent) {
     (event.kind === "input" || event.kind === "change") &&
     event.value?.text != null
   );
+}
+
+const IGNORED_TEXT_COMPOSITION_KEYS = new Set(["Process", "Dead", "Unidentified"]);
+const MODIFIER_ONLY_KEYS = new Set(["Alt", "AltGraph", "Control", "Meta", "Shift"]);
+
+function isIgnorableKeyboardEvent(event: RecordingEvent) {
+  if (event.kind !== "keyboard") return false;
+  const keys = event.value?.keys;
+  if (keys?.length) {
+    const replayKeys = keys.filter((key) => !MODIFIER_ONLY_KEYS.has(key));
+    return replayKeys.length === 0 ||
+      replayKeys.every((key) => IGNORED_TEXT_COMPOSITION_KEYS.has(key));
+  }
+  const key = event.value?.key;
+  return !key ||
+    MODIFIER_ONLY_KEYS.has(key) ||
+    IGNORED_TEXT_COMPOSITION_KEYS.has(key);
 }
 
 function dedupedEventKind(event: RecordingEvent): PendingDedupedEvent["kind"] | null {

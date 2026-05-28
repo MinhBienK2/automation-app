@@ -73,8 +73,8 @@ Users can:
 - Open Runs to monitor concurrent workflow run snapshots and stop a selected active run by run id.
 - Start, inspect, stop, and discard backend-owned browser recording sessions.
   Recorder sessions launch through backend browser/session infrastructure,
-  inject page-side capture, observe navigation, and collect raw navigation,
-  click, input, select, checkbox/radio, and scroll events in memory. Capture
+  inject page-side capture, observe top-level page navigation, and collect raw
+  navigation, click, input, select, checkbox/radio, and scroll events in memory. Capture
   drops malformed locator candidates, bounds locator strings, and redacts
   password or secret-like text field values before they enter the event stream;
   redacted input steps are generated excluded with a review warning until an

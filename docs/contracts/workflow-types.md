@@ -308,8 +308,8 @@ workflow, active profile, and active batch conflicts before launch. Public
 `workflow_settings_snapshot` values are sanitized for renderer display; the
 backend retains the internal settings snapshot for later save phases. Starting a
 session launches the recorder browser in the backend, injects capture before
-optional `initial_url` navigation, and records navigation events from the page
-adapter. `browser_launch_overrides.headless` is applied to the recorder settings
+optional `initial_url` navigation, and records top-level navigation events from
+the page adapter while ignoring embedded frame navigations. `browser_launch_overrides.headless` is applied to the recorder settings
 snapshot for deterministic headless verification; unsupported override keys are
 reported as warnings and ignored. Page-side capture buffers events when the
 adapter binding exists but cannot call back into the backend, and the backend
@@ -338,7 +338,9 @@ The recorder normalizer collapses repeated input/change events for the same
 target into one `input_text` step with the final value, maps navigation, click
 variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
 wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
-into existing action configs, and carries source event ids forward for review.
+into existing action configs, ignores text-composition and modifier-only
+keyboard noise such as `Process`/`Shift` so it does not split text entry, and
+carries source event ids forward for review.
 Each reviewed step also carries first/last source-event timestamps; graph
 generation turns positive gaps between included recorded steps into fixed
 duration edge delays so normal graph runs preserve the operator's recorded

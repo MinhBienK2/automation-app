@@ -127,8 +127,9 @@ accepts `{ mode, workflow_id?, workflow_name?, initial_url?,
   batch conflicts before launching. Starting a session launches a backend-owned
   recorder browser through the existing browser session infrastructure, injects
   bounded page-side capture with an in-page buffer fallback for adapter binding
-  failures, observes navigation plus backend tab, download, and dialog events,
-  and optionally navigates to `initial_url`. If launch, capture setup, or
+  failures, observes top-level page navigation plus backend tab, download, and dialog events,
+  and optionally navigates to `initial_url`. Embedded frame navigations are ignored
+  instead of becoming review `navigate` steps. If launch, capture setup, or
   initial navigation fails, the backend closes any partially launched recorder
   context before returning the command error.
 Dialogs observed through the backend adapter are dismissed with a review warning

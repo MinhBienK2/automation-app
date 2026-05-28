@@ -28,6 +28,7 @@ type RecorderPayload = {
 
 type BrowserFrame = {
   url(): string;
+  parentFrame?(): BrowserFrame | null;
 };
 
 type BrowserDownload = {
@@ -119,6 +120,7 @@ export class RecordingEventCollector {
     poller.unref?.();
     this.pollers.push(poller);
     recorderPage.on?.("framenavigated", ((frame: BrowserFrame) => {
+      if (!isMainFrame(frame)) return;
       const url = frame.url();
       if (!url || url === "about:blank") return;
       this.recordNavigation(url);
@@ -311,6 +313,15 @@ export class RecordingEventCollector {
 
 function isRecordingEventKind(value: string): value is RecordingEventKind {
   return RECORDABLE_EVENT_KINDS.has(value as RecordingEventKind);
+}
+
+function isMainFrame(frame: BrowserFrame) {
+  if (typeof frame.parentFrame !== "function") return true;
+  try {
+    return frame.parentFrame() == null;
+  } catch {
+    return true;
+  }
 }
 
 function recordingTargetOrNull(value: unknown, depth = 0): RecordingTarget | null {

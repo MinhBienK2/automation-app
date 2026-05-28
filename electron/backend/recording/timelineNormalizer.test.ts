@@ -52,6 +52,50 @@ describe("normalizeRecordingEvents", () => {
     });
   });
 
+  test("keeps text input together when composition keydown noise appears between events", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("input-1", 1, "input", {
+        target: fieldTarget(),
+        value: { text: "x" },
+      }),
+      recordingEvent("process-1", 2, "keyboard", {
+        value: { key: "Process" },
+      }),
+      recordingEvent("input-2", 3, "input", {
+        target: fieldTarget(),
+        value: { text: "xm" },
+      }),
+      recordingEvent("shift-1", 4, "keyboard", {
+        value: { key: "Shift" },
+      }),
+      recordingEvent("shift-process-1", 5, "keyboard", {
+        value: { keys: ["Shift", "Process"] },
+      }),
+      recordingEvent("input-3", 6, "input", {
+        target: fieldTarget(),
+        value: { text: "xml H" },
+      }),
+      recordingEvent("arrow-1", 7, "keyboard", {
+        value: { key: "ArrowDown" },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action.type)).toEqual([
+      "input_text",
+      "press_key",
+    ]);
+    expect(steps[0]).toMatchObject({
+      source_event_ids: ["input-1", "input-2", "input-3"],
+      action: {
+        type: "input_text",
+        config: { text: "xml H" },
+      },
+    });
+    expect(steps[1]).toMatchObject({
+      action: { type: "press_key", config: { key: "ArrowDown" } },
+    });
+  });
+
   test("maps select, checkbox, radio, and scroll events to existing actions", () => {
     const steps = normalizeRecordingEvents([
       recordingEvent("select-1", 1, "select", {

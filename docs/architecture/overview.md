@@ -98,7 +98,7 @@ payloads.
   before launch. The event collector injects bounded page-side capture, drains
   buffered fallback events on stop, redacts sensitive text field values and
   secret-like raw keys, drops malformed locator candidates, and observes backend
-  page navigation before the locator generator and timeline normalizer convert
+  top-level page navigation before the locator generator and timeline normalizer convert
   raw events into stable review steps. Graph draft generation converts those
   steps into a standard v2 `WorkflowGraph` and validates it without persistence.
   Draft save reconciles reviewed labels, inclusion, and supported value edits

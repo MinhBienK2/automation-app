@@ -90,6 +90,27 @@ describe("RecordingEventCollector", () => {
     ]);
   });
 
+  test("ignores subframe navigation events from embedded third-party frames", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_iframe_nav", {
+      now: () => new Date("2026-05-27T10:00:00.000Z"),
+    });
+
+    await collector.attachPage(page);
+    page.navigateFrame("https://ads.fixture.test/user-sync", { mainFrame: false });
+    page.navigateFrame("https://fixture.owned.test/next", { mainFrame: true });
+
+    expect(collector.listEvents()).toMatchObject([
+      {
+        id: "rec_iframe_nav_evt_1",
+        sequence: 1,
+        kind: "navigation",
+        page_url: "https://fixture.owned.test/next",
+        frame_url: "https://fixture.owned.test/next",
+      },
+    ]);
+  });
+
   test("observes backend tab, download, and dialog events", async () => {
     const page = new FakeCollectorPage();
     const context = new FakeCollectorContext(page);
@@ -476,7 +497,7 @@ class FakeCollectorPage implements BrowserDriverPage {
   private exposedCapture:
     | ((payload: Record<string, unknown>) => void | Promise<void>)
     | null = null;
-  private frameNavigated: ((frame: { url(): string }) => void) | null = null;
+  private frameNavigated: ((frame: { url(): string; parentFrame?(): unknown }) => void) | null = null;
   private downloadHandler: ((download: FakeDownload) => void) | null = null;
   private dialogHandler: ((dialog: FakeDialog) => void | Promise<void>) | null = null;
 
@@ -513,7 +534,7 @@ class FakeCollectorPage implements BrowserDriverPage {
 
   on(eventName: string, handler: (...args: never[]) => void | Promise<void>) {
     if (eventName === "framenavigated") {
-      this.frameNavigated = handler as (frame: { url(): string }) => void;
+      this.frameNavigated = handler as (frame: { url(): string; parentFrame?(): unknown }) => void;
     }
     if (eventName === "download") {
       this.downloadHandler = handler as unknown as (download: FakeDownload) => void;
@@ -534,6 +555,13 @@ class FakeCollectorPage implements BrowserDriverPage {
 
   navigate(url: string) {
     this.frameNavigated?.({ url: () => url });
+  }
+
+  navigateFrame(url: string, options: { mainFrame: boolean }) {
+    this.frameNavigated?.({
+      url: () => url,
+      parentFrame: () => (options.mainFrame ? null : {}),
+    });
   }
 
   emitDownload(suggestedFilename: string) {
