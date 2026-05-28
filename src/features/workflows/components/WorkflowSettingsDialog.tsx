@@ -26,6 +26,8 @@ import { Textarea } from "../../../components/ui/textarea";
 import { UnsavedChangesDialog } from "../../../components/ui/unsaved-changes-dialog";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import {
+  describeBrowserIdentityPosture,
+  getWorkflowSettingsSectionWarnings,
   tagsFromInput,
   tagsToInput,
   type WorkflowSettingsHelpLanguage,
@@ -66,6 +68,9 @@ export function WorkflowSettingsDialog({
   const activeMeta =
     workflowSettingsSections.find((section) => section.id === activeSection) ??
     workflowSettingsSections[0];
+  const sectionWarnings = settings
+    ? getWorkflowSettingsSectionWarnings(settings, activeSection)
+    : [];
 
   const updateSection = <Section extends WorkflowSettingsSectionId>(
     section: Section,
@@ -112,22 +117,30 @@ export function WorkflowSettingsDialog({
                   <div>
                     <p className="eyebrow">Workflow</p>
                     <DialogTitle>Workflow Settings</DialogTitle>
+                    <p className="workflow-settings-context">{settings.general.name}</p>
                     <DialogDescription className="sr-only">
                       Configure workflow settings before running this workflow.
                     </DialogDescription>
                   </div>
                 </div>
-                <Button
-                  className="workflow-settings-save-button"
-                  shape="pill"
-                  type="button"
-                  onClick={() => {
-                    void onSaveSettings();
-                  }}
-                >
-                  <Save aria-hidden="true" />
-                  Save Settings
-                </Button>
+                <div className="workflow-settings-header-actions">
+                  {hasUnsavedChanges ? (
+                    <span className="workflow-settings-dirty-status" role="status">
+                      Unsaved changes
+                    </span>
+                  ) : null}
+                  <Button
+                    className="workflow-settings-save-button"
+                    shape="pill"
+                    type="button"
+                    onClick={() => {
+                      void onSaveSettings();
+                    }}
+                  >
+                    <Save aria-hidden="true" />
+                    Save Settings
+                  </Button>
+                </div>
               </div>
             </DialogHeader>
 
@@ -166,7 +179,15 @@ export function WorkflowSettingsDialog({
                   <WorkflowSettingsHelpButton section={activeSection} />
                 </div>
 
-                {error ? <p className="field-error">{error}</p> : null}
+                {error ? (
+                  <p className="field-error" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+                <WorkflowSettingsWarningList
+                  label={`${activeMeta.label} warnings`}
+                  warnings={sectionWarnings}
+                />
 
                 {activeSection === "general" ? (
                   <GeneralSettingsSection
@@ -184,6 +205,7 @@ export function WorkflowSettingsDialog({
                 {activeSection === "browser_launch" ? (
                   <BrowserLaunchSettingsSection
                     value={settings.browser_launch}
+                    workflowName={settings.general.name}
                     onChange={(value) => updateSection("browser_launch", value)}
                     onResetBrowserIdentity={onResetBrowserIdentity}
                   />
@@ -389,6 +411,31 @@ function WorkflowSettingsHelpList({
   );
 }
 
+function WorkflowSettingsWarningList({
+  label,
+  warnings,
+}: {
+  label: string;
+  warnings: string[];
+}) {
+  if (!warnings.length) return null;
+
+  return (
+    <div
+      aria-label={label}
+      className="workflow-settings-warning-list"
+      role="note"
+    >
+      <strong>Review before launch</strong>
+      <ul>
+        {warnings.map((warning) => (
+          <li key={warning}>{warning}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function GeneralSettingsSection({
   value,
   onChange,
@@ -556,12 +603,33 @@ function RunPolicySettingsSection({
   );
 }
 
+function WorkflowSettingsIdentityPosture({
+  rows,
+}: {
+  rows: Array<{ label: string; value: string }>;
+}) {
+  if (!rows.length) return null;
+
+  return (
+    <dl className="workflow-settings-identity-posture settings-field-group-wide">
+      {rows.map((row) => (
+        <div key={row.label}>
+          <dt>{row.label}</dt>
+          <dd>{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function BrowserLaunchSettingsSection({
   value,
+  workflowName,
   onChange,
   onResetBrowserIdentity,
 }: {
   value: WorkflowSettingsBrowserLaunch;
+  workflowName: string;
   onChange: (value: WorkflowSettingsBrowserLaunch) => void;
   onResetBrowserIdentity?: () => void | Promise<void>;
 }) {
@@ -569,12 +637,15 @@ function BrowserLaunchSettingsSection({
   const [resetIdentityPending, setResetIdentityPending] = useState(false);
   const persistent = value.session_mode === "persistent_profile";
   const localEnvironment = detectedLocalBrowserEnvironment();
+  const identityPosture = describeBrowserIdentityPosture(value);
   const confirmResetIdentity = async () => {
     if (!onResetBrowserIdentity) return;
     setResetIdentityPending(true);
     try {
       await onResetBrowserIdentity();
       setResetIdentityOpen(false);
+    } catch {
+      // Parent keeps the dialog settings/error state authoritative.
     } finally {
       setResetIdentityPending(false);
     }
@@ -612,11 +683,12 @@ function BrowserLaunchSettingsSection({
         <label className="field">
           <span>Fingerprint seed</span>
           <Input
+            readOnly
             type="text"
             value={value.fingerprint_seed}
-            onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
           />
         </label>
+        <WorkflowSettingsIdentityPosture rows={identityPosture} />
         <div className="settings-field-group-actions">
           <Button
             type="button"
@@ -632,11 +704,31 @@ function BrowserLaunchSettingsSection({
             <DialogHeader>
               <DialogTitle>Reset browser identity</DialogTitle>
               <DialogDescription>
-                This creates a new backend-generated identity id, profile
-                directory, and fingerprint seed. Existing proxy, location,
-                and font preferences are preserved.
+                Reset identity for {workflowName || "this workflow"} from{" "}
+                {value.identity_id}.
               </DialogDescription>
             </DialogHeader>
+            <div className="workflow-settings-reset-copy">
+              <p>Pending settings are saved before reset.</p>
+              <ul>
+                <li>
+                  Creates a new backend-generated identity id, profile directory,
+                  and fingerprint seed.
+                </li>
+                <li>
+                  Preserves non-storage preferences such as proxy, location,
+                  humanization, and fingerprint fonts directory.
+                </li>
+                <li>Historical runs and evidence are preserved.</li>
+                <li>
+                  Run from selected is disabled until a fresh retained session exists.
+                </li>
+                <li>
+                  Active workflow, profile, or retained browser session blockers can
+                  reject the backend reset command.
+                </li>
+              </ul>
+            </div>
             <div className="dialog-footer-actions">
               <Button
                 type="button"
@@ -834,6 +926,7 @@ function GraphDefaultsSettingsSection({
       {delay?.type === "fixed" ? (
         <NumberField
           label="Duration ms"
+          min={0}
           value={delay.duration_ms}
           onChange={(next) =>
             onChange({
@@ -847,6 +940,7 @@ function GraphDefaultsSettingsSection({
         <>
           <NumberField
             label="Minimum wait ms"
+            min={0}
             value={delay.min_ms}
             onChange={(next) =>
               onChange({
@@ -861,6 +955,7 @@ function GraphDefaultsSettingsSection({
           />
           <NumberField
             label="Maximum wait ms"
+            min={0}
             value={delay.max_ms}
             onChange={(next) =>
               onChange({
@@ -902,11 +997,13 @@ function EnvironmentSettingsSection({
 function NumberField({
   disabled,
   label,
+  min = 1,
   value,
   onChange,
 }: {
   disabled?: boolean;
   label: string;
+  min?: number;
   value?: number | null;
   onChange: (value: number | null) => void;
 }) {
@@ -914,7 +1011,7 @@ function NumberField({
     <label className="field">
       <span>{label}</span>
       <Input
-        min={1}
+        min={min}
         type="number"
         value={value ?? ""}
         disabled={disabled}

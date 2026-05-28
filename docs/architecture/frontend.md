@@ -32,7 +32,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Workflow Library table, selected preview panel, and local toolbar controls.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, empty inspector, selection summary, and inspector panels are split into sibling `WorkflowGraph*` component modules.
-- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
+- `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, section warnings, scoped reset confirmation, identity posture, and section help. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx` and sibling
   `Recording*` components: browser recorder status, guarded discard, summary
   filters, selected-step review, save blockers, and generated draft review UI.
@@ -49,7 +49,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   z-index variables.
 - `src/styles/components.css`: shared CSS hooks for reusable product patterns
   that are not feature-specific.
-- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
+- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, Workflow Settings warning/identity presentation helpers, and bilingual settings help content.
 - `src/features/workflows/lib/workflowLibrary.ts`: pure Workflow Library
   helpers for active-run lookup, schedule lookup, search/filter/sort,
   action availability, selected workflow fallback, and safe date formatting.
@@ -89,7 +89,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Graph validation/run controls and presentation of validation issues for the
   selected node, selected link, empty graph-health inspector, or multi-selection
   summary.
-- Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
+- Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, dialog header workflow context/dirty/error state, section warning notes, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch identity posture/read-only seed/reset confirmation, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
 - Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; the renderer does not create identity ids or fingerprint seeds.
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,

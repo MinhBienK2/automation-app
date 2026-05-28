@@ -1,7 +1,9 @@
 import type {
+  GraphEdgeDelay,
   VariableAssignment,
   VariableValueType,
   WorkflowSettings,
+  WorkflowSettingsBrowserLaunch,
   WorkflowSettingsSectionId,
 } from "../../../types/workflow";
 import { personaForSeed } from "../../../lib/personaCatalog";
@@ -285,6 +287,114 @@ export function tagsFromInput(value: string) {
 
 export function tagsToInput(tags: string[]) {
   return tags.join(", ");
+}
+
+export type WorkflowSettingsPresentationRow = {
+  label: string;
+  value: string;
+};
+
+export function validateDefaultEdgeDelay(delay: GraphEdgeDelay | null | undefined) {
+  if (!delay) return null;
+  if (delay.type === "fixed") {
+    if (!Number.isFinite(delay.duration_ms) || delay.duration_ms < 0) {
+      return "Fixed wait must be zero or greater.";
+    }
+    return null;
+  }
+  if (!Number.isFinite(delay.min_ms) || delay.min_ms < 0) {
+    return "Minimum wait must be zero or greater.";
+  }
+  if (!Number.isFinite(delay.max_ms) || delay.max_ms < 0) {
+    return "Maximum wait must be zero or greater.";
+  }
+  if (delay.max_ms < delay.min_ms) {
+    return "Maximum wait must be greater than or equal to minimum wait.";
+  }
+  return null;
+}
+
+export function getWorkflowSettingsSectionWarnings(
+  settings: WorkflowSettings,
+  section: WorkflowSettingsSectionId,
+) {
+  const warnings: string[] = [];
+
+  if (section === "general" && !settings.general.name.trim()) {
+    warnings.push("Workflow name is required before settings can be saved.");
+  }
+
+  if (section === "graph_defaults") {
+    const delayWarning = validateDefaultEdgeDelay(settings.graph_defaults.default_edge_delay);
+    if (delayWarning) warnings.push(delayWarning);
+  }
+
+  if (section === "run_policy") {
+    if (
+      settings.run_policy.run_from_selected_enabled &&
+      settings.browser_launch.session_mode !== "persistent_profile"
+    ) {
+      warnings.push("Run from selected requires Reuse login session.");
+    }
+    if (
+      settings.run_policy.run_from_selected_enabled &&
+      settings.run_policy.browser_retention !== "retain"
+    ) {
+      warnings.push("Run from selected requires Browser retention set to retain.");
+    }
+  }
+
+  if (section === "browser_launch") {
+    const locationIncomplete =
+      !settings.browser_launch.geoip &&
+      (!settings.browser_launch.timezone?.trim() || !settings.browser_launch.locale?.trim());
+    if (locationIncomplete) {
+      warnings.push(
+        "GeoIP is off. Add explicit timezone and locale before running this workflow.",
+      );
+    }
+    if (settings.browser_launch.proxy_enabled && locationIncomplete) {
+      warnings.push(
+        "Proxy is enabled while GeoIP is off. Keep timezone and locale aligned with the proxy exit.",
+      );
+    }
+    if (settings.browser_launch.fingerprint_fonts_dir?.trim()) {
+      warnings.push(
+        "A configured fingerprint fonts directory can create a stable font hash across identities.",
+      );
+    }
+  }
+
+  if (
+    section === "environment" &&
+    settings.environment.initial_variables.some((row) => !row.name.trim())
+  ) {
+    warnings.push(
+      "Initial variable rows need names before they can become runtime context.",
+    );
+  }
+
+  return warnings;
+}
+
+export function describeBrowserIdentityPosture(
+  browserLaunch: WorkflowSettingsBrowserLaunch,
+): WorkflowSettingsPresentationRow[] {
+  const persona = browserLaunch.persona;
+  if (!persona) return [];
+
+  return [
+    { label: "Persona", value: `${persona.label} (${persona.id})` },
+    {
+      label: "OS/browser",
+      value: `${persona.os_bucket} / ${persona.browser_channel_bucket}`,
+    },
+    { label: "Region rationale", value: persona.rationale },
+    {
+      label: "Font bundle",
+      value: persona.font_bundle.label || "Not configured",
+    },
+  ];
 }
 
 const enLabels = {

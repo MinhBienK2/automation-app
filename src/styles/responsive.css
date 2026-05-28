@@ -44,7 +44,8 @@
     .settings-readiness-grid,
     .workflow-settings-body,
   .workflow-settings-grid,
-  .settings-field-group-grid,
+    .settings-field-group-grid,
+  .workflow-settings-identity-posture,
   .workflow-settings-identity-row,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
@@ -174,9 +175,13 @@
     display: grid;
   }
 
+  .workflow-settings-header-actions {
+    justify-content: start;
+    margin-right: 38px;
+  }
+
   .workflow-settings-save-button {
     width: fit-content;
-    margin-right: 38px;
   }
 
   .workflow-card .row-actions {

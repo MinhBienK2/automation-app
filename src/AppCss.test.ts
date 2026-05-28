@@ -290,6 +290,9 @@ describe("App CSS", () => {
     const fieldGroupHeader = cssRule(".settings-field-group-header");
     const fieldGroupGrid = cssRule(".settings-field-group-grid");
     const fieldGroupFooter = cssRule(".settings-field-group-footer");
+    const dirtyStatus = cssRule(".workflow-settings-dirty-status");
+    const warningList = cssRule(".workflow-settings-warning-list");
+    const identityPosture = cssRule(".workflow-settings-identity-posture");
 
     expect(fieldGroup).toContain("border: 1px solid #233240");
     expect(fieldGroup).toContain("border-radius: 8px");
@@ -299,5 +302,8 @@ describe("App CSS", () => {
     expect(fieldGroupFooter).toContain("color: #667d8d");
     expect(cssRule(".settings-field-group-wide")).toContain("grid-column: 1 / -1");
     expect(cssRule(".settings-field-group-actions")).toContain("flex-wrap: wrap");
+    expect(dirtyStatus).toContain("border: 1px solid rgba(244, 183, 64");
+    expect(warningList).toContain("background: rgba(244, 183, 64");
+    expect(identityPosture).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
   });
 });

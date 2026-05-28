@@ -478,8 +478,38 @@
   color: #32d3e6;
 }
 
-.workflow-settings-save-button {
+.workflow-settings-context {
+  margin-top: 4px;
+  color: #9aaebd;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.workflow-settings-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
+  min-width: 0;
   margin-right: 38px;
+}
+
+.workflow-settings-dirty-status {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid rgba(244, 183, 64, 0.48);
+  border-radius: 999px;
+  background: rgba(244, 183, 64, 0.1);
+  color: #f4b740;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.workflow-settings-save-button {
+  margin-right: 0;
 }
 
 .workflow-settings-body {
@@ -537,6 +567,31 @@
   line-height: 1.5;
 }
 
+.workflow-settings-warning-list {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 183, 64, 0.48);
+  border-radius: 8px;
+  background: rgba(244, 183, 64, 0.08);
+  color: #f4b740;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workflow-settings-warning-list strong {
+  color: #e7eef5;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.workflow-settings-warning-list ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 .workflow-settings-help-trigger {
   border-color: rgba(50, 211, 230, 0.36);
   color: #32d3e6;
@@ -573,6 +628,58 @@
   grid-template-columns: minmax(140px, 0.45fr) minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
+}
+
+.workflow-settings-identity-posture {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.workflow-settings-identity-posture div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #233240;
+  border-radius: 6px;
+  background: #0b1016;
+}
+
+.workflow-settings-identity-posture dt {
+  color: #667d8d;
+  font-size: 11px;
+}
+
+.workflow-settings-identity-posture dd {
+  min-width: 0;
+  margin: 2px 0 0;
+  color: #e7eef5;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.workflow-settings-reset-copy {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #121c26;
+  color: #9aaebd;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workflow-settings-reset-copy p {
+  margin: 0;
+  color: #e7eef5;
+}
+
+.workflow-settings-reset-copy ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .workflow-settings-span-two {

@@ -292,6 +292,54 @@ describe("WorkflowSettingsDialog", () => {
     );
   });
 
+  test("surfaces workflow context dirty state and browser launch warnings", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.browser_launch.geoip = false;
+    settings.browser_launch.timezone = null;
+    settings.browser_launch.locale = null;
+    settings.browser_launch.proxy_enabled = true;
+    settings.browser_launch.fingerprint_fonts_dir = "/opt/fp-fonts";
+
+    render(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        error="Save failed"
+        hasUnsavedChanges
+        open
+        settings={settings}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const titleRow = dialog.querySelector(".workflow-settings-title-row");
+    expect(titleRow).not.toBeNull();
+    expect(within(titleRow as HTMLElement).getByText("Checkout QA")).toBeInTheDocument();
+    expect(within(titleRow as HTMLElement).getByText("Unsaved changes"))
+      .toHaveAttribute("role", "status");
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Save failed");
+
+    const warnings = within(dialog).getByRole("note", {
+      name: "Browser Launch warnings",
+    });
+    expect(
+      within(warnings).getByText(
+        "GeoIP is off. Add explicit timezone and locale before running this workflow.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(warnings).getByText(/Proxy is enabled while GeoIP is off/i))
+      .toBeInTheDocument();
+    expect(within(warnings).getByText(/stable font hash across identities/i))
+      .toBeInTheDocument();
+  });
+
   test("does not save disabled batch switch changes but still edits active run policy fields", async () => {
     const user = userEvent.setup();
     const onSettingsChange = vi.fn();
@@ -513,6 +561,73 @@ describe("WorkflowSettingsDialog", () => {
       .not.toBeInTheDocument();
 
     confirmSpy.mockRestore();
+  });
+
+  test("shows scoped identity posture and reset consequences without mutable seeds", async () => {
+    const user = userEvent.setup();
+    const onResetBrowserIdentity = vi.fn();
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.browser_launch.persona = {
+      id: "professional_desktop",
+      label: "Professional desktop",
+      rationale: "Business research persona for owned workflow testing.",
+      os_bucket: "windows_desktop",
+      browser_channel_bucket: "chromium_stable",
+      viewport: { width: 1440, height: 900 },
+      window: { width: 1512, height: 982 },
+      timezone: "America/New_York",
+      locale: "en-US",
+      proxy_geo_policy: "match_proxy_region",
+      proxy_region: "us-east",
+      webrtc_mode: "default",
+      font_bundle: {
+        label: "System fonts",
+        path: null,
+        expected_families: ["Arial", "Calibri"],
+      },
+      behavioral_timing_profile: "default",
+    };
+
+    render(
+      <WorkflowSettingsDialog
+        activeSection="browser_launch"
+        hasUnsavedChanges
+        open
+        settings={settings}
+        onActiveSectionChange={vi.fn()}
+        onDiscardChanges={vi.fn()}
+        onOpenChange={vi.fn()}
+        onSaveSettings={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onResetBrowserIdentity={onResetBrowserIdentity}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const sessionGroup = within(dialog).getByRole("group", { name: "Session & identity" });
+    expect(within(sessionGroup).getByLabelText("Fingerprint seed"))
+      .toHaveAttribute("readonly");
+    expect(within(sessionGroup).getByText("Persona")).toBeInTheDocument();
+    expect(within(sessionGroup).getByText("Professional desktop (professional_desktop)"))
+      .toBeInTheDocument();
+    expect(within(sessionGroup).getByText("OS/browser")).toBeInTheDocument();
+    expect(within(sessionGroup).getByText("windows_desktop / chromium_stable"))
+      .toBeInTheDocument();
+
+    await user.click(within(sessionGroup).getByRole("button", { name: "Reset identity" }));
+
+    const resetDialog = screen.getByRole("dialog", { name: "Reset browser identity" });
+    expect(within(resetDialog).getByText(/Checkout QA/i)).toBeInTheDocument();
+    expect(within(resetDialog).getByText(/bi_workflow-1/i)).toBeInTheDocument();
+    expect(within(resetDialog).getByText(/Pending settings are saved before reset/i))
+      .toBeInTheDocument();
+    expect(within(resetDialog).getByText(/Historical runs and evidence are preserved/i))
+      .toBeInTheDocument();
+    expect(within(resetDialog).getByText(/Run from selected is disabled until a fresh retained session exists/i))
+      .toBeInTheDocument();
   });
 
   test("renders settings help with the scrollable workflow settings help layout", async () => {

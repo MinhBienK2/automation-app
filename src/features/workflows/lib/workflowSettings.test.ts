@@ -4,6 +4,9 @@ import { describe, expect, test } from "vitest";
 import {
   createDefaultBrowserProfileName,
   defaultWorkflowSettings,
+  describeBrowserIdentityPosture,
+  getWorkflowSettingsSectionWarnings,
+  validateDefaultEdgeDelay,
   variableRowsFromJsonText,
   variablesJsonFromRows,
   workflowSettingsHelp,
@@ -228,5 +231,63 @@ describe("workflow settings model", () => {
         "}",
       ].join("\n"),
     );
+  });
+
+  test("derives workflow settings warning and identity presentation copy", () => {
+    const settings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+    settings.browser_launch.geoip = false;
+    settings.browser_launch.timezone = null;
+    settings.browser_launch.locale = null;
+    settings.browser_launch.proxy_enabled = true;
+    settings.browser_launch.fingerprint_fonts_dir = "/opt/fp-fonts";
+    settings.browser_launch.persona = {
+      id: "professional_desktop",
+      label: "Professional desktop",
+      rationale: "Business research persona for owned workflow testing.",
+      os_bucket: "windows_desktop",
+      browser_channel_bucket: "chromium_stable",
+      viewport: { width: 1440, height: 900 },
+      window: { width: 1512, height: 982 },
+      timezone: "America/New_York",
+      locale: "en-US",
+      proxy_geo_policy: "match_proxy_region",
+      proxy_region: "us-east",
+      webrtc_mode: "default",
+      font_bundle: {
+        label: "System fonts",
+        path: null,
+        expected_families: ["Arial", "Calibri"],
+      },
+      behavioral_timing_profile: "default",
+    };
+    settings.run_policy.run_from_selected_enabled = true;
+    settings.run_policy.browser_retention = "close";
+    settings.environment.initial_variables = [
+      { name: "", value_type: "text", value: "missing-name" },
+    ];
+
+    expect(getWorkflowSettingsSectionWarnings(settings, "browser_launch")).toEqual([
+      "GeoIP is off. Add explicit timezone and locale before running this workflow.",
+      "Proxy is enabled while GeoIP is off. Keep timezone and locale aligned with the proxy exit.",
+      "A configured fingerprint fonts directory can create a stable font hash across identities.",
+    ]);
+    expect(getWorkflowSettingsSectionWarnings(settings, "run_policy")).toEqual([
+      "Run from selected requires Browser retention set to retain.",
+    ]);
+    expect(getWorkflowSettingsSectionWarnings(settings, "environment")).toEqual([
+      "Initial variable rows need names before they can become runtime context.",
+    ]);
+    expect(validateDefaultEdgeDelay({ type: "random", min_ms: 900, max_ms: 100 }))
+      .toBe("Maximum wait must be greater than or equal to minimum wait.");
+
+    expect(describeBrowserIdentityPosture(settings.browser_launch)).toEqual([
+      { label: "Persona", value: "Professional desktop (professional_desktop)" },
+      { label: "OS/browser", value: "windows_desktop / chromium_stable" },
+      { label: "Region rationale", value: "Business research persona for owned workflow testing." },
+      { label: "Font bundle", value: "System fonts" },
+    ]);
   });
 });
