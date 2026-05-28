@@ -44,10 +44,15 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Schedule event rows store scheduling decisions such as started, skipped, missed, failed-to-start, and disabled. Skipped/missed events exist even when no run row is created. Schedule event history by schedule id or workflow id uses descending created-time indexes.
 - Operational attention rows store sanitized manual full-run launch blocks that happen before a run row exists. They keep workflow references and concise issue summaries, not browser storage, cookies, proxy credentials, or raw page outputs.
 - Deleting a workflow cascades to its schedules, schedule events, and operational attention events.
-- `OperationsRepository` owns bounded Overview SQL reads for run metrics, attention, upcoming schedules, and metadata-only evidence extracted from sanitized run outputs. The renderer supplies local-day UTC boundaries; persisted timestamps remain UTC.
-- `EvidenceRepository` owns bounded evidence queries over persisted run outputs
-  and run steps. It derives typed evidence items on read rather than maintaining
-  a separate projection table, and validates run-scoped artifact paths before
+- `OperationsRepository` owns bounded Overview SQL reads for run metrics,
+  attention, upcoming schedules, and metadata-only evidence extracted from
+  sanitized run outputs. The renderer supplies local-day UTC boundaries, the
+  backend rejects Overview ranges over 48 hours before hourly bucket allocation,
+  and persisted timestamps remain UTC.
+- `EvidenceRepository` owns bounded evidence result pages over matching
+  persisted run outputs and run steps without a fixed newest-run ceiling before
+  filtering. It derives typed evidence items on read rather than maintaining a
+  separate projection table, and validates run-scoped artifact paths before
   preview/reveal/export.
 - Legacy ordered-step tables are intentionally not migrated into the new Electron data format.
 

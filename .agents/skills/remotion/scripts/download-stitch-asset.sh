@@ -26,7 +26,7 @@ curl -L -o "$OUTPUT_PATH" "$DOWNLOAD_URL"
 
 if [ $? -eq 0 ]; then
   echo "✓ Successfully downloaded to $OUTPUT_PATH"
-  
+
   # Display file size for verification
   if command -v stat &> /dev/null; then
     FILE_SIZE=$(stat -f%z "$OUTPUT_PATH" 2>/dev/null || stat -c%s "$OUTPUT_PATH" 2>/dev/null)

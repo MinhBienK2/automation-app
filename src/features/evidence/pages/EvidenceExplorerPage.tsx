@@ -294,20 +294,13 @@ function EvidenceDetailView({
             type="button"
             variant="secondary"
             onClick={() =>
-              onOpenIdentity(
-                item.workflow?.id
-                  ? {
-                      type: "managed",
-                      workflow_id: item.workflow.id,
-                      identity_id: item.identity?.id ?? "",
-                    }
-                  : {
-                      type: "historical",
-                      identity_id: item.identity?.id ?? "",
-                      run_id: item.run.id,
-                      evidence_id: item.evidence_id,
-                    },
-              )
+              onOpenIdentity({
+                type: "historical",
+                identity_id: item.identity?.id ?? "",
+                workflow_id: item.workflow?.id ?? null,
+                run_id: item.run.id,
+                evidence_id: item.evidence_id,
+              })
             }
           >
             Open Identity

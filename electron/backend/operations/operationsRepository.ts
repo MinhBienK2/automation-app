@@ -79,6 +79,7 @@ const defaultLimits = {
   upcoming_schedules: 8,
 };
 const maxDashboardLimit = 50;
+const maxOverviewRangeMs = 48 * 60 * 60 * 1000;
 
 export class OperationsRepository {
   constructor(private readonly database: DatabaseSync) {}
@@ -520,6 +521,9 @@ function validateRange(request: OperationsOverviewRequest) {
   const end = Date.parse(request.day_end_utc);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
     throw { message: "Invalid operations overview range", field: "day_start_utc" };
+  }
+  if (end - start > maxOverviewRangeMs) {
+    throw { message: "Operations overview range cannot exceed 48 hours", field: "day_end_utc" };
   }
   return {
     day_start_utc: new Date(start).toISOString(),

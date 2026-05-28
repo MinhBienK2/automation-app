@@ -32,8 +32,9 @@ Frontend and backend must agree on:
   optional context, and `MissionControlTarget`. Search rows come only from
   bounded approved read models and do not carry raw outputs or filesystem
   paths.
-- `OperationsOverviewRequest`: local-day UTC range plus optional bounded list
-  limits and attention filters for the Overview read model.
+- `OperationsOverviewRequest`: local-day UTC range capped at 48 hours plus
+  optional bounded list limits and attention filters for the Overview read
+  model.
 - `OperationsOverview`: backend-owned dashboard DTO with metrics, live runs,
   unified attention, activity buckets, recent evidence metadata, upcoming
   schedules, and data warnings.
@@ -41,9 +42,10 @@ Frontend and backend must agree on:
   navigation, including workflow reference, optional identity reference from
   the run settings snapshot, sanitized error text, capped step summaries, and
   safe evidence metadata.
-- `EvidenceListRequest`: bounded evidence filters for search, type, run status,
+- `EvidenceListRequest`: evidence filters for search, type, run status,
   durable source, workflow, run, historical identity, time range, cursor, limit,
-  and optional focused evidence id.
+  and optional focused evidence id. Result pages remain bounded, but matching
+  persisted run outputs are not capped to the newest rows before filtering.
 - `EvidencePage`: backend-owned evidence result page with typed list items,
   opaque cursor, `has_more`, and skipped-item warning counts.
 - `EvidenceDetail`: one typed safe payload for screenshot, download, browser
@@ -277,7 +279,9 @@ carry only safe run-scoped relative paths such as `runs/<run_id>/screenshots/...
 artifact preview/reveal/export commands accept evidence ids and revalidate path
 containment in the Electron backend. Historical identity fields come from the
 run-time settings snapshot and sanitized `browser_identity` output, not the
-workflow's current identity after later rotation.
+workflow's current identity after later rotation. Evidence-to-Identity
+navigation opens a read-only historical identity target with workflow, run, and
+evidence context so rotated identity observations remain inspectable.
 
 ## Identity Lab Shape
 

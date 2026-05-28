@@ -22,7 +22,7 @@ export const WalkthroughComposition: React.FC = () => {
     <TransitionSeries>
       {screensManifest.screens.map((screen, index) => {
         const durationInFrames = screen.duration * fps;
-        
+
         // Select transition based on screen config
         const transition =
           screen.transitionType === 'slide'

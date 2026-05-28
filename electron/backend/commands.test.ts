@@ -2047,6 +2047,26 @@ describe("Electron workflow command handlers", () => {
     expect(overview.activity.some((bucket) => bucket.blocked === 1)).toBe(true);
   });
 
+  test("rejects operations overview ranges that are too broad for hourly buckets", async () => {
+    const { handlers } = await createTestHandlers();
+
+    let thrown: unknown;
+    try {
+      handlers.getOperationsOverview({
+        day_start_utc: "2026-01-01T00:00:00.000Z",
+        day_end_utc: "2026-02-01T00:00:00.000Z",
+        timezone_label: "UTC",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({
+      message: "Operations overview range cannot exceed 48 hours",
+      field: "day_end_utc",
+    });
+  });
+
   test("aggregates persisted runs schedule attention evidence schedules and selected run detail", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
@@ -2387,6 +2407,72 @@ describe("Electron workflow command handlers", () => {
     await expect(
       fs.readFile(path.join(String(exportResult?.bundle_dir), "artifacts", "001-visit.png"), "utf8"),
     ).resolves.toBe("png-data");
+  });
+
+  test("finds and opens evidence older than the newest 500 output rows", async () => {
+    const { handlers, database, appPaths } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Long archive");
+    const evidencePath = "runs/run-archive/screenshots/archive-old.png";
+    await fs.mkdir(path.dirname(path.join(appPaths.evidenceDir, evidencePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(appPaths.evidenceDir, evidencePath), Buffer.from("old-png"));
+
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-archive",
+        workflow.id,
+        "success",
+        "2026-01-01T00:00:00.000Z",
+        "2026-01-01T00:01:00.000Z",
+        JSON.stringify({
+          __evidence: [
+            {
+              artifact_kind: "screenshot",
+              path: evidencePath,
+              created_at: "2026-01-01T00:00:30.000Z",
+            },
+          ],
+        }),
+      );
+
+    const insertRun = database.prepare(
+      `INSERT INTO runs (
+        id, workflow_id, status, started_at, finished_at, outputs_json
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    for (let index = 0; index < 501; index += 1) {
+      const startedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 0)).toISOString();
+      const finishedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 30)).toISOString();
+      insertRun.run(
+        `run-newer-${index}`,
+        workflow.id,
+        "success",
+        startedAt,
+        finishedAt,
+        JSON.stringify({}),
+      );
+    }
+
+    const page = handlers.listEvidenceItems({ search: "archive-old", limit: 10 });
+    expect(page.items).toEqual([
+      expect.objectContaining({
+        label: "archive-old.png",
+        run: expect.objectContaining({ id: "run-archive" }),
+      }),
+    ]);
+    expect(handlers.getEvidenceDetail(page.items[0]?.evidence_id ?? "")).toMatchObject({
+      payload: expect.objectContaining({
+        kind: "screenshot",
+        relative_path: evidencePath,
+        file_state: "available",
+      }),
+    });
   });
 
   test("starts isolated workflow runs concurrently and lists each run snapshot", async () => {

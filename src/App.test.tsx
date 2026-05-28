@@ -329,6 +329,93 @@ describe("App settings and graph autosave", () => {
     expect(getEvidenceDetail).toHaveBeenCalledWith("ev-shot");
   });
 
+  test("opens evidence identities as historical references with run context", async () => {
+    const evidencePage = {
+      generated_at: "2026-05-27T00:00:00.000Z",
+      items: [
+        {
+          evidence_id: "ev-historical",
+          kind: "browser_identity",
+          label: "Old browser identity",
+          created_at: "2026-05-27T09:01:00.000Z",
+          run: {
+            id: "run-old",
+            status: "success",
+            source: "manual",
+            started_at: "2026-05-27T09:00:00.000Z",
+            finished_at: "2026-05-27T09:02:00.000Z",
+          },
+          workflow: { id: workflow.id, name: workflow.name },
+          identity: { id: "bi_old", display_name: "Old QA identity" },
+          node_id: "identity",
+          step_number: 1,
+          relative_path: null,
+          file_state: "unchecked",
+          navigation_targets: { run: true, workflow: true },
+        },
+      ],
+      next_cursor: null,
+      has_more: false,
+      warnings: {
+        skipped_artifacts: 0,
+        skipped_reports: 0,
+        skipped_traces: 0,
+        skipped_manifests: 0,
+      },
+    };
+    const getIdentityLabOverview = vi.fn((request?: { selected_target?: unknown }) => ({
+      generated_at: "2026-05-27T10:00:00.000Z",
+      items: [],
+      selected: {
+        kind: "historical",
+        identity_ref: { id: "bi_old", display_name: "Old QA identity" },
+        workflow_ref: { id: workflow.id, name: workflow.name },
+        run_id: "run-old",
+        evidence_id: "ev-historical",
+        observed_fields: [{ key: "identity_id", value: "bi_old" }],
+      },
+      counts: {
+        managed_identities: 0,
+        active_retained_sessions: 0,
+        identities_with_warnings: 0,
+        identities_with_recent_failures: 0,
+      },
+      data_warnings: [],
+      request,
+    }));
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_evidence_items: () => evidencePage,
+      get_evidence_detail: () => ({
+        item: evidencePage.items[0],
+        payload: {
+          kind: "browser_identity",
+          fields: [{ key: "identity_id", value: "bi_old" }],
+        },
+      }),
+      get_identity_lab_overview: ({ request }: { request?: { selected_target?: unknown } }) =>
+        getIdentityLabOverview(request),
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Evidence" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Open Identity" }));
+
+    expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(getIdentityLabOverview).toHaveBeenLastCalledWith({
+        selected_target: {
+          type: "historical",
+          identity_id: "bi_old",
+          workflow_id: workflow.id,
+          run_id: "run-old",
+          evidence_id: "ev-historical",
+        },
+      });
+    });
+  });
+
   test("opens Identity Lab and navigates managed identity actions", async () => {
     const getIdentityLabOverview = vi.fn((_request?: unknown) => ({
       generated_at: "2026-05-27T10:00:00.000Z",

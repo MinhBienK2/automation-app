@@ -76,17 +76,17 @@
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `list_run_states` while any run snapshot is `running`, regardless of whether the run was started from the workflow detail workspace, directly from the workflow list, or by the scheduler. `get_run_state` remains a compatibility/latest-state view.
-- Overview loads a bounded operations aggregate through `getOperationsOverview`
-  and can navigate persisted run references into Runs through
+- Overview loads a bounded operations aggregate through `getOperationsOverview`,
+  which rejects local-day UTC ranges over 48 hours before building hourly
+  activity buckets, and can navigate persisted run references into Runs through
   `getOperationalRunDetail`.
 - Evidence loads durable persisted run evidence through `listEvidenceItems`.
   Overview recent evidence can focus a specific evidence id, and Runs selected
   durable run detail can open Evidence with a `run_id` filter.
 - Identity Lab loads current workflow-owned browser identity posture through
   `getIdentityLabOverview` / `getIdentityLabDetail`. Evidence details with an
-  identity id can open Identity Lab as a current managed identity when the
-  workflow still owns that identity, or as a read-only historical identity
-  reference when it no longer matches current settings.
+  identity id open Identity Lab as a read-only historical identity reference
+  with workflow, run, and evidence context.
 - Persisted run rows record durable `source` provenance as `manual` or
   `schedule`; older local rows are migrated deterministically from started
   schedule events when possible and otherwise treated as manual.

@@ -125,7 +125,8 @@ Preserve these unless the task explicitly changes them.
 - Evidence is a separate app screen reachable from the sidebar. It lists only
   typed persisted evidence summaries and bounded typed details for screenshot,
   download, browser identity, action trace, and evidence manifest items. It
-  does not expose raw arbitrary output browsing.
+  does not expose raw arbitrary output browsing. Identity evidence opens
+  read-only Identity Lab historical context tied to the evidence run.
 - Identities is a separate app screen reachable from the sidebar. It receives
   sanitized Identity Lab DTOs and does not expose raw profile paths, browser
   storage, cookies, tokens, proxy credentials, absolute local font/binary paths,

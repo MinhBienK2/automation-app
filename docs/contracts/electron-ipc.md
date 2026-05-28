@@ -113,15 +113,17 @@ returns the current app-session run snapshots for multi-run monitoring.
 
 `getOperationsOverview({ day_start_utc, day_end_utc, timezone_label?, attention_filter?, limits? })`
 returns the bounded `OperationsOverview` read model for the operator's local
-day expressed as UTC boundaries. The backend validates the range, applies list
-limits, computes KPI/activity/attention meaning, and returns only safe evidence
+day expressed as UTC boundaries. The backend validates the range, rejects
+ranges over 48 hours before building hourly buckets, applies list limits,
+computes KPI/activity/attention meaning, and returns only safe evidence
 metadata. `getOperationalRunDetail(runId)` returns one bounded persisted run
 summary for Overview-to-Runs navigation; it is not an unbounded run-history or
 artifact-opening API.
 
 `listEvidenceItems(request?)` returns a bounded historical evidence page derived
-from persisted run outputs and run steps. `getEvidenceDetail(evidenceId)` returns
-one typed bounded detail payload. `getEvidenceScreenshotPreview(evidenceId)`,
+from all matching persisted run outputs and run steps.
+`getEvidenceDetail(evidenceId)` returns one typed bounded detail payload.
+`getEvidenceScreenshotPreview(evidenceId)`,
 `revealEvidenceArtifact(evidenceId)`, and
 `exportEvidenceBundle({ evidence_ids })` accept evidence ids only; the backend
 resolves and validates file artifact paths before preview, native reveal, or

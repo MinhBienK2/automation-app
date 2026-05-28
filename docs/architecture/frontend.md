@@ -74,7 +74,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,
   delegates file reveal/export through backend commands, and navigates related
-  runs/workflows back into existing destinations.
+  runs/workflows back into existing destinations. Identity evidence opens
+  Identity Lab as a read-only historical target carrying workflow, run, and
+  evidence context.
 - Workflow list direct Run, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while run snapshot polling continues. Active row status, row Run disabling, and row Stop are scoped to that workflow's run id. Duplicate calls `duplicateWorkflow` so local copies preserve the saved graph and non-storage settings while receiving a fresh browser identity/profile/fingerprint. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.

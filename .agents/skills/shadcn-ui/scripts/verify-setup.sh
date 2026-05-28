@@ -46,7 +46,7 @@ fi
 # Check if globals.css or equivalent exists
 if [ -f "src/index.css" ] || [ -f "src/globals.css" ] || [ -f "app/globals.css" ]; then
     echo -e "${GREEN}✓${NC} Global CSS file found"
-    
+
     # Check for Tailwind directives
     CSS_FILE=$(find . -name "globals.css" -o -name "index.css" | head -n 1)
     if grep -q "@tailwind base" "$CSS_FILE"; then
@@ -58,7 +58,7 @@ if [ -f "src/index.css" ] || [ -f "src/globals.css" ] || [ -f "app/globals.css" 
         echo "  @tailwind components;"
         echo "  @tailwind utilities;"
     fi
-    
+
     # Check for CSS variables
     if grep -q "^:root" "$CSS_FILE" || grep -q "@layer base" "$CSS_FILE"; then
         echo -e "${GREEN}✓${NC} CSS variables defined"
@@ -73,7 +73,7 @@ fi
 # Check if components/ui directory exists
 if [ -d "src/components/ui" ] || [ -d "components/ui" ]; then
     echo -e "${GREEN}✓${NC} components/ui directory exists"
-    
+
     # Count components
     COMPONENT_COUNT=$(find . -path "*/components/ui/*.tsx" -o -path "*/components/ui/*.jsx" | wc -l)
     echo -e "  ${COMPONENT_COUNT} components installed"
@@ -85,7 +85,7 @@ fi
 # Check if lib/utils exists
 if [ -f "src/lib/utils.ts" ] || [ -f "lib/utils.ts" ]; then
     echo -e "${GREEN}✓${NC} lib/utils.ts exists"
-    
+
     # Check for cn function
     UTILS_FILE=$(find . -name "utils.ts" | grep "lib" | head -n 1)
     if grep -q "export function cn" "$UTILS_FILE"; then
@@ -101,11 +101,11 @@ fi
 if [ -f "package.json" ]; then
     echo ""
     echo "📦 Checking dependencies..."
-    
+
     # Required dependencies
     REQUIRED_DEPS=("react" "tailwindcss")
     RECOMMENDED_DEPS=("class-variance-authority" "clsx" "tailwind-merge" "tailwindcss-animate")
-    
+
     for dep in "${REQUIRED_DEPS[@]}"; do
         if grep -q "\"$dep\"" package.json; then
             echo -e "${GREEN}✓${NC} $dep installed"
@@ -113,7 +113,7 @@ if [ -f "package.json" ]; then
             echo -e "${RED}✗${NC} $dep not installed"
         fi
     done
-    
+
     echo ""
     echo "Recommended dependencies:"
     for dep in "${RECOMMENDED_DEPS[@]}"; do

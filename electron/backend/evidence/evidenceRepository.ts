@@ -281,7 +281,6 @@ export class EvidenceRepository {
       INNER JOIN workflows ON workflows.id = runs.workflow_id
       WHERE ${where.join(" AND ")}
       ORDER BY COALESCE(runs.finished_at, runs.started_at) DESC
-      LIMIT 500
     `;
     return this.options.database.prepare(sql).all(...params) as RunRow[];
   }
