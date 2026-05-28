@@ -1,5 +1,6 @@
 import { CalendarClock, History, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { StaleTargetPanel } from "../../../components/patterns/StaleTargetPanel";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -22,6 +23,7 @@ import type {
   WorkflowScheduleKind,
   WorkflowSummary,
 } from "../../../types/workflow";
+import type { StaleTargetDescriptor } from "../../../lib/missionControlNavigation";
 
 type ScheduleDialogMode = "create" | "edit" | null;
 type ScheduleKindDraft = "once_at" | "interval" | "calendar_daily" | "calendar_weekly" | "calendar_monthly";
@@ -45,6 +47,7 @@ type SchedulesPageProps = {
   workflows: WorkflowSummary[];
   events: WorkflowScheduleEvent[];
   focusedScheduleId?: string | null;
+  staleTarget?: StaleTargetDescriptor | null;
   loading: boolean;
   error: string;
   onCreateSchedule: (input: WorkflowScheduleInput) => Promise<unknown>;
@@ -52,6 +55,10 @@ type SchedulesPageProps = {
   onDeleteSchedule: (scheduleId: string) => Promise<unknown> | void;
   onToggleSchedule: (scheduleId: string, enabled: boolean) => Promise<unknown> | void;
   onLoadEvents: (scheduleId: string) => Promise<unknown> | void;
+  onRefreshTarget?: () => void;
+  onOpenList?: () => void;
+  onOpenOverview?: () => void;
+  onClearStaleTarget?: () => void;
   onOpenRun?: (runId: string) => void;
   onOpenWorkflow?: (workflowId: string) => void;
 };
@@ -71,6 +78,7 @@ export function SchedulesPage({
   workflows,
   events,
   focusedScheduleId,
+  staleTarget,
   loading,
   error,
   onCreateSchedule,
@@ -78,6 +86,10 @@ export function SchedulesPage({
   onDeleteSchedule,
   onToggleSchedule,
   onLoadEvents,
+  onRefreshTarget,
+  onOpenList,
+  onOpenOverview,
+  onClearStaleTarget,
   onOpenRun,
   onOpenWorkflow,
 }: SchedulesPageProps) {
@@ -164,6 +176,16 @@ export function SchedulesPage({
           </p>
         ) : null}
       </header>
+
+      {staleTarget ? (
+        <StaleTargetPanel
+          descriptor={staleTarget}
+          onRefresh={onRefreshTarget}
+          onOpenList={onOpenList}
+          onOpenOverview={onOpenOverview}
+          onClear={onClearStaleTarget}
+        />
+      ) : null}
 
       <section className="panel schedule-panel" aria-label="Schedule list">
         {loading ? (

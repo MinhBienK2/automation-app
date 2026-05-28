@@ -59,11 +59,13 @@
     grid-template-columns: 1fr;
   }
 
-  .command-search-result {
+  .command-search-result,
+  .command-palette-result {
     grid-template-columns: 72px minmax(0, 1fr);
   }
 
-  .command-search-result small {
+  .command-search-result small,
+  .command-palette-result small {
     grid-column: 2;
   }
 

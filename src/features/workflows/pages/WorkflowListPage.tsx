@@ -1,8 +1,10 @@
 import { CircleDot, Copy, Download, Eye, Pencil, Play, Square, Trash2, Upload } from "lucide-react";
 import type { RunState, WorkflowRunSnapshot, WorkflowSummary } from "../../../types/workflow";
+import { StaleTargetPanel } from "../../../components/patterns/StaleTargetPanel";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { IconButton } from "../../../components/ui/icon-button";
+import type { StaleTargetDescriptor } from "../../../lib/missionControlNavigation";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ type WorkflowListPageProps = {
   runState: RunState;
   runSnapshots: WorkflowRunSnapshot[];
   activeRunWorkflowName?: string | null;
+  staleTarget?: StaleTargetDescriptor | null;
   onWorkflowNameDraftChange: (name: string) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
@@ -36,6 +39,10 @@ type WorkflowListPageProps = {
   onCloseWorkflowDialog: () => void;
   onOpenWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
+  onRefreshTarget?: () => void;
+  onOpenList?: () => void;
+  onOpenOverview?: () => void;
+  onClearStaleTarget?: () => void;
 };
 
 export function WorkflowListPage({
@@ -46,6 +53,7 @@ export function WorkflowListPage({
   runState,
   runSnapshots,
   activeRunWorkflowName,
+  staleTarget,
   onWorkflowNameDraftChange,
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
@@ -59,6 +67,10 @@ export function WorkflowListPage({
   onCloseWorkflowDialog,
   onOpenWorkflow,
   onDeleteWorkflow,
+  onRefreshTarget,
+  onOpenList,
+  onOpenOverview,
+  onClearStaleTarget,
 }: WorkflowListPageProps) {
   const workflowDialogTitle =
     workflowDialogMode === "create" ? "Create Workflow" : "Edit Workflow";
@@ -122,6 +134,16 @@ export function WorkflowListPage({
           </p>
         ) : null}
       </header>
+
+      {staleTarget ? (
+        <StaleTargetPanel
+          descriptor={staleTarget}
+          onRefresh={onRefreshTarget}
+          onOpenList={onOpenList}
+          onOpenOverview={onOpenOverview}
+          onClear={onClearStaleTarget}
+        />
+      ) : null}
 
       <section className="workflow-library" aria-label="Workflow list">
         {workflows.length === 0 ? (

@@ -7,6 +7,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 ## Key Files
 
 - `src/App.tsx`: top-level state orchestration.
+- `src/layouts/AppShell.tsx` and `src/layouts/AppSidebar.tsx`: shared app
+  shell, data-driven sidebar, command search affordance, alerts preview, and
+  keyboard shortcut handling.
 - `src/features/overview/pages/OperationsOverviewPage.tsx`: default Mission
   Control operations dashboard with durable metrics, live runs, attention,
   activity, recent evidence metadata, and upcoming schedules.
@@ -30,9 +33,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
 - `src/components/patterns/`: reusable Mission Control product patterns such
   as command regions, status clusters, state panels, table/detail shells,
-  key-value metadata, collapsed error details, empty states, data toolbars, and
-  confirmation dialogs. These components do not call IPC or know workflow,
-  run, evidence, identity, schedule, or settings DTOs.
+  key-value metadata, command palettes, alert previews, stale target panels,
+  collapsed error details, empty states, data toolbars, and confirmation
+  dialogs. These components do not call IPC or know workflow, run, evidence,
+  identity, schedule, or settings DTOs.
 - `src/styles/tokens.css`: shared Mission Control color, focus, radius, and
   z-index variables.
 - `src/styles/components.css`: shared CSS hooks for reusable product patterns
@@ -55,6 +59,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/lib/workflowApi.ts`: Electron bridge wrappers.
 - `src/types/electron.ts`: renderer-visible bridge contract.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
+- `src/lib/missionControlNavigation.ts`: pure sidebar, active item, typed target
+  conversion, stale-target descriptor, and shortcut-guard helpers.
+- `src/lib/commandSearch.ts`: pure bounded command search result builders,
+  grouping, dedupe, limits, and safe result text formatting.
 - `src/types/workflow.ts`: DTO and action config types.
 
 ## Belongs Here
@@ -75,14 +83,18 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   router. Sidebar navigation, Overview cards, Evidence links, Identity links,
   schedule history links, selected run details, command search results, and the
   Alerts shortcut route through that contract instead of passing raw strings.
-  Missing durable run or schedule targets render explicit stale-target states.
+  Missing durable workflow, run, or schedule targets render explicit shared
+  stale-target states with refresh, list, overview, and clear fallbacks where
+  available.
 - The app shell command bar searches only bounded approved read models:
   workflow summaries, run snapshots, schedule summaries, evidence list items,
   and Identity Lab summaries. It must not render raw run outputs, browser
   storage, cookies, tokens, proxy credentials, local filesystem paths, or
   arbitrary diagnostic payloads. Identity results derived from evidence route
   to read-only historical identity context with workflow/run/evidence metadata.
-  Alerts focuses Overview's Attention Queue.
+  The shell presents results in a grouped command palette with guarded `/` and
+  Ctrl/Meta+K focus shortcuts. Alerts opens a preview popover, and its primary
+  action focuses Overview's Attention Queue.
 - Evidence owns historical evidence browsing UI state. It calls
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,

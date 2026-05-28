@@ -1,5 +1,7 @@
 import { Square } from "lucide-react";
+import { StaleTargetPanel } from "../../../components/patterns/StaleTargetPanel";
 import { Button } from "../../../components/ui/button";
+import type { StaleTargetDescriptor } from "../../../lib/missionControlNavigation";
 import type {
   IdentityLabTarget,
   OperationalRunDetail,
@@ -11,8 +13,13 @@ type RunCenterPageProps = {
   runSnapshots: WorkflowRunSnapshot[];
   focusedRunDetail?: OperationalRunDetail | null;
   missingRunId?: string | null;
+  staleTarget?: StaleTargetDescriptor | null;
   error: string;
   onStopRun: (runId: string) => void;
+  onRefreshTarget?: () => void;
+  onOpenList?: () => void;
+  onOpenOverview?: () => void;
+  onClearStaleTarget?: () => void;
   onOpenEvidence?: (runId: string) => void;
   onOpenWorkflow?: (workflowId: string) => void;
   onOpenIdentity?: (target: IdentityLabTarget) => void;
@@ -22,8 +29,13 @@ export function RunCenterPage({
   runSnapshots,
   focusedRunDetail,
   missingRunId,
+  staleTarget,
   error,
   onStopRun,
+  onRefreshTarget,
+  onOpenList,
+  onOpenOverview,
+  onClearStaleTarget,
   onOpenEvidence,
   onOpenWorkflow,
   onOpenIdentity,
@@ -51,19 +63,16 @@ export function RunCenterPage({
       </header>
 
       <section className="run-center-panel panel">
-        {!focusedRunDetail && missingRunId ? (
-          <article className="focused-run-detail focused-run-missing" aria-label="Missing run target">
-            <header>
-              <div>
-                <p className="eyebrow">Persisted Run</p>
-                <h2>Run target unavailable</h2>
-              </div>
-              <span className="status-pill status-pill-danger">stale target</span>
-            </header>
-            <p className="muted">
-              The selected run is no longer available in durable run history: {missingRunId}
-            </p>
-          </article>
+        {!focusedRunDetail && staleTarget ? (
+          <StaleTargetPanel
+            descriptor={staleTarget}
+            onRefresh={onRefreshTarget}
+            onOpenList={onOpenList}
+            onOpenOverview={onOpenOverview}
+            onClear={onClearStaleTarget}
+          />
+        ) : !focusedRunDetail && missingRunId ? (
+          <p className="muted">Run target unavailable: {missingRunId}</p>
         ) : null}
         {focusedRunDetail ? (
           <article className="focused-run-detail" aria-label="Selected run detail">

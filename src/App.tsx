@@ -63,6 +63,24 @@ import {
   normalizeRunState,
 } from "./lib/workflowUi";
 import {
+  buildEvidenceCommandResults,
+  buildIdentityCommandResults,
+  buildRunCommandResults,
+  buildScheduleCommandResults,
+  buildWorkflowCommandResults,
+  dedupeCommandSearchResults,
+  groupCommandSearchResults,
+  limitCommandSearchResults,
+  type CommandSearchResultGroup,
+} from "./lib/commandSearch";
+import {
+  activeItemFromScreen,
+  createStaleTargetDescriptor,
+  operationsTargetToMissionTarget,
+  type StaleTargetDescriptor,
+} from "./lib/missionControlNavigation";
+import type { AlertPreviewItem } from "./components/patterns/AlertPreviewPopover";
+import {
   defaultWorkflowSettings,
 } from "./features/workflows/lib/workflowSettings";
 import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
@@ -322,32 +340,6 @@ function legacyRunId(workflowId: string | null) {
   return `legacy-${workflowId ?? "run"}`;
 }
 
-function operationsTargetToMissionTarget(
-  target: OperationsNavigationTarget,
-): MissionControlTarget {
-  if (target.type === "workflow") {
-    return { type: "workflow", workflow_id: target.workflow_id };
-  }
-  if (target.type === "run") {
-    return { type: "run", run_id: target.run_id };
-  }
-  if (target.type === "schedule") {
-    return { type: "schedule", schedule_id: target.schedule_id };
-  }
-  return { type: "evidence", evidence_id: target.evidence_id };
-}
-
-function includesCommandQuery(value: string | null | undefined, query: string) {
-  return value?.toLowerCase().includes(query) ?? false;
-}
-
-function commandText(value: string | null | undefined, fallback: string) {
-  const trimmed = value?.trim();
-  if (!trimmed) return fallback;
-  if (/password|secret|token|cookie|authorization/i.test(trimmed)) return fallback;
-  return trimmed.length > 96 ? `${trimmed.slice(0, 93)}...` : trimmed;
-}
-
 function formatMaintenanceBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
@@ -374,6 +366,9 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [commandSearchQuery, setCommandSearchQuery] = useState("");
   const [commandSearchResults, setCommandSearchResults] = useState<CommandSearchResult[]>([]);
+  const [commandSearchLoading, setCommandSearchLoading] = useState(false);
+  const [commandSearchError, setCommandSearchError] = useState<string | null>(null);
+  const [staleTarget, setStaleTarget] = useState<StaleTargetDescriptor | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
@@ -487,59 +482,21 @@ function App() {
     const query = commandSearchQuery.trim();
     if (query.length < 2) {
       setCommandSearchResults([]);
+      setCommandSearchLoading(false);
+      setCommandSearchError(null);
       return;
     }
 
     let cancelled = false;
-    const queryLower = query.toLowerCase();
 
     void (async () => {
-      const localResults: CommandSearchResult[] = [];
-
-      workflows
-        .filter((workflow) => includesCommandQuery(workflow.name, queryLower))
-        .slice(0, 5)
-        .forEach((workflow) => {
-          localResults.push({
-            id: `workflow:${workflow.id}`,
-            type: "Workflow",
-            label: commandText(workflow.name, "Workflow"),
-            context: `${workflow.step_count} steps`,
-            target: { type: "workflow", workflow_id: workflow.id },
-          });
-        });
-
-      runSnapshots
-        .filter((run) =>
-          includesCommandQuery(run.workflow_name, queryLower) ||
-          includesCommandQuery(run.run_id, queryLower),
-        )
-        .slice(0, 5)
-        .forEach((run) => {
-          localResults.push({
-            id: `run:${run.run_id}`,
-            type: "Run",
-            label: commandText(run.workflow_name, "Run"),
-            context: `${run.state.status} ${run.run_id}`,
-            target: { type: "run", run_id: run.run_id },
-          });
-        });
-
-      schedules
-        .filter((schedule) =>
-          includesCommandQuery(schedule.name, queryLower) ||
-          includesCommandQuery(schedule.workflow_name, queryLower),
-        )
-        .slice(0, 5)
-        .forEach((schedule) => {
-          localResults.push({
-            id: `schedule:${schedule.id}`,
-            type: "Schedule",
-            label: commandText(schedule.name, "Schedule"),
-            context: commandText(schedule.workflow_name, "Workflow"),
-            target: { type: "schedule", schedule_id: schedule.id },
-          });
-        });
+      setCommandSearchLoading(true);
+      setCommandSearchError(null);
+      const localResults: CommandSearchResult[] = [
+        ...buildWorkflowCommandResults(workflows, query),
+        ...buildRunCommandResults(runSnapshots, query),
+        ...buildScheduleCommandResults(schedules, query),
+      ];
 
       const [evidenceResult, identityResult] = await Promise.allSettled([
         listEvidenceItems({ search: query, limit: 5 }),
@@ -549,73 +506,23 @@ function App() {
 
       const remoteResults: CommandSearchResult[] = [];
       if (evidenceResult.status === "fulfilled") {
-        evidenceResult.value.items.slice(0, 5).forEach((item) => {
-          remoteResults.push({
-            id: `evidence:${item.evidence_id}`,
-            type: "Evidence",
-            label: commandText(item.label, "Evidence item"),
-            context: commandText(item.workflow?.name ?? item.identity?.display_name, "Run evidence"),
-            target: { type: "evidence", evidence_id: item.evidence_id },
-          });
-          if (item.identity?.id) {
-            const historicalIdentityResultId = [
-              "identity",
-              "historical",
-              item.workflow?.id ?? "unknown",
-              item.identity.id,
-              item.run.id,
-              item.evidence_id,
-            ].join(":");
-            const historicalIdentityContext = item.workflow?.name
-              ? `Historical evidence / ${item.workflow.name}`
-              : `Historical evidence / ${item.run.id}`;
-            remoteResults.push({
-              id: historicalIdentityResultId,
-              type: "Identity",
-              label: commandText(item.identity.display_name ?? item.identity.id, "Identity"),
-              context: commandText(historicalIdentityContext, "Historical evidence"),
-              target: {
-                type: "identity",
-                target: {
-                  type: "historical",
-                  identity_id: item.identity.id,
-                  workflow_id: item.workflow?.id ?? null,
-                  evidence_id: item.evidence_id,
-                  run_id: item.run.id,
-                },
-              },
-            });
-          }
-        });
+        remoteResults.push(...buildEvidenceCommandResults(evidenceResult.value.items));
       }
 
       if (identityResult.status === "fulfilled") {
-        identityResult.value.items.slice(0, 5).forEach((item) => {
-          remoteResults.push({
-            id: `identity:${item.workflow_ref.id}:${item.identity_ref.id}`,
-            type: "Identity",
-            label: commandText(
-              item.identity_ref.display_name ?? item.identity_ref.id,
-              "Identity",
-            ),
-            context: commandText(item.workflow_ref.name, "Workflow"),
-            target: {
-              type: "identity",
-              target: {
-                type: "managed",
-                workflow_id: item.workflow_ref.id,
-                identity_id: item.identity_ref.id,
-              },
-            },
-          });
-        });
+        remoteResults.push(...buildIdentityCommandResults(identityResult.value));
       }
 
-      const unique = new Map<string, CommandSearchResult>();
-      [...localResults, ...remoteResults].forEach((result) => {
-        if (!unique.has(result.id)) unique.set(result.id, result);
-      });
-      setCommandSearchResults([...unique.values()].slice(0, 8));
+      if (evidenceResult.status === "rejected" || identityResult.status === "rejected") {
+        setCommandSearchError("Some remote results are unavailable. Local results are still shown.");
+      }
+      setCommandSearchResults(
+        limitCommandSearchResults(
+          dedupeCommandSearchResults([...localResults, ...remoteResults]),
+          { total: 10, perGroup: 5 },
+        ),
+      );
+      setCommandSearchLoading(false);
     })();
 
     return () => {
@@ -706,21 +613,39 @@ function App() {
     }
   }
 
-  async function loadFocusedRunDetail(runId: string) {
+  async function loadFocusedRunDetail(
+    runId: string,
+    source: StaleTargetDescriptor["source"] = "runs",
+  ) {
     try {
       const detail = await getOperationalRunDetail(runId);
       if (!detail) {
         setFocusedRunDetail(null);
         setMissingRunId(runId);
+        setStaleTarget(
+          createStaleTargetDescriptor(
+            { type: "run", run_id: runId },
+            source,
+            `The selected run is no longer available in durable run history: ${runId}`,
+          ),
+        );
         setAppError("Run not found");
         return;
       }
       setFocusedRunDetail(detail);
       setMissingRunId(null);
+      setStaleTarget(null);
       setAppError("");
     } catch (error) {
       setFocusedRunDetail(null);
       setMissingRunId(runId);
+      setStaleTarget(
+        createStaleTargetDescriptor(
+          { type: "run", run_id: runId },
+          source,
+          commandMessage(error),
+        ),
+      );
       setAppError(commandMessage(error));
     }
   }
@@ -903,7 +828,10 @@ function App() {
     return normalized;
   }
 
-  async function openWorkflow(id: string) {
+  async function openWorkflow(
+    id: string,
+    source?: StaleTargetDescriptor["source"],
+  ) {
     setAppError("");
 
     try {
@@ -917,10 +845,18 @@ function App() {
         setSelectedGraphNodeId(null);
         setGraphIssues([]);
         setGraphIssuesNeedRecheck(false);
+        setStaleTarget(
+          createStaleTargetDescriptor(
+            { type: "workflow", workflow_id: id },
+            source,
+            `Workflow target is no longer available: ${id}`,
+          ),
+        );
         setAppError("Workflow not found");
         return;
       }
 
+      setStaleTarget(null);
       setSelectedWorkflowId(id);
       setDetail(loaded);
       try {
@@ -1483,12 +1419,14 @@ function App() {
 
   function backToList() {
     setScreen("list");
+    setStaleTarget(null);
     setAppError("");
     void loadWorkflows();
   }
 
   function openOverview(focus: OverviewFocus | null = null) {
     setScreen("overview");
+    setStaleTarget(null);
     setOverviewFocus(focus);
     setAppError("");
     void loadOperationsOverview();
@@ -1496,12 +1434,14 @@ function App() {
 
   function openSettings() {
     setScreen("settings");
+    setStaleTarget(null);
     setAppError("");
     void loadSettingsDiagnostics();
   }
 
   function openSchedules() {
     setScreen("schedules");
+    setStaleTarget(null);
     setAppError("");
     setFocusedScheduleId(null);
     void loadSchedules();
@@ -1509,6 +1449,7 @@ function App() {
 
   function openRunCenter() {
     setScreen("runs");
+    setStaleTarget(null);
     setAppError("");
     setFocusedRunDetail(null);
     setMissingRunId(null);
@@ -1517,6 +1458,7 @@ function App() {
 
   function openEvidence(nextQuery: EvidenceListRequest = evidenceQuery) {
     setScreen("evidence");
+    setStaleTarget(null);
     setAppError("");
     setEvidenceDetailError("");
     void loadEvidencePage(nextQuery);
@@ -1524,6 +1466,7 @@ function App() {
 
   function openIdentities(target: IdentityLabTarget | null = identityLabTarget) {
     setScreen("identities");
+    setStaleTarget(null);
     setAppError("");
     setIdentityLabTarget(target);
     void loadIdentityLabOverview(target);
@@ -1546,12 +1489,20 @@ function App() {
     setAppError("");
     setMissingRunId(null);
     void refreshRunStates();
-    void loadFocusedRunDetail(runId);
+    void loadFocusedRunDetail(runId, "identity");
   }
 
   async function openIdentityWorkflowSettings(workflowId: string) {
     const workflow = workflows.find((item) => item.id === workflowId);
     if (!workflow) {
+      setScreen("list");
+      setStaleTarget(
+        createStaleTargetDescriptor(
+          { type: "workflow", workflow_id: workflowId, mode: "settings" },
+          "identity",
+          `Workflow target is no longer available: ${workflowId}`,
+        ),
+      );
       setAppError("Workflow not found");
       return;
     }
@@ -1627,25 +1578,37 @@ function App() {
   async function openScheduleTarget(
     scheduleId?: string | null,
     scheduleEventId?: string | null,
+    source: StaleTargetDescriptor["source"] = "schedule",
   ) {
     setScreen("schedules");
     setFocusedScheduleId(scheduleId ?? null);
+    setStaleTarget(null);
     setAppError("");
     const items = await loadSchedules();
     if (!scheduleId) return;
     const exists = items.some((schedule) => schedule.id === scheduleId);
     if (!exists) {
-      setAppError(
-        scheduleEventId
-          ? `Schedule event target is no longer available: ${scheduleEventId}`
-          : `Schedule target is no longer available: ${scheduleId}`,
+      const message = scheduleEventId
+        ? `Schedule event target is no longer available: ${scheduleEventId}`
+        : `Schedule target is no longer available: ${scheduleId}`;
+      setStaleTarget(
+        createStaleTargetDescriptor(
+          { type: "schedule", schedule_id: scheduleId, schedule_event_id: scheduleEventId },
+          source,
+          message,
+        ),
       );
+      setAppError(message);
       return;
     }
+    setStaleTarget(null);
     await loadScheduleHistory(scheduleId);
   }
 
-  async function navigateToMissionControlTarget(target: MissionControlTarget) {
+  async function navigateToMissionControlTarget(
+    target: MissionControlTarget,
+    source: StaleTargetDescriptor["source"] = "search",
+  ) {
     setCommandSearchQuery("");
     setCommandSearchResults([]);
 
@@ -1661,21 +1624,30 @@ function App() {
       if (target.mode === "settings") {
         const workflow = workflows.find((item) => item.id === target.workflow_id);
         if (!workflow) {
+          setScreen("list");
+          setStaleTarget(
+            createStaleTargetDescriptor(
+              target,
+              source,
+              `Workflow target is no longer available: ${target.workflow_id}`,
+            ),
+          );
           setAppError(`Workflow target is no longer available: ${target.workflow_id}`);
           return;
         }
         await openWorkflowSettings(workflow, "browser_launch");
         return;
       }
-      await openWorkflow(target.workflow_id);
+      await openWorkflow(target.workflow_id, source);
       return;
     }
     if (target.type === "run") {
       setScreen("runs");
       setAppError("");
       setMissingRunId(null);
+      setStaleTarget(null);
       void refreshRunStates();
-      await loadFocusedRunDetail(target.run_id);
+      await loadFocusedRunDetail(target.run_id, source);
       if (target.evidence_id) {
         openEvidence({ run_id: target.run_id, focus_evidence_id: target.evidence_id });
       }
@@ -1693,17 +1665,21 @@ function App() {
       return;
     }
     if (target.type === "schedule") {
-      await openScheduleTarget(target.schedule_id, target.schedule_event_id);
+      await openScheduleTarget(target.schedule_id, target.schedule_event_id, source);
       return;
     }
-    await openWorkflow(target.workflow_id);
+    await openWorkflow(target.workflow_id, source);
     if (target.node_id) {
       setSelectedGraphNodeId(target.node_id);
     }
   }
 
   function navigateFromOverview(target: OperationsNavigationTarget) {
-    void navigateToMissionControlTarget(operationsTargetToMissionTarget(target));
+    void navigateToMissionControlTarget(operationsTargetToMissionTarget(target), "overview");
+  }
+
+  function navigateFromEvidence(target: OperationsNavigationTarget) {
+    void navigateToMissionControlTarget(operationsTargetToMissionTarget(target), "evidence");
   }
 
   async function submitCreateSchedule(input: WorkflowScheduleInput) {
@@ -1793,6 +1769,7 @@ function App() {
     section: WorkflowSettingsSectionId,
   ) {
     setAppError("");
+    setStaleTarget(null);
     setWorkflowSettingsActiveSection(section);
 
     try {
@@ -1885,34 +1862,40 @@ function App() {
         isRunning,
       })
     : { enabled: false, reason: "No workflow graph is loaded.", visible: false };
+  const commandSearchGroups: CommandSearchResultGroup[] =
+    groupCommandSearchResults(commandSearchResults);
+  const alertItems: AlertPreviewItem[] =
+    operationsOverview?.attention.items.slice(0, 5).map((item) => ({
+      id: item.id,
+      severity: item.severity,
+      title: item.title,
+      summary: item.summary,
+      workflowName: item.workflow.name,
+      occurredAt: item.occurred_at,
+    })) ?? [];
+  const workflowStaleTarget =
+    staleTarget?.targetType === "workflow" || staleTarget?.targetType === "graph_issue"
+      ? staleTarget
+      : null;
+  const scheduleStaleTarget = staleTarget?.targetType === "schedule" ? staleTarget : null;
+  const runStaleTarget = staleTarget?.targetType === "run" ? staleTarget : null;
 
   return (
     <AppShell
-      activeItem={
-        screen === "settings"
-          ? "settings"
-          : screen === "schedules"
-            ? "schedules"
-            : screen === "runs"
-              ? "runs"
-              : screen === "evidence"
-                ? "evidence"
-                : screen === "identities"
-                  ? "identities"
-              : screen === "overview"
-                ? "overview"
-                : "workflows"
-      }
+      activeItem={activeItemFromScreen(screen)}
       sidebarCollapsed={sidebarCollapsed}
       commandSearchQuery={commandSearchQuery}
-      commandSearchResults={commandSearchResults}
+      commandSearchGroups={commandSearchGroups}
+      commandSearchLoading={commandSearchLoading}
+      commandSearchError={commandSearchError}
       alertCount={operationsOverview?.metrics.attention_today ?? 0}
+      alertItems={alertItems}
       onCommandSearchQueryChange={setCommandSearchQuery}
       onCommandSearchResultSelect={(result) => {
-        void navigateToMissionControlTarget(result.target);
+        void navigateToMissionControlTarget(result.target, "search");
       }}
       onOpenAlerts={() => {
-        void navigateToMissionControlTarget({ type: "overview", focus: "attention" });
+        void navigateToMissionControlTarget({ type: "overview", focus: "attention" }, "alerts");
       }}
       onOpenOverview={() => openOverview()}
       onOpenEvidence={() => openEvidence({})}
@@ -1951,7 +1934,7 @@ function App() {
           onPreviewScreenshot={previewEvidenceScreenshot}
           onRevealArtifact={revealEvidence}
           onExportSelection={exportSelectedEvidence}
-          onNavigate={navigateFromOverview}
+          onNavigate={navigateFromEvidence}
           onOpenIdentity={openIdentityTarget}
         />
       ) : screen === "identities" ? (
@@ -1965,7 +1948,7 @@ function App() {
           onOpenEvidence={openIdentityEvidence}
           onOpenRun={openIdentityRun}
           onOpenWorkflow={(workflowId) => {
-            void openWorkflow(workflowId);
+            void openWorkflow(workflowId, "identity");
           }}
           onOpenWorkflowSettings={(workflowId) => {
             void openIdentityWorkflowSettings(workflowId);
@@ -1994,6 +1977,7 @@ function App() {
           workflows={workflows}
           events={scheduleEvents}
           focusedScheduleId={focusedScheduleId}
+          staleTarget={scheduleStaleTarget}
           loading={schedulesLoading}
           error={appError}
           onCreateSchedule={submitCreateSchedule}
@@ -2001,11 +1985,25 @@ function App() {
           onDeleteSchedule={removeSchedule}
           onToggleSchedule={toggleSchedule}
           onLoadEvents={loadScheduleHistory}
+          onRefreshTarget={() => {
+            if (focusedScheduleId) {
+              void openScheduleTarget(focusedScheduleId, null, "schedule");
+              return;
+            }
+            void loadSchedules();
+          }}
+          onOpenList={() => openSchedules()}
+          onOpenOverview={() => openOverview()}
+          onClearStaleTarget={() => {
+            setFocusedScheduleId(null);
+            setStaleTarget(null);
+            setAppError("");
+          }}
           onOpenRun={(runId) => {
-            void navigateToMissionControlTarget({ type: "run", run_id: runId });
+            void navigateToMissionControlTarget({ type: "run", run_id: runId }, "schedule");
           }}
           onOpenWorkflow={(workflowId) => {
-            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
+            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId }, "schedule");
           }}
         />
       ) : screen === "runs" ? (
@@ -2013,14 +2011,30 @@ function App() {
           runSnapshots={runSnapshots}
           focusedRunDetail={focusedRunDetail}
           missingRunId={missingRunId}
+          staleTarget={runStaleTarget}
           error={appError}
           onStopRun={(runId) => stopRun(runId)}
+          onRefreshTarget={() => {
+            if (missingRunId) {
+              void loadFocusedRunDetail(missingRunId, "runs");
+              return;
+            }
+            void refreshRunStates();
+          }}
+          onOpenList={openRunCenter}
+          onOpenOverview={() => openOverview()}
+          onClearStaleTarget={() => {
+            setFocusedRunDetail(null);
+            setMissingRunId(null);
+            setStaleTarget(null);
+            setAppError("");
+          }}
           onOpenEvidence={(runId) => openEvidence({ run_id: runId })}
           onOpenWorkflow={(workflowId) => {
-            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
+            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId }, "runs");
           }}
           onOpenIdentity={(target) => {
-            void navigateToMissionControlTarget({ type: "identity", target });
+            void navigateToMissionControlTarget({ type: "identity", target }, "runs");
           }}
         />
       ) : screen === "detail" && detail ? (
@@ -2071,6 +2085,7 @@ function App() {
           runState={runState}
           runSnapshots={runSnapshots}
           activeRunWorkflowName={activeRunWorkflowName}
+          staleTarget={workflowStaleTarget}
           onWorkflowNameDraftChange={setWorkflowNameDraft}
           onSubmitWorkflowDialog={submitWorkflowDialog}
           onOpenCreateWorkflow={openCreateWorkflowDialog}
@@ -2082,8 +2097,23 @@ function App() {
           onImportWorkflowPackageFile={importWorkflowPackageFile}
           onRecordWorkflow={startWorkflowRecording}
           onCloseWorkflowDialog={closeWorkflowDialog}
-          onOpenWorkflow={openWorkflow}
+          onOpenWorkflow={(workflowId) => {
+            void openWorkflow(workflowId);
+          }}
           onDeleteWorkflow={deleteWorkflow}
+          onRefreshTarget={() => {
+            if (workflowStaleTarget?.targetType === "workflow") {
+              void openWorkflow(workflowStaleTarget.requestedId);
+              return;
+            }
+            void loadWorkflows();
+          }}
+          onOpenList={backToList}
+          onOpenOverview={() => openOverview()}
+          onClearStaleTarget={() => {
+            setStaleTarget(null);
+            setAppError("");
+          }}
         />
       )}
       <RecordingReviewDialog

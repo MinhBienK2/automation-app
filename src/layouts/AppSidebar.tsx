@@ -1,7 +1,11 @@
 import { Button } from "../components/ui/button";
 import { Activity, CalendarClock, Files, Fingerprint, Gauge, ListTree, Settings } from "lucide-react";
+import {
+  missionControlNavItems,
+  type MissionControlNavItemId,
+} from "../lib/missionControlNavigation";
 
-type AppSidebarActiveItem = "overview" | "workflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
+type AppSidebarActiveItem = MissionControlNavItemId;
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
@@ -17,6 +21,15 @@ type AppSidebarProps = {
 };
 
 const appLogoSrc = `${import.meta.env.BASE_URL}app-logo.svg`;
+const sidebarIcons = {
+  overview: Gauge,
+  workflows: ListTree,
+  runs: Activity,
+  evidence: Files,
+  schedules: CalendarClock,
+  identities: Fingerprint,
+  settings: Settings,
+} satisfies Record<MissionControlNavItemId, typeof Gauge>;
 
 function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
   return (
@@ -62,6 +75,16 @@ export function AppSidebar({
   onOpenWorkflows,
   onToggle,
 }: AppSidebarProps) {
+  const handlers = {
+    overview: onOpenOverview,
+    workflows: onOpenWorkflows,
+    runs: onOpenRunCenter,
+    evidence: onOpenEvidence,
+    schedules: onOpenSchedules,
+    identities: onOpenIdentities,
+    settings: onOpenSettings,
+  } satisfies Record<MissionControlNavItemId, () => void>;
+
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
@@ -69,97 +92,27 @@ export function AppSidebar({
         <span className="sidebar-title">Mission Control</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
-        <Button
-          className={
-            activeItem === "overview"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenOverview}
-        >
-          <Gauge aria-hidden="true" className="sidebar-item-icon" />
-          <span>Overview</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "workflows"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenWorkflows}
-        >
-          <ListTree aria-hidden="true" className="sidebar-item-icon" />
-          <span>Workflows</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "runs"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenRunCenter}
-        >
-          <Activity aria-hidden="true" className="sidebar-item-icon" />
-          <span>Runs</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "evidence"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenEvidence}
-        >
-          <Files aria-hidden="true" className="sidebar-item-icon" />
-          <span>Evidence</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "schedules"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenSchedules}
-        >
-          <CalendarClock aria-hidden="true" className="sidebar-item-icon" />
-          <span>Schedules</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "identities"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenIdentities}
-        >
-          <Fingerprint aria-hidden="true" className="sidebar-item-icon" />
-          <span>Identities</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "settings"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenSettings}
-        >
-          <Settings aria-hidden="true" className="sidebar-item-icon" />
-          <span>Settings</span>
-        </Button>
+        {missionControlNavItems.map((item) => {
+          const Icon = sidebarIcons[item.id];
+          return (
+            <Button
+              key={item.id}
+              aria-label={collapsed ? item.ariaLabel : undefined}
+              className={
+                activeItem === item.id
+                  ? "sidebar-nav-item sidebar-nav-item-active"
+                  : "sidebar-nav-item"
+              }
+              data-tooltip={collapsed ? item.label : undefined}
+              variant="secondary"
+              type="button"
+              onClick={handlers[item.id]}
+            >
+              <Icon aria-hidden="true" className="sidebar-item-icon" />
+              <span>{item.label}</span>
+            </Button>
+          );
+        })}
       </nav>
       <Button
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}

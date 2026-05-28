@@ -692,7 +692,12 @@ describe("App settings and graph autosave", () => {
       });
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Alerts" }));
+    await userEvent.click(screen.getByRole("button", { name: "Alerts 1" }));
+    const alertPreview = await screen.findByRole("dialog", { name: "Alerts preview" });
+    expect(alertPreview).toHaveTextContent("Launch blocked");
+    await userEvent.click(
+      within(alertPreview).getByRole("button", { name: "Open Attention Queue" }),
+    );
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Attention focus active");
     expect(screen.queryByText(/secret|token|cookie/i)).not.toBeInTheDocument();

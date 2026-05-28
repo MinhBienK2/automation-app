@@ -24,8 +24,11 @@ Preserve these unless the task explicitly changes them.
   targets and must not expose raw outputs, cookies, tokens, proxy credentials,
   profile contents, absolute local paths, or arbitrary diagnostic payloads.
   Identity results derived from persisted evidence open read-only historical
-  context tied to the evidence run.
-- The shell Alerts button opens Overview and marks the Attention Queue as the
+  context tied to the evidence run. The shell presents results in a grouped
+  command palette with guarded keyboard focus shortcuts that do not fire inside
+  inputs, dialogs, or popovers.
+- The shell Alerts button opens an alerts preview popover. The preview's Open
+  Attention Queue action opens Overview and marks the Attention Queue as the
   focused target.
 - Evidence is a separate sidebar page between Runs and Schedules. It is the
   only broad historical evidence browser; Overview recent evidence opens
@@ -42,7 +45,8 @@ Preserve these unless the task explicitly changes them.
 - Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
 - Schedule history entries with run ids can open the matching Runs target, and
   all schedule history entries can open the owning Workflow target. A stale or
-  deleted schedule target renders an unavailable target message.
+  deleted schedule, run, or workflow target renders an unavailable target
+  message with bounded fallback actions.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and local fingerprint font directories.
 - Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. `Launch Run` is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.

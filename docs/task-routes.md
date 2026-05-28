@@ -119,7 +119,7 @@ Update docs: product model, user-visible invariants, workflow lifecycle, executi
 
 ## Change Mission Control Cross-Workspace Navigation
 
-Use when changing sidebar order, shell command search, Alerts focus,
+Use when changing sidebar order, shell command search, Alerts preview/focus,
 cross-workspace traceability links, stale navigation target states, compact
 desktop behavior, or app-level Settings diagnostics/maintenance.
 
@@ -128,7 +128,9 @@ Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
 `contracts/workflow-types.md`; also read `DESIGN.md` before layout or styling
 changes.
 
-Verify: `src/App.tsx`, `src/layouts/`, `src/features/overview/`,
+Verify: `src/App.tsx`, `src/layouts/`, `src/lib/missionControlNavigation.ts`,
+`src/lib/commandSearch.ts`, `src/components/patterns/`,
+`src/features/overview/`,
 `src/features/evidence/`, `src/features/identities/`, `src/features/runs/`,
 `src/features/schedules/`, `src/features/settings/`,
 `src/types/workflow.ts`, `electron/backend/operations/operationsRepository.ts`
