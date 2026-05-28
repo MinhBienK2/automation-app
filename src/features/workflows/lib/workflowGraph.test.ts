@@ -351,6 +351,12 @@ describe("workflow graph helpers", () => {
     );
   });
 
+  test("converts very large linear graphs without recursive traversal failure", () => {
+    const graph = largeLinearGraph(12_000);
+
+    expect(() => toReactFlowGraph(graph)).not.toThrow();
+  });
+
   test("marks selected graph edges with distinct stroke and marker styling", () => {
     const graph = linearGraphFromSteps([waitStep]);
 
@@ -523,3 +529,41 @@ describe("workflow graph helpers", () => {
     );
   });
 });
+
+function largeLinearGraph(actionCount: number): WorkflowGraph {
+  const nodes: WorkflowGraph["nodes"] = [
+    {
+      id: "start",
+      node_type: "start",
+      label: "Start",
+      position: { x: 0, y: 0 },
+      config: {},
+      ports: nodePorts("start"),
+      group_id: null,
+    },
+    ...Array.from({ length: actionCount }, (_, index) => ({
+      id: `node-${index + 1}`,
+      node_type: "action" as const,
+      label: `Node ${index + 1}`,
+      position: { x: (index + 1) * 220, y: 0 },
+      config: { type: "wait" as const, config: { condition: "duration" as const, duration_ms: 10 } },
+      ports: nodePorts("action"),
+      group_id: null,
+    })),
+  ];
+
+  return {
+    version: 2,
+    nodes,
+    edges: nodes.slice(0, -1).map((node, index) => ({
+      id: `edge-${node.id}-${nodes[index + 1].id}`,
+      source_node_id: node.id,
+      source_port: "out",
+      target_node_id: nodes[index + 1].id,
+      target_port: "in",
+      label: "next",
+      condition: null,
+    })),
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}

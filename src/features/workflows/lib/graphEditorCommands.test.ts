@@ -237,4 +237,60 @@ describe("graph editor commands", () => {
       }),
     );
   });
+
+  test("auto arranges long linear workflows into compact wrapped lanes", () => {
+    const longGraph = linearWorkflowGraph(18);
+
+    const arranged = arrangeWorkflowGraph(longGraph);
+    const positions = new Map(arranged.nodes.map((node) => [node.id, node.position]));
+
+    expect(positions.get("start")).toEqual({ x: 0, y: 0 });
+    expect(positions.get("node-1")).toEqual({ x: 260, y: 0 });
+    expect(positions.get("node-8")).toEqual({ x: 2080, y: 0 });
+    expect(positions.get("node-9")).toEqual({ x: 2080, y: 180 });
+    expect(positions.get("node-16")).toEqual({ x: 260, y: 180 });
+    expect(positions.get("node-17")).toEqual({ x: 260, y: 360 });
+    expect(positions.get("node-18")?.x).toBeLessThanOrEqual(2080);
+  });
 });
+
+function linearWorkflowGraph(actionCount: number): WorkflowGraph {
+  const nodes: WorkflowGraph["nodes"] = [
+    {
+      id: "start",
+      node_type: "start",
+      label: "Start",
+      position: { x: 0, y: 0 },
+      config: {},
+      ports: [{ id: "out", label: "Out", direction: "output" }],
+      group_id: null,
+    },
+    ...Array.from({ length: actionCount }, (_, index) => ({
+      id: `node-${index + 1}`,
+      node_type: "action" as const,
+      label: `Node ${index + 1}`,
+      position: { x: 9999, y: 9999 },
+      config: { type: "wait" as const, config: { condition: "duration" as const, duration_ms: 10 } },
+      ports: [
+        { id: "in", label: "In", direction: "input" as const },
+        { id: "out", label: "Out", direction: "output" as const },
+      ],
+      group_id: null,
+    })),
+  ];
+
+  return {
+    version: 2,
+    nodes,
+    edges: nodes.slice(0, -1).map((node, index) => ({
+      id: `edge-${node.id}-${nodes[index + 1].id}`,
+      source_node_id: node.id,
+      source_port: "out",
+      target_node_id: nodes[index + 1].id,
+      target_port: "in",
+      label: "next",
+      condition: null,
+    })),
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}

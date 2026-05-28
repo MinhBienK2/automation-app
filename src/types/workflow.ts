@@ -1210,6 +1210,10 @@ export type ReviewedRecordingStep = {
   action: ActionConfig;
   label: string;
   included: boolean;
+  timing?: {
+    first_event_at: string;
+    last_event_at: string;
+  } | null;
   locator_confidence?: "high" | "medium" | "low" | null;
   warnings: RecordingWarning[];
 };

@@ -294,6 +294,10 @@ target into one `input_text` step with the final value, maps navigation, click
 variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
 wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
 into existing action configs, and carries source event ids forward for review.
+Each reviewed step also carries first/last source-event timestamps; graph
+generation turns positive gaps between included recorded steps into fixed
+duration edge delays so normal graph runs preserve the operator's recorded
+pacing between actions.
 Sensitive redacted input steps are generated with an empty value, excluded by
 default, and must be reviewed with a safe literal or variable before replay.
 Native file chooser captures only expose file names; generated `upload_file`
@@ -310,7 +314,8 @@ Workflow Settings snapshot, normalized `ReviewedRecordingStep[]`, generated
 generation does not create workflow rows, persist Workflow Settings, or replace
 an existing graph. The generated graph uses the normal v2 graph shape:
 `Start -> recorded action nodes -> optional End Success`, with deterministic
-left-to-right positions and ordinary action node configs.
+row-wrapped positions for long recordings, fixed edge delays for captured
+operator pacing between included steps, and ordinary action node configs.
 
 Draft save commands serialize as:
 
@@ -343,7 +348,7 @@ Graph validation issues serialize as `{ level, node_id, edge_id, message }`, whe
 
 Graph links are directed execution edges. The frontend replaces any existing edge that shares the same source output or target input when a port is reconnected, except Merge `in` keeps multiple incoming branch links. Links may carry an optional duration-only `delay`; the compiler emits it as a synthetic fixed or random wait before the target node. Edge order labels are display-only and follow the same stable port traversal shape as graph compilation rather than raw edge array order. Backend validation is authoritative and rejects self-links, duplicate edges, invalid edge wait ranges, more than one outgoing edge from the same output port, more than one incoming edge to the same non-Merge input port, missing ports/nodes, unreachable non-start nodes, unsupported free cycles, and loop-control nodes reachable outside a loop body. Validation may return warnings for optional branches or continuations that are missing but still executable.
 
-Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Manual auto arrange updates node positions into deterministic left-to-right execution columns and remains a normal graph edit. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
+Current frontend graph authoring uses `@xyflow/react` for pan, zoom, drag, handles, minimap, controls, background, and selection. Manual auto arrange updates node positions into deterministic execution lanes that stay left-to-right for compact graphs and wrap long main paths into rows so large recordings do not become one unreachable line; it remains a normal graph edit. Persisted `WorkflowGraph` remains the source of truth and is converted through frontend React Flow adapters.
 
 Current frontend graph authoring supports explicit port connection, edge deletion, multi-selection bulk edit commands, action config editing, and structured config editing for:
 

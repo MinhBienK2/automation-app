@@ -380,12 +380,27 @@ function recordingStep(
     action,
     label: recordingActionLabels[action.type] ?? action.type,
     included: options.included ?? true,
+    timing: recordingStepTiming(sourceEvents),
     locator_confidence: locator?.confidence ?? null,
     warnings: [
       ...sourceEvents.flatMap((event) => event.warnings),
       ...(locator?.warnings ?? []),
       ...(options.warnings ?? []),
     ],
+  };
+}
+
+function recordingStepTiming(
+  sourceEvents: RecordingEvent[],
+): ReviewedRecordingStep["timing"] {
+  const timestamps = sourceEvents
+    .map((event) => Date.parse(event.timestamp))
+    .filter((timestamp) => Number.isFinite(timestamp));
+  if (timestamps.length === 0) return null;
+
+  return {
+    first_event_at: new Date(Math.min(...timestamps)).toISOString(),
+    last_event_at: new Date(Math.max(...timestamps)).toISOString(),
   };
 }
 

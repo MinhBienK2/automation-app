@@ -130,18 +130,20 @@ session id and serialize errors as `{ message, field? }`.
 
 `generateRecordingDraft(sessionId, options)` normalizes the selected session
 events, creates a review-only `RecordingWorkflowDraft`, generates a standard v2
-`WorkflowGraph`, validates it through backend graph validation, stores the draft
-in backend memory, and returns it without creating workflow rows or replacing an
-existing graph. `getRecordingDraft(draftId)` returns the stored review draft.
+`WorkflowGraph` with row-wrapped recorded node positions and fixed edge delays
+for positive captured inter-step timing, validates it through backend graph
+validation, stores the draft in backend memory, and returns it without creating
+workflow rows or replacing an existing graph. `getRecordingDraft(draftId)`
+returns the stored review draft.
 `saveRecordingDraft(draftId, input)` is the only recorder command that persists
 reviewed output. It reconciles renderer-reviewed step labels, inclusion flags,
 and supported action value edits against the backend-held draft steps by step id,
 regenerates and validates the graph, then either creates a normal workflow with
 the recorder browser settings snapshot or replaces the linked workflow graph for
 `replace_current_graph` drafts. Renderer-supplied action type or locator
-replacement is ignored. Successful save consumes the in-memory draft and its
-source session; subsequent `getRecordingDraft` or session lookups return
-not-found command errors.
+replacement is ignored, and timing metadata remains backend-owned. Successful
+save consumes the in-memory draft and its source session; subsequent
+`getRecordingDraft` or session lookups return not-found command errors.
 
 The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
 are no longer part of the production Electron bridge. Selector generation and

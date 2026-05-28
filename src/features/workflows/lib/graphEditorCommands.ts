@@ -30,6 +30,8 @@ export type GraphHistoryState = {
 const defaultOffset: GraphPosition = { x: 48, y: 48 };
 const arrangeColumnGap = 260;
 const arrangeRowGap = 120;
+const arrangeLaneGap = 180;
+const arrangeColumnsPerLane = 8;
 
 export function arrangeWorkflowGraph(graph: WorkflowGraph): WorkflowGraph {
   const orderedNodeIds = graphExecutionNodeOrder(graph);
@@ -62,9 +64,16 @@ export function arrangeWorkflowGraph(graph: WorkflowGraph): WorkflowGraph {
   const positions = new Map<string, GraphPosition>();
   for (const [column, nodeIds] of columns) {
     nodeIds.forEach((nodeId, row) => {
+      const lane = column <= 0 ? 0 : Math.floor((column - 1) / arrangeColumnsPerLane);
+      const columnInLane = column <= 0 ? 0 : (column - 1) % arrangeColumnsPerLane;
+      const displayColumn = column <= 0
+        ? 0
+        : lane % 2 === 0
+          ? columnInLane + 1
+          : arrangeColumnsPerLane - columnInLane;
       positions.set(nodeId, {
-        x: column * arrangeColumnGap,
-        y: row * arrangeRowGap,
+        x: displayColumn * arrangeColumnGap,
+        y: lane * arrangeLaneGap + row * arrangeRowGap,
       });
     });
   }
@@ -318,42 +327,65 @@ function graphExecutionNodeOrder(graph: WorkflowGraph) {
     edges.sort((left, right) => left.id.localeCompare(right.id));
   }
 
-  function visitNode(nodeId: string, path: Set<string>) {
-    if (path.has(nodeId)) return;
+  const stack = [start.id];
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (!nodeId) continue;
     const node = nodeById.get(nodeId);
-    if (!node) return;
-    if (!seenNodeIds.has(node.id)) {
-      seenNodeIds.add(node.id);
-      orderedNodeIds.push(node.id);
-    }
-    path.add(node.id);
+    if (!node || seenNodeIds.has(node.id)) continue;
+    seenNodeIds.add(node.id);
+    orderedNodeIds.push(node.id);
+
+    const nextNodeIds: string[] = [];
     for (const portId of orderedOutputPortIds(node)) {
       const edge = edgesBySourcePort.get(edgeSourcePortKey(node.id, portId))?.[0];
-      if (edge) visitNode(edge.target_node_id, new Set(path));
+      if (edge && !seenNodeIds.has(edge.target_node_id)) {
+        nextNodeIds.push(edge.target_node_id);
+      }
+    }
+    for (let index = nextNodeIds.length - 1; index >= 0; index -= 1) {
+      const nextNodeId = nextNodeIds[index];
+      if (nextNodeId) stack.push(nextNodeId);
     }
   }
-
-  visitNode(start.id, new Set());
   return orderedNodeIds;
 }
 
 function graphNodeDepths(graph: WorkflowGraph, orderedNodeIds: string[]) {
   const depths = new Map<string, number>();
+  const nodeOrderSet = new Set(orderedNodeIds);
+  const edgesBySource = new Map<string, GraphEdge[]>();
   const start = graph.nodes.find((node) => node.node_type === "start");
   if (start) depths.set(start.id, 0);
 
-  for (let pass = 0; pass < graph.nodes.length; pass += 1) {
-    let changed = false;
-    for (const edge of graph.edges) {
-      const sourceDepth = depths.get(edge.source_node_id);
-      if (sourceDepth == null) continue;
+  for (const edge of graph.edges) {
+    if (!nodeOrderSet.has(edge.source_node_id) || !nodeOrderSet.has(edge.target_node_id)) {
+      continue;
+    }
+    edgesBySource.set(edge.source_node_id, [
+      ...(edgesBySource.get(edge.source_node_id) ?? []),
+      edge,
+    ]);
+  }
+
+  const queue = start ? [start.id] : [];
+  const relaxCounts = new Map<string, number>();
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const nodeId = queue[queueIndex];
+    if (!nodeId) continue;
+    const sourceDepth = depths.get(nodeId);
+    if (sourceDepth == null) continue;
+    for (const edge of edgesBySource.get(nodeId) ?? []) {
       const nextDepth = sourceDepth + 1;
       if ((depths.get(edge.target_node_id) ?? -1) < nextDepth) {
         depths.set(edge.target_node_id, nextDepth);
-        changed = true;
+        const relaxCount = (relaxCounts.get(edge.target_node_id) ?? 0) + 1;
+        relaxCounts.set(edge.target_node_id, relaxCount);
+        if (relaxCount <= graph.nodes.length) {
+          queue.push(edge.target_node_id);
+        }
       }
     }
-    if (!changed) break;
   }
 
   const maxReachableDepth = Math.max(0, ...depths.values());

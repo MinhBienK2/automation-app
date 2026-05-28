@@ -18,7 +18,9 @@ Workflow Automation Manager is an Electron desktop app for building and running 
   workflow's saved Workflow Settings, exposes only sanitized session/settings
   metadata through IPC, captures browser usage into reviewable action configs,
   and is not a saved workflow until a reviewed recording draft is explicitly
-  saved. Native file chooser paths are not trusted from browser capture; upload
+  saved. Reviewed steps keep backend-held first/last event timing so saved
+  recording graphs can replay positive inter-step gaps through ordinary edge
+  delays. Native file chooser paths are not trusted from browser capture; upload
   recorder steps stay excluded until the reviewer enters explicit local file
   paths that can replay through the normal `upload_file` action.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
@@ -62,8 +64,9 @@ Users can:
   raw stream into reviewable action-intent steps with ordered locator candidates
   and weak-locator warnings. Stopping a recorder session drains any buffered
   page-side fallback events before draft generation. Draft generation creates a
-  validated review-only v2 workflow graph without persisting a workflow or
-  replacing an existing saved graph. The workflow list exposes Record Workflow
+  validated review-only v2 workflow graph with deterministic row-wrapped layout
+  and fixed edge delays for recorded inter-step pacing without persisting a
+  workflow or replacing an existing saved graph. The workflow list exposes Record Workflow
   for creating a new workflow from a recording, while the workflow detail header
   exposes Record Replacement for replacing that workflow's graph; replacement
   recording is rejected while the target workflow, browser profile, or batch
@@ -71,7 +74,8 @@ Users can:
   step labels, step inclusion, and supported captured values before
   `saveRecordingDraft` creates a normal workflow or explicitly replaces the
   linked graph. Draft save reconciles those edits against the backend-held draft
-  by step id and ignores renderer-supplied action type or locator replacement.
+  by step id and ignores renderer-supplied action type, locator replacement, or
+  timing replacement.
   Discarding a recorder session removes its in-memory session and drafts, and
   saving a draft consumes the draft/session after successful persistence.
 
