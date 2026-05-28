@@ -13,7 +13,9 @@ const dialogSource = readFileSync(
 );
 const cssFiles = [
   "src/App.css",
+  "src/styles/tokens.css",
   "src/styles/base.css",
+  "src/styles/components.css",
   "src/styles/layout.css",
   "src/styles/workflows.css",
   "src/styles/workflow-graph.css",
@@ -33,13 +35,15 @@ function cssRule(selector: string) {
 describe("App CSS", () => {
   test("uses App.css as a small style entrypoint", () => {
     expect(appCss).toContain('@import "./styles/base.css";');
+    expect(appCss).toContain('@import "./styles/tokens.css";');
+    expect(appCss).toContain('@import "./styles/components.css";');
     expect(appCss).toContain('@import "./styles/layout.css";');
     expect(appCss).toContain('@import "./styles/workflows.css";');
     expect(appCss).toContain('@import "./styles/workflow-graph.css";');
     expect(appCss).toContain('@import "./styles/modals.css";');
     expect(appCss).not.toContain('@import "./styles/monitor.css";');
     expect(appCss).toContain('@import "./styles/responsive.css";');
-    expect(appCss.split("\n").length).toBeLessThanOrEqual(12);
+    expect(appCss.split("\n").length).toBeLessThanOrEqual(14);
   });
 
   test("keeps step help modal content scrollable on small screens", () => {
@@ -90,6 +94,18 @@ describe("App CSS", () => {
     expect(root).toContain("--app-radius-pill: 8px");
     expect(buttonSource).toContain("var(--app-accent-border)");
     expect(buttonSource).not.toContain("#32d3e6");
+  });
+
+  test("defines reusable foundation pattern hooks outside feature CSS", () => {
+    const commandRegion = cssRule(".command-region");
+    const statePanel = cssRule(".state-panel");
+    const tableShellBody = cssRule(".table-shell-body");
+    const detailPanel = cssRule(".detail-panel");
+
+    expect(commandRegion).toContain("grid-template-columns: minmax(0, 1fr) auto");
+    expect(statePanel).toContain("border: 1px solid var(--app-border)");
+    expect(tableShellBody).toContain("overflow: auto");
+    expect(detailPanel).toContain("min-width: 0");
   });
 
   test("does not scale font sizes with viewport units", () => {

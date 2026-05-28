@@ -13,17 +13,22 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        primary:
+          "border-[var(--app-accent-border)] bg-[var(--app-accent)] text-[var(--app-bg)] hover:border-[var(--app-accent-border-strong)] hover:bg-[var(--app-accent)]",
         default:
-          "border-[var(--app-text)] bg-[var(--app-surface)] text-[var(--app-text)] hover:border-[var(--app-accent-border)]",
+          "border-[var(--app-accent-border)] bg-[var(--app-accent)] text-[var(--app-bg)] hover:border-[var(--app-accent-border-strong)] hover:bg-[var(--app-accent)]",
         secondary:
           "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)] opacity-90 hover:border-[var(--app-border-hover)]",
         ghost:
           "border-transparent bg-transparent text-[var(--app-text)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface)]",
+        quiet:
+          "border-transparent bg-transparent text-[var(--app-text-secondary)] hover:border-[var(--app-border)] hover:bg-[var(--app-surface)] hover:text-[var(--app-text)]",
         destructive:
           "border-[var(--app-danger-border)] bg-[var(--app-surface)] text-[var(--app-danger-text)] hover:border-[var(--app-danger-border-strong)]",
       },
       size: {
         default: "h-10 px-4",
+        md: "h-10 px-4",
         sm: "h-8 px-3 text-xs",
         lg: "h-11 px-8",
         icon: "size-9 px-0",
@@ -34,8 +39,8 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: "primary",
+      size: "md",
       shape: "default",
     },
   },

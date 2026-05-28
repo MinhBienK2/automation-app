@@ -45,7 +45,9 @@ Update docs: workflow lifecycle, frontend architecture, run-state contract if mo
 
 Read: `DESIGN.md`, `architecture/frontend.md`, `domain/user-visible-invariants.md`
 
-Verify: `src/App.css`, `src/styles/`, `src/layouts/`, user-facing components under `src/features/workflows/`
+Verify: `src/App.css`, `src/styles/`, `src/layouts/`,
+`src/components/ui/`, `src/components/layout/`, `src/components/patterns/`,
+user-facing components under `src/features/workflows/`
 
 Checks: focused UI tests; `npm test -- src/AppCss.test.ts` when CSS invariants change.
 

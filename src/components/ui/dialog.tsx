@@ -1,6 +1,29 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+
+const dialogContentVariants = cva(
+  [
+    "fixed left-1/2 top-1/2 z-50 grid -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[var(--app-radius-md)] border border-[var(--app-border)] bg-[var(--app-bg)] p-5 text-[var(--app-text)] outline-none",
+    "max-h-[min(760px,calc(100dvh-48px))] grid-rows-[auto_minmax(0,1fr)_auto]",
+    "focus-visible:border-[var(--app-accent-border)]",
+  ],
+  {
+    variants: {
+      size: {
+        sm: "w-[min(400px,calc(100vw-48px))]",
+        md: "w-[min(480px,calc(100vw-48px))]",
+        lg: "w-[min(720px,calc(100vw-48px))]",
+        xl: "w-[min(920px,calc(100vw-48px))]",
+        "fullscreen-ish": "h-[min(760px,calc(100dvh-48px))] w-[min(1080px,calc(100vw-48px))]",
+      },
+    },
+    defaultVariants: {
+      size: "md",
+    },
+  },
+);
 
 function Dialog({
   ...props
@@ -39,18 +62,17 @@ function DialogOverlay({
 function DialogContent({
   className,
   children,
+  size,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> &
+  VariantProps<typeof dialogContentVariants>) {
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[min(480px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[var(--app-radius-md)] border border-[var(--app-border)] bg-[var(--app-bg)] p-5 text-[var(--app-text)] outline-none",
-          "focus-visible:border-[var(--app-accent-border)]",
-          className,
-        )}
+        data-size={size ?? "md"}
+        className={cn(dialogContentVariants({ size, className }))}
         {...props}
       >
         {children}
@@ -63,6 +85,19 @@ function DialogContent({
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>
+  );
+}
+
+function DialogBody({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("min-h-0 overflow-y-auto pr-1", className)}
+      {...props}
+    />
   );
 }
 
@@ -120,6 +155,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,

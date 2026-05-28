@@ -2,12 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test } from "vitest";
 import { Button } from "./button";
-import { Badge } from "./badge";
+import { Badge, StatusBadge } from "./badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -46,17 +48,39 @@ describe("shadcn UI components", () => {
     );
   });
 
+  test("supports the foundation button and status badge APIs", () => {
+    render(
+      <div>
+        <Button type="button" variant="primary" size="md">Primary command</Button>
+        <Button type="button" variant="quiet" size="sm">Quiet command</Button>
+        <StatusBadge tone="warning">Needs review</StatusBadge>
+      </div>,
+    );
+
+    expect(screen.getByRole("button", { name: "Primary command" }).className)
+      .toContain("bg-[var(--app-accent)]");
+    expect(screen.getByRole("button", { name: "Quiet command" }).className)
+      .toContain("border-transparent");
+    expect(screen.getByText("Needs review")).toHaveAttribute("data-tone", "warning");
+  });
+
   test("opens an accessible dialog from a trigger", async () => {
     render(
       <Dialog>
         <DialogTrigger asChild>
           <Button type="button">Open dialog</Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>Create Workflow</DialogTitle>
             <DialogDescription>Name the workflow before adding steps.</DialogDescription>
           </DialogHeader>
+          <DialogBody>
+            <p>Dialog body content</p>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button">Save</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>,
     );
@@ -65,7 +89,9 @@ describe("shadcn UI components", () => {
 
     expect(
       screen.getByRole("dialog", { name: "Create Workflow" }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("data-size", "lg");
+    expect(screen.getByText("Dialog body content").parentElement)
+      .toHaveAttribute("data-slot", "dialog-body");
     const closeButton = screen.getByRole("button", { name: "Close dialog" });
     expect(closeButton).toHaveTextContent("×");
     expect(closeButton.querySelector("svg")).not.toBeInTheDocument();

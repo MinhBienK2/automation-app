@@ -1,6 +1,10 @@
 import { Activity, AlertTriangle, CalendarClock, RefreshCw, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
+import { CommandRegion } from "../../../components/patterns/CommandRegion";
+import { EmptyState } from "../../../components/patterns/EmptyState";
+import { StatePanel } from "../../../components/patterns/StatePanel";
+import { StatusCluster } from "../../../components/patterns/StatusCluster";
 import type {
   OperationsOverview,
   OperationsNavigationTarget,
@@ -33,35 +37,48 @@ export function OperationsOverviewPage({
 
   return (
     <section className="app-screen operations-overview-screen" aria-label="Overview">
-      <header className="app-header overview-header">
-        <div>
-          <p className="eyebrow">Operations Dashboard</p>
-          <h1>Overview</h1>
-          <p className="muted">
-            {overview
-              ? `Today in ${overview.range.timezone_label}. Last refreshed ${formatDateTime(overview.generated_at)}.`
-              : "Loading durable operations state."}
-          </p>
-        </div>
-        <div className="page-header-actions">
+      <CommandRegion
+        ariaLabel="Overview commands"
+        eyebrow="Operations Dashboard"
+        title="Overview"
+        description={
+          overview
+            ? `Today in ${overview.range.timezone_label}. Last refreshed ${formatDateTime(overview.generated_at)}.`
+            : "Loading durable operations state."
+        }
+        status={
+          <StatusCluster
+            items={[
+              { label: `${metrics?.active_runs ?? 0} active`, tone: "active" },
+              { label: `${metrics?.attention_today ?? 0} attention`, tone: metrics?.attention_today ? "warning" : "muted" },
+            ]}
+            ariaLabel="Overview status"
+          />
+        }
+        primaryAction={
+          <Button type="button" onClick={onOpenWorkflows}>
+            Open Workflows
+          </Button>
+        }
+        secondaryActions={
           <Button type="button" variant="secondary" onClick={onRefresh}>
             <RefreshCw aria-hidden="true" />
             Refresh Overview
           </Button>
-          <Button type="button" onClick={onOpenWorkflows}>
-            Open Workflows
-          </Button>
-        </div>
-      </header>
+        }
+      />
 
       {error ? (
-        <div className="panel overview-error" role="alert">
-          <strong>Overview unavailable</strong>
-          <p>{error}</p>
-          <Button type="button" variant="secondary" onClick={onRefresh}>
-            Retry
-          </Button>
-        </div>
+        <StatePanel
+          tone="danger"
+          title="Overview unavailable"
+          description={error}
+          primaryAction={
+            <Button type="button" variant="secondary" onClick={onRefresh}>
+              Retry
+            </Button>
+          }
+        />
       ) : null}
 
       <section className="overview-kpi-grid" aria-label="Operations metrics">
@@ -80,7 +97,7 @@ export function OperationsOverviewPage({
               ))}
             </div>
           ) : (
-            <EmptyState title="No active runs" body="Workflow runs that are currently executing appear here." />
+            <OverviewEmptyState title="No active runs" body="Workflow runs that are currently executing appear here." />
           )}
         </Panel>
 
@@ -95,7 +112,7 @@ export function OperationsOverviewPage({
               ))}
             </div>
           ) : (
-            <EmptyState title="No attention items" body="Blocked launches, failed runs, and schedule issues appear here." />
+            <OverviewEmptyState title="No attention items" body="Blocked launches, failed runs, and schedule issues appear here." />
           )}
         </Panel>
 
@@ -121,7 +138,7 @@ export function OperationsOverviewPage({
               })}
             </div>
           ) : (
-            <EmptyState title="No activity today" body="Completed, failed, blocked, and schedule attention events appear by hour." />
+            <OverviewEmptyState title="No activity today" body="Completed, failed, blocked, and schedule attention events appear by hour." />
           )}
         </Panel>
 
@@ -139,7 +156,7 @@ export function OperationsOverviewPage({
               ))}
             </div>
           ) : (
-            <EmptyState title="No evidence metadata" body="Generated screenshot and download metadata appears here after runs finish." />
+            <OverviewEmptyState title="No evidence metadata" body="Generated screenshot and download metadata appears here after runs finish." />
           )}
         </Panel>
 
@@ -151,7 +168,7 @@ export function OperationsOverviewPage({
               ))}
             </div>
           ) : (
-            <EmptyState title="No upcoming schedules" body="Enabled schedules with a next occurrence appear here." />
+            <OverviewEmptyState title="No upcoming schedules" body="Enabled schedules with a next occurrence appear here." />
           )}
         </Panel>
       </div>
@@ -282,12 +299,9 @@ function ScheduleRow({
   );
 }
 
-function EmptyState({ title, body }: { title: string; body: string }) {
+function OverviewEmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="empty-state empty-state-compact">
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </div>
+    <EmptyState title={title} description={body} />
   );
 }
 

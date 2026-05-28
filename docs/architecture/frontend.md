@@ -28,6 +28,15 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
+- `src/components/patterns/`: reusable Mission Control product patterns such
+  as command regions, status clusters, state panels, table/detail shells,
+  key-value metadata, collapsed error details, empty states, data toolbars, and
+  confirmation dialogs. These components do not call IPC or know workflow,
+  run, evidence, identity, schedule, or settings DTOs.
+- `src/styles/tokens.css`: shared Mission Control color, focus, radius, and
+  z-index variables.
+- `src/styles/components.css`: shared CSS hooks for reusable product patterns
+  that are not feature-specific.
 - `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
 - `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, runtime failure, and system/startup issue presentation with copyable collapsed raw details for long errors.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
@@ -106,6 +115,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, auto arrange, arrange selection, and shortcuts icon controls.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
+- Shared product pattern composition for page command regions, compact
+  empty/loading/error/warning/stale states, status clusters, bounded
+  table/detail shells, safe key-value metadata, collapsed long error details,
+  and high-impact confirmation dialogs.
 - Settings navigation state in the app shell/sidebar, plus app-level
   diagnostics refresh, CloakBrowser install/check, and orphaned inactive
   profile cleanup command state. Settings displays environment readiness from

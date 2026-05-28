@@ -21,6 +21,36 @@ const badgeVariants = cva(
   },
 );
 
+const statusBadgeVariants = cva(
+  "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[var(--app-radius-pill)] border px-2.5 py-1 text-xs font-medium",
+  {
+    variants: {
+      tone: {
+        neutral:
+          "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)]",
+        muted:
+          "border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text-muted)]",
+        active:
+          "border-[var(--app-accent-border)] bg-[var(--app-surface)] text-[var(--app-accent)]",
+        success:
+          "border-[var(--app-success-border)] bg-[var(--app-surface)] text-[var(--app-success)]",
+        warning:
+          "border-[var(--app-warning-border)] bg-[var(--app-surface)] text-[var(--app-warning)]",
+        danger:
+          "border-[var(--app-danger-border)] bg-[var(--app-surface)] text-[var(--app-danger-text)]",
+      },
+      size: {
+        sm: "px-2 py-0.5 text-[11px]",
+        md: "px-2.5 py-1 text-xs",
+      },
+    },
+    defaultVariants: {
+      tone: "neutral",
+      size: "md",
+    },
+  },
+);
+
 function Badge({
   className,
   variant,
@@ -35,4 +65,20 @@ function Badge({
   );
 }
 
-export { Badge };
+function StatusBadge({
+  className,
+  tone,
+  size,
+  ...props
+}: React.ComponentProps<"span"> & VariantProps<typeof statusBadgeVariants>) {
+  return (
+    <span
+      data-slot="status-badge"
+      data-tone={tone ?? "neutral"}
+      className={cn(statusBadgeVariants({ tone, size, className }))}
+      {...props}
+    />
+  );
+}
+
+export { Badge, StatusBadge };

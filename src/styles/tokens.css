@@ -1,0 +1,30 @@
+:root {
+  --app-bg: #0b1016;
+  --app-surface: #121c26;
+  --app-surface-muted: #172431;
+  --app-sidebar: #0e151d;
+  --app-border: #233240;
+  --app-border-strong: #314758;
+  --app-border-hover: #3e5668;
+  --app-text: #e7eef5;
+  --app-text-secondary: #9aaebd;
+  --app-text-muted: #667d8d;
+  --app-accent: #32d3e6;
+  --app-accent-border: rgba(50, 211, 230, 0.48);
+  --app-accent-border-strong: rgba(50, 211, 230, 0.72);
+  --app-focus-ring: rgba(50, 211, 230, 0.18);
+  --app-danger-text: #f06467;
+  --app-danger-border: rgba(240, 100, 103, 0.42);
+  --app-danger-border-strong: rgba(240, 100, 103, 0.72);
+  --app-warning: #f4b740;
+  --app-warning-border: rgba(244, 183, 64, 0.48);
+  --app-success: #39d98a;
+  --app-success-border: rgba(57, 217, 138, 0.48);
+  --app-radius-sm: 6px;
+  --app-radius-md: 8px;
+  --app-radius-lg: 12px;
+  --app-radius-pill: 8px;
+  --app-z-sticky: 20;
+  --app-z-popover: 30;
+  --app-z-dialog: 50;
+}
