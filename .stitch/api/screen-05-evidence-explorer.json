@@ -1,0 +1,28 @@
+{
+  "id": 14002,
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "text": "{\"name\":\"projects/17656305095080667375/screens/e59fce6c25054d749fa50b5405129b6f\",\"title\":\"Evidence Explorer - Traceability Navigation Update\",\"screenshot\":{\"name\":\"projects/17656305095080667375/files/df967cee438d451fb4ddd1b543cf348b\",\"downloadUrl\":\"https://lh3.googleusercontent.com/aida/ADBb0uh7_z3O3A2A9VasPWzIcZftyQqV2P85MAuHWEeZQxFFcD12ks99MnMEmNFWTa6fmwOdsqt5neM_qGmOFNz-V2SRPo46cQUgP8DTu3B9RyAqiNI4FVgEfAk04hpV-CAw5YbiDSsuaDUQiyJ_c_4ySCDFC0_-LOUtU9mWB0KXrc6VNJycLsg74R2dOyx-wCIdFEa19-farhdzn4z2gh94Z9hd0fa1DOlhIVs6d2VNivCSIeK2EcIX_l_AIu3O\"},\"htmlCode\":{\"name\":\"projects/17656305095080667375/files/f89ccd5492e7479dac17c45fbfc15f11\",\"downloadUrl\":\"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzhiZmI0NTYwNWZlODRjNTFhMmI3MzYzZjg2ZGI5NTI2EgsSBxDm7Zq2owYYAZIBJAoKcHJvamVjdF9pZBIWQhQxNzY1NjMwNTA5NTA4MDY2NzM3NQ&filename=&opi=96797242\",\"mimeType\":\"text/html\"},\"width\":\"2560\",\"height\":\"2048\",\"deviceType\":\"DESKTOP\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "deviceType": "DESKTOP",
+      "height": "2048",
+      "htmlCode": {
+        "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzhiZmI0NTYwNWZlODRjNTFhMmI3MzYzZjg2ZGI5NTI2EgsSBxDm7Zq2owYYAZIBJAoKcHJvamVjdF9pZBIWQhQxNzY1NjMwNTA5NTA4MDY2NzM3NQ&filename=&opi=96797242",
+        "mimeType": "text/html",
+        "name": "projects/17656305095080667375/files/f89ccd5492e7479dac17c45fbfc15f11"
+      },
+      "name": "projects/17656305095080667375/screens/e59fce6c25054d749fa50b5405129b6f",
+      "screenshot": {
+        "downloadUrl": "https://lh3.googleusercontent.com/aida/ADBb0uh7_z3O3A2A9VasPWzIcZftyQqV2P85MAuHWEeZQxFFcD12ks99MnMEmNFWTa6fmwOdsqt5neM_qGmOFNz-V2SRPo46cQUgP8DTu3B9RyAqiNI4FVgEfAk04hpV-CAw5YbiDSsuaDUQiyJ_c_4ySCDFC0_-LOUtU9mWB0KXrc6VNJycLsg74R2dOyx-wCIdFEa19-farhdzn4z2gh94Z9hd0fa1DOlhIVs6d2VNivCSIeK2EcIX_l_AIu3O",
+        "name": "projects/17656305095080667375/files/df967cee438d451fb4ddd1b543cf348b"
+      },
+      "title": "Evidence Explorer - Traceability Navigation Update",
+      "width": "2560"
+    }
+  }
+}

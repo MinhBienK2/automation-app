@@ -23,7 +23,14 @@
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
 - Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. `run_policy.run_from_selected_mode` controls whether the sub-plan stops after the selected node or continues through the downstream main path. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
 - Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled top-level step evidence and executed nested action traces to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
+- Run persistence records durable `source` provenance as `manual` or
+  `schedule` at run creation so historical evidence filtering remains
+  meaningful after restart.
 - Scheduled runs start through the same saved-workflow command path as manual full runs. If the scheduled workflow conflicts with an active workflow, active persistent profile, or active batch, the scheduler records a skipped occurrence instead of queueing it; isolated due schedules can start in the same scheduler tick.
+- Manual full-run launch attempts that fail graph or Workflow Settings
+  validation before a run row exists write sanitized operational attention for
+  Overview. Scheduled validation failures continue to use schedule events and
+  are not duplicated into operational attention rows.
 - `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup actions before graph actions.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
@@ -55,6 +62,13 @@
 - Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
 - Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`. At finish time, command persistence keeps compatible top-level `run_steps` rows and appends executed nested trace rows, so the stored rows can reconstruct which branch, loop iteration, or retry attempt actually ran.
+- Overview only reads metadata from sanitized structured evidence; artifact
+  opening, raw output inspection, absolute local paths, and arbitrary file
+  paths stay outside this phase.
+- Evidence Explorer reads typed evidence summaries and bounded details from
+  persisted outputs and run steps. Screenshot preview, artifact reveal, and
+  evidence-bundle export are backend commands that revalidate run-scoped
+  artifact paths under the app evidence directory before touching files.
 - Failures carry step id, step number, step name, action type, and reason when available.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 
@@ -77,6 +91,10 @@
 - The Electron runner captures runtime outputs before retaining or closing the session, so command callers can inspect values produced by extract, screenshot, download, variable, and transform actions.
 - Retained browser sessions are keyed by workflow/profile so multiple isolated workflows can retain inspectable browsers at the same time. Starting a fresh run closes only the retained session that would conflict with that workflow/profile before a new CloakBrowser context launches, releasing that persistent profile lock while preserving unrelated retained sessions.
 - A run-from-selected run reuses the matching retained context/page instead of closing and relaunching. If the retained browser was closed manually, the runner clears retained-session metadata and the command reports that a new reusable session must be created by running the workflow again.
+- Identity Lab can close a retained session by workflow/profile through a
+  guarded command. This releases only the retained in-memory browser context;
+  it does not remove the persistent profile directory, saved identity settings,
+  cookies/login state, evidence files, or historical run rows.
 - Workflow Settings Browser Launch resolves the browser identity before the browser starts. `BrowserSessionManager` maps persistent versus temporary storage, stable profile directory, fingerprint seed, fingerprint fonts directory, proxy server/bypass/credentials, explicit timezone/locale or local machine timezone/locale, GeoIP, supported WebRTC policy values, humanize toggle/preset, and headless mode into CloakBrowser launch options. New workflows enable GeoIP by default, and blank legacy location settings normalize back to GeoIP, so CloakBrowser resolves blank timezone/locale fields from the current public or proxy exit IP. Running with GeoIP off requires explicit timezone and locale values. It also applies the current CloakBrowser/Fingerprint.com lab mitigation flags: `--fingerprint-noise=false`, `--fingerprint-storage-quota=500`, and `--fingerprint-platform=windows`. When `AUTOMATION_BROWSER_ENGINE=camoufox`, the session manager maps the same storage/proxy/timezone/locale/headless/download settings into Playwright Firefox options and records Camoufox runtime evidence; CloakBrowser-only fingerprint flags are intentionally not passed to Firefox. Persona viewport/window dimensions stay in sanitized identity evidence for audit, but Browser Launch still does not send explicit Playwright `viewport`, `userAgent`, `--window-size`, or CloakBrowser screen-size overrides. In-run Set Viewport can still change runtime viewport later.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.

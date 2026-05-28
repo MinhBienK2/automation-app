@@ -25,6 +25,16 @@ describe("Workflow list integration", () => {
     resetWorkflowBridge();
   });
 
+  async function confirmLaunchRun(scope: HTMLElement = document.body) {
+    await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
+    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
+  }
+
+  async function openWorkflows() {
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+  }
+
   test("hides step counts and raw updated timestamps from workflow cards", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([
@@ -37,6 +47,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
 
@@ -57,7 +69,11 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     expect(await screen.findByText("No workflows yet")).toBeInTheDocument();
+    expect(screen.getByText("Mission Control Workspace")).toBeInTheDocument();
+    expect(screen.queryByText("Workflow Automation Manager")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Create Workflow" }));
@@ -79,6 +95,8 @@ describe("Workflow list integration", () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
+
+    await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
 
@@ -143,6 +161,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     await userEvent.click(await screen.findByRole("button", {
       name: "Run Login flow",
     }));
@@ -178,6 +198,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     expect(await screen.findByRole("button", { name: "Run Login flow" }))
       .toBeDisabled();
   });
@@ -202,6 +224,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
     expect(within(workflowCard as HTMLElement).getByRole("button", {
@@ -252,6 +276,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     const loginCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
     const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
 
@@ -270,7 +296,7 @@ describe("Workflow list integration", () => {
     expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
   });
 
-  test("Run Center renders multiple active runs and stops the selected run", async () => {
+  test("Runs renders multiple active runs and stops the selected run", async () => {
     const secondWorkflow = {
       id: "workflow-2",
       name: "Support flow",
@@ -313,10 +339,12 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Run Center" }));
+    await openWorkflows();
 
-    const runCenter = await screen.findByRole("region", { name: "Run Center" });
-    expect(within(runCenter).getByRole("heading", { name: "Run Center" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Runs" }));
+
+    const runCenter = await screen.findByRole("region", { name: "Runs" });
+    expect(within(runCenter).getByRole("heading", { name: "Runs" }))
       .toBeInTheDocument();
     expect(within(runCenter).getByText("Login flow")).toBeInTheDocument();
     expect(within(runCenter).getByText("Support flow")).toBeInTheDocument();
@@ -335,6 +363,8 @@ describe("Workflow list integration", () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
+
+    await openWorkflows();
 
     await userEvent.click(await screen.findByRole("button", { name: "Delete Login flow" }));
 
@@ -388,6 +418,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     await userEvent.click(await screen.findByRole("button", {
       name: "Duplicate Login flow",
     }));
@@ -426,6 +458,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     await userEvent.click(await screen.findByRole("button", {
       name: "Export Login flow",
@@ -516,6 +550,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     const file = new File([JSON.stringify(workflowPackage)], "workflow.json", {
       type: "application/json",
     });
@@ -549,6 +585,8 @@ describe("Workflow list integration", () => {
   test("rejects oversized workflow packages before reading JSON", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
     renderApp();
+
+    await openWorkflows();
 
     const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "huge.workflow.json", {
       type: "application/json",
@@ -585,6 +623,8 @@ describe("Workflow list integration", () => {
     });
 
     renderApp();
+
+    await openWorkflows();
 
     expect((await screen.findByText("Login flow")).closest("[data-slot='card']"))
       .toBeInTheDocument();
@@ -648,6 +688,8 @@ describe("Workflow list integration", () => {
 
     renderApp();
 
+    await openWorkflows();
+
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
@@ -655,7 +697,7 @@ describe("Workflow list integration", () => {
     const controlsRow = within(header).getByRole("group", {
       name: "Workflow controls row",
     });
-    await userEvent.click(within(controlsRow).getByRole("button", { name: "Run" }));
+    await confirmLaunchRun(controlsRow);
 
     expect(await screen.findByText("Failed at step 1: XPath not found"))
       .toBeInTheDocument();

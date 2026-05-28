@@ -13,13 +13,37 @@ Preserve these unless the task explicitly changes them.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
 - Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
+- Overview is the default Mission Control entry point. It shows backend-owned
+  durable metrics, live operations, attention, activity, recent evidence
+  metadata, and upcoming schedules for the operator's local day.
+- Mission Control sidebar order is Overview, Workflows, Runs, Evidence,
+  Schedules, Identities, Settings. Overview is the default first screen.
+- The shell command bar searches bounded workflow, run, schedule, evidence, and
+  identity read models only. Search results route through typed Mission Control
+  targets and must not expose raw outputs, cookies, tokens, proxy credentials,
+  profile contents, absolute local paths, or arbitrary diagnostic payloads.
+  Identity results derived from persisted evidence open read-only historical
+  context tied to the evidence run.
+- The shell Alerts button opens Overview and marks the Attention Queue as the
+  focused target.
+- Evidence is a separate sidebar page between Runs and Schedules. It is the
+  only broad historical evidence browser; Overview recent evidence opens
+  Evidence focused on the selected evidence id, and Runs selected run details
+  can open Evidence filtered to that run.
+- Identities is a separate sidebar page after Schedules and before Settings.
+  It lists workflow-owned current browser identities, shows managed identity
+  posture/diagnostics/run context, and opens read-only historical references
+  for old identity ids from evidence or rotation history.
 - Scheduled runs use the latest saved workflow graph and saved Workflow Settings at fire time; unsaved workflow detail drafts are not run.
 - Schedules run only while the Electron app process is active. Missed occurrences are skipped and recorded; the scheduler does not run catch-up backlogs.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
 - Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
 - Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
+- Schedule history entries with run ids can open the matching Runs target, and
+  all schedule history entries can open the owning Workflow target. A stale or
+  deleted schedule target renders an unavailable target message.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and local fingerprint font directories.
-- Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. Run is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
+- Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. `Launch Run` is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
 - Workflow Settings Run Policy exposes maximum workflow duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control. When Run from selected is enabled, the group shows a scope select with `selected_only` for running only the selected node and `from_selected` for running from that node through the downstream main path. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Graph exposes the new link wait default for newly created graph links in one grouped control. It supports no default wait, fixed duration milliseconds, or random min/max milliseconds, and changing it must not rewrite existing links.
@@ -31,9 +55,22 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings validation warns operators when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities. CloakBrowser diagnostics inspect configured font directories and report missing/unreadable directories, file counts, normalized hashes, expected family coverage, shared-directory warnings, and bounded approximate profile sizes instead of placeholder status.
 - Set Viewport is an in-run viewport-size action. Active authoring exposes width and height only; Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile viewport, or touch input controls.
 - Workflow Settings saves, backend identity reset, and workflow deletion must reject browser identity profile reset/delete while a workflow/profile run is active or a retained browser session is still active for that workflow/profile.
+- Identity Lab Close Retained Session closes only the matching in-memory
+  retained browser context after backend guards pass. It must not delete
+  profile data, cookies/login state, workflow settings, evidence, or
+  historical runs.
+- Identity Lab Reset Identity uses the existing guarded backend identity reset
+  command with in-app confirmation and is unavailable while an active run or
+  retained session blocks the backend command.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and uses nested collapsible sections for best-fit guidance, non-goals, precedence, field explanations, examples, related graph actions, common mistakes, and safety notes when present. Detailed field, example, related-action, and mistake items are also individually collapsible. It explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
+- App Settings includes only current app-level preferences, environment
+  readiness diagnostics, guarded local maintenance commands, and graph shortcut
+  guidance. It does not introduce policy, retention, notification, or theme
+  systems. Diagnostics display CloakBrowser, GeoIP, headed display, font,
+  profile-count, and smoke readiness without raw binary/cache/profile/font
+  paths.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
@@ -82,12 +119,33 @@ Preserve these unless the task explicitly changes them.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
-- Run Center is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
+- Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
+- Runs can render one selected persisted run detail opened from Overview or
+  shell navigation. Selected run details can open related Evidence, Workflow,
+  and Identity targets, and stale run targets render an unavailable target
+  message.
+- Evidence is a separate app screen reachable from the sidebar. It lists only
+  typed persisted evidence summaries and bounded typed details for screenshot,
+  download, browser identity, action trace, and evidence manifest items. It
+  does not expose raw arbitrary output browsing. Identity evidence opens
+  read-only Identity Lab historical context tied to the evidence run.
+- Identities is a separate app screen reachable from the sidebar. It receives
+  sanitized Identity Lab DTOs and does not expose raw profile paths, browser
+  storage, cookies, tokens, proxy credentials, absolute local font/binary paths,
+  or raw arbitrary run outputs.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
+- Mission Control must remain usable at compact desktop widths such as
+  1024x768 without horizontal page overflow; table interiors may keep their own
+  bounded horizontal scrolling.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
+- Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. `Run from selected` remains the direct retained-session debugging command.
+- A real manual full-run launch attempt blocked by graph or Workflow Settings
+  validation before browser launch creates one sanitized durable
+  `launch_blocked` attention item visible on Overview. Manual Validate alone
+  does not create attention.
 - Running a graph shows status in the page header and reflects graph progress through canvas node state.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.
@@ -117,6 +175,10 @@ Preserve these unless the task explicitly changes them.
 - Browser sessions remain open after success, failure, and stop by default. Workflow Settings Run Policy browser retention can close the browser by default, and terminal End Success, End Failure, or Stop Workflow nodes can explicitly request closure.
 - Failures identify the failed step when possible.
 - Screenshots, downloads, and failure screenshots are written under run-scoped evidence directories and surfaced through structured `__evidence` metadata.
+- Evidence artifact preview/reveal/export commands accept evidence ids, not
+  paths. The backend resolves the item from persisted metadata, validates it is
+  under `evidence/runs/<run_id>/...`, and never returns absolute original paths
+  to the renderer. Downloads are not previewed or executed in-app.
 - `browser_identity` output evidence includes a fingerprint seed hash, configured fingerprint font hash when available, sanitized persona metadata/rationale, timezone/locale source, supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, configured humanization status and preset, and CloakBrowser wrapper/binary version evidence.
 - Graph runs use the same run-state contract as workflow runs. When compiled graph node ids are present in run state, the canvas reflects current/completed/failed nodes.
 

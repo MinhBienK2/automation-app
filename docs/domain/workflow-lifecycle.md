@@ -7,6 +7,10 @@
 - Repository trims and stores the workflow with timestamps, creates a `Start -> New node` draft graph, and persists default Workflow Settings with a browser identity. `New node` is an unconfigured action node with `config: null`.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh backend-generated browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
+- If a manual full-run launch from Graph Builder or the workflow list is
+  blocked by graph/settings validation before a run row is created, the backend
+  records one sanitized `launch_blocked` operational attention row for Overview.
+  Manual Validate does not write this audit row.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
 
 ## Open Detail
@@ -62,10 +66,30 @@
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
 - `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
 - Reset identity in Workflow Settings is an in-app confirmation that delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, and returns saved settings to the dialog.
+- Identity Lab can close the selected workflow/profile's retained session
+  through `closeIdentityRetainedSession`. Closing a retained session clears only
+  in-memory browser context state and leaves persistent profile data, settings,
+  cookies/login state, evidence, and historical runs intact. Identity Lab reset
+  uses the same guarded `resetWorkflowBrowserIdentity` command as Workflow
+  Settings.
 - `validate_workflow_run` reports graph and settings issues without starting the runner.
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `list_run_states` while any run snapshot is `running`, regardless of whether the run was started from the workflow detail workspace, directly from the workflow list, or by the scheduler. `get_run_state` remains a compatibility/latest-state view.
+- Overview loads a bounded operations aggregate through `getOperationsOverview`,
+  which rejects local-day UTC ranges over 48 hours before building hourly
+  activity buckets, and can navigate persisted run references into Runs through
+  `getOperationalRunDetail`.
+- Evidence loads durable persisted run evidence through `listEvidenceItems`.
+  Overview recent evidence can focus a specific evidence id, and Runs selected
+  durable run detail can open Evidence with a `run_id` filter.
+- Identity Lab loads current workflow-owned browser identity posture through
+  `getIdentityLabOverview` / `getIdentityLabDetail`. Evidence details with an
+  identity id open Identity Lab as a read-only historical identity reference
+  with workflow, run, and evidence context.
+- Persisted run rows record durable `source` provenance as `manual` or
+  `schedule`; older local rows are migrated deterministically from started
+  schedule events when possible and otherwise treated as manual.
 - Graph runs share the same run-state lifecycle as full workflow runs, with each active workflow run tracked by its run id.
 - Terminal run state, outputs, action traces, failure screenshot paths, and serialized step errors are persisted to `runs` and `run_steps`. Top-level run-step rows remain compatible with existing history queries, while executed nested branch/body traces are appended with parent node and sequence metadata for path reconstruction.
 - End Success, End Failure, and Stop Workflow can opt into closing the browser at the terminal point. When that option is off, Workflow Settings Run Policy browser retention decides whether terminal runs retain or close the browser session.

@@ -39,12 +39,31 @@ describe("App shell", () => {
 
     expect(await screen.findByRole("complementary", { name: "Application sidebar" }))
       .toBeInTheDocument();
-    const logo = screen.getByRole("img", { name: "Automation App logo" });
+    const logo = screen.getByRole("img", { name: "Mission Control logo" });
     expect(logo.getAttribute("src")).toContain("app-logo.svg");
+    expect(screen.getByText("Mission Control")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Workflows" })).toHaveAttribute(
       "data-slot",
       "button",
     );
+    expect(screen.getByRole("button", { name: "Runs" })).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
+    const navItems = within(screen.getByRole("navigation", { name: "Main navigation" }))
+      .getAllByRole("button")
+      .map((item) => item.textContent);
+    expect(navItems).toEqual([
+      "Overview",
+      "Workflows",
+      "Runs",
+      "Evidence",
+      "Schedules",
+      "Identities",
+      "Settings",
+    ]);
+    expect(screen.queryByRole("button", { name: "Run Center" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Identities" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Application content" }))
       .toHaveClass("app-content");
   });

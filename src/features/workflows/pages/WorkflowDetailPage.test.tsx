@@ -18,11 +18,27 @@ describe("Workflow detail integration", () => {
     resetWorkflowBridge();
   });
 
+  async function confirmLaunchRun(scope: HTMLElement = document.body) {
+    await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
+    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
+  }
+
+  async function openWorkflows() {
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+  }
+
+  async function openWorkflowDetails() {
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+  }
+
   test("opens workflow details on a separate screen and returns to the list", async () => {
     mockWorkflowBridgeCommands(workflowDetailScenario([sleepStep]));
 
     renderApp();
 
+    await openWorkflows();
     expect(await screen.findByRole("heading", { name: "Workflows" })).toBeInTheDocument();
     expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Main navigation" }))
@@ -48,7 +64,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
 
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
@@ -90,7 +106,7 @@ describe("Workflow detail integration", () => {
     expect(within(controlsRow).getByRole("button", { name: "Save" }))
       .toHaveClass("workflow-command-icon");
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
-    expect(within(controlsRow).getByRole("button", { name: "Run" }))
+    expect(within(controlsRow).getByRole("button", { name: "Launch Run" }))
       .toHaveAttribute("data-slot", "button");
     const editor = screen.getByRole("region", { name: "Visual Graph" });
     expect(editor).toBeInTheDocument();
@@ -99,6 +115,38 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByRole("region", { name: "Builder Steps" }))
       .not.toBeInTheDocument();
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
+  });
+
+  test("confirms full graph launch before running", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+      run_workflow: { ...idleRunState, status: "running" },
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    await userEvent.click(await screen.findByRole("button", { name: "Launch Run" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
+    expect(within(dialog).getByText("Login flow")).toBeInTheDocument();
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
+      workflowId: "workflow-1",
+    });
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
+      workflowId: "workflow-1",
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Launch Run" }));
+    const reopenedDialog = await screen.findByRole("dialog", { name: "Launch Run" });
+    await userEvent.click(within(reopenedDialog).getByRole("button", { name: "Launch Run" }));
+
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow", {
+      workflowId: "workflow-1",
+    });
   });
 
   test("runs from the selected node when a retained persistent session is available", async () => {
@@ -149,7 +197,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
     expect(runFromSelected).toBeEnabled();
     await userEvent.click(runFromSelected);
@@ -208,7 +256,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
     expect(runFromSelected).toBeEnabled();
     await userEvent.click(runFromSelected);
@@ -243,7 +291,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
 
     expect(screen.queryByRole("button", { name: "Run from selected" }))
       .not.toBeInTheDocument();
@@ -301,7 +349,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     expect(screen.queryByRole("dialog", { name: "Workflow Settings" }))
       .not.toBeInTheDocument();
 
@@ -379,7 +427,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -421,7 +469,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -459,7 +507,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     await userEvent.click(screen.getByRole("button", { name: "Validate" }));
 
     const panel = await screen.findByRole("region", { name: "Run issues" });
@@ -488,7 +536,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     await userEvent.click(screen.getByRole("button", { name: "Validate" }));
     const panel = await screen.findByRole("region", { name: "Run issues" });
 
@@ -574,16 +622,16 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
     const controlsRow = within(header).getByRole("group", {
       name: "Workflow controls row",
     });
-    await userEvent.click(within(controlsRow).getByRole("button", { name: "Run" }));
+    await confirmLaunchRun(controlsRow);
 
-    expect(within(controlsRow).getByRole("button", { name: "Run" })).toBeDisabled();
+    expect(within(controlsRow).getByRole("button", { name: "Launch Run" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Test to Here" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Test All" }))
@@ -648,6 +696,7 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
+    await openWorkflows();
     const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
     await userEvent.click(within(supportCard as HTMLElement).getByRole("button", {
       name: "View Details",
@@ -659,7 +708,7 @@ describe("Workflow detail integration", () => {
       name: "Workflow controls row",
     });
 
-    expect(within(controlsRow).getByRole("button", { name: "Run" }))
+    expect(within(controlsRow).getByRole("button", { name: "Launch Run" }))
       .not.toBeDisabled();
     expect(within(controlsRow).queryByRole("button", { name: "Stop" }))
       .not.toBeInTheDocument();
@@ -694,14 +743,14 @@ describe("Workflow detail integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowDetails();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
     const controlsRow = within(header).getByRole("group", {
       name: "Workflow controls row",
     });
-    await userEvent.click(within(controlsRow).getByRole("button", { name: "Run" }));
+    await confirmLaunchRun(controlsRow);
 
     const panel = await screen.findByRole("region", { name: "Run issues" });
     expect(within(panel).getByText("Run failed at step 1: Navigate")).toBeInTheDocument();

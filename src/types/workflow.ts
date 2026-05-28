@@ -1015,6 +1015,399 @@ export type WorkflowScheduleEventFilter = {
   limit?: number | null;
 };
 
+export type OperationsNavigationTarget =
+  | { type: "workflow"; workflow_id: string }
+  | { type: "run"; run_id: string }
+  | { type: "schedule"; schedule_id: string }
+  | { type: "evidence"; evidence_id: string };
+
+export type MissionControlTarget =
+  | { type: "overview"; focus?: "attention" | "recent_evidence" | "live_runs" }
+  | {
+      type: "workflow";
+      workflow_id: string;
+      mode?: "list" | "detail" | "graph" | "settings";
+    }
+  | { type: "run"; run_id: string; step_id?: string | null; evidence_id?: string | null }
+  | { type: "evidence"; evidence_id?: string | null; filters?: EvidenceListRequest | null }
+  | { type: "identity"; target: IdentityLabTarget }
+  | { type: "schedule"; schedule_id?: string | null; schedule_event_id?: string | null }
+  | {
+      type: "graph_issue";
+      workflow_id: string;
+      node_id?: string | null;
+      issue_id?: string | null;
+      run_id?: string | null;
+      evidence_id?: string | null;
+    };
+
+export type CommandSearchResult = {
+  id: string;
+  type: "Workflow" | "Run" | "Evidence" | "Schedule" | "Identity";
+  label: string;
+  context?: string | null;
+  target: MissionControlTarget;
+};
+
+export type OperationsOverviewRequest = {
+  day_start_utc: string;
+  day_end_utc: string;
+  timezone_label?: string | null;
+  attention_filter?: {
+    source_kind?: Array<"launch_blocked" | "run_failed" | "schedule_event"> | null;
+    severity?: Array<"warning" | "failure"> | null;
+  } | null;
+  limits?: {
+    live_runs?: number | null;
+    attention?: number | null;
+    recent_evidence?: number | null;
+    upcoming_schedules?: number | null;
+  } | null;
+};
+
+export type OverviewMetrics = {
+  active_runs: number;
+  succeeded_today: number;
+  attention_today: number;
+  upcoming_schedules: number;
+};
+
+export type OverviewLiveRun = {
+  run_id: string;
+  workflow_id: string;
+  workflow_name: string;
+  source: WorkflowRunSource;
+  status: RunStatus;
+  current_step_id?: string | null;
+  current_step_number?: number | null;
+  started_at: string;
+  identity_display_name: string | null;
+  navigation_target: OperationsNavigationTarget;
+};
+
+export type OverviewAttentionItem = {
+  id: string;
+  source_kind: "launch_blocked" | "run_failed" | "schedule_event";
+  severity: "warning" | "failure";
+  occurred_at: string;
+  title: string;
+  summary: string;
+  workflow: { id: string; name: string };
+  run_id?: string | null;
+  schedule_id?: string | null;
+  schedule_event_type?: WorkflowScheduleStatus | null;
+  navigation_target: OperationsNavigationTarget;
+};
+
+export type OverviewActivityBucket = {
+  bucket_start_utc: string;
+  bucket_end_utc: string;
+  succeeded: number;
+  failed: number;
+  blocked: number;
+  schedule_attention: number;
+};
+
+export type OverviewEvidenceItem = {
+  evidence_id: string;
+  artifact_kind: string;
+  relative_path_or_label: string;
+  created_at?: string | null;
+  run_id: string;
+  workflow: { id: string; name: string };
+  node_id?: string | null;
+  navigation_targets: {
+    run?: OperationsNavigationTarget;
+    workflow?: OperationsNavigationTarget;
+    evidence?: OperationsNavigationTarget;
+  };
+};
+
+export type OverviewUpcomingSchedule = {
+  schedule_id: string;
+  workflow_id: string;
+  workflow_name: string;
+  schedule_name: string;
+  next_run_at: string;
+  last_status?: WorkflowScheduleStatus | null;
+  last_reason?: string | null;
+  navigation_target: OperationsNavigationTarget;
+};
+
+export type BoundedOperationsList<T> = {
+  items: T[];
+  total: number;
+  has_more: boolean;
+};
+
+export type OperationsOverview = {
+  generated_at: string;
+  range: {
+    day_start_utc: string;
+    day_end_utc: string;
+    timezone_label: string;
+  };
+  metrics: OverviewMetrics;
+  live_runs: BoundedOperationsList<OverviewLiveRun>;
+  attention: BoundedOperationsList<OverviewAttentionItem>;
+  activity: OverviewActivityBucket[];
+  recent_evidence: BoundedOperationsList<OverviewEvidenceItem>;
+  upcoming_schedules: BoundedOperationsList<OverviewUpcomingSchedule>;
+  data_warnings: { evidence_items_skipped: number };
+};
+
+export type OperationalRunStepSummary = {
+  node_id: string | null;
+  step_number: number;
+  action_type: string;
+  status: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  sanitized_error_summary?: string | null;
+};
+
+export type OperationalRunDetail = {
+  run_id: string;
+  workflow: { id: string; name: string };
+  identity?: { id: string; display_name?: string | null } | null;
+  status: RunStatus;
+  started_at: string;
+  finished_at?: string | null;
+  sanitized_error_summary?: string | null;
+  step_summaries: OperationalRunStepSummary[];
+  step_summaries_has_more: boolean;
+  evidence_metadata: OverviewEvidenceItem[];
+  evidence_metadata_has_more: boolean;
+};
+
+export type EvidenceKind =
+  | "screenshot"
+  | "download"
+  | "browser_identity"
+  | "action_trace"
+  | "evidence_manifest";
+
+export type EvidenceFileState = "unchecked" | "available" | "unavailable";
+
+export type EvidenceListRequest = {
+  search?: string | null;
+  types?: EvidenceKind[] | null;
+  run_statuses?: RunStatus[] | null;
+  sources?: WorkflowRunSource[] | null;
+  workflow_id?: string | null;
+  run_id?: string | null;
+  identity_id?: string | null;
+  time_start_utc?: string | null;
+  time_end_utc?: string | null;
+  focus_evidence_id?: string | null;
+  cursor?: string | null;
+  limit?: number | null;
+};
+
+export type EvidenceListItem = {
+  evidence_id: string;
+  kind: EvidenceKind;
+  label: string;
+  created_at: string;
+  run: {
+    id: string;
+    status: RunStatus;
+    source: WorkflowRunSource;
+    started_at: string;
+    finished_at?: string | null;
+  };
+  workflow: { id: string; name: string } | null;
+  identity: { id: string; display_name?: string | null } | null;
+  node_id?: string | null;
+  step_number?: number | null;
+  relative_path?: string | null;
+  file_state?: EvidenceFileState;
+  navigation_targets: {
+    run: boolean;
+    workflow: boolean;
+  };
+};
+
+export type EvidencePage = {
+  generated_at: string;
+  items: EvidenceListItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+  warnings: {
+    skipped_artifacts: number;
+    skipped_reports: number;
+    skipped_traces: number;
+    skipped_manifests: number;
+  };
+};
+
+export type EvidenceDetail =
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "screenshot";
+        artifact_kind: "screenshot";
+        relative_path: string;
+        file_state: EvidenceFileState;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "download";
+        artifact_kind: "download";
+        relative_path: string;
+        file_state: EvidenceFileState;
+        size_bytes?: number | null;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "browser_identity";
+        fields: Array<{ key: string; value: string | number | boolean | null }>;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "action_trace";
+        entries: Array<Record<string, unknown>>;
+        has_more: boolean;
+      };
+    }
+  | {
+      item: EvidenceListItem;
+      payload: {
+        kind: "evidence_manifest";
+        rows: Array<{
+          key: string;
+          category: string;
+          approximate_bytes?: number | null;
+          redacted: boolean;
+          truncated: boolean;
+        }>;
+      };
+    };
+
+export type EvidenceScreenshotPreview = {
+  evidence_id: string;
+  mime_type: "image/png";
+  base64_data: string;
+  file_state: "available";
+};
+
+export type EvidenceBundleExportRequest = {
+  evidence_ids: string[];
+};
+
+export type EvidenceBundleExportResult = {
+  bundle_dir: string;
+  exported_count: number;
+  omitted_file_count: number;
+} | null;
+
+export type IdentityLabTarget =
+  | { type: "managed"; workflow_id: string; identity_id: string }
+  | {
+      type: "historical";
+      identity_id: string;
+      workflow_id?: string | null;
+      run_id?: string | null;
+      evidence_id?: string | null;
+    };
+
+export type IdentityLabOverviewRequest = {
+  search?: string | null;
+  selected_target?: IdentityLabTarget | null;
+  limits?: { identities?: number | null; rotation_history?: number | null } | null;
+};
+
+export type ManagedIdentitySummary = {
+  workflow_ref: { id: string; name: string };
+  identity_ref: { id: string; display_name?: string | null };
+  short_identity_id: string;
+  persona_id?: string | null;
+  persona_label?: string | null;
+  session_mode: WorkflowBrowserSessionMode;
+  profile_reuse: boolean;
+  retained_session: { active: boolean; reason?: string | null };
+  configured_posture_summary: string[];
+  last_run?: {
+    run_id: string;
+    status: RunStatus;
+    started_at: string;
+    finished_at?: string | null;
+  } | null;
+  recent_failures_24h: number;
+  warning_badges: string[];
+};
+
+export type IdentityLabManagedDetail = {
+  kind: "managed";
+  workflow_ref: { id: string; name: string };
+  identity_ref: { id: string; display_name?: string | null };
+  session: {
+    active: boolean;
+    profile_name?: string | null;
+    reset_blocked_reason?: string | null;
+  };
+  configured_posture: Array<{ label: string; value: string }>;
+  latest_observed?: {
+    run_id: string;
+    observed_at: string;
+    fields: Array<{ key: string; value: string | number | boolean | null }>;
+  } | null;
+  last_run?: ManagedIdentitySummary["last_run"];
+  recent_failures_24h: number;
+  evidence_summary: { total: number };
+  rotation_history: Array<{
+    previous_identity_id?: string | null;
+    next_identity_id?: string | null;
+    message: string;
+  }>;
+  diagnostics: {
+    binary_installed: boolean;
+    wrapper_version?: string | null;
+    geoip_available: boolean;
+    headed_display_available: boolean;
+    profile?: {
+      approximate_size_bytes: number;
+      active_session: boolean;
+    } | null;
+    font_status: CloakBrowserDiagnostics["font_checklist"]["status"];
+  };
+  actions: {
+    can_close_retained_session: boolean;
+    can_reset_identity: boolean;
+    reset_disabled_reason?: string | null;
+  };
+};
+
+export type IdentityLabHistoricalDetail = {
+  kind: "historical";
+  identity_ref: { id: string; display_name?: string | null };
+  workflow_ref?: { id: string; name: string } | null;
+  run_id?: string | null;
+  evidence_id?: string | null;
+  observed_fields: Array<{ key: string; value: string | number | boolean | null }>;
+};
+
+export type IdentityLabDetail = IdentityLabManagedDetail | IdentityLabHistoricalDetail;
+
+export type IdentityLabOverview = {
+  generated_at: string;
+  items: ManagedIdentitySummary[];
+  selected?: IdentityLabDetail | null;
+  counts: {
+    managed_identities: number;
+    active_retained_sessions: number;
+    identities_with_warnings: number;
+    identities_with_recent_failures: number;
+  };
+  data_warnings: string[];
+};
+
 export type ScheduleValidationIssue = {
   field: string;
   message: string;

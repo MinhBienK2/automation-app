@@ -35,6 +35,16 @@ const methodNames: BridgeMethodName[] = [
   "stopRun",
   "getRunState",
   "listRunStates",
+  "getOperationsOverview",
+  "getOperationalRunDetail",
+  "listEvidenceItems",
+  "getEvidenceDetail",
+  "getEvidenceScreenshotPreview",
+  "revealEvidenceArtifact",
+  "exportEvidenceBundle",
+  "getIdentityLabOverview",
+  "getIdentityLabDetail",
+  "closeIdentityRetainedSession",
   "listSchedules",
   "getSchedule",
   "createSchedule",
@@ -74,6 +84,18 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   workflowCommandCallMock(command, args);
 
   if (!(command in commands)) {
+    if (command === "get_operations_overview") return defaultOperationsOverview();
+    if (command === "get_operational_run_detail") return null;
+    if (command === "list_evidence_items") return defaultEvidencePage();
+    if (command === "get_evidence_detail") return null;
+    if (command === "get_evidence_screenshot_preview") {
+      throw new Error("Unexpected command: get_evidence_screenshot_preview");
+    }
+    if (command === "reveal_evidence_artifact") return null;
+    if (command === "export_evidence_bundle") return null;
+    if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
+    if (command === "get_identity_lab_detail") return null;
+    if (command === "close_identity_retained_session") return null;
     throw new Error(`Unexpected command: ${command}`);
   }
 
@@ -81,6 +103,59 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   return typeof handler === "function"
     ? (handler as CommandHandler)(args)
     : handler;
+}
+
+function defaultEvidencePage() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    items: [],
+    next_cursor: null,
+    has_more: false,
+    warnings: {
+      skipped_artifacts: 0,
+      skipped_reports: 0,
+      skipped_traces: 0,
+      skipped_manifests: 0,
+    },
+  };
+}
+
+function defaultIdentityLabOverview() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    items: [],
+    selected: null,
+    counts: {
+      managed_identities: 0,
+      active_retained_sessions: 0,
+      identities_with_warnings: 0,
+      identities_with_recent_failures: 0,
+    },
+    data_warnings: [],
+  };
+}
+
+function defaultOperationsOverview() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    range: {
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    },
+    metrics: {
+      active_runs: 0,
+      succeeded_today: 0,
+      attention_today: 0,
+      upcoming_schedules: 0,
+    },
+    live_runs: { items: [], total: 0, has_more: false },
+    attention: { items: [], total: 0, has_more: false },
+    activity: [],
+    recent_evidence: { items: [], total: 0, has_more: false },
+    upcoming_schedules: { items: [], total: 0, has_more: false },
+    data_warnings: { evidence_items_skipped: 0 },
+  };
 }
 
 export function mockWorkflowBridgeCommands(commands: CommandMap) {
@@ -177,6 +252,40 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.listRunStates.mockImplementation(() =>
     resolveCommand(commands, "list_run_states", undefined),
+  );
+  workflowBridgeMock.getOperationsOverview.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "get_operations_overview", { request }),
+  );
+  workflowBridgeMock.getOperationalRunDetail.mockImplementation((runId: string) =>
+    resolveCommand(commands, "get_operational_run_detail", { runId }),
+  );
+  workflowBridgeMock.listEvidenceItems.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "list_evidence_items", { request }),
+  );
+  workflowBridgeMock.getEvidenceDetail.mockImplementation((evidenceId: string) =>
+    resolveCommand(commands, "get_evidence_detail", { evidenceId }),
+  );
+  workflowBridgeMock.getEvidenceScreenshotPreview.mockImplementation((evidenceId: string) =>
+    resolveCommand(commands, "get_evidence_screenshot_preview", { evidenceId }),
+  );
+  workflowBridgeMock.revealEvidenceArtifact.mockImplementation((evidenceId: string) =>
+    resolveCommand(commands, "reveal_evidence_artifact", { evidenceId }),
+  );
+  workflowBridgeMock.exportEvidenceBundle.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "export_evidence_bundle", { request }),
+  );
+  workflowBridgeMock.getIdentityLabOverview.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "get_identity_lab_overview", { request }),
+  );
+  workflowBridgeMock.getIdentityLabDetail.mockImplementation((target: unknown) =>
+    resolveCommand(commands, "get_identity_lab_detail", { target }),
+  );
+  workflowBridgeMock.closeIdentityRetainedSession.mockImplementation(
+    (workflowId: string, profileName: string) =>
+      resolveCommand(commands, "close_identity_retained_session", {
+        workflowId,
+        profileName,
+      }),
   );
   workflowBridgeMock.listSchedules.mockImplementation(() =>
     resolveCommand(commands, "list_schedules", undefined),

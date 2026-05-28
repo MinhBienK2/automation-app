@@ -19,6 +19,9 @@ Node/Electron backend.
 - Workflow package service: `electron/backend/services/workflowPackageService.ts`
 - Electron SQLite bootstrap: `electron/backend/persistence/database.ts`
 - Electron repository: `electron/backend/persistence/workflowRepository.ts`
+- Operations read model: `electron/backend/operations/operationsRepository.ts`
+- Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
+- Identity read model: `electron/backend/identity/identityRepository.ts`
 - Command contract: `docs/contracts/electron-ipc.md`
 
 ## Belongs Here
@@ -32,12 +35,27 @@ Node/Electron backend.
 - Legacy workflow browser runtime config commands map to Workflow Settings Browser.
 - Import/export, duplicate, batch run, builder assist command logic.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
+- Operations aggregate reads through `getOperationsOverview` and
+  `getOperationalRunDetail`; metric meanings, attention dedupe, evidence
+  metadata filtering, and bounded limits stay in the backend.
+- Evidence reads and artifact operations through `listEvidenceItems`,
+  `getEvidenceDetail`, `getEvidenceScreenshotPreview`,
+  `revealEvidenceArtifact`, and `exportEvidenceBundle`; evidence extraction,
+  path validation, native reveal, and bundle writing stay in the backend.
+- Identity Lab reads and session action through `getIdentityLabOverview`,
+  `getIdentityLabDetail`, and `closeIdentityRetainedSession`; current identity
+  aggregation, historical identity fallback, run/evidence matching, sanitized
+  diagnostics, rotation history, and retained-session close guards stay in the
+  backend.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
 - Nested subworkflow nodes are not part of the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the saved workflow graph with saved Workflow Settings as the run baseline. The UI saves the current graph and dirty settings sections before invoking it.
+- Manual full-run launch attempts blocked by graph/settings validation before a
+  run row exists write one sanitized `launch_blocked` operational attention
+  row. Manual validation alone does not write attention.
 - Product-facing batch execution remains globally exclusive with normal workflow execution, shares run-manager stop handling and persisted run records, and rejects starts while any normal run is active.
 - Product-facing scheduled execution uses the same saved-workflow run path as manual `runWorkflow`, uses run-manager workflow/profile/batch conflict checks instead of a global normal-run lock, and records skipped/missed/failed scheduler decisions in schedule events.
 - Workflow package import delegates preview/import preparation, selected-section validation, and export sanitization to `WorkflowPackageService`; command handlers still wrap workflow, graph, and settings writes in a SQLite transaction. Export sanitization removes proxy secrets, proxy URL credentials, and local fingerprint font directories.
@@ -55,6 +73,10 @@ Node/Electron backend.
 
 - UI state decisions.
 - SQL implementation details.
+- Renderer-side KPI or evidence aggregation.
+- Renderer-side evidence extraction from raw outputs or filesystem paths.
+- Renderer-side identity aggregation from raw run outputs, diagnostics,
+  profile storage, or filesystem paths.
 - Browser action internals.
 - Active run/profile lock maps, run snapshots, batch state, and final run persistence internals outside calls into the run manager.
 

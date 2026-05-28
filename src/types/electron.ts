@@ -6,6 +6,19 @@ import type {
   ElementSnapshot,
   GraphValidationIssue,
   OrchestrationSchedule,
+  OperationalRunDetail,
+  OperationsOverview,
+  OperationsOverviewRequest,
+  EvidenceBundleExportRequest,
+  EvidenceBundleExportResult,
+  EvidenceDetail,
+  EvidenceListRequest,
+  EvidencePage,
+  EvidenceScreenshotPreview,
+  IdentityLabDetail,
+  IdentityLabOverview,
+  IdentityLabOverviewRequest,
+  IdentityLabTarget,
   RecordedEvent,
   RunState,
   RunValidationIssue,
@@ -74,6 +87,27 @@ export type WorkflowElectronBridge = {
   stopRun(runId?: string | null): Promise<WorkflowRunSnapshot>;
   getRunState(): Promise<RunState>;
   listRunStates(): Promise<WorkflowRunSnapshot[]>;
+  getOperationsOverview(
+    request: OperationsOverviewRequest,
+  ): Promise<OperationsOverview>;
+  getOperationalRunDetail(runId: string): Promise<OperationalRunDetail>;
+  listEvidenceItems(request?: EvidenceListRequest): Promise<EvidencePage>;
+  getEvidenceDetail(evidenceId: string): Promise<EvidenceDetail>;
+  getEvidenceScreenshotPreview(
+    evidenceId: string,
+  ): Promise<EvidenceScreenshotPreview>;
+  revealEvidenceArtifact(evidenceId: string): Promise<void>;
+  exportEvidenceBundle(
+    request: EvidenceBundleExportRequest,
+  ): Promise<EvidenceBundleExportResult>;
+  getIdentityLabOverview(
+    request?: IdentityLabOverviewRequest,
+  ): Promise<IdentityLabOverview>;
+  getIdentityLabDetail(target: IdentityLabTarget): Promise<IdentityLabDetail>;
+  closeIdentityRetainedSession(
+    workflowId: string,
+    profileName: string,
+  ): Promise<void>;
   listSchedules(): Promise<WorkflowSchedule[]>;
   getSchedule(scheduleId: string): Promise<WorkflowSchedule>;
   createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule>;

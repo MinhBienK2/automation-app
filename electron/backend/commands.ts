@@ -12,8 +12,13 @@ import type {
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
   ElementSnapshot,
+  EvidenceBundleExportRequest,
+  EvidenceListRequest,
+  IdentityLabOverviewRequest,
+  IdentityLabTarget,
   GraphValidationIssue,
   OrchestrationSchedule,
+  OperationsOverviewRequest,
   RecordedEvent,
   RunValidationIssue,
   ScheduleValidationIssue,
@@ -61,10 +66,13 @@ import {
   type RunnerCommandPort,
 } from "./runtime/runManager.js";
 import { sanitizePathSegment } from "./evidence/artifacts.js";
+import { EvidenceRepository } from "./evidence/evidenceRepository.js";
+import { IdentityRepository } from "./identity/identityRepository.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./graph/migration.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
+import { OperationsRepository } from "./operations/operationsRepository.js";
 import {
   createHighEntropyBrowserIdentityId,
   deriveFingerprintSeedFromIdentityId,
@@ -100,14 +108,37 @@ type CommandContext = {
   database: DatabaseSync;
   runner?: RunnerCommandPort;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
+  revealEvidenceArtifact?: (absolutePath: string) => void | Promise<void>;
+  selectEvidenceBundleDirectory?: () => Promise<string | null>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
 };
 
 export function createWorkflowCommandHandlers(context: CommandContext) {
   const repository = new WorkflowRepository(context.database);
   const scheduleRepository = new WorkflowScheduleRepository(context.database);
+  const operationsRepository = new OperationsRepository(context.database);
+  const evidenceRepository = new EvidenceRepository({
+    database: context.database,
+    appPaths: context.appPaths,
+    revealEvidenceArtifact: context.revealEvidenceArtifact,
+    selectEvidenceBundleDirectory: context.selectEvidenceBundleDirectory,
+  });
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   const runManager = new RunManager({ database: context.database, runner });
+  const identityRepository = new IdentityRepository({
+    database: context.database,
+    workflows: () => repository.listWorkflows(),
+    settingsForWorkflow: (workflowId) => getSettings(workflowId),
+    diagnostics: () =>
+      buildCloakBrowserDiagnostics({
+        appPaths: context.appPaths,
+        workflows: repository.listWorkflows(),
+        settingsForWorkflow: getSettings,
+        lastRunAtForWorkflow,
+        retainedProfileNames: runManager.retainedProfileNames(),
+      }),
+    runner,
+  });
   const settingsService = new WorkflowSettingsService({
     directoryReadable,
     isOptionalModuleAvailable,
@@ -349,6 +380,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const runIssues = validateWorkflowRun(workflowId);
     const firstError = runIssues.find((issue) => issue.level === "error");
     if (firstError) {
+      if (source === "manual") {
+        operationsRepository.recordLaunchBlocked({ workflow, issues: runIssues });
+      }
       throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
     }
     if (compileGraph(graph).steps.length === 0) {
@@ -636,6 +670,58 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     listRunStates(): WorkflowRunSnapshot[] {
       return runManager.listRunStates();
+    },
+
+    getOperationsOverview(request: OperationsOverviewRequest) {
+      return operationsRepository.getOverview(request, runManager.listRunStates());
+    },
+
+    getOperationalRunDetail(runId: string) {
+      return operationsRepository.getRunDetail(runId);
+    },
+
+    listEvidenceItems(request: EvidenceListRequest = {}) {
+      return evidenceRepository.listEvidenceItems(request);
+    },
+
+    getEvidenceDetail(evidenceId: string) {
+      return evidenceRepository.getEvidenceDetail(evidenceId);
+    },
+
+    getEvidenceScreenshotPreview(evidenceId: string) {
+      return evidenceRepository.getEvidenceScreenshotPreview(evidenceId);
+    },
+
+    revealEvidenceArtifact(evidenceId: string) {
+      return evidenceRepository.revealEvidenceArtifact(evidenceId);
+    },
+
+    exportEvidenceBundle(request: EvidenceBundleExportRequest) {
+      return evidenceRepository.exportEvidenceBundle(request);
+    },
+
+    getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
+      return identityRepository.getOverview(request);
+    },
+
+    getIdentityLabDetail(target: IdentityLabTarget) {
+      return identityRepository.getDetail(target);
+    },
+
+    async closeIdentityRetainedSession(workflowId: string, profileName: string) {
+      const settings = getSettings(workflowId);
+      const currentProfile = browserProfileKey(settings);
+      if (currentProfile !== profileName) {
+        throw commandError("Identity profile does not match current workflow settings", "profileName");
+      }
+      const conflict = activeRunConflict(workflowId, settings);
+      if (conflict) {
+        throw commandError(conflict.message, conflict.field);
+      }
+      if (!runner.closeRetainedSession) {
+        throw commandError("Retained session close is unavailable", "profileName");
+      }
+      await runner.closeRetainedSession(workflowId, profileName);
     },
 
     listSchedules(): WorkflowSchedule[] {
