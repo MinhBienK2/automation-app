@@ -16,6 +16,50 @@ import {
 } from "./tests/mocks/workflowScenarios";
 import { renderApp } from "./tests/utils/renderApp";
 
+function diagnosticsFixture() {
+  return {
+    wrapper_version: "1.0.0",
+    binary: {
+      version: "120.0.0",
+      platform: "linux",
+      installed: true,
+      binary_path: "/redacted/cloakbrowser",
+      cache_dir: "/redacted/cache",
+      download_url: null,
+    },
+    auto_update_enabled: false,
+    checksum_skip_enabled: false,
+    geoip_available: true,
+    profile_root: "/redacted/profiles",
+    font_checklist: {
+      status: "ok",
+      reason: null,
+      directories: [],
+    },
+    last_smoke_result: {
+      status: "not_recorded",
+      reason: null,
+    },
+    headed_display: {
+      available: true,
+      reason: null,
+    },
+    profiles: [
+      {
+        profile_dir: "bi_search",
+        identity_id: "bi_search",
+        display_name: "QA identity",
+        workflow_id: workflow.id,
+        workflow_name: workflow.name,
+        approximate_size_bytes: 2048,
+        last_modified_at: "2026-05-27T09:00:00.000Z",
+        last_run_at: "2026-05-27T09:00:00.000Z",
+        active_session: false,
+      },
+    ],
+  };
+}
+
 describe("App settings and graph autosave", () => {
   beforeEach(() => {
     resetWorkflowBridge();
@@ -380,6 +424,168 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Close Retained Session" }));
     await waitFor(() => {
       expect(closeIdentityRetainedSession).toHaveBeenCalledWith(workflow.id, "bi_123");
+    });
+  });
+
+  test("routes shell search results and alerts through typed Mission Control targets", async () => {
+    const evidencePage = {
+      generated_at: "2026-05-27T00:00:00.000Z",
+      items: [
+        {
+          evidence_id: "ev-search",
+          kind: "browser_identity",
+          label: "QA browser identity",
+          created_at: "2026-05-27T09:01:00.000Z",
+          run: {
+            id: "run-search",
+            status: "success",
+            source: "manual",
+            started_at: "2026-05-27T09:00:00.000Z",
+            finished_at: "2026-05-27T09:02:00.000Z",
+          },
+          workflow: { id: workflow.id, name: workflow.name },
+          identity: { id: "bi_search", display_name: "QA identity" },
+          node_id: "identity",
+          step_number: 1,
+          relative_path: null,
+          file_state: "unchecked",
+        },
+      ],
+      next_cursor: null,
+      has_more: false,
+      warnings: {
+        skipped_artifacts: 0,
+        skipped_reports: 0,
+        skipped_traces: 0,
+        skipped_manifests: 0,
+      },
+    };
+    const identityOverview = {
+      generated_at: "2026-05-27T10:00:00.000Z",
+      counts: {
+        managed_identities: 1,
+        active_retained_sessions: 0,
+        identities_with_warnings: 0,
+        identities_with_recent_failures: 0,
+      },
+      items: [
+        {
+          workflow_ref: { id: workflow.id, name: workflow.name },
+          identity_ref: { id: "bi_search", display_name: "QA identity" },
+          short_identity_id: "bi_search",
+          persona_label: "Windows Chrome",
+          session_mode: "persistent_profile",
+          profile_reuse: true,
+          retained_session: { active: false },
+          configured_posture_summary: ["GeoIP"],
+          last_run: null,
+          recent_failures_24h: 0,
+          warning_badges: [],
+        },
+      ],
+      selected: {
+        kind: "managed",
+        workflow_ref: { id: workflow.id, name: workflow.name },
+        identity_ref: { id: "bi_search", display_name: "QA identity" },
+        session: { active: false, profile_name: "bi_search" },
+        configured_posture: [{ label: "Persona", value: "Windows Chrome" }],
+        latest_observed: null,
+        last_run: null,
+        recent_failures_24h: 0,
+        evidence_summary: { total: 1 },
+        rotation_history: [],
+        diagnostics: {
+          binary_installed: true,
+          wrapper_version: "1.0.0",
+          geoip_available: true,
+          headed_display_available: true,
+          profile: null,
+          font_status: "ok",
+        },
+        actions: {
+          can_close_retained_session: false,
+          can_reset_identity: true,
+        },
+      },
+      data_warnings: [],
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_evidence_items: () => evidencePage,
+      get_evidence_detail: () => ({
+        item: evidencePage.items[0],
+        payload: { kind: "browser_identity", fields: [{ key: "fingerprint_seed_hash", value: "safe-hash" }] },
+      }),
+      get_identity_lab_overview: () => identityOverview,
+      get_operations_overview: () => ({
+        ...emptyOperationsOverview(),
+        metrics: {
+          active_runs: 0,
+          succeeded_today: 0,
+          attention_today: 1,
+          upcoming_schedules: 0,
+        },
+        attention: {
+          items: [
+            {
+              id: "attention-1",
+              source_kind: "launch_blocked",
+              severity: "failure",
+              occurred_at: "2026-05-27T00:00:00.000Z",
+              title: "Launch blocked",
+              summary: "Graph needs a start node",
+              workflow: { id: workflow.id, name: workflow.name },
+              navigation_target: { type: "workflow", workflow_id: workflow.id },
+            },
+          ],
+          total: 1,
+          has_more: false,
+        },
+      }),
+    });
+
+    renderApp();
+
+    const search = await screen.findByRole("searchbox", { name: "Search Mission Control" });
+    await userEvent.type(search, "QA");
+
+    await userEvent.click(await screen.findByRole("button", { name: /Identity QA identity/i }));
+    expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Alerts" }));
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Attention Queue" })).toHaveTextContent("Attention focus active");
+    expect(screen.queryByText(/secret|token|cookie/i)).not.toBeInTheDocument();
+  });
+
+  test("shows Settings diagnostics and guarded maintenance commands", async () => {
+    const install = vi.fn(() => diagnosticsFixture());
+    const cleanup = vi.fn(() => ({
+      deleted_profiles: ["orphan-profile"],
+      skipped_profiles: [],
+      reclaimed_bytes: 4096,
+    }));
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_cloakbrowser_diagnostics: diagnosticsFixture(),
+      install_cloakbrowser_binary: install,
+      cleanup_orphaned_browser_profiles: cleanup,
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+
+    expect(await screen.findByRole("region", { name: "Environment readiness" })).toHaveTextContent("CloakBrowser");
+    expect(screen.getByRole("region", { name: "Environment readiness" })).toHaveTextContent("GeoIP available");
+    expect(screen.getByRole("region", { name: "Maintenance" })).toHaveTextContent("Cleanup Orphaned Profiles");
+
+    await userEvent.click(screen.getByRole("button", { name: "Install CloakBrowser Binary" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cleanup Orphaned Profiles" }));
+
+    await waitFor(() => {
+      expect(install).toHaveBeenCalledTimes(1);
+      expect(cleanup).toHaveBeenCalledTimes(1);
     });
   });
 

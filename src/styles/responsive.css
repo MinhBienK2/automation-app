@@ -16,6 +16,14 @@
     padding-top: 20px;
   }
 
+  .shell-command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .shell-alert-button {
+    justify-self: stretch;
+  }
+
   .app-header,
   .page-detail-header,
   .page-detail-title-row,
@@ -33,6 +41,7 @@
     .evidence-grid,
     .identity-kpi-grid,
     .identity-workspace,
+    .settings-readiness-grid,
     .workflow-settings-body,
   .workflow-settings-grid,
   .settings-field-group-grid,
@@ -48,6 +57,14 @@
     .identity-definition-list div,
     .run-step-summary {
     grid-template-columns: 1fr;
+  }
+
+  .command-search-result {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .command-search-result small {
+    grid-column: 2;
   }
 
   .workflow-settings-section-header,

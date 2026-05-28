@@ -10,6 +10,7 @@ import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { AppShell } from "./layouts/AppShell";
 import {
   closeIdentityRetainedSession,
+  cleanupOrphanedBrowserProfiles,
   createWorkflow as createWorkflowCommand,
   createSchedule,
   deleteWorkflow as deleteWorkflowCommand,
@@ -22,6 +23,7 @@ import {
   getEvidenceDetail,
   getEvidenceScreenshotPreview,
   getIdentityLabOverview,
+  getCloakBrowserDiagnostics,
   getWorkflowGraph,
   getOperationalRunDetail,
   getOperationsOverview,
@@ -29,6 +31,7 @@ import {
   getWorkflow,
   getWorkflowSettings,
   importWorkflowPackage,
+  installCloakBrowserBinary,
   listEvidenceItems,
   listRunStates,
   listScheduleEvents,
@@ -73,6 +76,8 @@ import {
   sectionLabel,
 } from "./features/workflows/components/WorkflowPackageOptions";
 import type {
+  CloakBrowserDiagnostics,
+  CommandSearchResult,
   GraphValidationIssue,
   GraphNodeType,
   EvidenceBundleExportResult,
@@ -82,6 +87,7 @@ import type {
   EvidenceScreenshotPreview,
   IdentityLabOverview,
   IdentityLabTarget,
+  MissionControlTarget,
   OperationalRunDetail,
   OperationsNavigationTarget,
   OperationsOverview,
@@ -104,6 +110,7 @@ type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "ru
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
+type OverviewFocus = NonNullable<Extract<MissionControlTarget, { type: "overview" }>["focus"]>;
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
 const workflowPackageSections: WorkflowSettingsSectionId[] = [
@@ -306,6 +313,40 @@ function legacyRunId(workflowId: string | null) {
   return `legacy-${workflowId ?? "run"}`;
 }
 
+function operationsTargetToMissionTarget(
+  target: OperationsNavigationTarget,
+): MissionControlTarget {
+  if (target.type === "workflow") {
+    return { type: "workflow", workflow_id: target.workflow_id };
+  }
+  if (target.type === "run") {
+    return { type: "run", run_id: target.run_id };
+  }
+  if (target.type === "schedule") {
+    return { type: "schedule", schedule_id: target.schedule_id };
+  }
+  return { type: "evidence", evidence_id: target.evidence_id };
+}
+
+function includesCommandQuery(value: string | null | undefined, query: string) {
+  return value?.toLowerCase().includes(query) ?? false;
+}
+
+function commandText(value: string | null | undefined, fallback: string) {
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+  if (/password|secret|token|cookie|authorization/i.test(trimmed)) return fallback;
+  return trimmed.length > 96 ? `${trimmed.slice(0, 93)}...` : trimmed;
+}
+
+function formatMaintenanceBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  const kib = bytes / 1024;
+  if (kib < 1024) return `${kib.toFixed(1)} KiB`;
+  return `${(kib / 1024).toFixed(1)} MiB`;
+}
+
 function todayOperationsRange() {
   const now = new Date();
   const start = new Date(now);
@@ -322,15 +363,20 @@ function todayOperationsRange() {
 function App() {
   const [screen, setScreen] = useState<AppScreen>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [commandSearchQuery, setCommandSearchQuery] = useState("");
+  const [commandSearchResults, setCommandSearchResults] = useState<CommandSearchResult[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
+  const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
   const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [operationsOverview, setOperationsOverview] =
     useState<OperationsOverview | null>(null);
   const [operationsOverviewLoading, setOperationsOverviewLoading] = useState(false);
+  const [overviewFocus, setOverviewFocus] = useState<OverviewFocus | null>(null);
   const [focusedRunDetail, setFocusedRunDetail] =
     useState<OperationalRunDetail | null>(null);
+  const [missingRunId, setMissingRunId] = useState<string | null>(null);
   const [evidencePage, setEvidencePage] = useState<EvidencePage | null>(null);
   const [evidenceQuery, setEvidenceQuery] = useState<EvidenceListRequest>({});
   const [evidenceLoading, setEvidenceLoading] = useState(false);
@@ -366,6 +412,11 @@ function App() {
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(
     readGraphAutosaveEnabled,
   );
+  const [settingsDiagnostics, setSettingsDiagnostics] =
+    useState<CloakBrowserDiagnostics | null>(null);
+  const [settingsDiagnosticsLoading, setSettingsDiagnosticsLoading] = useState(false);
+  const [settingsDiagnosticsError, setSettingsDiagnosticsError] = useState("");
+  const [settingsMaintenanceMessage, setSettingsMaintenanceMessage] = useState("");
   const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(
     graphAutosaveEnabled ? "saved" : "off",
   );
@@ -415,6 +466,145 @@ function App() {
     void refreshRunStates();
     void loadOperationsOverview();
   }, []);
+
+  useEffect(() => {
+    const query = commandSearchQuery.trim();
+    if (query.length < 2) {
+      setCommandSearchResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    const queryLower = query.toLowerCase();
+
+    void (async () => {
+      const localResults: CommandSearchResult[] = [];
+
+      workflows
+        .filter((workflow) => includesCommandQuery(workflow.name, queryLower))
+        .slice(0, 5)
+        .forEach((workflow) => {
+          localResults.push({
+            id: `workflow:${workflow.id}`,
+            type: "Workflow",
+            label: commandText(workflow.name, "Workflow"),
+            context: `${workflow.step_count} steps`,
+            target: { type: "workflow", workflow_id: workflow.id },
+          });
+        });
+
+      runSnapshots
+        .filter((run) =>
+          includesCommandQuery(run.workflow_name, queryLower) ||
+          includesCommandQuery(run.run_id, queryLower),
+        )
+        .slice(0, 5)
+        .forEach((run) => {
+          localResults.push({
+            id: `run:${run.run_id}`,
+            type: "Run",
+            label: commandText(run.workflow_name, "Run"),
+            context: `${run.state.status} ${run.run_id}`,
+            target: { type: "run", run_id: run.run_id },
+          });
+        });
+
+      schedules
+        .filter((schedule) =>
+          includesCommandQuery(schedule.name, queryLower) ||
+          includesCommandQuery(schedule.workflow_name, queryLower),
+        )
+        .slice(0, 5)
+        .forEach((schedule) => {
+          localResults.push({
+            id: `schedule:${schedule.id}`,
+            type: "Schedule",
+            label: commandText(schedule.name, "Schedule"),
+            context: commandText(schedule.workflow_name, "Workflow"),
+            target: { type: "schedule", schedule_id: schedule.id },
+          });
+        });
+
+      const [evidenceResult, identityResult] = await Promise.allSettled([
+        listEvidenceItems({ search: query, limit: 5 }),
+        getIdentityLabOverview({ search: query, limits: { identities: 5 } }),
+      ]);
+      if (cancelled) return;
+
+      const remoteResults: CommandSearchResult[] = [];
+      if (evidenceResult.status === "fulfilled") {
+        evidenceResult.value.items.slice(0, 5).forEach((item) => {
+          remoteResults.push({
+            id: `evidence:${item.evidence_id}`,
+            type: "Evidence",
+            label: commandText(item.label, "Evidence item"),
+            context: commandText(item.workflow?.name ?? item.identity?.display_name, "Run evidence"),
+            target: { type: "evidence", evidence_id: item.evidence_id },
+          });
+          if (item.identity?.id) {
+            remoteResults.push({
+              id: item.workflow?.id
+                ? `identity:${item.workflow.id}:${item.identity.id}`
+                : `identity:historical:${item.identity.id}:${item.evidence_id}`,
+              type: "Identity",
+              label: commandText(item.identity.display_name ?? item.identity.id, "Identity"),
+              context: commandText(item.workflow?.name, "Historical evidence"),
+              target: item.workflow?.id
+                ? {
+                    type: "identity",
+                    target: {
+                      type: "managed",
+                      workflow_id: item.workflow.id,
+                      identity_id: item.identity.id,
+                    },
+                  }
+                : {
+                    type: "identity",
+                    target: {
+                      type: "historical",
+                      identity_id: item.identity.id,
+                      evidence_id: item.evidence_id,
+                      run_id: item.run.id,
+                    },
+                  },
+            });
+          }
+        });
+      }
+
+      if (identityResult.status === "fulfilled") {
+        identityResult.value.items.slice(0, 5).forEach((item) => {
+          remoteResults.push({
+            id: `identity:${item.workflow_ref.id}:${item.identity_ref.id}`,
+            type: "Identity",
+            label: commandText(
+              item.identity_ref.display_name ?? item.identity_ref.id,
+              "Identity",
+            ),
+            context: commandText(item.workflow_ref.name, "Workflow"),
+            target: {
+              type: "identity",
+              target: {
+                type: "managed",
+                workflow_id: item.workflow_ref.id,
+                identity_id: item.identity_ref.id,
+              },
+            },
+          });
+        });
+      }
+
+      const unique = new Map<string, CommandSearchResult>();
+      [...localResults, ...remoteResults].forEach((result) => {
+        if (!unique.has(result.id)) unique.set(result.id, result);
+      });
+      setCommandSearchResults([...unique.values()].slice(0, 8));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [commandSearchQuery, workflows, runSnapshots, schedules]);
 
   useEffect(() => {
     if (!runSnapshots.some((snapshot) => snapshot.state.status === "running")) return;
@@ -476,9 +666,12 @@ function App() {
   async function loadSchedules() {
     setSchedulesLoading(true);
     try {
-      setSchedules(await listSchedules());
+      const items = await listSchedules();
+      setSchedules(items);
+      return items;
     } catch (error) {
       setAppError(commandMessage(error));
+      return [];
     } finally {
       setSchedulesLoading(false);
     }
@@ -497,10 +690,58 @@ function App() {
 
   async function loadFocusedRunDetail(runId: string) {
     try {
-      setFocusedRunDetail(await getOperationalRunDetail(runId));
+      const detail = await getOperationalRunDetail(runId);
+      if (!detail) {
+        setFocusedRunDetail(null);
+        setMissingRunId(runId);
+        setAppError("Run not found");
+        return;
+      }
+      setFocusedRunDetail(detail);
+      setMissingRunId(null);
+      setAppError("");
     } catch (error) {
       setFocusedRunDetail(null);
+      setMissingRunId(runId);
       setAppError(commandMessage(error));
+    }
+  }
+
+  async function loadSettingsDiagnostics() {
+    setSettingsDiagnosticsLoading(true);
+    try {
+      setSettingsDiagnostics(await getCloakBrowserDiagnostics());
+      setSettingsDiagnosticsError("");
+    } catch (error) {
+      setSettingsDiagnosticsError(commandMessage(error));
+    } finally {
+      setSettingsDiagnosticsLoading(false);
+    }
+  }
+
+  async function installSettingsBrowserBinary() {
+    setSettingsMaintenanceMessage("");
+    try {
+      setSettingsDiagnostics(await installCloakBrowserBinary());
+      setSettingsDiagnosticsError("");
+      setSettingsMaintenanceMessage("CloakBrowser binary install check completed.");
+    } catch (error) {
+      setSettingsDiagnosticsError(commandMessage(error));
+    }
+  }
+
+  async function cleanupSettingsBrowserProfiles() {
+    setSettingsMaintenanceMessage("");
+    try {
+      const result = await cleanupOrphanedBrowserProfiles();
+      setSettingsMaintenanceMessage(
+        `Deleted ${result.deleted_profiles.length} orphaned profile${
+          result.deleted_profiles.length === 1 ? "" : "s"
+        }; reclaimed ${formatMaintenanceBytes(result.reclaimed_bytes)}.`,
+      );
+      await loadSettingsDiagnostics();
+    } catch (error) {
+      setSettingsDiagnosticsError(commandMessage(error));
     }
   }
 
@@ -1105,8 +1346,9 @@ function App() {
     void loadWorkflows();
   }
 
-  function openOverview() {
+  function openOverview(focus: OverviewFocus | null = null) {
     setScreen("overview");
+    setOverviewFocus(focus);
     setAppError("");
     void loadOperationsOverview();
   }
@@ -1114,11 +1356,13 @@ function App() {
   function openSettings() {
     setScreen("settings");
     setAppError("");
+    void loadSettingsDiagnostics();
   }
 
   function openSchedules() {
     setScreen("schedules");
     setAppError("");
+    setFocusedScheduleId(null);
     void loadSchedules();
   }
 
@@ -1126,6 +1370,7 @@ function App() {
     setScreen("runs");
     setAppError("");
     setFocusedRunDetail(null);
+    setMissingRunId(null);
     void refreshRunStates();
   }
 
@@ -1158,6 +1403,7 @@ function App() {
   function openIdentityRun(runId: string) {
     setScreen("runs");
     setAppError("");
+    setMissingRunId(null);
     void refreshRunStates();
     void loadFocusedRunDetail(runId);
   }
@@ -1237,28 +1483,86 @@ function App() {
     }
   }
 
-  function navigateFromOverview(target: OperationsNavigationTarget) {
+  async function openScheduleTarget(
+    scheduleId?: string | null,
+    scheduleEventId?: string | null,
+  ) {
+    setScreen("schedules");
+    setFocusedScheduleId(scheduleId ?? null);
+    setAppError("");
+    const items = await loadSchedules();
+    if (!scheduleId) return;
+    const exists = items.some((schedule) => schedule.id === scheduleId);
+    if (!exists) {
+      setAppError(
+        scheduleEventId
+          ? `Schedule event target is no longer available: ${scheduleEventId}`
+          : `Schedule target is no longer available: ${scheduleId}`,
+      );
+      return;
+    }
+    await loadScheduleHistory(scheduleId);
+  }
+
+  async function navigateToMissionControlTarget(target: MissionControlTarget) {
+    setCommandSearchQuery("");
+    setCommandSearchResults([]);
+
+    if (target.type === "overview") {
+      openOverview(target.focus ?? null);
+      return;
+    }
     if (target.type === "workflow") {
-      void openWorkflow(target.workflow_id);
+      if (target.mode === "list") {
+        backToList();
+        return;
+      }
+      if (target.mode === "settings") {
+        const workflow = workflows.find((item) => item.id === target.workflow_id);
+        if (!workflow) {
+          setAppError(`Workflow target is no longer available: ${target.workflow_id}`);
+          return;
+        }
+        await openWorkflowSettings(workflow, "browser_launch");
+        return;
+      }
+      await openWorkflow(target.workflow_id);
       return;
     }
     if (target.type === "run") {
       setScreen("runs");
       setAppError("");
+      setMissingRunId(null);
       void refreshRunStates();
-      void loadFocusedRunDetail(target.run_id);
-      return;
-    }
-    if (target.type === "schedule") {
-      setScreen("schedules");
-      setAppError("");
-      void loadSchedules();
-      void loadScheduleHistory(target.schedule_id);
+      await loadFocusedRunDetail(target.run_id);
+      if (target.evidence_id) {
+        openEvidence({ run_id: target.run_id, focus_evidence_id: target.evidence_id });
+      }
       return;
     }
     if (target.type === "evidence") {
-      openEvidence({ focus_evidence_id: target.evidence_id });
+      openEvidence({
+        ...(target.filters ?? {}),
+        ...(target.evidence_id ? { focus_evidence_id: target.evidence_id } : {}),
+      });
+      return;
     }
+    if (target.type === "identity") {
+      openIdentities(target.target);
+      return;
+    }
+    if (target.type === "schedule") {
+      await openScheduleTarget(target.schedule_id, target.schedule_event_id);
+      return;
+    }
+    await openWorkflow(target.workflow_id);
+    if (target.node_id) {
+      setSelectedGraphNodeId(target.node_id);
+    }
+  }
+
+  function navigateFromOverview(target: OperationsNavigationTarget) {
+    void navigateToMissionControlTarget(operationsTargetToMissionTarget(target));
   }
 
   async function submitCreateSchedule(input: WorkflowScheduleInput) {
@@ -1459,7 +1763,17 @@ function App() {
                 : "workflows"
       }
       sidebarCollapsed={sidebarCollapsed}
-      onOpenOverview={openOverview}
+      commandSearchQuery={commandSearchQuery}
+      commandSearchResults={commandSearchResults}
+      alertCount={operationsOverview?.metrics.attention_today ?? 0}
+      onCommandSearchQueryChange={setCommandSearchQuery}
+      onCommandSearchResultSelect={(result) => {
+        void navigateToMissionControlTarget(result.target);
+      }}
+      onOpenAlerts={() => {
+        void navigateToMissionControlTarget({ type: "overview", focus: "attention" });
+      }}
+      onOpenOverview={() => openOverview()}
       onOpenEvidence={() => openEvidence({})}
       onOpenIdentities={() => openIdentities(null)}
       onOpenSchedules={openSchedules}
@@ -1473,6 +1787,7 @@ function App() {
           overview={operationsOverview}
           loading={operationsOverviewLoading}
           error={appError}
+          focus={overviewFocus}
           onRefresh={loadOperationsOverview}
           onOpenWorkflows={backToList}
           onNavigate={navigateFromOverview}
@@ -1523,13 +1838,21 @@ function App() {
       ) : screen === "settings" ? (
         <SettingsPage
           graphAutosaveEnabled={graphAutosaveEnabled}
+          diagnostics={settingsDiagnostics}
+          diagnosticsLoading={settingsDiagnosticsLoading}
+          diagnosticsError={settingsDiagnosticsError}
+          maintenanceMessage={settingsMaintenanceMessage}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
+          onRefreshDiagnostics={loadSettingsDiagnostics}
+          onInstallBinary={installSettingsBrowserBinary}
+          onCleanupProfiles={cleanupSettingsBrowserProfiles}
         />
       ) : screen === "schedules" ? (
         <SchedulesPage
           schedules={schedules}
           workflows={workflows}
           events={scheduleEvents}
+          focusedScheduleId={focusedScheduleId}
           loading={schedulesLoading}
           error={appError}
           onCreateSchedule={submitCreateSchedule}
@@ -1537,14 +1860,27 @@ function App() {
           onDeleteSchedule={removeSchedule}
           onToggleSchedule={toggleSchedule}
           onLoadEvents={loadScheduleHistory}
+          onOpenRun={(runId) => {
+            void navigateToMissionControlTarget({ type: "run", run_id: runId });
+          }}
+          onOpenWorkflow={(workflowId) => {
+            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
+          }}
         />
       ) : screen === "runs" ? (
         <RunCenterPage
           runSnapshots={runSnapshots}
           focusedRunDetail={focusedRunDetail}
+          missingRunId={missingRunId}
           error={appError}
           onStopRun={(runId) => stopRun(runId)}
           onOpenEvidence={(runId) => openEvidence({ run_id: runId })}
+          onOpenWorkflow={(workflowId) => {
+            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
+          }}
+          onOpenIdentity={(target) => {
+            void navigateToMissionControlTarget({ type: "identity", target });
+          }}
         />
       ) : screen === "detail" && detail ? (
         <>

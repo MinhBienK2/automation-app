@@ -194,6 +194,7 @@ export class OperationsRepository {
     return {
       run_id: row.id,
       workflow: { id: row.workflow_id, name: row.workflow_name },
+      identity: runIdentity(row),
       status: row.status,
       started_at: row.started_at,
       finished_at: row.finished_at,
@@ -501,6 +502,17 @@ function evidenceItemsFromRun(row: RunRow, limit: number) {
     if (items.length >= limit) break;
   }
   return { items, total: evidence.length };
+}
+
+function runIdentity(row: RunRow): OperationalRunDetail["identity"] {
+  const settings = parseJsonRecord(row.settings_snapshot_json);
+  const browserLaunch = parseJsonRecord(settings?.browser_launch);
+  const identityId = stringValue(browserLaunch?.identity_id);
+  if (!identityId) return null;
+  return {
+    id: identityId,
+    display_name: stringValue(browserLaunch?.display_name),
+  };
 }
 
 function validateRange(request: OperationsOverviewRequest) {

@@ -1021,6 +1021,34 @@ export type OperationsNavigationTarget =
   | { type: "schedule"; schedule_id: string }
   | { type: "evidence"; evidence_id: string };
 
+export type MissionControlTarget =
+  | { type: "overview"; focus?: "attention" | "recent_evidence" | "live_runs" }
+  | {
+      type: "workflow";
+      workflow_id: string;
+      mode?: "list" | "detail" | "graph" | "settings";
+    }
+  | { type: "run"; run_id: string; step_id?: string | null; evidence_id?: string | null }
+  | { type: "evidence"; evidence_id?: string | null; filters?: EvidenceListRequest | null }
+  | { type: "identity"; target: IdentityLabTarget }
+  | { type: "schedule"; schedule_id?: string | null; schedule_event_id?: string | null }
+  | {
+      type: "graph_issue";
+      workflow_id: string;
+      node_id?: string | null;
+      issue_id?: string | null;
+      run_id?: string | null;
+      evidence_id?: string | null;
+    };
+
+export type CommandSearchResult = {
+  id: string;
+  type: "Workflow" | "Run" | "Evidence" | "Schedule" | "Identity";
+  label: string;
+  context?: string | null;
+  target: MissionControlTarget;
+};
+
 export type OperationsOverviewRequest = {
   day_start_utc: string;
   day_end_utc: string;
@@ -1141,6 +1169,7 @@ export type OperationalRunStepSummary = {
 export type OperationalRunDetail = {
   run_id: string;
   workflow: { id: string; name: string };
+  identity?: { id: string; display_name?: string | null } | null;
   status: RunStatus;
   started_at: string;
   finished_at?: string | null;

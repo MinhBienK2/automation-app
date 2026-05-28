@@ -44,6 +44,7 @@ type SchedulesPageProps = {
   schedules: WorkflowSchedule[];
   workflows: WorkflowSummary[];
   events: WorkflowScheduleEvent[];
+  focusedScheduleId?: string | null;
   loading: boolean;
   error: string;
   onCreateSchedule: (input: WorkflowScheduleInput) => Promise<unknown>;
@@ -51,6 +52,8 @@ type SchedulesPageProps = {
   onDeleteSchedule: (scheduleId: string) => Promise<unknown> | void;
   onToggleSchedule: (scheduleId: string, enabled: boolean) => Promise<unknown> | void;
   onLoadEvents: (scheduleId: string) => Promise<unknown> | void;
+  onOpenRun?: (runId: string) => void;
+  onOpenWorkflow?: (workflowId: string) => void;
 };
 
 const weekdayOptions = [
@@ -67,6 +70,7 @@ export function SchedulesPage({
   schedules,
   workflows,
   events,
+  focusedScheduleId,
   loading,
   error,
   onCreateSchedule,
@@ -74,6 +78,8 @@ export function SchedulesPage({
   onDeleteSchedule,
   onToggleSchedule,
   onLoadEvents,
+  onOpenRun,
+  onOpenWorkflow,
 }: SchedulesPageProps) {
   const [dialogMode, setDialogMode] = useState<ScheduleDialogMode>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
@@ -186,6 +192,7 @@ export function SchedulesPage({
                   <tr
                     key={schedule.id}
                     aria-label={`${schedule.name} ${schedule.workflow_name}`}
+                    className={focusedScheduleId === schedule.id ? "schedule-row-focused" : undefined}
                   >
                     <td>
                       <span className={schedule.enabled ? "status-pill status-pill-on" : "status-pill"}>
@@ -195,6 +202,7 @@ export function SchedulesPage({
                     <td>
                       <strong>{schedule.name}</strong>
                       <small>{scheduleKindSummary(schedule.kind)}</small>
+                      {focusedScheduleId === schedule.id ? <small>Selected schedule target</small> : null}
                     </td>
                     <td>{schedule.workflow_name}</td>
                     <td>{formatDateTime(schedule.next_run_at)}</td>
@@ -473,6 +481,28 @@ export function SchedulesPage({
                     <strong>{statusLabel(event.event_type)}</strong>
                     <span>{formatDateTime(event.scheduled_for)}</span>
                     {event.reason ? <small>{event.reason}</small> : null}
+                    <div className="schedule-history-actions">
+                      {event.run_id && onOpenRun ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => onOpenRun(event.run_id ?? "")}
+                        >
+                          Open Run
+                        </Button>
+                      ) : null}
+                      {onOpenWorkflow ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => onOpenWorkflow(event.workflow_id)}
+                        >
+                          Open Workflow
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 ))
               )}

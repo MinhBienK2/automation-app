@@ -17,9 +17,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   identity workspace with list/detail posture, latest observed evidence,
   sanitized diagnostics, historical identity references, retained-session close,
   guarded reset, and navigation to Evidence/Runs/Workflow Settings.
-- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave and graph shortcut guidance.
-- `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, and event history view.
-- `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots.
+- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave, environment readiness diagnostics, guarded maintenance commands, and graph shortcut guidance.
+- `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
+- `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen with icon-only row actions, including direct Run for saved workflow state.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
@@ -60,6 +60,16 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   supports manual refresh, and navigates returned workflow/run/schedule
   references into existing Workflows, Runs, Schedules, and focused Evidence
   destinations.
+- The app shell owns a typed in-memory Mission Control navigation target
+  router. Sidebar navigation, Overview cards, Evidence links, Identity links,
+  schedule history links, selected run details, command search results, and the
+  Alerts shortcut route through that contract instead of passing raw strings.
+  Missing durable run or schedule targets render explicit stale-target states.
+- The app shell command bar searches only bounded approved read models:
+  workflow summaries, run snapshots, schedule summaries, evidence list items,
+  and Identity Lab summaries. It must not render raw run outputs, browser
+  storage, cookies, tokens, proxy credentials, local filesystem paths, or
+  arbitrary diagnostic payloads. Alerts focuses Overview's Attention Queue.
 - Evidence owns historical evidence browsing UI state. It calls
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,
@@ -81,7 +91,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, auto arrange, and shortcuts icon controls.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
-- Settings navigation state in the app shell/sidebar.
+- Settings navigation state in the app shell/sidebar, plus app-level
+  diagnostics refresh, CloakBrowser install/check, and orphaned inactive
+  profile cleanup command state. Settings displays environment readiness from
+  sanitized diagnostics and does not expose raw binary/cache/profile/font paths.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview/Runs-to-Evidence handoff state.

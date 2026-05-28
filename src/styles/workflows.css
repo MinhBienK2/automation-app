@@ -1077,6 +1077,15 @@
   border-color: rgba(240, 100, 103, 0.52);
 }
 
+.overview-focus-note {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(244, 183, 64, 0.42);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-warning);
+  font-size: 13px;
+}
+
 .focused-run-detail {
   background: rgba(23, 36, 49, 0.78);
   border: 1px solid var(--app-border);
@@ -1097,6 +1106,10 @@
   margin: 0;
 }
 
+.focused-run-missing {
+  border-color: rgba(244, 183, 64, 0.42);
+}
+
 .detail-list {
   justify-content: start;
   margin: 14px 0;
@@ -1114,6 +1127,13 @@
 
 .detail-list dd {
   margin: 4px 0 0;
+}
+
+.run-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .run-step-summary-list {

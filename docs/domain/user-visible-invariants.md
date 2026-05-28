@@ -16,6 +16,14 @@ Preserve these unless the task explicitly changes them.
 - Overview is the default Mission Control entry point. It shows backend-owned
   durable metrics, live operations, attention, activity, recent evidence
   metadata, and upcoming schedules for the operator's local day.
+- Mission Control sidebar order is Overview, Workflows, Runs, Evidence,
+  Schedules, Identities, Settings. Overview is the default first screen.
+- The shell command bar searches bounded workflow, run, schedule, evidence, and
+  identity read models only. Search results route through typed Mission Control
+  targets and must not expose raw outputs, cookies, tokens, proxy credentials,
+  profile contents, absolute local paths, or arbitrary diagnostic payloads.
+- The shell Alerts button opens Overview and marks the Attention Queue as the
+  focused target.
 - Evidence is a separate sidebar page between Runs and Schedules. It is the
   only broad historical evidence browser; Overview recent evidence opens
   Evidence focused on the selected evidence id, and Runs selected run details
@@ -29,6 +37,9 @@ Preserve these unless the task explicitly changes them.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
 - Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
 - Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
+- Schedule history entries with run ids can open the matching Runs target, and
+  all schedule history entries can open the owning Workflow target. A stale or
+  deleted schedule target renders an unavailable target message.
 - Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and local fingerprint font directories.
 - Workflow detail exposes a compact header command bar. Settings, Validate, and Save are accessible icon controls with tooltips; Settings opens Workflow Settings at Browser Launch. `Launch Run` is the primary text action, Stop appears only while running, and Run from selected appears only when its workflow setting makes it relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
@@ -52,6 +63,12 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and uses nested collapsible sections for best-fit guidance, non-goals, precedence, field explanations, examples, related graph actions, common mistakes, and safety notes when present. Detailed field, example, related-action, and mistake items are also individually collapsible. It explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
+- App Settings includes only current app-level preferences, environment
+  readiness diagnostics, guarded local maintenance commands, and graph shortcut
+  guidance. It does not introduce policy, retention, notification, or theme
+  systems. Diagnostics display CloakBrowser, GeoIP, headed display, font,
+  profile-count, and smoke readiness without raw binary/cache/profile/font
+  paths.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
@@ -101,6 +118,10 @@ Preserve these unless the task explicitly changes them.
 - Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
 - Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
+- Runs can render one selected persisted run detail opened from Overview or
+  shell navigation. Selected run details can open related Evidence, Workflow,
+  and Identity targets, and stale run targets render an unavailable target
+  message.
 - Evidence is a separate app screen reachable from the sidebar. It lists only
   typed persisted evidence summaries and bounded typed details for screenshot,
   download, browser identity, action trace, and evidence manifest items. It
@@ -112,6 +133,9 @@ Preserve these unless the task explicitly changes them.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
+- Mission Control must remain usable at compact desktop widths such as
+  1024x768 without horizontal page overflow; table interiors may keep their own
+  bounded horizontal scrolling.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
 - Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. `Run from selected` remains the direct retained-session debugging command.

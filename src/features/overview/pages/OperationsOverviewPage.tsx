@@ -14,6 +14,7 @@ type OperationsOverviewPageProps = {
   overview: OperationsOverview | null;
   loading: boolean;
   error: string;
+  focus?: "attention" | "recent_evidence" | "live_runs" | null;
   onRefresh: () => void;
   onOpenWorkflows: () => void;
   onNavigate: (target: OperationsNavigationTarget) => void;
@@ -23,6 +24,7 @@ export function OperationsOverviewPage({
   overview,
   loading,
   error,
+  focus,
   onRefresh,
   onOpenWorkflows,
   onNavigate,
@@ -83,6 +85,9 @@ export function OperationsOverviewPage({
         </Panel>
 
         <Panel title="Attention Queue" icon={<AlertTriangle aria-hidden="true" />} count={overview?.attention.total}>
+          {focus === "attention" ? (
+            <p className="overview-focus-note">Attention focus active</p>
+          ) : null}
           {overview?.attention.items.length ? (
             <div className="overview-list">
               {overview.attention.items.map((item) => (

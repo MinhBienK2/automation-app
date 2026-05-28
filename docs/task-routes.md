@@ -101,6 +101,31 @@ Checks: `npm test -- electron/backend/persistence/database.test.ts electron/back
 
 Update docs: product model, user-visible invariants, workflow lifecycle, execution semantics, architecture overview, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, README smoke checklist, and this route when Overview ownership or checks change.
 
+## Change Mission Control Cross-Workspace Navigation
+
+Use when changing sidebar order, shell command search, Alerts focus,
+cross-workspace traceability links, stale navigation target states, compact
+desktop behavior, or app-level Settings diagnostics/maintenance.
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`contracts/workflow-types.md`; also read `DESIGN.md` before layout or styling
+changes.
+
+Verify: `src/App.tsx`, `src/layouts/`, `src/features/overview/`,
+`src/features/evidence/`, `src/features/identities/`, `src/features/runs/`,
+`src/features/schedules/`, `src/features/settings/`,
+`src/types/workflow.ts`, `electron/backend/operations/operationsRepository.ts`
+
+Checks: `npm test -- src/App.test.tsx src/layouts/AppShell.test.tsx src/AppCss.test.ts`,
+focused page tests for touched workspaces, `npx tsc --noEmit`,
+`npm run build:electron`, `npm test`, `npm run build`; use a Playwright
+desktop/compact visual check when layout changes.
+
+Update docs: product model, user-visible invariants, architecture overview,
+frontend architecture, workflow types, README smoke checklist, and this route
+when navigation/search/settings ownership or checks change.
+
 ## Change Evidence Explorer
 
 Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,

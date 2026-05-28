@@ -63,6 +63,11 @@ The Identity Lab read model is backend-owned: it derives current managed
 identity rows from Workflow Settings, matches persisted runs/evidence by
 workflow and identity snapshot, returns read-only historical references for old
 identity ids, and sanitizes diagnostics before renderer display.
+The renderer owns cross-workspace Mission Control routing only as typed
+in-memory navigation targets. Those targets connect shell search, Alerts,
+Overview, Evidence, Identity Lab, Runs, Schedules, Workflows, and graph issue
+focus without creating a persisted navigation table or exposing raw backend
+payloads.
 
 ## Boundaries
 
@@ -85,7 +90,9 @@ identity ids, and sanitizes diagnostics before renderer display.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
 - Operations repository code owns dashboard aggregation, attention
   correlation, local-day activity buckets, bounded persisted run detail, and
-  safe evidence metadata extraction.
+  safe evidence metadata extraction. Persisted run detail includes the
+  workflow identity reference from the run settings snapshot when available so
+  the renderer can offer traceability without inspecting raw run outputs.
 - Evidence repository code owns historical evidence listing, filtering,
   deterministic evidence ids, typed detail payloads, artifact path containment,
   native reveal, screenshot preview, and manifest-based bundle export.

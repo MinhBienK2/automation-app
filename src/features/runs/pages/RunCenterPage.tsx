@@ -1,22 +1,32 @@
 import { Square } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import type { OperationalRunDetail, WorkflowRunSnapshot } from "../../../types/workflow";
+import type {
+  IdentityLabTarget,
+  OperationalRunDetail,
+  WorkflowRunSnapshot,
+} from "../../../types/workflow";
 import { runStatusLabel } from "../../../lib/workflowUi";
 
 type RunCenterPageProps = {
   runSnapshots: WorkflowRunSnapshot[];
   focusedRunDetail?: OperationalRunDetail | null;
+  missingRunId?: string | null;
   error: string;
   onStopRun: (runId: string) => void;
   onOpenEvidence?: (runId: string) => void;
+  onOpenWorkflow?: (workflowId: string) => void;
+  onOpenIdentity?: (target: IdentityLabTarget) => void;
 };
 
 export function RunCenterPage({
   runSnapshots,
   focusedRunDetail,
+  missingRunId,
   error,
   onStopRun,
   onOpenEvidence,
+  onOpenWorkflow,
+  onOpenIdentity,
 }: RunCenterPageProps) {
   const sortedRuns = [...runSnapshots].sort((left, right) =>
     right.started_at.localeCompare(left.started_at),
@@ -41,6 +51,20 @@ export function RunCenterPage({
       </header>
 
       <section className="run-center-panel panel">
+        {!focusedRunDetail && missingRunId ? (
+          <article className="focused-run-detail focused-run-missing" aria-label="Missing run target">
+            <header>
+              <div>
+                <p className="eyebrow">Persisted Run</p>
+                <h2>Run target unavailable</h2>
+              </div>
+              <span className="status-pill status-pill-danger">stale target</span>
+            </header>
+            <p className="muted">
+              The selected run is no longer available in durable run history: {missingRunId}
+            </p>
+          </article>
+        ) : null}
         {focusedRunDetail ? (
           <article className="focused-run-detail" aria-label="Selected run detail">
             <header>
@@ -66,15 +90,41 @@ export function RunCenterPage({
                 <dd>{focusedRunDetail.sanitized_error_summary ?? "-"}</dd>
               </div>
             </dl>
-            {onOpenEvidence ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => onOpenEvidence(focusedRunDetail.run_id)}
-              >
-                Open Evidence
-              </Button>
-            ) : null}
+            <div className="run-detail-actions">
+              {onOpenEvidence ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenEvidence(focusedRunDetail.run_id)}
+                >
+                  Open Evidence
+                </Button>
+              ) : null}
+              {onOpenWorkflow ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenWorkflow(focusedRunDetail.workflow.id)}
+                >
+                  Open Workflow
+                </Button>
+              ) : null}
+              {onOpenIdentity && focusedRunDetail.identity?.id ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    onOpenIdentity({
+                      type: "managed",
+                      workflow_id: focusedRunDetail.workflow.id,
+                      identity_id: focusedRunDetail.identity?.id ?? "",
+                    })
+                  }
+                >
+                  Open Identity
+                </Button>
+              ) : null}
+            </div>
             <div className="run-step-summary-list">
               {focusedRunDetail.step_summaries.map((step) => (
                 <div key={`${step.step_number}-${step.node_id ?? "step"}`} className="run-step-summary">
