@@ -455,17 +455,73 @@
   align-content: start;
 }
 
+.settings-header .muted {
+  margin-top: 8px;
+  max-width: 620px;
+}
+
+.settings-workspace {
+  display: grid;
+  grid-template-columns: minmax(168px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.settings-section-nav {
+  position: sticky;
+  top: 76px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+}
+
+.settings-section-nav a {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.settings-section-nav a:hover,
+.settings-section-nav a:focus-visible {
+  background: rgba(50, 211, 230, 0.08);
+  color: var(--app-text);
+  outline: none;
+}
+
+.settings-panel-stack {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
 .settings-panel {
   display: grid;
   gap: 18px;
-  max-width: 720px;
+  min-width: 0;
+  max-width: none;
   padding: 18px;
+}
+
+.settings-panel .panel-heading {
+  align-items: flex-start;
 }
 
 .settings-readiness-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .settings-readiness-item {
@@ -490,12 +546,32 @@
   font-weight: 500;
 }
 
+.settings-readiness-item ul {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding-left: 16px;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-readiness-item li {
+  overflow-wrap: anywhere;
+}
+
 .settings-readiness-item-ready {
   border-color: rgba(57, 217, 138, 0.34);
+  background: rgba(57, 217, 138, 0.05);
 }
 
 .settings-readiness-item-attention {
   border-color: rgba(244, 183, 64, 0.42);
+  background: rgba(244, 183, 64, 0.06);
+}
+
+.settings-readiness-item-neutral {
+  border-color: var(--app-border);
 }
 
 .settings-maintenance-actions {
@@ -504,6 +580,23 @@
   gap: 10px;
 }
 
+.settings-maintenance-hint {
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
 .settings-panel .graph-shortcut-guide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-confirm-copy {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.settings-confirm-copy p {
+  margin: 0;
+  color: var(--app-text-secondary);
+  line-height: 1.5;
 }

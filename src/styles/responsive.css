@@ -35,32 +35,33 @@
   .workflow-graph-layout,
   .graph-shortcut-guide,
   .overview-kpi-grid,
-    .overview-grid,
-    .evidence-toolbar,
-    .evidence-workspace,
-    .evidence-grid,
-    .identity-kpi-grid,
-    .identity-workspace,
-    .schedule-summary-strip,
-    .schedule-dialog-body,
-    .schedule-history-meta,
-    .settings-readiness-grid,
-    .workflow-settings-body,
+  .overview-grid,
+  .evidence-toolbar,
+  .evidence-workspace,
+  .evidence-grid,
+  .identity-kpi-grid,
+  .identity-workspace,
+  .schedule-summary-strip,
+  .schedule-dialog-body,
+  .schedule-history-meta,
+  .settings-workspace,
+  .settings-readiness-grid,
+  .workflow-settings-body,
   .workflow-settings-grid,
-    .settings-field-group-grid,
+  .settings-field-group-grid,
   .workflow-settings-identity-posture,
   .workflow-settings-identity-row,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
   }
 
-    .overview-row,
-    .activity-bucket,
-    .evidence-metadata div,
-    .evidence-payload-summary div,
-    .identity-row,
-    .identity-definition-list div,
-    .run-step-summary {
+  .overview-row,
+  .activity-bucket,
+  .evidence-metadata div,
+  .evidence-payload-summary div,
+  .identity-row,
+  .identity-definition-list div,
+  .run-step-summary {
     grid-template-columns: 1fr;
   }
 
@@ -186,6 +187,22 @@
 
   .workflow-settings-save-button {
     width: fit-content;
+  }
+
+  .settings-section-nav {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+
+  .settings-section-nav a {
+    flex: 0 0 auto;
+  }
+
+  .settings-panel .panel-heading,
+  .settings-maintenance-actions {
+    display: grid;
   }
 
   .workflow-card .row-actions {

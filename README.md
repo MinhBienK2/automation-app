@@ -139,6 +139,11 @@ normalized hashes, missing/shared directory warnings, last recorded
 smoke summary, and profile storage metadata with bounded approximate
 profile sizes without proxy passwords,
 cookies, or browser storage values.
+The app Settings screen converts those diagnostics into sanitized readiness
+cards and does not show raw binary, cache, download, profile, or font paths.
+Install and orphan-profile cleanup actions require in-app confirmation; cleanup
+deletes only inactive orphaned profiles while preserving workflows, evidence,
+settings, and active or managed profiles.
 
 For reproducible sensitive runs, keep `CLOAKBROWSER_AUTO_UPDATE=false` on lab
 machines or record the effective binary version from `browser_identity`
@@ -230,7 +235,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 1. Open Identities from the sidebar, confirm current managed identities show workflow owner, session/profile reuse, retained-session state, warning counts, configured posture, latest observed browser identity evidence without sensitive fields, diagnostics, rotation history, Open Evidence, Open Last Run, Open Workflow, and Open Workflow Settings. Confirm Close Retained Session opens a scoped confirmation and clears only the retained in-memory browser session without deleting profile data, cookies/login state, workflow settings, evidence, or historical runs; confirm Reset Identity is confirmed and blocked while a retained session or active run owns the profile, and old identity ids from evidence/rotation history open read-only historical references with only related Evidence/Run/Workflow actions.
 2. Create a workflow.
 2. Confirm the new workflow graph starts with `Start -> New node`.
-3. Open Settings from the sidebar, confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status; run Install CloakBrowser Binary and Cleanup Orphaned Profiles from Maintenance; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
+3. Open Settings from the sidebar, confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status without raw local paths or download URLs; confirm Install CloakBrowser Binary and Cleanup Orphaned Profiles open guarded Maintenance confirmations, and cleanup states that workflows, evidence, settings, and active profiles are preserved; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
 4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll Direction/Pixels fields and Scroll To Element/Wait Then Scroll To Element target fields with Timeout ms defaulting to 60000, without low-level target constraint or scroll tuning controls.
 5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.

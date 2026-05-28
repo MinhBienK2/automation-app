@@ -735,7 +735,13 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("region", { name: "Maintenance" })).toHaveTextContent("Cleanup Orphaned Profiles");
 
     await userEvent.click(screen.getByRole("button", { name: "Install CloakBrowser Binary" }));
+    const installDialog = await screen.findByRole("dialog", { name: "Install CloakBrowser Binary" });
+    await userEvent.click(within(installDialog).getByRole("button", { name: "Install Binary" }));
+
     await userEvent.click(screen.getByRole("button", { name: "Cleanup Orphaned Profiles" }));
+    const cleanupDialog = await screen.findByRole("dialog", { name: "Cleanup Orphaned Profiles" });
+    expect(cleanupDialog).toHaveTextContent("Workflows, evidence, settings, and active profiles are preserved");
+    await userEvent.click(within(cleanupDialog).getByRole("button", { name: "Cleanup Profiles" }));
 
     await waitFor(() => {
       expect(install).toHaveBeenCalledTimes(1);

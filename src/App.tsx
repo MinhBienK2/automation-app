@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
+import { formatCleanupResult } from "./features/settings/pages/settingsDiagnosticsFormatters";
 import { RunCenterPage } from "./features/runs/pages/RunCenterPage";
 import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
 import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
@@ -340,14 +341,6 @@ function legacyRunId(workflowId: string | null) {
   return `legacy-${workflowId ?? "run"}`;
 }
 
-function formatMaintenanceBytes(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  const kib = bytes / 1024;
-  if (kib < 1024) return `${kib.toFixed(1)} KiB`;
-  return `${(kib / 1024).toFixed(1)} MiB`;
-}
-
 function todayOperationsRange() {
   const now = new Date();
   const start = new Date(now);
@@ -672,7 +665,9 @@ function App() {
       setSettingsDiagnosticsError("");
       setSettingsMaintenanceMessage("CloakBrowser binary install check completed.");
     } catch (error) {
-      setSettingsDiagnosticsError(commandMessage(error));
+      const message = commandMessage(error);
+      setSettingsDiagnosticsError(message);
+      throw error;
     }
   }
 
@@ -680,14 +675,12 @@ function App() {
     setSettingsMaintenanceMessage("");
     try {
       const result = await cleanupOrphanedBrowserProfiles();
-      setSettingsMaintenanceMessage(
-        `Deleted ${result.deleted_profiles.length} orphaned profile${
-          result.deleted_profiles.length === 1 ? "" : "s"
-        }; reclaimed ${formatMaintenanceBytes(result.reclaimed_bytes)}.`,
-      );
+      setSettingsMaintenanceMessage(formatCleanupResult(result).join(" "));
       await loadSettingsDiagnostics();
     } catch (error) {
-      setSettingsDiagnosticsError(commandMessage(error));
+      const message = commandMessage(error);
+      setSettingsDiagnosticsError(message);
+      throw error;
     }
   }
 

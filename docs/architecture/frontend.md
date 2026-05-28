@@ -26,7 +26,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/identities/pages/identityPresentation.ts`: pure Identity Lab
   session labels, evidence-count copy, bounded byte formatting, date display,
   and safe observed-field filtering.
-- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave, environment readiness diagnostics, guarded maintenance commands, and graph shortcut guidance.
+- `src/features/settings/pages/SettingsPage.tsx`: app-level settings workspace with graph autosave, sanitized environment readiness diagnostics, guarded maintenance confirmations, and graph shortcut guidance.
+- `src/features/settings/pages/settingsDiagnosticsFormatters.ts`: pure app-settings diagnostics readiness, cleanup summary, byte formatting, and local-path redaction helpers.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule
   operations workspace with summary counts, readable schedule/decision labels,
   create/edit readiness preview, row-scoped enable/disable errors, named delete
@@ -184,7 +185,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Settings navigation state in the app shell/sidebar, plus app-level
   diagnostics refresh, CloakBrowser install/check, and orphaned inactive
   profile cleanup command state. Settings displays environment readiness from
-  sanitized diagnostics and does not expose raw binary/cache/profile/font paths.
+  sanitized diagnostics, keeps install/cleanup behind explicit confirmations,
+  reports cleanup preservation copy, and does not expose raw
+  binary/cache/download/profile/font paths.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview/Runs-to-Evidence handoff state.

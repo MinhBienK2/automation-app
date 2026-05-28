@@ -93,7 +93,9 @@ Preserve these unless the task explicitly changes them.
   guidance. It does not introduce policy, retention, notification, or theme
   systems. Diagnostics display CloakBrowser, GeoIP, headed display, font,
   profile-count, and smoke readiness without raw binary/cache/profile/font
-  paths.
+  paths, local download URLs, or arbitrary diagnostic payloads. Install and
+  orphan-profile cleanup require explicit in-app confirmation; cleanup states
+  that workflows, evidence, settings, and active profiles are preserved.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
