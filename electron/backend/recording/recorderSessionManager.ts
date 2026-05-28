@@ -123,6 +123,7 @@ export class RecorderSessionManager {
         status: "stopped",
         stopped_at: this.currentDate().toISOString(),
       };
+      await record.collector?.flushBufferedEvents();
       record.collector?.dispose();
       await record.browserContext?.close();
       record.browserContext = null;

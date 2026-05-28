@@ -258,7 +258,8 @@ startRecordingSession({
 `new_workflow` starts from a backend-owned unsaved Workflow Settings draft with
 a fresh browser identity and `workflow_id: null` on the public session.
 `replace_current_graph` starts from the existing workflow's saved Workflow
-Settings and returns the workflow id on the public session. Public
+Settings and returns the workflow id on the public session. It rejects active
+workflow, active profile, and active batch conflicts before launch. Public
 `workflow_settings_snapshot` values are sanitized for renderer display; the
 backend retains the internal settings snapshot for later save phases. Starting a
 session launches the recorder browser in the backend, injects capture before
@@ -267,7 +268,8 @@ adapter. `browser_launch_overrides.headless` is applied to the recorder settings
 snapshot for deterministic headless verification; unsupported override keys are
 reported as warnings and ignored. Page-side capture buffers events when the
 adapter binding exists but cannot call back into the backend, and the backend
-poller drains that buffer into the session event stream.
+poller drains that buffer into the session event stream. Stopping a recorder
+session also drains the buffer before closing the browser context.
 
 `RecordingBrowserIdentitySnapshot` includes `identity_id`, display/profile
 metadata, a `fingerprint_seed_hash` rather than the raw seed, persona metadata,
@@ -279,11 +281,13 @@ checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
 Capture records navigation, click variants, text entry, select, checkbox/radio,
 file-input change names, throttled scroll, non-text keys/hotkeys, form submit
 markers, tab creation/switch, downloads, and dialogs. Capture drops malformed
-locator candidates, bounds locator strings, and redacts password or
-secret-like text field values before events are returned through IPC. Redacted
-input events carry a `sensitive_input_redacted` warning and `raw.value_redacted`
-marker. Unsupported captured behavior must become `RecordingWarning` entries
-rather than silently producing graph nodes.
+locator candidates, bounds locator strings, bounds raw page-controlled payloads,
+and redacts password or secret-like text field values before events are returned
+through IPC. Raw payload fields with secret-like keys are redacted even when a
+page calls the recorder binding directly. Redacted input events carry a
+`sensitive_input_redacted` warning and `raw.value_redacted` marker. Unsupported
+captured behavior must become `RecordingWarning` entries rather than silently
+producing graph nodes.
 
 The recorder normalizer collapses repeated input/change events for the same
 target into one `input_text` step with the final value, maps navigation, click
@@ -323,6 +327,11 @@ saveRecordingDraft(draftId, {
 internal recorder settings snapshot with the reviewed workflow name. `replace_graph`
 requires a draft linked to an existing workflow and replaces only that workflow's
 graph; saved Workflow Settings and browser identity remain unchanged.
+Before generating the saved graph, the backend reconciles `reviewed_steps`
+against the backend-held draft by step id. It honors reviewed labels, inclusion
+flags, and supported captured value edits such as navigated URL, input text,
+select value, scroll pixels, and reviewed upload file paths; action type,
+locator, source event, and warning replacement from renderer input is ignored.
 Successful save consumes the backend-memory draft and source session. Discarding
 a recorder session also removes generated drafts for that session.
 

@@ -68,15 +68,18 @@ package import/export, graph validation/compilation, workflow scheduling, SQLite
   including new-workflow settings drafts, existing-workflow settings snapshots,
   sanitized browser identity metadata, backend browser launch/cleanup,
   stop/discard lifecycle state, and recording event buffers. Failed recorder
-  launch/setup/navigation closes any browser context before surfacing the error.
-  The event collector injects bounded page-side capture, redacts sensitive text
-  field values, drops malformed locator candidates, and observes backend page
-  navigation before the locator generator and timeline normalizer convert raw
-  events into stable review steps. Graph draft generation converts those review
+  launch/setup/navigation closes any browser context before surfacing the error,
+  and replacement recording rejects active workflow/profile/batch conflicts
+  before launch. The event collector injects bounded page-side capture, drains
+  buffered fallback events on stop, redacts sensitive text field values and
+  secret-like raw keys, drops malformed locator candidates, and observes backend
+  page navigation before the locator generator and timeline normalizer convert
+  raw events into stable review steps. Graph draft generation converts those
   steps into a standard v2 `WorkflowGraph` and validates it without persistence.
-  Draft save persists reviewed steps only through `saveRecordingDraft`, creating
-  a normal workflow with the recorder settings snapshot or replacing the linked
-  graph, then consumes the in-memory draft/session.
+  Draft save reconciles reviewed labels, inclusion, and supported value edits
+  against backend-held steps through `saveRecordingDraft`, creating a normal
+  workflow with the recorder settings snapshot or replacing the linked graph,
+  then consumes the in-memory draft/session.
 - Repository/database code owns SQL, timestamps, JSON persistence, and run history.
 - Schedule repository/engine code owns schedule SQL, next-run calculation, due-schedule scanning, and schedule event audit history.
 - Graph validation code owns structural/semantic workflow graph checks before persistence or compilation.

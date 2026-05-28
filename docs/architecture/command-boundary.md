@@ -40,14 +40,19 @@ Node/Electron backend.
   never launches or instruments browsers directly. Recorder setup failures close
   any launched browser context before returning the command error. Dialog
   observation dismisses native modal state with a review warning rather than
-  leaving the recorder browser blocked.
+  leaving the recorder browser blocked. Replacement recording checks the same
+  active workflow/profile/batch conflicts as workflow runs before launching.
+  Stopping a session drains buffered page-side fallback events before closing
+  the recorder context.
 - Browser recorder draft commands. Draft generation normalizes recorded events,
   builds a review-only workflow graph, validates it, and returns/stores the
   draft in backend memory without persistence. `saveRecordingDraft` consumes
-  reviewed steps, regenerates and validates the graph, and is the only recorder
-  path that creates a workflow or replaces a linked workflow graph. Successful
-  save consumes the in-memory draft/session; discarding a session also removes
-  any drafts generated from that session.
+  reviewed labels, inclusion flags, and supported value edits by reconciling
+  renderer input against the backend-held draft steps, regenerates and validates
+  the graph, and is the only recorder path that creates a workflow or replaces a
+  linked workflow graph. Renderer-supplied action type or locator replacement is
+  ignored. Successful save consumes the in-memory draft/session; discarding a
+  session also removes any drafts generated from that session.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.

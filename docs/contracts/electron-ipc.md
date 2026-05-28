@@ -110,19 +110,23 @@ accepts `{ mode, workflow_id?, workflow_name?, initial_url?,
   browser_launch_overrides? }` and returns a `RecordingSession` with sanitized
   browser identity metadata and a sanitized Workflow Settings snapshot. The
   recorder accepts the safe `browser_launch_overrides.headless` boolean for
-  headless verification runs and warns on unsupported override keys. Starting a
-  session launches a backend-owned recorder browser through the existing browser
-  session infrastructure, injects bounded page-side capture with an in-page buffer
-  fallback for adapter binding failures, observes navigation plus backend tab,
-  download, and dialog events, and optionally navigates to `initial_url`. If
-  launch, capture setup, or initial navigation fails, the backend closes any
-  partially launched recorder context before returning the command error.
+  headless verification runs and warns on unsupported override keys.
+  `replace_current_graph` rejects active workflow, active profile, and active
+  batch conflicts before launching. Starting a session launches a backend-owned
+  recorder browser through the existing browser session infrastructure, injects
+  bounded page-side capture with an in-page buffer fallback for adapter binding
+  failures, observes navigation plus backend tab, download, and dialog events,
+  and optionally navigates to `initial_url`. If launch, capture setup, or
+  initial navigation fails, the backend closes any partially launched recorder
+  context before returning the command error.
 Dialogs observed through the backend adapter are dismissed with a review warning
 so the recorder browser does not block on native modal state. `listRecordingEvents`
 returns the in-memory raw event stream for the session. `stopRecordingSession` and
-`discardRecordingSession` close the recorder browser context. Discard consumes
-the in-memory session and any generated drafts for that session. Commands
-operate by session id and serialize errors as `{ message, field? }`.
+`discardRecordingSession` close the recorder browser context. Stop drains
+buffered page-side fallback events before closing so immediate review does not
+miss events captured while the binding fallback was active. Discard consumes the
+in-memory session and any generated drafts for that session. Commands operate by
+session id and serialize errors as `{ message, field? }`.
 
 `generateRecordingDraft(sessionId, options)` normalizes the selected session
 events, creates a review-only `RecordingWorkflowDraft`, generates a standard v2
@@ -130,12 +134,14 @@ events, creates a review-only `RecordingWorkflowDraft`, generates a standard v2
 in backend memory, and returns it without creating workflow rows or replacing an
 existing graph. `getRecordingDraft(draftId)` returns the stored review draft.
 `saveRecordingDraft(draftId, input)` is the only recorder command that persists
-reviewed output. It consumes renderer-reviewed step labels, inclusion flags, and
-supported action value edits, regenerates and validates the graph, then either
-creates a normal workflow with the recorder browser settings snapshot or
-replaces the linked workflow graph for `replace_current_graph` drafts. Successful
-save consumes the in-memory draft and its source session; subsequent
-`getRecordingDraft` or session lookups return not-found command errors.
+reviewed output. It reconciles renderer-reviewed step labels, inclusion flags,
+and supported action value edits against the backend-held draft steps by step id,
+regenerates and validates the graph, then either creates a normal workflow with
+the recorder browser settings snapshot or replaces the linked workflow graph for
+`replace_current_graph` drafts. Renderer-supplied action type or locator
+replacement is ignored. Successful save consumes the in-memory draft and its
+source session; subsequent `getRecordingDraft` or session lookups return
+not-found command errors.
 
 The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
 are no longer part of the production Electron bridge. Selector generation and

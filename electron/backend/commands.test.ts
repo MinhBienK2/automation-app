@@ -16,6 +16,7 @@ import {
   type AppPaths,
 } from "./persistence/database";
 import type {
+  ActionConfig,
   CompiledWorkflowGraph,
   RunState,
   WorkflowGraph,
@@ -1804,6 +1805,117 @@ describe("Electron workflow command handlers", () => {
     expect(() => handlers.getRecordingSession(session.id)).toThrow("Recording session not found");
   });
 
+  test("reconciles reviewed recording steps against the backend draft before saving", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded fixture",
+    });
+    await page.emitRecorderPayload({
+      kind: "click",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "button",
+        accessible_name: "Save",
+        locators: [
+          {
+            kind: "role",
+            value: "button",
+            name: "Save",
+            score: 0.9,
+            reason: "Accessible role",
+          },
+        ],
+      },
+      value: null,
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+    await handlers.stopRecordingSession(session.id);
+    const draft = handlers.generateRecordingDraft(session.id, {
+      include_event_ids: null,
+      add_terminal_success: true,
+    });
+    const tamperedSteps = [
+      null,
+      {
+        ...draft.steps[0],
+        id: "injected-step",
+        action: {
+          type: "execute_js",
+          config: { script: "return document.cookie", output_name: "cookie" },
+        } as ActionConfig,
+      },
+      ...draft.steps.map((step) => ({
+        ...step,
+        label: "Reviewed click",
+        action: {
+          type: "execute_js",
+          config: { script: "return document.cookie", output_name: "cookie" },
+        } as ActionConfig,
+        warnings: [],
+      })),
+    ] as unknown as typeof draft.steps;
+
+    const saved = handlers.saveRecordingDraft(draft.id, {
+      workflow_name: "Saved recording",
+      save_mode: "create_new",
+      reviewed_steps: tamperedSteps,
+      add_terminal_success: true,
+    });
+
+    const graph = handlers.getWorkflowGraph(saved.workflow.id);
+    const actionNodes = graph.nodes.filter((node) => node.node_type === "action");
+    expect(actionNodes).toHaveLength(1);
+    expect(actionNodes[0]).toMatchObject({
+      label: "Reviewed click",
+      config: { type: "click" },
+    });
+    expect(JSON.stringify(graph)).not.toContain("execute_js");
+    expect(JSON.stringify(graph)).not.toContain("document.cookie");
+  });
+
+  test("drains buffered recorder events before stopping a session", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Buffered recorder",
+    });
+    page.bufferRecorderPayload({
+      kind: "click",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "button",
+        accessible_name: "Save",
+        locators: [],
+      },
+      value: null,
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+
+    await handlers.stopRecordingSession(session.id);
+
+    expect(handlers.listRecordingEvents(session.id)).toMatchObject([
+      {
+        kind: "click",
+        page_url: "https://fixture.owned.test/form",
+      },
+    ]);
+  });
+
   test("replaces the current workflow graph without creating a new workflow", async () => {
     const page = new FakeRecordingPage();
     const context = new FakeRecordingContext(page);
@@ -1862,6 +1974,46 @@ describe("Electron workflow command handlers", () => {
     );
     expect(handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id)
       .toBe(originalIdentity);
+  });
+
+  test("rejects replacement recording while the workflow is running", async () => {
+    let activeRunSignal: AbortSignal | null = null;
+    const { handlers } = await createTestHandlers({
+      runner: {
+        async run(request: { signal?: AbortSignal }): Promise<RunState> {
+          activeRunSignal = request.signal ?? null;
+          await new Promise<void>((resolve) => {
+            request.signal?.addEventListener("abort", resolve, { once: true });
+          });
+          return {
+            status: "stopped",
+            mode: "run_workflow",
+            target_step_id: null,
+            current_step_id: null,
+            current_step_number: null,
+            completed_step_ids: [],
+            outputs: {},
+            error: null,
+          };
+        },
+      },
+    });
+    const workflow = handlers.createWorkflow("Running workflow");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    const runPromise = handlers.runWorkflow(workflow.id);
+    await waitFor(() => activeRunSignal !== null);
+
+    await expect(handlers.startRecordingSession({
+      mode: "replace_current_graph",
+      workflow_id: workflow.id,
+    })).rejects.toThrow("This workflow is already running");
+
+    const running = handlers.listRunStates().find((snapshot) =>
+      snapshot.workflow_id === workflow.id && snapshot.state.status === "running"
+    );
+    if (running) await handlers.stopRun(running.run_id);
+    await runPromise;
   });
 
   test("runs saved workflow graph through the Electron browser runner", async () => {
@@ -3352,6 +3504,7 @@ class FakeRecordingPage implements BrowserDriverPage {
   initScripts: string[] = [];
   gotoCalls: string[] = [];
   gotoError: Error | null = null;
+  bufferedPayloads: Record<string, unknown>[] = [];
   private exposedCapture:
     | ((payload: Record<string, unknown>) => void | Promise<void>)
     | null = null;
@@ -3367,7 +3520,10 @@ class FakeRecordingPage implements BrowserDriverPage {
     throw new Error("Not implemented");
   }
 
-  async evaluate() {
+  async evaluate(script?: string | (() => unknown)) {
+    if (typeof script === "string" && script.includes("__wamRecorderBufferedEvents.splice")) {
+      return this.bufferedPayloads.splice(0);
+    }
     return undefined;
   }
 
@@ -3393,6 +3549,10 @@ class FakeRecordingPage implements BrowserDriverPage {
   async emitRecorderPayload(payload: Record<string, unknown>) {
     if (!this.exposedCapture) throw new Error("Recorder capture binding was not exposed");
     await this.exposedCapture(payload);
+  }
+
+  bufferRecorderPayload(payload: Record<string, unknown>) {
+    this.bufferedPayloads.push(payload);
   }
 }
 

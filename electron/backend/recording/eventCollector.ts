@@ -94,6 +94,7 @@ export class RecordingEventCollector {
   private readonly now: () => Date;
   private readonly pollers: Array<ReturnType<typeof setInterval>> = [];
   private readonly attachedPages = new WeakSet<BrowserDriverPage>();
+  private readonly attachedPageList: BrowserDriverPage[] = [];
 
   constructor(
     private readonly sessionId: string,
@@ -105,6 +106,7 @@ export class RecordingEventCollector {
   async attachPage(page: BrowserDriverPage) {
     if (this.attachedPages.has(page)) return;
     this.attachedPages.add(page);
+    this.attachedPageList.push(page);
     const recorderPage = page as RecorderCapablePage;
     await recorderPage.exposeFunction?.(RECORDER_CAPTURE_BINDING, (payload) => {
       this.recordPagePayload(payload);
@@ -192,6 +194,12 @@ export class RecordingEventCollector {
     }
   }
 
+  async flushBufferedEvents() {
+    for (const page of this.attachedPageList) {
+      await this.flushBufferedPageEvents(page);
+    }
+  }
+
   async installPageCapture(page: BrowserDriverPage) {
     await page.evaluate(recorderCaptureScript()).catch(() => undefined);
     await this.flushBufferedPageEvents(page);
@@ -220,7 +228,7 @@ export class RecordingEventCollector {
         page_url: boundedString(payload.page_url, MAX_URL_STRING_LENGTH),
         target: null,
         value: null,
-        raw: boundedRecord(payload.raw),
+        raw: redactSensitiveRawFields(boundedRecord(payload.raw)),
         confidence: "low",
         warnings: [
           {
@@ -234,7 +242,7 @@ export class RecordingEventCollector {
     }
     const target = recordingTargetOrNull(payload.target);
     let value = recordingValueOrNull(payload.value);
-    let raw = boundedRecord(payload.raw);
+    let raw = redactSensitiveRawFields(boundedRecord(payload.raw));
     let warnings = recordingWarnings(payload.warnings);
     const sensitiveTarget = isSensitiveTextTarget(target, raw);
     const sensitiveTextTarget = value?.text != null && sensitiveTarget;
@@ -363,7 +371,10 @@ function recordingValueOrNull(value: unknown): RecordingValue | null {
     selected_label: boundedString(raw.selected_label),
     key: boundedString(raw.key),
     keys: Array.isArray(raw.keys)
-      ? raw.keys.filter((key): key is string => typeof key === "string").slice(0, 8)
+      ? raw.keys
+          .filter((key): key is string => typeof key === "string")
+          .map((key) => key.slice(0, 80))
+          .slice(0, 8)
       : null,
     scroll: scrollOrNull(raw.scroll),
     file_names: Array.isArray(raw.file_names)
@@ -512,6 +523,30 @@ function redactSensitiveRaw(raw: Record<string, unknown>) {
   );
 }
 
+function redactSensitiveRawFields(raw: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(raw).map(([key, value]) => [
+      key,
+      SENSITIVE_FIELD_PATTERN.test(key) ? "[redacted]" : redactSensitiveUnknown(value),
+    ]),
+  );
+}
+
+function redactSensitiveUnknown(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSensitiveUnknown(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        SENSITIVE_FIELD_PATTERN.test(key) ? "[redacted]" : redactSensitiveUnknown(entry),
+      ]),
+    );
+  }
+  return value;
+}
+
 function redactSensitiveTarget(target: RecordingTarget | null): RecordingTarget | null {
   if (!target) return null;
   return {
@@ -583,7 +618,9 @@ function recorderCaptureScript() {
       window.__wamRecorderBufferedEvents = Array.isArray(window.__wamRecorderBufferedEvents)
         ? window.__wamRecorderBufferedEvents
         : [];
-      window.__wamRecorderBufferedEvents.push(event);
+      if (window.__wamRecorderBufferedEvents.length < ${MAX_RECORDING_EVENTS}) {
+        window.__wamRecorderBufferedEvents.push(event);
+      }
     };
     const push = (payload) => {
       const capture = window.__wamRecorderCapture;

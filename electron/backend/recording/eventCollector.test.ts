@@ -64,6 +64,7 @@ describe("RecordingEventCollector", () => {
     expect(page.initScripts[0]).toContain('"contextmenu"');
     expect(page.initScripts[0]).toContain('"submit"');
     expect(page.initScripts[0]).toContain('type === "file"');
+    expect(page.initScripts[0]).toContain("__wamRecorderBufferedEvents.length < 1000");
   });
 
   test("observes main-frame navigation events from the backend page adapter", async () => {
@@ -249,6 +250,64 @@ describe("RecordingEventCollector", () => {
     expect(event.target?.locators).toEqual([]);
   });
 
+  test("redacts page-controlled raw fields with secret-like keys", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_sensitive_raw");
+
+    await collector.attachPage(page);
+    await page.emit({
+      kind: "click",
+      page_url: "https://fixture.owned.test/settings",
+      frame_url: "https://fixture.owned.test/settings",
+      target: { tag_name: "button", text_sample: "Save", locators: [] },
+      value: null,
+      raw: {
+        api_key: "owned-api-key-secret",
+        nested: { password: "owned-password-secret" },
+      },
+      confidence: "high",
+      warnings: [],
+    });
+
+    const [event] = collector.listEvents();
+
+    expect(JSON.stringify(event)).not.toContain("owned-api-key-secret");
+    expect(JSON.stringify(event)).not.toContain("owned-password-secret");
+    expect(event.raw).toMatchObject({
+      api_key: "[redacted]",
+      nested: { password: "[redacted]" },
+    });
+  });
+
+  test("flushes buffered page events on demand before disposal", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_buffered", {
+      now: () => new Date("2026-05-27T10:00:00.000Z"),
+    });
+
+    await collector.attachPage(page);
+    page.bufferRecorderPayload({
+      kind: "click",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: { tag_name: "button", text_sample: "Save", locators: [] },
+      value: null,
+      raw: {},
+      confidence: "high",
+      warnings: [],
+    });
+    await collector.flushBufferedEvents();
+    collector.dispose();
+
+    expect(collector.listEvents()).toMatchObject([
+      {
+        id: "rec_buffered_evt_1",
+        kind: "click",
+        page_url: "https://fixture.owned.test/form",
+      },
+    ]);
+  });
+
   test("deeply bounds page-controlled raw payloads and warning messages", async () => {
     const page = new FakeCollectorPage();
     const collector = new RecordingEventCollector("rec_bounded");
@@ -300,7 +359,7 @@ describe("RecordingEventCollector", () => {
       kind: hugeKind,
       page_url: "https://fixture.owned.test/form",
       frame_url: "https://fixture.owned.test/form",
-      raw: { hugeKind },
+      raw: { hugeKind, token: "owned-token-secret" },
       confidence: "high",
       warnings: [],
     });
@@ -310,6 +369,8 @@ describe("RecordingEventCollector", () => {
     expect(event.kind).toBe("wait_marker");
     expect(event.warnings[0]?.message).not.toContain(hugeKind);
     expect(event.warnings[0]?.message.length).toBeLessThanOrEqual(160);
+    expect(JSON.stringify(event)).not.toContain("owned-token-secret");
+    expect(event.raw.token).toBe("[redacted]");
     expect(JSON.stringify(event).length).toBeLessThan(2_000);
   });
 
@@ -411,6 +472,7 @@ class FakeCollectorContext {
 class FakeCollectorPage implements BrowserDriverPage {
   initScripts: string[] = [];
   evaluatedScripts: string[] = [];
+  bufferedPayloads: Record<string, unknown>[] = [];
   private exposedCapture:
     | ((payload: Record<string, unknown>) => void | Promise<void>)
     | null = null;
@@ -429,6 +491,9 @@ class FakeCollectorPage implements BrowserDriverPage {
   async evaluate(script?: string | (() => unknown)) {
     if (typeof script === "string") {
       this.evaluatedScripts.push(script);
+      if (script.includes("__wamRecorderBufferedEvents.splice")) {
+        return this.bufferedPayloads.splice(0);
+      }
     }
     return undefined;
   }
@@ -461,6 +526,10 @@ class FakeCollectorPage implements BrowserDriverPage {
   async emit(payload: Record<string, unknown>) {
     if (!this.exposedCapture) throw new Error("Recorder capture binding was not exposed");
     await this.exposedCapture(payload);
+  }
+
+  bufferRecorderPayload(payload: Record<string, unknown>) {
+    this.bufferedPayloads.push(payload);
   }
 
   navigate(url: string) {

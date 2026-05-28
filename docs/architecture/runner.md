@@ -50,11 +50,13 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
   capture through the Playwright-compatible page adapter, supports a limited
   recorder-safe `headless` launch override for verification runs, observes
   navigation plus backend tab/download/dialog events, drains buffered in-page
-  events when an adapter binding cannot call back, redacts password/secret-like
-  text field values before they are stored, drops malformed locator candidates,
-  stores bounded raw recording events in memory, closes partially launched
-  contexts when setup/navigation fails, and closes the recorder context on stop
-  or discard. Recorder normalization maps only to existing runner actions;
+  events when an adapter binding cannot call back and again before stopping,
+  redacts password/secret-like text field values and secret-like raw keys before
+  they are stored, drops malformed locator candidates, stores bounded raw
+  recording events in memory, closes partially launched contexts when
+  setup/navigation fails, and closes the recorder context on stop or discard.
+  Replacement recording rejects active workflow/profile/batch conflicts before
+  launch. Recorder normalization maps only to existing runner actions;
   redacted sensitive inputs and upload replay require reviewer-entered safe
   values or local file paths, and native file chooser captures remain warnings
   until reviewed.
