@@ -425,6 +425,57 @@ describe("normalizeRecordingEvents", () => {
     ]);
   });
 
+  test("maps paste clipboard events to set and paste clipboard actions without duplicating the following input", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("paste-1", 1, "clipboard" as RecordingEvent["kind"], {
+        target: fieldTarget(),
+        value: { text: "copied text" },
+        raw: { action: "paste" },
+      }),
+      recordingEvent("input-after-paste", 2, "input", {
+        target: fieldTarget(),
+        value: { text: "copied text" },
+      }),
+      recordingEvent("click-1", 3, "click", {
+        target: buttonTarget(),
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action)).toMatchObject([
+      { type: "set_clipboard", config: { text: "copied text" } },
+      { type: "paste_clipboard" },
+      { type: "click" },
+    ]);
+    expect(steps[1]).toMatchObject({
+      source_event_ids: ["paste-1"],
+      action: {
+        type: "paste_clipboard",
+        config: {
+          target: {
+            locators: [{ kind: "test_id", value: "email" }],
+          },
+        },
+      },
+    });
+  });
+
+  test("does not duplicate keyboard copy when a clipboard copy event follows", () => {
+    const steps = normalizeRecordingEvents([
+      recordingEvent("copy-key", 1, "keyboard", {
+        target: fieldTarget(),
+        value: { keys: ["Control", "C"] },
+      }),
+      recordingEvent("copy-clipboard", 2, "clipboard" as RecordingEvent["kind"], {
+        target: fieldTarget(),
+        raw: { action: "copy" },
+      }),
+    ]);
+
+    expect(steps.map((step) => step.action)).toEqual([
+      { type: "hotkey", config: { keys: ["Control", "C"] } },
+    ]);
+  });
+
   test("maps tab, download, dialog, wait, and screenshot markers", () => {
     const steps = normalizeRecordingEvents([
       recordingEvent("tab-1", 1, "tab", {

@@ -1540,6 +1540,7 @@ export type RecordingEventKind =
   | "select"
   | "checkbox"
   | "radio"
+  | "clipboard"
   | "scroll"
   | "keyboard"
   | "download"

@@ -69,6 +69,7 @@ const RECORDABLE_EVENT_KINDS = new Set<RecordingEventKind>([
   "select",
   "checkbox",
   "radio",
+  "clipboard",
   "scroll",
   "keyboard",
   "download",
@@ -716,6 +717,35 @@ function recorderCaptureScript() {
         target: targetFor(event.target),
         value: keys.length > 1 ? { keys } : { key: keys[0] || key },
         raw: { key, code: event.code || null, repeat: Boolean(event.repeat) }
+      });
+    }, true);
+    document.addEventListener("copy", (event) => {
+      push({
+        kind: "clipboard",
+        target: targetFor(event.target),
+        value: null,
+        raw: { action: "copy" }
+      });
+    }, true);
+    document.addEventListener("paste", (event) => {
+      const target = event.target;
+      const clipboardText = event.clipboardData && typeof event.clipboardData.getData === "function"
+        ? event.clipboardData.getData("text/plain") || ""
+        : "";
+      const sensitive = isSensitiveInput(target);
+      push({
+        kind: "clipboard",
+        target: targetFor(target),
+        value: { text: sensitive ? "" : clipboardText },
+        raw: {
+          action: "paste",
+          value_redacted: sensitive || undefined
+        },
+        warnings: sensitive ? [{
+          code: "sensitive_input_redacted",
+          message: "Recorder redacted a sensitive pasted value; review this step and provide a safe variable or test value before replay.",
+          severity: "warning"
+        }] : []
       });
     }, true);
     document.addEventListener("input", (event) => {

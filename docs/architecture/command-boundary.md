@@ -39,7 +39,8 @@ Node/Electron backend.
   the recorder browser in the backend, applies supported recorder-safe launch
   overrides such as `headless`, injects capture with a page buffer fallback for
   adapter binding failures, observes backend top-level page navigation plus
-  tab/download/dialog events, and records raw events; renderer code receives only typed sanitized DTOs and
+  tab/download/dialog events, and records raw events including clipboard
+  copy/paste; renderer code receives only typed sanitized DTOs and
   never launches or instruments browsers directly. Recorder setup failures close
   any launched browser context before returning the command error. Dialog
   observation dismisses native modal state with a review warning rather than
@@ -49,7 +50,9 @@ Node/Electron backend.
   the recorder context.
 - Browser recorder draft commands. Draft generation normalizes recorded events,
   builds a review-only workflow graph, validates it, and returns/stores the
-  draft in backend memory without persistence. `saveRecordingDraft` consumes
+  draft in backend memory without persistence. Clipboard paste normalizes to
+  Set Clipboard plus Paste Clipboard and suppresses the duplicate input caused
+  by the paste. `saveRecordingDraft` consumes
   reviewed labels, inclusion flags, and supported value edits by reconciling
   renderer input against the backend-held draft steps, regenerates and validates
   the graph, and is the only recorder path that creates a workflow or replaces a

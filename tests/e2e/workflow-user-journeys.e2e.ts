@@ -1,10 +1,12 @@
 import { test, expect } from "./support/electronFixture";
+import type { Page } from "@playwright/test";
 import { createWorkflowWithoutRun, linearGraph, runState } from "./support/workflows";
 
 test.describe("desktop workflow user journeys", () => {
   test("creates a workflow through the UI and exposes graph and settings controls", async ({
     appWindow,
   }) => {
+    await openWorkflows(appWindow);
     await appWindow.getByRole("button", { name: "Create Workflow" }).click();
     const dialog = appWindow.getByRole("dialog", { name: "Create Workflow" });
     await expect(dialog).toBeVisible();
@@ -62,8 +64,7 @@ test.describe("desktop workflow user journeys", () => {
       ]),
     );
     await appWindow.reload();
-    await expect(appWindow.getByRole("heading", { name: "Workflows", exact: true }))
-      .toBeVisible();
+    await openWorkflows(appWindow);
 
     await appWindow.getByRole("button", { name: "Run UI runnable workflow" }).click();
     await expect(appWindow.getByText("Running: UI runnable workflow")).toBeVisible();
@@ -81,8 +82,7 @@ test.describe("desktop workflow user journeys", () => {
   test("deletes a workflow through the UI confirmation dialog", async ({ appWindow }) => {
     await createWorkflowWithoutRun(appWindow, "UI delete workflow", linearGraph([]));
     await appWindow.reload();
-    await expect(appWindow.getByRole("heading", { name: "Workflows", exact: true }))
-      .toBeVisible();
+    await openWorkflows(appWindow);
 
     await appWindow.getByRole("button", { name: "Delete UI delete workflow" }).click();
     const dialog = appWindow.getByRole("dialog", { name: "Delete Workflow" });
@@ -95,3 +95,9 @@ test.describe("desktop workflow user journeys", () => {
     await expect(appWindow.getByText("No workflows yet")).toBeVisible();
   });
 });
+
+async function openWorkflows(appWindow: Page) {
+  await appWindow.getByRole("button", { name: "Workflows", exact: true }).click();
+  await expect(appWindow.getByRole("heading", { name: "Workflows", exact: true }))
+    .toBeVisible();
+}

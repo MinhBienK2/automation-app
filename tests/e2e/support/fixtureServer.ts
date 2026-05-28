@@ -197,6 +197,7 @@ function recorderReplayPage(record: boolean) {
   <body>
     <form data-testid="recorder-form">
       <label>Email <input data-testid="email" name="email" value=""></label>
+      <label>Paste <input data-testid="paste-target" name="pasteTarget" value=""></label>
       <label>Plan
         <select data-testid="plan" name="plan">
           <option>Free</option>
@@ -213,6 +214,7 @@ function recorderReplayPage(record: boolean) {
       const summary = document.querySelector('[data-testid="summary"]');
       const status = document.querySelector('[data-testid="status"]');
       const email = document.querySelector('[data-testid="email"]');
+      const pasteTarget = document.querySelector('[data-testid="paste-target"]');
       const plan = document.querySelector('[data-testid="plan"]');
       const agree = document.querySelector('[data-testid="agree"]');
       const submit = document.querySelector('[data-testid="submit"]');
@@ -220,6 +222,7 @@ function recorderReplayPage(record: boolean) {
         const data = new FormData(form);
         summary.textContent = [
           'email=' + data.get('email'),
+          'paste=' + data.get('pasteTarget'),
           'plan=' + data.get('plan'),
           'agree=' + agree.checked,
           'status=' + nextStatus,
@@ -237,6 +240,16 @@ function recorderReplayPage(record: boolean) {
         window.setTimeout(() => {
           email.value = 'qa-recorder@example.test';
           email.dispatchEvent(new Event('input', { bubbles: true }));
+          pasteTarget.focus();
+          const clipboardData = new DataTransfer();
+          clipboardData.setData('text/plain', 'clipboard-recorded');
+          pasteTarget.dispatchEvent(new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData,
+          }));
+          pasteTarget.value = 'clipboard-recorded';
+          pasteTarget.dispatchEvent(new Event('input', { bubbles: true }));
           plan.value = 'Team';
           plan.dispatchEvent(new Event('change', { bubbles: true }));
           agree.checked = true;

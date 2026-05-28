@@ -96,6 +96,37 @@ describe("RecordingEventCollector", () => {
     });
   });
 
+  test("captures paste clipboard text as a recorder clipboard event", async () => {
+    const page = new FakeCollectorPage();
+    const collector = new RecordingEventCollector("rec_clipboard");
+
+    await collector.attachPage(page);
+    const { documentListeners, payloads } = runRecorderCaptureScript(page.initScripts[0]);
+    documentListeners.get("paste")?.[0]?.({
+      target: {
+        tagName: "INPUT",
+        type: "text",
+        id: "paste-target",
+        getAttribute: (name: string) =>
+          name === "id" ? "paste-target" : name === "type" ? "text" : null,
+        getBoundingClientRect: () => ({ x: 4, y: 8, width: 240, height: 36 }),
+      },
+      clipboardData: {
+        getData: (format: string) => format === "text/plain" ? "copied text" : "",
+      },
+    });
+
+    expect(payloads[0]).toMatchObject({
+      kind: "clipboard",
+      target: {
+        tag_name: "input",
+        input_type: "text",
+      },
+      value: { text: "copied text" },
+      raw: { action: "paste" },
+    });
+  });
+
   test("observes main-frame navigation events from the backend page adapter", async () => {
     const page = new FakeCollectorPage();
     const collector = new RecordingEventCollector("rec_nav", {
@@ -584,7 +615,7 @@ class FakeCollectorContext {
 }
 
 function runRecorderCaptureScript(script: string) {
-  const documentListeners = new Map<string, Array<(event: { target?: unknown }) => void>>();
+  const documentListeners = new Map<string, Array<(event: { target?: unknown; clipboardData?: unknown }) => void>>();
   const windowListeners = new Map<string, Array<() => void>>();
   const payloads: Array<Record<string, unknown>> = [];
   const addListener = <Args extends unknown[]>(
@@ -606,7 +637,7 @@ function runRecorderCaptureScript(script: string) {
   const documentObject = {
     addEventListener: (
       eventName: string,
-      handler: (event: { target?: unknown }) => void,
+      handler: (event: { target?: unknown; clipboardData?: unknown }) => void,
     ) => {
       addListener(documentListeners, eventName, handler);
     },

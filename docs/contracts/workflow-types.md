@@ -322,11 +322,12 @@ humanization settings, and headless state. Proxy passwords and proxy URL
 credentials must not be sent to renderer code in recorder snapshots.
 
 `RecordingEvent.kind` currently allows navigation, click, input/change/select,
-checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
-Capture records navigation, click variants, literal text entry including empty
-strings and surrounding whitespace, contenteditable editor text, select,
-checkbox/radio, file-input change names, throttled scroll, non-text keys/hotkeys,
-form submit markers, tab creation/switch, downloads, and dialogs. Capture drops malformed
+checkbox/radio, clipboard, scroll, keyboard, download, dialog, tab, and
+wait-marker events. Capture records navigation, click variants, literal text
+entry including empty strings and surrounding whitespace, contenteditable editor
+text, select, checkbox/radio, clipboard copy/paste, file-input change names,
+throttled scroll, non-text keys/hotkeys, form submit markers,
+tab creation/switch, downloads, and dialogs. Capture drops malformed
 locator candidates, bounds locator strings, bounds raw page-controlled payloads,
 and redacts password or secret-like text field values before events are returned
 through IPC. Raw payload fields with secret-like keys are redacted even when a
@@ -337,13 +338,15 @@ producing graph nodes.
 
 The recorder normalizer collapses repeated input/change events for the same
 target into one `input_text` step with the final value, maps navigation, click
-variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
+variants, select, checkbox/radio, clipboard paste, scroll, keyboard, tab, download, dialog,
 wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
 into existing action configs, ignores text-composition and modifier-only
 keyboard noise such as `Process`/`Shift`, text edit hotkeys, and deletion keys
 so they do not split text entry, ignores generic clicks superseded by form
-control events on the same target, treats click-caused tab creation as a
-subsequent tab switch, resets scroll deltas after navigation/tab changes, and
+control events on the same target, turns paste into Set Clipboard followed by
+Paste Clipboard while dropping the following duplicate input event on the same
+target, treats click-caused tab creation as a subsequent tab switch, resets
+scroll deltas after navigation/tab changes, and
 carries source event ids forward for review.
 Each reviewed step also carries first/last source-event timestamps; graph
 generation turns positive gaps between included recorded steps into fixed
@@ -386,7 +389,7 @@ graph; saved Workflow Settings and browser identity remain unchanged.
 Before generating the saved graph, the backend reconciles `reviewed_steps`
 against the backend-held draft by step id. It honors reviewed labels, inclusion
 flags, and supported captured value edits such as navigated URL, input text,
-select value, scroll pixels, and reviewed upload file paths; action type,
+select value, clipboard text, scroll pixels, and reviewed upload file paths; action type,
 locator, source event, and warning replacement from renderer input is ignored.
 Successful save consumes the backend-memory draft and source session. Discarding
 a recorder session also removes generated drafts for that session.

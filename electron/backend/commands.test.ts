@@ -2170,6 +2170,67 @@ describe("Electron workflow command handlers", () => {
     expect(JSON.stringify(graph)).not.toContain("document.cookie");
   });
 
+  test("honors reviewed clipboard text while saving paste recording steps", async () => {
+    const page = new FakeRecordingPage();
+    const context = new FakeRecordingContext(page);
+    const { handlers } = await createTestHandlers({
+      recorderDriver: new FakeRecordingDriver(context),
+    });
+    const session = await handlers.startRecordingSession({
+      mode: "new_workflow",
+      workflow_name: "Recorded fixture",
+    });
+    await page.emitRecorderPayload({
+      kind: "clipboard",
+      page_url: "https://fixture.owned.test/form",
+      frame_url: "https://fixture.owned.test/form",
+      target: {
+        tag_name: "input",
+        input_type: "text",
+        accessible_name: "Paste",
+        locators: [
+          { kind: "test_id", value: "paste-target", score: 1, reason: "Stable test id" },
+        ],
+      },
+      value: { text: "recorded paste" },
+      raw: { action: "paste" },
+      confidence: "high",
+      warnings: [],
+    });
+    await handlers.stopRecordingSession(session.id);
+    const draft = handlers.generateRecordingDraft(session.id, {
+      include_event_ids: null,
+      add_terminal_success: false,
+    });
+    const reviewedSteps = draft.steps.map((step) =>
+      step.action.type === "set_clipboard"
+        ? {
+            ...step,
+            action: {
+              type: "set_clipboard" as const,
+              config: { text: "reviewed paste" },
+            },
+          }
+        : step,
+    );
+
+    const saved = handlers.saveRecordingDraft(draft.id, {
+      workflow_name: "Saved recording",
+      save_mode: "create_new",
+      reviewed_steps: reviewedSteps,
+      add_terminal_success: false,
+    });
+
+    const actionConfigs = handlers.getWorkflowGraph(saved.workflow.id).nodes
+      .flatMap((node) => node.node_type === "action" ? [node.config] : []);
+    expect(actionConfigs).toEqual(
+      expect.arrayContaining([
+        { type: "set_clipboard", config: { text: "reviewed paste" } },
+        expect.objectContaining({ type: "paste_clipboard" }),
+      ]),
+    );
+  });
+
   test("drains buffered recorder events before stopping a session", async () => {
     const page = new FakeRecordingPage();
     const context = new FakeRecordingContext(page);

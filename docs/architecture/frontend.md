@@ -88,7 +88,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   review dialog stops the session, loads a generated draft, labels the save
   action as Save Workflow or Replace Graph according to draft mode, and lets the
   renderer edit reviewed step labels, inclusion flags, and supported action
-  values before calling `saveRecordingDraft`. Backend-held step timing is not
+  values including clipboard text before calling `saveRecordingDraft`. Backend-held step timing is not
   editable in the renderer; saved recording graphs use it to create fixed
   inter-step edge delays and row-wrapped node positions for long recordings.
 - Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
