@@ -326,7 +326,7 @@ describe("Workflow graph editor integration", () => {
       sourceHandle: "out",
       target: "merge",
       targetHandle: "in",
-      data: { hasIssue: false, status: "idle" as const },
+      data: { hasIssue: false, status: "idle" as const, kind: "main" as const },
     };
     const nextMergeEdge = {
       id: "edge-b-out-merge-in",
@@ -334,7 +334,7 @@ describe("Workflow graph editor integration", () => {
       sourceHandle: "out",
       target: "merge",
       targetHandle: "in",
-      data: { hasIssue: false, status: "idle" as const },
+      data: { hasIssue: false, status: "idle" as const, kind: "main" as const },
     };
     const nextNormalEdge = {
       ...nextMergeEdge,
@@ -1109,11 +1109,14 @@ describe("Workflow graph editor integration", () => {
       "Pan canvas mode",
       "Fit graph view",
       "Auto arrange graph",
+      "Arrange selection",
     ].forEach(
       (name) => {
         expect(within(toolbar).getByRole("button", { name })).toBeInTheDocument();
       },
     );
+    expect(within(toolbar).getByRole("button", { name: "Arrange selection" }))
+      .toBeDisabled();
 
     await userEvent.click(within(toolbar).getByRole("button", { name: "Pan canvas mode" }));
     expect(within(toolbar).getByRole("button", { name: "Pan canvas mode" }))

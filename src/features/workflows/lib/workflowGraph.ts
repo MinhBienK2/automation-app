@@ -12,6 +12,10 @@ import type {
 export { defaultActionConfig } from "./workflowActionDefaults";
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
+import {
+  classifyWorkflowGraphEdge,
+  type WorkflowGraphEdgeKind,
+} from "./graphLayout";
 
 const graphIssueKey = "__graph__";
 
@@ -28,6 +32,7 @@ export type WorkflowFlowNodeData = {
 export type WorkflowFlowEdgeData = {
   hasIssue: boolean;
   status: WorkflowFlowEdgeStatus;
+  kind: WorkflowGraphEdgeKind;
   delay?: GraphEdgeDelay | null;
   delayLabel?: string | null;
 };
@@ -186,9 +191,11 @@ export function toReactFlowGraph(
         state.selectedEdgeIds?.has(edge.id) ?? state.selectedEdgeId === edge.id;
       const status = graphEdgeStatus(edge, state, hasIssue, isSelected);
       const stroke = graphEdgeStrokeForStatus(status);
+      const kind = classifyWorkflowGraphEdge(graph, edge);
 
       return {
         id: edge.id,
+        type: "workflow",
         source: edge.source_node_id,
         sourceHandle: edge.source_port,
         target: edge.target_node_id,
@@ -208,6 +215,7 @@ export function toReactFlowGraph(
             } via ${edge.label ?? edge.source_port}`,
         className: [
           "graph-edge",
+          `graph-edge-${kind}`,
           hasIssue ? "graph-edge-has-issue" : "",
           status === "failed" ? "graph-edge-failed" : "",
           status === "running" ? "graph-edge-running" : "",
@@ -226,6 +234,7 @@ export function toReactFlowGraph(
         data: {
           hasIssue,
           status,
+          kind,
           delay: edge.delay ?? null,
           delayLabel: graphEdgeDelayLabel(edge.delay ?? null),
         },

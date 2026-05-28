@@ -3,11 +3,18 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
-import type { NodeProps } from "@xyflow/react";
+import {
+  BaseEdge,
+  Handle,
+  Position,
+  getSmoothStepPath,
+  useUpdateNodeInternals,
+} from "@xyflow/react";
+import type { EdgeProps, NodeProps } from "@xyflow/react";
 import type { GraphNodeType, GraphPort } from "../../../types/workflow";
 import {
   graphNodeLabel,
+  type WorkflowFlowEdge,
   type WorkflowFlowNode,
   type WorkflowFlowNodeStatus,
 } from "../lib/workflowGraph";
@@ -102,6 +109,47 @@ export function WorkflowGraphNode({
         );
       })}
     </div>
+  );
+}
+
+export function WorkflowGraphEdge({
+  id,
+  sourceX,
+  sourceY,
+  sourcePosition,
+  targetX,
+  targetY,
+  targetPosition,
+  markerEnd,
+  style,
+  label,
+  interactionWidth,
+}: EdgeProps<WorkflowFlowEdge>) {
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+    borderRadius: 8,
+    offset: 32,
+  });
+
+  return (
+    <BaseEdge
+      id={id}
+      path={edgePath}
+      markerEnd={markerEnd}
+      style={style}
+      label={label}
+      labelX={labelX}
+      labelY={labelY}
+      labelShowBg
+      labelBgPadding={[4, 3]}
+      labelBgBorderRadius={4}
+      interactionWidth={interactionWidth ?? 24}
+    />
   );
 }
 

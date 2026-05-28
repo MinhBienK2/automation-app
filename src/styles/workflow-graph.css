@@ -114,6 +114,26 @@
   stroke-width: 2.5;
 }
 
+.graph-canvas .graph-edge-main .react-flow__edge-path {
+  stroke: #4c6a7f;
+}
+
+.graph-canvas .graph-edge-branch .react-flow__edge-path {
+  opacity: 0.82;
+  stroke-dasharray: 7 5;
+}
+
+.graph-canvas .graph-edge-continuation .react-flow__edge-path {
+  stroke: #5b7488;
+  stroke-dasharray: 3 4;
+}
+
+.graph-canvas .graph-edge-loop .react-flow__edge-path,
+.graph-canvas .graph-edge-recovery .react-flow__edge-path {
+  opacity: 0.88;
+  stroke-dasharray: 9 4 2 4;
+}
+
 .graph-canvas .react-flow__edge-text {
   fill: #9aaebd;
   font-size: 12px;
@@ -156,7 +176,7 @@
 }
 
 .graph-canvas .graph-edge-completed .react-flow__edge-path {
-  stroke: #32d3e6;
+  stroke: #39d98a;
 }
 
 .graph-canvas .graph-edge-failed .react-flow__edge-path {
@@ -403,12 +423,19 @@
 }
 
 .graph-minimap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-self: end;
   padding: 4px 8px;
   border: 1px solid #233240;
   border-radius: 8px;
   color: #667d8d;
   font-size: 12px;
+}
+
+.graph-arrange-error {
+  color: #f4b740;
 }
 
 .graph-connection-summary,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { WorkflowGraph, WorkflowStep } from "../../../types/workflow";
+import type { GraphNode, GraphNodeType, WorkflowGraph, WorkflowStep } from "../../../types/workflow";
 import {
   createDefaultGraphNode,
   fromReactFlowGraph,
@@ -226,7 +226,7 @@ describe("workflow graph helpers", () => {
           targetHandle: "in",
           label: "1",
           ariaLabel: "Step 1: Start to Wait via next",
-          className: "graph-edge graph-edge-has-issue",
+          className: expect.stringContaining("graph-edge-has-issue"),
           interactionWidth: 20,
           markerEnd: expect.objectContaining({
             type: "arrowclosed",
@@ -238,6 +238,7 @@ describe("workflow graph helpers", () => {
           }),
           data: expect.objectContaining({
             hasIssue: true,
+            kind: "main",
             delayLabel: "750ms",
           }),
         }),
@@ -389,7 +390,7 @@ describe("workflow graph helpers", () => {
     expect(defaultFlow.edges.find((edge) => edge.id === "edge-start-step-wait"))
       .toEqual(
         expect.objectContaining({
-          className: "graph-edge",
+          className: expect.stringContaining("graph-edge-main"),
           style: expect.objectContaining({ stroke: "#3e5668" }),
         }),
       );
@@ -426,6 +427,86 @@ describe("workflow graph helpers", () => {
           style: expect.objectContaining({ stroke: "#f4b740" }),
         }),
       );
+  });
+
+  test("classifies workflow edges by graph intent for visual routing", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        graphNode("start", "start", { x: 0, y: 0 }),
+        graphNode("if-1", "if", { x: 260, y: 0 }),
+        graphNode("true-action", "action", { x: 520, y: -120 }),
+        graphNode("after-if", "action", { x: 520, y: 0 }),
+        graphNode("retry-1", "retry", { x: 780, y: 0 }),
+        graphNode("failed-action", "action", { x: 1040, y: 120 }),
+      ],
+      edges: [
+        {
+          id: "edge-start-if",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "if-1",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+        {
+          id: "edge-if-true",
+          source_node_id: "if-1",
+          source_port: "true",
+          target_node_id: "true-action",
+          target_port: "in",
+          label: "true",
+          condition: null,
+        },
+        {
+          id: "edge-if-done",
+          source_node_id: "if-1",
+          source_port: "done",
+          target_node_id: "after-if",
+          target_port: "in",
+          label: "done",
+          condition: null,
+        },
+        {
+          id: "edge-retry-failed",
+          source_node_id: "retry-1",
+          source_port: "failed",
+          target_node_id: "failed-action",
+          target_port: "in",
+          label: "failed",
+          condition: null,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const edges = new Map(toReactFlowGraph(graph).edges.map((edge) => [edge.id, edge]));
+
+    expect(edges.get("edge-start-if")).toEqual(
+      expect.objectContaining({
+        className: expect.stringContaining("graph-edge-main"),
+        data: expect.objectContaining({ kind: "main" }),
+      }),
+    );
+    expect(edges.get("edge-if-true")).toEqual(
+      expect.objectContaining({
+        className: expect.stringContaining("graph-edge-branch"),
+        data: expect.objectContaining({ kind: "branch" }),
+      }),
+    );
+    expect(edges.get("edge-if-done")).toEqual(
+      expect.objectContaining({
+        className: expect.stringContaining("graph-edge-continuation"),
+        data: expect.objectContaining({ kind: "continuation" }),
+      }),
+    );
+    expect(edges.get("edge-retry-failed")).toEqual(
+      expect.objectContaining({
+        className: expect.stringContaining("graph-edge-recovery"),
+        data: expect.objectContaining({ kind: "recovery" }),
+      }),
+    );
   });
 
   test("maps React Flow nodes and edges back to a persisted workflow graph", () => {
@@ -565,5 +646,18 @@ function largeLinearGraph(actionCount: number): WorkflowGraph {
       condition: null,
     })),
     viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function graphNode(
+  id: string,
+  nodeType: GraphNodeType,
+  position: { x: number; y: number },
+): GraphNode {
+  return {
+    ...createDefaultGraphNode(nodeType, position),
+    id,
+    label: id,
+    position,
   };
 }

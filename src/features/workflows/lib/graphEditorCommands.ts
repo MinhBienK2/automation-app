@@ -66,11 +66,7 @@ export function arrangeWorkflowGraph(graph: WorkflowGraph): WorkflowGraph {
     nodeIds.forEach((nodeId, row) => {
       const lane = column <= 0 ? 0 : Math.floor((column - 1) / arrangeColumnsPerLane);
       const columnInLane = column <= 0 ? 0 : (column - 1) % arrangeColumnsPerLane;
-      const displayColumn = column <= 0
-        ? 0
-        : lane % 2 === 0
-          ? columnInLane + 1
-          : arrangeColumnsPerLane - columnInLane;
+      const displayColumn = column <= 0 ? 0 : columnInLane + 1;
       positions.set(nodeId, {
         x: displayColumn * arrangeColumnGap,
         y: lane * arrangeLaneGap + row * arrangeRowGap,
