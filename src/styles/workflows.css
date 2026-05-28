@@ -1331,6 +1331,11 @@
   color: #f06467;
 }
 
+.status-pill-warning {
+  border-color: rgba(244, 183, 64, 0.5);
+  color: #f4b740;
+}
+
 .overview-error {
   border-color: rgba(240, 100, 103, 0.52);
 }
@@ -1674,7 +1679,12 @@
 .identity-kpi-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.identity-warning-list {
+  display: grid;
+  gap: 8px;
 }
 
 .identity-workspace {
@@ -1697,7 +1707,7 @@
   align-items: center;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.7fr) auto auto;
+  grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.7fr) auto auto auto;
   min-height: 64px;
   padding: 11px 12px;
   border: 1px solid var(--app-border);
@@ -1727,6 +1737,13 @@
   font-size: 12px;
 }
 
+.identity-row-selected-marker {
+  color: var(--app-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 .identity-row svg {
   color: var(--app-success);
   height: 18px;
@@ -1748,6 +1765,17 @@
   color: var(--app-accent);
   height: 22px;
   width: 22px;
+}
+
+.identity-detail-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.identity-mono {
+  font-family: var(--app-mono-font, "SFMono-Regular", Consolas, monospace);
 }
 
 .identity-detail-body h2 {

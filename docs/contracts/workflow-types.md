@@ -437,6 +437,9 @@ state, GeoIP/display availability, bounded profile size/session state, and
 font posture where available, while excluding absolute local paths, proxy
 credentials, cookies, localStorage, sessionStorage, profile contents, and raw
 arbitrary run outputs.
+The renderer treats observed identity fields as a bounded allow-display surface
+and defensively omits secret, storage, profile, binary, cache, and local path
+keys even when the backend DTO is already sanitized.
 
 ## Graph Shape
 

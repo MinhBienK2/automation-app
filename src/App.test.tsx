@@ -538,6 +538,8 @@ describe("App settings and graph autosave", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Identities" }));
     await userEvent.click(await screen.findByRole("button", { name: "Close Retained Session" }));
+    const closeDialog = await screen.findByRole("dialog", { name: "Close retained session" });
+    await userEvent.click(within(closeDialog).getByRole("button", { name: "Close Session" }));
     await waitFor(() => {
       expect(closeIdentityRetainedSession).toHaveBeenCalledWith(workflow.id, "bi_123");
     });

@@ -154,7 +154,12 @@ Preserve these unless the task explicitly changes them.
   sensitive identity/trace fields. Identity evidence opens read-only Identity
   Lab historical context tied to the evidence run.
 - Identities is a separate app screen reachable from the sidebar. It receives
-  sanitized Identity Lab DTOs and does not expose raw profile paths, browser
+  sanitized Identity Lab DTOs, shows selected managed rows beyond color,
+  warning counts/data warnings, managed current identity details, and read-only
+  historical references. Close Retained Session uses an in-app confirmation
+  that states it closes only in-memory retained browser context and does not
+  delete profile data, cookies/login state, workflow settings, evidence, or
+  historical runs. Identity Lab does not expose raw profile paths, browser
   storage, cookies, tokens, proxy credentials, absolute local font/binary paths,
   or raw arbitrary run outputs.
 - Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
