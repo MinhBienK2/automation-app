@@ -3,6 +3,8 @@ import type {
   BatchRunRequest,
   EvidenceBundleExportRequest,
   EvidenceListRequest,
+  IdentityLabOverviewRequest,
+  IdentityLabTarget,
   ElementSnapshot,
   OrchestrationSchedule,
   OperationsOverviewRequest,
@@ -171,6 +173,18 @@ export function revealEvidenceArtifact(evidenceId: string) {
 
 export function exportEvidenceBundle(request: EvidenceBundleExportRequest) {
   return bridge().exportEvidenceBundle(request);
+}
+
+export function getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
+  return bridge().getIdentityLabOverview(request);
+}
+
+export function getIdentityLabDetail(target: IdentityLabTarget) {
+  return bridge().getIdentityLabDetail(target);
+}
+
+export function closeIdentityRetainedSession(workflowId: string, profileName: string) {
+  return bridge().closeIdentityRetainedSession(workflowId, profileName);
 }
 
 export function listSchedules() {

@@ -27,6 +27,9 @@ import {
   getEvidenceScreenshotPreview,
   revealEvidenceArtifact,
   exportEvidenceBundle,
+  getIdentityLabOverview,
+  getIdentityLabDetail,
+  closeIdentityRetainedSession,
   getWorkflowBrowserConfig,
   getWorkflowGraph,
   importWorkflow,
@@ -93,6 +96,9 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.getEvidenceScreenshotPreview.mockResolvedValue(undefined);
     workflowBridgeMock.revealEvidenceArtifact.mockResolvedValue(undefined);
     workflowBridgeMock.exportEvidenceBundle.mockResolvedValue(undefined);
+    workflowBridgeMock.getIdentityLabOverview.mockResolvedValue(undefined);
+    workflowBridgeMock.getIdentityLabDetail.mockResolvedValue(undefined);
+    workflowBridgeMock.closeIdentityRetainedSession.mockResolvedValue(undefined);
 
     await validateSchedule({
       workflow_id: "workflow-1",
@@ -148,6 +154,9 @@ describe("workflow API phase ten commands", () => {
     await getEvidenceScreenshotPreview("ev-1");
     await revealEvidenceArtifact("ev-1");
     await exportEvidenceBundle({ evidence_ids: ["ev-1"] });
+    await getIdentityLabOverview({ selected_target: { type: "managed", workflow_id: "workflow-1", identity_id: "bi_1" } });
+    await getIdentityLabDetail({ type: "managed", workflow_id: "workflow-1", identity_id: "bi_1" });
+    await closeIdentityRetainedSession("workflow-1", "profile-1");
     await getCloakBrowserDiagnostics();
     await installCloakBrowserBinary();
     await cleanupOrphanedBrowserProfiles();
@@ -219,6 +228,18 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.exportEvidenceBundle).toHaveBeenCalledWith({
       evidence_ids: ["ev-1"],
     });
+    expect(workflowBridgeMock.getIdentityLabOverview).toHaveBeenCalledWith({
+      selected_target: { type: "managed", workflow_id: "workflow-1", identity_id: "bi_1" },
+    });
+    expect(workflowBridgeMock.getIdentityLabDetail).toHaveBeenCalledWith({
+      type: "managed",
+      workflow_id: "workflow-1",
+      identity_id: "bi_1",
+    });
+    expect(workflowBridgeMock.closeIdentityRetainedSession).toHaveBeenCalledWith(
+      "workflow-1",
+      "profile-1",
+    );
     expect(workflowBridgeMock.getCloakBrowserDiagnostics).toHaveBeenCalled();
     expect(workflowBridgeMock.installCloakBrowserBinary).toHaveBeenCalled();
     expect(workflowBridgeMock.cleanupOrphanedBrowserProfiles).toHaveBeenCalled();

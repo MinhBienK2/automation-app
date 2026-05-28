@@ -15,6 +15,10 @@ import type {
   EvidenceListRequest,
   EvidencePage,
   EvidenceScreenshotPreview,
+  IdentityLabDetail,
+  IdentityLabOverview,
+  IdentityLabOverviewRequest,
+  IdentityLabTarget,
   RecordedEvent,
   RunState,
   RunValidationIssue,
@@ -96,6 +100,14 @@ export type WorkflowElectronBridge = {
   exportEvidenceBundle(
     request: EvidenceBundleExportRequest,
   ): Promise<EvidenceBundleExportResult>;
+  getIdentityLabOverview(
+    request?: IdentityLabOverviewRequest,
+  ): Promise<IdentityLabOverview>;
+  getIdentityLabDetail(target: IdentityLabTarget): Promise<IdentityLabDetail>;
+  closeIdentityRetainedSession(
+    workflowId: string,
+    profileName: string,
+  ): Promise<void>;
   listSchedules(): Promise<WorkflowSchedule[]>;
   getSchedule(scheduleId: string): Promise<WorkflowSchedule>;
   createSchedule(input: WorkflowScheduleInput): Promise<WorkflowSchedule>;

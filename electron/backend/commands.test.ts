@@ -349,6 +349,135 @@ describe("Electron workflow command handlers", () => {
       .toBe(rotated.browser_launch.identity_id);
   });
 
+  test("builds Identity Lab overview from current identity snapshots and closes retained sessions", async () => {
+    const closeRetainedSession = vi.fn(async () => undefined);
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        run: vi.fn(),
+        closeRetainedSession,
+        getRetainedSessionState: vi.fn((workflowId?: string | null, profileName?: string | null) => ({
+          available: workflowId === "workflow-identity" && profileName === "profile-current",
+          workflow_id: workflowId ?? null,
+          profile_name: profileName ?? null,
+          reason: workflowId === "workflow-identity" ? null : "No retained session",
+        })),
+        getRetainedSessionStates: vi.fn(() => [
+          {
+            available: true,
+            workflow_id: "workflow-identity",
+            profile_name: "profile-current",
+            reason: null,
+          },
+        ]),
+      },
+    });
+    const workflow = handlers.createWorkflow("Identity flow");
+    database.prepare("UPDATE workflows SET id = ? WHERE id = ?").run("workflow-identity", workflow.id);
+    const settings = handlers.getWorkflowSettings("workflow-identity");
+    handlers.saveWorkflowSettings("workflow-identity", {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        identity_id: "bi_current",
+        display_name: "Current identity",
+        profile_dir: "profile-current",
+        profile_name: "profile-current",
+        persona: {
+          ...settings.browser_launch.persona,
+          label: "Windows Chrome",
+        },
+        proxy_enabled: true,
+        proxy_server: "http://user:secret@proxy.local:8080",
+      },
+      migration_notes: [
+        {
+          path: "browser_launch.identity_id",
+          action: "rotated",
+          message: "Browser identity rotated from bi_old to bi_current at 2026-05-27T08:00:00.000Z",
+        },
+      ],
+    });
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-old",
+        "workflow-identity",
+        "manual",
+        "success",
+        "2026-05-27T07:00:00.000Z",
+        "2026-05-27T07:01:00.000Z",
+        JSON.stringify({ browser_launch: { identity_id: "bi_old", display_name: "Old identity" } }),
+        JSON.stringify({ browser_identity: { identity_id: "bi_old" } }),
+        null,
+      );
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-current",
+        "workflow-identity",
+        "manual",
+        "failed",
+        new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        new Date(Date.now() - 55 * 60 * 1000).toISOString(),
+        JSON.stringify({
+          browser_launch: { identity_id: "bi_current", display_name: "Current identity" },
+        }),
+        JSON.stringify({
+          browser_identity: {
+            identity_id: "bi_current",
+            display_name: "Current identity",
+            fingerprint_seed_hash: "seed-hash",
+            proxy_password: "should-not-leak",
+          },
+        }),
+        JSON.stringify({ reason: "Assertion failed" }),
+      );
+
+    const overview = await handlers.getIdentityLabOverview();
+
+    expect(overview.counts).toMatchObject({
+      managed_identities: 1,
+      active_retained_sessions: 1,
+      identities_with_recent_failures: 1,
+    });
+    expect(overview.items).toEqual([
+      expect.objectContaining({
+        workflow_ref: { id: "workflow-identity", name: "Identity flow" },
+        identity_ref: { id: "bi_current", display_name: "Current identity" },
+        retained_session: { active: true },
+        last_run: expect.objectContaining({ run_id: "run-current", status: "failed" }),
+        recent_failures_24h: 1,
+      }),
+    ]);
+    expect(overview.selected).toMatchObject({
+      kind: "managed",
+      latest_observed: expect.objectContaining({
+        run_id: "run-current",
+        fields: expect.arrayContaining([{ key: "fingerprint_seed_hash", value: "seed-hash" }]),
+      }),
+      rotation_history: [expect.objectContaining({ previous_identity_id: "bi_old" })],
+      actions: {
+        can_close_retained_session: true,
+        can_reset_identity: false,
+      },
+    });
+    expect(JSON.stringify(overview)).not.toContain("secret");
+    expect(JSON.stringify(overview)).not.toContain("should-not-leak");
+
+    await handlers.closeIdentityRetainedSession("workflow-identity", "profile-current");
+    expect(closeRetainedSession).toHaveBeenCalledWith("workflow-identity", "profile-current");
+  });
+
   test("derives deterministic CloakBrowser seeds and probes collisions", () => {
     const identityId = "bi_11111111111111111111111111111111";
     const firstSeed = deriveFingerprintSeedFromIdentityId(identityId);

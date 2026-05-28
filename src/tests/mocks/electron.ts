@@ -42,6 +42,9 @@ const methodNames: BridgeMethodName[] = [
   "getEvidenceScreenshotPreview",
   "revealEvidenceArtifact",
   "exportEvidenceBundle",
+  "getIdentityLabOverview",
+  "getIdentityLabDetail",
+  "closeIdentityRetainedSession",
   "listSchedules",
   "getSchedule",
   "createSchedule",
@@ -90,6 +93,9 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     }
     if (command === "reveal_evidence_artifact") return null;
     if (command === "export_evidence_bundle") return null;
+    if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
+    if (command === "get_identity_lab_detail") return null;
+    if (command === "close_identity_retained_session") return null;
     throw new Error(`Unexpected command: ${command}`);
   }
 
@@ -111,6 +117,21 @@ function defaultEvidencePage() {
       skipped_traces: 0,
       skipped_manifests: 0,
     },
+  };
+}
+
+function defaultIdentityLabOverview() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    items: [],
+    selected: null,
+    counts: {
+      managed_identities: 0,
+      active_retained_sessions: 0,
+      identities_with_warnings: 0,
+      identities_with_recent_failures: 0,
+    },
+    data_warnings: [],
   };
 }
 
@@ -252,6 +273,19 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.exportEvidenceBundle.mockImplementation((request: unknown) =>
     resolveCommand(commands, "export_evidence_bundle", { request }),
+  );
+  workflowBridgeMock.getIdentityLabOverview.mockImplementation((request: unknown) =>
+    resolveCommand(commands, "get_identity_lab_overview", { request }),
+  );
+  workflowBridgeMock.getIdentityLabDetail.mockImplementation((target: unknown) =>
+    resolveCommand(commands, "get_identity_lab_detail", { target }),
+  );
+  workflowBridgeMock.closeIdentityRetainedSession.mockImplementation(
+    (workflowId: string, profileName: string) =>
+      resolveCommand(commands, "close_identity_retained_session", {
+        workflowId,
+        profileName,
+      }),
   );
   workflowBridgeMock.listSchedules.mockImplementation(() =>
     resolveCommand(commands, "list_schedules", undefined),

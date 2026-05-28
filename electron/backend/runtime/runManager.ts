@@ -19,6 +19,7 @@ export type CommandError = {
 export type RunnerCommandPort = {
   run: BrowserWorkflowRunner["run"];
   closeRetainedContext?: BrowserWorkflowRunner["closeRetainedContext"];
+  closeRetainedSession?: BrowserWorkflowRunner["closeRetainedSession"];
   createIsolatedRunRunner?: () => RunnerCommandPort;
   hasReusableRetainedSession?: BrowserWorkflowRunner["hasReusableRetainedSession"];
   getRetainedSessionState?: BrowserWorkflowRunner["getRetainedSessionState"];

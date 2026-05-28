@@ -1278,6 +1278,107 @@ export type EvidenceBundleExportResult = {
   omitted_file_count: number;
 } | null;
 
+export type IdentityLabTarget =
+  | { type: "managed"; workflow_id: string; identity_id: string }
+  | {
+      type: "historical";
+      identity_id: string;
+      workflow_id?: string | null;
+      run_id?: string | null;
+      evidence_id?: string | null;
+    };
+
+export type IdentityLabOverviewRequest = {
+  search?: string | null;
+  selected_target?: IdentityLabTarget | null;
+  limits?: { identities?: number | null; rotation_history?: number | null } | null;
+};
+
+export type ManagedIdentitySummary = {
+  workflow_ref: { id: string; name: string };
+  identity_ref: { id: string; display_name?: string | null };
+  short_identity_id: string;
+  persona_id?: string | null;
+  persona_label?: string | null;
+  session_mode: WorkflowBrowserSessionMode;
+  profile_reuse: boolean;
+  retained_session: { active: boolean; reason?: string | null };
+  configured_posture_summary: string[];
+  last_run?: {
+    run_id: string;
+    status: RunStatus;
+    started_at: string;
+    finished_at?: string | null;
+  } | null;
+  recent_failures_24h: number;
+  warning_badges: string[];
+};
+
+export type IdentityLabManagedDetail = {
+  kind: "managed";
+  workflow_ref: { id: string; name: string };
+  identity_ref: { id: string; display_name?: string | null };
+  session: {
+    active: boolean;
+    profile_name?: string | null;
+    reset_blocked_reason?: string | null;
+  };
+  configured_posture: Array<{ label: string; value: string }>;
+  latest_observed?: {
+    run_id: string;
+    observed_at: string;
+    fields: Array<{ key: string; value: string | number | boolean | null }>;
+  } | null;
+  last_run?: ManagedIdentitySummary["last_run"];
+  recent_failures_24h: number;
+  evidence_summary: { total: number };
+  rotation_history: Array<{
+    previous_identity_id?: string | null;
+    next_identity_id?: string | null;
+    message: string;
+  }>;
+  diagnostics: {
+    binary_installed: boolean;
+    wrapper_version?: string | null;
+    geoip_available: boolean;
+    headed_display_available: boolean;
+    profile?: {
+      approximate_size_bytes: number;
+      active_session: boolean;
+    } | null;
+    font_status: CloakBrowserDiagnostics["font_checklist"]["status"];
+  };
+  actions: {
+    can_close_retained_session: boolean;
+    can_reset_identity: boolean;
+    reset_disabled_reason?: string | null;
+  };
+};
+
+export type IdentityLabHistoricalDetail = {
+  kind: "historical";
+  identity_ref: { id: string; display_name?: string | null };
+  workflow_ref?: { id: string; name: string } | null;
+  run_id?: string | null;
+  evidence_id?: string | null;
+  observed_fields: Array<{ key: string; value: string | number | boolean | null }>;
+};
+
+export type IdentityLabDetail = IdentityLabManagedDetail | IdentityLabHistoricalDetail;
+
+export type IdentityLabOverview = {
+  generated_at: string;
+  items: ManagedIdentitySummary[];
+  selected?: IdentityLabDetail | null;
+  counts: {
+    managed_identities: number;
+    active_retained_sessions: number;
+    identities_with_warnings: number;
+    identities_with_recent_failures: number;
+  };
+  data_warnings: string[];
+};
+
 export type ScheduleValidationIssue = {
   field: string;
   message: string;

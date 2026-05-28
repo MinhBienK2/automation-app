@@ -14,6 +14,8 @@ import type {
   ElementSnapshot,
   EvidenceBundleExportRequest,
   EvidenceListRequest,
+  IdentityLabOverviewRequest,
+  IdentityLabTarget,
   GraphValidationIssue,
   OrchestrationSchedule,
   OperationsOverviewRequest,
@@ -65,6 +67,7 @@ import {
 } from "./runtime/runManager.js";
 import { sanitizePathSegment } from "./evidence/artifacts.js";
 import { EvidenceRepository } from "./evidence/evidenceRepository.js";
+import { IdentityRepository } from "./identity/identityRepository.js";
 import { elementTargetFromXpath, migrateWorkflowGraph } from "./graph/migration.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
@@ -119,6 +122,20 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     appPaths: context.appPaths,
     revealEvidenceArtifact: context.revealEvidenceArtifact,
     selectEvidenceBundleDirectory: context.selectEvidenceBundleDirectory,
+  });
+  const identityRepository = new IdentityRepository({
+    database: context.database,
+    workflows: () => repository.listWorkflows(),
+    settingsForWorkflow: (workflowId) => getSettings(workflowId),
+    diagnostics: () =>
+      buildCloakBrowserDiagnostics({
+        appPaths: context.appPaths,
+        workflows: repository.listWorkflows(),
+        settingsForWorkflow: getSettings,
+        lastRunAtForWorkflow,
+        retainedProfileNames: runManager.retainedProfileNames(),
+      }),
+    runner,
   });
   const runner = context.runner ?? new BrowserWorkflowRunner({ appPaths: context.appPaths });
   const runManager = new RunManager({ database: context.database, runner });
@@ -681,6 +698,27 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     exportEvidenceBundle(request: EvidenceBundleExportRequest) {
       return evidenceRepository.exportEvidenceBundle(request);
+    },
+
+    getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
+      return identityRepository.getOverview(request);
+    },
+
+    getIdentityLabDetail(target: IdentityLabTarget) {
+      return identityRepository.getDetail(target);
+    },
+
+    async closeIdentityRetainedSession(workflowId: string, profileName: string) {
+      const settings = getSettings(workflowId);
+      const currentProfile = browserProfileKey(settings);
+      if (currentProfile !== profileName) {
+        throw commandError("Identity profile does not match current workflow settings", "profileName");
+      }
+      const conflict = activeRunConflict(workflowId, settings);
+      if (conflict) {
+        throw commandError(conflict.message, conflict.field);
+      }
+      await runner.closeRetainedSession?.(workflowId, profileName);
     },
 
     listSchedules(): WorkflowSchedule[] {

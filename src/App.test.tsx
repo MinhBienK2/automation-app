@@ -285,6 +285,104 @@ describe("App settings and graph autosave", () => {
     expect(getEvidenceDetail).toHaveBeenCalledWith("ev-shot");
   });
 
+  test("opens Identity Lab and navigates managed identity actions", async () => {
+    const getIdentityLabOverview = vi.fn(() => ({
+      generated_at: "2026-05-27T10:00:00.000Z",
+      counts: {
+        managed_identities: 1,
+        active_retained_sessions: 1,
+        identities_with_warnings: 0,
+        identities_with_recent_failures: 1,
+      },
+      items: [
+        {
+          workflow_ref: { id: workflow.id, name: workflow.name },
+          identity_ref: { id: "bi_123", display_name: "QA identity" },
+          short_identity_id: "bi_123",
+          persona_label: "Windows Chrome",
+          session_mode: "persistent_profile",
+          profile_reuse: true,
+          retained_session: { active: true },
+          configured_posture_summary: ["GeoIP", "Humanized"],
+          last_run: { run_id: "run-1", status: "failed", started_at: "2026-05-27T09:00:00.000Z" },
+          recent_failures_24h: 1,
+          warning_badges: [],
+        },
+      ],
+      selected: {
+        kind: "managed",
+        workflow_ref: { id: workflow.id, name: workflow.name },
+        identity_ref: { id: "bi_123", display_name: "QA identity" },
+        session: {
+          active: true,
+          profile_name: "bi_123",
+          reset_blocked_reason: "Close the retained browser session before resetting this identity.",
+        },
+        configured_posture: [
+          { label: "Persona", value: "Windows Chrome" },
+          { label: "Proxy", value: "Enabled, credentials redacted" },
+        ],
+        latest_observed: {
+          run_id: "run-1",
+          observed_at: "2026-05-27T09:02:00.000Z",
+          fields: [{ key: "fingerprint_seed_hash", value: "seed-hash" }],
+        },
+        last_run: { run_id: "run-1", status: "failed", started_at: "2026-05-27T09:00:00.000Z" },
+        recent_failures_24h: 1,
+        evidence_summary: { total: 2 },
+        rotation_history: [],
+        diagnostics: {
+          binary_installed: true,
+          wrapper_version: "1.0.0",
+          geoip_available: true,
+          headed_display_available: true,
+          profile: { approximate_size_bytes: 128, active_session: true },
+          font_status: "ok",
+        },
+        actions: {
+          can_close_retained_session: true,
+          can_reset_identity: false,
+          reset_disabled_reason: "Close retained session first.",
+        },
+      },
+      data_warnings: [],
+    }));
+    const closeIdentityRetainedSession = vi.fn();
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      get_identity_lab_overview: ({ request }: { request: unknown }) =>
+        getIdentityLabOverview(request),
+      get_identity_lab_detail: () => getIdentityLabOverview().selected,
+      close_identity_retained_session: ({ workflowId, profileName }: { workflowId: string; profileName: string }) =>
+        closeIdentityRetainedSession(workflowId, profileName),
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Identities" }));
+
+    expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Managed identities" })).toHaveTextContent("QA identity");
+    expect(screen.getByRole("region", { name: "Identity detail" })).toHaveTextContent("Proxy");
+    expect(screen.getByRole("region", { name: "Identity detail" })).toHaveTextContent("seed-hash");
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Evidence" }));
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
+        "list_evidence_items",
+        expect.objectContaining({
+          request: expect.objectContaining({ workflow_id: workflow.id, identity_id: "bi_123" }),
+        }),
+      );
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Identities" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Close Retained Session" }));
+    await waitFor(() => {
+      expect(closeIdentityRetainedSession).toHaveBeenCalledWith(workflow.id, "bi_123");
+    });
+  });
+
   test("shows graph keyboard and mouse guidance in settings", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 

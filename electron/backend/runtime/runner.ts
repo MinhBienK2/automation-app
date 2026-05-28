@@ -352,6 +352,10 @@ export class BrowserWorkflowRunner {
     await this.sessionManager.closeRetainedContext();
   }
 
+  async closeRetainedSession(workflowId: string | null, profileName: string | null) {
+    await this.sessionManager.closeRetainedSession(workflowId, profileName);
+  }
+
   hasReusableRetainedSession(workflowId: string, profileName?: string | null) {
     return this.sessionManager.hasReusableRetainedSession(workflowId, profileName);
   }
