@@ -102,6 +102,7 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     if (command === "get_identity_lab_overview") return defaultIdentityLabOverview();
     if (command === "get_identity_lab_detail") return null;
     if (command === "close_identity_retained_session") return null;
+    if (command === "list_schedules") return [];
     throw new Error(`Unexpected command: ${command}`);
   }
 

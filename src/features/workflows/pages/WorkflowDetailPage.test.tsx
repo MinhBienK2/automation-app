@@ -30,7 +30,14 @@ describe("Workflow detail integration", () => {
 
   async function openWorkflowDetails() {
     await openWorkflows();
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
+  }
+
+  async function openWorkflowGraph(name = "Login flow") {
+    const row = await screen.findByRole("row", { name: new RegExp(name, "i") });
+    await userEvent.click(within(row).getByRole("button", {
+      name: `Open Graph ${name}`,
+    }));
   }
 
   test("opens workflow details on a separate screen and returns to the list", async () => {
@@ -44,7 +51,7 @@ describe("Workflow detail integration", () => {
     expect(screen.getByRole("navigation", { name: "Main navigation" }))
       .toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
 
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
@@ -697,10 +704,7 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflows();
-    const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
-    await userEvent.click(within(supportCard as HTMLElement).getByRole("button", {
-      name: "View Details",
-    }));
+    await openWorkflowGraph("Support flow");
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });

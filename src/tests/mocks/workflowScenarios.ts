@@ -47,6 +47,7 @@ export function listWorkflowScenario(workflows: WorkflowSummary[] = [workflow]) 
     list_workflows: workflows,
     get_run_state: idleRunState,
     list_run_states: [],
+    list_schedules: [],
     get_operations_overview: emptyOperationsOverview(),
     get_operational_run_detail: null,
   };

@@ -2084,6 +2084,7 @@ function App() {
           appError={appError}
           runState={runState}
           runSnapshots={runSnapshots}
+          schedules={schedules}
           activeRunWorkflowName={activeRunWorkflowName}
           staleTarget={workflowStaleTarget}
           onWorkflowNameDraftChange={setWorkflowNameDraft}
@@ -2176,10 +2177,14 @@ function App() {
               <p className="eyebrow">Package</p>
               <DialogTitle>Export Workflow</DialogTitle>
               <DialogDescription>
-                Choose the workflow parts to include in the JSON package.
+                Create a workflow package for {exportPackageWorkflow.name}.
               </DialogDescription>
             </DialogHeader>
             <form className="workflow-dialog-form" onSubmit={submitExportPackage}>
+              <p className="muted">
+                Export writes a portable JSON package after you choose Flow and
+                Workflow Settings sections.
+              </p>
               <PackageFlowCheckbox
                 checked={exportPackageIncludeFlow}
                 label="Flow"
@@ -2190,6 +2195,11 @@ function App() {
                 selectedSections={exportPackageSections}
                 onSelectedSectionsChange={setExportPackageSections}
               />
+              <p className="muted">
+                Proxy credentials, local fingerprint font directories, and
+                machine-local or sensitive settings are sanitized. The native
+                Save dialog chooses the file location.
+              </p>
               {appError ? <p className="field-error">{appError}</p> : null}
               <DialogFooter className="form-actions">
                 <Button shape="pill" type="submit">
@@ -2223,6 +2233,9 @@ function App() {
               </DialogDescription>
             </DialogHeader>
             <form className="workflow-dialog-form" onSubmit={submitImportPackage}>
+              <p className="muted">
+                Failed validation leaves no partial workflow behind.
+              </p>
               <dl className="package-preview-list">
                 <div>
                   <dt>Name</dt>
@@ -2253,7 +2266,7 @@ function App() {
               />
               {importPackagePreview.omitted_fields.length > 0 ? (
                 <p className="muted">
-                  Sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
+                  Omitted or sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
                 </p>
               ) : null}
               {appError ? <p className="field-error">{appError}</p> : null}
@@ -2301,6 +2314,11 @@ function App() {
               <p className="muted">
                 Keep it when you want retained login state available for manual
                 recovery or a later profile cleanup.
+              </p>
+              <p className="muted">
+                Deleting profile data removes only unshared inactive profile
+                directories. The backend can reject active run, profile, or
+                retained-session conflicts.
               </p>
             </div>
             {appError ? <p className="field-error">{appError}</p> : null}

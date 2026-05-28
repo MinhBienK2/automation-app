@@ -39,7 +39,145 @@ describe("Workflow list integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
   }
 
-  test("hides step counts and raw updated timestamps from workflow cards", async () => {
+  async function findWorkflowRow(name: string) {
+    return screen.findByRole("row", { name: new RegExp(name, "i") });
+  }
+
+  async function openWorkflowGraph(name = "Login flow") {
+    const row = await findWorkflowRow(name);
+    await userEvent.click(within(row).getByRole("button", {
+      name: `Open Graph ${name}`,
+    }));
+  }
+
+  async function openMoreActions(name = "Login flow") {
+    const row = await findWorkflowRow(name);
+    await userEvent.click(within(row).getByRole("button", {
+      name: `More actions for ${name}`,
+    }));
+    return screen.findByRole("menu", { name: `More actions for ${name}` });
+  }
+
+  async function clickRecordWorkflow() {
+    const buttons = await screen.findAllByRole("button", { name: "Record Workflow" });
+    await userEvent.click(buttons[0]);
+  }
+
+  test("renders a dense table/detail library with local search filters and sort", async () => {
+    const supportWorkflow = {
+      id: "workflow-2",
+      name: "Support flow",
+      step_count: 1,
+      created_at: "2026-05-27T00:00:00.000Z",
+      updated_at: "2026-05-28T00:00:00.000Z",
+    };
+    const activeRun = {
+      run_id: "run-login",
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+      source: "manual",
+      started_at: "2026-05-29T10:00:00.000Z",
+      state: {
+        ...idleRunState,
+        status: "running",
+        mode: "run_workflow",
+        current_step_number: 2,
+      },
+    };
+    const schedule = {
+      id: "schedule-support",
+      workflow_id: supportWorkflow.id,
+      workflow_name: supportWorkflow.name,
+      name: "Daily support",
+      enabled: true,
+      kind: { type: "calendar", preset: "daily", time: "09:00" },
+      next_run_at: null,
+      last_event_at: null,
+      last_status: null,
+      last_reason: null,
+      created_at: "2026-05-29T00:00:00.000Z",
+      updated_at: "2026-05-29T00:00:00.000Z",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow, supportWorkflow]),
+      list_run_states: [activeRun],
+      list_schedules: [schedule],
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    const library = await screen.findByRole("region", { name: "Workflow library" });
+    const table = within(library).getByRole("table", { name: "Workflow library table" });
+    expect(within(table).getByRole("columnheader", { name: "Workflow" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /Login flow.*Running step 2/i }))
+      .toBeInTheDocument();
+    await userEvent.click(within(table).getByRole("row", {
+      name: /Login flow.*Running step 2/i,
+    }));
+    expect(screen.getByRole("region", { name: "Workflow detail" }))
+      .toHaveTextContent("Login flow");
+
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search workflows" }), "Support");
+    expect(within(table).queryByRole("row", { name: /Login flow/i })).not.toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /Support flow/i })).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole("searchbox", { name: "Search workflows" }));
+    await userEvent.click(screen.getByRole("button", { name: "Scheduled" }));
+    expect(within(table).queryByRole("row", { name: /Login flow/i })).not.toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /Support flow/i })).toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText("Sort workflows"), "name");
+    expect(screen.getByLabelText("Sort workflows")).toHaveValue("name");
+  });
+
+  test("uses a More menu for secondary workflow actions with active-run guards", async () => {
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_run_states: [
+        {
+          run_id: "run-login",
+          workflow_id: workflow.id,
+          workflow_name: workflow.name,
+          source: "manual",
+          started_at: "2026-05-29T10:00:00.000Z",
+          state: {
+            ...idleRunState,
+            status: "running",
+            mode: "run_workflow",
+          },
+        },
+      ],
+    });
+
+    renderApp();
+
+    await openWorkflows();
+
+    const row = await screen.findByRole("row", { name: /Login flow/i });
+    expect(within(row).getByRole("button", { name: "Open Graph Login flow" }))
+      .toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Stop Login flow" }))
+      .toBeInTheDocument();
+    await userEvent.click(within(row).getByRole("button", {
+      name: "More actions for Login flow",
+    }));
+
+    const menu = await screen.findByRole("menu", { name: "More actions for Login flow" });
+    expect(within(menu).getByRole("menuitem", { name: "Settings Login flow" }))
+      .toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Duplicate Login flow" }))
+      .toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Export Login flow" }))
+      .toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Delete Login flow" }))
+      .toBeDisabled();
+    expect(menu).toHaveTextContent("Workflow currently running");
+  });
+
+  test("formats workflow metadata without exposing raw updated timestamps", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([
         {
@@ -54,14 +192,13 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
+    const row = await findWorkflowRow("Login flow");
 
-    expect(workflowCard).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("1733 steps"))
+    expect(row).toBeInTheDocument();
+    expect(within(row).getByText("1733 steps")).toBeInTheDocument();
+    expect(screen.queryByText("Updated 1733-raw-timestamp"))
       .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Updated 1733-raw-timestamp"))
-      .not.toBeInTheDocument();
-    expect(screen.queryByText("1733 steps")).not.toBeInTheDocument();
+    expect(screen.queryByText("1733-raw-timestamp")).not.toBeInTheDocument();
   });
 
   test("lists workflows and creates a workflow from a dialog", async () => {
@@ -80,11 +217,11 @@ describe("Workflow list integration", () => {
     expect(screen.queryByText("Workflow Automation Manager")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("New workflow name")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Create Workflow" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Create Workflow" })[0]);
     const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
 
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create Workflow" }));
 
     await waitFor(() => {
       expect(workflowBridgeMock.createWorkflow).toHaveBeenCalledWith(
@@ -112,9 +249,7 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", {
-      name: "Record Workflow",
-    }));
+    await clickRecordWorkflow();
     expect(workflowBridgeMock.startRecordingSession).toHaveBeenCalledWith({
       mode: "new_workflow",
       workflow_name: "Recorded workflow",
@@ -202,9 +337,7 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", {
-      name: "Record Workflow",
-    }));
+    await clickRecordWorkflow();
     await userEvent.click(await screen.findByRole("button", {
       name: "Stop Recording",
     }));
@@ -267,7 +400,7 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
     await userEvent.click(await screen.findByRole("button", {
       name: "Record Replacement",
     }));
@@ -327,7 +460,7 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -364,71 +497,61 @@ describe("Workflow list integration", () => {
     );
   });
 
-  test("shows icon-only workflow card actions with duplicate", async () => {
+  test("shows compact row actions and secondary More menu actions", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
     await openWorkflows();
 
-    const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
+    const row = await findWorkflowRow("Login flow");
 
-    expect(workflowCard).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "View Details",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Run Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Edit Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Duplicate Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Delete Login flow",
-    })).toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
-      name: "Delete Login flow",
-    })).toHaveAttribute("data-tooltip", "Delete Login flow");
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
+    expect(row).toBeInTheDocument();
+    expect(within(row).getByRole("button", {
+      name: "Open Graph Login flow",
+    })).toHaveAttribute("data-tooltip", "Open Graph Login flow");
+    expect(within(row).getByRole("button", {
       name: "Run Login flow",
     })).toHaveAttribute("data-tooltip", "Run Login flow");
-    expect(within(workflowCard as HTMLElement).queryByText("View Details"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Run"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Edit"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Duplicate"))
-      .not.toBeInTheDocument();
-    expect(within(workflowCard as HTMLElement).queryByText("Delete"))
-      .not.toBeInTheDocument();
+    expect(within(row).getByRole("button", {
+      name: "More actions for Login flow",
+    })).toHaveAttribute("data-tooltip", "More actions for Login flow");
+
+    const menu = await openMoreActions();
+    expect(within(menu).getByRole("menuitem", {
+      name: "Settings Login flow",
+    })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", {
+      name: "Duplicate Login flow",
+    })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", {
+      name: "Export Login flow",
+    })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", {
+      name: "Delete Login flow",
+    })).toBeInTheDocument();
   });
 
   test("runs a saved workflow from the list without opening the detail page", async () => {
+    let runStarted = false;
+    const activeRun = {
+      run_id: "run-1",
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+      source: "manual",
+      started_at: "2026-05-17T09:00:00.000Z",
+      state: {
+        ...idleRunState,
+        status: "running" as const,
+        mode: "run_workflow" as const,
+      },
+    };
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
-      run_workflow: {
-        run_id: "run-1",
-        workflow_id: workflow.id,
-        workflow_name: workflow.name,
-        source: "manual",
-        started_at: "2026-05-17T09:00:00.000Z",
-        status: "running",
-        mode: "run_workflow",
-        target_step_id: null,
-        current_step_id: null,
-        current_step_number: null,
-        completed_step_ids: [],
-        outputs: {},
-        error: null,
-        state: {
-          ...idleRunState,
-          status: "running",
-          mode: "run_workflow",
-        },
+      list_run_states: () => runStarted ? [activeRun] : [],
+      run_workflow: () => {
+        runStarted = true;
+        return activeRun;
       },
     });
 
@@ -446,8 +569,8 @@ describe("Workflow list integration", () => {
     expect(workflowBridgeMock.getWorkflow).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Back to Workflows" }))
       .not.toBeInTheDocument();
-    expect(await screen.findByText("Running")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Run Login flow" })).toBeDisabled();
+    expect((await screen.findAllByText("Running")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Stop Login flow" })).toBeInTheDocument();
   });
 
   test("disables list run buttons while a run is already active", async () => {
@@ -473,8 +596,8 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    expect(await screen.findByRole("button", { name: "Run Login flow" }))
-      .toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Stop Login flow" }))
+      .toBeInTheDocument();
   });
 
   test("disables destructive workflow actions while a run is already active", async () => {
@@ -500,18 +623,18 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    const workflowCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
+    const menu = await openMoreActions();
+    expect(within(menu).getByRole("menuitem", {
       name: "Duplicate Login flow",
     })).toBeDisabled();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
+    expect(within(menu).getByRole("menuitem", {
       name: "Export Login flow",
     })).toBeDisabled();
-    expect(within(workflowCard as HTMLElement).getByRole("button", {
+    expect(within(menu).getByRole("menuitem", {
       name: "Delete Login flow",
     })).toBeDisabled();
 
-    await userEvent.click(within(workflowCard as HTMLElement).getByRole("button", {
+    await userEvent.click(within(menu).getByRole("menuitem", {
       name: "Delete Login flow",
     }));
 
@@ -551,19 +674,19 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    const loginCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
-    const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
+    const loginRow = await findWorkflowRow("Login flow");
+    const supportRow = await findWorkflowRow("Support flow");
 
-    expect(within(loginCard as HTMLElement).getByRole("button", {
-      name: "Run Login flow",
-    })).toBeDisabled();
-    expect(within(loginCard as HTMLElement).getByText("Running step 1"))
+    expect(within(loginRow).getByRole("button", {
+      name: "Stop Login flow",
+    })).toBeInTheDocument();
+    expect(within(loginRow).getByText("Running step 1"))
       .toBeInTheDocument();
-    await userEvent.click(within(loginCard as HTMLElement).getByRole("button", {
+    await userEvent.click(within(loginRow).getByRole("button", {
       name: "Stop Login flow",
     }));
 
-    expect(within(supportCard as HTMLElement).getByRole("button", {
+    expect(within(supportRow).getByRole("button", {
       name: "Run Support flow",
     })).not.toBeDisabled();
     expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
@@ -639,7 +762,8 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Delete Login flow" }));
+    const menu = await openMoreActions();
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Delete Login flow" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Delete Workflow" });
     expect(within(dialog).getByText(/This removes Login flow/i)).toBeInTheDocument();
@@ -648,6 +772,10 @@ describe("Workflow list integration", () => {
     });
     expect(profileDataCheckbox).not.toBeChecked();
     expect(within(dialog).getByText(/Keep it when you want retained login state/i))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText(/unshared inactive profile directories/i))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText(/backend can reject active run/i))
       .toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
 
@@ -670,22 +798,22 @@ describe("Workflow list integration", () => {
       created_at: "2",
       updated_at: "2",
     };
-    let listCalls = 0;
+    let duplicated = false;
 
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
-      list_workflows: () => {
-        listCalls += 1;
-        return listCalls === 1 ? [workflow] : [workflow, copiedWorkflow];
-      },
-      duplicate_workflow: {
-        workflow: {
-          id: copiedWorkflow.id,
-          name: copiedWorkflow.name,
-          created_at: copiedWorkflow.created_at,
-          updated_at: copiedWorkflow.updated_at,
-        },
-        steps: [sleepStep],
+      list_workflows: () => duplicated ? [workflow, copiedWorkflow] : [workflow],
+      duplicate_workflow: () => {
+        duplicated = true;
+        return {
+          workflow: {
+            id: copiedWorkflow.id,
+            name: copiedWorkflow.name,
+            created_at: copiedWorkflow.created_at,
+            updated_at: copiedWorkflow.updated_at,
+          },
+          steps: [sleepStep],
+        };
       },
     });
 
@@ -693,8 +821,16 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", {
+    const menu = await openMoreActions();
+    await userEvent.click(within(menu).getByRole("menuitem", {
       name: "Duplicate Login flow",
+    }));
+    const dialog = await screen.findByRole("dialog", { name: "Duplicate Workflow" });
+    expect(within(dialog).getByText(/Copy of Login flow/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Browser identity, profile, and fingerprint are fresh/i))
+      .toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", {
+      name: "Duplicate Workflow",
     }));
 
     await waitFor(() => {
@@ -734,10 +870,15 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", {
+    const menu = await openMoreActions();
+    await userEvent.click(within(menu).getByRole("menuitem", {
       name: "Export Login flow",
     }));
     const dialog = await screen.findByRole("dialog", { name: "Export Workflow" });
+    expect(within(dialog).getByText(/Create a workflow package for Login flow/i))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText(/Proxy credentials/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/native Save dialog/i)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Export" }));
 
     await waitFor(() => {
@@ -836,6 +977,12 @@ describe("Workflow list integration", () => {
     expect(within(dialog).getByText("Imported package")).toBeInTheDocument();
     expect(within(dialog).getByText("Flow")).toBeInTheDocument();
     expect(within(dialog).getByText("General")).toBeInTheDocument();
+    expect(within(dialog).getByText(/never overwrites an existing one/i))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText(/Failed validation leaves no partial workflow/i))
+      .toBeInTheDocument();
+    expect(within(dialog).getByText(/Omitted or sanitized fields/i))
+      .toHaveTextContent("settings.browser_launch.proxy_password");
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Import" }));
 
@@ -899,10 +1046,12 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    expect((await screen.findByText("Login flow")).closest("[data-slot='card']"))
-      .toBeInTheDocument();
+    expect(await findWorkflowRow("Login flow")).toBeInTheDocument();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Edit Login flow" }));
+    const menu = await openMoreActions();
+    await userEvent.click(within(menu).getByRole("menuitem", {
+      name: "Settings Login flow",
+    }));
     const dialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
 
     expect(within(dialog).getByRole("tab", { name: "General" }))
@@ -963,7 +1112,7 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
     const header = await screen.findByRole("region", {
       name: "Workflow detail header",
     });
@@ -979,7 +1128,7 @@ describe("Workflow list integration", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Create Workflow" }));
     const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Checkout flow");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create Workflow" }));
 
     expect(await screen.findByText("Checkout flow")).toHaveAttribute(
       "aria-current",

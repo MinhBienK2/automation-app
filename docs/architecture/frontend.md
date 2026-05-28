@@ -23,7 +23,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave, environment readiness diagnostics, guarded maintenance commands, and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
-- `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen with icon-only row actions, including direct Run for saved workflow state and the Record Workflow entry point.
+- `src/features/workflows/pages/WorkflowListPage.tsx`: Workflow Library
+  composition screen with a dense table/detail workspace, local search/filter
+  and sort state, direct Run/Stop row actions, consequence-aware lifecycle
+  dialogs, package entry points, and the Record Workflow entry point.
+- `src/features/workflows/components/WorkflowLibraryTable.tsx`,
+  `WorkflowLibraryDetailPanel.tsx`, and `WorkflowLibraryFilters.tsx`: bounded
+  Workflow Library table, selected preview panel, and local toolbar controls.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
@@ -42,6 +48,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/styles/components.css`: shared CSS hooks for reusable product patterns
   that are not feature-specific.
 - `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
+- `src/features/workflows/lib/workflowLibrary.ts`: pure Workflow Library
+  helpers for active-run lookup, schedule lookup, search/filter/sort,
+  action availability, selected workflow fallback, and safe date formatting.
 - `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, runtime failure, and system/startup issue presentation with copyable collapsed raw details for long errors.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
 - `src/features/workflows/components/ActionConfigEditor.tsx`: reusable action config editor dispatcher used by graph action nodes; concrete fields are split into grouped `ActionConfig*Fields.tsx` modules.
@@ -102,7 +111,19 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   runs/workflows back into existing destinations. Identity evidence opens
   Identity Lab as a read-only historical target carrying workflow, run, and
   evidence context.
-- Workflow list direct Run, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while run snapshot polling continues. Active row status, row Run disabling, and row Stop are scoped to that workflow's run id. Duplicate calls `duplicateWorkflow` so local copies preserve the saved graph and non-storage settings while receiving a fresh browser identity/profile/fingerprint. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
+- Workflow Library direct Run, active-row Stop, More-menu lifecycle actions,
+  selected detail preview, duplicate confirmation, delete confirmation, and
+  Workflow Package import/export interaction. List Run calls the existing
+  `runWorkflow` command against saved workflow state and leaves the user on the
+  list while run snapshot polling continues. Active row status, row Run/Stop
+  switching, and row Stop are scoped to that workflow's run id. Duplicate calls
+  `duplicateWorkflow` so local copies preserve the saved graph and non-storage
+  settings while receiving a fresh browser identity/profile/fingerprint.
+  Export chooses Flow and selected Workflow Settings sections, explains
+  sanitization, then delegates native Save dialog and package JSON writing to
+  the Electron backend. Import reads package JSON from the browser file input,
+  previews available sections and sanitized fields, always creates a new
+  workflow, refreshes the list, and opens the imported workflow.
 - Browser recorder UI orchestration. The workflow list starts a backend-owned
   new-workflow recorder session, and the workflow detail header starts a
   `replace_current_graph` recorder session for explicit graph replacement. The

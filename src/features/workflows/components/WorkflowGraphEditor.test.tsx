@@ -69,7 +69,10 @@ describe("Workflow graph editor integration", () => {
 
   async function openWorkflowDetails() {
     await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const row = await screen.findByRole("row", { name: /Login flow/i });
+    await userEvent.click(within(row).getByRole("button", {
+      name: "Open Graph Login flow",
+    }));
   }
 
   test("adds selects deletes and saves logic nodes through the grouped React Flow workspace", async () => {

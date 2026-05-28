@@ -7,11 +7,17 @@ Preserve these unless the task explicitly changes them.
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
 - New workflows have a `Start -> New node` draft graph.
-- Workflow list `Edit` opens Workflow Settings at General.
-- Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph and non-storage copied settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint, and disables Run from selected for the copy.
+- Workflow list `Settings` opens Workflow Settings at General.
+- Workflow Library uses a dense table/detail workspace. Row actions expose
+  `Open Graph`, direct `Run <workflow name>` or `Stop <workflow name>`, and a
+  `More actions for <workflow name>` menu containing Settings, Duplicate,
+  Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`,
+  preserves the saved graph and non-storage copied settings without
+  package-export sanitization, creates a fresh browser identity/profile/fingerprint,
+  and disables Run from selected for the copy.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Keeping profile data is the default. Deleting profile data removes only unshared inactive profile directories. Backend deletion rejects while the workflow is actively running, while its persistent profile is used by an active run, or while a retained browser session still owns the workflow/profile.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
-- Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
+- Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview with included sections and omitted/sanitized fields, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
 - Browser recording never exposes captured password or secret-like text field values to the renderer. Top-level page navigations can become recorded `navigate` steps, but embedded frame navigations such as ad/user-sync iframes must not become workflow nodes. Text entry must preserve literal whitespace and clearing, contenteditable edits must capture visible editor text, and text-composition, edit-hotkey, deletion-key, or modifier-only keydown noise must not create workflow nodes or split one text entry into multiple Fill Field steps. Clipboard paste into non-sensitive targets records replayable Set Clipboard plus Paste steps and suppresses the duplicate input event caused by the paste; sensitive pasted values are redacted and excluded until reviewed. Generic clicks that only precede a checkbox/radio/select/upload control event must not create duplicate click nodes. A tab opened by a recorded click should replay as click plus tab switch; a tab created without a preceding click should replay as Open New Tab. Those generated input steps are excluded by default with a review warning until the operator supplies a safe literal or variable. Stopping a recorder drains buffered fallback events before review draft generation. Generated recording graphs preserve positive captured gaps between included steps as fixed edge delays and wrap long recordings into readable rows instead of one horizontal line. Record Replacement cannot start while the target workflow, target browser profile, or batch runner is active. Saving a recording draft only honors reviewed labels, inclusion flags, supported captured value edits, and backend-held timing metadata against the backend-held draft steps; renderer-supplied action type, locator replacement, or timing replacement is ignored. Discarding a recording session and successfully saving a recording draft consume the backend in-memory recorder state instead of leaving reusable draft/session handles.
 - Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
 - Overview is the default Mission Control entry point. It shows backend-owned
@@ -119,6 +125,9 @@ Preserve these unless the task explicitly changes them.
 ## UI Behavior
 
 - Workflow list and detail remain separate screens.
+- Workflow Library search/filter/sort is local to loaded workflow summaries,
+  run snapshots, and schedules. Unsupported filters are disabled with a
+  bounded reason instead of broad detail fetches or placeholder data.
 - Workflow list does not expose raw `updated_at` values; graph editing state belongs in the detail screen.
 - Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.

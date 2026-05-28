@@ -77,6 +77,13 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
   }
 
+  async function openWorkflowGraph(name = "Login flow") {
+    const row = await screen.findByRole("row", { name: new RegExp(name, "i") });
+    await userEvent.click(within(row).getByRole("button", {
+      name: `Open Graph ${name}`,
+    }));
+  }
+
   test("opens settings from the sidebar and persists the autosave preference", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
@@ -760,7 +767,7 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await openWorkflows();
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -808,7 +815,7 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await openWorkflows();
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
@@ -842,7 +849,7 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await openWorkflows();
-    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await openWorkflowGraph();
     const header = await screen.findByRole("region", { name: "Workflow detail header" });
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
@@ -900,7 +907,7 @@ describe("App settings and graph autosave", () => {
     await waitFor(() => {
       expect(workflowBridgeMock.runWorkflow).toHaveBeenCalledWith("workflow-1");
     });
-    expect(await screen.findByText("Running")).toBeInTheDocument();
+    expect((await screen.findAllByText("Running")).length).toBeGreaterThan(0);
 
     expect(await screen.findByText("Run succeeded: Login flow")).toBeInTheDocument();
     expect(runSnapshotCalls).toBeGreaterThan(1);
