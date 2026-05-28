@@ -323,9 +323,10 @@ credentials must not be sent to renderer code in recorder snapshots.
 
 `RecordingEvent.kind` currently allows navigation, click, input/change/select,
 checkbox/radio, scroll, keyboard, download, dialog, tab, and wait-marker events.
-Capture records navigation, click variants, text entry, select, checkbox/radio,
-file-input change names, throttled scroll, non-text keys/hotkeys, form submit
-markers, tab creation/switch, downloads, and dialogs. Capture drops malformed
+Capture records navigation, click variants, literal text entry including empty
+strings and surrounding whitespace, contenteditable editor text, select,
+checkbox/radio, file-input change names, throttled scroll, non-text keys/hotkeys,
+form submit markers, tab creation/switch, downloads, and dialogs. Capture drops malformed
 locator candidates, bounds locator strings, bounds raw page-controlled payloads,
 and redacts password or secret-like text field values before events are returned
 through IPC. Raw payload fields with secret-like keys are redacted even when a
@@ -339,7 +340,10 @@ target into one `input_text` step with the final value, maps navigation, click
 variants, select, checkbox/radio, scroll, keyboard, tab, download, dialog,
 wait-marker, screenshot-marker, submit-marker, and reviewed upload-path events
 into existing action configs, ignores text-composition and modifier-only
-keyboard noise such as `Process`/`Shift` so it does not split text entry, and
+keyboard noise such as `Process`/`Shift`, text edit hotkeys, and deletion keys
+so they do not split text entry, ignores generic clicks superseded by form
+control events on the same target, treats click-caused tab creation as a
+subsequent tab switch, resets scroll deltas after navigation/tab changes, and
 carries source event ids forward for review.
 Each reviewed step also carries first/last source-event timestamps; graph
 generation turns positive gaps between included recorded steps into fixed
