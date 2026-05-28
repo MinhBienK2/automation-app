@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Workflow Library - Mission Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0B1016",
+                        panel: "#0E151D",
+                        surface: "#121C26",
+                        "elevated-surface": "#172431",
+                        border: "#233240",
+                        "border-emphasis": "#314758",
+                        "text-primary": "#E7EEF5",
+                        "text-secondary": "#9AAEBD",
+                        "text-muted": "#667D8D",
+                        primary: "#32D3E6",
+                        "primary-wash": "rgba(50, 211, 230, 0.12)",
+                        success: "#39D98A",
+                        warning: "#F4B740",
+                        danger: "#F06467"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "control": "8px",
+                        "card": "12px",
+                        "panel": "16px",
+                        "pill": "9999px"
+                    },
+                    spacing: {
+                        "base": "8px",
+                        "compact": "12px",
+                        "panel": "16px",
+                        "page": "24px",
+                        "section": "32px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "technical": ["Geist Mono", "monospace"]
+                    },
+                    fontSize: {
+                        "page-title": ["30px", { lineHeight: "38px", fontWeight: "600", letterSpacing: "0" }],
+                        "section-title": ["19px", { lineHeight: "26px", fontWeight: "500", letterSpacing: "0" }],
+                        "body": ["14px", { lineHeight: "20px", fontWeight: "400", letterSpacing: "0" }],
+                        "control": ["13px", { lineHeight: "18px", fontWeight: "500", letterSpacing: "0" }],
+                        "technical": ["12px", { lineHeight: "16px", fontWeight: "600", letterSpacing: "0.08em" }],
+                        "metric": ["34px", { lineHeight: "40px", fontWeight: "600", letterSpacing: "0" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .icon-fill { font-variation-settings: 'FILL' 1; }
+
+        /* Custom Scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0B1016; }
+        ::-webkit-scrollbar-thumb { background: #233240; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #314758; }
+    </style>
+</head>
+<body class="bg-background text-text-primary font-body antialiased min-h-screen flex overflow-hidden">
+<!-- Shared SideNavBar -->
+<nav class="bg-panel w-[232px] h-screen flex flex-col border-r border-border fixed inset-y-0 left-0 z-40">
+<!-- Brand / Header -->
+<div class="h-16 flex flex-col justify-center px-page border-b border-border">
+<h1 class="font-headline text-xl font-semibold text-primary tracking-tight">Mission Control</h1>
+<span class="text-text-secondary text-[11px] uppercase tracking-wider font-technical">Automation Lab</span>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 overflow-y-auto py-panel space-y-1 px-base">
+<!-- Overview -->
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span class="font-control text-control">Overview</span>
+</a>
+<!-- Workflows (Active) -->
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control bg-primary-wash text-primary border-l-2 border-primary cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-lg icon-fill">account_tree</span>
+<span class="font-control text-control">Workflows</span>
+</a>
+<!-- Runs -->
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-lg">play_circle</span>
+<span class="font-control text-control">Runs</span>
+</a>
+<!-- Evidence -->
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-lg">description</span>
+<span class="font-control text-control">Evidence</span>
+</a>
+<!-- Schedules -->
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+<span class="font-control text-control">Schedules</span>
+</a>
+<!-- Identities -->
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-lg">fingerprint</span>
+<span class="font-control text-control">Identities</span>
+</a>
+</div>
+<!-- Footer / Settings -->
+<div class="p-base border-t border-border">
+<a class="flex items-center space-x-3 px-3 py-2 rounded-control text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer active:opacity-80 mb-2" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span class="font-control text-control">Settings</span>
+</a>
+<button class="w-full flex items-center justify-center space-x-2 bg-surface border border-border-emphasis text-text-primary px-4 py-2 rounded-control hover:bg-elevated-surface transition-colors font-control text-control shadow-sm">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>New Workflow</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col ml-[232px] min-w-0">
+<!-- Shared TopNavBar -->
+<header class="bg-background h-16 w-full flex items-center border-b border-border sticky top-0 right-0 z-30 flex items-center justify-between px-page transition-all duration-150">
+<!-- Left: Page Title & Context -->
+<div class="flex items-center gap-4">
+<h2 class="font-headline text-page-title text-primary">Workflow Library</h2>
+<div class="h-5 w-px bg-border"></div>
+<!-- Search -->
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface border border-border text-body text-text-primary rounded-control py-1.5 pl-9 pr-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-text-muted" placeholder="Search workflows..." type="text"/>
+</div>
+</div>
+<!-- Right: Actions & Badges -->
+<div class="flex items-center gap-4">
+<span class="px-2.5 py-1 rounded-control bg-surface border border-border text-text-secondary font-technical text-[11px] uppercase tracking-wider flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                    Environment: Production
+                </span>
+<div class="flex items-center gap-1">
+<button class="p-2 rounded-control text-secondary hover:text-text-primary hover:bg-elevated-surface transition-colors relative">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border border-background"></span>
+</button>
+<button class="p-2 rounded-control text-secondary hover:text-text-primary hover:bg-elevated-surface transition-colors">
+<span class="material-symbols-outlined text-xl">help_outline</span>
+</button>
+</div>
+<button class="bg-primary text-background px-4 py-1.5 rounded-control font-control text-control hover:bg-opacity-90 transition-opacity flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+                    Launch Run
+                </button>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 flex overflow-hidden relative">
+<!-- Left Area: Data Table & Filters -->
+<div class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative z-10 transition-all duration-300 mr-[340px]">
+<!-- Secondary Filter Bar -->
+<div class="px-page py-compact border-b border-border flex items-center justify-between bg-background/95 backdrop-blur z-20">
+<div class="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 -mb-1">
+<!-- Filter Dropdowns (Simulated) -->
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-control bg-surface border border-border text-body text-text-secondary hover:border-border-emphasis hover:text-text-primary transition-colors whitespace-nowrap">
+<span class="font-control text-control">Status</span>
+<span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-control bg-surface border border-border text-body text-text-secondary hover:border-border-emphasis hover:text-text-primary transition-colors whitespace-nowrap">
+<span class="font-control text-control">Tags</span>
+<span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-control bg-surface border border-border text-body text-text-secondary hover:border-border-emphasis hover:text-text-primary transition-colors whitespace-nowrap">
+<span class="font-control text-control">Owner</span>
+<span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="flex-1 overflow-auto bg-background p-page">
+<div class="border border-border rounded-card bg-surface overflow-hidden">
+<table class="w-full text-left border-collapse whitespace-nowrap">
+<thead class="bg-panel border-b border-border sticky top-0 z-10">
+<tr>
+<th class="px-4 py-3 font-control text-text-secondary w-10"></th>
+<th class="px-4 py-3 font-control text-text-secondary">Workflow Name</th>
+<th class="px-4 py-3 font-control text-text-secondary">Last Run</th>
+<th class="px-4 py-3 font-control text-text-secondary">Health</th>
+<th class="px-4 py-3 font-control text-text-secondary hidden xl:table-cell">Active Schedule</th>
+<th class="px-4 py-3 font-control text-text-secondary hidden lg:table-cell">Identity</th>
+<th class="px-4 py-3 font-control text-text-secondary">Owner / Update</th>
+<th class="px-4 py-3 font-control text-text-secondary w-10"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- Row 1: Selected -->
+<tr class="bg-primary-wash cursor-pointer hover:bg-elevated-surface transition-colors group">
+<td class="px-4 py-3 border-l-2 border-primary">
+<div class="w-4 h-4 rounded border border-primary flex items-center justify-center bg-primary/20">
+<span class="material-symbols-outlined text-[12px] text-primary">check</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-control bg-panel border border-border flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-lg">database</span>
+</div>
+<div>
+<div class="font-control text-text-primary">Data Ingestion Pipeline</div>
+<div class="font-technical text-text-muted text-[10px]">ID: WRK-0A9F</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2 text-body">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-text-primary">2m ago</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 rounded-pill bg-success/10 border border-success/20 text-success font-control text-[11px] flex items-center gap-1 w-max">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Healthy
+                                        </span>
+</td>
+<td class="px-4 py-3 hidden xl:table-cell text-body text-text-secondary">Daily at 00:00 UTC</td>
+<td class="px-4 py-3 hidden lg:table-cell font-technical text-text-secondary text-xs">svc-etl-prod</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-border-emphasis text-[10px] flex items-center justify-center font-control text-text-primary">AL</div>
+<div class="text-body text-text-secondary text-xs">Updated 4h ago</div>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="p-1 text-text-muted hover:text-text-primary rounded-control hover:bg-surface opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Warning -->
+<tr class="cursor-pointer hover:bg-surface transition-colors group">
+<td class="px-4 py-3 border-l-2 border-transparent">
+<div class="w-4 h-4 rounded border border-border flex items-center justify-center group-hover:border-border-emphasis transition-colors"></div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-control bg-panel border border-border flex items-center justify-center text-text-secondary">
+<span class="material-symbols-outlined text-lg">receipt_long</span>
+</div>
+<div>
+<div class="font-control text-text-primary">Invoice Processor</div>
+<div class="font-technical text-text-muted text-[10px]">ID: WRK-7B2C</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2 text-body">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+<span class="text-text-primary">15m ago</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 rounded-pill bg-warning/10 border border-warning/20 text-warning font-control text-[11px] flex items-center gap-1 w-max">
+<span class="material-symbols-outlined text-[14px]">warning</span> Degraded
+                                        </span>
+</td>
+<td class="px-4 py-3 hidden xl:table-cell text-body text-text-secondary">Every 30m</td>
+<td class="px-4 py-3 hidden lg:table-cell font-technical text-text-secondary text-xs">svc-finance-bot</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-border-emphasis text-[10px] flex items-center justify-center font-control text-text-primary">MK</div>
+<div class="text-body text-text-secondary text-xs">Updated 1d ago</div>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="p-1 text-text-muted hover:text-text-primary rounded-control hover:bg-surface opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Failed -->
+<tr class="cursor-pointer hover:bg-surface transition-colors group">
+<td class="px-4 py-3 border-l-2 border-transparent">
+<div class="w-4 h-4 rounded border border-border flex items-center justify-center group-hover:border-border-emphasis transition-colors"></div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-control bg-panel border border-border flex items-center justify-center text-danger">
+<span class="material-symbols-outlined text-lg">security</span>
+</div>
+<div>
+<div class="font-control text-text-primary">Compliance Audit Scan</div>
+<div class="font-technical text-text-muted text-[10px]">ID: WRK-1X9M</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2 text-body">
+<span class="w-2 h-2 rounded-full bg-danger"></span>
+<span class="text-text-primary">1h ago</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<span class="px-2 py-0.5 rounded-pill bg-danger/10 border border-danger/20 text-danger font-control text-[11px] flex items-center gap-1 w-max">
+<span class="material-symbols-outlined text-[14px]">error</span> Critical
+                                        </span>
+</td>
+<td class="px-4 py-3 hidden xl:table-cell text-body text-text-secondary">Weekly (Sun)</td>
+<td class="px-4 py-3 hidden lg:table-cell font-technical text-text-secondary text-xs">svc-sec-ops</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-border-emphasis text-[10px] flex items-center justify-center font-control text-text-primary">SJ</div>
+<div class="text-body text-text-secondary text-xs">Updated 3d ago</div>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="p-1 text-text-muted hover:text-text-primary rounded-control hover:bg-surface opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Area: Inspector Panel (Fixed, absolute to right edge) -->
+<aside class="w-[340px] bg-panel border-l border-border flex flex-col h-full absolute right-0 top-0 z-20 shadow-[-8px_0_24px_rgba(0,0,0,0.2)]">
+<!-- Inspector Header -->
+<div class="p-panel border-b border-border bg-panel sticky top-0 z-10 flex flex-col gap-4">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-card bg-surface border border-border flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">database</span>
+</div>
+<div>
+<h3 class="font-section-title text-text-primary leading-tight">Data Ingestion Pipeline</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-technical text-text-muted text-xs">WRK-0A9F</span>
+<span class="w-1 h-1 rounded-full bg-border-emphasis"></span>
+<span class="text-success text-xs font-control flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Active
+                                    </span>
+</div>
+</div>
+</div>
+<button class="p-1 text-text-muted hover:text-text-primary rounded-control hover:bg-surface transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Quick Actions Grid -->
+<div class="grid grid-cols-3 gap-2">
+<button class="col-span-3 flex items-center justify-center gap-2 bg-surface border border-border-emphasis text-text-primary px-3 py-2 rounded-control hover:bg-elevated-surface transition-colors font-control text-control">
+<span class="material-symbols-outlined text-sm text-primary">account_tree</span>
+                            Open Graph Builder
+                        </button>
+<button class="flex flex-col items-center justify-center gap-1 bg-surface border border-border text-text-primary px-2 py-2 rounded-control hover:border-border-emphasis transition-colors font-control text-[11px]">
+<span class="material-symbols-outlined text-sm text-text-secondary">content_copy</span>
+                            Duplicate
+                        </button>
+<button class="flex flex-col items-center justify-center gap-1 bg-surface border border-border text-text-primary px-2 py-2 rounded-control hover:border-border-emphasis transition-colors font-control text-[11px]">
+<span class="material-symbols-outlined text-sm text-text-secondary">file_download</span>
+                            Export
+                        </button>
+<button class="flex flex-col items-center justify-center gap-1 bg-surface border border-border text-text-primary px-2 py-2 rounded-control hover:border-border-emphasis transition-colors font-control text-[11px]">
+<span class="material-symbols-outlined text-sm text-text-secondary">file_upload</span>
+                            Import
+                        </button>
+<button class="col-span-3 flex items-center justify-center gap-2 bg-surface border border-border text-danger hover:bg-danger/10 px-3 py-2 rounded-control hover:border-danger/30 transition-colors font-control text-control">
+<span class="material-symbols-outlined text-sm">delete</span>
+                            Archive
+                        </button>
+</div>
+</div>
+<!-- Inspector Content Scrollable -->
+<div class="flex-1 overflow-y-auto p-panel space-y-section pb-24">
+<!-- Section: Recent Runs -->
+<section>
+<h4 class="font-control text-text-secondary uppercase tracking-wider text-xs mb-3 flex justify-between items-center">
+                            Recent Runs
+                            <a class="text-primary hover:underline lowercase normal-case tracking-normal" href="#">View all</a>
+</h4>
+<div class="space-y-2">
+<!-- Run Item -->
+<div class="flex items-center justify-between p-3 rounded-card bg-surface border border-border hover:border-border-emphasis transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-success text-lg">check_circle</span>
+<div>
+<div class="font-technical text-text-primary text-xs">RUN-8X22</div>
+<div class="text-body text-text-muted text-xs">2m ago • by System</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-technical text-text-primary text-xs">45s</div>
+<a class="text-primary text-xs hover:underline mt-0.5 inline-block" href="#">Logs</a>
+</div>
+</div>
+<!-- Run Item -->
+<div class="flex items-center justify-between p-3 rounded-card bg-surface border border-border hover:border-border-emphasis transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-success text-lg">check_circle</span>
+<div>
+<div class="font-technical text-text-primary text-xs">RUN-8X21</div>
+<div class="text-body text-text-muted text-xs">24h ago • by System</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-technical text-text-primary text-xs">42s</div>
+</div>
+</div>
+<!-- Run Item -->
+<div class="flex items-center justify-between p-3 rounded-card bg-surface border border-border hover:border-border-emphasis transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-warning text-lg">warning</span>
+<div>
+<div class="font-technical text-text-primary text-xs">RUN-8X20</div>
+<div class="text-body text-text-muted text-xs">48h ago • by System</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-technical text-text-warning text-xs">1m 12s</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Configuration Posture -->
+<section>
+<h4 class="font-control text-text-secondary uppercase tracking-wider text-xs mb-3">Configuration Posture</h4>
+<div class="bg-surface rounded-card border border-border overflow-hidden">
+<!-- Detail Row -->
+<div class="p-3 border-b border-border flex justify-between items-start">
+<div class="flex items-center gap-2 text-text-secondary">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-control text-xs">Schedule</span>
+</div>
+<div class="text-right">
+<div class="font-body text-text-primary text-sm">Daily at 00:00 UTC</div>
+<div class="font-technical text-text-muted text-[10px] mt-0.5">cron(0 0 * * ? *)</div>
+</div>
+</div>
+<!-- Detail Row -->
+<div class="p-3 border-b border-border flex justify-between items-start">
+<div class="flex items-center gap-2 text-text-secondary">
+<span class="material-symbols-outlined text-sm">fingerprint</span>
+<span class="font-control text-xs">Identity</span>
+</div>
+<div class="text-right">
+<div class="font-technical text-primary text-xs bg-primary-wash px-1.5 py-0.5 rounded inline-block">svc-etl-prod</div>
+<div class="text-body text-success text-xs mt-1 flex items-center justify-end gap-1">
+<span class="material-symbols-outlined text-[12px]">verified_user</span> Valid Credentials
+                                    </div>
+</div>
+</div>
+<!-- Detail Row -->
+<div class="p-3 flex justify-between items-start">
+<div class="flex items-center gap-2 text-text-secondary">
+<span class="material-symbols-outlined text-sm">cloud</span>
+<span class="font-control text-xs">Node Pool</span>
+</div>
+<div class="text-right">
+<div class="font-body text-text-primary text-sm">us-east-cluster-1</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

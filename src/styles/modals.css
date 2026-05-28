@@ -3,9 +3,9 @@
   gap: 18px;
   width: min(480px, 100%);
   padding: 20px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
-  background: #171717;
+  background: #0b1016;
 }
 
 .modal-header {
@@ -24,9 +24,9 @@
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
   padding: 20px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
-  background: #171717;
+  background: #0b1016;
 }
 
 .action-help-dialog {
@@ -176,9 +176,9 @@
   width: min(280px, 100%);
   gap: 4px;
   padding: 4px;
-  border: 1px solid #2e2e2e;
-  border-radius: 9999px;
-  background: #0f0f0f;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #121c26;
 }
 
 .help-language-tabs-compact {
@@ -195,9 +195,9 @@
 .help-language-switch button {
   min-height: 32px;
   border-color: transparent;
-  border-radius: 9999px;
+  border-radius: 8px;
   background: transparent;
-  color: #b4b4b4;
+  color: #9aaebd;
 }
 
 .help-language-switch-compact button {
@@ -218,9 +218,9 @@
   display: grid;
   gap: 10px;
   padding: 14px;
-  border: 1px solid #2e2e2e;
+  border: 1px solid #233240;
   border-radius: 8px;
-  background: #0f0f0f;
+  background: #121c26;
 }
 
 .help-disclosure-summary {
@@ -230,7 +230,7 @@
   align-items: center;
   cursor: pointer;
   list-style: none;
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 15px;
   font-weight: 500;
 }
@@ -242,7 +242,7 @@
 .help-disclosure-summary::before {
   content: ">";
   width: 16px;
-  color: #898989;
+  color: #667d8d;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 12px;
   line-height: 1;
@@ -250,7 +250,7 @@
 }
 
 .help-disclosure[open] > .help-disclosure-summary::before {
-  color: #3ecf8e;
+  color: #32d3e6;
   transform: rotate(90deg);
 }
 
@@ -268,7 +268,7 @@
   gap: 8px;
   margin: 0;
   padding-left: 18px;
-  color: #b4b4b4;
+  color: #9aaebd;
 }
 
 .help-section li {
@@ -306,7 +306,7 @@
 
 .help-field-group-summary::before {
   content: ">";
-  color: #898989;
+  color: #667d8d;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 10px;
   line-height: 1;
@@ -314,7 +314,7 @@
 }
 
 .help-field-group[open] > .help-field-group-summary::before {
-  color: #3ecf8e;
+  color: #32d3e6;
   transform: rotate(90deg);
 }
 
@@ -337,7 +337,7 @@
 .help-field-leaf {
   padding: 10px 0 0;
   border: 0;
-  border-top: 1px solid #242424;
+  border-top: 1px solid #233240;
   border-radius: 0;
   background: transparent;
 }
@@ -350,7 +350,7 @@
 .help-field-leaf > .help-disclosure-summary {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 6px;
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 13px;
 }
 
@@ -371,7 +371,7 @@
 }
 
 .help-field-item strong {
-  color: #fafafa;
+  color: #e7eef5;
   font-size: 13px;
   font-weight: 500;
 }
@@ -380,7 +380,7 @@
   border: 1px solid #303030;
   border-radius: 6px;
   padding: 2px 6px;
-  color: #b4b4b4;
+  color: #9aaebd;
   font-size: 11px;
   line-height: 1.2;
 }
@@ -395,7 +395,7 @@
   gap: 5px;
   margin: 0;
   padding-left: 18px;
-  color: #898989;
+  color: #667d8d;
 }
 
 .help-field-details li {
@@ -405,7 +405,7 @@
 .help-field-reference {
   gap: 8px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #242424;
+  border-bottom: 1px solid #233240;
 }
 
 .help-field-reference:last-child {
@@ -423,13 +423,13 @@
   display: grid;
   gap: 5px;
   padding: 10px;
-  border: 1px solid #242424;
+  border: 1px solid #233240;
   border-radius: 6px;
-  background: #171717;
+  background: #0b1016;
 }
 
 .help-option-disclosure {
-  border: 1px solid #242424;
+  border: 1px solid #233240;
 }
 
 .help-option-summary {
@@ -444,7 +444,7 @@
 }
 
 .help-option-item strong span {
-  color: #898989;
+  color: #667d8d;
   font-family: "Source Code Pro", "Office Code Pro", Menlo, monospace;
   font-size: 11px;
   font-weight: 400;

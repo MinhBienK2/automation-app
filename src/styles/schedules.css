@@ -48,6 +48,10 @@
   color: var(--app-text-muted);
 }
 
+.schedule-row-focused td {
+  background: rgba(50, 211, 230, 0.06);
+}
+
 .status-pill {
   display: inline-flex;
   min-height: 26px;
@@ -103,6 +107,13 @@
 .schedule-history-item small {
   color: var(--app-text-muted);
   font-size: 13px;
+}
+
+.schedule-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .run-center-screen {

@@ -10,6 +10,8 @@
 - Main process registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
 - SQLite repository: `electron/backend/persistence/workflowRepository.ts`
+- Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
+- Identity read model: `electron/backend/identity/identityRepository.ts`
 
 ## Current Boundary
 
@@ -60,6 +62,16 @@ string map.
 - `stopRun`
 - `getRunState`
 - `listRunStates`
+- `getOperationsOverview`
+- `getOperationalRunDetail`
+- `listEvidenceItems`
+- `getEvidenceDetail`
+- `getEvidenceScreenshotPreview`
+- `revealEvidenceArtifact`
+- `exportEvidenceBundle`
+- `getIdentityLabOverview`
+- `getIdentityLabDetail`
+- `closeIdentityRetainedSession`
 - `listSchedules`
 - `getSchedule`
 - `createSchedule`
@@ -149,6 +161,34 @@ The legacy prototype helpers `suggestSelectors` and `normalizeRecordedEvents`
 are no longer part of the production Electron bridge. Selector generation and
 timeline normalization belong behind the `Recording*` session/draft contract.
 
+`getOperationsOverview({ day_start_utc, day_end_utc, timezone_label?, attention_filter?, limits? })`
+returns the bounded `OperationsOverview` read model for the operator's local
+day expressed as UTC boundaries. The backend validates the range, rejects
+ranges over 48 hours before building hourly buckets, applies list limits,
+computes KPI/activity/attention meaning, and returns only safe evidence
+metadata. `getOperationalRunDetail(runId)` returns one bounded persisted run
+summary for Overview-to-Runs navigation; it is not an unbounded run-history or
+artifact-opening API.
+
+`listEvidenceItems(request?)` returns a bounded historical evidence page derived
+from all matching persisted run outputs and run steps.
+`getEvidenceDetail(evidenceId)` returns one typed bounded detail payload.
+Evidence time filters are validated as parseable UTC-normalized instants and
+invalid ranges return typed command errors instead of raw runtime exceptions.
+`getEvidenceScreenshotPreview(evidenceId)`,
+`revealEvidenceArtifact(evidenceId)`, and
+`exportEvidenceBundle({ evidence_ids })` accept evidence ids only; the backend
+resolves and validates file artifact paths before preview, native reveal, or
+manifest-bundle export.
+
+`getIdentityLabOverview(request?)` returns a bounded Identity Lab read model
+for workflow-owned browser identities. `getIdentityLabDetail(target)` returns
+one managed identity detail or read-only historical identity reference.
+`closeIdentityRetainedSession(workflowId, profileName)` closes only the
+matching in-memory retained browser context after backend workflow/profile/run
+guards pass; it does not delete persistent profile data, settings, evidence,
+or historical runs.
+
 ## Payload Rules
 
 - Renderer wrapper names remain camelCase.
@@ -177,6 +217,21 @@ Workflow schedule CRUD, schedule validation, enable-time workflow readiness
 checks, schedule event history, and the in-app scheduler tick are owned by the
 Electron backend. The renderer manages schedule form state and calls the typed
 bridge; it does not own timers or schedule SQL.
+
+Operations Overview aggregation is owned by the Electron backend. The renderer
+can refresh and navigate from returned references, but it does not compute KPI
+meaning from raw SQL rows or expose arbitrary run outputs.
+
+Evidence Explorer aggregation and artifact actions are owned by the Electron
+backend. The renderer never receives absolute original artifact paths and does
+not import filesystem, SQLite, Electron shell/dialog, or raw output readers.
+
+Identity Lab aggregation and retained-session close are owned by the Electron
+backend. The renderer receives current managed identity summaries, historical
+references, rotation history, run/evidence references, and sanitized
+diagnostics only; it never receives absolute profile/font/binary paths, proxy
+credentials, raw browser storage, cookies, tokens, or raw run outputs through
+the Identity Lab boundary.
 
 CloakBrowser diagnostics and binary/profile lifecycle are command-owned as well.
 The renderer can request wrapper/binary/profile diagnostics, trigger an explicit

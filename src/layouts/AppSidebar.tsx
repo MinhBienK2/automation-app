@@ -1,11 +1,14 @@
 import { Button } from "../components/ui/button";
-import { Activity, CalendarClock, ListTree, Settings } from "lucide-react";
+import { Activity, CalendarClock, Files, Fingerprint, Gauge, ListTree, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "workflows" | "runs" | "schedules" | "settings";
+type AppSidebarActiveItem = "overview" | "workflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
   collapsed: boolean;
+  onOpenOverview: () => void;
+  onOpenEvidence: () => void;
+  onOpenIdentities: () => void;
   onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
@@ -50,6 +53,9 @@ function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
 export function AppSidebar({
   activeItem,
   collapsed,
+  onOpenOverview,
+  onOpenEvidence,
+  onOpenIdentities,
   onOpenRunCenter,
   onOpenSchedules,
   onOpenSettings,
@@ -59,10 +65,23 @@ export function AppSidebar({
   return (
     <aside aria-label="Application sidebar" className="app-sidebar">
       <div className="sidebar-brand">
-        <img className="sidebar-logo" src={appLogoSrc} alt="Automation App logo" />
-        <span className="sidebar-title">Workflow Manager</span>
+        <img className="sidebar-logo" src={appLogoSrc} alt="Mission Control logo" />
+        <span className="sidebar-title">Mission Control</span>
       </div>
       <nav aria-label="Main navigation" className="sidebar-nav">
+        <Button
+          className={
+            activeItem === "overview"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenOverview}
+        >
+          <Gauge aria-hidden="true" className="sidebar-item-icon" />
+          <span>Overview</span>
+        </Button>
         <Button
           className={
             activeItem === "workflows"
@@ -87,7 +106,20 @@ export function AppSidebar({
           onClick={onOpenRunCenter}
         >
           <Activity aria-hidden="true" className="sidebar-item-icon" />
-          <span>Run Center</span>
+          <span>Runs</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "evidence"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenEvidence}
+        >
+          <Files aria-hidden="true" className="sidebar-item-icon" />
+          <span>Evidence</span>
         </Button>
         <Button
           className={
@@ -101,6 +133,19 @@ export function AppSidebar({
         >
           <CalendarClock aria-hidden="true" className="sidebar-item-icon" />
           <span>Schedules</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "identities"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenIdentities}
+        >
+          <Fingerprint aria-hidden="true" className="sidebar-item-icon" />
+          <span>Identities</span>
         </Button>
         <Button
           className={

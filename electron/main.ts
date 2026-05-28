@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import {
   createWorkflowCommandHandlers,
   serializeCommandError,
@@ -113,6 +113,17 @@ app.whenReady().then(() => {
 
       await fs.writeFile(filePath, JSON.stringify(packageValue, null, 2), "utf8");
       return filePath;
+    },
+    revealEvidenceArtifact(absolutePath) {
+      shell.showItemInFolder(absolutePath);
+    },
+    async selectEvidenceBundleDirectory() {
+      const { canceled, filePaths } = await dialog.showOpenDialog({
+        defaultPath: appPaths.rootDir,
+        properties: ["openDirectory", "createDirectory"],
+        title: "Export Evidence Bundle",
+      });
+      return canceled ? null : filePaths[0] ?? null;
     },
   });
   registerWorkflowIpc(handlers);

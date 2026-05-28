@@ -5,6 +5,11 @@ import type {
   RecordingGenerateDraftOptions,
   RecordingSaveDraftInput,
   RecorderStartSessionInput,
+  EvidenceBundleExportRequest,
+  EvidenceListRequest,
+  IdentityLabOverviewRequest,
+  IdentityLabTarget,
+  OperationsOverviewRequest,
   WorkflowBrowserConfig,
   WorkflowDeleteOptions,
   WorkflowExport,
@@ -141,6 +146,46 @@ export function getRunState() {
 
 export function listRunStates() {
   return bridge().listRunStates();
+}
+
+export function getOperationsOverview(request: OperationsOverviewRequest) {
+  return bridge().getOperationsOverview(request);
+}
+
+export function getOperationalRunDetail(runId: string) {
+  return bridge().getOperationalRunDetail(runId);
+}
+
+export function listEvidenceItems(request: EvidenceListRequest = {}) {
+  return bridge().listEvidenceItems(request);
+}
+
+export function getEvidenceDetail(evidenceId: string) {
+  return bridge().getEvidenceDetail(evidenceId);
+}
+
+export function getEvidenceScreenshotPreview(evidenceId: string) {
+  return bridge().getEvidenceScreenshotPreview(evidenceId);
+}
+
+export function revealEvidenceArtifact(evidenceId: string) {
+  return bridge().revealEvidenceArtifact(evidenceId);
+}
+
+export function exportEvidenceBundle(request: EvidenceBundleExportRequest) {
+  return bridge().exportEvidenceBundle(request);
+}
+
+export function getIdentityLabOverview(request: IdentityLabOverviewRequest = {}) {
+  return bridge().getIdentityLabOverview(request);
+}
+
+export function getIdentityLabDetail(target: IdentityLabTarget) {
+  return bridge().getIdentityLabDetail(target);
+}
+
+export function closeIdentityRetainedSession(workflowId: string, profileName: string) {
+  return bridge().closeIdentityRetainedSession(workflowId, profileName);
 }
 
 export function listSchedules() {

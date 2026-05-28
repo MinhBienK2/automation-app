@@ -42,12 +42,12 @@ export type WorkflowFlowEdgeStatus =
   | "failed"
   | "issue";
 
-const graphEdgeStroke = "#4d4d4d";
-const graphSelectedEdgeStroke = "#22d3ee";
-const graphRunningEdgeStroke = "#38bdf8";
-const graphCompletedEdgeStroke = "#3ecf8e";
-const graphIssueEdgeStroke = "#fbbf24";
-const graphFailedEdgeStroke = "#ff7b72";
+const graphEdgeStroke = "#3e5668";
+const graphSelectedEdgeStroke = "#32d3e6";
+const graphRunningEdgeStroke = "#32d3e6";
+const graphCompletedEdgeStroke = "#39d98a";
+const graphIssueEdgeStroke = "#f4b740";
+const graphFailedEdgeStroke = "#f06467";
 
 type ReactFlowGraphState = {
   selectedNodeId?: string | null;

@@ -26,6 +26,51 @@ Frontend and backend must agree on:
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
 - `RunState.retained_session`: optional retained browser session availability metadata used by debug run-from-selected UI.
 - `WorkflowRunSnapshot`: run-id scoped status wrapper with `run_id`, `workflow_id`, `workflow_name`, `source` (`manual` or `schedule`), `started_at`, and nested `state: RunState`, plus mirrored top-level run-state fields for compatibility.
+- `MissionControlTarget`: renderer-only typed navigation target for Overview,
+  Workflow, Run, Evidence, Identity Lab, Schedule, and graph issue focus.
+- `CommandSearchResult`: sanitized shell search row with a display type, label,
+  optional context, and `MissionControlTarget`. Search rows come only from
+  bounded approved read models and do not carry raw outputs or filesystem
+  paths.
+- `OperationsOverviewRequest`: local-day UTC range capped at 48 hours plus
+  optional bounded list limits and attention filters for the Overview read
+  model.
+- `OperationsOverview`: backend-owned dashboard DTO with metrics, live runs,
+  unified attention, activity buckets, recent evidence metadata, upcoming
+  schedules, and data warnings. Recent evidence result pages remain bounded
+  after the backend has matched persisted evidence metadata; newer output-only
+  run rows must not hide older evidence items.
+- `OperationalRunDetail`: bounded selected-run summary for Overview-to-Runs
+  navigation, including workflow reference, optional identity reference from
+  the run settings snapshot, sanitized error text, capped step summaries, and
+  safe evidence metadata.
+- `EvidenceListRequest`: evidence filters for search, type, run status,
+  durable source, workflow, run, historical identity, time range, cursor, limit,
+  and optional focused evidence id. Result pages remain bounded, but matching
+  persisted run outputs are not capped to the newest rows before filtering.
+- `EvidencePage`: backend-owned evidence result page with typed list items,
+  opaque cursor, `has_more`, and skipped-item warning counts.
+- `EvidenceDetail`: one typed safe payload for screenshot, download, browser
+  identity, action trace, or evidence manifest evidence.
+- `EvidenceScreenshotPreview`: validated screenshot preview payload containing
+  PNG base64 data only after backend path/file checks.
+- `EvidenceBundleExportRequest` / `EvidenceBundleExportResult`: explicit
+  selected evidence bundle export request and manifest-bundle result.
+- `IdentityLabTarget`: managed identity target by current `workflow_id` plus
+  `identity_id`, or historical identity reference by `identity_id` with
+  optional workflow/run/evidence context.
+- `IdentityLabOverviewRequest`: bounded Identity Lab search, selected target,
+  and list/rotation limits.
+- `IdentityLabOverview`: backend-owned Identity Lab DTO with current managed
+  identity summaries, selected detail, counts, and data warnings.
+- `ManagedIdentitySummary`: one workflow-owned current browser identity row
+  with workflow/identity refs, session/profile reuse, retained-session state,
+  configured posture summary, last matching run, recent failure count, and
+  warning badges.
+- `IdentityLabDetail`: either a managed identity detail with configured
+  posture, latest observed browser identity evidence, matching run/evidence
+  summary, rotation history, sanitized diagnostics, and action availability,
+  or a read-only historical identity reference with safe source context.
 - `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
@@ -339,6 +384,45 @@ select value, scroll pixels, and reviewed upload file paths; action type,
 locator, source event, and warning replacement from renderer input is ignored.
 Successful save consumes the backend-memory draft and source session. Discarding
 a recorder session also removes generated drafts for that session.
+
+## Evidence Shape
+
+Evidence items are derived from persisted run outputs and run steps rather than
+a separate projection table. Supported item kinds are `screenshot`, `download`,
+`browser_identity`, `action_trace`, and `evidence_manifest`. File artifact items
+carry only safe run-scoped relative paths such as `runs/<run_id>/screenshots/...`;
+artifact preview/reveal/export commands accept evidence ids and revalidate path
+containment in the Electron backend. Historical identity fields come from the
+run-time settings snapshot and sanitized `browser_identity` output, not the
+workflow's current identity after later rotation. Evidence-to-Identity
+navigation opens a read-only historical identity target with workflow, run, and
+evidence context so rotated identity observations remain inspectable.
+
+## Identity Lab Shape
+
+Identity Lab is a read model, not a new identity catalog table. Managed
+identity rows are derived from current Workflow Settings Browser Launch values.
+Run metrics match exact current `workflow_id` and `identity_id` from the run
+settings snapshot, with a safe fallback to sanitized `browser_identity` output
+only when the run association is unambiguous. Runs from previous identities are
+historical and do not count toward the current identity's last run, recent
+failure, valid run-scoped evidence item total, or latest observed report after
+reset.
+
+Historical identity references are read-only. They may carry safe workflow,
+run, or evidence context. Stale managed identity targets that no longer match
+current Workflow Settings resolve through the same historical lookup so old run
+context remains inspectable. Historical lookup is not capped to the newest run
+rows before matching identity ids, but the returned detail remains bounded and
+sanitized. When a matched historical run exists, its persisted workflow id is
+the source of truth for the displayed workflow context. Historical references
+do not expose diagnostics, reset, close session, or settings mutation actions.
+
+Identity diagnostics in the DTO are sanitized. They report installed/version
+state, GeoIP/display availability, bounded profile size/session state, and
+font posture where available, while excluding absolute local paths, proxy
+credentials, cookies, localStorage, sessionStorage, profile contents, and raw
+arbitrary run outputs.
 
 ## Graph Shape
 

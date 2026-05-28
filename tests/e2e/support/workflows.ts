@@ -15,6 +15,10 @@ export type E2EWorkflowRuntimeOverrides = {
   observeAfterRunMs: number;
 };
 
+type RunWorkflowOptions = {
+  timeoutMs?: number;
+};
+
 export function target(testId: string): ElementTarget {
   return { locators: [{ kind: "test_id", value: testId }] };
 }
@@ -27,11 +31,17 @@ export async function createAndRunWorkflow(
   page: Page,
   name: string,
   steps: Array<{ id: string; label: string; config: ActionConfig }>,
+  options: RunWorkflowOptions = {},
 ) {
-  return createAndRunGraph(page, name, linearGraph(steps));
+  return createAndRunGraph(page, name, linearGraph(steps), options);
 }
 
-export async function createAndRunGraph(page: Page, name: string, graph: WorkflowGraph) {
+export async function createAndRunGraph(
+  page: Page,
+  name: string,
+  graph: WorkflowGraph,
+  options: RunWorkflowOptions = {},
+) {
   const workflowId = await createWorkflow(page, name, graph);
   let lastState: RunState | null = null;
 
@@ -40,7 +50,7 @@ export async function createAndRunGraph(page: Page, name: string, graph: Workflo
       .poll(async () => {
         lastState = await runState(page);
         return lastState;
-      }, { timeout: 45_000 })
+      }, { timeout: options.timeoutMs ?? 45_000 })
       .toMatchObject({ status: "success" });
   } catch (error) {
     const state = await runStateForError(page, lastState);

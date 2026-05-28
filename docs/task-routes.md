@@ -105,6 +105,92 @@ Checks: `npm test -- electron/backend/scheduling/scheduler.test.ts`, `npm test -
 
 Update docs: workflow lifecycle, user-visible invariants, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, execution semantics, and this route when ownership or checks change.
 
+## Change Operations Overview
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`, `domain/workflow-lifecycle.md`, `domain/execution-semantics.md`, `architecture/overview.md`, `architecture/frontend.md`, `architecture/persistence.md`, `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
+
+Verify: `src/App.tsx`, `src/features/overview/`, `src/features/runs/`, `src/layouts/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/backend/operations/operationsRepository.ts`, `electron/backend/persistence/database.ts`, `electron/backend/commands.ts`
+
+Checks: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts`, `npm test -- src/App.test.tsx src/layouts/AppShell.test.tsx`, `npm test -- src/AppCss.test.ts`, `npx tsc --noEmit`, `npm run build:electron`, `npm test`
+
+Update docs: product model, user-visible invariants, workflow lifecycle, execution semantics, architecture overview, frontend architecture, persistence architecture, command boundary, Electron IPC contract, workflow types, README smoke checklist, and this route when Overview ownership or checks change.
+
+## Change Mission Control Cross-Workspace Navigation
+
+Use when changing sidebar order, shell command search, Alerts focus,
+cross-workspace traceability links, stale navigation target states, compact
+desktop behavior, or app-level Settings diagnostics/maintenance.
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`contracts/workflow-types.md`; also read `DESIGN.md` before layout or styling
+changes.
+
+Verify: `src/App.tsx`, `src/layouts/`, `src/features/overview/`,
+`src/features/evidence/`, `src/features/identities/`, `src/features/runs/`,
+`src/features/schedules/`, `src/features/settings/`,
+`src/types/workflow.ts`, `electron/backend/operations/operationsRepository.ts`
+
+Checks: `npm test -- src/App.test.tsx src/layouts/AppShell.test.tsx src/AppCss.test.ts`,
+focused page tests for touched workspaces, `npx tsc --noEmit`,
+`npm run build:electron`, `npm test`, `npm run build`; use a Playwright
+desktop/compact visual check when layout changes.
+
+Update docs: product model, user-visible invariants, architecture overview,
+frontend architecture, workflow types, README smoke checklist, and this route
+when navigation/search/settings ownership or checks change.
+
+## Change Evidence Explorer
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
+`domain/workflow-lifecycle.md`, `domain/execution-semantics.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`architecture/persistence.md`, `architecture/command-boundary.md`,
+`contracts/electron-ipc.md`, `contracts/workflow-types.md`,
+`contracts/run-state.md`
+
+Verify: `src/App.tsx`, `src/features/evidence/`, `src/features/overview/`,
+`src/features/runs/`, `src/layouts/`, `src/lib/workflowApi.ts`,
+`src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`,
+`electron/preload.cts`, `electron/backend/evidence/evidenceRepository.ts`,
+`electron/backend/persistence/database.ts`, `electron/backend/runtime/runManager.ts`,
+`electron/backend/commands.ts`, `electron/main.ts`
+
+Checks: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts`,
+`npm test -- src/lib/workflowApi.test.ts src/layouts/AppShell.test.tsx src/App.test.tsx src/AppCss.test.ts`,
+`npx tsc --noEmit`, `npm run build:electron`, `npm test`, `npm run build`
+
+Update docs: product model, user-visible invariants, workflow lifecycle,
+execution semantics, architecture overview, frontend architecture, persistence
+architecture, command boundary, Electron IPC contract, workflow types,
+run-state contract, README smoke checklist, and this route when Evidence
+ownership or checks change.
+
+## Change Identity Lab
+
+Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
+`domain/workflow-lifecycle.md`, `domain/execution-semantics.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`architecture/command-boundary.md`, `architecture/runner.md`,
+`contracts/electron-ipc.md`, `contracts/workflow-types.md`,
+`contracts/run-state.md`
+
+Verify: `src/App.tsx`, `src/features/identities/`,
+`src/features/evidence/`, `src/layouts/`, `src/lib/workflowApi.ts`,
+`src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`,
+`electron/preload.cts`, `electron/backend/identity/identityRepository.ts`,
+`electron/backend/runtime/runManager.ts`, `electron/backend/runtime/runner.ts`,
+`electron/backend/commands.ts`
+
+Checks: `npm test -- electron/backend/commands.test.ts src/lib/workflowApi.test.ts src/layouts/AppShell.test.tsx src/App.test.tsx`,
+`npx tsc --noEmit`, `npm run build:electron`, `npm test`, `npm run build`
+
+Update docs: product model, user-visible invariants, workflow lifecycle,
+execution semantics, architecture overview, frontend architecture, command
+boundary, Electron IPC contract, workflow types, run-state contract, runner
+architecture, README smoke checklist, and this route when Identity Lab
+ownership or checks change.
+
 ## Change Runner Behavior
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
@@ -178,3 +264,4 @@ Common E2E commands:
 - Full local desktop: `npm run test:e2e:full`
 - Visible local browser review/debug: `npm run test:e2e:visible`
 - Flake detection: `npm run test:e2e:flake`
+- Opt-in public real-web workflow checks: `npm run test:e2e:real-web`

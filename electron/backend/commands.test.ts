@@ -38,6 +38,7 @@ vi.mock("electron", () => ({
 const tempRoots: string[] = [];
 
 afterEach(async () => {
+  vi.useRealTimers();
   for (const root of tempRoots.splice(0)) {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -353,6 +354,294 @@ describe("Electron workflow command handlers", () => {
     );
     expect(handlers.getWorkflowSettings(workflow.id).browser_launch.identity_id)
       .toBe(rotated.browser_launch.identity_id);
+  });
+
+  test("builds Identity Lab overview from current identity snapshots and closes retained sessions", async () => {
+    const closeRetainedSession = vi.fn(async () => undefined);
+    const { handlers, database } = await createTestHandlers({
+      runner: {
+        run: vi.fn(),
+        closeRetainedSession,
+        getRetainedSessionState: vi.fn((workflowId?: string | null, profileName?: string | null) => ({
+          available: workflowId === "workflow-identity" && profileName === "profile-current",
+          workflow_id: workflowId ?? null,
+          profile_name: profileName ?? null,
+          reason: workflowId === "workflow-identity" ? null : "No retained session",
+        })),
+        getRetainedSessionStates: vi.fn(() => [
+          {
+            available: true,
+            workflow_id: "workflow-identity",
+            profile_name: "profile-current",
+            reason: null,
+          },
+        ]),
+      },
+    });
+    const workflow = handlers.createWorkflow("Identity flow");
+    database.prepare("UPDATE workflows SET id = ? WHERE id = ?").run("workflow-identity", workflow.id);
+    const settings = handlers.getWorkflowSettings("workflow-identity");
+    handlers.saveWorkflowSettings("workflow-identity", {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        identity_id: "bi_current",
+        display_name: "Current identity",
+        profile_dir: "profile-current",
+        profile_name: "profile-current",
+        persona: {
+          ...settings.browser_launch.persona,
+          label: "Windows Chrome",
+        },
+        proxy_enabled: true,
+        proxy_server: "http://user:secret@proxy.local:8080",
+      },
+      migration_notes: [
+        {
+          path: "browser_launch.identity_id",
+          action: "rotated",
+          message: "Browser identity rotated from bi_old to bi_current at 2026-05-27T08:00:00.000Z",
+        },
+      ],
+    });
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-old",
+        "workflow-identity",
+        "manual",
+        "success",
+        "2026-05-27T07:00:00.000Z",
+        "2026-05-27T07:01:00.000Z",
+        JSON.stringify({ browser_launch: { identity_id: "bi_old", display_name: "Old identity" } }),
+        JSON.stringify({ browser_identity: { identity_id: "bi_old" } }),
+        null,
+      );
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-current",
+        "workflow-identity",
+        "manual",
+        "failed",
+        new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        new Date(Date.now() - 55 * 60 * 1000).toISOString(),
+        JSON.stringify({
+          browser_launch: { identity_id: "bi_current", display_name: "Current identity" },
+        }),
+        JSON.stringify({
+          browser_identity: {
+            identity_id: "bi_current",
+            display_name: "Current identity",
+            fingerprint_seed_hash: "seed-hash",
+            proxy_password: "should-not-leak",
+          },
+          __evidence: [
+            {
+              artifact_kind: "screenshot",
+              path: "runs/run-current/screenshots/one.png",
+            },
+            {
+              artifact_kind: "download",
+              path: "runs/run-current/downloads/two.csv",
+            },
+            {
+              artifact_kind: "screenshot",
+              path: "C:Users\\operator\\secret.png",
+            },
+          ],
+        }),
+        JSON.stringify({ reason: "Assertion failed" }),
+      );
+
+    const overview = await handlers.getIdentityLabOverview();
+
+    expect(overview.counts).toMatchObject({
+      managed_identities: 1,
+      active_retained_sessions: 1,
+      identities_with_recent_failures: 1,
+    });
+    expect(overview.items).toEqual([
+      expect.objectContaining({
+        workflow_ref: { id: "workflow-identity", name: "Identity flow" },
+        identity_ref: { id: "bi_current", display_name: "Current identity" },
+        retained_session: { active: true },
+        last_run: expect.objectContaining({ run_id: "run-current", status: "failed" }),
+        recent_failures_24h: 1,
+      }),
+    ]);
+    expect(overview.selected).toMatchObject({
+      kind: "managed",
+      latest_observed: expect.objectContaining({
+        run_id: "run-current",
+        fields: expect.arrayContaining([{ key: "fingerprint_seed_hash", value: "seed-hash" }]),
+      }),
+      rotation_history: [expect.objectContaining({ previous_identity_id: "bi_old" })],
+      evidence_summary: { total: 2 },
+      actions: {
+        can_close_retained_session: true,
+        can_reset_identity: false,
+      },
+    });
+    expect(JSON.stringify(overview)).not.toContain("secret");
+    expect(JSON.stringify(overview)).not.toContain("should-not-leak");
+
+    await handlers.closeIdentityRetainedSession("workflow-identity", "profile-current");
+    expect(closeRetainedSession).toHaveBeenCalledWith("workflow-identity", "profile-current");
+  });
+
+  test("resolves stale managed identity targets with historical run context", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Rotated identity flow");
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        identity_id: "bi_current",
+        display_name: "Current identity",
+      },
+    });
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-old-identity",
+        workflow.id,
+        "manual",
+        "success",
+        "2026-05-27T07:00:00.000Z",
+        "2026-05-27T07:01:00.000Z",
+        JSON.stringify({
+          browser_launch: { identity_id: "bi_old", display_name: "Old identity" },
+        }),
+        JSON.stringify({
+          browser_identity: {
+            identity_id: "bi_old",
+            display_name: "Old identity",
+            fingerprint_seed_hash: "old-seed",
+          },
+        }),
+      );
+
+    const overview = await handlers.getIdentityLabOverview({
+      selected_target: {
+        type: "managed",
+        workflow_id: workflow.id,
+        identity_id: "bi_old",
+      },
+    });
+
+    expect(overview.selected).toMatchObject({
+      kind: "historical",
+      workflow_ref: { id: workflow.id, name: "Rotated identity flow" },
+      run_id: "run-old-identity",
+      observed_fields: expect.arrayContaining([
+        { key: "identity_id", value: "bi_old" },
+        { key: "fingerprint_seed_hash", value: "old-seed" },
+      ]),
+    });
+  });
+
+  test("resolves historical identities older than the newest 200 workflow runs", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Long identity archive");
+    const insertRun = database.prepare(
+      `INSERT INTO runs (
+        id, workflow_id, source, status, started_at, finished_at,
+        settings_snapshot_json, outputs_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    insertRun.run(
+      "run-archived-identity",
+      workflow.id,
+      "manual",
+      "success",
+      "2026-01-01T07:00:00.000Z",
+      "2026-01-01T07:01:00.000Z",
+      JSON.stringify({ browser_launch: { identity_id: "bi_archived" } }),
+      JSON.stringify({ browser_identity: { identity_id: "bi_archived" } }),
+    );
+    for (let index = 0; index < 200; index += 1) {
+      const startedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 0)).toISOString();
+      const finishedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 30)).toISOString();
+      insertRun.run(
+        `run-new-identity-${index}`,
+        workflow.id,
+        "manual",
+        "success",
+        startedAt,
+        finishedAt,
+        JSON.stringify({ browser_launch: { identity_id: "bi_current" } }),
+        JSON.stringify({ browser_identity: { identity_id: "bi_current" } }),
+      );
+    }
+
+    const overview = await handlers.getIdentityLabOverview({
+      selected_target: {
+        type: "historical",
+        workflow_id: workflow.id,
+        identity_id: "bi_archived",
+      },
+    });
+
+    expect(overview.selected).toMatchObject({
+      kind: "historical",
+      run_id: "run-archived-identity",
+      observed_fields: expect.arrayContaining([{ key: "identity_id", value: "bi_archived" }]),
+    });
+  });
+
+  test("derives historical identity workflow context from the matched run", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const historicalWorkflow = handlers.createWorkflow("Historical identity source");
+    const otherWorkflow = handlers.createWorkflow("Unrelated current workflow");
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-cross-workflow-history",
+        historicalWorkflow.id,
+        "manual",
+        "success",
+        "2026-05-27T07:00:00.000Z",
+        "2026-05-27T07:01:00.000Z",
+        JSON.stringify({ browser_launch: { identity_id: "bi_cross_history" } }),
+        JSON.stringify({ browser_identity: { identity_id: "bi_cross_history" } }),
+      );
+
+    const overview = await handlers.getIdentityLabOverview({
+      selected_target: {
+        type: "historical",
+        workflow_id: otherWorkflow.id,
+        identity_id: "bi_cross_history",
+        run_id: "run-cross-workflow-history",
+      },
+    });
+
+    expect(overview.selected).toMatchObject({
+      kind: "historical",
+      workflow_ref: { id: historicalWorkflow.id, name: "Historical identity source" },
+      run_id: "run-cross-workflow-history",
+    });
   });
 
   test("derives deterministic CloakBrowser seeds and probes collisions", () => {
@@ -2339,6 +2628,616 @@ describe("Electron workflow command handlers", () => {
       field: "graph",
     });
     expect(runner.run).not.toHaveBeenCalled();
+  });
+
+  test("records blocked manual launches and exposes the durable operations overview", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Checkout flow");
+    handlers.saveWorkflowGraph(workflow.id, {
+      version: 2,
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    });
+
+    await expect(handlers.runWorkflow(workflow.id)).rejects.toMatchObject({
+      message: "Graph must contain exactly one start node",
+    });
+
+    const attentionRows = database
+      .prepare("SELECT event_type, source, workflow_id, severity, summary FROM operational_attention_events")
+      .all() as Array<Record<string, string>>;
+    expect(attentionRows).toEqual([
+      expect.objectContaining({
+        event_type: "launch_blocked",
+        source: "manual",
+        workflow_id: workflow.id,
+        severity: "failure",
+        summary: "Graph must contain exactly one start node",
+      }),
+    ]);
+
+    const overview = handlers.getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+    expect(overview.metrics.attention_today).toBe(1);
+    expect(overview.metrics.active_runs).toBe(0);
+    expect(overview.attention.items).toEqual([
+      expect.objectContaining({
+        source_kind: "launch_blocked",
+        title: "Launch blocked",
+        workflow: { id: workflow.id, name: "Checkout flow" },
+        navigation_target: { type: "workflow", workflow_id: workflow.id },
+      }),
+    ]);
+    expect(overview.activity).toHaveLength(24);
+    expect(overview.activity.some((bucket) => bucket.blocked === 1)).toBe(true);
+  });
+
+  test("rejects operations overview ranges that are too broad for hourly buckets", async () => {
+    const { handlers } = await createTestHandlers();
+
+    let thrown: unknown;
+    try {
+      handlers.getOperationsOverview({
+        day_start_utc: "2026-01-01T00:00:00.000Z",
+        day_end_utc: "2026-02-01T00:00:00.000Z",
+        timezone_label: "UTC",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({
+      message: "Operations overview range cannot exceed 48 hours",
+      field: "day_end_utc",
+    });
+  });
+
+  test("aggregates persisted runs schedule attention evidence schedules and selected run detail", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Evidence flow");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const schedule = handlers.createSchedule({
+      workflow_id: workflow.id,
+      name: "Daily evidence",
+      enabled: true,
+      kind: { type: "once_at", timestamp: "2026-05-27T20:00:00.000Z" },
+    });
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-success",
+        workflow.id,
+        "success",
+        "2026-05-27T09:00:00.000Z",
+        "2026-05-27T09:02:00.000Z",
+        JSON.stringify({
+          __evidence: [
+            {
+              run_id: "run-success",
+              node_id: "shot",
+              artifact_kind: "screenshot",
+              path: "runs/run-success/screenshots/001-shot.png",
+              created_at: "2026-05-27T09:01:00.000Z",
+            },
+          ],
+        }),
+        null,
+      );
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-failed",
+        workflow.id,
+        "failed",
+        "2026-05-27T10:00:00.000Z",
+        "2026-05-27T10:03:00.000Z",
+        JSON.stringify({ reason: "Assertion failed", step_id: "assert" }),
+      );
+    database
+      .prepare(
+        `INSERT INTO run_steps (
+          id, run_id, node_id, step_number, action_type, status, started_at, finished_at, error_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "step-1",
+        "run-failed",
+        "assert",
+        1,
+        "assert_text",
+        "failed",
+        "2026-05-27T10:00:00.000Z",
+        "2026-05-27T10:03:00.000Z",
+        JSON.stringify({ reason: "Assertion failed" }),
+      );
+    database
+      .prepare(
+        `INSERT INTO workflow_schedule_events (
+          id, schedule_id, workflow_id, event_type, run_id, scheduled_for, created_at, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "schedule-event-1",
+        schedule.id,
+        workflow.id,
+        "failed_to_start",
+        null,
+        "2026-05-27T08:00:00.000Z",
+        "2026-05-27T08:00:01.000Z",
+        "Workflow validation failed",
+      );
+
+    const overview = handlers.getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+
+    expect(overview.metrics).toMatchObject({
+      succeeded_today: 1,
+      attention_today: 2,
+      upcoming_schedules: 1,
+    });
+    expect(overview.attention.items.map((item) => item.source_kind)).toEqual([
+      "run_failed",
+      "schedule_event",
+    ]);
+    expect(overview.recent_evidence.items).toEqual([
+      expect.objectContaining({
+        artifact_kind: "screenshot",
+        relative_path_or_label: "runs/run-success/screenshots/001-shot.png",
+        run_id: "run-success",
+      }),
+    ]);
+    expect(overview.upcoming_schedules.items).toEqual([
+      expect.objectContaining({
+        schedule_id: schedule.id,
+        workflow_id: workflow.id,
+        schedule_name: "Daily evidence",
+      }),
+    ]);
+
+    expect(handlers.getOperationalRunDetail("run-failed")).toMatchObject({
+      run_id: "run-failed",
+      workflow: { id: workflow.id, name: "Evidence flow" },
+      status: "failed",
+      sanitized_error_summary: "Assertion failed",
+      step_summaries: [
+        expect.objectContaining({
+          node_id: "assert",
+          action_type: "assert_text",
+          status: "failed",
+        }),
+      ],
+    });
+  });
+
+  test("surfaces recent evidence beyond newer output rows without evidence", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Overview evidence archive");
+
+    const insertRun = database.prepare(
+      `INSERT INTO runs (
+        id, workflow_id, status, started_at, finished_at, outputs_json
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    insertRun.run(
+      "run-evidence-archive",
+      workflow.id,
+      "success",
+      "2026-05-26T08:00:00.000Z",
+      "2026-05-26T08:01:00.000Z",
+      JSON.stringify({
+        __evidence: [
+          {
+            artifact_kind: "screenshot",
+            path: "runs/run-evidence-archive/screenshots/archive.png",
+            created_at: "2026-05-26T08:00:30.000Z",
+          },
+        ],
+      }),
+    );
+    for (let index = 0; index < 100; index += 1) {
+      const startedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 0)).toISOString();
+      const finishedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 30)).toISOString();
+      insertRun.run(
+        `run-output-only-${index}`,
+        workflow.id,
+        "success",
+        startedAt,
+        finishedAt,
+        JSON.stringify({}),
+      );
+    }
+
+    const overview = handlers.getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+
+    expect(overview.recent_evidence.items).toEqual([
+      expect.objectContaining({
+        artifact_kind: "screenshot",
+        relative_path_or_label: "runs/run-evidence-archive/screenshots/archive.png",
+        run_id: "run-evidence-archive",
+      }),
+    ]);
+  });
+
+  test("skips overview evidence metadata with Windows absolute paths", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Overview unsafe evidence");
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-unsafe-evidence",
+        workflow.id,
+        "success",
+        "2026-05-27T08:00:00.000Z",
+        "2026-05-27T08:01:00.000Z",
+        JSON.stringify({
+          __evidence: [
+            {
+              artifact_kind: "screenshot",
+              path: "C:\\Users\\operator\\secret.png",
+              created_at: "2026-05-27T08:00:30.000Z",
+            },
+            {
+              artifact_kind: "download",
+              path: "\\\\server\\share\\secret.csv",
+              created_at: "2026-05-27T08:00:40.000Z",
+            },
+            {
+              artifact_kind: "screenshot",
+              path: "C:Users\\operator\\secret.png",
+              created_at: "2026-05-27T08:00:50.000Z",
+            },
+          ],
+        }),
+      );
+
+    const overview = handlers.getOperationsOverview({
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    });
+
+    expect(overview.recent_evidence.items).toEqual([]);
+    expect(overview.data_warnings.evidence_items_skipped).toBe(3);
+  });
+
+  test("lists details previews reveals and exports safe persisted evidence", async () => {
+    const bundleRoot = await fs.mkdtemp(path.join(os.tmpdir(), "evidence-bundle-"));
+    tempRoots.push(bundleRoot);
+    const revealEvidenceArtifact = vi.fn();
+    const { handlers, database, appPaths } = await createTestHandlers({
+      revealEvidenceArtifact,
+      selectEvidenceBundleDirectory: vi.fn(async () => bundleRoot),
+    });
+    const workflow = handlers.createWorkflow("Evidence Explorer flow");
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+    const settings = handlers.getWorkflowSettings(workflow.id);
+    handlers.saveWorkflowSettings(workflow.id, {
+      ...settings,
+      browser_launch: {
+        ...settings.browser_launch,
+        identity_id: "bi_historical",
+        display_name: "Historical QA identity",
+      },
+    });
+    const evidencePath = "runs/run-evidence/screenshots/001-visit.png";
+    await fs.mkdir(path.dirname(path.join(appPaths.evidenceDir, evidencePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(appPaths.evidenceDir, evidencePath), Buffer.from("png-data"));
+
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, finished_at,
+          settings_snapshot_json, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-evidence",
+        workflow.id,
+        "schedule",
+        "success",
+        "2026-05-27T09:00:00.000Z",
+        "2026-05-27T09:02:00.000Z",
+        JSON.stringify({
+          browser_launch: {
+            identity_id: "bi_historical",
+            display_name: "Historical QA identity",
+          },
+        }),
+        JSON.stringify({
+          browser_identity: {
+            identity_id: "bi_historical",
+            display_name: "Historical QA identity",
+            fingerprint_seed_hash: "seed-hash",
+            proxy_password: "should-not-leak",
+          },
+          __action_traces: [
+            {
+              node_id: "visit",
+              label: "Visit owned site",
+              action_type: "navigate",
+              status: "success",
+              mode: "browser",
+              started_at: "2026-05-27T09:00:10.000Z",
+              finished_at: "2026-05-27T09:00:11.000Z",
+              nested_events: [{ label: "safe nested trace", token: "nested-secret" }],
+              evidence_summary: [{ kind: "screenshot", path: evidencePath }],
+            },
+          ],
+          __evidence: [
+            {
+              node_id: "visit",
+              step_number: 1,
+              artifact_kind: "screenshot",
+              path: evidencePath,
+              created_at: "2026-05-27T09:01:00.000Z",
+            },
+            {
+              artifact_kind: "screenshot",
+              path: "../escape.png",
+            },
+            {
+              node_id: "visit",
+              artifact_kind: "screenshot",
+              path: evidencePath,
+              created_at: "2026-05-27T09:01:00.000Z",
+            },
+          ],
+          __evidence_model: {
+            outputs: [
+              {
+                key: "browser_identity",
+                category: "browser_identity",
+                redacted: false,
+                truncated: false,
+                approximate_bytes: 120,
+              },
+              {
+                key: "secret_token",
+                category: "sensitive_redacted",
+                redacted: true,
+                truncated: false,
+                approximate_bytes: 0,
+              },
+            ],
+          },
+        }),
+      );
+    database
+      .prepare(
+        `INSERT INTO run_steps (
+          id, run_id, node_id, step_number, action_type, status, started_at, finished_at, trace_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "step-run-evidence-1",
+        "run-evidence",
+        "visit",
+        1,
+        "navigate",
+        "success",
+        "2026-05-27T09:00:10.000Z",
+        "2026-05-27T09:00:11.000Z",
+        JSON.stringify({ node_id: "visit", action_type: "navigate", status: "success" }),
+      );
+
+    const page = handlers.listEvidenceItems({
+      sources: ["schedule"],
+      identity_id: "bi_historical",
+      limit: 10,
+    });
+    expect(page.items.map((item) => item.kind)).toEqual(
+      expect.arrayContaining([
+        "screenshot",
+        "browser_identity",
+        "action_trace",
+        "evidence_manifest",
+      ]),
+    );
+    expect(page.warnings).toMatchObject({ skipped_artifacts: 1 });
+    expect(page.items.filter((item) => item.kind === "screenshot")).toHaveLength(1);
+    const screenshot = page.items.find((item) => item.kind === "screenshot");
+    expect(screenshot).toMatchObject({
+      label: "001-visit.png",
+      run: { id: "run-evidence", source: "schedule", status: "success" },
+      workflow: { id: workflow.id, name: "Evidence Explorer flow" },
+      identity: { id: "bi_historical", display_name: "Historical QA identity" },
+      node_id: "visit",
+      step_number: 1,
+      relative_path: evidencePath,
+      file_state: "unchecked",
+    });
+    const screenshotId = screenshot?.evidence_id ?? "";
+
+    const screenshotDetail = handlers.getEvidenceDetail(screenshotId);
+    expect(screenshotDetail).toMatchObject({
+      item: expect.objectContaining({ evidence_id: screenshotId, kind: "screenshot" }),
+      payload: expect.objectContaining({
+        kind: "screenshot",
+        relative_path: evidencePath,
+        file_state: "available",
+      }),
+    });
+    expect(JSON.stringify(screenshotDetail)).not.toContain("proxy_password");
+
+    await expect(handlers.getEvidenceScreenshotPreview(screenshotId)).resolves.toEqual({
+      evidence_id: screenshotId,
+      mime_type: "image/png",
+      base64_data: Buffer.from("png-data").toString("base64"),
+      file_state: "available",
+    });
+
+    await handlers.revealEvidenceArtifact(screenshotId);
+    expect(revealEvidenceArtifact).toHaveBeenCalledWith(path.join(appPaths.evidenceDir, evidencePath));
+
+    const identityDetail = handlers.getEvidenceDetail(
+      page.items.find((item) => item.kind === "browser_identity")?.evidence_id ?? "",
+    );
+    expect(identityDetail.payload).toMatchObject({
+      kind: "browser_identity",
+      fields: expect.arrayContaining([
+        { key: "identity_id", value: "bi_historical" },
+        { key: "display_name", value: "Historical QA identity" },
+      ]),
+    });
+    expect(JSON.stringify(identityDetail)).not.toContain("should-not-leak");
+
+    const traceDetail = handlers.getEvidenceDetail(
+      page.items.find((item) => item.kind === "action_trace")?.evidence_id ?? "",
+    );
+    expect(JSON.stringify(traceDetail)).toContain("safe nested trace");
+    expect(JSON.stringify(traceDetail)).not.toContain("nested-secret");
+
+    const exportResult = await handlers.exportEvidenceBundle({
+      evidence_ids: page.items.map((item) => item.evidence_id),
+    });
+    expect(exportResult).toMatchObject({
+      exported_count: 4,
+      omitted_file_count: 0,
+      bundle_dir: expect.stringContaining("evidence-bundle-"),
+    });
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(String(exportResult?.bundle_dir), "manifest.json"), "utf8"),
+    );
+    expect(JSON.stringify(manifest)).not.toContain(appPaths.evidenceDir);
+    expect(JSON.stringify(manifest)).not.toContain("should-not-leak");
+    expect(manifest.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          evidence_id: screenshotId,
+          kind: "screenshot",
+          artifact: expect.objectContaining({
+            relative_path: evidencePath,
+            copied_path: expect.stringContaining("artifacts/"),
+          }),
+        }),
+      ]),
+    );
+    await expect(
+      fs.readFile(path.join(String(exportResult?.bundle_dir), "artifacts", "001-visit.png"), "utf8"),
+    ).resolves.toBe("png-data");
+  });
+
+  test("rejects invalid evidence time filters with command errors", async () => {
+    const { handlers, database } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Invalid time filter");
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-invalid-time-filter",
+        workflow.id,
+        "success",
+        "2026-05-27T08:00:00.000Z",
+        "2026-05-27T08:01:00.000Z",
+        JSON.stringify({ browser_identity: { identity_id: "bi_time_filter" } }),
+      );
+
+    expect(() =>
+      handlers.listEvidenceItems({ time_start_utc: "not-a-date" }),
+    ).toThrowError(
+      expect.objectContaining({
+        message: "Invalid evidence time filter",
+        field: "time_start_utc",
+      }),
+    );
+  });
+
+  test("finds and opens evidence older than the newest 500 output rows", async () => {
+    const { handlers, database, appPaths } = await createTestHandlers();
+    const workflow = handlers.createWorkflow("Long archive");
+    const evidencePath = "runs/run-archive/screenshots/archive-old.png";
+    await fs.mkdir(path.dirname(path.join(appPaths.evidenceDir, evidencePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(appPaths.evidenceDir, evidencePath), Buffer.from("old-png"));
+
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, status, started_at, finished_at, outputs_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-archive",
+        workflow.id,
+        "success",
+        "2026-01-01T00:00:00.000Z",
+        "2026-01-01T00:01:00.000Z",
+        JSON.stringify({
+          __evidence: [
+            {
+              artifact_kind: "screenshot",
+              path: evidencePath,
+              created_at: "2026-01-01T00:00:30.000Z",
+            },
+          ],
+        }),
+      );
+
+    const insertRun = database.prepare(
+      `INSERT INTO runs (
+        id, workflow_id, status, started_at, finished_at, outputs_json
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    for (let index = 0; index < 501; index += 1) {
+      const startedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 0)).toISOString();
+      const finishedAt = new Date(Date.UTC(2026, 4, 27, 0, index, 30)).toISOString();
+      insertRun.run(
+        `run-newer-${index}`,
+        workflow.id,
+        "success",
+        startedAt,
+        finishedAt,
+        JSON.stringify({}),
+      );
+    }
+
+    const page = handlers.listEvidenceItems({ search: "archive-old", limit: 10 });
+    expect(page.items).toEqual([
+      expect.objectContaining({
+        label: "archive-old.png",
+        run: expect.objectContaining({ id: "run-archive" }),
+      }),
+    ]);
+    expect(handlers.getEvidenceDetail(page.items[0]?.evidence_id ?? "")).toMatchObject({
+      payload: expect.objectContaining({
+        kind: "screenshot",
+        relative_path: evidencePath,
+        file_state: "available",
+      }),
+    });
   });
 
   test("starts isolated workflow runs concurrently and lists each run snapshot", async () => {

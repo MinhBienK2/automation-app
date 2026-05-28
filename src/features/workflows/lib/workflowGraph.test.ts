@@ -230,10 +230,10 @@ describe("workflow graph helpers", () => {
           interactionWidth: 20,
           markerEnd: expect.objectContaining({
             type: "arrowclosed",
-            color: "#fbbf24",
+            color: "#f4b740",
           }),
           style: expect.objectContaining({
-            stroke: "#fbbf24",
+            stroke: "#f4b740",
             strokeWidth: 2.75,
           }),
           data: expect.objectContaining({
@@ -371,10 +371,10 @@ describe("workflow graph helpers", () => {
           selected: true,
           className: expect.stringContaining("graph-edge-selected"),
           markerEnd: expect.objectContaining({
-            color: "#22d3ee",
+            color: "#32d3e6",
           }),
           style: expect.objectContaining({
-            stroke: "#22d3ee",
+            stroke: "#32d3e6",
             strokeWidth: 3.5,
           }),
         }),
@@ -390,7 +390,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: "graph-edge",
-          style: expect.objectContaining({ stroke: "#4d4d4d" }),
+          style: expect.objectContaining({ stroke: "#3e5668" }),
         }),
       );
 
@@ -401,7 +401,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-completed"),
-          style: expect.objectContaining({ stroke: "#3ecf8e" }),
+          style: expect.objectContaining({ stroke: "#39d98a" }),
         }),
       );
 
@@ -412,7 +412,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-failed"),
-          style: expect.objectContaining({ stroke: "#ff7b72" }),
+          style: expect.objectContaining({ stroke: "#f06467" }),
         }),
       );
 
@@ -423,7 +423,7 @@ describe("workflow graph helpers", () => {
       .toEqual(
         expect.objectContaining({
           className: expect.stringContaining("graph-edge-has-issue"),
-          style: expect.objectContaining({ stroke: "#fbbf24" }),
+          style: expect.objectContaining({ stroke: "#f4b740" }),
         }),
       );
   });

@@ -19,11 +19,36 @@ export const idleRunState: RunState = {
   error: null,
 };
 
+export function emptyOperationsOverview() {
+  return {
+    generated_at: "2026-05-27T00:00:00.000Z",
+    range: {
+      day_start_utc: "2026-05-27T00:00:00.000Z",
+      day_end_utc: "2026-05-28T00:00:00.000Z",
+      timezone_label: "UTC",
+    },
+    metrics: {
+      active_runs: 0,
+      succeeded_today: 0,
+      attention_today: 0,
+      upcoming_schedules: 0,
+    },
+    live_runs: { items: [], total: 0, has_more: false },
+    attention: { items: [], total: 0, has_more: false },
+    activity: [],
+    recent_evidence: { items: [], total: 0, has_more: false },
+    upcoming_schedules: { items: [], total: 0, has_more: false },
+    data_warnings: { evidence_items_skipped: 0 },
+  };
+}
+
 export function listWorkflowScenario(workflows: WorkflowSummary[] = [workflow]) {
   return {
     list_workflows: workflows,
     get_run_state: idleRunState,
     list_run_states: [],
+    get_operations_overview: emptyOperationsOverview(),
+    get_operational_run_detail: null,
   };
 }
 

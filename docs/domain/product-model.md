@@ -2,13 +2,31 @@
 
 ## Purpose
 
-Workflow Automation Manager is an Electron desktop app for building and running browser automation workflows.
+Mission Control is an Electron desktop app for building and running browser automation workflows.
 
 ## Core Concepts
 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
 - An action config is the executable behavior produced by graph compilation.
 - A run executes compiled graph action configs through the Electron CloakBrowser runner and reports progress to the UI.
+- Operations Overview is the default Mission Control workspace. It combines
+  current run snapshots with durable run, schedule, launch-block attention, and
+  evidence metadata so the app remains operationally meaningful after restart.
+- Evidence Explorer is the durable investigation workspace for persisted run
+  evidence. It lists safe typed evidence items across runs, loads bounded
+  details on demand, previews screenshots only through validated backend file
+  commands, reveals artifacts in their folder, and exports sanitized manifest
+  bundles without exposing absolute paths or raw browser storage.
+- Identity Lab is the durable workspace for workflow-owned browser identities.
+  It derives current managed identity rows from Workflow Settings, shows
+  session continuity, configured posture, latest observed browser identity
+  evidence, matching run/evidence summaries, rotation history, sanitized
+  diagnostics, and read-only historical identity references.
+- Mission Control navigation is a typed in-memory target contract across
+  Overview, Workflows, Runs, Evidence, Schedules, Identities, graph issues, the
+  shell command search, and the Alerts shortcut. Targets carry ids and optional
+  focus metadata, while stale durable targets produce visible unavailable
+  states instead of falling back silently.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
@@ -42,7 +60,7 @@ Users can:
 - Turn graph autosave on or off from Settings.
 - Run a full workflow.
 - Test a selected step with visible progress.
-- Stop an active run, including a selected run from Run Center when multiple isolated workflows are active.
+- Stop an active run, including a selected run from Runs when multiple isolated workflows are active.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
 - Configure the workflow's browser identity and launch behavior before running it.
@@ -52,7 +70,7 @@ Users can:
 - Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
-- Open Run Center to monitor concurrent workflow run snapshots and stop a selected active run by run id.
+- Open Runs to monitor concurrent workflow run snapshots and stop a selected active run by run id.
 - Start, inspect, stop, and discard backend-owned browser recording sessions.
   Recorder sessions launch through backend browser/session infrastructure,
   inject page-side capture, observe navigation, and collect raw navigation,
@@ -78,6 +96,23 @@ Users can:
   timing replacement.
   Discarding a recorder session removes its in-memory session and drafts, and
   saving a draft consumes the draft/session after successful persistence.
+- Open Overview to scan active runs, successful runs today, attention items,
+  execution activity, recent evidence metadata, and upcoming schedules.
+- Open Evidence to search/filter persisted screenshot, download, browser
+  identity, action trace, and evidence manifest items across historical runs,
+  then navigate back to the related run or workflow.
+- Open Identities to inspect current managed browser identities, close an
+  active retained session without deleting profile data, reset a guarded
+  workflow identity through the existing backend rotation command, and navigate
+  to related Evidence, Runs, or Workflow Settings.
+- Search from the shell command bar across workflow summaries, active/session
+  run snapshots, schedules, persisted evidence summaries, and Identity Lab
+  summaries, then open the matching workspace through typed navigation.
+- Use the shell Alerts shortcut to focus Overview's Attention Queue without
+  leaving a raw alert payload in the renderer.
+- Open Settings to inspect sanitized environment readiness, trigger a guarded
+  CloakBrowser binary install/check, and clean up orphaned inactive browser
+  profiles.
 
 ## Current Source Files
 
@@ -99,6 +134,10 @@ Users can:
 - SQLite bootstrap: `electron/backend/persistence/database.ts`
 - Workflow repository: `electron/backend/persistence/workflowRepository.ts`
 - Schedule repository and engine: `electron/backend/scheduling/workflowScheduleRepository.ts`, `electron/backend/scheduling/scheduler.ts`
+- Operations read model: `electron/backend/operations/operationsRepository.ts`
+- Evidence read model and artifact boundary:
+  `electron/backend/evidence/evidenceRepository.ts`
+- Identity read model: `electron/backend/identity/identityRepository.ts`
 
 ## Invariant
 

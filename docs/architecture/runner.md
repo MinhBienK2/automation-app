@@ -39,6 +39,10 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Runner infrastructure errors fail the run without a retained session.
 - Browser sessions are retained through `BrowserSessionManager` after terminal outcomes unless Workflow Settings Run Policy browser retention is `close` or a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
 - Retained-session metadata is keyed by workflow/profile inside `BrowserSessionManager` and shared across isolated runner instances so retained browsers remain discoverable after the run-specific runner finishes. Run-from-selected checks the matching metadata before execution and refuses stale, closed, missing, or mismatched sessions.
+- Identity Lab closes retained sessions through a narrow workflow/profile
+  command that delegates to the runner/session manager after command-level
+  active-run/profile guards pass. This clears retained in-memory context state
+  only and does not delete persistent browser profile data.
 - Starting a fresh run closes only a retained session that conflicts with the same workflow/profile before CloakBrowser launches, so persistent profile directories are not reused while an older browser process still owns the profile lock. Retained sessions for unrelated workflow/profile pairs remain available for inspection.
 - Run-from-selected is the exception to the relaunch rule: it keeps the retained context/page alive and runs the selected-node sub-plan against that page. Depending on Run Policy scope, the sub-plan may stop after the selected node or continue downstream. If the operator closed the browser manually, the runner clears retained metadata and reports that no reusable browser session is available.
 - Browser launch settings come from Workflow Settings Browser Launch. `browser_launch.headless` switches CloakBrowser between headed and headless mode.
@@ -77,6 +81,7 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - CloakBrowser session launch and tab/frame/download behavior.
 - Workflow Settings Browser Launch identity application at browser launch.
 - Retained browser session lookup, stale detection, and close/retain bookkeeping.
+- Workflow/profile-scoped retained-session close for Identity Lab.
 - Action dispatch and browser interaction.
 - Cancellation-aware execution.
 - Runner-level errors and outcomes.

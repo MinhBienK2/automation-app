@@ -8,12 +8,20 @@
     position: static;
     min-height: auto;
     border-right: 0;
-    border-bottom: 1px solid #242424;
+    border-bottom: 1px solid #233240;
   }
 
   .app-screen {
     width: min(100% - 24px, 680px);
     padding-top: 20px;
+  }
+
+  .shell-command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .shell-alert-button {
+    justify-self: stretch;
   }
 
   .app-header,
@@ -26,12 +34,37 @@
 
   .workflow-graph-layout,
   .graph-shortcut-guide,
-  .workflow-settings-body,
+  .overview-kpi-grid,
+    .overview-grid,
+    .evidence-toolbar,
+    .evidence-workspace,
+    .evidence-grid,
+    .identity-kpi-grid,
+    .identity-workspace,
+    .settings-readiness-grid,
+    .workflow-settings-body,
   .workflow-settings-grid,
   .settings-field-group-grid,
   .workflow-settings-identity-row,
   .settings-panel .graph-shortcut-guide {
     grid-template-columns: 1fr;
+  }
+
+    .overview-row,
+    .activity-bucket,
+    .evidence-metadata div,
+    .identity-row,
+    .identity-definition-list div,
+    .run-step-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .command-search-result {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .command-search-result small {
+    grid-column: 2;
   }
 
   .workflow-settings-section-header,
@@ -124,7 +157,7 @@
     padding-right: 0;
     padding-bottom: 8px;
     border-right: 0;
-    border-bottom: 1px solid #242424;
+    border-bottom: 1px solid #233240;
   }
 
   .workflow-settings-tab {
