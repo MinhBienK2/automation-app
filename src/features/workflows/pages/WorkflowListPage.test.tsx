@@ -263,8 +263,15 @@ describe("Workflow list integration", () => {
     expect(within(dialog).getByText("qa@example.test")).toBeInTheDocument();
     await userEvent.clear(within(dialog).getByLabelText("Workflow name"));
     await userEvent.type(within(dialog).getByLabelText("Workflow name"), "Recorded signup");
-    await userEvent.clear(within(dialog).getByLabelText("Step label Fill Field"));
-    await userEvent.type(within(dialog).getByLabelText("Step label Fill Field"), "Fill recorded email");
+    await userEvent.click(within(dialog).getByRole("button", {
+      name: /Step 2 Fill Field/i,
+    }));
+    const stepLabelInput = within(dialog).getByLabelText("Step label Fill Field");
+    await userEvent.clear(stepLabelInput);
+    await userEvent.type(stepLabelInput, "Fill recorded email");
+    await userEvent.click(within(dialog).getByRole("button", {
+      name: /Step 1 Navigate/i,
+    }));
     await userEvent.click(within(dialog).getByRole("checkbox", {
       name: "Include Navigate",
     }));

@@ -2134,9 +2134,8 @@ function App() {
         }}
         onStepChange={updateRecordingStep}
         onOpenChange={(open) => {
-          if (!open) {
-            void discardWorkflowRecording();
-          }
+          if (open) return;
+          setAppError("");
         }}
       />
       <WorkflowSettingsDialog

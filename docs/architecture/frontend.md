@@ -33,7 +33,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
-- `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
+- `src/features/workflows/components/RecordingReviewDialog.tsx` and sibling
+  `Recording*` components: browser recorder status, guarded discard, summary
+  filters, selected-step review, save blockers, and generated draft review UI.
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
@@ -127,12 +129,14 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Browser recorder UI orchestration. The workflow list starts a backend-owned
   new-workflow recorder session, and the workflow detail header starts a
   `replace_current_graph` recorder session for explicit graph replacement. The
-  review dialog stops the session, loads a generated draft, labels the save
-  action as Save Workflow or Replace Graph according to draft mode, and lets the
-  renderer edit reviewed step labels, inclusion flags, and supported action
-  values including clipboard text before calling `saveRecordingDraft`. Backend-held step timing is not
-  editable in the renderer; saved recording graphs use it to create fixed
-  inter-step edge delays and row-wrapped node positions for long recordings.
+  review dialog stops the session, loads a generated draft, shows summary
+  filters and needs-attention save blockers, labels the save action as Save
+  Workflow or Replace Graph according to draft mode, guards close/discard behind
+  an explicit confirmation, and lets the renderer edit reviewed step labels,
+  inclusion flags, and supported action values including clipboard text before
+  calling `saveRecordingDraft`. Backend-held step timing is not editable in the
+  renderer; saved recording graphs use it to create fixed inter-step edge
+  delays and row-wrapped node positions for long recordings.
 - Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Runs owns the cross-workflow session monitor. It lists run snapshots, shows source/status/current step/error context, calls `stopRun(runId)` for selected active runs, and can render one bounded persisted-run detail loaded from an Overview navigation target.

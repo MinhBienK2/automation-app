@@ -35,9 +35,14 @@
 
 .recording-review-dialog {
   grid-template-rows: auto minmax(0, 1fr);
-  width: min(760px, calc(100vw - 48px));
-  max-height: min(760px, calc(100dvh - 48px));
   overflow: hidden;
+}
+
+.recording-review-body {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  padding-right: 0;
 }
 
 .recording-review-form,
@@ -47,38 +52,163 @@
   min-height: 0;
 }
 
-.recording-step-list {
-  display: grid;
-  gap: 10px;
-  min-height: 0;
-  max-height: min(430px, calc(100dvh - 310px));
-  overflow-y: auto;
-  padding-right: 4px;
+.recording-review-form {
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  height: 100%;
 }
 
-.recording-step {
+.recording-review-topbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.35fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.recording-review-summary,
+.recording-replace-copy,
+.recording-live-header,
+.recording-step-detail,
+.recording-empty-filter {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+}
+
+.recording-review-summary,
+.recording-replace-copy,
+.recording-step-detail,
+.recording-live-header {
   display: grid;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid #2e2e2e;
-  border-radius: 8px;
-  background: #0f0f0f;
 }
 
-.recording-step[data-included="false"] {
+.recording-replace-copy p,
+.recording-live-header p {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recording-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recording-summary-metrics span {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.recording-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recording-review-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr);
+  gap: 14px;
+  min-height: 0;
+}
+
+.recording-step-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  margin: 0;
+  overflow-y: auto;
+  padding: 0;
+  padding-right: 4px;
+  list-style: none;
+}
+
+.recording-step-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recording-step-row[data-included="false"] {
   opacity: 0.62;
 }
 
-.recording-step-header,
-.recording-step-meta,
-.recording-session-summary {
+.recording-step-row > button {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
+  color: var(--app-text);
+  text-align: left;
+  outline: none;
 }
 
-.recording-step-header {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+.recording-step-row[data-selected="true"] > button {
+  border-color: var(--app-accent-border);
+  box-shadow: inset 3px 0 0 var(--app-accent);
+}
+
+.recording-step-row > button:focus-visible {
+  border-color: var(--app-accent-border-strong);
+  box-shadow: 0 0 0 2px var(--app-focus-ring);
+}
+
+.recording-step-row-index {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.recording-step-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.recording-step-row-main strong,
+.recording-step-row-main span,
+.recording-step-row-main small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recording-step-row-main strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recording-step-row-main span,
+.recording-step-row-main small {
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.recording-step-row .status-cluster {
+  grid-column: 1 / -1;
+  padding-left: calc(42px + 10px);
+}
+
+.recording-step-row-toggle {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 0 4px;
 }
 
 .recording-step-include {
@@ -87,66 +217,97 @@
   flex-direction: row;
   align-items: center;
   gap: 10px;
-  color: #fafafa;
+  color: var(--app-text);
   font-size: 14px;
 }
 
-.recording-step-include input {
+.recording-step-include input,
+.recording-step-row-toggle input {
   width: 16px;
   height: 16px;
   min-height: 16px;
   padding: 0;
-  accent-color: #3ecf8e;
+  accent-color: var(--app-accent);
 }
 
 .recording-step-include span,
-.recording-step-value,
-.recording-step-meta dd,
-.recording-session-summary dd {
+.recording-step-value {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.recording-action-pill {
-  display: inline-flex;
-  min-height: 28px;
-  align-items: center;
-  padding: 0 10px;
-  border: 1px solid rgba(62, 207, 142, 0.38);
-  border-radius: 6px;
-  color: #3ecf8e;
-  font-size: 12px;
+.recording-step-detail {
+  align-content: start;
+  overflow-y: auto;
+}
+
+.recording-step-detail > p {
+  margin: 0;
+  color: var(--app-text-secondary);
+}
+
+.recording-step-detail-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.recording-step-detail-header h3 {
+  min-width: 0;
+  margin: 2px 0 0;
+  color: var(--app-text);
+  font-size: 18px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.recording-step-editor-grid {
+  display: grid;
+  gap: 12px;
 }
 
 .recording-step-value {
   padding: 9px 11px;
-  border: 1px solid #2e2e2e;
-  border-radius: 6px;
-  background: #171717;
-  color: #b4b4b4;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg);
+  color: var(--app-text-secondary);
   font-size: 13px;
 }
 
-.recording-step-meta,
-.recording-session-summary {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.recording-session-summary {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.recording-step-meta dt,
-.recording-session-summary dt {
-  color: #898989;
+.recording-source-events {
+  display: grid;
+  gap: 8px;
+  color: var(--app-text-secondary);
   font-size: 12px;
 }
 
-.recording-step-meta dd,
-.recording-session-summary dd {
-  margin: 3px 0 0;
-  color: #fafafa;
-  font-size: 13px;
+.recording-source-events summary {
+  cursor: pointer;
+  color: var(--app-text);
+}
+
+.recording-source-events p {
+  margin: 0;
+  font-family: "Source Code Pro", "Office Code Pro", Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.recording-empty-filter {
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.recording-session-panel {
+  align-content: start;
+}
+
+.recording-session-panel .key-value-list {
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-surface);
 }
 
 .recording-warning-list {
@@ -154,14 +315,52 @@
   gap: 6px;
   margin: 0;
   padding: 10px 12px 10px 28px;
-  border: 1px solid rgba(255, 99, 71, 0.32);
-  border-radius: 8px;
-  color: #ffb4a8;
+  border: 1px solid var(--app-warning-border);
+  border-radius: var(--app-radius-md);
+  color: var(--app-warning);
   font-size: 13px;
 }
 
 .recording-review-actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.recording-save-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .recording-review-topbar,
+  .recording-review-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .recording-review-form {
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .recording-step-list,
+  .recording-step-detail {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .recording-summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recording-review-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .action-help-header {

@@ -36,11 +36,15 @@ Mission Control is an Electron desktop app for building and running browser auto
   workflow's saved Workflow Settings, exposes only sanitized session/settings
   metadata through IPC, captures browser usage into reviewable action configs,
   and is not a saved workflow until a reviewed recording draft is explicitly
-  saved. Reviewed steps keep backend-held first/last event timing so saved
-  recording graphs can replay positive inter-step gaps through ordinary edge
-  delays. Native file chooser paths are not trusted from browser capture; upload
-  recorder steps stay excluded until the reviewer enters explicit local file
-  paths that can replay through the normal `upload_file` action.
+  saved. The review surface summarizes included/excluded/needs-attention steps,
+  blocks save for missing workflow names, missing navigation URLs, redacted
+  required text, or missing upload paths, and protects discard/close behind an
+  explicit confirmation. Reviewed steps keep backend-held first/last event
+  timing so saved recording graphs can replay positive inter-step gaps through
+  ordinary edge delays. Native file chooser paths are not trusted from browser
+  capture; upload recorder steps stay excluded until the reviewer enters
+  explicit local file paths that can replay through the normal `upload_file`
+  action.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.
@@ -94,12 +98,13 @@ Users can:
   for creating a new workflow from a recording, while the workflow detail header
   exposes Record Replacement for replacing that workflow's graph; replacement
   recording is rejected while the target workflow, browser profile, or batch
-  runner is active. The review dialog lets operators edit the workflow name,
-  step labels, step inclusion, and supported captured values before
-  `saveRecordingDraft` creates a normal workflow or explicitly replaces the
-  linked graph. Draft save reconciles those edits against the backend-held draft
-  by step id and ignores renderer-supplied action type, locator replacement, or
-  timing replacement.
+  runner is active. The review dialog lets operators edit the workflow name for
+  new recordings, step labels, step inclusion, and supported captured values
+  before `saveRecordingDraft` creates a normal workflow or explicitly replaces
+  the linked graph. Replacement review explains that only the current graph is
+  replaced; workflow settings and identity remain unchanged. Draft save
+  reconciles those edits against the backend-held draft by step id and ignores
+  renderer-supplied action type, locator replacement, or timing replacement.
   Discarding a recorder session removes its in-memory session and drafts, and
   saving a draft consumes the draft/session after successful persistence.
 - Open Overview to scan active runs, successful runs today, attention items,
