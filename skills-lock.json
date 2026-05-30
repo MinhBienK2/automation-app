@@ -6,6 +6,12 @@
       "sourceType": "github",
       "computedHash": "2c9df6461b050a8010354c5c41aaf1c93487363d8fd0e04121e91829d0007201"
     },
+    "cloakbrowser": {
+      "source": "octaviantocan/cloakbrowser-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "051a3d2f065eb109ac4bd60757ab4e0c84f24cf66626b8debcf4ce2e7786626f"
+    },
     "electron": {
       "source": "teachingai/full-stack-skills",
       "sourceType": "github",
