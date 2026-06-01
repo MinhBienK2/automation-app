@@ -777,6 +777,95 @@ describe("BrowserWorkflowRunner", () => {
     expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
   });
 
+  test("prefers CloakBrowser human scroll for element targets when available", async () => {
+    const page = new HumanScrollPage({ targetDocumentY: 1400 });
+    const cloakHumanScroll = vi.fn(async ({ locator, timeoutMs, preset }) => {
+      const box = await locator.boundingBox?.();
+      page.events.push(`cloakHumanScroll:${Math.round(box?.y ?? -1)}:${timeoutMs}:${preset}`);
+      return true;
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
+      cloakHumanScroll,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "into_view",
+              target: { locators: [{ kind: "test_id", value: "cta" }] },
+              timeout_ms: 4500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings({ browser_launch: { human_preset: "careful" } }),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(cloakHumanScroll).toHaveBeenCalledTimes(1);
+    expect(page.events).toContain("cloakHumanScroll:1400:4500:careful");
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual([]);
+    expect(page.events).toEqual(
+      expect.not.arrayContaining([
+        expect.stringMatching(/^scrollIntoViewIfNeeded:/),
+      ]),
+    );
+  });
+
+  test("prefers CloakBrowser human scroll for wait-then-scroll targets after visibility wait", async () => {
+    const page = new HumanScrollPage({ targetDocumentY: 1400 });
+    const cloakHumanScroll = vi.fn(async ({ locator, timeoutMs, preset }) => {
+      const box = await locator.boundingBox?.();
+      page.events.push(`cloakHumanScroll:${Math.round(box?.y ?? -1)}:${timeoutMs}:${preset}`);
+      return true;
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
+      cloakHumanScroll,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "until_visible",
+              target: { locators: [{ kind: "test_id", value: "cta" }] },
+              timeout_ms: 4500,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(cloakHumanScroll).toHaveBeenCalledTimes(1);
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "waitFor:testid=cta:visible:4500",
+        "cloakHumanScroll:1400:4500:default",
+      ]),
+    );
+    expect(page.events.indexOf("waitFor:testid=cta:visible:4500")).toBeLessThan(
+      page.events.indexOf("cloakHumanScroll:1400:4500:default"),
+    );
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual([]);
+  });
+
   test("scrolls upward with distance-aware pacing when a target is above the viewport", async () => {
     const page = new HumanScrollPage({ targetDocumentY: 300, initialScrollY: 900 });
     const sleeps: number[] = [];

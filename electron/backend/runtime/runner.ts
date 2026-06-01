@@ -50,6 +50,7 @@ type RunnerOptions = {
   driver?: BrowserDriver;
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   random?: () => number;
+  cloakHumanScroll?: CloakHumanScrollAdapter;
   sessionManager?: BrowserSessionManager;
   retainedSessions?: Map<string, RetainedSession>;
   usesDefaultDriver?: boolean;
@@ -137,6 +138,31 @@ type HumanScrollProfile = {
   pulsePauseMaxMs: number;
 };
 
+type CloakHumanScrollAdapter = (input: {
+  page: BrowserDriverPage;
+  locator: BrowserDriverLocator;
+  timeoutMs?: number | null;
+  preset?: string | null;
+  signal?: AbortSignal;
+}) => Promise<boolean>;
+
+type CloakHumanModule = {
+  humanScrollIntoView?: (
+    page: BrowserDriverPage,
+    raw: {
+      move: (x: number, y: number) => Promise<void>;
+      down: (options?: Record<string, unknown>) => Promise<void>;
+      up: (options?: Record<string, unknown>) => Promise<void>;
+      wheel: (deltaX: number, deltaY: number) => Promise<void>;
+    },
+    getBox: () => Promise<ScrollBox | null>,
+    cursorX: number,
+    cursorY: number,
+    cfg: Record<string, unknown>,
+  ) => Promise<unknown>;
+  resolveConfig?: (preset?: string) => Record<string, unknown>;
+};
+
 const PAGE_SCROLL_TARGET_CHUNK_PX = 240;
 const PAGE_SCROLL_MAX_STEPS = 18;
 const PAGE_SCROLL_PULSE_PAUSE_MIN_MS = 18;
@@ -206,12 +232,14 @@ export class BrowserWorkflowRunner {
   private readonly appPaths: AppPaths;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
+  private readonly cloakHumanScroll: CloakHumanScrollAdapter;
   private readonly sessionManager: BrowserSessionManager;
 
   constructor(options: RunnerOptions) {
     this.appPaths = options.appPaths;
     this.sleep = options.sleep ?? sleep;
     this.random = options.random ?? Math.random;
+    this.cloakHumanScroll = options.cloakHumanScroll ?? cloakBrowserHumanScrollLocatorIntoView;
     this.sessionManager = options.sessionManager ?? new BrowserSessionManager({
       appPaths: options.appPaths,
       driver: options.driver,
@@ -1171,6 +1199,15 @@ export class BrowserWorkflowRunner {
     if (mode === "until_visible") {
       await waitForLocatorState(locator, "visible", action.config.timeout_ms);
     }
+    const handledByCloakBrowser = await this.cloakHumanScroll({
+      page: runtime.page,
+      locator,
+      timeoutMs: action.config.timeout_ms,
+      preset: runtime.settings.browser_launch.human_preset,
+      signal: runtime.signal,
+    });
+    if (handledByCloakBrowser) return;
+
     await humanScrollLocatorIntoView(
       runtime.page,
       locator,
@@ -1591,6 +1628,65 @@ async function humanPageScroll(
     },
     { deltaX, deltaY },
   );
+}
+
+async function cloakBrowserHumanScrollLocatorIntoView({
+  page,
+  locator,
+  timeoutMs,
+  preset,
+  signal,
+}: Parameters<CloakHumanScrollAdapter>[0]) {
+  throwIfAborted(signal);
+  if (!locator.boundingBox || !page.mouse?.move || !page.mouse.down || !page.mouse.up || !page.mouse.wheel) {
+    return false;
+  }
+  if (typeof (page as { viewportSize?: unknown }).viewportSize !== "function") {
+    return false;
+  }
+
+  const cloakHuman = await loadCloakHumanModule();
+  if (!cloakHuman?.humanScrollIntoView || !cloakHuman.resolveConfig) return false;
+
+  try {
+    const cfg = cloakHuman.resolveConfig(preset === "careful" ? "careful" : "default");
+    await cloakHuman.humanScrollIntoView(
+      page,
+      {
+        move: page.mouse.move.bind(page.mouse),
+        down: page.mouse.down.bind(page.mouse),
+        up: page.mouse.up.bind(page.mouse),
+        wheel: page.mouse.wheel.bind(page.mouse),
+      },
+      () => locatorBoundingBox(locator, timeoutMs),
+      0,
+      0,
+      cfg,
+    );
+    throwIfAborted(signal);
+    return true;
+  } catch {
+    throwIfAborted(signal);
+    return false;
+  }
+}
+
+async function loadCloakHumanModule(): Promise<CloakHumanModule | null> {
+  try {
+    return (await import("cloakbrowser/human")) as unknown as CloakHumanModule;
+  } catch {
+    return null;
+  }
+}
+
+async function locatorBoundingBox(
+  locator: BrowserDriverLocator,
+  timeoutMs?: number | null,
+): Promise<ScrollBox | null> {
+  if (!locator.boundingBox) return null;
+  return (
+    locator.boundingBox as (options?: { timeout?: number }) => Promise<ScrollBox | null>
+  )({ timeout: timeoutMs ?? undefined });
 }
 
 async function humanScrollLocatorIntoView(
