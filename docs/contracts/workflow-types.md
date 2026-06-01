@@ -492,11 +492,13 @@ The `type` string must match the TypeScript `ActionType` union. Unknown action
 types, unknown nested action types, unknown graph `node_type` values, and
 unknown `condition.kind` values are rejected by backend validation before they
 can be saved, imported, compiled, or executed through normal commands.
-`scroll` accepts `mode: "page" | "into_view"`. Missing
+`scroll` accepts `mode: "page" | "into_view" | "until_element_visible"`. Missing
 mode is treated as legacy `"page"` and uses `direction` plus `pixels`.
 Element-targeted scroll uses `target` or legacy `xpath`, optional
 `iframe_xpath`, and optional `timeout_ms`. When `timeout_ms` is omitted, target
-scroll defaults to `60000` ms.
+scroll defaults to `60000` ms. `until_element_visible` uses the same target
+fields plus `direction` and `pixels` for repeated page-scroll search gestures
+before the target-scroll phase.
 
 Graph-internal Merge and Router configs use:
 

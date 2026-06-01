@@ -140,9 +140,9 @@ The same small loop is required for every inventory entry:
     remains.
 
 A test mentioning an action does not by itself satisfy the loop. For example,
-The removed target visibility scroll mode was covered only by a scenario that requires
-finding content outside the viewport and asserts the resulting interaction or
-captured output.
+Scroll Until Element Visible is covered by a scenario that requires finding
+content outside the viewport and asserts the resulting interaction or captured
+output.
 
 ## Behavior Inventory
 
@@ -187,7 +187,7 @@ Examples of behavior-changing variants requiring explicit classification:
 | --- | --- |
 | `wait.condition` | duration, relevant element states, text, URL, and page load. |
 | `select_option.match_by` | label and value. |
-| `scroll.mode` | page and into view. |
+| `scroll.mode` | page, into view, and until element visible. |
 | `assert_element.state` | attached, visible, hidden, enabled, disabled. |
 | `assert_text.match_mode` | contains, equals, and meaningful failure behavior. |
 | `ElementTarget` | locator resolution/fallback and supported constraints; iframe behavior when actually supported. |

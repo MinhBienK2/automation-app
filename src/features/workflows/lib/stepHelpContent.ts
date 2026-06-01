@@ -110,8 +110,8 @@ const timeoutField = {
 };
 
 const scrollTimeoutField = {
-  vi: "Timeout ms là thời gian tối đa để chờ/scroll tới target. Mặc định Scroll To Element là 60000 ms, tức 1 phút.",
-  en: "Timeout ms is the maximum time to wait/scroll to the target. Scroll To Element defaults to 60000 ms, or 1 minute.",
+  vi: "Timeout ms là thời gian tối đa để chờ/scroll tới target. Các mode target scroll mặc định 60000 ms, tức 1 phút.",
+  en: "Timeout ms is the maximum time to wait/scroll to the target. Target scroll modes default to 60000 ms, or 1 minute.",
 };
 
 const baseStepHelpContent: Record<
@@ -311,33 +311,33 @@ const baseStepHelpContent: Record<
   scroll: {
     vi: {
       title: "Trợ giúp Scroll",
-      summary: "Cuộn trang theo pixel hoặc dùng wheel human-like để đưa một element đích vào vùng nhìn thấy.",
-      useWhen: ["Dùng Page Scroll khi cần cuộn một lượng pixel cố định.", "Dùng Scroll To Element khi element đã có trên trang nhưng nằm ngoài màn hình."],
+      summary: "Cuộn trang theo pixel, đưa element có sẵn vào vùng nhìn thấy, hoặc cuộn để tìm element lazy-load.",
+      useWhen: ["Dùng Page Scroll khi cần cuộn một lượng pixel cố định.", "Dùng Scroll To Element khi element đã có trên trang nhưng nằm ngoài màn hình.", "Dùng Scroll Until Element Visible khi cần cuộn trang để lazy-load tạo element."],
       fields: [
         { name: "Mode", description: "Page Scroll và các mode target dùng gesture gồm nhiều wheel pulse nhỏ, pause ngắn trong gesture và pause random dài hơn giữa các gesture." },
-        { name: "Direction", description: "Hướng cuộn Page: down, up, right, hoặc left." },
-        { name: "Pixels", description: "Số pixel cho Page scroll. Thử 250-800 tùy trang." },
-        { name: "Target locator", description: "Element đích cho Scroll To Element." },
+        { name: "Direction", description: "Hướng cuộn Page Scroll hoặc hướng tìm kiếm của Scroll Until Element Visible: down, up, right, hoặc left." },
+        { name: "Pixels", description: "Số pixel cho Page Scroll hoặc mỗi lần cuộn tìm kiếm. Thử 250-800 tùy trang." },
+        { name: "Target locator", description: "Element đích cho Scroll To Element hoặc Scroll Until Element Visible." },
         { name: "Iframe XPath", description: "Chọn iframe trên trang cha nếu target nằm trong iframe legacy XPath." },
         { name: "Timeout ms", description: scrollTimeoutField.vi },
       ],
-      examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
-      commonMistakes: ["Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Scroll To Element cần target là element đích, không phải body.", "Target scroll tự tính chunk/pause human-like; không cần cấu hình step/pause thủ công."],
+      examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']", "Mode: Scroll Until Element Visible, Direction: Down, Pixels: 700, Target locator: lazy card"],
+      commonMistakes: ["Nếu element nằm trong iframe, cần Iframe XPath của iframe và target bên trong iframe.", "Scroll To Element cần target đã tồn tại trong DOM; dùng Scroll Until Element Visible cho lazy-load.", "Target scroll tự tính chunk/pause human-like; không cần cấu hình step/pause thủ công."],
     },
     en: {
       title: "Scroll Help",
-      summary: "Scroll the page by pixels or use human-like wheel movement to bring a target element into view.",
-      useWhen: ["Use Page Scroll for a fixed pixel-distance scroll.", "Use Scroll To Element when the element is already on the page but outside the viewport."],
+      summary: "Scroll the page by pixels, bring an existing element into view, or scroll to find a lazy-loaded element.",
+      useWhen: ["Use Page Scroll for a fixed pixel-distance scroll.", "Use Scroll To Element when the element is already on the page but outside the viewport.", "Use Scroll Until Element Visible when page scrolling must trigger lazy-load DOM mounting."],
       fields: [
         { name: "Mode", description: "Page Scroll and target modes use gestures made of smaller wheel pulses, short pauses inside each gesture, and longer random pauses between gestures." },
-        { name: "Direction", description: "Page scroll direction: down, up, right, or left." },
-        { name: "Pixels", description: "Pixel distance for Page scroll. Try 250-800 depending on the page." },
-        { name: "Target locator", description: "Target element for Scroll To Element." },
+        { name: "Direction", description: "Page Scroll direction or Scroll Until Element Visible search direction: down, up, right, or left." },
+        { name: "Pixels", description: "Pixel distance for Page Scroll or each search scroll. Try 250-800 depending on the page." },
+        { name: "Target locator", description: "Target element for Scroll To Element or Scroll Until Element Visible." },
         { name: "Iframe XPath", description: "Selects the parent-page iframe when the target uses a legacy XPath inside a frame." },
         { name: "Timeout ms", description: scrollTimeoutField.en },
       ],
-      examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']"],
-      commonMistakes: ["If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Scroll To Element needs the target element, not body.", "Target scroll calculates human-like chunks and pauses automatically."],
+      examples: ["Mode: Page Scroll, Direction: Down, Pixels: 500", "Mode: Scroll To Element, Iframe XPath: //*[@id='main-frame'], Target locator: //h2[normalize-space(.)='Ready']", "Mode: Scroll Until Element Visible, Direction: Down, Pixels: 700, Target locator: lazy card"],
+      commonMistakes: ["If the element is inside an iframe, set Iframe XPath for the iframe and the target locator inside that iframe.", "Scroll To Element needs the target to already exist in the DOM; use Scroll Until Element Visible for lazy-load pages.", "Target scroll calculates human-like chunks and pauses automatically."],
     },
   },
   select_option: {
@@ -1033,7 +1033,7 @@ function fieldRequiredWhen(
         "wait:URL contains": "Bắt buộc khi Condition là URL contains.",
         "navigate:URL": "Bắt buộc; đây là trang workflow sẽ mở.",
         "navigate:Wait until": "Tùy chọn; mặc định là Load.",
-        "scroll:Target locator": "Bắt buộc với Scroll To Element; không cần với Page Scroll.",
+        "scroll:Target locator": "Bắt buộc với Scroll To Element và Scroll Until Element Visible; không cần với Page Scroll.",
         "click:Offset X / Offset Y": "Chỉ bắt buộc khi Position là Offset.",
         "go_back:No fields": "Action này không có field cấu hình.",
         "go_forward:No fields": "Action này không có field cấu hình.",
@@ -1048,7 +1048,7 @@ function fieldRequiredWhen(
         "wait:URL contains": "Required when Condition is URL contains.",
         "navigate:URL": "Required; this is the page the workflow opens.",
         "navigate:Wait until": "Optional; defaults to Load.",
-        "scroll:Target locator": "Required for Scroll To Element; not needed for Page Scroll.",
+        "scroll:Target locator": "Required for Scroll To Element and Scroll Until Element Visible; not needed for Page Scroll.",
         "click:Offset X / Offset Y": "Required only when Position is Offset.",
         "go_back:No fields": "This action has no configurable fields.",
         "go_forward:No fields": "This action has no configurable fields.",

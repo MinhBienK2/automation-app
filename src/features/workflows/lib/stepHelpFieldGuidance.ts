@@ -540,7 +540,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     "Timeout ms": [
       "Đơn vị là mili-giây: 1000 = 1 giây, 5000 = 5 giây.",
-      "Với Scroll To Element, mặc định là 60000 ms để có đủ thời gian cuộn bằng nhiều wheel pulse và pause thích ứng tới target.",
+      "Với các mode target scroll, mặc định là 60000 ms để có đủ thời gian cuộn bằng nhiều wheel pulse và pause thích ứng tới target.",
       "Timeout quá ngắn dễ fail trên mạng chậm; timeout quá dài làm workflow đợi lâu khi XPath sai.",
     ],
     Condition: [
@@ -616,14 +616,14 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode quyết định ý nghĩa của các field còn lại.",
-      "Page Scroll dùng Direction/Pixels; Scroll To Element dùng Target locator và Timeout.",
+      "Page Scroll dùng Direction/Pixels; Scroll To Element dùng Target locator và Timeout; Scroll Until Element Visible dùng cả Target locator, Timeout, Direction và Pixels.",
     ],
     Direction: [
       "Down/Up cuộn theo chiều dọc; Left/Right cuộn theo chiều ngang.",
-      "Direction chỉ dùng trong Page scroll.",
+      "Direction dùng trong Page Scroll và Scroll Until Element Visible.",
     ],
     Pixels: [
-      "Pixels là tổng khoảng cách cho Page Scroll.",
+      "Pixels là tổng khoảng cách cho Page Scroll hoặc mỗi lần cuộn tìm kiếm trong Scroll Until Element Visible.",
       "250-800 thường hợp lý cho một hành động cuộn trang.",
     ],
     "Max attempts": [
@@ -677,7 +677,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     "Timeout ms": [
       "Unit is milliseconds: 1000 = 1 second, 5000 = 5 seconds.",
-      "For Scroll To Element, the default is 60000 ms so the runner has time to scroll with adaptive wheel pulses and pauses to the target.",
+      "For target scroll modes, the default is 60000 ms so the runner has time to scroll with adaptive wheel pulses and pauses to the target.",
       "Too short can fail on slow pages; too long makes wrong XPath failures slower.",
     ],
     Condition: [
@@ -753,14 +753,14 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode decides how the other fields are interpreted.",
-      "Page Scroll uses Direction/Pixels; Scroll To Element use Target locator and Timeout.",
+      "Page Scroll uses Direction/Pixels; Scroll To Element uses Target locator and Timeout; Scroll Until Element Visible uses Target locator, Timeout, Direction, and Pixels.",
     ],
     Direction: [
       "Down/Up scroll vertically; Left/Right scroll horizontally.",
-      "Direction is only used by Page scroll.",
+      "Direction is used by Page Scroll and Scroll Until Element Visible.",
     ],
     Pixels: [
-      "Pixels is the total distance for Page Scroll.",
+      "Pixels is the total distance for Page Scroll or each search scroll in Scroll Until Element Visible.",
       "250-800 is usually reasonable for one page-scroll action.",
     ],
     "Max attempts": [

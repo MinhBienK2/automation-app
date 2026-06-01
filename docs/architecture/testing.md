@@ -91,7 +91,7 @@ Desktop coverage map:
 - `capture-network.e2e.ts`: `extract_text`, `extract_attribute`, `extract_input_value`, `extract_list`, `extract_table`, `take_screenshot`, `wait_for_download`, `execute_js`, `wait_for_request`, `wait_for_response` with status-filtered and unfiltered matching, `block_request`, `mock_response`.
 - `keyboard-dialog.e2e.ts`: `focus_element`, `blur_element`, `press_key`, `hotkey`, `set_clipboard`, `paste_clipboard`, `type_sequence`, `accept_dialog`, `dismiss_dialog`.
 - `human-behavior.e2e.ts`: `hover`, `click`, `double_click`, `right_click`, `input_text`, `type_sequence`, and page scroll emit trusted page-observable mouse, pointer, keyboard, wheel, and scroll event sequences with CloakBrowser humanization enabled.
-- `pointer-actions.e2e.ts`: `click`, `double_click`, `right_click`, `hover`, `drag_and_drop`, and `scroll` page and into-view modes.
+- `pointer-actions.e2e.ts`: `click`, `double_click`, `right_click`, `hover`, `drag_and_drop`, and `scroll` page, into-view, and scroll-until-visible modes.
 - `navigation-actions.e2e.ts`: `navigate`, `go_back`, `go_forward`, `reload`, `open_new_tab`, `switch_tab`, `close_tab`.
 - `extended-form-actions.e2e.ts`: `upload_file`, `select_custom_option`, `set_contenteditable`.
 - `wait-assertion-actions.e2e.ts`: `wait(duration)`, `wait(page_load)`, element wait states (`visible`, `hidden`, `attached`, `detached`, `enabled`, `disabled`), `wait(text_visible)`, `wait(url_contains)`, `random_wait`, `assert_element` states (`visible`, `hidden`, `attached`, `enabled`, `disabled`), `assert_text` contains/equals pass paths, and assertion failure run-state paths.

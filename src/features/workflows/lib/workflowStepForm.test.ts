@@ -75,6 +75,16 @@ describe("workflow step form config helpers", () => {
         timeout_ms: 60000,
       },
     });
+    expect(updateActionConfigField(config, "mode", "until_element_visible")).toEqual({
+      type: "scroll",
+      config: {
+        mode: "until_element_visible",
+        direction: "down",
+        pixels: 300,
+        target: null,
+        timeout_ms: 60000,
+      },
+    });
 
     const targetedConfig: ActionConfig = {
       type: "scroll",

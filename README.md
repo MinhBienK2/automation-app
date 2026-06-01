@@ -231,7 +231,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 2. Create a workflow.
 2. Confirm the new workflow graph starts with `Start -> New node`.
 3. Open Settings from the sidebar, confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status; run Install CloakBrowser Binary and Cleanup Orphaned Profiles from Maintenance; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
-4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll Direction/Pixels fields and Scroll To Element target fields with Timeout ms defaulting to 60000, without low-level target constraint or scroll tuning controls.
+4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll Direction/Pixels fields, Scroll To Element target fields with Timeout ms defaulting to 60000, and Scroll Until Element Visible target/timeout plus Direction/Pixels fields without low-level target constraint or scroll tuning controls.
 5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.
 7. Add Set Variables, Set JSON Variables, Assert Element, Assert Text, If, Switch, Router, Merge, Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop, Retry, End Success, End Failure, and Stop Workflow graph nodes from their current visible graph palettes.
@@ -250,7 +250,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 17. Confirm extracted outputs are available in the browser session output store and screenshot path exists.
 17. Confirm runner evidence outputs include `__action_traces` and run-scoped `__evidence` metadata when screenshot or download artifacts are produced, and that nested branch/body action traces include parent node and sequence metadata.
 18. Confirm tab actions move between visible Chromium tabs and reject missing tab indexes.
-19. Confirm structured target fields let element and output steps target iframe content, and confirm Scroll To Element can target iframe content with an iframe XPath.
+19. Confirm structured target fields let element and output steps target iframe content, and confirm Scroll To Element and Scroll Until Element Visible can target iframe content with an iframe XPath.
 20. Confirm dialog actions accept prompts with text and dismiss confirms without hanging.
 21. Confirm download actions save a new file under the current run evidence directory and store its app-local path plus `__evidence` metadata in outputs.
 22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use literal items and a variable array, Router takes the first matching case or default branch, Merge converges routed branches, and control-flow blocks run nested actions.

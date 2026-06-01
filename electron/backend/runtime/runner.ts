@@ -171,6 +171,8 @@ const PAGE_SCROLL_GESTURE_PAUSE_MIN_MS = 170;
 const PAGE_SCROLL_GESTURE_PAUSE_MAX_MS = 310;
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
+const SCROLL_UNTIL_VISIBLE_DEFAULT_PIXELS = 700;
+const SCROLL_UNTIL_VISIBLE_ATTEMPT_BUDGET_MS = 300;
 
 const runnerActionCapabilities: Partial<Record<ActionType, RunnerActionCapability>> = {
   click: "cloak_native",
@@ -1183,6 +1185,11 @@ export class BrowserWorkflowRunner {
     action: Extract<ActionConfig, { type: "scroll" }>,
   ) {
     const mode = action.config.mode ?? "page";
+    assertRuntimeEnumValue(
+      mode,
+      ["page", "into_view", "until_element_visible"],
+      "Scroll mode must be page, into_view, or until_element_visible",
+    );
     if (mode === "page") {
       await humanPageScroll(
         runtime.page,
@@ -1196,6 +1203,20 @@ export class BrowserWorkflowRunner {
     }
 
     const locator = await this.locatorForAction(runtime, action.config, "");
+    if (mode === "until_element_visible") {
+      await humanScrollUntilLocatorVisible(
+        runtime.page,
+        locator,
+        action.config.direction ?? "down",
+        action.config.pixels ?? SCROLL_UNTIL_VISIBLE_DEFAULT_PIXELS,
+        action.config.timeout_ms,
+        this.sleep,
+        this.random,
+        runtime.signal,
+        runtime.settings.browser_launch.human_preset,
+      );
+    }
+
     const handledByCloakBrowser = await this.cloakHumanScroll({
       page: runtime.page,
       locator,
@@ -1686,6 +1707,55 @@ async function locatorBoundingBox(
   )({ timeout: timeoutMs ?? undefined });
 }
 
+async function humanScrollUntilLocatorVisible(
+  page: BrowserDriverPage,
+  locator: BrowserDriverLocator,
+  direction: Extract<ActionConfig, { type: "scroll" }>["config"]["direction"],
+  pixels: number,
+  timeoutMs: number | null | undefined,
+  sleepFn: (ms: number, signal?: AbortSignal) => Promise<void>,
+  random: () => number,
+  signal?: AbortSignal,
+  preset?: string | null,
+) {
+  const timeoutBudgetMs = timeoutMs ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS;
+  const maxAttempts = Math.max(
+    1,
+    Math.min(240, Math.ceil(timeoutBudgetMs / SCROLL_UNTIL_VISIBLE_ATTEMPT_BUDGET_MS)),
+  );
+  const profile = humanScrollProfile(preset);
+  const startedAt = Date.now();
+
+  for (let attempt = 0; attempt <= maxAttempts; attempt += 1) {
+    throwIfAborted(signal);
+    if (Date.now() - startedAt > timeoutBudgetMs) {
+      throw new Error(`Scroll target did not become visible within ${timeoutBudgetMs} ms`);
+    }
+
+    if (await locatorHasVisibleBox(locator, 200)) return;
+    if (attempt === maxAttempts) break;
+
+    await humanPageScroll(page, direction ?? "down", pixels, sleepFn, random, signal);
+    await sleepFn(humanScrollPauseMs(profile, random, pixels), signal);
+  }
+
+  throw new Error("Scroll target did not become visible before max attempts");
+}
+
+async function locatorHasVisibleBox(locator: BrowserDriverLocator, timeoutMs?: number) {
+  let box: ScrollBox | null | undefined = null;
+  try {
+    box = await locatorBoundingBox(locator, timeoutMs);
+  } catch {
+    box = null;
+  }
+  if (box && box.width > 0 && box.height > 0) return true;
+  if (!locator.boundingBox && locator.isVisible) {
+    return locator.isVisible();
+  }
+  return false;
+}
+
 async function humanScrollLocatorIntoView(
   page: BrowserDriverPage,
   locator: BrowserDriverLocator,
@@ -2145,7 +2215,7 @@ function frameRootForXpath(page: BrowserDriverPage, iframeXpath: string) {
   if (!page.frameLocator) {
     throw new Error("iframe targets require driver support for frameLocator");
   }
-  return page.frameLocator(iframeXpath);
+  return page.frameLocator(xpathSelector(iframeXpath));
 }
 
 function locatorFromConfig(
@@ -2176,8 +2246,9 @@ function locatorFromConfig(
     case "attribute":
       return root.locator(`[${locator.attribute ?? "data-testid"}="${cssAttributeValue(locator.value)}"]`);
     case "css":
-    case "xpath":
       return root.locator(locator.value);
+    case "xpath":
+      return root.locator(xpathSelector(locator.value));
   }
 }
 
@@ -2194,9 +2265,16 @@ function selectorFromLocatorConfig(locator: ElementLocator) {
     case "placeholder":
       return locator.value;
     case "css":
-    case "xpath":
       return locator.value;
+    case "xpath":
+      return xpathSelector(locator.value);
   }
+}
+
+function xpathSelector(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("xpath=")) return trimmed;
+  return trimmed.startsWith("/") && !trimmed.startsWith("//") ? `xpath=${trimmed}` : trimmed;
 }
 
 function applyIndexConstraint(

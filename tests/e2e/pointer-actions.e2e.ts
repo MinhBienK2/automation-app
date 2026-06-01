@@ -19,7 +19,7 @@ test.describe("desktop pointer and element interaction node execution", () => {
       },
       {
         type: "desktop depth",
-        description: "Verifies pointer and scroll mode side effects through the real browser page.",
+        description: "Verifies pointer and direct scroll mode side effects through the real browser page.",
       },
     );
 
@@ -155,5 +155,63 @@ test.describe("desktop pointer and element interaction node execution", () => {
     });
     expect(state.error?.reason).toMatch(/Scroll target|Timeout|Element/i);
     expect(state.completed_step_ids).not.toContain("extract-lazy-summary");
+  });
+
+  test("scrolls until a lazy-loaded element is visible", async ({
+    appWindow,
+    fixtureServer,
+  }, testInfo) => {
+    testInfo.annotations.push(
+      { type: "fixture route", description: "/lazy-scroll" },
+      {
+        type: "nodes",
+        description: "navigate, scroll(until_element_visible), extract_text",
+      },
+      {
+        type: "desktop depth",
+        description:
+          "Verifies scroll-until-visible page-scrolls to trigger lazy DOM mounting before targeting the element.",
+      },
+    );
+
+    const { state } = await createAndRunWorkflow(
+      appWindow,
+      "E2E lazy scroll until visible",
+      [
+        {
+          id: "navigate-lazy-scroll",
+          label: "Navigate Lazy Scroll",
+          config: { type: "navigate", config: { url: `${fixtureServer.baseUrl}/lazy-scroll` } },
+        },
+        {
+          id: "scroll-lazy-target",
+          label: "Scroll Lazy Target",
+          config: {
+            type: "scroll",
+            config: {
+              mode: "until_element_visible",
+              target: target("lazy-target"),
+              direction: "down",
+              pixels: 700,
+              timeout_ms: 10000,
+            },
+          },
+        },
+        {
+          id: "extract-lazy-summary",
+          label: "Extract Lazy Summary",
+          config: {
+            type: "extract_text",
+            config: { target: target("lazy-summary"), output_name: "lazy_summary" },
+          },
+        },
+      ],
+      { timeoutMs: 90_000 },
+    );
+
+    expect(state.outputs.lazy_summary).toMatch(/^lazy:mounted\|scroll:/);
+    expect(state.completed_step_ids).toEqual(
+      expect.arrayContaining(["scroll-lazy-target", "extract-lazy-summary"]),
+    );
   });
 });

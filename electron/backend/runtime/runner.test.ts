@@ -777,6 +777,37 @@ describe("BrowserWorkflowRunner", () => {
     expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
   });
 
+  test("uses explicit Playwright XPath selectors for structured absolute XPath targets", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
+      cloakHumanScroll: async () => true,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "into_view",
+              target: { locators: [{ kind: "xpath", value: "/html/body/footer" }] },
+              timeout_ms: 1000,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("locator:xpath=/html/body/footer");
+  });
+
   test("prefers CloakBrowser human scroll for element targets when available", async () => {
     const page = new HumanScrollPage({ targetDocumentY: 1400 });
     const cloakHumanScroll = vi.fn(async ({ locator, timeoutMs, preset }) => {
@@ -907,6 +938,43 @@ describe("BrowserWorkflowRunner", () => {
       action_type: "scroll",
       reason: "Scroll target did not enter the viewport before max attempts",
     });
+  });
+
+  test("scrolls the page until a lazy-loaded target exists, then brings it into view", async () => {
+    const page = new LazyLoadedTargetPage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
+      cloakHumanScroll: async () => false,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "until_element_visible",
+              target: { locators: [{ kind: "test_id", value: "lazy-cta" }] },
+              direction: "down",
+              pixels: 350,
+              timeout_ms: 5000,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toContain("mount:lazy-cta");
+    expect(page.events.filter((event) => event.startsWith("wheel:")).length).toBeGreaterThan(1);
+    const finalBox = await page.lazyLocator.boundingBox();
+    expect(finalBox?.y).toBeGreaterThanOrEqual(0);
+    expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
   });
 
   test("fails targeted scroll modes when no target is configured", async () => {
@@ -3783,6 +3851,70 @@ class MissingTargetLocator extends FakeLocator {
   override async isVisible() {
     this.events.push(`isVisible:${this.selector}`);
     return false;
+  }
+}
+
+class LazyLoadedTargetPage extends HumanScrollPage {
+  readonly lazyLocator: LazyLoadedTargetLocator;
+  private mounted = false;
+
+  constructor() {
+    super({ targetDocumentY: 1200 });
+    this.lazyLocator = new LazyLoadedTargetLocator("testid=lazy-cta", this);
+  }
+
+  override getByTestId(testId: string) {
+    this.events.push(`getByTestId:${testId}`);
+    return this.lazyLocator;
+  }
+
+  override mouse = {
+    move: async (x: number, y: number) => {
+      this.events.push(`move:${x}:${y}`);
+    },
+    down: async (options?: { button?: string }) => {
+      this.events.push(`mouseDown:${options?.button ?? "left"}`);
+    },
+    up: async (options?: { button?: string }) => {
+      this.events.push(`mouseUp:${options?.button ?? "left"}`);
+    },
+    wheel: async (x: number, y: number) => {
+      this.scrollY += y;
+      this.events.push(`wheel:${x}:${y}`);
+      if (!this.mounted && this.scrollY > 400) {
+        this.mounted = true;
+        this.events.push("mount:lazy-cta");
+      }
+    },
+  };
+
+  isMounted() {
+    return this.mounted;
+  }
+}
+
+class LazyLoadedTargetLocator extends HumanScrollLocator {
+  constructor(
+    selector: string,
+    private readonly lazyPage: LazyLoadedTargetPage,
+  ) {
+    super(selector, lazyPage);
+  }
+
+  override async boundingBox() {
+    if (!this.lazyPage.isMounted()) {
+      this.events.push(`boundingBox:${this.selector}:missing`);
+      return null;
+    }
+    return super.boundingBox();
+  }
+
+  override async isVisible() {
+    if (!this.lazyPage.isMounted()) {
+      this.events.push(`isVisible:${this.selector}:missing`);
+      return false;
+    }
+    return super.isVisible();
   }
 }
 

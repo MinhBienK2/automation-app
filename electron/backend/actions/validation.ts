@@ -90,9 +90,9 @@ const actionValidators = createActionValidatorMap({
     const mode = config.config.mode ?? "page";
     const modeValidation = validateRequiredEnumValue(
       mode,
-      ["page", "into_view"],
+      ["page", "into_view", "until_element_visible"],
       "mode",
-      "Scroll mode must be page or into_view",
+      "Scroll mode must be page, into_view, or until_element_visible",
     );
     if (modeValidation) return modeValidation;
 
@@ -107,10 +107,24 @@ const actionValidators = createActionValidatorMap({
         positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
       );
     }
-    return firstValidation(
+    const targetValidation = firstValidation(
       validateElementTarget(config.config),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     );
+    if (targetValidation) return targetValidation;
+
+    if (mode === "until_element_visible") {
+      return firstValidation(
+        validateRequiredEnumValue(
+          config.config.direction ?? "down",
+          ["up", "down", "left", "right"],
+          "direction",
+          "Scroll direction must be up, down, left, or right",
+        ),
+        positiveValue(config.config.pixels ?? 700, "pixels", "Scroll pixels must be greater than 0"),
+      );
+    }
+    return null;
   },
   select_option: (config) =>
     firstValidation(

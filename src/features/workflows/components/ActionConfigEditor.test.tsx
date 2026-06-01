@@ -161,9 +161,13 @@ describe("ActionConfigEditor", () => {
     expect(screen.getByLabelText("Mode")).toHaveValue("page");
     expect(screen.getByRole("option", { name: "Page Scroll" })).toHaveValue("page");
     expect(screen.getByRole("option", { name: "Scroll To Element" })).toHaveValue("into_view");
+    expect(screen.getByRole("option", { name: "Scroll Until Element Visible" })).toHaveValue(
+      "until_element_visible",
+    );
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "Page Scroll",
       "Scroll To Element",
+      "Scroll Until Element Visible",
       "Down",
       "Up",
       "Right",
@@ -187,6 +191,23 @@ describe("ActionConfigEditor", () => {
       type: "scroll",
       config: {
         mode: "into_view",
+        direction: "down",
+        pixels: 500,
+        target: null,
+        timeout_ms: 60000,
+      },
+    });
+
+    await userEvent.selectOptions(screen.getByLabelText("Mode"), "until_element_visible");
+
+    expect(screen.getByLabelText("Target locator")).toBeInTheDocument();
+    expect(screen.getByLabelText("Timeout ms")).toBeInTheDocument();
+    expect(screen.getByLabelText("Direction")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pixels")).toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "scroll",
+      config: {
+        mode: "until_element_visible",
         direction: "down",
         pixels: 500,
         target: null,

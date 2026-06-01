@@ -39,6 +39,7 @@ export function PointerActionFields({
             >
               <option value="page">Page Scroll</option>
               <option value="into_view">Scroll To Element</option>
+              <option value="until_element_visible">Scroll Until Element Visible</option>
             </Select>
           </Label>
           {mode === "page" ? (
@@ -105,6 +106,39 @@ export function PointerActionFields({
                   }
                 />
               </Label>
+              {mode === "until_element_visible" ? (
+                <>
+                  <Label>
+                    Direction
+                    <Select
+                      value={config.config.direction ?? "down"}
+                      onChange={(event) =>
+                        onChange(
+                          updateActionConfigField(config, "direction", event.currentTarget.value),
+                        )
+                      }
+                    >
+                      <option value="down">Down</option>
+                      <option value="up">Up</option>
+                      <option value="right">Right</option>
+                      <option value="left">Left</option>
+                    </Select>
+                  </Label>
+                  <Label>
+                    Pixels
+                    <Input
+                      min="1"
+                      type="number"
+                      value={config.config.pixels ?? 700}
+                      onChange={(event) =>
+                        onChange(
+                          updateActionConfigField(config, "pixels", event.currentTarget.value),
+                        )
+                      }
+                    />
+                  </Label>
+                </>
+              ) : null}
             </>
           )}
         </>
