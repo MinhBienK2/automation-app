@@ -41,6 +41,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
       respondHtml(response, pointerPage());
       return;
     }
+    if (url.pathname === "/lazy-scroll") {
+      respondHtml(response, lazyScrollPage());
+      return;
+    }
     if (url.pathname === "/human-behavior") {
       respondHtml(response, humanBehaviorPage());
       return;
@@ -377,7 +381,6 @@ function pointerPage() {
     <div data-testid="drag-source" draggable="true">drag-source</div>
     <div data-testid="drop-zone" id="drop-zone">Drop here</div>
     <div style="margin-top: 900px" data-testid="into-view-target">Into view target</div>
-    <div style="margin-top: 360px" data-testid="until-visible-target" hidden>Until visible target</div>
     <script>
       const summary = document.querySelector('[data-testid="pointer-summary"]');
       const state = { click: 0, double: 0, right: 0, hover: 0, drop: 'none', scroll: 'idle' };
@@ -434,9 +437,52 @@ function pointerPage() {
           render();
         }
       });
-      setTimeout(() => {
-        document.querySelector('[data-testid="until-visible-target"]').hidden = false;
-      }, 80);
+    </script>
+  </body>
+</html>`;
+}
+
+function lazyScrollPage() {
+  return `<!doctype html>
+<html>
+  <head>
+    <title>Lazy Scroll Fixture</title>
+    <style>
+      body { font-family: sans-serif; margin: 0; min-height: 1800px; padding: 24px; }
+      [data-testid="lazy-summary"] {
+        background: white;
+        border: 1px solid #d0d5dd;
+        margin-bottom: 900px;
+        padding: 10px;
+        position: sticky;
+        top: 0;
+      }
+      [data-testid="lazy-target"] {
+        border: 1px solid #667085;
+        margin-top: 700px;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-testid="lazy-summary">lazy:idle|scroll:0</div>
+    <script>
+      const summary = document.querySelector('[data-testid="lazy-summary"]');
+      let mounted = false;
+      function render() {
+        summary.textContent = 'lazy:' + (mounted ? 'mounted' : 'idle') + '|scroll:' + Math.round(window.scrollY);
+      }
+      window.addEventListener('scroll', () => {
+        if (!mounted && window.scrollY > 400) {
+          mounted = true;
+          const target = document.createElement('div');
+          target.dataset.testid = 'lazy-target';
+          target.textContent = 'Lazy target mounted after page scroll';
+          document.body.appendChild(target);
+        }
+        render();
+      });
+      render();
     </script>
   </body>
 </html>`;

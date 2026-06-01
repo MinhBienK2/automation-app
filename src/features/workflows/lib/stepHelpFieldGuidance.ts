@@ -540,7 +540,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     "Timeout ms": [
       "Đơn vị là mili-giây: 1000 = 1 giây, 5000 = 5 giây.",
-      "Với Scroll To Element và Wait Then Scroll To Element, mặc định là 60000 ms để có đủ thời gian cuộn bằng nhiều wheel pulse và pause thích ứng tới target.",
+      "Với Scroll To Element, mặc định là 60000 ms để có đủ thời gian cuộn bằng nhiều wheel pulse và pause thích ứng tới target.",
       "Timeout quá ngắn dễ fail trên mạng chậm; timeout quá dài làm workflow đợi lâu khi XPath sai.",
     ],
     Condition: [
@@ -616,7 +616,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode quyết định ý nghĩa của các field còn lại.",
-      "Page Scroll dùng Direction/Pixels; Scroll To Element và Wait Then Scroll To Element dùng Target locator và Timeout.",
+      "Page Scroll dùng Direction/Pixels; Scroll To Element dùng Target locator và Timeout.",
     ],
     Direction: [
       "Down/Up cuộn theo chiều dọc; Left/Right cuộn theo chiều ngang.",
@@ -677,7 +677,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     "Timeout ms": [
       "Unit is milliseconds: 1000 = 1 second, 5000 = 5 seconds.",
-      "For Scroll To Element and Wait Then Scroll To Element, the default is 60000 ms so the runner has time to scroll with adaptive wheel pulses and pauses to the target.",
+      "For Scroll To Element, the default is 60000 ms so the runner has time to scroll with adaptive wheel pulses and pauses to the target.",
       "Too short can fail on slow pages; too long makes wrong XPath failures slower.",
     ],
     Condition: [
@@ -753,7 +753,7 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     ],
     Mode: [
       "Mode decides how the other fields are interpreted.",
-      "Page Scroll uses Direction/Pixels; Scroll To Element and Wait Then Scroll To Element use Target locator and Timeout.",
+      "Page Scroll uses Direction/Pixels; Scroll To Element use Target locator and Timeout.",
     ],
     Direction: [
       "Down/Up scroll vertically; Left/Right scroll horizontally.",

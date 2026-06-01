@@ -820,52 +820,6 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
-  test("prefers CloakBrowser human scroll for wait-then-scroll targets after visibility wait", async () => {
-    const page = new HumanScrollPage({ targetDocumentY: 1400 });
-    const cloakHumanScroll = vi.fn(async ({ locator, timeoutMs, preset }) => {
-      const box = await locator.boundingBox?.();
-      page.events.push(`cloakHumanScroll:${Math.round(box?.y ?? -1)}:${timeoutMs}:${preset}`);
-      return true;
-    });
-    const runner = new BrowserWorkflowRunner({
-      appPaths: await createTempAppPaths(),
-      driver: createFakeDriver(new FakeContext(page)),
-      sleep: async () => {},
-      random: () => 0.5,
-      cloakHumanScroll,
-    });
-
-    const result = await runner.run({
-      graph: {
-        steps: [
-          step("scroll", "Scroll", {
-            type: "scroll",
-            config: {
-              mode: "until_visible",
-              target: { locators: [{ kind: "test_id", value: "cta" }] },
-              timeout_ms: 4500,
-            },
-          }),
-        ],
-      },
-      settings: makeSettings(),
-      mode: "run_workflow",
-    });
-
-    expect(result.status).toBe("success");
-    expect(cloakHumanScroll).toHaveBeenCalledTimes(1);
-    expect(page.events).toEqual(
-      expect.arrayContaining([
-        "waitFor:testid=cta:visible:4500",
-        "cloakHumanScroll:1400:4500:default",
-      ]),
-    );
-    expect(page.events.indexOf("waitFor:testid=cta:visible:4500")).toBeLessThan(
-      page.events.indexOf("cloakHumanScroll:1400:4500:default"),
-    );
-    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual([]);
-  });
-
   test("scrolls upward with distance-aware pacing when a target is above the viewport", async () => {
     const page = new HumanScrollPage({ targetDocumentY: 300, initialScrollY: 900 });
     const sleeps: number[] = [];
@@ -912,6 +866,49 @@ describe("BrowserWorkflowRunner", () => {
     expect((finalBox?.y ?? 0) + (finalBox?.height ?? 0)).toBeLessThanOrEqual(page.viewport.height);
   });
 
+  test("fails scroll-to-element when lazy-loaded target is not in the DOM", async () => {
+    const page = new MissingTargetPage();
+    const cloakHumanScroll = vi.fn(async ({ locator }) => {
+      const box = await locator.boundingBox?.();
+      page.events.push(`cloakHumanScroll:${box ? "box" : "missing"}`);
+      return false;
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async () => {},
+      random: () => 0.5,
+      cloakHumanScroll,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "into_view",
+              target: { locators: [{ kind: "test_id", value: "lazy-cta" }] },
+              timeout_ms: 100,
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(cloakHumanScroll).toHaveBeenCalledTimes(1);
+    expect(page.events).toContain("cloakHumanScroll:missing");
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual([]);
+    expect(result.error).toMatchObject({
+      step_id: "scroll",
+      action_type: "scroll",
+      reason: "Scroll target did not enter the viewport before max attempts",
+    });
+  });
+
   test("fails targeted scroll modes when no target is configured", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
@@ -940,7 +937,7 @@ describe("BrowserWorkflowRunner", () => {
     });
   });
 
-  test("waits for until-visible scroll targets inside legacy iframe XPath", async () => {
+  test("scrolls into view targets inside legacy iframe XPath", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
@@ -953,7 +950,7 @@ describe("BrowserWorkflowRunner", () => {
           step("scroll", "Scroll", {
             type: "scroll",
             config: {
-              mode: "until_visible",
+              mode: "into_view",
               xpath: "//h2[normalize-space(.)='Ready']",
               iframe_xpath: "//iframe[@id='main']",
               timeout_ms: 2500,
@@ -970,7 +967,6 @@ describe("BrowserWorkflowRunner", () => {
       expect.arrayContaining([
         "frameLocator://iframe[@id='main']",
         "frameLocator.locator://h2[normalize-space(.)='Ready']",
-        "waitFor://h2[normalize-space(.)='Ready']:visible:2500",
       ]),
     );
     expect(page.events.some((event) => event.startsWith("scrollIntoViewIfNeeded:"))).toBe(false);
@@ -3759,6 +3755,34 @@ class HumanScrollLocator extends FakeLocator {
     const box = this.page.targetBox();
     this.events.push(`isVisible:${this.selector}`);
     return box.y >= 0 && box.y + box.height <= this.page.viewport.height;
+  }
+}
+
+class MissingTargetPage extends FakePage {
+  readonly missingLocator = new MissingTargetLocator("testid=lazy-cta", this.events);
+
+  override getByTestId(testId: string) {
+    this.events.push(`getByTestId:${testId}`);
+    return this.missingLocator;
+  }
+}
+
+class MissingTargetLocator extends FakeLocator {
+  override async boundingBox() {
+    this.events.push(`boundingBox:${this.selector}:missing`);
+    return null;
+  }
+
+  override async waitFor(options?: { state?: string; timeout?: number }) {
+    this.events.push(
+      `waitFor:${this.selector}:${options?.state ?? "visible"}:${options?.timeout ?? "none"}`,
+    );
+    throw new Error("Element did not become visible");
+  }
+
+  override async isVisible() {
+    this.events.push(`isVisible:${this.selector}`);
+    return false;
   }
 }
 

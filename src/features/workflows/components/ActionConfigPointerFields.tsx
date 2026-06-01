@@ -39,7 +39,6 @@ export function PointerActionFields({
             >
               <option value="page">Page Scroll</option>
               <option value="into_view">Scroll To Element</option>
-              <option value="until_visible">Wait Then Scroll To Element</option>
             </Select>
           </Label>
           {mode === "page" ? (

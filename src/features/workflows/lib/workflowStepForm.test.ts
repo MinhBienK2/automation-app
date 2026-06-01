@@ -79,7 +79,7 @@ describe("workflow step form config helpers", () => {
     const targetedConfig: ActionConfig = {
       type: "scroll",
       config: {
-        mode: "until_visible",
+        mode: "into_view",
         direction: "down",
         pixels: 300,
         target: null,
@@ -90,7 +90,7 @@ describe("workflow step form config helpers", () => {
     expect(updateActionConfigField(targetedConfig, "xpath", "//h2")).toEqual({
       type: "scroll",
       config: {
-        mode: "until_visible",
+        mode: "into_view",
         direction: "down",
         pixels: 300,
         target: null,
@@ -101,7 +101,7 @@ describe("workflow step form config helpers", () => {
     expect(updateActionConfigField(targetedConfig, "timeout_ms", "9000")).toEqual({
       type: "scroll",
       config: {
-        mode: "until_visible",
+        mode: "into_view",
         direction: "down",
         pixels: 300,
         target: null,

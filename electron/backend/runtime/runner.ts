@@ -1196,9 +1196,6 @@ export class BrowserWorkflowRunner {
     }
 
     const locator = await this.locatorForAction(runtime, action.config, "");
-    if (mode === "until_visible") {
-      await waitForLocatorState(locator, "visible", action.config.timeout_ms);
-    }
     const handledByCloakBrowser = await this.cloakHumanScroll({
       page: runtime.page,
       locator,

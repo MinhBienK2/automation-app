@@ -1068,7 +1068,9 @@ describe("TypeScript graph compiler parity", () => {
     }
   });
 
-  test("accepts scroll target modes and rejects missing element targets", () => {
+  test("accepts scroll target mode and rejects removed or missing element targets", () => {
+    const removedScrollMode = ["until", "visible"].join("_") as never;
+
     expect(
       validateActionConfig({
         type: "scroll",
@@ -1084,13 +1086,16 @@ describe("TypeScript graph compiler parity", () => {
       validateActionConfig({
         type: "scroll",
         config: {
-          mode: "until_visible",
+          mode: removedScrollMode,
           xpath: "//h2[normalize-space(.)='Ready']",
           iframe_xpath: "//iframe[@id='main']",
           timeout_ms: 5000,
         },
       }),
-    ).toBeNull();
+    ).toEqual({
+      field: "mode",
+      message: "Scroll mode must be page or into_view",
+    });
 
     expect(
       validateActionConfig({

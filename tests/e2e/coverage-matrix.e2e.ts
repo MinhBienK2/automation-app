@@ -104,7 +104,7 @@ const requiredBehaviorVariantValues: Record<string, string[]> = {
   "repeat_for_each.source": ["array_variable", "literal_items"],
   router_and_merge: ["router.mode=first_match", "router.case.priority", "router.default", "merge.in multi-edge"],
   "run_policy.browser_retention": ["retain", "close"],
-  "scroll.mode": ["page", "into_view", "until_visible"],
+  "scroll.mode": ["page", "into_view"],
   "select_option.match_by": ["label", "value"],
   "stop_workflow.status": ["success", "failure", "close_browser"],
   "wait.condition": [

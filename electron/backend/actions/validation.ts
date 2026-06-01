@@ -90,9 +90,9 @@ const actionValidators = createActionValidatorMap({
     const mode = config.config.mode ?? "page";
     const modeValidation = validateRequiredEnumValue(
       mode,
-      ["page", "into_view", "until_visible"],
+      ["page", "into_view"],
       "mode",
-      "Scroll mode must be page, into_view, or until_visible",
+      "Scroll mode must be page or into_view",
     );
     if (modeValidation) return modeValidation;
 

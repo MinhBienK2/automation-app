@@ -85,7 +85,7 @@ export type VariableAssignment = {
   value: string;
 };
 
-export type ScrollMode = "page" | "into_view" | "until_visible";
+export type ScrollMode = "page" | "into_view";
 export type ScrollDirection = "up" | "down" | "left" | "right";
 
 export type WorkflowSummary = {

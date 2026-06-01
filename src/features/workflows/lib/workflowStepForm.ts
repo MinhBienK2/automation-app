@@ -417,7 +417,7 @@ function updateScrollConfigField(
   value: string,
 ): ActionConfig {
   if (field === "mode") {
-    const mode = value === "into_view" || value === "until_visible" ? value : "page";
+    const mode = value === "into_view" ? value : "page";
     if (mode === "page") {
       return {
         type: "scroll",

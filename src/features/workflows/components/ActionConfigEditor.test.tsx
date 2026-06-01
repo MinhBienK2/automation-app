@@ -161,9 +161,14 @@ describe("ActionConfigEditor", () => {
     expect(screen.getByLabelText("Mode")).toHaveValue("page");
     expect(screen.getByRole("option", { name: "Page Scroll" })).toHaveValue("page");
     expect(screen.getByRole("option", { name: "Scroll To Element" })).toHaveValue("into_view");
-    expect(screen.getByRole("option", { name: "Wait Then Scroll To Element" })).toHaveValue(
-      "until_visible",
-    );
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Page Scroll",
+      "Scroll To Element",
+      "Down",
+      "Up",
+      "Right",
+      "Left",
+    ]);
     expect(screen.getByLabelText("Direction")).toBeInTheDocument();
     expect(screen.getByLabelText("Pixels")).toBeInTheDocument();
     expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();

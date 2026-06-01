@@ -22,7 +22,7 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 1430 --strictPort",
+    command: "CHOKIDAR_USEPOLLING=1 npm run dev -- --host 127.0.0.1 --port 1430 --strictPort",
     url: "http://127.0.0.1:1430",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

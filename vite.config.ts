@@ -6,6 +6,19 @@ import react from "@vitejs/plugin-react";
 
 const host = process.env.ELECTRON_RENDERER_HOST;
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const ignoredWatchPath = (watchPath: string) => {
+  const normalized = watchPath.split(path.sep).join("/");
+  return (
+    normalized.includes("/.local/") ||
+    normalized.endsWith("/.local") ||
+    normalized.includes("/test-results/") ||
+    normalized.endsWith("/test-results") ||
+    normalized.includes("/src-tauri/") ||
+    normalized.includes("/dist/") ||
+    normalized.includes("/dist-electron/") ||
+    normalized.includes("/release/")
+  );
+};
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -34,7 +47,7 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      ignored: ["**/src-tauri/**", "**/dist/**", "**/dist-electron/**", "**/release/**"],
+      ignored: ignoredWatchPath,
     },
   },
 }));
