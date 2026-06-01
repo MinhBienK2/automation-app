@@ -105,6 +105,12 @@ const actionValidators = createActionValidatorMap({
           "Scroll direction must be up, down, left, or right",
         ),
         positiveValue(config.config.pixels, "pixels", "Scroll pixels must be greater than 0"),
+        validateOptionalEnumValue(
+          config.config.scroll_style,
+          ["human_like", "smooth_single"],
+          "scroll_style",
+          "Scroll style must be human_like or smooth_single",
+        ),
       );
     }
     const targetValidation = firstValidation(
@@ -122,6 +128,12 @@ const actionValidators = createActionValidatorMap({
           "Scroll direction must be up, down, left, or right",
         ),
         positiveValue(config.config.pixels ?? 700, "pixels", "Scroll pixels must be greater than 0"),
+        validateOptionalEnumValue(
+          config.config.scroll_style,
+          ["human_like", "smooth_single"],
+          "scroll_style",
+          "Scroll style must be human_like or smooth_single",
+        ),
       );
     }
     return null;

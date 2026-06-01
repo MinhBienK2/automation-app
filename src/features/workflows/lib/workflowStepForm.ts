@@ -34,6 +34,7 @@ export type ActionConfigField =
   | "prompt_text"
   | "reason"
   | "script"
+  | "scroll_style"
   | "seconds"
   | "status"
   | "source_xpath"
@@ -433,7 +434,7 @@ function updateScrollConfigField(
     return {
       type: "scroll",
       config: {
-        ...config.config,
+        ...withoutPageOnlyScrollFields(config.config),
         mode,
         target: config.config.target ?? null,
         timeout_ms: config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS,
@@ -466,6 +467,13 @@ function updateScrollConfigField(
     type: "scroll",
     config: { ...config.config, [field]: value },
   };
+}
+
+function withoutPageOnlyScrollFields(
+  config: Extract<ActionConfig, { type: "scroll" }>["config"],
+) {
+  const { scroll_style: _scrollStyle, ...targetConfig } = config;
+  return targetConfig;
 }
 
 function updateSelectOptionConfigField(

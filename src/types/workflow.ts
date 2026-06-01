@@ -87,6 +87,7 @@ export type VariableAssignment = {
 
 export type ScrollMode = "page" | "into_view" | "until_element_visible";
 export type ScrollDirection = "up" | "down" | "left" | "right";
+export type ScrollStyle = "human_like" | "smooth_single";
 
 export type WorkflowSummary = {
   id: string;
@@ -408,6 +409,7 @@ export type ActionConfig =
         mode?: ScrollMode | null;
         direction?: ScrollDirection;
         pixels?: number;
+        scroll_style?: ScrollStyle | null;
         xpath?: string | null;
         target?: ElementTarget | null;
         iframe_xpath?: string | null;

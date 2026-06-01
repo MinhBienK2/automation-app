@@ -45,6 +45,20 @@ export function PointerActionFields({
           {mode === "page" ? (
             <>
               <Label>
+                Scroll style
+                <Select
+                  value={config.config.scroll_style ?? "human_like"}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "scroll_style", event.currentTarget.value),
+                    )
+                  }
+                >
+                  <option value="human_like">Human-like</option>
+                  <option value="smooth_single">Smooth single wheel</option>
+                </Select>
+              </Label>
+              <Label>
                 Direction
                 <Select
                   value={config.config.direction ?? "down"}

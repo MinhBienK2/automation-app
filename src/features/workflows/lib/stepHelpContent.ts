@@ -315,6 +315,7 @@ const baseStepHelpContent: Record<
       useWhen: ["Dùng Page Scroll khi cần cuộn một lượng pixel cố định.", "Dùng Scroll To Element khi element đã có trên trang nhưng nằm ngoài màn hình.", "Dùng Scroll Until Element Visible khi cần cuộn trang để lazy-load tạo element."],
       fields: [
         { name: "Mode", description: "Page Scroll và các mode target dùng gesture gồm nhiều wheel pulse nhỏ, pause ngắn trong gesture và pause random dài hơn giữa các gesture." },
+        { name: "Scroll style", description: "Human-like chia Page Scroll thành nhiều pulse/pause; Smooth single wheel gửi một wheel gesture đúng số pixel." },
         { name: "Direction", description: "Hướng cuộn Page Scroll hoặc hướng tìm kiếm của Scroll Until Element Visible: down, up, right, hoặc left." },
         { name: "Pixels", description: "Số pixel cho Page Scroll hoặc mỗi lần cuộn tìm kiếm. Thử 250-800 tùy trang." },
         { name: "Target locator", description: "Element đích cho Scroll To Element hoặc Scroll Until Element Visible." },
@@ -330,6 +331,7 @@ const baseStepHelpContent: Record<
       useWhen: ["Use Page Scroll for a fixed pixel-distance scroll.", "Use Scroll To Element when the element is already on the page but outside the viewport.", "Use Scroll Until Element Visible when page scrolling must trigger lazy-load DOM mounting."],
       fields: [
         { name: "Mode", description: "Page Scroll and target modes use gestures made of smaller wheel pulses, short pauses inside each gesture, and longer random pauses between gestures." },
+        { name: "Scroll style", description: "Human-like splits Page Scroll into several pulses and pauses; Smooth single wheel sends one wheel gesture for the exact pixel distance." },
         { name: "Direction", description: "Page Scroll direction or Scroll Until Element Visible search direction: down, up, right, or left." },
         { name: "Pixels", description: "Pixel distance for Page Scroll or each search scroll. Try 250-800 depending on the page." },
         { name: "Target locator", description: "Target element for Scroll To Element or Scroll Until Element Visible." },

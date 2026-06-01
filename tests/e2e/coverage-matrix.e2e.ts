@@ -76,6 +76,7 @@ const requiredBehaviorChangingFields = [
   "router_and_merge",
   "run_policy.browser_retention",
   "scroll.mode",
+  "scroll.style",
   "select_option.match_by",
   "stop_workflow.status",
   "wait.condition",
@@ -105,6 +106,7 @@ const requiredBehaviorVariantValues: Record<string, string[]> = {
   router_and_merge: ["router.mode=first_match", "router.case.priority", "router.default", "merge.in multi-edge"],
   "run_policy.browser_retention": ["retain", "close"],
   "scroll.mode": ["page", "into_view", "until_element_visible"],
+  "scroll.style": ["human_like", "smooth_single"],
   "select_option.match_by": ["label", "value"],
   "stop_workflow.status": ["success", "failure", "close_browser"],
   "wait.condition": [

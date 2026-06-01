@@ -1086,6 +1086,33 @@ describe("TypeScript graph compiler parity", () => {
       validateActionConfig({
         type: "scroll",
         config: {
+          mode: "page",
+          direction: "down",
+          pixels: 500,
+          scroll_style: "smooth_single",
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
+          mode: "page",
+          direction: "down",
+          pixels: 500,
+          scroll_style: "fast" as never,
+        },
+      }),
+    ).toEqual({
+      field: "scroll_style",
+      message: "Scroll style must be human_like or smooth_single",
+    });
+
+    expect(
+      validateActionConfig({
+        type: "scroll",
+        config: {
           mode: "until_element_visible",
           target: elementTarget(),
           direction: "down",

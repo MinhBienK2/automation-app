@@ -1191,14 +1191,29 @@ export class BrowserWorkflowRunner {
       "Scroll mode must be page, into_view, or until_element_visible",
     );
     if (mode === "page") {
-      await humanPageScroll(
-        runtime.page,
-        action.config.direction ?? "down",
-        action.config.pixels ?? 0,
-        this.sleep,
-        this.random,
-        runtime.signal,
+      const scrollStyle = action.config.scroll_style ?? "human_like";
+      assertRuntimeEnumValue(
+        scrollStyle,
+        ["human_like", "smooth_single"],
+        "Scroll style must be human_like or smooth_single",
       );
+      if (scrollStyle === "smooth_single") {
+        await smoothSinglePageScroll(
+          runtime.page,
+          action.config.direction ?? "down",
+          action.config.pixels ?? 0,
+          runtime.signal,
+        );
+      } else {
+        await humanPageScroll(
+          runtime.page,
+          action.config.direction ?? "down",
+          action.config.pixels ?? 0,
+          this.sleep,
+          this.random,
+          runtime.signal,
+        );
+      }
       return;
     }
 
@@ -1643,6 +1658,28 @@ async function humanPageScroll(
       const { deltaX: x, deltaY: y } = payload ?? { deltaX: 0, deltaY: 0 };
       window.scrollBy({ left: x, top: y, behavior: "instant" });
       window.dispatchEvent(new Event("scroll"));
+    },
+    { deltaX, deltaY },
+  );
+}
+
+async function smoothSinglePageScroll(
+  page: BrowserDriverPage,
+  direction: Extract<ActionConfig, { type: "scroll" }>["config"]["direction"],
+  pixels: number,
+  signal?: AbortSignal,
+) {
+  throwIfAborted(signal);
+  const deltaX = direction === "left" ? -pixels : direction === "right" ? pixels : 0;
+  const deltaY = direction === "up" ? -pixels : direction === "down" ? pixels : 0;
+  if (page.mouse?.wheel) {
+    await page.mouse.wheel(deltaX, deltaY);
+    return;
+  }
+  await page.evaluate(
+    (payload?: { deltaX: number; deltaY: number }) => {
+      const { deltaX: x, deltaY: y } = payload ?? { deltaX: 0, deltaY: 0 };
+      window.scrollBy({ left: x, top: y, behavior: "smooth" });
     },
     { deltaX, deltaY },
   );

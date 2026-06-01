@@ -715,6 +715,41 @@ describe("BrowserWorkflowRunner", () => {
     expect(Math.max(...sleeps)).toBeLessThanOrEqual(320);
   });
 
+  test("supports a smooth single-wheel page scroll style without human chunking", async () => {
+    const page = new FakePage();
+    const sleeps: number[] = [];
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      random: () => 0.5,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("scroll", "Scroll", {
+            type: "scroll",
+            config: {
+              mode: "page",
+              direction: "down",
+              pixels: 900,
+              scroll_style: "smooth_single",
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events.filter((event) => event.startsWith("wheel:"))).toEqual(["wheel:0:900"]);
+    expect(sleeps).toEqual([]);
+  });
+
   test("scrolls element targets through a wheel-based human planner", async () => {
     const page = new HumanScrollPage({ targetDocumentY: 1400 });
     const sleeps: number[] = [];

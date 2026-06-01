@@ -57,6 +57,10 @@ describe("workflow step form config helpers", () => {
       type: "scroll",
       config: { direction: "down", pixels: 500 },
     });
+    expect(updateActionConfigField(config, "scroll_style", "smooth_single")).toEqual({
+      type: "scroll",
+      config: { direction: "down", pixels: 300, scroll_style: "smooth_single" },
+    });
   });
 
   test("updates targeted scroll mode fields without dropping legacy page settings", () => {

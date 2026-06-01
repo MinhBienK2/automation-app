@@ -168,14 +168,28 @@ describe("ActionConfigEditor", () => {
       "Page Scroll",
       "Scroll To Element",
       "Scroll Until Element Visible",
+      "Human-like",
+      "Smooth single wheel",
       "Down",
       "Up",
       "Right",
       "Left",
     ]);
+    expect(screen.getByLabelText("Scroll style")).toHaveValue("human_like");
     expect(screen.getByLabelText("Direction")).toBeInTheDocument();
     expect(screen.getByLabelText("Pixels")).toBeInTheDocument();
     expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText("Scroll style"), "smooth_single");
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "scroll",
+      config: {
+        mode: "page",
+        direction: "down",
+        pixels: 500,
+        scroll_style: "smooth_single",
+      },
+    });
 
     await userEvent.selectOptions(screen.getByLabelText("Mode"), "into_view");
 

@@ -188,6 +188,7 @@ Examples of behavior-changing variants requiring explicit classification:
 | `wait.condition` | duration, relevant element states, text, URL, and page load. |
 | `select_option.match_by` | label and value. |
 | `scroll.mode` | page, into view, and until element visible. |
+| `scroll.style` | human-like and smooth single wheel. |
 | `assert_element.state` | attached, visible, hidden, enabled, disabled. |
 | `assert_text.match_mode` | contains, equals, and meaningful failure behavior. |
 | `ElementTarget` | locator resolution/fallback and supported constraints; iframe behavior when actually supported. |

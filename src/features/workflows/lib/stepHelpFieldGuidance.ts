@@ -618,6 +618,10 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
       "Mode quyết định ý nghĩa của các field còn lại.",
       "Page Scroll dùng Direction/Pixels; Scroll To Element dùng Target locator và Timeout; Scroll Until Element Visible dùng cả Target locator, Timeout, Direction và Pixels.",
     ],
+    "Scroll style": [
+      "Human-like là mặc định: chia Page Scroll thành nhiều wheel pulse và pause giống người cuộn nhiều nhịp.",
+      "Smooth single wheel gửi một wheel gesture đúng số pixel, phù hợp khi muốn scroll gọn hơn nhưng vẫn dùng wheel input thật.",
+    ],
     Direction: [
       "Down/Up cuộn theo chiều dọc; Left/Right cuộn theo chiều ngang.",
       "Direction dùng trong Page Scroll và Scroll Until Element Visible.",
@@ -754,6 +758,10 @@ const commonFieldDetails: Record<StepHelpLanguage, Record<string, string[]>> = {
     Mode: [
       "Mode decides how the other fields are interpreted.",
       "Page Scroll uses Direction/Pixels; Scroll To Element uses Target locator and Timeout; Scroll Until Element Visible uses Target locator, Timeout, Direction, and Pixels.",
+    ],
+    "Scroll style": [
+      "Human-like is the default: it splits Page Scroll into several wheel pulses and pauses like multiple human scroll beats.",
+      "Smooth single wheel sends one wheel gesture for the exact pixel distance, useful when you want a shorter scroll while still using real wheel input.",
     ],
     Direction: [
       "Down/Up scroll vertically; Left/Right scroll horizontally.",

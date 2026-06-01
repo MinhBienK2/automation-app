@@ -494,6 +494,9 @@ unknown `condition.kind` values are rejected by backend validation before they
 can be saved, imported, compiled, or executed through normal commands.
 `scroll` accepts `mode: "page" | "into_view" | "until_element_visible"`. Missing
 mode is treated as legacy `"page"` and uses `direction` plus `pixels`.
+Page mode accepts optional `scroll_style: "human_like" | "smooth_single"`;
+missing style keeps the existing human-like chunked wheel gestures, and
+`smooth_single` sends one wheel gesture for the requested distance.
 Element-targeted scroll uses `target` or legacy `xpath`, optional
 `iframe_xpath`, and optional `timeout_ms`. When `timeout_ms` is omitted, target
 scroll defaults to `60000` ms. `until_element_visible` uses the same target
