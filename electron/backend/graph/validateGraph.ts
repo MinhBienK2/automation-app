@@ -27,6 +27,7 @@ const supportedGraphNodeTypes = new Set<string>([
   "action",
   "merge",
   "router",
+  "random_choice",
   "if",
   "switch",
   "repeat_times",
@@ -235,6 +236,9 @@ function pushNodeSemanticIssues(
     case "router":
       pushRouterSemanticIssues(graph, node, issues);
       break;
+    case "random_choice":
+      pushRandomChoiceSemanticIssues(graph, node, issues);
+      break;
     case "repeat_times":
       if (!positiveNumberField(node.config, "times")) {
         issues.push(error(node.id, null, "Repeat times must be greater than 0"));
@@ -350,6 +354,20 @@ function expectedPorts(node: GraphNode): GraphPort[] {
         outputPort("done", "Done"),
       ];
     }
+    case "random_choice": {
+      const choices = randomChoiceGraphConfigOrNull(node);
+      const choiceValues = choices?.choices.length
+        ? choices.choices
+        : [
+            { id: "1", label: "Choice 1", weight: 1 },
+            { id: "2", label: "Choice 2", weight: 1 },
+          ];
+      return [
+        inputPort("in", "In"),
+        ...choiceValues.map((choice) => outputPort(`choice_${choice.id}`, choice.label)),
+        outputPort("done", "Done"),
+      ];
+    }
     case "if":
       return [inputPort("in", "In"), outputPort("true", "True"), outputPort("false", "False"), outputPort("done", "Done")];
     case "switch": {
@@ -434,6 +452,11 @@ function branchContinuationSemantics(node: GraphNode): {
       const router = routerGraphConfigOrNull(node);
       const casePorts = router?.cases.map((caseValue) => `case_${caseValue.id}`) ?? [];
       return { branchPorts: [...casePorts, "default"], continuationPorts: ["done"] };
+    }
+    case "random_choice": {
+      const choice = randomChoiceGraphConfigOrNull(node);
+      const choicePorts = choice?.choices.map((choiceValue) => `choice_${choiceValue.id}`) ?? [];
+      return { branchPorts: choicePorts, continuationPorts: ["done"] };
     }
     case "repeat_times":
     case "repeat_for_each":
@@ -622,6 +645,57 @@ function pushRouterSemanticIssues(
   warnMissingContinuation(graph, node, "done", "Router done continuation is unconnected; workflow ends successfully here", issues);
 }
 
+function pushRandomChoiceSemanticIssues(
+  graph: WorkflowGraph,
+  node: GraphNode,
+  issues: GraphValidationIssue[],
+) {
+  const randomChoice = randomChoiceGraphConfigOrNull(node);
+  if (!randomChoice || randomChoice.choices.length === 0) {
+    issues.push(error(node.id, null, "Random choices are required"));
+    return;
+  }
+
+  const seenIds = new Set<string>();
+  const duplicateIds = new Set<string>();
+  for (const choice of randomChoice.choices) {
+    if (seenIds.has(choice.id)) duplicateIds.add(choice.id);
+    seenIds.add(choice.id);
+    if (!choice.label.trim()) {
+      issues.push(error(node.id, null, "Random choice labels are required"));
+    }
+    if (!positive(choice.weight)) {
+      issues.push(error(node.id, null, "Random choice weight must be greater than 0"));
+    }
+  }
+  if (duplicateIds.size > 0) {
+    issues.push(error(node.id, null, "Random choice ids must be unique"));
+  }
+
+  for (const edgeValue of graph.edges.filter((edgeItem) => edgeItem.source_node_id === node.id)) {
+    const match = /^choice_(.+)$/.exec(edgeValue.source_port);
+    if (!match) continue;
+    const choiceId = match[1];
+    if (randomChoice.choices.some((choice) => choice.id === choiceId)) continue;
+    issues.push(error(
+      node.id,
+      edgeValue.id,
+      `Random Choice ${edgeValue.source_port} no longer matches a configured choice`,
+    ));
+  }
+
+  for (const choice of randomChoice.choices) {
+    warnMissingBranch(
+      graph,
+      node,
+      `choice_${choice.id}`,
+      `Random Choice ${choice.label || choice.id} branch is unconnected and will no-op if selected`,
+      issues,
+    );
+  }
+  warnMissingContinuation(graph, node, "done", "Random Choice done continuation is unconnected; workflow ends successfully here", issues);
+}
+
 function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
   const record = asRecord(node.config);
   if (record.mode != null && record.mode !== "first_match") return null;
@@ -639,6 +713,24 @@ function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
     cases,
     default_label: stringField(record, "default_label") ?? "Default",
   };
+}
+
+type RandomChoiceGraphConfig = {
+  choices: Array<{ id: string; label: string; weight: number }>;
+};
+
+function randomChoiceGraphConfigOrNull(node: GraphNode): RandomChoiceGraphConfig | null {
+  const record = asRecord(node.config);
+  const rawChoices = Array.isArray(record.choices) ? record.choices : [];
+  const choices = rawChoices.map((item) => {
+    const choice = asRecord(item);
+    return {
+      id: stringField(choice, "id") ?? "",
+      label: typeof choice.label === "string" ? choice.label : "",
+      weight: numberField(choice, "weight") ?? 0,
+    };
+  });
+  return { choices };
 }
 
 function requireBodyPort(

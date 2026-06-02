@@ -71,6 +71,7 @@ type PhaseOneActionType =
   | "graph_noop"
   | "if_condition"
   | "router_condition"
+  | "random_choice"
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
@@ -505,6 +506,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
   graph_noop: elementHelp("Graph No-op", "mark internal graph flow progress", "đánh dấu luồng graph", "logic"),
   if_condition: elementHelp("If Condition", "run steps when a condition matches", "rẽ nhánh", "logic"),
   router_condition: elementHelp("Router Condition", "run first matching router case", "router case đầu tiên", "logic"),
+  random_choice: elementHelp("Random Choice", "choose one weighted branch", "chọn một nhánh theo weight", "logic"),
   repeat_times: elementHelp("Repeat Times", "repeat nested steps", "lặp số lần", "loop"),
   repeat_for_each: elementHelp("Repeat For Each", "repeat steps for each item", "lặp từng item", "loop"),
   retry_block: elementHelp("Retry Block", "retry nested steps after failure", "thử lại block", "retry"),
@@ -925,6 +927,8 @@ function actualFieldNames(actionType: ActionType): string[] {
       return ["No fields"];
     case "router_condition":
       return ["Cases", "Default steps"];
+    case "random_choice":
+      return ["Choices", "Output name"];
     case "repeat_times":
       return ["Times"];
     case "repeat_for_each":
@@ -1115,6 +1119,16 @@ function fieldDescription(
     return vi
       ? "Text sẽ nhập vào prompt dialog trước khi accept."
       : "Text entered into a prompt dialog before accepting it.";
+  }
+  if (actionType === "random_choice" && fieldName === "Choices") {
+    return vi
+      ? "Danh sách các nhánh có label và weight để runner chọn một nhánh khi chạy."
+      : "Weighted branch list used by the runner to choose one path at runtime.";
+  }
+  if (actionType === "random_choice" && fieldName === "Output name") {
+    return vi
+      ? "Tên output lưu id choice đã được chọn để audit hoặc dùng ở node logic sau."
+      : "Output name that stores the selected choice id for audit or later logic nodes.";
   }
   if (isLocatorTypeField(fieldName)) {
     return vi

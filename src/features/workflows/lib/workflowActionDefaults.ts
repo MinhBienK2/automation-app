@@ -199,6 +199,17 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           default_steps: [],
         },
       };
+    case "random_choice":
+      return {
+        type: actionType,
+        config: {
+          output_name: "random_choice",
+          choices: [
+            { id: "1", label: "Choice 1", weight: 1, steps: [] },
+            { id: "2", label: "Choice 2", weight: 1, steps: [] },
+          ],
+        },
+      };
     case "repeat_times":
       return { type: actionType, config: { times: 1, steps: [] } };
     case "repeat_for_each":

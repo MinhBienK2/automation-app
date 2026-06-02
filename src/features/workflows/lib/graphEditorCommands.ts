@@ -433,6 +433,11 @@ function preferredOutputPortOrder(node: GraphNode) {
         "default",
         "done",
       ];
+    case "random_choice":
+      return [
+        ...randomChoicePortIds(node),
+        "done",
+      ];
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -466,6 +471,22 @@ function routerCasePortIds(node: GraphNode) {
     .filter((portId): portId is string => Boolean(portId));
   const portIds = node.ports
     .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
+}
+
+function randomChoicePortIds(node: GraphNode) {
+  const choices = Array.isArray((node.config as { choices?: unknown } | null)?.choices)
+    ? ((node.config as { choices: Array<{ id?: unknown }> }).choices)
+    : [];
+  const configured = choices
+    .map((choice) => typeof choice.id === "string" ? `choice_${choice.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("choice_"))
     .map((port) => port.id);
   return [
     ...configured.filter((portId) => portIds.includes(portId)),

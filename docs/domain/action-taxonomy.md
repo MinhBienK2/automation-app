@@ -45,6 +45,7 @@ Graph-internal action types are not visible in the main action picker. This incl
 - `if_condition`
 - `graph_noop`
 - `router_condition`
+- `random_choice`
 - `repeat_times`
 - `repeat_for_each`
 - `retry_block`

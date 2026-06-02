@@ -381,6 +381,11 @@ function preferredOutputPortOrder(node: GraphNode) {
         "default",
         "done",
       ];
+    case "random_choice":
+      return [
+        ...randomChoicePortIds(node),
+        "done",
+      ];
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -421,6 +426,22 @@ function routerCasePortIds(node: GraphNode) {
   ];
 }
 
+function randomChoicePortIds(node: GraphNode) {
+  const choices = Array.isArray((node.config as { choices?: unknown } | null)?.choices)
+    ? ((node.config as { choices: Array<{ id?: unknown }> }).choices)
+    : [];
+  const configured = choices
+    .map((choice) => typeof choice.id === "string" ? `choice_${choice.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("choice_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
+}
+
 function isLoopPort(node: GraphNode, portId: string) {
   return (
     ["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(node.node_type) &&
@@ -438,7 +459,7 @@ function isRecoveryPort(node: GraphNode, portId: string) {
 }
 
 function isContinuationPort(node: GraphNode, portId: string) {
-  if (["if", "switch", "router", "try_catch", "fallback"].includes(node.node_type)) {
+  if (["if", "switch", "router", "random_choice", "try_catch", "fallback"].includes(node.node_type)) {
     return portId === "done";
   }
   if (["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(node.node_type)) {
@@ -449,7 +470,7 @@ function isContinuationPort(node: GraphNode, portId: string) {
 
 function isBranchPort(node: GraphNode, portId: string) {
   if (node.node_type === "if") return portId === "true" || portId === "false";
-  if (node.node_type === "switch" || node.node_type === "router") {
+  if (node.node_type === "switch" || node.node_type === "router" || node.node_type === "random_choice") {
     return portId === "default" || portId.startsWith("case_");
   }
   return node.node_type === "fallback" && portId === "primary";

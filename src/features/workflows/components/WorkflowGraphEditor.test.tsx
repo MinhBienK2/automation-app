@@ -30,6 +30,7 @@ const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   switch: true,
   merge: true,
   router: true,
+  random_choice: true,
   repeat_times: true,
   repeat_for_each: true,
   while: true,

@@ -186,6 +186,8 @@ function portUsageText(nodeType: GraphNodeType, port: GraphPort) {
       return switchPortUsage(port);
     case "router":
       return routerPortUsage(port);
+    case "random_choice":
+      return randomChoicePortUsage(port);
     case "merge":
       return mergePortUsage(port);
     case "repeat_times":
@@ -248,6 +250,17 @@ function routerPortUsage(port: GraphPort) {
   }
   if (port.id.startsWith("case_")) {
     return "Chạy branch cho case đầu tiên có condition khớp; bỏ trống thì branch này no-op.";
+  }
+  return genericPortUsage(port);
+}
+
+function randomChoicePortUsage(port: GraphPort) {
+  if (port.id === "in") return "Nhận luồng trước khi chọn ngẫu nhiên một choice theo weight.";
+  if (port.id === "done") {
+    return "Quay về flow chính sau khi choice được chọn hoàn tất; bỏ trống thì path kết thúc thành công.";
+  }
+  if (port.id.startsWith("choice_")) {
+    return "Chạy branch nếu choice này được chọn; bỏ trống thì branch này no-op.";
   }
   return genericPortUsage(port);
 }

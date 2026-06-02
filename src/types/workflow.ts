@@ -48,6 +48,7 @@ export type ActionType =
   | "graph_noop"
   | "if_condition"
   | "router_condition"
+  | "random_choice"
   | "repeat_times"
   | "repeat_for_each"
   | "retry_block"
@@ -644,6 +645,18 @@ export type ActionConfig =
         default_steps: CompiledNestedAction[];
       };
     }
+  | {
+      type: "random_choice";
+      config: {
+        output_name?: string | null;
+        choices: Array<{
+          id: string;
+          label: string;
+          weight: number;
+          steps: CompiledNestedAction[];
+        }>;
+      };
+    }
   | { type: "repeat_times"; config: { times: number; steps: CompiledNestedAction[] } }
   | {
       type: "repeat_for_each";
@@ -869,6 +882,7 @@ export type GraphNodeType =
   | "action"
   | "merge"
   | "router"
+  | "random_choice"
   | "if"
   | "switch"
   | "repeat_times"

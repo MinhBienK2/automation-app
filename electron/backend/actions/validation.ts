@@ -343,6 +343,7 @@ const actionValidators = createActionValidatorMap({
       validateRouterConditionCases(config.config.cases),
       validateNestedActionArray(config.config.default_steps, "default_steps"),
     ),
+  random_choice: (config) => validateRandomChoiceCases(config.config.choices),
   repeat_times: (config) =>
     firstValidation(
       positiveValue(config.config.times, "times", "Repeat times must be greater than 0"),
@@ -688,6 +689,30 @@ function validateRouterConditionCases(cases: unknown) {
     );
     if (conditionValidation) return conditionValidation;
     const stepsValidation = validateNestedActionArray(caseValue.steps, `cases[${index}].steps`);
+    if (stepsValidation) return stepsValidation;
+  }
+  return null;
+}
+
+function validateRandomChoiceCases(cases: unknown) {
+  if (!Array.isArray(cases) || cases.length === 0) {
+    return validationError("choices", "Random choices are required");
+  }
+  const seenIds = new Set<string>();
+  for (let index = 0; index < cases.length; index += 1) {
+    const caseValue = asRecord(cases[index]);
+    const id = stringField(caseValue, "id");
+    if (!id) return validationError(`choices[${index}].id`, "Random choice id is required");
+    if (seenIds.has(id)) return validationError("choices", "Random choice ids must be unique");
+    seenIds.add(id);
+    if (!stringField(caseValue, "label")) {
+      return validationError(`choices[${index}].label`, "Random choice labels are required");
+    }
+    const weight = caseValue.weight;
+    if (typeof weight !== "number" || !Number.isFinite(weight) || weight <= 0) {
+      return validationError(`choices[${index}].weight`, "Random choice weight must be greater than 0");
+    }
+    const stepsValidation = validateNestedActionArray(caseValue.steps, `choices[${index}].steps`);
     if (stepsValidation) return stepsValidation;
   }
   return null;

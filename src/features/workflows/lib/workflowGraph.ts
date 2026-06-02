@@ -334,6 +334,11 @@ function preferredOutputPortOrder(node: GraphNode) {
         "default",
         "done",
       ];
+    case "random_choice":
+      return [
+        ...randomChoicePortIds(node),
+        "done",
+      ];
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -367,6 +372,22 @@ function routerCasePortIds(node: GraphNode) {
     .filter((portId): portId is string => Boolean(portId));
   const portIds = node.ports
     .filter((port) => port.direction === "output" && port.id.startsWith("case_"))
+    .map((port) => port.id);
+  return [
+    ...configured.filter((portId) => portIds.includes(portId)),
+    ...portIds.filter((portId) => !configured.includes(portId)),
+  ];
+}
+
+function randomChoicePortIds(node: GraphNode) {
+  const choices = Array.isArray((node.config as { choices?: unknown } | null)?.choices)
+    ? ((node.config as { choices: Array<{ id?: unknown }> }).choices)
+    : [];
+  const configured = choices
+    .map((choice) => typeof choice.id === "string" ? `choice_${choice.id}` : null)
+    .filter((portId): portId is string => Boolean(portId));
+  const portIds = node.ports
+    .filter((port) => port.direction === "output" && port.id.startsWith("choice_"))
     .map((port) => port.id);
   return [
     ...configured.filter((portId) => portIds.includes(portId)),
@@ -500,6 +521,13 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
         outputPort("default", "Default"),
         outputPort("done", "Done"),
       ];
+    case "random_choice":
+      return [
+        inputPort("in", "In"),
+        outputPort("choice_1", "Choice 1"),
+        outputPort("choice_2", "Choice 2"),
+        outputPort("done", "Done"),
+      ];
     case "if":
       return [
         inputPort("in", "In"),
@@ -613,6 +641,7 @@ function graphEdgeStrokeForStatus(status: WorkflowFlowEdgeStatus) {
 export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "set_variable") return "Set Variables";
   if (nodeType === "set_json_variables") return "Set JSON Variables";
+  if (nodeType === "random_choice") return "Random Choice";
 
   return nodeType
     .split("_")
@@ -646,6 +675,14 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
           },
         ],
         default_label: "Default",
+      };
+    case "random_choice":
+      return {
+        choices: [
+          { id: "1", label: "Choice 1", weight: 1 },
+          { id: "2", label: "Choice 2", weight: 1 },
+        ],
+        output_name: "random_choice",
       };
     case "repeat_times":
       return { times: 1 };

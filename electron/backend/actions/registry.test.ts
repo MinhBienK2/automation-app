@@ -60,6 +60,7 @@ describe("backend action registry", () => {
       "graph_noop",
       "if_condition",
       "router_condition",
+      "random_choice",
       "repeat_times",
       "repeat_for_each",
       "retry_block",

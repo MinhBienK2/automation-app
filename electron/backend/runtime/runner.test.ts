@@ -2274,6 +2274,70 @@ describe("BrowserWorkflowRunner", () => {
     expect(result.outputs?.branch).toBe("default");
   });
 
+  test("runs weighted Random Choice branch and stores the selected choice id", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+      random: () => 0.8,
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("random", "Random Choice", {
+            type: "random_choice",
+            config: {
+              output_name: "selected_action",
+              choices: [
+                {
+                  id: "like",
+                  label: "Like",
+                  weight: 3,
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "like" }],
+                      },
+                    },
+                  ],
+                },
+                {
+                  id: "comment",
+                  label: "Comment",
+                  weight: 1,
+                  steps: [
+                    {
+                      type: "set_variable",
+                      config: {
+                        variables: [{ name: "branch", value_type: "text", value: "comment" }],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          } as ActionConfig),
+          step("done", "Done", {
+            type: "set_variable",
+            config: {
+              variables: [{ name: "after_random", value_type: "text", value: "continued" }],
+            },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs).toMatchObject({
+      selected_action: "comment",
+      branch: "comment",
+      after_random: "continued",
+    });
+  });
+
   test("records nested branch traces with parent and sequence metadata", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),

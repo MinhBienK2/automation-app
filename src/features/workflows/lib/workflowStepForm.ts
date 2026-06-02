@@ -159,6 +159,7 @@ export function updateActionConfigField(
     case "graph_noop":
     case "if_condition":
     case "router_condition":
+    case "random_choice":
       return config;
     case "repeat_times":
       return { type: "repeat_times", config: { ...config.config, times: Number(value) } };

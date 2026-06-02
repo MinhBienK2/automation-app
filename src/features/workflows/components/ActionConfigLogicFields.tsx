@@ -17,6 +17,7 @@ export function LogicActionFields({
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
     case "if_condition":
+    case "random_choice":
       return null;
     case "repeat_times":
       return (

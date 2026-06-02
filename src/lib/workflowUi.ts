@@ -57,6 +57,7 @@ export const actionLabels: Record<ActionType, string> = {
   graph_noop: "Graph No-op",
   if_condition: "If Condition",
   router_condition: "Router Condition",
+  random_choice: "Random Choice",
   repeat_times: "Repeat Times",
   repeat_for_each: "Repeat For Each",
   retry_block: "Retry Block",

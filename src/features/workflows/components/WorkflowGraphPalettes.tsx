@@ -36,7 +36,7 @@ export const logicNodeGroups: Array<{
   label: string;
   nodes: GraphNodeType[];
 }> = [
-  { label: "Branching", nodes: ["if", "switch", "router", "merge"] },
+  { label: "Branching", nodes: ["if", "switch", "router", "random_choice", "merge"] },
   {
     label: "Loops",
     nodes: [
@@ -63,6 +63,7 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   action: "Run a browser, data, session, network, or advanced action.",
   merge: "Let multiple branch paths continue into one shared path.",
   router: "Evaluate prioritized cases and run the first matching branch.",
+  random_choice: "Choose one weighted branch at runtime.",
   if: "Branch the workflow into True and False paths.",
   switch: "Route execution to a matching case or a default path.",
   repeat_times: "Run a loop path a fixed number of times.",
@@ -658,6 +659,7 @@ const hiddenActionPickerTypes = new Set<ActionType>([
   "graph_noop",
   "if_condition",
   "router_condition",
+  "random_choice",
   "repeat_times",
   "repeat_for_each",
   "retry_block",
@@ -743,6 +745,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   graph_noop: "Mark graph control flow progress",
   if_condition: "Run steps conditionally",
   router_condition: "Run the first matching router case",
+  random_choice: "Choose one weighted branch",
   repeat_times: "Repeat nested steps",
   repeat_for_each: "Repeat for each item",
   retry_block: "Retry a group of steps",

@@ -67,6 +67,7 @@ describe("workflow graph helpers", () => {
     const jsonVariablesNode = createDefaultGraphNode("set_json_variables", { x: 30, y: 40 });
     const mergeNode = createDefaultGraphNode("merge", { x: 40, y: 50 });
     const routerNode = createDefaultGraphNode("router", { x: 50, y: 60 });
+    const randomChoiceNode = createDefaultGraphNode("random_choice" as GraphNodeType, { x: 60, y: 70 });
 
     expect(ifNode.node_type).toBe("if");
     expect(ifNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
@@ -102,6 +103,19 @@ describe("workflow graph helpers", () => {
       "input:in:In",
       "output:case_1:Case 1",
       "output:default:Default",
+      "output:done:Done",
+    ]);
+    expect(randomChoiceNode.config).toEqual({
+      choices: [
+        { id: "1", label: "Choice 1", weight: 1 },
+        { id: "2", label: "Choice 2", weight: 1 },
+      ],
+      output_name: "random_choice",
+    });
+    expect(randomChoiceNode.ports.map((port) => `${port.direction}:${port.id}:${port.label}`)).toEqual([
+      "input:in:In",
+      "output:choice_1:Choice 1",
+      "output:choice_2:Choice 2",
       "output:done:Done",
     ]);
   });
@@ -143,6 +157,12 @@ describe("workflow graph helpers", () => {
       "in",
       "case_1",
       "default",
+      "done",
+    ]);
+    expect(nodePorts("random_choice" as GraphNodeType).map((port) => port.id)).toEqual([
+      "in",
+      "choice_1",
+      "choice_2",
       "done",
     ]);
     expect(nodePorts("try_catch").map((port) => port.id)).toEqual([

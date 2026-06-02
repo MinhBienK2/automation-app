@@ -749,6 +749,13 @@ export class BrowserWorkflowRunner {
         }
         await this.executeActions(runtime, action.config.default_steps);
       },
+      random_choice: async (action) => {
+        const choice = weightedRandomChoice(action.config.choices, this.random);
+        if (action.config.output_name?.trim()) {
+          runtime.outputs[action.config.output_name] = choice.id;
+        }
+        await this.executeActions(runtime, choice.steps);
+      },
       repeat_times: async (action) => {
         for (let index = 0; index < action.config.times; index += 1) {
           const control = await this.executeLoopBody(runtime, action.config.steps);
@@ -2660,6 +2667,25 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
     );
   }
   throw new Error(`Unsupported condition kind: ${typed.kind || "unknown"}`);
+}
+
+function weightedRandomChoice<T extends { id: string; weight: number }>(
+  choices: T[],
+  random: () => number,
+): T {
+  if (choices.length === 0) throw new Error("Random choices are required");
+  const totalWeight = choices.reduce((total, choice) => {
+    if (!Number.isFinite(choice.weight) || choice.weight <= 0) {
+      throw new Error("Random choice weight must be greater than 0");
+    }
+    return total + choice.weight;
+  }, 0);
+  let threshold = random() * totalWeight;
+  for (const choice of choices) {
+    threshold -= choice.weight;
+    if (threshold < 0) return choice;
+  }
+  return choices[choices.length - 1];
 }
 
 async function currentPageHostname(runtime: Runtime) {

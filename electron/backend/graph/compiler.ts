@@ -180,6 +180,23 @@ function compilePath(
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
+    case "random_choice": {
+      const randomChoice = randomChoiceGraphConfig(node);
+      steps.push(step(node, {
+        type: "random_choice",
+        config: {
+          output_name: randomChoice.output_name,
+          choices: randomChoice.choices.map((choice) => ({
+            id: choice.id,
+            label: choice.label,
+            weight: choice.weight,
+            steps: compileNestedConfigs(graph, node.id, `choice_${choice.id}`, visited),
+          })),
+        },
+      }));
+      compileContinuation(graph, node.id, "done", visited, steps, options);
+      break;
+    }
     case "if": {
       const condition = nodeCondition(node);
       steps.push(step(node, {
@@ -514,10 +531,11 @@ function forEachNestedActionArray(
     const value = record[key];
     if (Array.isArray(value)) visit(value as ActionConfig[]);
   }
-  const cases = record.cases;
-  if (Array.isArray(cases)) {
-    for (const switchCase of cases) {
-      const steps = asMutableRecord(switchCase).steps;
+  for (const branchKey of ["cases", "choices"]) {
+    const branches = record[branchKey];
+    if (!Array.isArray(branches)) continue;
+    for (const branch of branches) {
+      const steps = asMutableRecord(branch).steps;
       if (Array.isArray(steps)) visit(steps as ActionConfig[]);
     }
   }
@@ -573,6 +591,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "if":
     case "switch":
     case "router":
+    case "random_choice":
     case "repeat_times":
     case "repeat_for_each":
     case "while":
@@ -611,6 +630,29 @@ function routerGraphConfigOrNull(node: GraphNode): RouterGraphConfig | null {
     mode: "first_match",
     cases,
     default_label: stringField(record, "default_label") ?? "Default",
+  };
+}
+
+type RandomChoiceGraphConfig = {
+  choices: Array<{ id: string; label: string; weight: number }>;
+  output_name: string | null;
+};
+
+function randomChoiceGraphConfig(node: GraphNode): RandomChoiceGraphConfig {
+  const record = asRecord(node.config);
+  const rawChoices = Array.isArray(record.choices) ? record.choices : [];
+  const choices = rawChoices.map((item) => {
+    const choice = asRecord(item);
+    return {
+      id: stringField(choice, "id") ?? "",
+      label: stringField(choice, "label") ?? "",
+      weight: numberField(choice, "weight") ?? 0,
+    };
+  });
+  if (choices.length === 0) throw validationError("choices", "Random choices are required");
+  return {
+    choices,
+    output_name: stringField(record, "output_name"),
   };
 }
 
@@ -661,7 +703,7 @@ function stringField(config: unknown, field: string): string | null {
 
 function numberField(config: unknown, field: string): number | null {
   const value = asRecord(config)[field];
-  return typeof value === "number" ? value : null;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function positiveInteger(config: unknown, field: string, message: string): number {

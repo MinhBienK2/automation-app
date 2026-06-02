@@ -61,6 +61,7 @@ describe("backend action execution registry", () => {
       graph_noop: async () => calls.push("graph_noop"),
       if_condition: async () => calls.push("if_condition"),
       router_condition: async () => calls.push("router_condition"),
+      random_choice: async () => calls.push("random_choice"),
       repeat_times: async () => calls.push("repeat_times"),
       repeat_for_each: async () => calls.push("repeat_for_each"),
       retry_block: async () => calls.push("retry_block"),

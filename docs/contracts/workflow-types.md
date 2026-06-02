@@ -448,6 +448,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `if` conditions.
 - `switch` expressions and case ports.
 - `router` first-match decision table cases with stable case ids.
+- `random_choice` weighted choices with stable choice ids.
 - `merge` explicit fan-in points.
 - `repeat_times` loop counts.
 - `repeat_for_each` item name with either a literal item list or a variable-array source.
@@ -458,7 +459,7 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 
 The main graph toolbar exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End.
 
-The Electron backend compiler currently emits action, `if`, `switch`, `router`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports. Nested compiled action configs retain their source graph node id/label so runner traces and persisted `run_steps` rows can identify the exact executed branch/body action.
+The Electron backend compiler currently emits action, `if`, `switch`, `router`, `random_choice`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports. Nested compiled action configs retain their source graph node id/label so runner traces and persisted `run_steps` rows can identify the exact executed branch/body action.
 The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. `run_policy.run_from_selected_mode` chooses whether that sub-plan contains only the selected node (`selected_only`) or the selected node through the downstream main path (`from_selected`). Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
 
 Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser Launch identity settings are applied by the runner/session manager rather than compiled into graph prelude actions.
@@ -470,6 +471,7 @@ Executable frontend/backend ports must agree:
 - `action`: input `in`, output `out`; `config: null` is a saveable draft marker but blocks validation/compile/run.
 - `merge`: input `in`, output `out`; input `in` may receive multiple incoming edges and compiles to an internal no-op step.
 - `router`: input `in`, outputs `case_<id>` for each configured stable-id case, `default`, and `done`.
+- `random_choice`: input `in`, outputs `choice_<id>` for each configured stable-id weighted choice, and `done`.
 - `if`: input `in`, outputs `true`, `false`, `done`
 - `switch`: input `in`, outputs `case_N`, `default`, `done`
 - `repeat_times` / `repeat_for_each` / `while`: input `in`, outputs `loop`, `done`
@@ -513,6 +515,18 @@ Graph-internal Merge and Router configs use:
     mode: "first_match",
     cases: [{ id, label, condition, steps }],
     default_steps
+  }
+}
+```
+
+Random Choice graph nodes compile to:
+
+```text
+{
+  type: "random_choice",
+  config: {
+    output_name,
+    choices: [{ id, label, weight, steps }]
   }
 }
 ```

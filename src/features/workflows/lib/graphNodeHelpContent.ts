@@ -189,6 +189,28 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       ]),
     ], "en"),
   },
+  random_choice: {
+    vi: nodeWithFields("Random Choice", "Chọn ngẫu nhiên một nhánh theo weight đã cấu hình.", [
+      field("Choices", "Danh sách các nhánh có label và weight riêng.", [
+        "Weight càng cao thì nhánh càng có khả năng được chọn.",
+        "Branch bỏ trống sẽ no-op nếu được chọn.",
+      ]),
+      field("Output name", "Tên output nhận id choice đã được chọn.", [
+        "Dùng output này để audit hoặc branch tiếp bằng Switch/Router.",
+        "Done port chạy sau khi branch được chọn hoàn tất.",
+      ]),
+    ]),
+    en: nodeWithFields("Random Choice", "Choose one branch at runtime using configured weights.", [
+      field("Choices", "List of branches with labels and weights.", [
+        "Higher weight means the branch is more likely to be selected.",
+        "An unconnected branch no-ops if it is selected.",
+      ]),
+      field("Output name", "Output that stores the selected choice id.", [
+        "Use this output for audit or later Switch/Router decisions.",
+        "Done runs after the selected branch finishes.",
+      ]),
+    ], "en"),
+  },
   if: {
     vi: {
       title: "If Help",

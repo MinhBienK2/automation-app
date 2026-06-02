@@ -55,6 +55,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   graph_noop: "graph_internal",
   if_condition: "graph_internal",
   router_condition: "graph_internal",
+  random_choice: "graph_internal",
   repeat_times: "graph_internal",
   repeat_for_each: "graph_internal",
   retry_block: "graph_internal",

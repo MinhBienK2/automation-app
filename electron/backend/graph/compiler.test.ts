@@ -723,6 +723,76 @@ describe("TypeScript graph compiler parity", () => {
     ]);
   });
 
+  test("compiles Random Choice weighted choices with done continuation", async () => {
+    const { handlers } = await createTestHandlers();
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("random", "random_choice" as GraphNodeType, {
+          config: {
+            choices: [
+              { id: "like", label: "Like", weight: 3 },
+              { id: "comment", label: "Comment", weight: 1 },
+            ],
+            output_name: "selected_action",
+          },
+          ports: [
+            inputPort("in", "In"),
+            outputPort("choice_like", "Like"),
+            outputPort("choice_comment", "Comment"),
+            outputPort("done", "Done"),
+          ],
+        }),
+        graphNode("like", "action", { config: clickAction("//button[@data-action='like']") }),
+        graphNode("comment", "action", { config: clickAction("//button[@data-action='comment']") }),
+        graphNode("continue", "action", { config: waitAction(20) }),
+      ],
+      [
+        edge("start", "out", "random", "in"),
+        edge("random", "choice_like", "like", "in"),
+        edge("random", "choice_comment", "comment", "in"),
+        edge("random", "done", "continue", "in"),
+      ],
+    );
+
+    expect(handlers.validateWorkflowGraph(graph).filter((issue) => issue.level === "error")).toEqual([]);
+    expect(handlers.compileWorkflowGraph(graph).steps).toEqual([
+      {
+        node_id: "random",
+        label: "Random",
+        config: {
+          type: "random_choice",
+          config: {
+            choices: [
+              {
+                id: "like",
+                label: "Like",
+                weight: 3,
+                steps: [
+                  expect.objectContaining({ type: "click", graph_node_id: "like" }),
+                ],
+              },
+              {
+                id: "comment",
+                label: "Comment",
+                weight: 1,
+                steps: [
+                  expect.objectContaining({ type: "click", graph_node_id: "comment" }),
+                ],
+              },
+            ],
+            output_name: "selected_action",
+          },
+        },
+      },
+      {
+        node_id: "continue",
+        label: "Continue",
+        config: waitAction(20),
+      },
+    ]);
+  });
+
   test("rejects Router nodes with empty cases, duplicate ids, invalid conditions, and stale ports", async () => {
     const { handlers } = await createTestHandlers();
     const graph = graphOf(

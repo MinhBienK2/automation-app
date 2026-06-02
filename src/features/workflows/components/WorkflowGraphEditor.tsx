@@ -170,7 +170,7 @@ function edgeKindForFlowSource(
     return "recovery";
   }
   if (
-    (["if", "switch", "router", "try_catch", "fallback"].includes(sourceNodeType) &&
+    (["if", "switch", "router", "random_choice", "try_catch", "fallback"].includes(sourceNodeType) &&
       sourcePortId === "done") ||
     (["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(sourceNodeType) &&
       sourcePortId === "done") ||
@@ -182,6 +182,7 @@ function edgeKindForFlowSource(
     (sourceNodeType === "if" && (sourcePortId === "true" || sourcePortId === "false")) ||
     ((sourceNodeType === "switch" || sourceNodeType === "router") &&
       (sourcePortId === "default" || sourcePortId.startsWith("case_"))) ||
+    (sourceNodeType === "random_choice" && sourcePortId.startsWith("choice_")) ||
     (sourceNodeType === "fallback" && sourcePortId === "primary")
   ) {
     return "branch";
