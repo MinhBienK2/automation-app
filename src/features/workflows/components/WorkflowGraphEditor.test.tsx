@@ -142,6 +142,44 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("opens the graph inspector as a right drawer only after selecting graph content", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    expect(
+      within(editor).queryByRole("complementary", {
+        name: "Graph inspector drawer",
+      }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Graph canvas node step-1" }),
+    );
+
+    const inspectorDrawer = within(editor).getByRole("complementary", {
+      name: "Graph inspector drawer",
+    });
+    expect(within(inspectorDrawer).getByRole("heading", { name: "Wait for page" }))
+      .toBeInTheDocument();
+
+    await userEvent.click(
+      within(inspectorDrawer).getByRole("button", { name: "Close inspector" }),
+    );
+
+    expect(
+      within(editor).queryByRole("complementary", {
+        name: "Graph inspector drawer",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   test("uses select-first canvas dragging with temporary spacebar panning", () => {
     expect(workflowGraphEditorSource).toContain("connectionDragThreshold={0}");
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
@@ -1053,6 +1091,7 @@ describe("Workflow graph editor integration", () => {
     await openWorkflowDetails();
     const editor = await screen.findByRole("region", { name: "Visual Graph" });
 
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
     await userEvent.click(within(editor).getByRole("combobox", { name: "Action type" }));
     const search = within(editor).getByLabelText("Search action types");
     expect(search).toHaveFocus();
@@ -1426,6 +1465,7 @@ describe("Workflow graph editor integration", () => {
 
     expect(within(editor).getByRole("button", { name: "Graph canvas node hidden-domain" }))
       .toBeInTheDocument();
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node hidden-domain" }));
     expect(within(editor).getByLabelText("Allowed domains")).toHaveValue("example.com");
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
@@ -1577,7 +1617,7 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
-  test("opens new workflows with a selected draft New node", async () => {
+  test("opens new workflow draft details after selecting the New node", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
       save_workflow_graph: undefined,
@@ -1590,6 +1630,14 @@ describe("Workflow graph editor integration", () => {
 
     expect(within(editor).getByRole("button", { name: "Graph canvas node new-node" }))
       .toBeInTheDocument();
+    expect(
+      within(editor).queryByRole("complementary", {
+        name: "Graph inspector drawer",
+      }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node new-node" }));
+
     expect(within(editor).getByRole("heading", { name: "New node" })).toBeInTheDocument();
     expect(within(editor).getByRole("combobox", { name: "Action type" }))
       .toHaveTextContent("Choose action type");

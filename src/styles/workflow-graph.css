@@ -11,8 +11,9 @@
 }
 
 .workflow-graph-layout {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -42,6 +43,59 @@
   gap: 10px;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.graph-inspector-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: grid;
+  width: min(380px, calc(100% - 32px));
+  min-width: 0;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid #314758;
+  border-radius: 8px;
+  background: #121c26;
+  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.36);
+  animation: graph-inspector-slide-in 160ms ease-out;
+}
+
+.graph-inspector-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #233240;
+}
+
+.graph-inspector-shell-header .eyebrow {
+  margin: 0;
+}
+
+.graph-inspector-close {
+  flex: 0 0 auto;
+}
+
+@keyframes graph-inspector-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-inspector-drawer {
+    animation: none;
+  }
 }
 
 .graph-inspector-header {

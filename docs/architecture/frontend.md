@@ -22,7 +22,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen with icon-only row actions, including direct Run for saved workflow state and the Record Workflow entry point.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
-- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and inspector panels are split into sibling `WorkflowGraph*` component modules.
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
@@ -35,7 +35,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/HelpDisclosure.tsx`: shared native disclosure wrapper for collapsible workflow help sections and nested help groups.
 - `src/features/workflows/components/TemplateTextField.tsx`: template-aware textarea with token preview/highlighting and variable insertion from known graph variables.
 - `src/features/workflows/components/VariableConfigFields.tsx`: shared Set Variables row editor used by action config and graph-node config surfaces.
-- `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector.
+- `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector drawer.
 - `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. These catalogs own detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
 - `src/features/workflows/lib/stepHelpTypes.ts`: shared action-help field/reference types consumed by help catalogs, palettes, and modal rendering so the generated action catalog does not own cross-component type contracts.
 - `src/features/workflows/lib/stepHelpFieldGuidance.ts`: shared action-help field details, option references, and locator-field helpers used by action help generation.
@@ -67,6 +67,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   schedule history links, selected run details, command search results, and the
   Alerts shortcut route through that contract instead of passing raw strings.
   Missing durable run or schedule targets render explicit stale-target states.
+  Opening workflow detail also collapses the sidebar to the icon rail so the
+  graph workspace starts with more horizontal room.
 - The app shell command bar searches only bounded approved read models:
   workflow summaries, run snapshots, schedule summaries, evidence list items,
   and Identity Lab summaries. It must not render raw run outputs, browser
@@ -98,13 +100,19 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Selected-node label editing and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter so the canvas component renders stable primary name, secondary kind, and compact meta strings without parsing action configs itself.
 - Canvas port tooltip copy for every graph node type. Tooltip text explains input vs output direction plus branch, continuation, terminal, retry, merge, loop, random-choice, and recovery semantics before users create a link. Port handles use custom canvas tooltip rendering without native `title` tooltips, delay display by 1 second, and raise the hovered React Flow node wrapper so the tooltip stays above neighboring nodes.
-- Selected-node help from the graph inspector and node context menu. Configured action nodes reuse the action guide popup with collapsible parent sections, minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, related nodes, and workflow examples with the same nested collapsible modal structure. Individual fields, options, outputs, examples, and related-node items are collapsible. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
-- DTO-to-React-Flow and React-Flow-to-DTO adapter state, execution-order edge labels, selected-link delay editing, edge delay metadata, ELK-backed auto-arrange layout, arrange-selection layout, and workflow-specific edge-kind rendering, while keeping persisted `WorkflowGraph` as source of truth. Long graphs use left-to-right row-wrapped auto-arrange lanes, optimized non-recursive traversal helpers, React Flow visible-element rendering above the large-graph threshold, and a minimap guard so run progress and graph edits stay responsive with many nodes.
+- Selected-node help from the graph inspector drawer and node context menu. Configured action nodes reuse the action guide popup with collapsible parent sections, minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, related nodes, and workflow examples with the same nested collapsible modal structure. Individual fields, options, outputs, examples, and related-node items are collapsible. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
+- DTO-to-React-Flow and React-Flow-to-DTO adapter state, execution-order edge labels, selected-link delay editing in the inspector drawer, edge delay metadata, ELK-backed auto-arrange layout, arrange-selection layout, and workflow-specific edge-kind rendering, while keeping persisted `WorkflowGraph` as source of truth. Long graphs use left-to-right row-wrapped auto-arrange lanes, optimized non-recursive traversal helpers, React Flow visible-element rendering above the large-graph threshold, and a minimap guard so run progress and graph edits stay responsive with many nodes.
 - Action node creation from the semantic action palette, including fixed Wait and Random Wait actions in the Wait group, unconfigured `New node` draft creation from the toolbar, graph-control node creation from simplified grouped node pickers including Merge, Router, and Random Choice, visible-canvas-centered placement for toolbar-created nodes, plus searchable type selection and config editing through the reusable action config editor.
 - Variable authoring UI for Set Variables, Set JSON Variables, Repeat For Each manual/array modes, and template token insertion/highlighting in supported text fields.
 - Variable picker catalogs known graph variables from Set Variables rows, Set JSON Variables keys, and output-producing action nodes when available.
 - Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and graph-scoped keyboard shortcuts without changing persisted `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside the active graph workspace.
-- Select-first graph canvas interaction. Empty-canvas drag performs box selection; Space temporarily enables panning through separate temporary state, and the toolbar exposes persistent select/pan modes plus undo, redo, fit view, auto arrange, arrange selection, and shortcuts icon controls.
+- Select-first graph canvas interaction. Workflow detail opens with no selected
+  graph item, and selecting a node, link, or multi-item selection opens the
+  inspector as a right-side drawer over a full-width canvas. Empty-canvas drag
+  performs box selection; Space temporarily enables panning through separate
+  temporary state, and the toolbar exposes persistent select/pan modes plus
+  undo, redo, fit view, auto arrange, arrange selection, and shortcuts icon
+  controls.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
 - Settings navigation state in the app shell/sidebar, plus app-level

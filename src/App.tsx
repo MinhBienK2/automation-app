@@ -963,6 +963,7 @@ function App() {
           : idleRunStateWithRetainedSession(current),
       );
       setSelectedGraphNodeId(null);
+      setSidebarCollapsed(true);
       setScreen("detail");
     } catch (error) {
       setAppError(commandMessage(error));

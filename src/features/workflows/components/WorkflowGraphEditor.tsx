@@ -114,14 +114,6 @@ const visibleNodeStagger = {
 };
 const graphMiniMapNodeLimit = 300;
 
-function initialSelectedNodeId(graph: WorkflowGraph) {
-  return (
-    graph.nodes.find((node) => node.node_type !== "start")?.id ??
-    graph.nodes[0]?.id ??
-    null
-  );
-}
-
 export function replacePortEdge(
   edges: WorkflowFlowEdge[],
   nextEdge: WorkflowFlowEdge,
@@ -270,12 +262,9 @@ export function WorkflowGraphEditor({
     searchLabel: string;
     groups: Array<{ label: string; nodes: GraphNodeType[] }>;
   } | null>(null);
-  const [selection, setSelection] = useState<GraphSelection>(() => {
-    const initialNodeId = initialSelectedNodeId(graph);
-    return {
-      nodeIds: initialNodeId ? [initialNodeId] : [],
-      edgeIds: [],
-    };
+  const [selection, setSelection] = useState<GraphSelection>({
+    nodeIds: [],
+    edgeIds: [],
   });
   const [clipboard, setClipboard] = useState<GraphClipboard | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -341,6 +330,7 @@ export function WorkflowGraphEditor({
   const selectedEdge = selectedEdgeId
     ? graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null
     : null;
+  const inspectorOpen = Boolean(selectionSummary || selectedEdge || selectedNode);
   const nodeLabels = useMemo(
     () => new Map(graph.nodes.map((node) => [node.id, node.label])),
     [graph.nodes],
@@ -1016,6 +1006,12 @@ export function WorkflowGraphEditor({
     deleteEdge(selectedEdge.id);
   }
 
+  function closeInspector() {
+    setContextMenu(null);
+    setLinkContextMenu(null);
+    setSelection({ nodeIds: [], edgeIds: [] });
+  }
+
   return (
     <section
       ref={editorRef}
@@ -1161,24 +1157,32 @@ export function WorkflowGraphEditor({
           </div>
         </div>
 
-        <WorkflowGraphInspector
-          graph={graph}
-          issueGroups={issueGroups}
-          nodeLabels={nodeLabels}
-          runState={runState}
-          selectionSummary={selectionSummary}
-          selectedEdge={selectedEdge}
-          selectedNode={selectedNode}
-          onCopySelection={copySelection}
-          onDeleteSelection={deleteSelection}
-          onDeleteSelectedEdge={deleteSelectedEdge}
-          onDeleteSelectedNode={deleteSelectedNode}
-          onDuplicateSelection={duplicateSelection}
-          onFocusSelectedNode={focusSelectedNode}
-          onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
-          onUpdateEdge={updateEdge}
-          onUpdateNode={updateNode}
-        />
+        {inspectorOpen ? (
+          <aside
+            className="graph-inspector-drawer"
+            aria-label="Graph inspector drawer"
+          >
+            <WorkflowGraphInspector
+              graph={graph}
+              issueGroups={issueGroups}
+              nodeLabels={nodeLabels}
+              runState={runState}
+              selectionSummary={selectionSummary}
+              selectedEdge={selectedEdge}
+              selectedNode={selectedNode}
+              onCopySelection={copySelection}
+              onDeleteSelection={deleteSelection}
+              onDeleteSelectedEdge={deleteSelectedEdge}
+              onDeleteSelectedNode={deleteSelectedNode}
+              onDuplicateSelection={duplicateSelection}
+              onFocusSelectedNode={focusSelectedNode}
+              onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
+              onClose={closeInspector}
+              onUpdateEdge={updateEdge}
+              onUpdateNode={updateNode}
+            />
+          </aside>
+        ) : null}
       </div>
 
       <ActionNodePalette

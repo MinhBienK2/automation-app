@@ -229,7 +229,11 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 1. Open Evidence from the sidebar, confirm screenshot/download/browser identity/action trace/evidence manifest items from completed runs are searchable and filterable, screenshot preview and Reveal in Folder work only through validated evidence actions, downloads show metadata without in-app preview, Export Selection creates a manifest bundle without absolute original paths, and Overview Recent Evidence plus Runs selected details navigate into Evidence.
 1. Open Identities from the sidebar, confirm current managed identities show workflow owner, session/profile reuse, retained-session state, configured posture, latest observed browser identity evidence, diagnostics, rotation history, Open Evidence, Open Last Run, and Open Workflow Settings. Confirm Close Retained Session clears only the retained in-memory browser session, Reset Identity is confirmed and blocked while a retained session or active run owns the profile, and old identity ids from evidence/rotation history open read-only historical references.
 2. Create a workflow.
-2. Confirm the new workflow graph starts with `Start -> New node`.
+2. Confirm the new workflow graph starts with `Start -> New node`, the workflow
+   detail sidebar is collapsed to the icon rail, the graph inspector is closed
+   until a node or link is selected, selecting `New node` opens the inspector as
+   a right-side drawer over the canvas, and Close inspector clears the
+   selection.
 3. Open Settings from the sidebar, confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status; run Install CloakBrowser Binary and Cleanup Orphaned Profiles from Maintenance; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
 4. Add Navigate, Wait, Random Wait, Fill Field, Click, and Scroll action nodes. Confirm Scroll shows Page Scroll style/Direction/Pixels fields, Scroll To Element target fields with Timeout ms defaulting to 60000, and Scroll Until Element Visible target/timeout plus Direction/Pixels fields without low-level target constraint controls.
 5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.

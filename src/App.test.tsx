@@ -851,6 +851,26 @@ describe("App settings and graph autosave", () => {
       .not.toBeInTheDocument();
   });
 
+  test("collapses the sidebar when opening workflow detail", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    expect(screen.getByRole("button", { name: "Collapse sidebar" }))
+      .toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    expect(await screen.findByRole("region", { name: "Workflow detail header" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand sidebar" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
   test("polls run state for a workflow started from the list", async () => {
     let runStateCalls = 0;
     let runSnapshotCalls = 0;

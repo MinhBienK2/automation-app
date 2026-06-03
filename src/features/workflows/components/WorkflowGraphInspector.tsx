@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardCopy } from "lucide-react";
+import { ClipboardCopy, X } from "lucide-react";
 import type {
   GraphEdge,
   GraphNode,
@@ -9,6 +9,7 @@ import type {
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
+import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { graphNodeLabel } from "../lib/workflowGraph";
@@ -37,6 +38,7 @@ type WorkflowGraphInspectorProps = {
   onDuplicateSelection: () => void;
   onFocusSelectedNode: () => void;
   onOpenSelectedNodeHelp: () => void;
+  onClose: () => void;
   onUpdateEdge: (edge: GraphEdge) => void;
   onUpdateNode: (node: GraphNode) => void;
 };
@@ -56,6 +58,7 @@ export function WorkflowGraphInspector({
   onDuplicateSelection,
   onFocusSelectedNode,
   onOpenSelectedNodeHelp,
+  onClose,
   onUpdateEdge,
   onUpdateNode,
 }: WorkflowGraphInspectorProps) {
@@ -67,7 +70,19 @@ export function WorkflowGraphInspector({
       : null;
 
   return (
-    <aside className="graph-inspector" aria-label="Graph inspector">
+    <div className="graph-inspector" aria-label="Graph inspector">
+      <div className="graph-inspector-shell-header">
+        <p className="eyebrow">Inspector</p>
+        <IconButton
+          className="graph-inspector-close"
+          variant="ghost"
+          type="button"
+          label="Close inspector"
+          onClick={onClose}
+        >
+          <X aria-hidden="true" />
+        </IconButton>
+      </div>
       {selectionSummary ? (
         <section className="graph-selected-edge" aria-label="Graph selection summary">
           <h2>Selection</h2>
@@ -202,7 +217,7 @@ export function WorkflowGraphInspector({
         <p className="muted">Select a graph node.</p>
       ) : null}
 
-    </aside>
+    </div>
   );
 }
 

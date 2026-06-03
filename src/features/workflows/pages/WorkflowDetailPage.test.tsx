@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
@@ -198,8 +198,10 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
-    expect(runFromSelected).toBeEnabled();
+    await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
@@ -257,8 +259,10 @@ describe("Workflow detail integration", () => {
     renderApp();
 
     await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
     const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
-    expect(runFromSelected).toBeEnabled();
+    await waitFor(() => expect(runFromSelected).toBeEnabled());
     await userEvent.click(runFromSelected);
 
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {

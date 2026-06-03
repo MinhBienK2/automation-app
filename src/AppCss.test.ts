@@ -132,13 +132,20 @@ describe("App CSS", () => {
 
   test("lets the workflow detail graph workspace fill the content column", () => {
     const detailScreen = cssRule(".workflow-detail-screen");
+    const graphLayout = cssRule(".workflow-graph-layout");
     const graphCanvas = cssRule(".graph-canvas");
     const graphFlow = cssRule(".graph-canvas .react-flow");
+    const inspectorDrawer = cssRule(".graph-inspector-drawer");
 
     expect(detailScreen).toContain("width: 100%");
     expect(detailScreen).toContain("max-width: none");
+    expect(graphLayout).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(graphLayout).toContain("position: relative");
     expect(graphCanvas).toContain("height: clamp(460px, calc(100dvh - 260px), 640px)");
     expect(graphFlow).toContain("height: 100%");
+    expect(inspectorDrawer).toContain("position: absolute");
+    expect(inspectorDrawer).toContain("right: 0");
+    expect(inspectorDrawer).toContain("animation: graph-inspector-slide-in");
   });
 
   test("keeps run error surfaces dense and text-contained", () => {
