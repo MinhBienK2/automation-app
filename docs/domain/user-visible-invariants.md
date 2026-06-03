@@ -157,7 +157,7 @@ Preserve these unless the task explicitly changes them.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector drawer mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
-- Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure.
+- Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure. The currently running node uses a prominent cyan border, tinted fill, ring, and glow so active execution remains visible on large dark graphs.
 - Selecting a graph node or link must not replace amber validation or red failure color with cyan selection color. Selection can add a secondary ring or emphasis while preserving the issue/failure color.
 - Graph links expose editor-only visual kinds for main path, branch, continuation, loop, and recovery routing. These kinds may adjust stroke weight or pattern, but failed, validation issue, running, selected, and completed semantic states take visual priority.
 

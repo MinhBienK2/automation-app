@@ -379,7 +379,14 @@
 }
 
 .graph-node-running {
-  outline: 2px solid rgba(56, 189, 248, 0.32);
+  border-color: #32d3e6;
+  background: linear-gradient(180deg, rgba(50, 211, 230, 0.22), #172431);
+  outline: 3px solid rgba(50, 211, 230, 0.7);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 1px rgba(50, 211, 230, 0.42) inset,
+    0 0 18px rgba(50, 211, 230, 0.34);
+  color: #e7eef5;
 }
 
 .graph-node-completed {

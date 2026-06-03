@@ -271,6 +271,15 @@ describe("App CSS", () => {
     expect(selectedFailedEdge).toContain("stroke: #f06467");
   });
 
+  test("makes the actively running graph node visually prominent", () => {
+    const runningNode = cssRule(".graph-node-running");
+
+    expect(runningNode).toContain("border-color: #32d3e6");
+    expect(runningNode).toContain("background: linear-gradient");
+    expect(runningNode).toContain("outline: 3px solid rgba(50, 211, 230");
+    expect(runningNode).toContain("box-shadow:");
+  });
+
   test("keeps variable rows tabular while protecting narrow inspectors from overflow", () => {
     const variableTable = cssRule(".variable-row-table");
     const variableGrid = cssRule(".variable-row-grid");
