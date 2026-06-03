@@ -129,7 +129,7 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).queryByLabelText("Allowed probe origins")).not.toBeInTheDocument();
   });
 
-  test("groups graph link wait defaults into a reusable settings field group", () => {
+  test("groups graph live run and link wait defaults into reusable settings field groups", () => {
     const settings = defaultWorkflowSettings({
       workflowId: "workflow-1",
       workflowName: "Checkout QA",
@@ -158,6 +158,13 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(dialog).getByRole("tab", { name: "Graph" })).toHaveAttribute("data-active", "true");
     expect(within(dialog).getByRole("heading", { name: "Graph" })).toBeInTheDocument();
 
+    const liveRunGroup = within(dialog).getByRole("group", { name: "Live run" });
+    expect(liveRunGroup).toHaveClass("settings-field-group");
+    expect(within(liveRunGroup).getByRole("switch", { name: "Live Run" }))
+      .toHaveAttribute("aria-checked", "true");
+    expect(within(liveRunGroup).getByRole("switch", { name: "Follow current" }))
+      .toHaveAttribute("aria-checked", "false");
+
     const linkWaitGroup = within(dialog).getByRole("group", { name: "New link wait" });
     expect(linkWaitGroup).toHaveClass("settings-field-group");
     expect(within(linkWaitGroup).getByText("Choose the wait copied to new links after saving."))
@@ -167,6 +174,40 @@ describe("WorkflowSettingsDialog", () => {
     expect(within(linkWaitGroup).getByLabelText("Maximum wait ms")).toHaveValue(5000);
     expect(within(linkWaitGroup).getByText(/Existing links keep their own wait/i))
       .toHaveClass("settings-field-group-footer");
+  });
+
+  test("hides follow current when Live Run is disabled", async () => {
+    const user = userEvent.setup();
+    const initialSettings = defaultWorkflowSettings({
+      workflowId: "workflow-1",
+      workflowName: "Checkout QA",
+    });
+
+    function Harness() {
+      const [settings, setSettings] = useState<WorkflowSettings>(initialSettings);
+      return (
+        <WorkflowSettingsDialog
+          activeSection="graph_defaults"
+          hasUnsavedChanges={false}
+          open
+          settings={settings}
+          onActiveSectionChange={vi.fn()}
+          onDiscardChanges={vi.fn()}
+          onOpenChange={vi.fn()}
+          onSaveSettings={vi.fn()}
+          onSettingsChange={setSettings}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const dialog = screen.getByRole("dialog", { name: "Workflow Settings" });
+    const liveRunGroup = within(dialog).getByRole("group", { name: "Live run" });
+    await user.click(within(liveRunGroup).getByRole("switch", { name: "Live Run" }));
+
+    expect(within(liveRunGroup).queryByRole("switch", { name: "Follow current" }))
+      .not.toBeInTheDocument();
   });
 
   test("groups workflow settings sections by related controls", () => {

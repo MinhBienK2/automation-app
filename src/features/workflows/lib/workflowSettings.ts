@@ -244,6 +244,8 @@ export function defaultWorkflowSettings({
     },
     graph_defaults: {
       default_edge_delay: null,
+      live_run_enabled: true,
+      live_run_follow_current: false,
     },
     environment: {
       initial_variables: [],
@@ -863,7 +865,7 @@ export const workflowSettingsHelp: Record<
     en: {
       title: "Graph Settings Help",
       summary:
-        "Graph settings control authoring conveniences for new links in this workflow. They do not rewrite existing links and they do not replace explicit Wait or Random Wait nodes.",
+        "Graph settings control workflow detail run visibility and authoring conveniences for new links in this workflow. They do not rewrite existing links and they do not replace explicit Wait or Random Wait nodes.",
       uiLabels: enLabels,
       bestFor: [
         "Use it when most transitions in one workflow should pause briefly before the next node starts.",
@@ -873,6 +875,20 @@ export const workflowSettingsHelp: Record<
         "Do not use it for waiting on page state, visible elements, text, URLs, downloads, or business checkpoints.",
       ],
       fieldGuide: [
+        {
+          name: "Live Run",
+          description:
+            "Controls whether workflow detail shows the Live Run navigator above the graph while a saved run is active, including current step, trail, and focus controls.",
+          whenToUse:
+            "Keep it enabled when operators need run progress directly inside Graph Builder during evidence capture.",
+        },
+        {
+          name: "Follow current",
+          description:
+            "Sets the default state of the navigator follow toggle when Live Run is enabled, selecting and centering the current node as run state changes.",
+          whenToUse:
+            "Enable it when the graph view should automatically track execution instead of waiting for a manual focus action.",
+        },
         {
           name: "New link wait",
           description:
@@ -929,7 +945,7 @@ export const workflowSettingsHelp: Record<
     vi: {
       title: "Trợ giúp Graph",
       summary:
-        "Graph settings là tiện ích khi author workflow: link mới có thể tự mang wait mặc định. Setting này không sửa link cũ và không thay thế Wait node rõ nghĩa.",
+        "Graph settings điều khiển Live Run trong workflow detail và tiện ích khi author workflow: link mới có thể tự mang wait mặc định. Setting này không sửa link cũ và không thay thế Wait node rõ nghĩa.",
       uiLabels: viLabels,
       bestFor: [
         "Dùng khi phần lớn transition trong workflow cần dừng nhẹ trước khi node kế tiếp chạy.",
@@ -939,6 +955,20 @@ export const workflowSettingsHelp: Record<
         "Không dùng để chờ trạng thái page, element visible, text, URL, download, hoặc checkpoint cần đặt tên.",
       ],
       fieldGuide: [
+        {
+          name: "Live Run",
+          description:
+            "Điều khiển workflow detail có hiển thị Live Run navigator phía trên graph khi saved run đang chạy, gồm current step, execution trail, và focus control.",
+          whenToUse:
+            "Giữ bật khi operator cần xem tiến độ run ngay trong Graph Builder lúc debug hoặc thu evidence.",
+        },
+        {
+          name: "Follow current",
+          description:
+            "Đặt trạng thái mặc định của follow toggle trong navigator khi Live Run bật, để chọn và đưa current node vào khung nhìn khi run state đổi.",
+          whenToUse:
+            "Bật khi graph view nên tự bám theo node đang chạy thay vì chờ operator bấm focus thủ công.",
+        },
         {
           name: "New link wait",
           description:

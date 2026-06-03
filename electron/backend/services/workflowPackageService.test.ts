@@ -154,7 +154,11 @@ function workflowSettings(
       humanize: true,
       human_preset: "default",
     } as WorkflowSettings["browser_launch"] & Record<string, unknown>,
-    graph_defaults: { default_edge_delay: null },
+    graph_defaults: {
+      default_edge_delay: null,
+      live_run_enabled: true,
+      live_run_follow_current: false,
+    },
     environment: { initial_variables: [] },
     migration_notes: [],
     created_at: timestamp,

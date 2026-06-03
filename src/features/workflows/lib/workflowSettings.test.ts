@@ -61,6 +61,10 @@ describe("workflow settings model", () => {
     expect(settings.browser_launch.proxy_enabled).toBe(false);
     expect(settings.browser_launch.headless).toBe(false);
     expect(settings.graph_defaults.default_edge_delay).toBeNull();
+    expect(settings.graph_defaults).toMatchObject({
+      live_run_enabled: true,
+      live_run_follow_current: false,
+    });
     expect(settings.environment.initial_variables).toEqual([]);
     expect(settings).not.toHaveProperty("owned_test_gates");
     expect(settings.migration_notes).toEqual([]);
@@ -165,6 +169,8 @@ describe("workflow settings model", () => {
     ]);
     expect(workflowSettingsHelp.graph_defaults.en.title).toBe("Graph Settings Help");
     expect(workflowSettingsHelp.graph_defaults.en.fieldGuide.map((field) => field.name)).toEqual([
+      "Live Run",
+      "Follow current",
       "New link wait",
       "Duration ms",
       "Minimum/maximum wait ms",

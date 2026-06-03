@@ -42,6 +42,7 @@ export class WorkflowSettingsService {
     const base = this.defaultWorkflowSettings(workflow);
     const rawRunPolicy = objectRecord(settings.run_policy);
     const rawBrowserLaunch = objectRecord(settings.browser_launch);
+    const rawGraphDefaults = objectRecord(settings.graph_defaults);
     const browserLaunch = normalizeSettingsBrowserLaunch(
       {
         ...base.browser_launch,
@@ -57,6 +58,7 @@ export class WorkflowSettingsService {
     const requestedRunFromSelected =
       rawRunPolicy.run_from_selected_enabled ??
       rawBrowserLaunch.run_from_selected_enabled;
+    const liveRunEnabled = rawGraphDefaults.live_run_enabled !== false;
     return {
       workflow_id: settings.workflow_id || workflow.id,
       version: 2,
@@ -82,8 +84,11 @@ export class WorkflowSettingsService {
       browser_launch: browserLaunch,
       graph_defaults: {
         default_edge_delay: normalizeGraphEdgeDelay(
-          objectRecord(settings.graph_defaults).default_edge_delay,
+          rawGraphDefaults.default_edge_delay,
         ),
+        live_run_enabled: liveRunEnabled,
+        live_run_follow_current:
+          liveRunEnabled && Boolean(rawGraphDefaults.live_run_follow_current),
       },
       environment: {
         initial_variables: Array.isArray(settings.environment?.initial_variables)
@@ -359,6 +364,8 @@ export function defaultWorkflowSettings(
     browser_launch: browserLaunch,
     graph_defaults: {
       default_edge_delay: null,
+      live_run_enabled: true,
+      live_run_follow_current: false,
     },
     environment: {
       initial_variables: [],

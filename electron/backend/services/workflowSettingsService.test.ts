@@ -47,6 +47,10 @@ describe("WorkflowSettingsService", () => {
     expect(settings.browser_launch).not.toHaveProperty("preflight_probe_url");
     expect(settings.browser_launch).not.toHaveProperty("preflight_allowed_origins");
     expect(settings.run_policy.execute_js_enabled).toBe(true);
+    expect(settings.graph_defaults).toMatchObject({
+      live_run_enabled: true,
+      live_run_follow_current: false,
+    });
     const issues = service.validateSettings(settings);
     expect(issues).toContainEqual(
       expect.objectContaining({

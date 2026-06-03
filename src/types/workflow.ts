@@ -228,6 +228,8 @@ export type GraphEdgeDelay =
 
 export type WorkflowSettingsGraphDefaults = {
   default_edge_delay: GraphEdgeDelay | null;
+  live_run_enabled: boolean;
+  live_run_follow_current: boolean;
 };
 
 export type WorkflowSettingsMigrationNote = {

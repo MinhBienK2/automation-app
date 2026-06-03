@@ -1427,6 +1427,7 @@ describe("Electron workflow command handlers", () => {
       handlers.validateWorkflowSettings({
         ...settings,
         graph_defaults: {
+          ...settings.graph_defaults,
           default_edge_delay: {
             type: "random",
             min_ms: 5000,

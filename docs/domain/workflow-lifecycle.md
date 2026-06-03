@@ -47,7 +47,7 @@
 - `save_workflow_graph` persists graph JSON without rewriting ordered `workflow_steps`.
 - `save_workflow_settings_section` persists one Workflow Settings section without changing graph JSON. The UI presents one Save Settings action in the Workflow Settings header, groups related controls inside each settings section, and saves dirty sections through that section command. General updates workflow summary metadata.
 - Workflow Settings Run Policy keeps maximum duration, browser retention, Allow Run JavaScript, and Run from selected enablement/scope editable. Batch defaults remain visible, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
-- Workflow Settings Graph owns the default duration-only wait copied onto newly created graph links. Changing it does not rewrite existing graph links.
+- Workflow Settings Graph owns the workflow detail Live Run visibility toggle, the Follow current default when Live Run is enabled, and the default duration-only wait copied onto newly created graph links. New settings default Live Run on and Follow current off. Changing the link wait does not rewrite existing graph links.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
 - Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
@@ -82,6 +82,7 @@
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `list_run_states` while any run snapshot is `running`, regardless of whether the run was started from the workflow detail workspace, directly from the workflow list, or by the scheduler. `get_run_state` remains a compatibility/latest-state view.
+- Workflow detail renders the Live Run navigator only when saved Graph settings enable Live Run. The saved Follow current setting initializes whether active run progress automatically selects and centers the current graph node; the navigator switch can override that for the current page session.
 - Overview loads a bounded operations aggregate through `getOperationsOverview`,
   which rejects local-day UTC ranges over 48 hours before building hourly
   activity buckets, and can navigate persisted run references into Runs through

@@ -148,7 +148,9 @@ Workflow Settings are persisted separately from graph JSON:
   graph_defaults: {
     default_edge_delay: null
       | { type: "fixed", duration_ms }
-      | { type: "random", min_ms, max_ms }
+      | { type: "random", min_ms, max_ms },
+    live_run_enabled: boolean,
+    live_run_follow_current: boolean
   },
   environment: { initial_variables },
   migration_notes: [{ path, action, message }]
@@ -168,7 +170,7 @@ Settings validation issues serialize as `{ section, field, message, level }`.
 Run validation issues serialize as `{ source, field, node_id, edge_id, message, level }`.
 Workflow exports include optional `settings`; imports without settings are valid flow-only packages.
 Run Policy `execute_js_enabled` defaults to true for authorized test profiles. When it is false, the runner rejects `execute_js` / Run JavaScript actions before evaluating script text and returns a clear failed step error. Run Policy batch fields remain part of the current contract for backend batch execution, but Workflow Settings currently renders those batch controls as visible, disabled values until Batch Run UI is ready.
-Graph default link wait is an authoring default only. It is copied onto newly created graph links and does not rewrite existing links.
+Graph `live_run_enabled` defaults to true for new or lazily normalized settings and controls whether workflow detail renders the Live Run navigator. `live_run_follow_current` defaults to false, is only meaningful when Live Run is enabled, and sets the navigator's initial Follow current state. Graph default link wait is an authoring default only. It is copied onto newly created graph links and does not rewrite existing links.
 
 ## Workflow Package Shape
 

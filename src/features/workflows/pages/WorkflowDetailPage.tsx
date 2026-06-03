@@ -29,6 +29,8 @@ type WorkflowDetailPageProps = {
   graphIssues: GraphValidationIssue[];
   graphIssuesNeedRecheck: boolean;
   defaultEdgeDelay?: GraphEdgeDelay | null;
+  liveRunEnabled: boolean;
+  liveRunFollowCurrent: boolean;
   onBack: () => void;
   onOpenWorkflowSettings: () => void;
   onStopRun: () => void;
@@ -53,6 +55,8 @@ export function WorkflowDetailPage({
   graphIssues,
   graphIssuesNeedRecheck,
   defaultEdgeDelay,
+  liveRunEnabled,
+  liveRunFollowCurrent,
   onBack,
   onOpenWorkflowSettings,
   onStopRun,
@@ -68,7 +72,7 @@ export function WorkflowDetailPage({
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
-  const [followCurrentNode, setFollowCurrentNode] = useState(true);
+  const [followCurrentNode, setFollowCurrentNode] = useState(liveRunFollowCurrent);
   const selectionRequestIdRef = useRef(0);
   const runIssues = useMemo(
     () =>
@@ -106,9 +110,13 @@ export function WorkflowDetailPage({
         : null;
 
   useEffect(() => {
-    if (!followCurrentNode || !currentRunNodeId || !workflowGraph) return;
+    setFollowCurrentNode(liveRunFollowCurrent);
+  }, [detail.workflow.id, liveRunFollowCurrent]);
+
+  useEffect(() => {
+    if (!liveRunEnabled || !followCurrentNode || !currentRunNodeId || !workflowGraph) return;
     requestNodeSelection(currentRunNodeId);
-  }, [currentRunNodeId, followCurrentNode, requestNodeSelection, workflowGraph]);
+  }, [currentRunNodeId, followCurrentNode, liveRunEnabled, requestNodeSelection, workflowGraph]);
 
   return (
     <section className="app-screen workflow-detail-screen">
@@ -205,13 +213,15 @@ export function WorkflowDetailPage({
 
       {workflowGraph ? (
         <>
-          <RunProgressNavigator
-            graph={workflowGraph}
-            runState={runState}
-            followCurrentNode={followCurrentNode}
-            onFollowCurrentNodeChange={setFollowCurrentNode}
-            onFocusNode={requestNodeSelection}
-          />
+          {liveRunEnabled ? (
+            <RunProgressNavigator
+              graph={workflowGraph}
+              runState={runState}
+              followCurrentNode={followCurrentNode}
+              onFollowCurrentNodeChange={setFollowCurrentNode}
+              onFocusNode={requestNodeSelection}
+            />
+          ) : null}
           <WorkflowGraphEditor
             graph={workflowGraph}
             runState={runState}

@@ -201,24 +201,53 @@ describe("Workflow detail integration", () => {
     expect(within(navigator).getByRole("button", { name: "Current step 2: Fill credentials" }))
       .toBeInTheDocument();
     const followSwitch = within(navigator).getByRole("switch", { name: "Follow current" });
-    expect(followSwitch).toHaveAttribute("aria-checked", "true");
+    expect(followSwitch).toHaveAttribute("aria-checked", "false");
     const editor = screen.getByRole("region", { name: "Visual Graph" });
-    let inspectorDrawer = await within(editor).findByRole("complementary", {
+    expect(within(editor).queryByRole("complementary", {
       name: "Graph inspector drawer",
-    });
-    expect(within(inspectorDrawer).getByRole("heading", { name: "Fill credentials" }))
-      .toBeInTheDocument();
+    })).not.toBeInTheDocument();
 
     await userEvent.click(followSwitch);
-    expect(followSwitch).toHaveAttribute("aria-checked", "false");
-    await userEvent.click(within(inspectorDrawer).getByRole("button", { name: "Close inspector" }));
+    expect(followSwitch).toHaveAttribute("aria-checked", "true");
     await userEvent.click(within(navigator).getByRole("button", { name: "Focus current" }));
 
-    inspectorDrawer = await within(editor).findByRole("complementary", {
+    const inspectorDrawer = await within(editor).findByRole("complementary", {
       name: "Graph inspector drawer",
     });
     expect(within(inspectorDrawer).getByRole("heading", { name: "Fill credentials" }))
       .toBeInTheDocument();
+  });
+
+  test("hides the live run navigator when Graph settings disable Live Run", async () => {
+    const runningState = {
+      ...idleRunState,
+      status: "running" as const,
+      mode: "run_workflow" as const,
+      current_step_id: "step-1",
+      current_step_number: 1,
+      completed_step_ids: [],
+    };
+    const scenario = workflowDetailScenario([sleepStep]);
+    mockWorkflowBridgeCommands({
+      ...scenario,
+      list_run_states: [runSnapshot(runningState)],
+      get_run_state: runningState,
+      get_workflow_settings: {
+        ...scenario.get_workflow_settings,
+        graph_defaults: {
+          ...scenario.get_workflow_settings.graph_defaults,
+          live_run_enabled: false,
+          live_run_follow_current: false,
+        },
+      },
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+
+    expect(screen.queryByRole("region", { name: "Live run navigator" }))
+      .not.toBeInTheDocument();
   });
 
   test("runs from the selected node when a retained persistent session is available", async () => {

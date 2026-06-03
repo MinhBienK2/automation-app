@@ -1451,6 +1451,8 @@ function workflowSettings(
     },
     graph_defaults: {
       default_edge_delay: null,
+      live_run_enabled: true,
+      live_run_follow_current: false,
     },
     migration_notes: [],
     created_at: "1",

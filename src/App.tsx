@@ -1846,6 +1846,8 @@ function App() {
             graphIssues={graphIssues}
             graphIssuesNeedRecheck={graphIssuesNeedRecheck}
             defaultEdgeDelay={workflowSettings?.graph_defaults?.default_edge_delay ?? null}
+            liveRunEnabled={workflowSettings?.graph_defaults?.live_run_enabled ?? true}
+            liveRunFollowCurrent={workflowSettings?.graph_defaults?.live_run_follow_current ?? false}
             onBack={backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => stopRun(detailRunSnapshot?.run_id ?? null)}
