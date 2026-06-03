@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Save, Settings } from "lucide-react";
 import type {
   GraphValidationIssue,
@@ -11,6 +11,7 @@ import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
 import { buildRunIssues } from "../../../lib/workflowUi";
+import { RunProgressNavigator } from "../components/RunProgressNavigator";
 import { RunIssuePanel } from "../components/RunIssuePanel";
 import { RunStatusBar } from "../components/RunStatusBar";
 import {
@@ -67,6 +68,8 @@ export function WorkflowDetailPage({
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
+  const [followCurrentNode, setFollowCurrentNode] = useState(true);
+  const selectionRequestIdRef = useRef(0);
   const runIssues = useMemo(
     () =>
       buildRunIssues({
@@ -79,20 +82,34 @@ export function WorkflowDetailPage({
   );
   const totalBlockingIssues = graphIssues.filter((issue) => issue.level === "error").length;
   const hasBlockingIssues = totalBlockingIssues > 0;
-  const requestNodeSelection = (nodeId: string) => {
+  const requestNodeSelection = useCallback((nodeId: string) => {
+    selectionRequestIdRef.current += 1;
     setSelectionRequest({
-      requestId: Date.now(),
+      requestId: selectionRequestIdRef.current,
       nodeId,
       edgeId: null,
     });
-  };
+  }, []);
   const requestEdgeSelection = (edgeId: string) => {
+    selectionRequestIdRef.current += 1;
     setSelectionRequest({
-      requestId: Date.now(),
+      requestId: selectionRequestIdRef.current,
       nodeId: null,
       edgeId,
     });
   };
+  const currentRunNodeId =
+    runState.status === "failed"
+      ? runState.error?.step_id ?? null
+      : runState.status === "running"
+        ? runState.current_step_id
+        : null;
+
+  useEffect(() => {
+    if (!followCurrentNode || !currentRunNodeId || !workflowGraph) return;
+    requestNodeSelection(currentRunNodeId);
+  }, [currentRunNodeId, followCurrentNode, requestNodeSelection, workflowGraph]);
+
   return (
     <section className="app-screen workflow-detail-screen">
       <PageHeader
@@ -187,18 +204,27 @@ export function WorkflowDetailPage({
       />
 
       {workflowGraph ? (
-        <WorkflowGraphEditor
-          graph={workflowGraph}
-          runState={runState}
-          validationIssues={graphIssues}
-          selectionRequest={selectionRequest}
-          defaultEdgeDelay={defaultEdgeDelay}
-          onChange={onGraphChange}
-          onRunGraph={onRunGraph}
-          onSelectedNodeChange={onSelectedGraphNodeChange}
-          onSaveGraph={onSaveGraph}
-          onValidateGraph={onValidateGraph}
-        />
+        <>
+          <RunProgressNavigator
+            graph={workflowGraph}
+            runState={runState}
+            followCurrentNode={followCurrentNode}
+            onFollowCurrentNodeChange={setFollowCurrentNode}
+            onFocusNode={requestNodeSelection}
+          />
+          <WorkflowGraphEditor
+            graph={workflowGraph}
+            runState={runState}
+            validationIssues={graphIssues}
+            selectionRequest={selectionRequest}
+            defaultEdgeDelay={defaultEdgeDelay}
+            onChange={onGraphChange}
+            onRunGraph={onRunGraph}
+            onSelectedNodeChange={onSelectedGraphNodeChange}
+            onSaveGraph={onSaveGraph}
+            onValidateGraph={onValidateGraph}
+          />
+        </>
       ) : null}
 
     </section>

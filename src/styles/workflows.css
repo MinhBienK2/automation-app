@@ -306,6 +306,123 @@
   color: #fca5a5;
 }
 
+.run-progress-navigator {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(50, 211, 230, 0.28);
+  border-radius: 8px;
+  background: #121c26;
+}
+
+.run-progress-main {
+  display: flex;
+  min-width: 0;
+  gap: 16px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.run-progress-copy {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.run-progress-copy h2 {
+  overflow-wrap: anywhere;
+  color: #e7eef5;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.run-progress-copy p:not(.eyebrow) {
+  color: #9aaebd;
+  font-size: 13px;
+}
+
+.run-progress-status {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 22px;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid rgba(50, 211, 230, 0.45);
+  border-radius: 999px;
+  color: #32d3e6;
+  font-size: 12px;
+}
+
+.run-progress-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: end;
+}
+
+.run-progress-follow.switch-field {
+  grid-template-columns: auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.run-progress-follow .switch-field-copy small {
+  display: none;
+}
+
+.run-progress-trail {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  padding: 0 0 2px;
+  list-style: none;
+}
+
+.run-progress-trail li {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.run-progress-trail-item {
+  display: grid;
+  min-width: 138px;
+  max-width: 220px;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #0b1016;
+  color: #9aaebd;
+  text-align: left;
+}
+
+.run-progress-trail-item[data-current="true"] {
+  border-color: rgba(50, 211, 230, 0.62);
+  color: #e7eef5;
+}
+
+.run-progress-trail-item span:not(.sr-only) {
+  color: #667d8d;
+  font-size: 11px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.run-progress-trail-item strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workflow-settings-dialog {
   width: min(1040px, calc(100vw - 48px));
   max-height: min(860px, calc(100dvh - 48px));
@@ -861,39 +978,6 @@
   display: grid;
   gap: 4px;
   padding-left: 18px;
-}
-
-.launch-run-summary {
-  display: grid;
-  gap: 12px;
-}
-
-.launch-run-summary dl {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-
-.launch-run-summary dl > div {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 12px;
-  padding: 10px;
-  border: 1px solid #233240;
-  border-radius: 8px;
-  background: #0b1016;
-}
-
-.launch-run-summary dt {
-  color: #667d8d;
-  font-size: 12px;
-}
-
-.launch-run-summary dd {
-  min-width: 0;
-  margin: 0;
-  color: #e7eef5;
-  overflow-wrap: anywhere;
 }
 
 .panel-heading {

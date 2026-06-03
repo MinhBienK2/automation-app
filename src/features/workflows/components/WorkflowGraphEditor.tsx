@@ -423,7 +423,7 @@ export function WorkflowGraphEditor({
     if (selectionRequest.edgeId) {
       setSelection({ nodeIds: [], edgeIds: [selectionRequest.edgeId] });
     }
-  }, [selectionRequest?.requestId]);
+  }, [reactFlowInstance, selectionRequest]);
   useEffect(() => {
     reactFlowNodesRef.current = reactFlowNodes;
     reactFlowEdgesRef.current = reactFlowEdges;

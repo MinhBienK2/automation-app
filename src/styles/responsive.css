@@ -53,11 +53,13 @@
 
   .workflow-settings-section-header,
   .workflow-settings-help-header,
+  .run-progress-main,
   .run-issue-header,
   .run-issue-item {
     display: grid;
   }
 
+  .run-progress-actions,
   .run-issue-header-actions,
   .run-issue-actions {
     justify-content: stretch;

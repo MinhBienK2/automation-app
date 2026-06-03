@@ -7,6 +7,7 @@ import {
   resetWorkflowBridge,
 } from "../../../tests/mocks/electron";
 import { sleepStep, workflow } from "../../../tests/mocks/workflowFixtures";
+import type { WorkflowRunSnapshot, WorkflowStep } from "../../../types/workflow";
 import {
   idleRunState,
   workflowDetailScenario,
@@ -29,6 +30,18 @@ describe("Workflow detail integration", () => {
   async function openWorkflowDetails() {
     await openWorkflows();
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+  }
+
+  function runSnapshot(state: WorkflowRunSnapshot["state"]): WorkflowRunSnapshot {
+    return {
+      run_id: "run-1",
+      workflow_id: workflow.id,
+      workflow_name: workflow.name,
+      source: "manual",
+      started_at: "2026-05-27T09:00:00.000Z",
+      state,
+      ...state,
+    };
   }
 
   test("opens workflow details on a separate screen and returns to the list", async () => {
@@ -135,6 +148,77 @@ describe("Workflow detail integration", () => {
       });
     });
     expect(screen.queryByRole("dialog", { name: "Launch Run" })).not.toBeInTheDocument();
+  });
+
+  test("shows live run progress and focuses the current graph node", async () => {
+    const fillStep: WorkflowStep = {
+      id: "step-2",
+      name: "Fill credentials",
+      workflow_id: workflow.id,
+      order_index: 1,
+      action_type: "input_text",
+      config: {
+        type: "input_text",
+        config: {
+          target: {
+            locators: [{ kind: "css", value: "#email" }],
+            constraints: {},
+          },
+          text: "qa@example.test",
+          clear_before_input: true,
+        },
+      },
+      created_at: "2",
+      updated_at: "2",
+    };
+    const runningState = {
+      ...idleRunState,
+      status: "running" as const,
+      mode: "run_workflow" as const,
+      current_step_id: "step-2",
+      current_step_number: 2,
+      completed_step_ids: ["step-1"],
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep, fillStep]),
+      list_run_states: [runSnapshot(runningState)],
+      get_run_state: runningState,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+
+    const navigator = await screen.findByRole("region", {
+      name: "Live run navigator",
+    });
+    expect(within(navigator).getByText("Running step 2")).toBeInTheDocument();
+    expect(within(navigator).getByRole("heading", { name: "Fill credentials" }))
+      .toBeInTheDocument();
+    expect(within(navigator).getByText("Fill Field")).toBeInTheDocument();
+    expect(within(navigator).getByRole("button", { name: "Step 1: Wait for page" }))
+      .toBeInTheDocument();
+    expect(within(navigator).getByRole("button", { name: "Current step 2: Fill credentials" }))
+      .toBeInTheDocument();
+    const followSwitch = within(navigator).getByRole("switch", { name: "Follow current" });
+    expect(followSwitch).toHaveAttribute("aria-checked", "true");
+    const editor = screen.getByRole("region", { name: "Visual Graph" });
+    let inspectorDrawer = await within(editor).findByRole("complementary", {
+      name: "Graph inspector drawer",
+    });
+    expect(within(inspectorDrawer).getByRole("heading", { name: "Fill credentials" }))
+      .toBeInTheDocument();
+
+    await userEvent.click(followSwitch);
+    expect(followSwitch).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(within(inspectorDrawer).getByRole("button", { name: "Close inspector" }));
+    await userEvent.click(within(navigator).getByRole("button", { name: "Focus current" }));
+
+    inspectorDrawer = await within(editor).findByRole("complementary", {
+      name: "Graph inspector drawer",
+    });
+    expect(within(inspectorDrawer).getByRole("heading", { name: "Fill credentials" }))
+      .toBeInTheDocument();
   });
 
   test("runs from the selected node when a retained persistent session is available", async () => {

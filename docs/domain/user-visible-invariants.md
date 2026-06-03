@@ -153,7 +153,7 @@ Preserve these unless the task explicitly changes them.
   validation before browser launch creates one sanitized durable
   `launch_blocked` attention item visible on Overview. Manual Validate alone
   does not create attention.
-- Running a graph shows status in the page header and reflects graph progress through canvas node state.
+- Running a graph shows status in the page header, displays a live run navigator with the current or failed node plus a bounded recent execution trail, and reflects graph progress through canvas node state. Follow current can automatically select and center the current node, while Focus current/failed node performs that selection on demand.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector drawer mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.

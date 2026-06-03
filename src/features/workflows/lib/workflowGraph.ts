@@ -656,7 +656,7 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
     .join(" ");
 }
 
-function graphCanvasNodeKindLabel(node: GraphNode) {
+export function graphCanvasNodeKindLabel(node: GraphNode) {
   if (node.node_type !== "action") return graphNodeLabel(node.node_type);
 
   const actionConfig = actionConfigOrNull(node.config);
