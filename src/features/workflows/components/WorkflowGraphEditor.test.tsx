@@ -62,10 +62,8 @@ describe("Workflow graph editor integration", () => {
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
-  async function confirmLaunchRun() {
+  async function launchRun() {
     await userEvent.click(screen.getByRole("button", { name: "Launch Run" }));
-    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
   async function openWorkflowDetails() {
@@ -1404,7 +1402,7 @@ describe("Workflow graph editor integration", () => {
     expect(within(editor).queryByRole("region", { name: "Output inspector" }))
       .not.toBeInTheDocument();
 
-    await confirmLaunchRun();
+    await launchRun();
 
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith(

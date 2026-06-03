@@ -67,10 +67,8 @@ describe("App settings and graph autosave", () => {
     vi.spyOn(Date, "now").mockReturnValue(42);
   });
 
-  async function confirmLaunchRun(scope: HTMLElement = document.body) {
+  async function launchRun(scope: HTMLElement = document.body) {
     await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
-    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
   async function openWorkflows() {
@@ -695,7 +693,7 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByText("Autosave failed")).toBeInTheDocument();
 
     const header = screen.getByRole("region", { name: "Workflow detail header" });
-    await confirmLaunchRun(header);
+    await launchRun(header);
 
     await waitFor(() => {
       expect(saveGraph).toHaveBeenCalled();

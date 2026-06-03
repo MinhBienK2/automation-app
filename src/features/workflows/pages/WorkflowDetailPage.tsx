@@ -9,14 +9,6 @@ import type {
 } from "../../../types/workflow";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button } from "../../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../../components/ui/dialog";
 import { IconButton } from "../../../components/ui/icon-button";
 import { buildRunIssues } from "../../../lib/workflowUi";
 import { RunIssuePanel } from "../components/RunIssuePanel";
@@ -36,8 +28,6 @@ type WorkflowDetailPageProps = {
   graphIssues: GraphValidationIssue[];
   graphIssuesNeedRecheck: boolean;
   defaultEdgeDelay?: GraphEdgeDelay | null;
-  workflowIdentityLabel?: string | null;
-  workflowSessionLabel?: string | null;
   onBack: () => void;
   onOpenWorkflowSettings: () => void;
   onStopRun: () => void;
@@ -62,8 +52,6 @@ export function WorkflowDetailPage({
   graphIssues,
   graphIssuesNeedRecheck,
   defaultEdgeDelay,
-  workflowIdentityLabel,
-  workflowSessionLabel,
   onBack,
   onOpenWorkflowSettings,
   onStopRun,
@@ -79,7 +67,6 @@ export function WorkflowDetailPage({
 }: WorkflowDetailPageProps) {
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
-  const [launchRunOpen, setLaunchRunOpen] = useState(false);
   const runIssues = useMemo(
     () =>
       buildRunIssues({
@@ -105,11 +92,6 @@ export function WorkflowDetailPage({
       nodeId: null,
       edgeId,
     });
-  };
-  const requestLaunchRun = () => setLaunchRunOpen(true);
-  const confirmLaunchRun = () => {
-    setLaunchRunOpen(false);
-    onRunGraph();
   };
   return (
     <section className="app-screen workflow-detail-screen">
@@ -173,7 +155,7 @@ export function WorkflowDetailPage({
               className="workflow-command-primary"
               size="sm"
               type="button"
-              onClick={requestLaunchRun}
+              onClick={onRunGraph}
               disabled={isRunning}
             >
               Launch Run
@@ -197,7 +179,7 @@ export function WorkflowDetailPage({
         issues={runIssues}
         issuesNeedRecheck={graphIssuesNeedRecheck}
         totalBlockingIssues={totalBlockingIssues}
-        onRunAgain={requestLaunchRun}
+        onRunAgain={onRunGraph}
         onSaveAgain={onSaveGraph}
         onSelectEdge={requestEdgeSelection}
         onSelectNode={requestNodeSelection}
@@ -212,66 +194,13 @@ export function WorkflowDetailPage({
           selectionRequest={selectionRequest}
           defaultEdgeDelay={defaultEdgeDelay}
           onChange={onGraphChange}
-          onRunGraph={requestLaunchRun}
+          onRunGraph={onRunGraph}
           onSelectedNodeChange={onSelectedGraphNodeChange}
           onSaveGraph={onSaveGraph}
           onValidateGraph={onValidateGraph}
         />
       ) : null}
 
-      <Dialog open={launchRunOpen} onOpenChange={setLaunchRunOpen}>
-        <DialogContent className="launch-run-dialog">
-          <DialogHeader className="modal-header">
-            <div>
-              <p className="eyebrow">Graph Builder</p>
-              <DialogTitle>Launch Run</DialogTitle>
-              <DialogDescription>
-                Confirm a full workflow run before the existing save, settings,
-                validation, and browser launch pipeline starts.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="launch-run-summary" aria-label="Launch run summary">
-            <dl>
-              <div>
-                <dt>Workflow</dt>
-                <dd>{detail.workflow.name}</dd>
-              </div>
-              <div>
-                <dt>Graph save state</dt>
-                <dd>{graphSaveStatus}</dd>
-              </div>
-              <div>
-                <dt>Browser identity</dt>
-                <dd>{workflowIdentityLabel || "Unavailable"}</dd>
-              </div>
-              <div>
-                <dt>Session reuse</dt>
-                <dd>{workflowSessionLabel || "Unavailable"}</dd>
-              </div>
-            </dl>
-            {hasBlockingIssues ? (
-              <p className="field-warning">
-                Current validation has {totalBlockingIssues} blocking issue
-                {totalBlockingIssues === 1 ? "" : "s"}; launch will still use
-                the existing validation gate before browser startup.
-              </p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setLaunchRunOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="button" onClick={confirmLaunchRun} disabled={isRunning}>
-              Launch Run
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </section>
   );
 }

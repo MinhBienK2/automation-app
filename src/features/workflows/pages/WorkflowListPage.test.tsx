@@ -29,10 +29,8 @@ describe("Workflow list integration", () => {
     resetWorkflowBridge();
   });
 
-  async function confirmLaunchRun(scope: HTMLElement = document.body) {
+  async function launchRun(scope: HTMLElement = document.body) {
     await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
-    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
   async function openWorkflows() {
@@ -846,7 +844,7 @@ describe("Workflow list integration", () => {
     const controlsRow = within(header).getByRole("group", {
       name: "Workflow controls row",
     });
-    await confirmLaunchRun(controlsRow);
+    await launchRun(controlsRow);
 
     expect(await screen.findByText("Failed at step 1: XPath not found"))
       .toBeInTheDocument();

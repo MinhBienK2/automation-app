@@ -144,7 +144,7 @@ Preserve these unless the task explicitly changes them.
   bounded horizontal scrolling.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
-- Workflow detail full graph execution is exposed as `Launch Run` and opens a confirmation dialog before invoking the existing save/settings/validation/run pipeline. `Run from selected` remains the direct retained-session debugging command.
+- Workflow detail full graph execution is exposed as `Launch Run` and invokes the existing save/settings/validation/run pipeline directly. `Run from selected` remains the direct retained-session debugging command.
 - Workflow detail opens the graph canvas with no selected node or link so the
   canvas can use the full workspace width. Selecting a node, link, or multi-item
   selection opens the graph inspector as a right-side drawer over the canvas;

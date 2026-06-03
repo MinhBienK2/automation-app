@@ -18,10 +18,8 @@ describe("Workflow detail integration", () => {
     resetWorkflowBridge();
   });
 
-  async function confirmLaunchRun(scope: HTMLElement = document.body) {
+  async function launchRun(scope: HTMLElement = document.body) {
     await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
-    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Launch Run" }));
   }
 
   async function openWorkflows() {
@@ -119,7 +117,7 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByText("Step Detail")).not.toBeInTheDocument();
   });
 
-  test("confirms full graph launch before running", async () => {
+  test("launches the full graph immediately without a confirmation dialog", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([sleepStep]),
       save_workflow_graph: undefined,
@@ -131,24 +129,12 @@ describe("Workflow detail integration", () => {
     await openWorkflowDetails();
     await userEvent.click(await screen.findByRole("button", { name: "Launch Run" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Launch Run" });
-    expect(within(dialog).getByText("Login flow")).toBeInTheDocument();
-    expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
-      workflowId: "workflow-1",
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow", {
+        workflowId: "workflow-1",
+      });
     });
-
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
-      workflowId: "workflow-1",
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "Launch Run" }));
-    const reopenedDialog = await screen.findByRole("dialog", { name: "Launch Run" });
-    await userEvent.click(within(reopenedDialog).getByRole("button", { name: "Launch Run" }));
-
-    expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow", {
-      workflowId: "workflow-1",
-    });
+    expect(screen.queryByRole("dialog", { name: "Launch Run" })).not.toBeInTheDocument();
   });
 
   test("runs from the selected node when a retained persistent session is available", async () => {
@@ -635,7 +621,7 @@ describe("Workflow detail integration", () => {
     const controlsRow = within(header).getByRole("group", {
       name: "Workflow controls row",
     });
-    await confirmLaunchRun(controlsRow);
+    await launchRun(controlsRow);
 
     expect(within(controlsRow).getByRole("button", { name: "Launch Run" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Test to Here" }))
@@ -756,7 +742,7 @@ describe("Workflow detail integration", () => {
     const controlsRow = within(header).getByRole("group", {
       name: "Workflow controls row",
     });
-    await confirmLaunchRun(controlsRow);
+    await launchRun(controlsRow);
 
     const panel = await screen.findByRole("region", { name: "Run issues" });
     expect(within(panel).getByText("Run failed at step 1: Navigate")).toBeInTheDocument();
