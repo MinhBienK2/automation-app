@@ -108,6 +108,8 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByLabelText("Workflow name")).not.toBeInTheDocument();
     expect(within(controlsRow).getByRole("button", { name: "Launch Run" }))
       .toHaveAttribute("data-slot", "button");
+    expect(within(controlsRow).queryByRole("button", { name: "Record Replacement" }))
+      .not.toBeInTheDocument();
     const editor = screen.getByRole("region", { name: "Visual Graph" });
     expect(editor).toBeInTheDocument();
     expect(within(editor).queryByRole("heading", { name: "Visual Graph" }))

@@ -928,29 +928,6 @@ function App() {
     }
   }
 
-  async function startWorkflowReplacementRecording() {
-    if (!detail) return;
-    setAppError("");
-    setRecordingDraft(null);
-    setRecordingWorkflowName(detail.workflow.name);
-    setRecordingBusy(true);
-
-    try {
-      const settingsSaved = await persistDirtyWorkflowSettings();
-      if (!settingsSaved) return;
-      const session = await startRecordingSession({
-        mode: "replace_current_graph",
-        workflow_id: detail.workflow.id,
-        workflow_name: detail.workflow.name,
-      });
-      setRecordingSession(session);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    } finally {
-      setRecordingBusy(false);
-    }
-  }
-
   async function stopWorkflowRecording() {
     if (!recordingSession) return;
     setAppError("");
@@ -1887,7 +1864,6 @@ function App() {
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
             onRunGraphFromSelected={runGraphFromSelectedNode}
-            onRecordReplacement={startWorkflowReplacementRecording}
             onSelectedGraphNodeChange={setSelectedGraphNodeId}
             showRunGraphFromSelected={runFromSelectedAvailability.visible ?? true}
             canRunGraphFromSelected={runFromSelectedAvailability.enabled}

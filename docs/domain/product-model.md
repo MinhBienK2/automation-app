@@ -89,11 +89,10 @@ Users can:
   page-side fallback events before draft generation. Draft generation creates a
   validated review-only v2 workflow graph with deterministic row-wrapped layout
   and fixed edge delays for recorded inter-step pacing without persisting a
-  workflow or replacing an existing saved graph. The workflow list exposes Record Workflow
-  for creating a new workflow from a recording, while the workflow detail header
-  exposes Record Replacement for replacing that workflow's graph; replacement
-  recording is rejected while the target workflow, browser profile, or batch
-  runner is active. The review dialog lets operators edit the workflow name,
+  workflow or replacing an existing saved graph. The workflow list exposes
+  Record Workflow for creating a new workflow from a recording. The workflow
+  detail header does not expose a Record Replacement action. The review dialog
+  lets operators edit the workflow name,
   step labels, step inclusion, and supported captured values before
   `saveRecordingDraft` creates a normal workflow or explicitly replaces the
   linked graph. Draft save reconciles those edits against the backend-held draft

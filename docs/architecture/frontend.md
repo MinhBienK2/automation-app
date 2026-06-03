@@ -81,14 +81,14 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   evidence context.
 - Workflow list direct Run, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while run snapshot polling continues. Active row status, row Run disabling, and row Stop are scoped to that workflow's run id. Duplicate calls `duplicateWorkflow` so local copies preserve the saved graph and non-storage settings while receiving a fresh browser identity/profile/fingerprint. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
 - Browser recorder UI orchestration. The workflow list starts a backend-owned
-  new-workflow recorder session, and the workflow detail header starts a
-  `replace_current_graph` recorder session for explicit graph replacement. The
-  review dialog stops the session, loads a generated draft, labels the save
-  action as Save Workflow or Replace Graph according to draft mode, and lets the
-  renderer edit reviewed step labels, inclusion flags, and supported action
-  values including clipboard text before calling `saveRecordingDraft`. Backend-held step timing is not
-  editable in the renderer; saved recording graphs use it to create fixed
-  inter-step edge delays and row-wrapped node positions for long recordings.
+  new-workflow recorder session. The workflow detail header does not expose a
+  Record Replacement entry point. The review dialog stops the session, loads a
+  generated draft, labels the save action as Save Workflow or Replace Graph
+  according to draft mode, and lets the renderer edit reviewed step labels,
+  inclusion flags, and supported action values including clipboard text before
+  calling `saveRecordingDraft`. Backend-held step timing is not editable in the
+  renderer; saved recording graphs use it to create fixed inter-step edge
+  delays and row-wrapped node positions for long recordings.
 - Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Runs owns the cross-workflow session monitor. It lists run snapshots, shows source/status/current step/error context, calls `stopRun(runId)` for selected active runs, and can render one bounded persisted-run detail loaded from an Overview navigation target.
