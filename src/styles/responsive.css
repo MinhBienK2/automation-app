@@ -106,6 +106,7 @@
   .page-detail-header .run-actions,
   .page-detail-header .run-actions-with-stop {
     display: flex;
+    flex-wrap: wrap;
     width: 100%;
     max-width: none;
   }

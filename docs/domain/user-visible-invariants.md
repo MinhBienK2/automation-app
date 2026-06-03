@@ -145,6 +145,7 @@ Preserve these unless the task explicitly changes them.
 - Command errors are shown as readable messages.
 - Workflow detail shows graph save state such as saved, unsaved changes, saving, autosave failed, or autosave off without raw workflow `updated_at` metadata in the detail controls row.
 - Workflow detail full graph execution is exposed as `Launch Run` and invokes the existing save/settings/validation/run pipeline directly. `Run from selected` remains the direct retained-session debugging command.
+- Workflow detail header command actions stay in a single row at desktop widths; compact-width layouts may wrap them to avoid horizontal overflow.
 - Workflow Settings Graph defaults Live Run on and Follow current off. Disabling Live Run hides the workflow detail live run navigator; enabling Follow current sets the default auto-focus behavior for the navigator.
 - Workflow detail opens the graph canvas with no selected node or link so the
   canvas can use the full workspace width. Selecting a node, link, or multi-item

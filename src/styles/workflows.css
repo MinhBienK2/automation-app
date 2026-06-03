@@ -138,12 +138,12 @@
 
 .page-detail-header .run-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
   width: auto;
-  max-width: 360px;
+  max-width: none;
 }
 
 .page-detail-header .run-actions-with-stop {

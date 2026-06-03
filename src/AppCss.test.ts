@@ -154,6 +154,14 @@ describe("App CSS", () => {
     expect(inspectorDrawer).toContain("animation: graph-inspector-slide-in");
   });
 
+  test("keeps workflow detail command actions on one desktop row", () => {
+    const runActions = cssRule(".page-detail-header .run-actions");
+
+    expect(runActions).toContain("display: flex");
+    expect(runActions).toContain("flex-wrap: nowrap");
+    expect(runActions).toContain("max-width: none");
+  });
+
   test("keeps run error surfaces dense and text-contained", () => {
     const runActions = cssRule(".page-detail-header .run-actions");
     const issueSummary = cssRule(".run-issue-summary-text");
