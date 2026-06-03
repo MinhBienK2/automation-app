@@ -13,7 +13,6 @@ import {
 import type { EdgeProps, NodeProps } from "@xyflow/react";
 import type { GraphNodeType, GraphPort } from "../../../types/workflow";
 import {
-  graphNodeLabel,
   type WorkflowFlowEdge,
   type WorkflowFlowNode,
   type WorkflowFlowNodeStatus,
@@ -68,7 +67,9 @@ export function WorkflowGraphNode({
         }}
       >
         <span>{data.label}</span>
-        <small>{graphNodeLabel(data.nodeType)}</small>
+        <small>
+          {[data.kindLabel, data.metaLabel].filter(Boolean).join(" · ")}
+        </small>
       </button>
       <div aria-hidden="true" className="graph-node-drag-surface" />
 

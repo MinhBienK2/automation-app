@@ -61,6 +61,47 @@ describe("workflow graph helpers", () => {
     ]);
   });
 
+  test("keeps custom node names separate from canvas kind and meta labels", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      viewport: { x: 0, y: 0, zoom: 1 },
+      nodes: [
+        {
+          ...createDefaultGraphNode("action", { x: 0, y: 0 }),
+          id: "login-wait",
+          label: "Login wait",
+          config: {
+            type: "wait",
+            config: { condition: "duration", duration_ms: 1000 },
+          },
+        },
+        {
+          ...createDefaultGraphNode("if", { x: 200, y: 0 }),
+          id: "login-check",
+          label: "Check login state",
+        },
+      ],
+      edges: [],
+    };
+
+    const flow = toReactFlowGraph(graph);
+
+    expect(flow.nodes.find((node) => node.id === "login-wait")?.data).toEqual(
+      expect.objectContaining({
+        label: "Login wait",
+        kindLabel: "Wait",
+        metaLabel: "1s",
+      }),
+    );
+    expect(flow.nodes.find((node) => node.id === "login-check")?.data).toEqual(
+      expect.objectContaining({
+        label: "Check login state",
+        kindLabel: "If",
+        metaLabel: null,
+      }),
+    );
+  });
+
   test("creates default nodes with stable ports", () => {
     const ifNode = createDefaultGraphNode("if", { x: 10, y: 20 });
     const variablesNode = createDefaultGraphNode("set_variable", { x: 20, y: 30 });

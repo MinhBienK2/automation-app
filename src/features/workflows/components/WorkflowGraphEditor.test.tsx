@@ -299,6 +299,8 @@ describe("Workflow graph editor integration", () => {
       position: { x: 0, y: 0 },
       data: {
         label: id,
+        kindLabel: "Action",
+        metaLabel: null,
         nodeType: "action" as const,
         ports: nodePorts("action"),
         status: "idle" as const,
@@ -311,6 +313,8 @@ describe("Workflow graph editor integration", () => {
       position: { x: 0, y: 0 },
       data: {
         label: "Merge",
+        kindLabel: "Merge",
+        metaLabel: null,
         nodeType: "merge" as const,
         ports: nodePorts("merge"),
         status: "idle" as const,
@@ -462,7 +466,8 @@ describe("Workflow graph editor integration", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node internal-loop" }));
 
     expect(within(editor).getByText("Graph-internal action")).toBeInTheDocument();
-    expect(within(editor).getByText("While Loop")).toBeInTheDocument();
+    expect(within(editor).getByRole("heading", { name: "While Loop", level: 3 }))
+      .toBeInTheDocument();
     expect(within(editor).getByText(/Replace this action-node payload with a supported user action/))
       .toBeInTheDocument();
     expect(within(editor).getByText(/\"type\": \"while_loop\"/)).toBeInTheDocument();
@@ -714,6 +719,9 @@ describe("Workflow graph editor integration", () => {
     await userEvent.clear(within(editor).getByLabelText("Node name"));
     await userEvent.type(within(editor).getByLabelText("Node name"), "Login wait");
     expect(within(editor).getByRole("heading", { name: "Login wait" })).toBeInTheDocument();
+    expect(
+      within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }),
+    ).toHaveTextContent("Login waitWait · 1s");
 
     await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
     await userEvent.click(
@@ -723,6 +731,9 @@ describe("Workflow graph editor integration", () => {
     await userEvent.clear(within(editor).getByLabelText("Node name"));
     await userEvent.type(within(editor).getByLabelText("Node name"), "Check login state");
     expect(within(editor).getByRole("heading", { name: "Check login state" })).toBeInTheDocument();
+    expect(
+      within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }),
+    ).toHaveTextContent("Check login stateIf");
 
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 

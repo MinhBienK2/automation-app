@@ -1,4 +1,6 @@
 import type {
+  ActionConfig,
+  ActionType,
   GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
@@ -12,6 +14,7 @@ import type {
 export { defaultActionConfig } from "./workflowActionDefaults";
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
+import { actionLabels } from "../../../lib/workflowUi";
 import {
   classifyWorkflowGraphEdge,
   type WorkflowGraphEdgeKind,
@@ -23,6 +26,8 @@ export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed"
 
 export type WorkflowFlowNodeData = {
   label: string;
+  kindLabel: string;
+  metaLabel: string | null;
   nodeType: GraphNodeType;
   ports: GraphPort[];
   status: WorkflowFlowNodeStatus;
@@ -179,6 +184,8 @@ export function toReactFlowGraph(
       selected: state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id,
       data: {
         label: node.label,
+        kindLabel: graphCanvasNodeKindLabel(node),
+        metaLabel: graphCanvasNodeMetaLabel(node),
         nodeType: node.node_type,
         ports: node.ports,
         status: graphNodeStatus(node.id, state),
@@ -647,6 +654,119 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function graphCanvasNodeKindLabel(node: GraphNode) {
+  if (node.node_type !== "action") return graphNodeLabel(node.node_type);
+
+  const actionConfig = actionConfigOrNull(node.config);
+  return actionConfig ? actionLabels[actionConfig.type] : graphNodeLabel(node.node_type);
+}
+
+function graphCanvasNodeMetaLabel(node: GraphNode) {
+  if (node.node_type === "action") {
+    return actionMetaLabel(actionConfigOrNull(node.config));
+  }
+
+  const config = objectConfig(node.config);
+  switch (node.node_type) {
+    case "if":
+    case "while":
+    case "repeat_until":
+      return conditionMetaLabel(config.condition);
+    case "repeat_times":
+      return typeof config.times === "number" ? `${config.times}x` : null;
+    case "repeat_for_each":
+      return typeof config.array_variable === "string" && config.array_variable.trim()
+        ? `{{${config.array_variable.trim()}}}`
+        : null;
+    case "router":
+      return Array.isArray(config.cases) ? `${config.cases.length} cases` : null;
+    case "random_choice":
+      return Array.isArray(config.choices) ? `${config.choices.length} choices` : null;
+    case "set_variable":
+      return Array.isArray(config.variables) ? `${config.variables.length} vars` : null;
+    default:
+      return null;
+  }
+}
+
+function actionMetaLabel(action: ActionConfig | null) {
+  if (!action) return null;
+  const config = objectConfig(action.config);
+
+  switch (action.type) {
+    case "wait":
+      return typeof config.duration_ms === "number"
+        ? compactDurationLabel(config.duration_ms)
+        : null;
+    case "random_wait":
+      return typeof config.min_ms === "number" && typeof config.max_ms === "number"
+        ? `${compactDurationLabel(config.min_ms)}-${compactDurationLabel(config.max_ms)}`
+        : null;
+    case "navigate":
+    case "open_new_tab":
+      return typeof config.url === "string" && config.url.trim()
+        ? compactText(config.url.trim(), 36)
+        : null;
+    case "press_key":
+      return typeof config.key === "string" && config.key.trim()
+        ? compactText(config.key.trim(), 24)
+        : null;
+    case "hotkey":
+      return Array.isArray(config.keys)
+        ? compactText(config.keys.filter((key) => typeof key === "string").join("+"), 28)
+        : null;
+    default:
+      return targetMetaLabel(config.target);
+  }
+}
+
+function actionConfigOrNull(config: unknown): ActionConfig | null {
+  if (!isRecord(config)) return null;
+  if (typeof config.type !== "string") return null;
+  if (!(config.type in actionLabels)) return null;
+  return config as ActionConfig & { type: ActionType };
+}
+
+function conditionMetaLabel(condition: unknown) {
+  if (!isRecord(condition)) return null;
+  const name = typeof condition.name === "string" ? condition.name.trim() : "";
+  const value = typeof condition.value === "string" ? condition.value.trim() : "";
+  if (!value) return null;
+
+  return compactText(`${name || "output"} = ${value}`, 34);
+}
+
+function targetMetaLabel(target: unknown) {
+  if (!isRecord(target) || !Array.isArray(target.locators)) return null;
+  const locator = target.locators.find(isRecord);
+  if (!locator) return null;
+
+  const value = typeof locator.value === "string" ? locator.value.trim() : "";
+  if (value) return compactText(value, 36);
+  const role = typeof locator.role === "string" ? locator.role.trim() : "";
+  return role ? compactText(role, 36) : null;
+}
+
+function compactDurationLabel(durationMs: number) {
+  if (durationMs >= 1000) {
+    return `${Number((durationMs / 1000).toFixed(1))}s`;
+  }
+
+  return `${durationMs}ms`;
+}
+
+function compactText(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+}
+
+function objectConfig(config: unknown): Record<string, unknown> {
+  return isRecord(config) ? config : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
