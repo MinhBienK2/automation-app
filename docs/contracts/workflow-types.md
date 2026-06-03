@@ -209,12 +209,14 @@ bytes, normalized content hash, expected family coverage, missing families, and
 the workflow identities sharing each directory.
 
 `WorkflowDeleteOptions` serializes as `{ deleteBrowserProfile?: boolean }`.
-Deletion keeps profile data by default. Deletion is rejected while the workflow
-has an active run, while its persistent profile is owned by an active run, or
-while a retained session still owns the workflow/profile. When
-`deleteBrowserProfile` is true, the backend removes only the deleting workflow's
-private profile directory; shared or active-session profile directories are
-retained.
+At the command boundary, omitting `deleteBrowserProfile` keeps profile data.
+The workflow list confirmation checks Delete private browser profile data by
+default and sends `deleteBrowserProfile: true` unless the operator unchecks it.
+Deletion is rejected while the workflow has an active run, while its persistent
+profile is owned by an active run, or while a retained session still owns the
+workflow/profile. When `deleteBrowserProfile` is true, the backend removes only
+the deleting workflow's private profile directory; shared or active-session
+profile directories are retained.
 
 `resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, humanization, and `fingerprint_fonts_dir` are preserved, `run_policy.run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
 

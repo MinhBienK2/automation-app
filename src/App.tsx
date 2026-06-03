@@ -865,7 +865,7 @@ function App() {
 
   function deleteWorkflow(id: string) {
     setAppError("");
-    setDeleteBrowserProfileData(false);
+    setDeleteBrowserProfileData(true);
     setDeleteWorkflowCandidate(
       workflows.find((workflow) => workflow.id === id) ?? null,
     );
@@ -2079,8 +2079,8 @@ function App() {
                 onChange={setDeleteBrowserProfileData}
               />
               <p className="muted">
-                Keep it when you want retained login state available for manual
-                recovery or a later profile cleanup.
+                Uncheck it when you want retained login state available for
+                manual recovery or a later profile cleanup.
               </p>
             </div>
             {appError ? <p className="field-error">{appError}</p> : null}
