@@ -119,6 +119,20 @@ export function WorkflowGraphInspector({
               ?
             </Button>
           </div>
+          {selectedNode.node_type !== "start" ? (
+            <label className="field">
+              <span>Node name</span>
+              <Input
+                value={selectedNode.label}
+                onChange={(event) =>
+                  onUpdateNode({
+                    ...selectedNode,
+                    label: event.currentTarget.value,
+                  })
+                }
+              />
+            </label>
+          ) : null}
           <ConnectionSummary graph={graph} node={selectedNode} />
           <PortGuidance graph={graph} node={selectedNode} />
           {issueGroups.get(selectedNode.id)?.length ? (

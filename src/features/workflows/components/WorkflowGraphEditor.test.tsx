@@ -692,6 +692,65 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("renames action and logic nodes from the graph inspector", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="wait"]') as HTMLElement,
+    );
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Graph canvas node node-action-42" }),
+    );
+    await userEvent.clear(within(editor).getByLabelText("Node name"));
+    await userEvent.type(within(editor).getByLabelText("Node name"), "Login wait");
+    expect(within(editor).getByRole("heading", { name: "Login wait" })).toBeInTheDocument();
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
+    await userEvent.clear(within(editor).getByLabelText("Node name"));
+    await userEvent.type(within(editor).getByLabelText("Node name"), "Check login state");
+    expect(within(editor).getByRole("heading", { name: "Check login state" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      const saveCall = workflowCommandCallMock.mock.calls.find(
+        ([command]) => command === "save_workflow_graph",
+      );
+      expect(saveCall?.[1]).toEqual(
+        expect.objectContaining({
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: "node-action-42",
+                node_type: "action",
+                label: "Login wait",
+              }),
+              expect.objectContaining({
+                id: "node-if-42",
+                node_type: "if",
+                label: "Check login state",
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+  });
+
   test("edits action node config through the graph inspector", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),
