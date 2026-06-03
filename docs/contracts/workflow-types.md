@@ -28,10 +28,6 @@ Frontend and backend must agree on:
 - `WorkflowRunSnapshot`: run-id scoped status wrapper with `run_id`, `workflow_id`, `workflow_name`, `source` (`manual` or `schedule`), `started_at`, and nested `state: RunState`, plus mirrored top-level run-state fields for compatibility.
 - `MissionControlTarget`: renderer-only typed navigation target for Overview,
   Workflow, Run, Evidence, Identity Lab, Schedule, and graph issue focus.
-- `CommandSearchResult`: sanitized shell search row with a display type, label,
-  optional context, and `MissionControlTarget`. Search rows come only from
-  bounded approved read models and do not carry raw outputs or filesystem
-  paths.
 - `OperationsOverviewRequest`: local-day UTC range capped at 48 hours plus
   optional bounded list limits and attention filters for the Overview read
   model.

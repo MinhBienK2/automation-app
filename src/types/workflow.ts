@@ -1057,14 +1057,6 @@ export type MissionControlTarget =
       evidence_id?: string | null;
     };
 
-export type CommandSearchResult = {
-  id: string;
-  type: "Workflow" | "Run" | "Evidence" | "Schedule" | "Identity";
-  label: string;
-  context?: string | null;
-  target: MissionControlTarget;
-};
-
 export type OperationsOverviewRequest = {
   day_start_utc: string;
   day_end_utc: string;

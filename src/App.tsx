@@ -83,7 +83,6 @@ import {
 } from "./features/workflows/components/WorkflowPackageOptions";
 import type {
   CloakBrowserDiagnostics,
-  CommandSearchResult,
   GraphValidationIssue,
   GraphNodeType,
   RecordingSession,
@@ -337,17 +336,6 @@ function operationsTargetToMissionTarget(
   return { type: "evidence", evidence_id: target.evidence_id };
 }
 
-function includesCommandQuery(value: string | null | undefined, query: string) {
-  return value?.toLowerCase().includes(query) ?? false;
-}
-
-function commandText(value: string | null | undefined, fallback: string) {
-  const trimmed = value?.trim();
-  if (!trimmed) return fallback;
-  if (/password|secret|token|cookie|authorization/i.test(trimmed)) return fallback;
-  return trimmed.length > 96 ? `${trimmed.slice(0, 93)}...` : trimmed;
-}
-
 function formatMaintenanceBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
@@ -372,8 +360,6 @@ function todayOperationsRange() {
 function App() {
   const [screen, setScreen] = useState<AppScreen>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [commandSearchQuery, setCommandSearchQuery] = useState("");
-  const [commandSearchResults, setCommandSearchResults] = useState<CommandSearchResult[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
@@ -482,146 +468,6 @@ function App() {
     void refreshRunStates();
     void loadOperationsOverview();
   }, []);
-
-  useEffect(() => {
-    const query = commandSearchQuery.trim();
-    if (query.length < 2) {
-      setCommandSearchResults([]);
-      return;
-    }
-
-    let cancelled = false;
-    const queryLower = query.toLowerCase();
-
-    void (async () => {
-      const localResults: CommandSearchResult[] = [];
-
-      workflows
-        .filter((workflow) => includesCommandQuery(workflow.name, queryLower))
-        .slice(0, 5)
-        .forEach((workflow) => {
-          localResults.push({
-            id: `workflow:${workflow.id}`,
-            type: "Workflow",
-            label: commandText(workflow.name, "Workflow"),
-            context: `${workflow.step_count} steps`,
-            target: { type: "workflow", workflow_id: workflow.id },
-          });
-        });
-
-      runSnapshots
-        .filter((run) =>
-          includesCommandQuery(run.workflow_name, queryLower) ||
-          includesCommandQuery(run.run_id, queryLower),
-        )
-        .slice(0, 5)
-        .forEach((run) => {
-          localResults.push({
-            id: `run:${run.run_id}`,
-            type: "Run",
-            label: commandText(run.workflow_name, "Run"),
-            context: `${run.state.status} ${run.run_id}`,
-            target: { type: "run", run_id: run.run_id },
-          });
-        });
-
-      schedules
-        .filter((schedule) =>
-          includesCommandQuery(schedule.name, queryLower) ||
-          includesCommandQuery(schedule.workflow_name, queryLower),
-        )
-        .slice(0, 5)
-        .forEach((schedule) => {
-          localResults.push({
-            id: `schedule:${schedule.id}`,
-            type: "Schedule",
-            label: commandText(schedule.name, "Schedule"),
-            context: commandText(schedule.workflow_name, "Workflow"),
-            target: { type: "schedule", schedule_id: schedule.id },
-          });
-        });
-
-      const [evidenceResult, identityResult] = await Promise.allSettled([
-        listEvidenceItems({ search: query, limit: 5 }),
-        getIdentityLabOverview({ search: query, limits: { identities: 5 } }),
-      ]);
-      if (cancelled) return;
-
-      const remoteResults: CommandSearchResult[] = [];
-      if (evidenceResult.status === "fulfilled") {
-        evidenceResult.value.items.slice(0, 5).forEach((item) => {
-          remoteResults.push({
-            id: `evidence:${item.evidence_id}`,
-            type: "Evidence",
-            label: commandText(item.label, "Evidence item"),
-            context: commandText(item.workflow?.name ?? item.identity?.display_name, "Run evidence"),
-            target: { type: "evidence", evidence_id: item.evidence_id },
-          });
-          if (item.identity?.id) {
-            const historicalIdentityResultId = [
-              "identity",
-              "historical",
-              item.workflow?.id ?? "unknown",
-              item.identity.id,
-              item.run.id,
-              item.evidence_id,
-            ].join(":");
-            const historicalIdentityContext = item.workflow?.name
-              ? `Historical evidence / ${item.workflow.name}`
-              : `Historical evidence / ${item.run.id}`;
-            remoteResults.push({
-              id: historicalIdentityResultId,
-              type: "Identity",
-              label: commandText(item.identity.display_name ?? item.identity.id, "Identity"),
-              context: commandText(historicalIdentityContext, "Historical evidence"),
-              target: {
-                type: "identity",
-                target: {
-                  type: "historical",
-                  identity_id: item.identity.id,
-                  workflow_id: item.workflow?.id ?? null,
-                  evidence_id: item.evidence_id,
-                  run_id: item.run.id,
-                },
-              },
-            });
-          }
-        });
-      }
-
-      if (identityResult.status === "fulfilled") {
-        identityResult.value.items.slice(0, 5).forEach((item) => {
-          remoteResults.push({
-            id: `identity:${item.workflow_ref.id}:${item.identity_ref.id}`,
-            type: "Identity",
-            label: commandText(
-              item.identity_ref.display_name ?? item.identity_ref.id,
-              "Identity",
-            ),
-            context: commandText(item.workflow_ref.name, "Workflow"),
-            target: {
-              type: "identity",
-              target: {
-                type: "managed",
-                workflow_id: item.workflow_ref.id,
-                identity_id: item.identity_ref.id,
-              },
-            },
-          });
-        });
-      }
-
-      const unique = new Map<string, CommandSearchResult>();
-      [...localResults, ...remoteResults].forEach((result) => {
-        if (!unique.has(result.id)) unique.set(result.id, result);
-      });
-      setCommandSearchResults([...unique.values()].slice(0, 8));
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [commandSearchQuery, workflows, runSnapshots, schedules]);
 
   useEffect(() => {
     if (!runSnapshots.some((snapshot) => snapshot.state.status === "running")) return;
@@ -1647,9 +1493,6 @@ function App() {
   }
 
   async function navigateToMissionControlTarget(target: MissionControlTarget) {
-    setCommandSearchQuery("");
-    setCommandSearchResults([]);
-
     if (target.type === "overview") {
       openOverview(target.focus ?? null);
       return;
@@ -1905,16 +1748,6 @@ function App() {
                 : "workflows"
       }
       sidebarCollapsed={sidebarCollapsed}
-      commandSearchQuery={commandSearchQuery}
-      commandSearchResults={commandSearchResults}
-      alertCount={operationsOverview?.metrics.attention_today ?? 0}
-      onCommandSearchQueryChange={setCommandSearchQuery}
-      onCommandSearchResultSelect={(result) => {
-        void navigateToMissionControlTarget(result.target);
-      }}
-      onOpenAlerts={() => {
-        void navigateToMissionControlTarget({ type: "overview", focus: "attention" });
-      }}
       onOpenOverview={() => openOverview()}
       onOpenEvidence={() => openEvidence({})}
       onOpenIdentities={() => openIdentities(null)}

@@ -23,10 +23,9 @@ Mission Control is an Electron desktop app for building and running browser auto
   evidence, matching run/evidence summaries, rotation history, sanitized
   diagnostics, and read-only historical identity references.
 - Mission Control navigation is a typed in-memory target contract across
-  Overview, Workflows, Runs, Evidence, Schedules, Identities, graph issues, the
-  shell command search, and the Alerts shortcut. Targets carry ids and optional
-  focus metadata, while stale durable targets produce visible unavailable
-  states instead of falling back silently.
+  Overview, Workflows, Runs, Evidence, Schedules, Identities, and graph issues.
+  Targets carry ids and optional focus metadata, while stale durable targets
+  produce visible unavailable states instead of falling back silently.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
 - Outputs are named values captured during execution, such as extracted text, screenshot paths, download paths, or runtime variables. Variable actions can write typed scalar values, arrays, and flattened object fields into this output store for later template interpolation and loop inputs.
 - A workflow graph is a versioned visual authoring model with nodes, edges, ports, viewport metadata, and action config payloads.
@@ -111,11 +110,6 @@ Users can:
   active retained session without deleting profile data, reset a guarded
   workflow identity through the existing backend rotation command, and navigate
   to related Evidence, Runs, or Workflow Settings.
-- Search from the shell command bar across workflow summaries, active/session
-  run snapshots, schedules, persisted evidence summaries, and Identity Lab
-  summaries, then open the matching workspace through typed navigation.
-- Use the shell Alerts shortcut to focus Overview's Attention Queue without
-  leaving a raw alert payload in the renderer.
 - Open Settings to inspect sanitized environment readiness, trigger a guarded
   CloakBrowser binary install/check, and clean up orphaned inactive browser
   profiles.

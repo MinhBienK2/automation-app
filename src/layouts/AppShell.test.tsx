@@ -66,5 +66,10 @@ describe("App shell", () => {
     expect(screen.getByRole("button", { name: "Identities" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Application content" }))
       .toHaveClass("app-content");
+    expect(screen.queryByRole("banner", { name: "Mission Control command bar" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Search Mission Control" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Alerts" })).not.toBeInTheDocument();
   });
 });

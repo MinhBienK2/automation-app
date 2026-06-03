@@ -64,18 +64,14 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   destinations.
 - The app shell owns a typed in-memory Mission Control navigation target
   router. Sidebar navigation, Overview cards, Evidence links, Identity links,
-  schedule history links, selected run details, command search results, and the
-  Alerts shortcut route through that contract instead of passing raw strings.
+  schedule history links, and selected run details route through that contract
+  instead of passing raw strings.
   Missing durable run or schedule targets render explicit stale-target states.
   Opening workflow detail also collapses the sidebar to the icon rail so the
   graph workspace starts with more horizontal room.
-- The app shell command bar searches only bounded approved read models:
-  workflow summaries, run snapshots, schedule summaries, evidence list items,
-  and Identity Lab summaries. It must not render raw run outputs, browser
-  storage, cookies, tokens, proxy credentials, local filesystem paths, or
-  arbitrary diagnostic payloads. Identity results derived from evidence route
-  to read-only historical identity context with workflow/run/evidence metadata.
-  Alerts focuses Overview's Attention Queue.
+- The app shell no longer renders a top command/search header or Alerts
+  shortcut. Cross-workspace movement stays in the sidebar and explicit in-page
+  links.
 - Evidence owns historical evidence browsing UI state. It calls
   `listEvidenceItems`, loads selected detail through `getEvidenceDetail`,
   requests screenshot previews only through `getEvidenceScreenshotPreview`,

@@ -81,6 +81,12 @@ describe("App CSS", () => {
     expect(css).not.toContain(".secondary-danger {");
   });
 
+  test("removes the shell command search header styles", () => {
+    expect(css).not.toContain(".shell-command-bar");
+    expect(css).not.toContain(".command-search");
+    expect(css).not.toContain(".shell-alert-button");
+  });
+
   test("exposes design tokens for shared UI primitives", () => {
     const root = cssRule(":root");
 

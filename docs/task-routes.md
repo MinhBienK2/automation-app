@@ -117,7 +117,7 @@ Update docs: product model, user-visible invariants, workflow lifecycle, executi
 
 ## Change Mission Control Cross-Workspace Navigation
 
-Use when changing sidebar order, shell command search, Alerts focus,
+Use when changing sidebar order, app-shell navigation surfaces,
 cross-workspace traceability links, stale navigation target states, compact
 desktop behavior, or app-level Settings diagnostics/maintenance.
 
@@ -138,7 +138,7 @@ desktop/compact visual check when layout changes.
 
 Update docs: product model, user-visible invariants, architecture overview,
 frontend architecture, workflow types, README smoke checklist, and this route
-when navigation/search/settings ownership or checks change.
+when navigation/settings ownership or checks change.
 
 ## Change Evidence Explorer
 

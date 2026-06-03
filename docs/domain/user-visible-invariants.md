@@ -19,14 +19,9 @@ Preserve these unless the task explicitly changes them.
   metadata, and upcoming schedules for the operator's local day.
 - Mission Control sidebar order is Overview, Workflows, Runs, Evidence,
   Schedules, Identities, Settings. Overview is the default first screen.
-- The shell command bar searches bounded workflow, run, schedule, evidence, and
-  identity read models only. Search results route through typed Mission Control
-  targets and must not expose raw outputs, cookies, tokens, proxy credentials,
-  profile contents, absolute local paths, or arbitrary diagnostic payloads.
-  Identity results derived from persisted evidence open read-only historical
-  context tied to the evidence run.
-- The shell Alerts button opens Overview and marks the Attention Queue as the
-  focused target.
+- The app shell does not render a top command/search header or Alerts shortcut.
+  Sidebar navigation and in-page links are the user-facing cross-workspace
+  navigation surfaces.
 - Evidence is a separate sidebar page between Runs and Schedules. It is the
   only broad historical evidence browser; Overview recent evidence opens
   Evidence focused on the selected evidence id, and Runs selected run details
