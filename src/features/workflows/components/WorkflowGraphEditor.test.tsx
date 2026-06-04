@@ -109,17 +109,16 @@ describe("Workflow graph editor integration", () => {
 
     await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node node-if-42" }));
     expect(within(editor).getByRole("heading", { name: "If" })).toBeInTheDocument();
-    expect(within(editor).getByRole("region", { name: "Node connections" })).toBeInTheDocument();
+    expect(within(editor).queryByRole("region", { name: "Node connections" }))
+      .not.toBeInTheDocument();
     expect(within(editor).queryByText("input: in")).not.toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Move Left" })).not.toBeInTheDocument();
     expect(within(editor).queryByRole("button", { name: "Move Right" })).not.toBeInTheDocument();
     expect(within(editor).getByLabelText("If True port")).toBeInTheDocument();
     expect(within(editor).getByLabelText("If False port")).toBeInTheDocument();
     expect(within(editor).getByLabelText("If Done port")).toBeInTheDocument();
-    expect(within(editor).getByText("True branch is optional; missing link will no-op."))
-      .toBeInTheDocument();
-    expect(within(editor).getByText("Done continuation is optional; workflow ends successfully here."))
-      .toBeInTheDocument();
+    expect(within(editor).queryByRole("region", { name: "Port guidance" }))
+      .not.toBeInTheDocument();
 
     await userEvent.click(within(editor).getByRole("button", { name: "Delete Node" }));
     expect(within(editor).queryByRole("button", { name: "Graph canvas node node-if-42" }))
@@ -865,6 +864,9 @@ describe("Workflow graph editor integration", () => {
 
     const help = await screen.findByRole("dialog", { name: "Wait Help" });
     expect(within(help).getByText("Action này làm gì")).toBeInTheDocument();
+    expect(within(help).getByText("Port và luồng chạy")).toBeInTheDocument();
+    expect(within(help).getByText("In")).toBeInTheDocument();
+    expect(within(help).getByText("Out")).toBeInTheDocument();
     expect(within(help).getByText("Cấu hình tối thiểu")).toBeInTheDocument();
     expect(within(help).getByText("Ví dụ workflow")).toBeInTheDocument();
     expect(within(help).getAllByText("Condition").length).toBeGreaterThan(0);

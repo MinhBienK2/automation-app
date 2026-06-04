@@ -10,6 +10,12 @@ export type StepHelpContent = {
     action: string;
     when: string;
   }>;
+  portSemantics?: Array<{
+    port: string;
+    kind: "input" | "continuation";
+    required: boolean;
+    description: string;
+  }>;
   fields: Array<{
     name: string;
     description: string;

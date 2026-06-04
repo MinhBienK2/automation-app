@@ -4,7 +4,6 @@ import type {
   ActionType,
   GraphNode,
   GraphNodeType,
-  WorkflowGraph,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import {
@@ -613,42 +612,6 @@ function GraphFieldReferenceGroups({
   );
 }
 
-type ConnectionSummaryProps = {
-  graph: WorkflowGraph;
-  node: GraphNode;
-};
-
-export function ConnectionSummary({ graph, node }: ConnectionSummaryProps) {
-  const incoming = graph.edges.filter((edge) => edge.target_node_id === node.id);
-  const outgoing = graph.edges.filter((edge) => edge.source_node_id === node.id);
-  const nodeLabels = new Map(graph.nodes.map((item) => [item.id, item.label]));
-
-  return (
-    <section className="graph-connection-summary" aria-label="Node connections">
-      <h3>Connections</h3>
-      {incoming.length ? (
-        incoming.map((edge) => (
-          <span key={edge.id}>
-            Incoming from {nodeLabels.get(edge.source_node_id) ?? edge.source_node_id}
-          </span>
-        ))
-      ) : (
-        <span>No incoming link</span>
-      )}
-      {outgoing.length ? (
-        outgoing.map((edge) => (
-          <span key={edge.id}>
-            {portLabel(node, edge.source_port)} to{" "}
-            {nodeLabels.get(edge.target_node_id) ?? edge.target_node_id}
-          </span>
-        ))
-      ) : (
-        <span>No outgoing link</span>
-      )}
-    </section>
-  );
-}
-
 type ActionNodePaletteProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -880,10 +843,4 @@ export function ActionNodePalette({
       </DialogContent>
     </Dialog>
   );
-}
-
-function portLabel(node: GraphNode, portId: string) {
-  const label = node.ports.find((port) => port.id === portId)?.label ?? portId;
-  if (label.toLowerCase() === "out") return "Next";
-  return label;
 }

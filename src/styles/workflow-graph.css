@@ -499,24 +499,9 @@
   color: #f4b740;
 }
 
-.graph-connection-summary,
-.graph-selected-edge,
-.graph-port-guidance {
+.graph-selected-edge {
   display: grid;
   gap: 6px;
-}
-
-.graph-connection-summary span,
-.graph-port-guidance p {
-  min-width: 0;
-  overflow: hidden;
-  padding: 5px 7px;
-  border: 1px solid #233240;
-  border-radius: 6px;
-  color: #9aaebd;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .graph-last-run-error {
@@ -576,20 +561,6 @@
   white-space: pre-wrap;
 }
 
-.graph-connection-summary {
-  padding: 8px;
-  border: 1px solid #233240;
-  border-radius: 8px;
-  background: #121212;
-}
-
-.graph-port-guidance {
-  padding: 8px;
-  border: 1px solid #233240;
-  border-radius: 8px;
-  background: #121212;
-}
-
 .graph-selected-edge {
   padding: 8px;
   border: 1px solid rgba(50, 211, 230, 0.48);
@@ -597,12 +568,6 @@
   background: #121212;
   color: #e7eef5;
   font-size: 12px;
-}
-
-.graph-connection-summary h3 {
-  color: #e7eef5;
-  font-size: 13px;
-  font-weight: 400;
 }
 
 .graph-config-fields {

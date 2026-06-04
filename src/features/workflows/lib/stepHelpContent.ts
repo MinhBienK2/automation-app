@@ -273,6 +273,8 @@ const baseStepHelpContent: Record<
       summary: "Click vào một element như button, link, checkbox giả lập, hoặc menu.",
       useWhen: ["Dùng để bấm nút Submit, mở dropdown, chọn tab, hoặc click link.", "Dùng Real click khi muốn giống hành vi người dùng nhất."],
       fields: [
+        { name: "Target source", description: "Use locator hiện field locator trực tiếp; Use Find Element ref chỉ dùng Target ref từ node Find Element trước đó." },
+        { name: "Target ref", description: "Tên output của Find Element, ví dụ current_like. Khi có Target ref, Click bỏ qua locator fields." },
         { name: "XPath", description: xpathField.vi },
         { name: "Mode", description: "Real click dùng chuột thật của browser; Force DOM click gọi click() trực tiếp khi element khó nhận chuột." },
         { name: "Click count", description: "Single click hoặc double click." },
@@ -285,14 +287,16 @@ const baseStepHelpContent: Record<
         { name: "Wait until", description: waitUntilField.vi },
         { name: "Timeout ms", description: timeoutField.vi },
       ],
-      examples: ["XPath: //*[@type='submit']", "Iframe XPath: //*[@id='frame'], XPath: //*[@id='buy']"],
-      commonMistakes: ["XPath trỏ vào text bên trong button thay vì button có thể click.", "Element bị che sẽ làm Real click thất bại; thử scroll hoặc kiểm tra overlay."],
+      examples: ["Target source: Use locator, XPath: //*[@type='submit']", "Target source: Use Find Element ref, Target ref: current_like"],
+      commonMistakes: ["XPath trỏ vào text bên trong button thay vì button có thể click.", "Đã chọn Target ref thì Target visibility/contains/index của locator không còn tác dụng."],
     },
     en: {
       title: "Click Help",
       summary: "Click an element such as a button, link, custom checkbox, or menu.",
       useWhen: ["Use to press Submit, open dropdowns, select tabs, or click links.", "Use Real click when you want browser-like user behavior."],
       fields: [
+        { name: "Target source", description: "Use locator shows direct locator fields; Use Find Element ref uses only Target ref from a previous Find Element node." },
+        { name: "Target ref", description: "Find Element output name, for example current_like. When Target ref is set, Click ignores locator fields." },
         { name: "XPath", description: xpathField.en },
         { name: "Mode", description: "Real click uses browser mouse events; Force DOM click calls click() directly when mouse interaction is difficult." },
         { name: "Click count", description: "Single click or double click." },
@@ -305,8 +309,8 @@ const baseStepHelpContent: Record<
         { name: "Wait until", description: waitUntilField.en },
         { name: "Timeout ms", description: timeoutField.en },
       ],
-      examples: ["XPath: //*[@type='submit']", "Iframe XPath: //*[@id='frame'], XPath: //*[@id='buy']"],
-      commonMistakes: ["XPath points to text inside a button instead of the clickable button.", "Covered elements can fail Real click; check overlays or scrolling."],
+      examples: ["Target source: Use locator, XPath: //*[@type='submit']", "Target source: Use Find Element ref, Target ref: current_like"],
+      commonMistakes: ["XPath points to text inside a button instead of the clickable button.", "When Target ref is selected, locator visibility/contains/index fields no longer apply."],
     },
   },
   find_element: {
@@ -780,10 +784,43 @@ function addLanguageDecisionGuidance(
     chooseInstead: decisionAlternatives(actionType, language),
     minimalConfig,
     advancedConfig: advancedConfig.length ? advancedConfig : undefined,
+    portSemantics: actionPortSemantics(language),
     workflowExamples: workflowExamples(actionType, language, content),
     outputs: outputGuidance(actionType, language),
     safetyNotes: safetyNotes(actionType, language),
   };
+}
+
+function actionPortSemantics(language: StepHelpLanguage): StepHelpContent["portSemantics"] {
+  return language === "vi"
+    ? [
+        {
+          port: "In",
+          kind: "input",
+          required: true,
+          description: "Nhận luồng chạy từ node trước đó. Nếu không có link vào, action này chỉ chạy khi nó là node đầu sau Start hoặc được chạy từ node được chọn.",
+        },
+        {
+          port: "Out",
+          kind: "continuation",
+          required: false,
+          description: "Tiếp tục sang node kế tiếp sau khi action thành công. Nếu không nối Out, nhánh hiện tại kết thúc thành công tại action này.",
+        },
+      ]
+    : [
+        {
+          port: "In",
+          kind: "input",
+          required: true,
+          description: "Receives execution from the previous node. Without an incoming link, this action runs only when it is the first node after Start or when execution starts from this selected node.",
+        },
+        {
+          port: "Out",
+          kind: "continuation",
+          required: false,
+          description: "Continues to the next node after the action succeeds. If Out is not connected, the current path ends successfully at this action.",
+        },
+      ];
 }
 
 function minimumFieldNames(fields: StepHelpContent["fields"]) {
@@ -885,7 +922,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "clear_input":
       return targetFields;
     case "click":
-      return ["Target ref", ...targetFields];
+      return ["Target source", "Target ref", ...targetFields];
     case "find_element":
       return [...targetFields, "Output name", "In viewport", "Rank"];
     case "scroll":

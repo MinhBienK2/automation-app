@@ -109,6 +109,25 @@ export function StepHelpModal({
               </HelpSection>
             ) : null}
 
+            {content.portSemantics?.length ? (
+              <HelpSection
+                defaultOpen
+                title={language === "vi" ? "Port và luồng chạy" : "Ports and flow"}
+              >
+                <div className="help-field-list">
+                  {content.portSemantics.map((port) => (
+                    <HelpLeafItem key={port.port} title={port.port}>
+                      <p>{port.description}</p>
+                      <ul className="help-field-details">
+                        <li>{port.kind}</li>
+                        <li>{port.required ? "required" : "optional"}</li>
+                      </ul>
+                    </HelpLeafItem>
+                  ))}
+                </div>
+              </HelpSection>
+            ) : null}
+
             <HelpSection
               defaultOpen
               title={language === "vi" ? "Cấu hình tối thiểu" : "Minimum setup"}

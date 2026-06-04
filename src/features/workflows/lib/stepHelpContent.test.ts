@@ -127,6 +127,19 @@ describe("step help content", () => {
     );
   });
 
+  test("action help includes action-node port semantics", () => {
+    for (const actionType of allActionOptions) {
+      expect(stepHelpContent[actionType].en.portSemantics, actionType).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ port: "In", kind: "input" }),
+          expect.objectContaining({ port: "Out", kind: "continuation" }),
+        ]),
+      );
+      expect(stepHelpContent[actionType].vi.portSemantics?.[0].description, actionType)
+        .toContain("trước");
+    }
+  });
+
   test("uses current structured target fields for visible targetable actions", () => {
     for (const actionType of [
       "input_text",
@@ -161,9 +174,9 @@ describe("step help content", () => {
     }
 
     expect(stepHelpContent.click.en.minimalConfig?.map((field) => field.name)).toEqual([
+      "Target source",
+      "Target ref",
       "Target locator type",
-      "Target locator",
-      "Target visibility",
     ]);
   });
 

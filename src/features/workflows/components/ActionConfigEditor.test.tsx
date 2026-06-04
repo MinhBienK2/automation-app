@@ -136,6 +136,72 @@ describe("ActionConfigEditor", () => {
     expect(screen.queryByLabelText("Method")).not.toBeInTheDocument();
   });
 
+  test("Click editor switches between locator and Find Element ref target sources", async () => {
+    const onChange = vi.fn();
+    const config: ActionConfig = {
+      type: "click",
+      config: {
+        target_ref: "current_like",
+        target: {
+          locators: [{ kind: "css", value: "button.like-button" }],
+          constraints: { visible: true, enabled: true },
+          iframe: null,
+        },
+        wait_until: "visible",
+        timeout_ms: 6000,
+      },
+    };
+
+    function Harness() {
+      const [currentConfig, setCurrentConfig] = useState(config);
+      return (
+        <ActionConfigEditor
+          config={currentConfig}
+          onChange={(nextConfig) => {
+            setCurrentConfig(nextConfig);
+            onChange(nextConfig);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const targetSource = screen.getByRole("group", { name: "Target source" });
+    expect(within(targetSource).getByRole("button", { name: "Use Find Element ref" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Target ref")).toHaveValue("current_like");
+    expect(screen.getByText("Click uses the element resolved by a previous Find Element node in this run."))
+      .toBeInTheDocument();
+    expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Target visibility")).not.toBeInTheDocument();
+
+    await userEvent.click(within(targetSource).getByRole("button", { name: "Use locator" }));
+
+    expect(screen.queryByLabelText("Target ref")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Target locator")).toHaveValue("button.like-button");
+    expect(screen.getByLabelText("Target visibility")).toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...config,
+      config: {
+        ...config.config,
+        target_ref: null,
+      },
+    });
+
+    await userEvent.click(within(targetSource).getByRole("button", { name: "Use Find Element ref" }));
+
+    expect(screen.getByLabelText("Target ref")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...config,
+      config: {
+        ...config.config,
+        target_ref: "",
+      },
+    });
+  });
+
   test("Scroll editor shows fields for the selected scroll mode", async () => {
     const onChange = vi.fn();
     const config: ActionConfig = {
