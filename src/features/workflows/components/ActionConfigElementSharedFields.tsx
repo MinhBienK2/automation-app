@@ -12,6 +12,7 @@ type TargetableElementConfig = Extract<
       | "wait"
       | "clear_input"
       | "click"
+      | "find_element"
       | "select_option"
       | "hover"
       | "double_click"

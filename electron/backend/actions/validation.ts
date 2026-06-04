@@ -83,8 +83,22 @@ const actionValidators = createActionValidatorMap({
     ),
   click: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      config.config.target_ref
+        ? requiredActionString(config.config.target_ref, "target_ref", "Target ref is required")
+        : validateElementTarget(config.config),
       validateElementActionTiming(config.config),
+    ),
+  find_element: (config) =>
+    firstValidation(
+      validateElementTarget(config.config),
+      requiredActionString(config.config.output_name, "output_name", "Output name is required"),
+      validateOptionalEnumValue(
+        config.config.rank,
+        ["first", "nearest_viewport_center", "largest_visible_area"],
+        "rank",
+        "Rank must be first, nearest_viewport_center, or largest_visible_area",
+      ),
+      optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     ),
   scroll: (config) => {
     const mode = config.config.mode ?? "page";

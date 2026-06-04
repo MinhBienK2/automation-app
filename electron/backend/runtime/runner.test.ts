@@ -3308,6 +3308,67 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("finds a viewport-ranked element and clicks it by runtime ref", async () => {
+    const page = new RankedElementPage({
+      "article button[aria-label^=\"Like video\"][aria-pressed=\"false\"]": [
+        { x: 20, y: -420, width: 52, height: 52 },
+        { x: 620, y: 338, width: 52, height: 52 },
+        { x: 620, y: 1020, width: 52, height: 52 },
+      ],
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-like", "Find Like", {
+            type: "find_element",
+            config: {
+              output_name: "current_like",
+              target: {
+                locators: [
+                  {
+                    kind: "css",
+                    value: 'article button[aria-label^="Like video"][aria-pressed="false"]',
+                  },
+                ],
+                constraints: { visible: true, enabled: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("click-like", "Click Like", {
+            type: "click",
+            config: { target_ref: "current_like" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.current_like).toMatchObject({
+      kind: "element_ref",
+      ref_id: expect.any(String),
+      locator: 'article button[aria-label^="Like video"][aria-pressed="false"]',
+      index: 1,
+      rank: "nearest_viewport_center",
+    });
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        'locator:article button[aria-label^="Like video"][aria-pressed="false"]',
+        'boundingBox:article button[aria-label^="Like video"][aria-pressed="false"] >> nth=1:1:338',
+        'nth:article button[aria-label^="Like video"][aria-pressed="false"]:1',
+        'click:article button[aria-label^="Like video"][aria-pressed="false"] >> nth=1',
+      ]),
+    );
+  });
+
   test("supports target locator kinds and iframe targets", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
@@ -3922,6 +3983,64 @@ class HumanScrollLocator extends FakeLocator {
     const box = this.page.targetBox();
     this.events.push(`isVisible:${this.selector}`);
     return box.y >= 0 && box.y + box.height <= this.page.viewport.height;
+  }
+}
+
+class RankedElementPage extends FakePage {
+  constructor(
+    private readonly boxesBySelector: Record<
+      string,
+      Array<{ x: number; y: number; width: number; height: number }>
+    >,
+  ) {
+    super();
+  }
+
+  override locator(selector: string) {
+    this.events.push(`locator:${selector}`);
+    const boxes = this.boxesBySelector[selector];
+    if (boxes) return new RankedElementLocator(selector, this.events, boxes);
+    return super.locator(selector);
+  }
+
+  override async evaluate(pageFunction: string | ((arg?: unknown) => unknown), arg?: unknown) {
+    if (typeof pageFunction === "function" && pageFunction.toString().includes("innerWidth")) {
+      return { width: 1280, height: 720 };
+    }
+    return super.evaluate(pageFunction, arg);
+  }
+}
+
+class RankedElementLocator extends FakeLocator {
+  constructor(
+    selector: string,
+    events: string[],
+    private readonly boxes: Array<{ x: number; y: number; width: number; height: number }>,
+    private readonly selectedIndex: number | null = null,
+  ) {
+    super(selector, events);
+  }
+
+  override async count() {
+    this.events.push(`count:${this.selector}`);
+    return this.selectedIndex == null ? this.boxes.length : 1;
+  }
+
+  override nth(index: number) {
+    this.events.push(`nth:${this.selector}:${index}`);
+    return new RankedElementLocator(
+      `${this.selector} >> nth=${index}`,
+      this.events,
+      this.boxes,
+      index,
+    );
+  }
+
+  override async boundingBox() {
+    const index = this.selectedIndex ?? 0;
+    const box = this.boxes[index] ?? null;
+    this.events.push(`boundingBox:${this.selector}:${index}:${box?.y ?? "null"}`);
+    return box;
   }
 }
 

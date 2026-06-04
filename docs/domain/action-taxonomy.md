@@ -21,7 +21,7 @@ The primary Add Action palette is filtered by the capability registry in
 compiler/runner orchestration but are not promoted as ordinary in-run choices.
 
 - Navigation: page navigation, browser history, and tab movement.
-- Element Interaction: click, hover, drag/drop, focus/blur, and scroll.
+- Element Interaction: click, find element, hover, drag/drop, focus/blur, and scroll.
 - Form Fields: fill, clear, select, checkbox/radio, upload, submit, custom dropdown, and rich text.
 - Keyboard: key presses, hotkeys, character-by-character typing, clipboard, and paste.
 - Wait: fixed duration/condition waits and random duration waits.
@@ -70,7 +70,7 @@ reaching action-specific validation or execution logic. `execute_js` is tagged
 as high audit risk in the registry and can be disabled per workflow by Run
 Policy before script text is evaluated.
 
-Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, and clear-method fields. Scroll is the exception that exposes Page Scroll style/pixel distance and element-targeted scroll modes because those are the action's core contract, but target scroll still hides low-level target constraints and planner tuning. The visible structured target editor defaults its locator kind to XPath while allowing more stable locator kinds when available.
+Intent-focused UI labels preserve serialized action types. Examples: `input_text` displays as Fill Field, `clear_input` as Clear Field, `find_element` as Find Element, `type_sequence` as Type Keys, `paste_clipboard` as Paste Into Field, `extract_input_value` as Extract Field Value, and `execute_js` as Run JavaScript. Visible browser action defaults are target-first and omit engine-level timing, typing, retry, positioning, and clear-method fields. Scroll is the exception that exposes Page Scroll style/pixel distance and element-targeted scroll modes because those are the action's core contract, but target scroll still hides low-level target constraints and planner tuning. The visible structured target editor defaults its locator kind to XPath while allowing more stable locator kinds when available.
 
 Removed actions: `open_url`, `sleep`, and `type_text` are not part of the current authoring contract.
 

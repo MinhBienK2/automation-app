@@ -5,6 +5,7 @@ export type ActionType =
   | "input_text"
   | "clear_input"
   | "click"
+  | "find_element"
   | "scroll"
   | "select_option"
   | "press_key"
@@ -401,8 +402,21 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
+        timeout_ms?: number | null;
+      };
+    }
+  | {
+      type: "find_element";
+      config: {
+        xpath?: string | null;
+        target?: ElementTarget | null;
+        iframe_xpath?: string | null;
+        output_name: string;
+        filter?: FindElementFilter | null;
+        rank?: FindElementRank | null;
         timeout_ms?: number | null;
       };
     }
@@ -824,6 +838,12 @@ export type ElementTarget = {
   locators: ElementLocator[];
   constraints?: ElementTargetConstraints | null;
   iframe?: ElementTarget | null;
+};
+
+export type FindElementRank = "first" | "nearest_viewport_center" | "largest_visible_area";
+
+export type FindElementFilter = {
+  in_viewport?: boolean | null;
 };
 
 export type WorkflowCondition =

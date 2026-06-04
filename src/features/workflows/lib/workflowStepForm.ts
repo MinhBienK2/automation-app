@@ -39,6 +39,9 @@ export type ActionConfigField =
   | "status"
   | "source_xpath"
   | "state"
+  | "target_ref"
+  | "rank"
+  | "in_viewport"
   | "target_xpath"
   | "text"
   | "timeout_ms"
@@ -81,6 +84,8 @@ export function updateActionConfigField(
       return updateElementConfigField(config, field, value);
     case "click":
       return updateClickConfigField(config, field, value);
+    case "find_element":
+      return updateFindElementConfigField(config, field, value);
     case "scroll":
       return updateScrollConfigField(config, field, value);
     case "select_option":
@@ -407,10 +412,52 @@ function updateClickConfigField(
     };
   }
 
+  if (field === "target_ref") {
+    return {
+      type: "click",
+      config: { ...config.config, target_ref: value || null },
+    };
+  }
+
   return {
     type: "click",
     config: { ...config.config, [field]: value },
   };
+}
+
+function updateFindElementConfigField(
+  config: Extract<ActionConfig, { type: "find_element" }>,
+  field: ActionConfigField,
+  value: string,
+): ActionConfig {
+  if (field === "timeout_ms") {
+    return { type: "find_element", config: { ...config.config, timeout_ms: Number(value) } };
+  }
+  if (field === "iframe_xpath") {
+    return { type: "find_element", config: { ...config.config, iframe_xpath: value || null } };
+  }
+  if (field === "output_name") {
+    return { type: "find_element", config: { ...config.config, output_name: value } };
+  }
+  if (field === "rank") {
+    return {
+      type: "find_element",
+      config: {
+        ...config.config,
+        rank: value as Extract<ActionConfig, { type: "find_element" }>["config"]["rank"],
+      },
+    };
+  }
+  if (field === "in_viewport") {
+    return {
+      type: "find_element",
+      config: {
+        ...config.config,
+        filter: { ...(config.config.filter ?? {}), in_viewport: value === "true" },
+      },
+    };
+  }
+  return { type: "find_element", config: { ...config.config, [field]: value } };
 }
 
 function updateScrollConfigField(

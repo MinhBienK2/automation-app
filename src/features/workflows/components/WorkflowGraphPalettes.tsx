@@ -702,6 +702,7 @@ export const actionDescriptions: Record<ActionType, string> = {
   input_text: "Fill a field",
   clear_input: "Clear a field",
   click: "Click an element",
+  find_element: "Resolve an element for later actions",
   scroll: "Move the page or an element",
   select_option: "Choose a native select option",
   press_key: "Press one key",

@@ -309,6 +309,34 @@ const baseStepHelpContent: Record<
       commonMistakes: ["XPath points to text inside a button instead of the clickable button.", "Covered elements can fail Real click; check overlays or scrolling."],
     },
   },
+  find_element: {
+    vi: {
+      title: "Trợ giúp Find Element",
+      summary: "Tìm một element khớp locator, lọc/rank theo viewport, rồi lưu ref ngắn hạn cho step sau như Click.",
+      useWhen: ["Dùng khi nhiều nút giống nhau tồn tại trong DOM nhưng bạn muốn chọn nút đang nằm trong màn hình.", "Dùng trước Click với Target ref để tách logic chọn element khỏi logic click."],
+      fields: [
+        { name: "Target locator", description: "Locator thật của các element ứng viên, ví dụ button Like trong mọi article." },
+        { name: "Output name", description: "Tên ref runtime để step sau dùng qua Target ref." },
+        { name: "In viewport", description: "Required chỉ chọn element đang giao với viewport hiện tại." },
+        { name: "Rank", description: "Nearest viewport center chọn ứng viên gần tâm màn hình nhất; Largest visible area chọn ứng viên đang lộ nhiều nhất." },
+      ],
+      examples: ["Target locator: article button[aria-label^='Like video'][aria-pressed='false']", "Output name: current_like, Rank: Nearest viewport center"],
+      commonMistakes: ["Dùng Target index thay vì Rank khi feed scroll/virtualize có thể click sai bài.", "Để In viewport off sẽ quay lại hành vi chọn phần tử đầu DOM."],
+    },
+    en: {
+      title: "Find Element Help",
+      summary: "Resolve a matching element, filter/rank it by viewport, and store a short-lived ref for a later step such as Click.",
+      useWhen: ["Use when many similar buttons exist in the DOM but you need the one currently in view.", "Use before Click with Target ref to separate element selection from clicking."],
+      fields: [
+        { name: "Target locator", description: "The real locator for candidate elements, such as all Like buttons inside articles." },
+        { name: "Output name", description: "Runtime ref name that the next step can use through Target ref." },
+        { name: "In viewport", description: "Required only selects elements intersecting the current viewport." },
+        { name: "Rank", description: "Nearest viewport center chooses the candidate closest to screen center; Largest visible area chooses the most exposed candidate." },
+      ],
+      examples: ["Target locator: article button[aria-label^='Like video'][aria-pressed='false']", "Output name: current_like, Rank: Nearest viewport center"],
+      commonMistakes: ["Using Target index instead of Rank can click the wrong post on scrolling or virtualized feeds.", "Turning In viewport off returns to first-DOM-match behavior."],
+    },
+  },
   scroll: {
     vi: {
       title: "Trợ giúp Scroll",
@@ -857,7 +885,9 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "clear_input":
       return targetFields;
     case "click":
-      return targetFields;
+      return ["Target ref", ...targetFields];
+    case "find_element":
+      return [...targetFields, "Output name", "In viewport", "Rank"];
     case "scroll":
       return ["Mode", "Direction", "Pixels", ...scrollTargetFields, "Iframe XPath", "Timeout ms"];
     case "select_option":

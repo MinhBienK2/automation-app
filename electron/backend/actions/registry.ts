@@ -49,6 +49,7 @@ export const actionDefinitions: ActionDefinition[] = [
   definition("input_text", "form"),
   definition("clear_input", "form"),
   definition("click", "element_interaction"),
+  definition("find_element", "element_interaction"),
   definition("scroll", "element_interaction"),
   definition("select_option", "form"),
   definition("press_key", "keyboard"),

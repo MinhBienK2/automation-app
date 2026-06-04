@@ -40,6 +40,16 @@ export function defaultActionConfig(actionType: ActionType): ActionConfig {
           target: null,
         },
       };
+    case "find_element":
+      return {
+        type: actionType,
+        config: {
+          target: null,
+          output_name: "element_ref",
+          filter: { in_viewport: true },
+          rank: "nearest_viewport_center",
+        },
+      };
     case "scroll":
       return {
         type: actionType,

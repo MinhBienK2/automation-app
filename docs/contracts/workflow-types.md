@@ -504,6 +504,9 @@ Element-targeted scroll uses `target` or legacy `xpath`, optional
 scroll defaults to `60000` ms. `until_element_visible` uses the same target
 fields plus `direction` and `pixels` for repeated page-scroll search gestures
 before the target-scroll phase.
+`find_element` stores a run-local element ref by `output_name`; `click` may use
+that name in `target_ref` instead of a direct target. Element refs are not
+portable across runs and their serialized outputs are evidence metadata.
 
 Graph-internal Merge and Router configs use:
 

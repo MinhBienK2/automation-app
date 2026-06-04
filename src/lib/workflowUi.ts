@@ -14,6 +14,7 @@ export const actionLabels: Record<ActionType, string> = {
   input_text: "Fill Field",
   clear_input: "Clear Field",
   click: "Click",
+  find_element: "Find Element",
   scroll: "Scroll",
   select_option: "Select Option",
   press_key: "Press Key",
@@ -104,6 +105,7 @@ const actionGroupCatalog: Array<{ label: string; actions: ActionType[] }> = [
     label: "Element Interaction",
     actions: [
       "click",
+      "find_element",
       "double_click",
       "right_click",
       "hover",

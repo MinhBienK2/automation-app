@@ -12,6 +12,7 @@ export const actionCapabilities: Record<ActionType, ActionCapability> = {
   input_text: "implemented_partial_requires_validation",
   clear_input: "implemented_partial_requires_validation",
   click: "implemented_partial_requires_validation",
+  find_element: "implemented_partial_requires_validation",
   scroll: "implemented_partial_requires_validation",
   select_option: "implemented_partial_requires_validation",
   press_key: "implemented",

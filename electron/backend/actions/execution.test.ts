@@ -18,6 +18,7 @@ describe("backend action execution registry", () => {
       input_text: async () => calls.push("input_text"),
       clear_input: async () => calls.push("clear_input"),
       click: async () => calls.push("click"),
+      find_element: async () => calls.push("find_element"),
       scroll: async () => calls.push("scroll"),
       select_option: async () => calls.push("select_option"),
       press_key: async () => calls.push("press_key"),

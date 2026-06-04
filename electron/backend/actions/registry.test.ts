@@ -17,6 +17,7 @@ describe("backend action registry", () => {
       "input_text",
       "clear_input",
       "click",
+      "find_element",
       "scroll",
       "select_option",
       "press_key",

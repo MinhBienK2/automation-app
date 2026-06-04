@@ -75,6 +75,7 @@ type Runtime = {
   page: BrowserDriverPage;
   domainPolicy: { allowed_domains: string[] } | null;
   outputs: Record<string, unknown>;
+  elementRefs: Map<string, RuntimeElementRef>;
   traces: ActionTrace[];
   evidence: EvidenceArtifact[];
   clipboard: string;
@@ -84,6 +85,22 @@ type Runtime = {
   liveState: RunState;
   onProgress?: (state: Partial<RunState>) => void;
   signal?: AbortSignal;
+};
+
+type RuntimeElementRef = {
+  refId: string;
+  target: ElementTarget;
+  locator: ElementLocator;
+  index: number;
+  outputName: string;
+  rank: "first" | "nearest_viewport_center" | "largest_visible_area";
+};
+
+type RankedElementCandidate = {
+  locator: BrowserDriverLocator;
+  locatorConfig: ElementLocator;
+  index: number;
+  box: { x?: number; y?: number; width: number; height: number } | null;
 };
 
 type ActionTrace = {
@@ -283,6 +300,7 @@ export class BrowserWorkflowRunner {
       page: launch.page,
       domainPolicy: request.graph.domain_policy ?? null,
       outputs: {},
+      elementRefs: new Map(),
       traces: [],
       evidence: [],
       clipboard: "",
@@ -475,7 +493,10 @@ export class BrowserWorkflowRunner {
         await (await this.locatorForAction(runtime, action.config)).fill("");
       },
       click: async (action) => {
-        await (await this.locatorForAction(runtime, action.config)).click();
+        await (await this.locatorForClick(runtime, action.config)).click();
+      },
+      find_element: async (action) => {
+        await this.executeFindElement(runtime, action);
       },
       hover: async (action) => {
         await requireLocatorMethod(
@@ -1393,6 +1414,93 @@ export class BrowserWorkflowRunner {
       runtime.signal,
     );
     return locator;
+  }
+
+  private async locatorForClick(
+    runtime: Runtime,
+    config: Extract<ActionConfig, { type: "click" }>["config"],
+  ) {
+    if (config.target_ref?.trim()) {
+      const ref = runtime.elementRefs.get(config.target_ref.trim());
+      if (!ref) {
+        throw new Error(`Element ref not found: ${config.target_ref}`);
+      }
+      const locator = await locatorForRuntimeElementRef(runtime.page, ref);
+      await this.waitForElementReadiness(
+        locator,
+        config.wait_until ?? null,
+        config.timeout_ms,
+        runtime.signal,
+      );
+      return locator;
+    }
+    return this.locatorForAction(runtime, config);
+  }
+
+  private async executeFindElement(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "find_element" }>,
+  ) {
+    const outputName = action.config.output_name.trim();
+    const rank = action.config.rank ?? "nearest_viewport_center";
+    const candidates = await this.waitForFindElementCandidates(
+      runtime,
+      action.config,
+    );
+    if (!candidates.length) {
+      throw new Error("No element locator satisfied target constraints");
+    }
+    const selected = await selectRankedElementCandidate(runtime.page, candidates, rank);
+    const target = action.config.target ?? {
+      locators: [selected.locatorConfig],
+      constraints: null,
+      iframe: null,
+    };
+    const ref: RuntimeElementRef = {
+      refId: randomUUID(),
+      target,
+      locator: selected.locatorConfig,
+      index: selected.index,
+      outputName,
+      rank,
+    };
+    runtime.elementRefs.set(outputName, ref);
+    runtime.outputs[outputName] = {
+      kind: "element_ref",
+      ref_id: ref.refId,
+      locator: selected.locatorConfig.value,
+      locator_kind: selected.locatorConfig.kind,
+      index: selected.index,
+      rank,
+      box: selected.box,
+    };
+  }
+
+  private async waitForFindElementCandidates(
+    runtime: Runtime,
+    config: Extract<ActionConfig, { type: "find_element" }>["config"],
+  ) {
+    const timeoutMs = config.timeout_ms ?? 0;
+    const deadline = Date.now() + timeoutMs;
+    do {
+      this.throwIfCancelled(runtime.signal);
+      const candidates = await rankedCandidatesForTarget(
+        runtime.page,
+        config.target,
+        config.xpath,
+        config.iframe_xpath,
+        Boolean(config.filter?.in_viewport),
+      );
+      if (candidates.length || timeoutMs <= 0) return candidates;
+      await this.sleep(Math.min(100, Math.max(1, deadline - Date.now())), runtime.signal);
+    } while (Date.now() < deadline);
+    return rankedCandidatesForTarget(
+      runtime.page,
+      config.target,
+      config.xpath,
+      config.iframe_xpath,
+      Boolean(config.filter?.in_viewport),
+    );
   }
 
   private async waitForElementReadiness(
@@ -2350,6 +2458,141 @@ async function locatorSatisfiesConstraints(
   return true;
 }
 
+async function rankedCandidatesForTarget(
+  page: BrowserDriverPage,
+  target: ElementTarget | null | undefined,
+  xpath?: string | null,
+  iframeXpath?: string | null,
+  inViewportOnly = false,
+): Promise<RankedElementCandidate[]> {
+  const typedTarget = isElementTarget(target) ? target : null;
+  const root = typedTarget?.iframe
+    ? frameRootForTarget(page, typedTarget.iframe)
+    : iframeXpath?.trim()
+      ? frameRootForXpath(page, iframeXpath)
+    : page;
+  const locators = typedTarget?.locators?.length
+    ? typedTarget.locators
+    : xpath?.trim()
+      ? [{ kind: "xpath", value: xpath } satisfies ElementLocator]
+      : [];
+  const constraints = typedTarget?.constraints ?? null;
+  const viewport = inViewportOnly ? await browserViewport(page) : null;
+
+  for (const locatorConfig of locators) {
+    const base = locatorFromConfig(root, locatorConfig);
+    const indexes = await candidateIndexes(base, constraints?.index);
+    const candidates: RankedElementCandidate[] = [];
+    for (const index of indexes) {
+      const locator = applyIndexConstraint(base, index);
+      if (!(await locatorSatisfiesConstraints(locator, withoutIndexConstraint(constraints)))) {
+        continue;
+      }
+      const box = await locator.boundingBox?.() ?? null;
+      if (inViewportOnly && (!box || !boxIntersectsViewport(box, viewport))) {
+        continue;
+      }
+      candidates.push({ locator, locatorConfig, index, box });
+    }
+    if (candidates.length) return candidates;
+  }
+
+  return [];
+}
+
+async function candidateIndexes(
+  locator: BrowserDriverLocator,
+  index: number | null | undefined,
+) {
+  if (index != null) return [index];
+  if (!locator.count || !locator.nth) return [0];
+  const count = await locator.count();
+  return Array.from({ length: count }, (_value, candidateIndex) => candidateIndex);
+}
+
+function withoutIndexConstraint(
+  constraints: ElementTarget["constraints"] | null,
+): ElementTarget["constraints"] | null {
+  if (!constraints) return null;
+  return { ...constraints, index: null };
+}
+
+async function selectRankedElementCandidate(
+  page: BrowserDriverPage,
+  candidates: RankedElementCandidate[],
+  rank: RuntimeElementRef["rank"],
+) {
+  if (rank === "first") return candidates[0];
+  const viewport = await browserViewport(page);
+  const viewportCenter = {
+    x: viewport.width / 2,
+    y: viewport.height / 2,
+  };
+  const sorted = [...candidates].sort((left, right) => {
+    if (rank === "largest_visible_area") {
+      return visibleArea(right.box, viewport) - visibleArea(left.box, viewport);
+    }
+    return distanceToViewportCenter(left.box, viewportCenter) - distanceToViewportCenter(right.box, viewportCenter);
+  });
+  return sorted[0];
+}
+
+async function locatorForRuntimeElementRef(
+  page: BrowserDriverPage,
+  ref: RuntimeElementRef,
+) {
+  const root = ref.target.iframe ? frameRootForTarget(page, ref.target.iframe) : page;
+  return applyIndexConstraint(locatorFromConfig(root, ref.locator), ref.index);
+}
+
+async function browserViewport(page: BrowserDriverPage) {
+  const viewport = await page.evaluate(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+  if (
+    viewport &&
+    typeof viewport === "object" &&
+    typeof (viewport as { width?: unknown }).width === "number" &&
+    typeof (viewport as { height?: unknown }).height === "number"
+  ) {
+    return viewport as { width: number; height: number };
+  }
+  return { width: 0, height: 0 };
+}
+
+function boxIntersectsViewport(
+  box: { x?: number; y?: number; width: number; height: number },
+  viewport: { width: number; height: number } | null,
+) {
+  if (!viewport) return true;
+  const x = box.x ?? 0;
+  const y = box.y ?? 0;
+  return x + box.width > 0 && y + box.height > 0 && x < viewport.width && y < viewport.height;
+}
+
+function visibleArea(
+  box: { x?: number; y?: number; width: number; height: number } | null,
+  viewport: { width: number; height: number },
+) {
+  if (!box) return 0;
+  const x = box.x ?? 0;
+  const y = box.y ?? 0;
+  const visibleWidth = Math.max(0, Math.min(x + box.width, viewport.width) - Math.max(x, 0));
+  const visibleHeight = Math.max(0, Math.min(y + box.height, viewport.height) - Math.max(y, 0));
+  return visibleWidth * visibleHeight;
+}
+
+function distanceToViewportCenter(
+  box: { x?: number; y?: number; width: number; height: number } | null,
+  viewportCenter: { x: number; y: number },
+) {
+  if (!box) return Number.POSITIVE_INFINITY;
+  const x = (box.x ?? 0) + box.width / 2;
+  const y = (box.y ?? 0) + box.height / 2;
+  return Math.hypot(x - viewportCenter.x, y - viewportCenter.y);
+}
+
 function isElementTarget(value: unknown): value is ElementTarget {
   return Boolean(
     value &&
@@ -2542,6 +2785,7 @@ function summarizeOutputChanges(
 
 function actionTraceMode(action: ActionConfig): ActionTrace["mode"] {
   if (action.type === "graph_noop" || action.type === "router_condition") return "manual";
+  if (action.type === "find_element") return "observer";
   if (action.type.startsWith("extract") || action.type.startsWith("assert")) return "observer";
   if (runnerCapabilityForAction(action) === "direct_dom" || action.type === "set_variable") {
     return "direct_dom";
@@ -2559,7 +2803,7 @@ function actionEvidenceModel(
       audit_tags: ["direct_dom_script", "requires_review"],
     };
   }
-  if (action.type.startsWith("extract") || action.type.startsWith("assert")) {
+  if (action.type === "find_element" || action.type.startsWith("extract") || action.type.startsWith("assert")) {
     return { evidence_categories: ["page_observation"] };
   }
   if (action.type === "take_screenshot" || action.type === "wait_for_download") {
