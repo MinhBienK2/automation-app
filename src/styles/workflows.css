@@ -308,17 +308,17 @@
 
 .run-monitor-drawer {
   position: fixed;
-  top: 96px;
+  top: 152px;
   right: 16px;
   bottom: 24px;
   z-index: 46;
   display: grid;
   align-content: start;
-  width: min(420px, calc(100vw - 32px));
+  width: min(440px, calc(100vw - 32px));
   min-width: 0;
   overflow-y: auto;
-  gap: 12px;
-  padding: 14px;
+  gap: 14px;
+  padding: 16px;
   border: 1px solid #314758;
   border-radius: 8px;
   background: #121c26;
@@ -346,7 +346,6 @@
   flex: 0 0 auto;
 }
 
-.run-monitor-current,
 .run-monitor-issue,
 .run-monitor-timeline {
   display: grid;
@@ -358,7 +357,6 @@
   background: #0e151d;
 }
 
-.run-monitor-current h3,
 .run-monitor-issue h3,
 .run-monitor-section-heading h3 {
   overflow-wrap: anywhere;
@@ -368,14 +366,12 @@
   line-height: 1.3;
 }
 
-.run-monitor-current p,
 .run-monitor-issue p {
   color: #9aaebd;
   font-size: 13px;
   line-height: 1.4;
 }
 
-.run-monitor-status,
 .run-monitor-issue span,
 .run-monitor-section-heading span {
   width: fit-content;
@@ -384,22 +380,8 @@
   line-height: 1.2;
 }
 
-.run-monitor-status {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 2px 8px;
-  border: 1px solid rgba(50, 211, 230, 0.45);
-  border-radius: 999px;
-}
-
-.run-monitor-status[data-status="failed"],
 .run-monitor-issue span {
   color: #f06467;
-}
-
-.run-monitor-status[data-status="success"] {
-  color: #39d98a;
 }
 
 .run-monitor-actions {
@@ -407,16 +389,6 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-}
-
-.run-monitor-follow.switch-field {
-  grid-template-columns: auto auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.run-monitor-follow .switch-field-copy small {
-  display: none;
 }
 
 .run-monitor-issue {
@@ -432,19 +404,34 @@
 
 .run-monitor-timeline ol {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.run-monitor-timeline li {
+  position: relative;
+}
+
+.run-monitor-timeline li:not(:last-child)::after {
+  position: absolute;
+  top: 31px;
+  bottom: -11px;
+  left: 14px;
+  width: 1px;
+  background: #233240;
+  content: "";
 }
 
 .run-monitor-step {
   display: grid;
   width: 100%;
-  min-height: 64px;
-  grid-template-columns: minmax(54px, auto) minmax(0, 1fr) auto;
+  min-height: 62px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 10px 12px 10px 0;
   border: 1px solid #233240;
   border-radius: 8px;
   background: #0b1016;
@@ -452,12 +439,7 @@
   text-align: left;
 }
 
-.run-monitor-step[data-current="true"] {
-  border-color: rgba(50, 211, 230, 0.62);
-  color: #e7eef5;
-}
-
-.run-monitor-step[data-status="success"] {
+.run-monitor-step[data-status="completed"] {
   border-color: rgba(57, 217, 138, 0.38);
 }
 
@@ -465,7 +447,41 @@
   border-color: rgba(240, 100, 103, 0.56);
 }
 
-.run-monitor-step span,
+.run-monitor-step-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.run-monitor-step-marker {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 11px;
+  height: 11px;
+  justify-self: center;
+  border: 2px solid #667d8d;
+  border-radius: 999px;
+  background: #0b1016;
+}
+
+.run-monitor-step[data-status="running"] .run-monitor-step-marker {
+  border-color: #32d3e6;
+  background: rgba(50, 211, 230, 0.28);
+  box-shadow: 0 0 0 4px rgba(50, 211, 230, 0.12);
+}
+
+.run-monitor-step[data-status="completed"] .run-monitor-step-marker {
+  border-color: #39d98a;
+  background: #39d98a;
+}
+
+.run-monitor-step[data-status="failed"] .run-monitor-step-marker {
+  border-color: #f06467;
+  background: #f06467;
+}
+
+.run-monitor-step-copy span,
 .run-monitor-step small {
   color: #667d8d;
   font-size: 11px;
@@ -477,7 +493,7 @@
   color: #32d3e6;
 }
 
-.run-monitor-step[data-status="success"] small {
+.run-monitor-step[data-status="completed"] small {
   color: #39d98a;
 }
 
@@ -493,6 +509,18 @@
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.run-monitor-empty {
+  margin: 0;
+  color: #667d8d;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.run-monitor-scroll-target {
+  display: block;
+  height: 1px;
 }
 
 @keyframes run-monitor-slide-in {

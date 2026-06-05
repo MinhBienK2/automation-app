@@ -82,7 +82,7 @@
 - A Start-only graph is a valid saved draft but run is rejected with a graph validation error before the runner starts.
 - Graph runs reject ambiguous links, duplicate links, self-links, unreachable nodes, unconfigured action nodes, missing required logic config/body ports, unsupported free cycles, and loop-control nodes reachable outside a loop body before the runner starts.
 - UI polls `list_run_states` while any run snapshot is `running`, regardless of whether the run was started from the workflow detail workspace, directly from the workflow list, or by the scheduler. `get_run_state` remains a compatibility/latest-state view.
-- Workflow detail renders the Live Run navigator only when saved Graph settings enable Live Run. The saved Follow current setting initializes whether active run progress automatically selects and centers the current graph node; the navigator switch can override that for the current page session.
+- Workflow detail renders the Live Run navigator only when saved Graph settings enable Live Run. The saved Follow current setting controls whether active run progress automatically selects and centers the current graph node; the navigator itself does not expose a separate Follow current toggle.
 - Overview loads a bounded operations aggregate through `getOperationsOverview`,
   which rejects local-day UTC ranges over 48 hours before building hourly
   activity buckets, and can navigate persisted run references into Runs through

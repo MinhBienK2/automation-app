@@ -162,6 +162,13 @@ describe("App CSS", () => {
     expect(runActions).toContain("max-width: none");
   });
 
+  test("keeps the run monitor drawer below workflow run controls", () => {
+    const drawer = cssRule(".run-monitor-drawer");
+
+    expect(drawer).toContain("top: 152px");
+    expect(drawer).not.toContain("top: 96px");
+  });
+
   test("keeps run error surfaces dense and text-contained", () => {
     const runActions = cssRule(".page-detail-header .run-actions");
     const issueSummary = cssRule(".run-issue-summary-text");

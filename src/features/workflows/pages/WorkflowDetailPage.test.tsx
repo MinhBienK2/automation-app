@@ -15,8 +15,15 @@ import {
 import { renderApp } from "../../../tests/utils/renderApp";
 
 describe("Workflow detail integration", () => {
+  const scrollIntoViewMock = vi.fn();
+
   beforeEach(() => {
     resetWorkflowBridge();
+    scrollIntoViewMock.mockClear();
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
   });
 
   async function launchRun(scope: HTMLElement = document.body) {
@@ -150,7 +157,7 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByRole("dialog", { name: "Launch Run" })).not.toBeInTheDocument();
   });
 
-  test("shows run monitor drawer and focuses the current graph node", async () => {
+  test("shows run monitor event timeline in execution order and focuses the current graph node", async () => {
     const fillStep: WorkflowStep = {
       id: "step-2",
       name: "Fill credentials",
@@ -171,16 +178,34 @@ describe("Workflow detail integration", () => {
       created_at: "2",
       updated_at: "2",
     };
+    const submitStep: WorkflowStep = {
+      id: "step-3",
+      name: "Submit login",
+      workflow_id: workflow.id,
+      order_index: 2,
+      action_type: "click",
+      config: {
+        type: "click",
+        config: {
+          target: {
+            locators: [{ kind: "css", value: "button[type=submit]" }],
+            constraints: {},
+          },
+        },
+      },
+      created_at: "3",
+      updated_at: "3",
+    };
     const runningState = {
       ...idleRunState,
       status: "running" as const,
       mode: "run_workflow" as const,
       current_step_id: "step-2",
       current_step_number: 2,
-      completed_step_ids: ["step-1"],
+      completed_step_ids: ["step-1", "step-1"],
     };
     mockWorkflowBridgeCommands({
-      ...workflowDetailScenario([sleepStep, fillStep]),
+      ...workflowDetailScenario([sleepStep, fillStep, submitStep]),
       list_run_states: [runSnapshot(runningState)],
       get_run_state: runningState,
     });
@@ -202,23 +227,35 @@ describe("Workflow detail integration", () => {
       name: "Run Monitor",
     });
     expect(within(monitor).getAllByText("Running step 2").length).toBeGreaterThan(0);
-    expect(within(monitor).getByRole("heading", { name: "Fill credentials" }))
-      .toBeInTheDocument();
-    expect(within(monitor).getByText("Fill Field")).toBeInTheDocument();
-    expect(within(monitor).getByRole("button", { name: "Step 1 success: Wait for page" }))
-      .toBeInTheDocument();
-    expect(within(monitor).getByRole("button", { name: "Step 2 running: Fill credentials" }))
-      .toBeInTheDocument();
-    const followSwitch = within(monitor).getByRole("switch", { name: "Follow current" });
-    expect(followSwitch).toHaveAttribute("aria-checked", "false");
+    expect(within(monitor).queryByRole("region", { name: "Current run step" }))
+      .not.toBeInTheDocument();
+    expect(within(monitor).queryByRole("button", { name: "Focus current" }))
+      .not.toBeInTheDocument();
+    const timeline = within(monitor).getByRole("region", { name: "Run timeline" });
+    expect(within(timeline).getByText("3 events")).toBeInTheDocument();
+    const timelineButtons = within(timeline).getAllByRole("button");
+    expect(timelineButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Event 1 completed: Step 1 Wait for page",
+      "Event 2 completed: Step 1 Wait for page",
+      "Event 3 running: Step 2 Fill credentials",
+    ]);
+    expect(timelineButtons.every((button) => button.getAttribute("data-current") !== "true"))
+      .toBe(true);
+    expect(within(timeline).queryByRole("button", { name: /Submit login/ }))
+      .not.toBeInTheDocument();
+    expect(within(timeline).queryByRole("button", { name: /End Success/ }))
+      .not.toBeInTheDocument();
+    expect(within(monitor).queryByRole("switch", { name: "Follow current" }))
+      .not.toBeInTheDocument();
     const editor = screen.getByRole("region", { name: "Visual Graph" });
     expect(within(editor).queryByRole("complementary", {
       name: "Graph inspector drawer",
     })).not.toBeInTheDocument();
+    expect(scrollIntoViewMock).toHaveBeenCalled();
 
-    await userEvent.click(followSwitch);
-    expect(followSwitch).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(within(monitor).getByRole("button", { name: "Focus current" }));
+    await userEvent.click(within(timeline).getByRole("button", {
+      name: "Event 3 running: Step 2 Fill credentials",
+    }));
 
     const inspectorDrawer = await within(editor).findByRole("complementary", {
       name: "Graph inspector drawer",
@@ -234,6 +271,31 @@ describe("Workflow detail integration", () => {
     await userEvent.click(within(controlsRow).getByRole("button", { name: "Monitor" }));
     expect(await screen.findByRole("complementary", { name: "Run Monitor" }))
       .toBeInTheDocument();
+  });
+
+  test("shows terminal monitor status without the Run prefix", async () => {
+    const successState = {
+      ...idleRunState,
+      status: "success" as const,
+      mode: "run_workflow" as const,
+      completed_step_ids: ["step-1"],
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      list_run_states: [runSnapshot(successState)],
+      get_run_state: successState,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    await userEvent.click(await screen.findByRole("button", { name: "Monitor" }));
+
+    const monitor = await screen.findByRole("complementary", { name: "Run Monitor" });
+    expect(within(monitor).getByRole("heading", { name: "Succeeded" }))
+      .toBeInTheDocument();
+    expect(within(monitor).queryByRole("heading", { name: "Run succeeded" }))
+      .not.toBeInTheDocument();
   });
 
   test("hides the run monitor when Graph settings disable Live Run", async () => {

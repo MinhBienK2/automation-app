@@ -1009,9 +1009,7 @@ export class BrowserWorkflowRunner {
       try {
         this.reportProgress(runtime);
         await this.executeNestedAction(runtime, action, previous.runtimeStepId);
-        if (!runtime.liveState.completed_step_ids.includes(action.graph_node_id)) {
-          runtime.liveState.completed_step_ids.push(action.graph_node_id);
-        }
+        runtime.liveState.completed_step_ids.push(action.graph_node_id);
         this.reportProgress(runtime);
       } finally {
         runtime.currentStepId = previous.runtimeStepId;

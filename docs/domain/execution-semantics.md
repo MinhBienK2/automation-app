@@ -59,7 +59,7 @@
 
 - Status values are `idle`, `running`, `success`, `failed`, and `stopped`.
 - Mode values are `none`, `run_workflow`, and `test_step`.
-- Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run.
+- Step progress reports current step id/number and completed step ids. Graph branch/body actions keep their source node ids in the compiled run plan, so nested `If`, loop, retry, and related branch nodes can appear as active/completed on the canvas before continuation nodes run. Repeated nested graph actions append repeated completed ids for each loop/retry occurrence so run monitors can show a log entry for every activity, while graph canvas state can still treat completed ids as a membership set.
 - Terminal run state includes captured outputs from `window.__wamOutputs` when the runner retained a browser session.
 - Captured outputs may include backend evidence keys such as `__action_traces` and `__evidence`. At finish time, command persistence keeps compatible top-level `run_steps` rows and appends executed nested trace rows, so the stored rows can reconstruct which branch, loop iteration, or retry attempt actually ran.
 - Overview only reads metadata from sanitized structured evidence; artifact

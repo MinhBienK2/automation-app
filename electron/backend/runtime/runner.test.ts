@@ -2464,6 +2464,8 @@ describe("BrowserWorkflowRunner", () => {
     const traces = result.outputs?.__action_traces as Array<Record<string, unknown>>;
 
     expect(result.status).toBe("success");
+    expect(result.completed_step_ids.filter((stepId) => stepId === "loop-body"))
+      .toEqual(["loop-body", "loop-body"]);
     expect(
       traces.filter((trace) => trace.node_id === "loop-body").map((trace) => ({
         parent_node_id: trace.parent_node_id,

@@ -24,7 +24,9 @@ Run state includes:
 - `target_step_id`
 - `current_step_id`
 - `current_step_number`
-- `completed_step_ids`
+- `completed_step_ids`: completed graph node ids in completion order. Nested
+  branch/body/loop actions may appear more than once when the same graph node
+  executes multiple times, such as loop iterations or retries.
 - `outputs`: captured runtime outputs/variables available after the runner has a browser session to inspect
 - `retained_session`: whether a reusable retained browser session is available, plus workflow/profile ownership and a reason when unavailable
 - `error`
@@ -57,7 +59,7 @@ source vocabulary for Runs, Overview, and Evidence filtering.
 
 - `run_workflow` delegates to the run manager to create a run-id scoped snapshot, close only a conflicting retained browser session for the same workflow/profile when launching a fresh session, then set that snapshot status to `running`, mode, target step id, and clears progress/error.
 - `run_workflow_from_node` reuses an existing retained session and runs from a selected main-path graph node. It requires the Workflow Settings Run Policy Run from selected toggle, Reuse login session, browser retention `retain`, and a retained session matching the workflow/profile. Run Policy scope decides whether the compiled sub-plan contains only the selected node or the selected node through the downstream main path.
-- Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes.
+- Progress events set current step and completed step ids. Nested compiled graph actions also report their original graph node ids while they execute, allowing branch/body nodes to surface in the same run-state fields as top-level continuation nodes. Repeated nested executions append repeated ids to `completed_step_ids` so live monitors can show each loop/retry occurrence as a separate activity log entry; canvas completion styling should treat the array as membership rather than uniqueness.
 - Multiple different workflows can run concurrently when they do not share a persistent browser profile. A second run for the same workflow fails with a workflow conflict, and a second run that would reuse the same persistent browser profile fails with a profile conflict.
 - `run_batch_workflow` remains globally exclusive. A batch blocks normal runs while active, normal runs block a batch start, batch reports progress through the same state shape, and it can be stopped through `stop_run`.
 - `stop_run(runId)` delegates to the run manager to set the targeted run status to `stopped` and clear error. Omitting `runId` is allowed only when there is exactly one active run; omitting it while multiple runs are active fails with a command error. Batch stopping remains supported through the same command.
@@ -84,13 +86,21 @@ source vocabulary for Runs, Overview, and Evidence filtering.
 - Workflow detail exposes a Run Monitor drawer whenever saved Graph settings
   enable Live Run. The Monitor button lets operators open or hide the drawer;
   active runs open it automatically unless the operator closed it for the
-  current workflow session. The drawer derives the current/failed node, full
-  graph timeline statuses, and focus targets from `current_step_id`,
-  `current_step_number`, `completed_step_ids`, and `error.step_id`, and uses
-  graph labels for readable node names. The saved Follow current setting
-  initializes whether progress selects and centers the current node as it
-  changes; Focus current/failed node and timeline row selection perform the same
-  graph focus action on demand.
+  current workflow session. The drawer derives the current/failed node,
+  chronological node-activity log rows, and focus targets from
+  `current_step_id`, `current_step_number`, `completed_step_ids`, and
+  `error.step_id`, and uses graph labels for readable node names. The drawer
+  does not render a separate current-node summary section. Each visible node
+  occurrence is one timeline row: it is running while `current_step_id` points to
+  it, becomes completed when its id appears in `completed_step_ids`, and becomes
+  failed when `error.step_id` points to it. Repeated ids create additional rows
+  for loop/retry occurrences. Future pending graph nodes remain visible on the
+  graph canvas instead of in the timeline, and timeline rows do not receive
+  separate current/active selection styling when the graph highlights the
+  current node. The saved Follow current setting controls whether progress
+  selects and centers the current node as it changes; the drawer does not expose
+  a separate Follow current toggle. Timeline row selection performs graph focus
+  on demand.
 - Workflow list rows display the active snapshot for their workflow, disable only the affected row Run action, and expose row-level Stop for that run id.
 - Runs displays all session run snapshots and can stop a selected active run by id.
 - Workflow detail renders `Run from selected` only when the Workflow Settings Run Policy toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Merge is not a supported selected start because it compiles to an internal no-op graph marker.

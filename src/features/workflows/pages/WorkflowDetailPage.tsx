@@ -254,8 +254,6 @@ export function WorkflowDetailPage({
             <RunMonitorDrawer
               graph={workflowGraph}
               runState={runState}
-              followCurrentNode={followCurrentNode}
-              onFollowCurrentNodeChange={setFollowCurrentNode}
               onFocusNode={requestNodeSelection}
               onClose={closeMonitor}
             />
