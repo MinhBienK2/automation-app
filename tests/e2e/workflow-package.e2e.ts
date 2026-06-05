@@ -77,6 +77,9 @@ test.describe("desktop workflow package import and export", () => {
     expect(result.importedSettings.browser_launch.proxy_password).toBeNull();
 
     await appWindow.reload();
+    await appWindow.getByRole("button", { name: "Workflows", exact: true }).click();
+    await expect(appWindow.getByRole("heading", { name: "Workflows", exact: true }))
+      .toBeVisible();
     await expect(appWindow.getByRole("heading", { name: "Package source" })).toBeVisible();
     await expect(appWindow.getByRole("heading", { name: "Imported package (imported)" }))
       .toBeVisible();
