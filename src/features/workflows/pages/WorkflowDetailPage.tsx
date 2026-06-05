@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Save, Settings } from "lucide-react";
+import { ActivitySquare, CheckCircle2, Save, Settings } from "lucide-react";
 import type {
   GraphValidationIssue,
   GraphEdgeDelay,
@@ -11,7 +11,7 @@ import { PageHeader } from "../../../components/layout/PageHeader";
 import { Button } from "../../../components/ui/button";
 import { IconButton } from "../../../components/ui/icon-button";
 import { buildRunIssues } from "../../../lib/workflowUi";
-import { RunProgressNavigator } from "../components/RunProgressNavigator";
+import { RunMonitorDrawer } from "../components/RunMonitorDrawer";
 import { RunIssuePanel } from "../components/RunIssuePanel";
 import { RunStatusBar } from "../components/RunStatusBar";
 import {
@@ -73,7 +73,9 @@ export function WorkflowDetailPage({
   const [selectionRequest, setSelectionRequest] =
     useState<GraphSelectionRequest | null>(null);
   const [followCurrentNode, setFollowCurrentNode] = useState(liveRunFollowCurrent);
+  const [monitorOpen, setMonitorOpen] = useState(false);
   const selectionRequestIdRef = useRef(0);
+  const monitorManuallyClosedRef = useRef(false);
   const runIssues = useMemo(
     () =>
       buildRunIssues({
@@ -111,12 +113,34 @@ export function WorkflowDetailPage({
 
   useEffect(() => {
     setFollowCurrentNode(liveRunFollowCurrent);
+    setMonitorOpen(false);
+    monitorManuallyClosedRef.current = false;
   }, [detail.workflow.id, liveRunFollowCurrent]);
+
+  useEffect(() => {
+    if (!liveRunEnabled || runState.status !== "running" || monitorManuallyClosedRef.current) {
+      return;
+    }
+    setMonitorOpen(true);
+  }, [liveRunEnabled, runState.status]);
 
   useEffect(() => {
     if (!liveRunEnabled || !followCurrentNode || !currentRunNodeId || !workflowGraph) return;
     requestNodeSelection(currentRunNodeId);
   }, [currentRunNodeId, followCurrentNode, liveRunEnabled, requestNodeSelection, workflowGraph]);
+
+  const toggleMonitor = () => {
+    setMonitorOpen((current) => {
+      const next = !current;
+      monitorManuallyClosedRef.current = !next;
+      return next;
+    });
+  };
+
+  const closeMonitor = () => {
+    monitorManuallyClosedRef.current = true;
+    setMonitorOpen(false);
+  };
 
   return (
     <section className="app-screen workflow-detail-screen">
@@ -163,6 +187,19 @@ export function WorkflowDetailPage({
             >
               <Save aria-hidden="true" />
             </IconButton>
+            {liveRunEnabled ? (
+              <Button
+                className="workflow-command-monitor"
+                variant="secondary"
+                size="sm"
+                type="button"
+                onClick={toggleMonitor}
+                aria-pressed={monitorOpen}
+              >
+                <ActivitySquare aria-hidden="true" />
+                Monitor
+              </Button>
+            ) : null}
             {showRunGraphFromSelected ? (
               <Button
                 className="workflow-command-secondary"
@@ -213,13 +250,14 @@ export function WorkflowDetailPage({
 
       {workflowGraph ? (
         <>
-          {liveRunEnabled ? (
-            <RunProgressNavigator
+          {liveRunEnabled && monitorOpen ? (
+            <RunMonitorDrawer
               graph={workflowGraph}
               runState={runState}
               followCurrentNode={followCurrentNode}
               onFollowCurrentNodeChange={setFollowCurrentNode}
               onFocusNode={requestNodeSelection}
+              onClose={closeMonitor}
             />
           ) : null}
           <WorkflowGraphEditor

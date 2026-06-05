@@ -150,7 +150,7 @@ describe("Workflow detail integration", () => {
     expect(screen.queryByRole("dialog", { name: "Launch Run" })).not.toBeInTheDocument();
   });
 
-  test("shows live run progress and focuses the current graph node", async () => {
+  test("shows run monitor drawer and focuses the current graph node", async () => {
     const fillStep: WorkflowStep = {
       id: "step-2",
       name: "Fill credentials",
@@ -189,18 +189,27 @@ describe("Workflow detail integration", () => {
 
     await openWorkflowDetails();
 
-    const navigator = await screen.findByRole("region", {
-      name: "Live run navigator",
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
     });
-    expect(within(navigator).getByText("Running step 2")).toBeInTheDocument();
-    expect(within(navigator).getByRole("heading", { name: "Fill credentials" }))
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    expect(within(controlsRow).getByRole("button", { name: "Monitor" }))
       .toBeInTheDocument();
-    expect(within(navigator).getByText("Fill Field")).toBeInTheDocument();
-    expect(within(navigator).getByRole("button", { name: "Step 1: Wait for page" }))
+
+    const monitor = await screen.findByRole("complementary", {
+      name: "Run Monitor",
+    });
+    expect(within(monitor).getAllByText("Running step 2").length).toBeGreaterThan(0);
+    expect(within(monitor).getByRole("heading", { name: "Fill credentials" }))
       .toBeInTheDocument();
-    expect(within(navigator).getByRole("button", { name: "Current step 2: Fill credentials" }))
+    expect(within(monitor).getByText("Fill Field")).toBeInTheDocument();
+    expect(within(monitor).getByRole("button", { name: "Step 1 success: Wait for page" }))
       .toBeInTheDocument();
-    const followSwitch = within(navigator).getByRole("switch", { name: "Follow current" });
+    expect(within(monitor).getByRole("button", { name: "Step 2 running: Fill credentials" }))
+      .toBeInTheDocument();
+    const followSwitch = within(monitor).getByRole("switch", { name: "Follow current" });
     expect(followSwitch).toHaveAttribute("aria-checked", "false");
     const editor = screen.getByRole("region", { name: "Visual Graph" });
     expect(within(editor).queryByRole("complementary", {
@@ -209,16 +218,25 @@ describe("Workflow detail integration", () => {
 
     await userEvent.click(followSwitch);
     expect(followSwitch).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(within(navigator).getByRole("button", { name: "Focus current" }));
+    await userEvent.click(within(monitor).getByRole("button", { name: "Focus current" }));
 
     const inspectorDrawer = await within(editor).findByRole("complementary", {
       name: "Graph inspector drawer",
     });
     expect(within(inspectorDrawer).getByRole("heading", { name: "Fill credentials" }))
       .toBeInTheDocument();
+
+    await userEvent.click(within(monitor).getByRole("button", { name: "Close monitor" }));
+    expect(screen.queryByRole("complementary", { name: "Run Monitor" }))
+      .not.toBeInTheDocument();
+    expect(editor).toBeInTheDocument();
+
+    await userEvent.click(within(controlsRow).getByRole("button", { name: "Monitor" }));
+    expect(await screen.findByRole("complementary", { name: "Run Monitor" }))
+      .toBeInTheDocument();
   });
 
-  test("hides the live run navigator when Graph settings disable Live Run", async () => {
+  test("hides the run monitor when Graph settings disable Live Run", async () => {
     const runningState = {
       ...idleRunState,
       status: "running" as const,
@@ -246,7 +264,9 @@ describe("Workflow detail integration", () => {
 
     await openWorkflowDetails();
 
-    expect(screen.queryByRole("region", { name: "Live run navigator" }))
+    expect(screen.queryByRole("complementary", { name: "Run Monitor" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Monitor" }))
       .not.toBeInTheDocument();
   });
 

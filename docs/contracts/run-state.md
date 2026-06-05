@@ -7,6 +7,7 @@
 - App orchestration: `src/App.tsx`
 - Graph run presentation: `src/features/workflows/components/WorkflowGraphEditor.tsx`
 - Run issue presentation: `src/features/workflows/components/RunIssuePanel.tsx`
+- Run Monitor drawer: `src/features/workflows/components/RunMonitorDrawer.tsx`
 - Status bar: `src/features/workflows/components/RunStatusBar.tsx`
 - Runs: `src/features/runs/pages/RunCenterPage.tsx`
 - Electron runner: `electron/backend/runtime/runner.ts`
@@ -80,7 +81,16 @@ source vocabulary for Runs, Overview, and Evidence filtering.
 
 - `App.tsx` polls `list_run_states` while any snapshot is running, including runs started from the workflow list or scheduler where the detail graph workspace is not open. It falls back to `get_run_state` only for legacy bridge compatibility.
 - Run status bar displays terminal and error states.
-- Workflow detail displays a live run navigator whenever saved Graph settings enable Live Run and the loaded graph has active or recent run progress. The navigator derives the current/failed node and recent trail from `current_step_id`, `current_step_number`, `completed_step_ids`, and `error.step_id`, and uses graph labels for readable node names. The saved Follow current setting initializes whether progress selects and centers the current node as it changes; Focus current/failed node performs the same action on demand.
+- Workflow detail exposes a Run Monitor drawer whenever saved Graph settings
+  enable Live Run. The Monitor button lets operators open or hide the drawer;
+  active runs open it automatically unless the operator closed it for the
+  current workflow session. The drawer derives the current/failed node, full
+  graph timeline statuses, and focus targets from `current_step_id`,
+  `current_step_number`, `completed_step_ids`, and `error.step_id`, and uses
+  graph labels for readable node names. The saved Follow current setting
+  initializes whether progress selects and centers the current node as it
+  changes; Focus current/failed node and timeline row selection perform the same
+  graph focus action on demand.
 - Workflow list rows display the active snapshot for their workflow, disable only the affected row Run action, and expose row-level Stop for that run id.
 - Runs displays all session run snapshots and can stop a selected active run by id.
 - Workflow detail renders `Run from selected` only when the Workflow Settings Run Policy toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Merge is not a supported selected start because it compiles to an internal no-op graph marker.
