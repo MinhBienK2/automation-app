@@ -266,9 +266,12 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "merge":
       return "out";
     case "if":
     case "switch":
+    case "router":
+    case "random_choice":
     case "repeat_times":
     case "repeat_for_each":
     case "while":

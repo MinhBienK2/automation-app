@@ -7,7 +7,7 @@ import {
   resetWorkflowBridge,
 } from "../../../tests/mocks/electron";
 import { sleepStep, workflow } from "../../../tests/mocks/workflowFixtures";
-import type { WorkflowRunSnapshot, WorkflowStep } from "../../../types/workflow";
+import type { WorkflowGraph, WorkflowRunSnapshot, WorkflowStep } from "../../../types/workflow";
 import {
   idleRunState,
   workflowDetailScenario,
@@ -451,6 +451,128 @@ describe("Workflow detail integration", () => {
     expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
       workflowId: "workflow-1",
       startNodeId: "step-1",
+    });
+  });
+
+  test("enables Run from selected for a main-path node after a merge", async () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: {},
+          ports: [{ id: "out", label: "Out", direction: "output" }],
+          group_id: null,
+        },
+        {
+          id: "merge",
+          node_type: "merge",
+          label: "Merge",
+          position: { x: 220, y: 0 },
+          config: {},
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+          group_id: null,
+        },
+        {
+          id: "after-merge",
+          node_type: "action",
+          label: "After Merge",
+          position: { x: 440, y: 0 },
+          config: sleepStep.config,
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "edge-start-merge",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "merge",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+        {
+          id: "edge-merge-after",
+          source_node_id: "merge",
+          source_port: "out",
+          target_node_id: "after-merge",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      get_workflow_graph: graph,
+      save_workflow_graph: undefined,
+      get_run_state: {
+        ...idleRunState,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      },
+      get_workflow_settings: {
+        ...workflowDetailScenario([sleepStep]).get_workflow_settings,
+        run_policy: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.run_policy,
+          browser_retention: "retain",
+          run_from_selected_enabled: true,
+          run_from_selected_mode: "from_selected",
+        },
+        browser_launch: {
+          ...workflowDetailScenario([sleepStep]).get_workflow_settings.browser_launch,
+          session_mode: "persistent_profile",
+          profile_dir: "qa-profile",
+          profile_name: "qa-profile",
+        },
+      },
+      run_workflow_from_node: {
+        status: "running",
+        mode: "run_workflow",
+        target_step_id: "after-merge",
+        current_step_id: "after-merge",
+        current_step_number: 1,
+        completed_step_ids: [],
+        outputs: {},
+        error: null,
+        retained_session: {
+          available: true,
+          workflow_id: "workflow-1",
+          profile_name: "qa-profile",
+          reason: null,
+        },
+      },
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node after-merge" }));
+    const runFromSelected = await screen.findByRole("button", { name: "Run from selected" });
+    await waitFor(() => expect(runFromSelected).toBeEnabled());
+    await userEvent.click(runFromSelected);
+
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("run_workflow_from_node", {
+      workflowId: "workflow-1",
+      startNodeId: "after-merge",
     });
   });
 
