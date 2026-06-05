@@ -179,7 +179,7 @@ export function toReactFlowGraph(
       id: node.id,
       type: "workflow",
       position: node.position,
-      initialHeight: 64,
+      initialHeight: 82,
       initialWidth: 160,
       selected: state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id,
       data: {

@@ -15,10 +15,10 @@ describe("vite config", () => {
   test("ignores generated output directories during dev watch", async () => {
     const source = await readFile(path.join(currentDir, "vite.config.ts"), "utf8");
 
-    expect(source).toContain('"**/src-tauri/**"');
-    expect(source).toContain('"**/dist/**"');
-    expect(source).toContain('"**/dist-electron/**"');
-    expect(source).toContain('"**/release/**"');
+    expect(source).toContain('normalized.includes("/src-tauri/")');
+    expect(source).toContain('normalized.includes("/dist/")');
+    expect(source).toContain('normalized.includes("/dist-electron/")');
+    expect(source).toContain('normalized.includes("/release/")');
   });
 
   test("builds renderer assets with relative paths for Electron file loading", async () => {

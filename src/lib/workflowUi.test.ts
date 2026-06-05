@@ -65,6 +65,7 @@ describe("workflow UI action taxonomy", () => {
     expect(actionGroups.find((group) => group.label === "Element Interaction")?.actions)
       .toEqual([
         "click",
+        "find_element",
         "double_click",
         "right_click",
         "hover",

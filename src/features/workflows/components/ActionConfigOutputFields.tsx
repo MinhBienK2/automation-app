@@ -5,7 +5,7 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { ElementTargetFields } from "./ActionConfigElementSharedFields";
+import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 
@@ -43,7 +43,7 @@ export function OutputActionFields({
     case "assert_element":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <Label>
             State
             <Select
@@ -64,7 +64,7 @@ export function OutputActionFields({
     case "assert_text":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <TemplateTextareaField
             label="Text"
             value={config.config.text}

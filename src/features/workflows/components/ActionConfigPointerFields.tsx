@@ -1,12 +1,12 @@
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
-import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import {
   ElementTargetFields,
+  ElementTargetSourceFields,
   StructuredTargetFields,
 } from "./ActionConfigElementSharedFields";
 
@@ -23,9 +23,9 @@ export function PointerActionFields({
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
     case "clear_input":
-      return <ElementTargetFields config={config} onChange={onChange} />;
+      return <ElementTargetSourceFields config={config} onChange={onChange} />;
     case "click":
-      return <ClickTargetFields config={config} onChange={onChange} />;
+      return <ElementTargetSourceFields config={config} onChange={onChange} />;
     case "find_element":
       return (
         <>
@@ -68,6 +68,7 @@ export function PointerActionFields({
       );
     case "scroll": {
       const mode = config.config.mode ?? "page";
+      const usesTargetRef = config.config.target_ref != null;
       return (
         <>
           <Label>
@@ -131,23 +132,33 @@ export function PointerActionFields({
             </>
           ) : (
             <>
-              <StructuredTargetFields
-                config={config}
-                onChange={onChange}
-                showConstraints={false}
-              />
-              <Label>
-                Iframe XPath
-                <Input
-                  value={config.config.iframe_xpath ?? ""}
-                  onChange={(event) =>
-                    onChange(
-                      updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
-                    )
-                  }
-                  placeholder="Optional iframe XPath"
+              {mode === "into_view" ? (
+                <ElementTargetSourceFields
+                  config={config}
+                  onChange={onChange}
+                  showConstraints={false}
                 />
-              </Label>
+              ) : (
+                <StructuredTargetFields
+                  config={config}
+                  onChange={onChange}
+                  showConstraints={false}
+                />
+              )}
+              {mode === "until_element_visible" || !usesTargetRef ? (
+                <Label>
+                  Iframe XPath
+                  <Input
+                    value={config.config.iframe_xpath ?? ""}
+                    onChange={(event) =>
+                      onChange(
+                        updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
+                      )
+                    }
+                    placeholder="Optional iframe XPath"
+                  />
+                </Label>
+              ) : null}
               <Label>
                 Timeout ms
                 <Input
@@ -203,65 +214,4 @@ export function PointerActionFields({
     default:
       return null;
   }
-}
-
-function ClickTargetFields({
-  config,
-  onChange,
-}: {
-  config: Extract<ActionConfig, { type: "click" }>;
-  onChange: (config: ActionConfig) => void;
-}) {
-  const [targetSource, setTargetSource] = useState<"locator" | "ref">(
-    config.config.target_ref?.trim() ? "ref" : "locator",
-  );
-
-  useEffect(() => {
-    if (config.config.target_ref?.trim()) setTargetSource("ref");
-  }, [config.config.target_ref]);
-
-  return (
-    <>
-      <div className="grid gap-1.5">
-        <Label>Target source</Label>
-        <SegmentedControl
-          ariaLabel="Target source"
-          value={targetSource}
-          options={[
-            { label: "Use locator", value: "locator" },
-            { label: "Use Find Element ref", value: "ref" },
-          ]}
-          onValueChange={(value) => {
-            setTargetSource(value);
-            onChange({
-              type: "click",
-              config: {
-                ...config.config,
-                target_ref: value === "ref" ? (config.config.target_ref ?? "") : null,
-              },
-            });
-          }}
-        />
-      </div>
-      {targetSource === "ref" ? (
-        <>
-          <Label>
-            Target ref
-            <Input
-              value={config.config.target_ref ?? ""}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "target_ref", event.currentTarget.value))
-              }
-              placeholder="Output name from Find Element"
-            />
-          </Label>
-          <p className="text-xs leading-5 text-[var(--app-text-muted)]">
-            Click uses the element resolved by a previous Find Element node in this run.
-          </p>
-        </>
-      ) : (
-        <ElementTargetFields config={config} onChange={onChange} />
-      )}
-    </>
-  );
 }

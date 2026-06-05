@@ -6,7 +6,7 @@ import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import {
-  ElementTargetFields,
+  ElementTargetSourceFields,
   StructuredTargetFields,
 } from "./ActionConfigElementSharedFields";
 
@@ -23,7 +23,7 @@ export function FormActionFields({
     case "select_option":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <Label>
             Match by
             <Select
@@ -73,7 +73,7 @@ export function FormActionFields({
         </Label>
       );
     case "hover":
-      return <ElementTargetFields config={config} onChange={onChange} />;
+      return <ElementTargetSourceFields config={config} onChange={onChange} />;
     case "double_click":
     case "right_click":
     case "focus_element":
@@ -83,7 +83,7 @@ export function FormActionFields({
     case "uncheck":
     case "toggle_checkbox":
     case "select_radio":
-      return <ElementTargetFields config={config} onChange={onChange} />;
+      return <ElementTargetSourceFields config={config} onChange={onChange} />;
     case "drag_and_drop":
       return (
         <>
@@ -102,7 +102,7 @@ export function FormActionFields({
     case "type_sequence":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <Label>
             Text
             <Textarea
@@ -129,7 +129,7 @@ export function FormActionFields({
     case "upload_file":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <Label>
             Files
             <Textarea
@@ -144,7 +144,7 @@ export function FormActionFields({
     case "submit_form":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
         </>
       );
     case "select_custom_option":
@@ -171,7 +171,7 @@ export function FormActionFields({
     case "set_contenteditable":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <Label>
             Text
             <Textarea

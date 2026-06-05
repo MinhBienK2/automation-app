@@ -493,7 +493,7 @@ export class BrowserWorkflowRunner {
         await (await this.locatorForAction(runtime, action.config)).fill("");
       },
       click: async (action) => {
-        await (await this.locatorForClick(runtime, action.config)).click();
+        await (await this.locatorForAction(runtime, action.config)).click();
       },
       find_element: async (action) => {
         await this.executeFindElement(runtime, action);
@@ -602,7 +602,7 @@ export class BrowserWorkflowRunner {
         );
       },
       submit_form: async (action) => {
-        if (action.config.xpath || action.config.target) {
+        if (action.config.xpath || action.config.target || action.config.target_ref?.trim()) {
           await submitFormTarget(await this.locatorForAction(runtime, action.config, "form"));
         } else {
           await this.pressKeyHuman(runtime.page, "Enter", runtime.signal);
@@ -620,7 +620,7 @@ export class BrowserWorkflowRunner {
       extract_text: async (action) => {
         runtime.outputs[action.config.output_name] =
           (await requireLocatorMethod(
-            await locatorFor(runtime.page, action.config.target, action.config.xpath),
+            await this.locatorForAction(runtime, action.config),
             "textContent",
             action.type,
           )()) ?? "";
@@ -628,7 +628,7 @@ export class BrowserWorkflowRunner {
       extract_attribute: async (action) => {
         runtime.outputs[action.config.output_name] =
           (await requireLocatorMethod(
-            await locatorFor(runtime.page, action.config.target, action.config.xpath),
+            await this.locatorForAction(runtime, action.config),
             "getAttribute",
             action.type,
           )(
@@ -638,19 +638,19 @@ export class BrowserWorkflowRunner {
       extract_input_value: async (action) => {
         runtime.outputs[action.config.output_name] =
           (await requireLocatorMethod(
-            await locatorFor(runtime.page, action.config.target, action.config.xpath),
+            await this.locatorForAction(runtime, action.config),
             "inputValue",
             action.type,
           )()) ?? "";
       },
       extract_list: async (action) => {
         runtime.outputs[action.config.output_name] = await extractListLike(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath),
+          await this.locatorForAction(runtime, action.config),
         );
       },
       extract_table: async (action) => {
         runtime.outputs[action.config.output_name] = await extractTable(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath),
+          await this.locatorForAction(runtime, action.config),
         );
       },
       take_screenshot: async (action) => {
@@ -723,7 +723,7 @@ export class BrowserWorkflowRunner {
         flattenObject(runtime.outputs, "", parsed);
       },
       assert_element: async (action) => {
-        const locator = await locatorFor(runtime.page, action.config.target, action.config.xpath);
+        const locator = await this.locatorForAction(runtime, action.config);
         await assertElementState(locator, action.config.state, action.config.timeout_ms);
       },
       assert_text: async (action) => {
@@ -732,9 +732,7 @@ export class BrowserWorkflowRunner {
           ["contains", "equals"],
           "Match mode must be contains or equals",
         );
-        const text = action.config.xpath || action.config.target
-          ? await (await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body")).textContent?.()
-          : "";
+        const text = await (await this.locatorForAction(runtime, action.config, "body")).textContent?.();
         if (action.config.match_mode === "equals" && text !== action.config.text) {
           throw new Error(`Text did not equal ${action.config.text}`);
         }
@@ -1095,20 +1093,20 @@ export class BrowserWorkflowRunner {
         return;
       case "element_visible":
         await waitForLocatorState(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await this.locatorForAction(runtime, action.config, "body"),
           "visible",
           action.config.timeout_ms,
         );
         return;
       case "element_attached":
         await waitForLocatorState(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await this.locatorForAction(runtime, action.config, "body"),
           "attached",
           action.config.timeout_ms,
         );
         return;
       case "element_enabled": {
-        const locator = await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body");
+        const locator = await this.locatorForAction(runtime, action.config, "body");
         await waitForLocatorState(locator, "visible", action.config.timeout_ms);
         await this.waitForLocatorEnabled(locator, true, action.config.timeout_ms, runtime.signal);
         return;
@@ -1122,21 +1120,21 @@ export class BrowserWorkflowRunner {
         return;
       case "element_hidden":
         await waitForLocatorState(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await this.locatorForAction(runtime, action.config, "body"),
           "hidden",
           action.config.timeout_ms,
         );
         return;
       case "element_detached":
         await waitForLocatorState(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await this.locatorForAction(runtime, action.config, "body"),
           "detached",
           action.config.timeout_ms,
         );
         return;
       case "element_disabled":
         await this.waitForLocatorEnabled(
-          await locatorFor(runtime.page, action.config.target, action.config.xpath ?? "body"),
+          await this.locatorForAction(runtime, action.config, "body"),
           false,
           action.config.timeout_ms,
           runtime.signal,
@@ -1394,31 +1392,13 @@ export class BrowserWorkflowRunner {
     runtime: Runtime,
     config: {
       target?: ElementTarget | null;
+      target_ref?: string | null;
       xpath?: string | null;
       iframe_xpath?: string | null;
       wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
       timeout_ms?: number | null;
     },
     fallbackXpath = "body",
-  ) {
-    const locator = await locatorFor(
-      runtime.page,
-      config.target,
-      config.xpath ?? fallbackXpath,
-      config.iframe_xpath,
-    );
-    await this.waitForElementReadiness(
-      locator,
-      config.wait_until ?? null,
-      config.timeout_ms,
-      runtime.signal,
-    );
-    return locator;
-  }
-
-  private async locatorForClick(
-    runtime: Runtime,
-    config: Extract<ActionConfig, { type: "click" }>["config"],
   ) {
     if (config.target_ref?.trim()) {
       const ref = runtime.elementRefs.get(config.target_ref.trim());
@@ -1434,7 +1414,20 @@ export class BrowserWorkflowRunner {
       );
       return locator;
     }
-    return this.locatorForAction(runtime, config);
+
+    const locator = await locatorFor(
+      runtime.page,
+      config.target,
+      config.xpath ?? fallbackXpath,
+      config.iframe_xpath,
+    );
+    await this.waitForElementReadiness(
+      locator,
+      config.wait_until ?? null,
+      config.timeout_ms,
+      runtime.signal,
+    );
+    return locator;
   }
 
   private async executeFindElement(

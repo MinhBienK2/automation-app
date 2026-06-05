@@ -3369,6 +3369,100 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("lets data capture actions consume runtime element refs", async () => {
+    const page = new RankedElementPage({
+      ".owned-card": [
+        { x: 10, y: 20, width: 120, height: 40 },
+        { x: 420, y: 300, width: 180, height: 80 },
+      ],
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-card", "Find Card", {
+            type: "find_element",
+            config: {
+              output_name: "current_card",
+              target: {
+                locators: [{ kind: "css", value: ".owned-card" }],
+                constraints: { visible: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("extract-card", "Extract Card", {
+            type: "extract_text",
+            config: { target_ref: "current_card", output_name: "card_text" },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.card_text).toBe("Owned Fixture");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "nth:.owned-card:1",
+        "boundingBox:.owned-card >> nth=1:1:300",
+      ]),
+    );
+  });
+
+  test("submits forms through runtime element refs", async () => {
+    const page = new RankedElementPage({
+      ".submit-button": [
+        { x: 30, y: 40, width: 120, height: 44 },
+        { x: 500, y: 260, width: 120, height: 44 },
+      ],
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-submit", "Find Submit", {
+            type: "find_element",
+            config: {
+              output_name: "current_submit",
+              target: {
+                locators: [{ kind: "css", value: ".submit-button" }],
+                constraints: { visible: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("submit", "Submit", {
+            type: "submit_form",
+            config: { target_ref: "current_submit" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "nth:.submit-button:1",
+        "click:.submit-button >> nth=1",
+      ]),
+    );
+    expect(page.events).not.toContain("press:Enter");
+  });
+
   test("supports target locator kinds and iframe targets", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({

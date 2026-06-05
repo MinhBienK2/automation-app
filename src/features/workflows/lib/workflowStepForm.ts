@@ -71,6 +71,13 @@ export function updateActionConfigField(
   field: ActionConfigField,
   value: string,
 ): ActionConfig {
+  if (field === "target_ref" && actionSupportsTargetRef(config.type)) {
+    return {
+      ...config,
+      config: { ...config.config, target_ref: value || null },
+    } as ActionConfig;
+  }
+
   switch (config.type) {
     case "navigate":
       return updateNavigateConfigField(config, field, value);
@@ -269,6 +276,40 @@ export function updateActionConfigField(
     case "domain_allowlist":
       return config;
   }
+}
+
+function actionSupportsTargetRef(actionType: ActionConfig["type"]): boolean {
+  return (
+    [
+      "wait",
+      "input_text",
+      "clear_input",
+      "click",
+      "scroll",
+      "select_option",
+      "hover",
+      "double_click",
+      "right_click",
+      "focus_element",
+      "blur_element",
+      "type_sequence",
+      "paste_clipboard",
+      "check",
+      "uncheck",
+      "toggle_checkbox",
+      "select_radio",
+      "upload_file",
+      "submit_form",
+      "set_contenteditable",
+      "extract_text",
+      "extract_attribute",
+      "extract_input_value",
+      "extract_table",
+      "extract_list",
+      "assert_element",
+      "assert_text",
+    ] as Array<ActionConfig["type"]>
+  ).includes(actionType);
 }
 
 function updateSetViewportConfigField(

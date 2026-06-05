@@ -274,7 +274,7 @@ const baseStepHelpContent: Record<
       useWhen: ["Dùng để bấm nút Submit, mở dropdown, chọn tab, hoặc click link.", "Dùng Real click khi muốn giống hành vi người dùng nhất."],
       fields: [
         { name: "Target source", description: "Use locator hiện field locator trực tiếp; Use Find Element ref chỉ dùng Target ref từ node Find Element trước đó." },
-        { name: "Target ref", description: "Tên output của Find Element, ví dụ current_like. Khi có Target ref, Click bỏ qua locator fields." },
+        { name: "Target ref", description: "Tên output của Find Element, ví dụ current_like. Khi có Target ref, action bỏ qua locator fields." },
         { name: "XPath", description: xpathField.vi },
         { name: "Mode", description: "Real click dùng chuột thật của browser; Force DOM click gọi click() trực tiếp khi element khó nhận chuột." },
         { name: "Click count", description: "Single click hoặc double click." },
@@ -296,7 +296,7 @@ const baseStepHelpContent: Record<
       useWhen: ["Use to press Submit, open dropdowns, select tabs, or click links.", "Use Real click when you want browser-like user behavior."],
       fields: [
         { name: "Target source", description: "Use locator shows direct locator fields; Use Find Element ref uses only Target ref from a previous Find Element node." },
-        { name: "Target ref", description: "Find Element output name, for example current_like. When Target ref is set, Click ignores locator fields." },
+        { name: "Target ref", description: "Find Element output name, for example current_like. When Target ref is set, the action ignores locator fields." },
         { name: "XPath", description: xpathField.en },
         { name: "Mode", description: "Real click uses browser mouse events; Force DOM click calls click() directly when mouse interaction is difficult." },
         { name: "Click count", description: "Single click or double click." },
@@ -880,12 +880,14 @@ function actualFieldNames(actionType: ActionType): string[] {
     "Target contains text",
     "Target index",
   ];
+  const targetSourceFields = ["Target source", "Target ref", ...targetFields];
   const scrollTargetFields = [
     "Target locator type",
     "Target locator",
     "Target role",
     "Target attribute",
   ];
+  const scrollTargetSourceFields = ["Target source", "Target ref", ...scrollTargetFields];
   const sourceTargetFields = [
     "Source locator type",
     "Source locator",
@@ -914,21 +916,21 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "navigate":
       return ["URL"];
     case "wait":
-      return ["Condition", "Duration ms", ...targetFields, "Text", "URL contains"];
+      return ["Condition", "Duration ms", ...targetSourceFields, "Text", "URL contains"];
     case "random_wait":
       return ["Minimum wait ms", "Maximum wait ms"];
     case "input_text":
-      return [...targetFields, "Text"];
+      return [...targetSourceFields, "Text"];
     case "clear_input":
-      return targetFields;
+      return targetSourceFields;
     case "click":
-      return ["Target source", "Target ref", ...targetFields];
+      return targetSourceFields;
     case "find_element":
       return [...targetFields, "Output name", "In viewport", "Rank"];
     case "scroll":
-      return ["Mode", "Direction", "Pixels", ...scrollTargetFields, "Iframe XPath", "Timeout ms"];
+      return ["Mode", "Direction", "Pixels", ...scrollTargetSourceFields, "Iframe XPath", "Timeout ms"];
     case "select_option":
-      return [...targetFields, "Match by", "Value"];
+      return [...targetSourceFields, "Match by", "Value"];
     case "press_key":
       return ["Key"];
     case "hotkey":
@@ -943,28 +945,28 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "uncheck":
     case "toggle_checkbox":
     case "select_radio":
-      return targetFields;
+      return targetSourceFields;
     case "drag_and_drop":
       return [...sourceTargetFields, ...destinationTargetFields];
     case "type_sequence":
-      return [...targetFields, "Text"];
+      return [...targetSourceFields, "Text"];
     case "set_clipboard":
       return ["Text"];
     case "upload_file":
-      return [...targetFields, "Files"];
+      return [...targetSourceFields, "Files"];
     case "submit_form":
-      return targetFields;
+      return targetSourceFields;
     case "select_custom_option":
       return [...triggerTargetFields, "Option text"];
     case "set_contenteditable":
-      return [...targetFields, "Text", "Clear before input"];
+      return [...targetSourceFields, "Text", "Clear before input"];
     case "extract_text":
     case "extract_input_value":
     case "extract_table":
     case "extract_list":
-      return [...targetFields, "Output name"];
+      return [...targetSourceFields, "Output name"];
     case "extract_attribute":
-      return [...targetFields, "Output name", "Attribute"];
+      return [...targetSourceFields, "Output name", "Attribute"];
     case "take_screenshot":
       return ["Path", "Output name", "Full page"];
     case "go_back":
@@ -986,9 +988,9 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "set_json_variables":
       return ["JSON variables"];
     case "assert_element":
-      return [...targetFields, "State"];
+      return [...targetSourceFields, "State"];
     case "assert_text":
-      return [...targetFields, "Text", "Match mode", "Timeout ms"];
+      return [...targetSourceFields, "Text", "Match mode", "Timeout ms"];
     case "graph_noop":
     case "if_condition":
       return ["No fields"];
@@ -1131,6 +1133,16 @@ function fieldRequiredWhen(
       };
 
   if (specific[key]) return specific[key];
+  if (fieldName === "Target source") {
+    return vi
+      ? "Bắt buộc; chọn Use locator để nhập locator trực tiếp hoặc Use Find Element ref để dùng ref runtime từ node Find Element trước đó."
+      : "Required; choose Use locator for direct locator fields or Use Find Element ref for a runtime ref from a previous Find Element node.";
+  }
+  if (fieldName === "Target ref") {
+    return vi
+      ? "Bắt buộc khi Target source là Use Find Element ref; bỏ trống khi dùng locator trực tiếp."
+      : "Required when Target source is Use Find Element ref; leave blank when using a direct locator.";
+  }
   if (isLocatorTypeField(fieldName) || isLocatorValueField(fieldName)) {
     return vi
       ? "Bắt buộc khi action cần tìm một element trên trang; để trống chỉ khi action hoặc mode không cần target."
@@ -1196,6 +1208,16 @@ function fieldDescription(
     return vi
       ? "Tên output lưu id choice đã được chọn để audit hoặc dùng ở node logic sau."
       : "Output name that stores the selected choice id for audit or later logic nodes.";
+  }
+  if (fieldName === "Target source") {
+    return vi
+      ? "Chọn nguồn target cho action: locator trực tiếp hoặc ref đã resolve từ Find Element."
+      : "Chooses the action target source: a direct locator or a resolved Find Element ref.";
+  }
+  if (fieldName === "Target ref") {
+    return vi
+      ? "Tên output_name của node Find Element đã chạy trước trong cùng run."
+      : "The output_name from a previous Find Element node in the same run.";
   }
   if (isLocatorTypeField(fieldName)) {
     return vi
@@ -1295,6 +1317,16 @@ function fieldValueGuidance(
   const vi = language === "vi";
   const details = fieldDetails(actionType, language, fieldName);
   if (fieldName === "No fields") return undefined;
+  if (fieldName === "Target source") {
+    return vi
+      ? "Dùng locator cho target tĩnh; dùng Find Element ref khi cần chọn một element đã được lọc/rank theo viewport hoặc danh sách động."
+      : "Use locator for static targets; use Find Element ref when the target was filtered/ranked by viewport or a dynamic list.";
+  }
+  if (fieldName === "Target ref") {
+    return vi
+      ? "Nhập chính xác Output name của Find Element, ví dụ current_card."
+      : "Enter the exact Find Element Output name, for example current_card.";
+  }
   if (isLocatorTypeField(fieldName)) {
     return vi
       ? "Mặc định là XPath; đổi sang Test ID, Role, Label, hoặc Placeholder khi trang có selector ổn định hơn."
@@ -1356,6 +1388,8 @@ function fieldExample(
   fieldName: string,
 ) {
   const vi = language === "vi";
+  if (fieldName === "Target source") return "Use locator";
+  if (fieldName === "Target ref") return "current_card";
   if (isLocatorTypeField(fieldName)) return "XPath";
   if (isLocatorValueField(fieldName)) return "//*[@id='submit']";
   if (fieldName.endsWith("visibility")) return "Visible";

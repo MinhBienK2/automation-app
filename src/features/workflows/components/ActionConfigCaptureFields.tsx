@@ -4,7 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { ElementTargetFields } from "./ActionConfigElementSharedFields";
+import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -105,7 +105,7 @@ function DataCaptureFields({
 }) {
   return (
     <>
-      <ElementTargetFields config={config} onChange={onChange} />
+      <ElementTargetSourceFields config={config} onChange={onChange} />
       <Label>
         Output name
         <Input

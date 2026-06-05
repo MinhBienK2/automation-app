@@ -106,7 +106,7 @@ type ScreenToFlowPosition = Pick<
 
 const graphNodeDimensions = {
   width: 160,
-  height: 64,
+  height: 82,
 };
 const visibleNodeStagger = {
   step: 24,

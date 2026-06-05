@@ -136,10 +136,10 @@ describe("ActionConfigEditor", () => {
     expect(screen.queryByLabelText("Method")).not.toBeInTheDocument();
   });
 
-  test("Click editor switches between locator and Find Element ref target sources", async () => {
+  test("targetable action editors switch between locator and Find Element ref target sources", async () => {
     const onChange = vi.fn();
     const config: ActionConfig = {
-      type: "click",
+      type: "input_text",
       config: {
         target_ref: "current_like",
         target: {
@@ -147,10 +147,12 @@ describe("ActionConfigEditor", () => {
           constraints: { visible: true, enabled: true },
           iframe: null,
         },
+        text: "hello",
+        clear_before_input: true,
         wait_until: "visible",
         timeout_ms: 6000,
       },
-    };
+    } as ActionConfig;
 
     function Harness() {
       const [currentConfig, setCurrentConfig] = useState(config);
@@ -171,7 +173,7 @@ describe("ActionConfigEditor", () => {
     expect(within(targetSource).getByRole("button", { name: "Use Find Element ref" }))
       .toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Target ref")).toHaveValue("current_like");
-    expect(screen.getByText("Click uses the element resolved by a previous Find Element node in this run."))
+    expect(screen.getByText("This action uses the element resolved by a previous Find Element node in this run."))
       .toBeInTheDocument();
     expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Target visibility")).not.toBeInTheDocument();
@@ -294,6 +296,30 @@ describe("ActionConfigEditor", () => {
         timeout_ms: 60000,
       },
     });
+  });
+
+  test("Scroll To Element ref mode omits locator-only iframe controls", () => {
+    const config: ActionConfig = {
+      type: "scroll",
+      config: {
+        mode: "into_view",
+        target_ref: "current_submit",
+        target: {
+          locators: [{ kind: "css", value: ".submit-button" }],
+          constraints: null,
+          iframe: null,
+        },
+        iframe_xpath: "//iframe[@title='legacy']",
+        timeout_ms: 60000,
+      },
+    };
+
+    render(<ActionConfigEditor config={config} onChange={vi.fn()} />);
+
+    expect(screen.getByLabelText("Target ref")).toHaveValue("current_submit");
+    expect(screen.queryByLabelText("Target locator")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Iframe XPath")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Timeout ms")).toBeInTheDocument();
   });
 
   test("Set Viewport editor omits launch-time device shape controls", () => {

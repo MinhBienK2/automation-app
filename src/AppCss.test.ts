@@ -191,7 +191,7 @@ describe("App CSS", () => {
     const validTargetHandle = cssRule(".graph-canvas .react-flow__handle.connectingto.valid");
 
     expect(graphNode).toContain("width: 160px");
-    expect(graphNode).toContain("min-height: 64px");
+    expect(graphNode).toContain("min-height: 82px");
     expect(graphHandle).toContain("pointer-events: all");
     expect(graphHandle).toContain("cursor: crosshair");
     expect(css).not.toContain(".graph-edge-overlay");
@@ -244,6 +244,22 @@ describe("App CSS", () => {
     expect(graphNodeButton).toContain("z-index: 1");
     expect(graphDragSurface).toContain("z-index: 2");
     expect(graphHandle).toContain("z-index: 3");
+  });
+
+  test("wraps long graph node names while keeping compact metadata contained", () => {
+    const graphNode = cssRule(".graph-node");
+    const graphNodeButton = cssRule(".graph-node-button");
+    const graphNodeTitle = cssRule(".graph-node-button > span");
+    const graphNodeMeta = cssRule(".graph-node-button small");
+
+    expect(graphNode).toContain("height: 82px");
+    expect(graphNodeButton).toContain("height: 100%");
+    expect(graphNodeButton).toContain("overflow: hidden");
+    expect(graphNodeTitle).toContain("-webkit-line-clamp: 2");
+    expect(graphNodeTitle).toContain("white-space: normal");
+    expect(graphNodeMeta).toContain("overflow: hidden");
+    expect(graphNodeMeta).toContain("text-overflow: ellipsis");
+    expect(graphNodeMeta).toContain("white-space: nowrap");
   });
 
   test("keeps graph port tooltips delayed and above neighboring nodes", () => {

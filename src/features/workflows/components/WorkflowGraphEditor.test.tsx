@@ -318,7 +318,7 @@ describe("Workflow graph editor integration", () => {
 
     expect(
       getVisibleNodeInsertionPosition(3, { screenToFlowPosition }, canvasElement),
-    ).toEqual({ x: 1432, y: 2420 });
+    ).toEqual({ x: 1432, y: 2411 });
     expect(screenToFlowPosition).toHaveBeenCalledWith(
       { x: 440, y: 380 },
       { snapToGrid: false },

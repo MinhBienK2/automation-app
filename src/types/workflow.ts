@@ -366,6 +366,7 @@ export type ActionConfig =
         duration_ms?: number | null;
         timeout_ms?: number | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
       };
     }
   | {
@@ -380,6 +381,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
@@ -392,6 +394,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -429,6 +432,7 @@ export type ActionConfig =
         scroll_style?: ScrollStyle | null;
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         timeout_ms?: number | null;
       };
@@ -438,6 +442,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         match_by: "label" | "value";
         value: string;
@@ -449,13 +454,7 @@ export type ActionConfig =
   | { type: "hotkey"; config: { keys: string[] } }
   | {
       type: "hover";
-      config: {
-        xpath: string;
-        target?: ElementTarget | null;
-        iframe_xpath?: string | null;
-        wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
-        timeout_ms?: number | null;
-      };
+      config: ElementTargetActionConfig;
     }
   | {
       type: "double_click";
@@ -490,6 +489,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         text: string;
         delay_ms?: number | null;
@@ -523,6 +523,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         files: string[];
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -534,6 +535,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
@@ -554,6 +556,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         text: string;
         clear_before_input: boolean;
@@ -618,6 +621,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         state: "attached" | "visible" | "hidden" | "enabled" | "disabled";
         timeout_ms?: number | null;
@@ -628,6 +632,7 @@ export type ActionConfig =
       config: {
         xpath?: string | null;
         target?: ElementTarget | null;
+        target_ref?: string | null;
         iframe_xpath?: string | null;
         text: string;
         match_mode: "contains" | "equals";
@@ -868,6 +873,7 @@ export type RouterGraphConfig = {
 type ElementTargetActionConfig = {
   xpath?: string | null;
   target?: ElementTarget | null;
+  target_ref?: string | null;
   iframe_xpath?: string | null;
   wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
   timeout_ms?: number | null;
@@ -876,6 +882,7 @@ type ElementTargetActionConfig = {
 type DataCaptureElementConfig = {
   xpath?: string | null;
   target?: ElementTarget | null;
+  target_ref?: string | null;
   iframe_xpath?: string | null;
   output_name: string;
   timeout_ms?: number | null;

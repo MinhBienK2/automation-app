@@ -262,6 +262,8 @@ describe("workflow graph helpers", () => {
           id: "step-wait",
           type: "workflow",
           position: { x: 220, y: 0 },
+          initialHeight: 82,
+          initialWidth: 160,
           selected: true,
           data: expect.objectContaining({
             label: "Wait",

@@ -49,11 +49,9 @@ const actionValidators = createActionValidatorMap({
     if (config.config.condition === "duration" && !positive(config.config.duration_ms)) {
       return validationError("duration_ms", "Wait duration must be greater than 0");
     }
-    if (
-      config.config.condition.startsWith("element_") &&
-      !hasElementTargetField(config.config)
-    ) {
-      return validationError("xpath", "Element target is required");
+    if (config.config.condition.startsWith("element_")) {
+      const validation = validateElementTargetSource(config.config);
+      if (validation) return validation;
     }
     if (config.config.condition === "text_visible") {
       const validation = requiredActionString(config.config.text, "text", "Text is required");
@@ -73,19 +71,17 @@ const actionValidators = createActionValidatorMap({
       : null,
   input_text: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   clear_input: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   click: (config) =>
     firstValidation(
-      config.config.target_ref
-        ? requiredActionString(config.config.target_ref, "target_ref", "Target ref is required")
-        : validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   find_element: (config) =>
@@ -128,7 +124,9 @@ const actionValidators = createActionValidatorMap({
       );
     }
     const targetValidation = firstValidation(
-      validateElementTarget(config.config),
+      mode === "into_view"
+        ? validateElementTargetSource(config.config)
+        : validateElementTarget(config.config),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
     );
     if (targetValidation) return targetValidation;
@@ -154,7 +152,7 @@ const actionValidators = createActionValidatorMap({
   },
   select_option: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       requiredActionString(config.config.value, "value", "Option value is required"),
       validateRequiredEnumValue(
         config.config.match_by,
@@ -168,17 +166,17 @@ const actionValidators = createActionValidatorMap({
   hotkey: (config) => validateStringList(config.config.keys, "keys", "Hotkey keys are required"),
   hover: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   double_click: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   right_click: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   drag_and_drop: (config) =>
@@ -197,17 +195,17 @@ const actionValidators = createActionValidatorMap({
     ),
   focus_element: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   blur_element: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   type_sequence: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       requiredActionString(config.config.text, "text", "Text is required"),
       optionalNonNegative(config.config.delay_ms, "delay_ms", "Delay must be zero or greater"),
       validateElementActionTiming(config.config),
@@ -215,39 +213,39 @@ const actionValidators = createActionValidatorMap({
   set_clipboard: () => null,
   paste_clipboard: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   check: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   uncheck: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   toggle_checkbox: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   select_radio: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   upload_file: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateStringList(config.config.files, "files", "Upload files are required"),
       validateElementActionTiming(config.config),
     ),
   submit_form: (config) =>
     firstValidation(
-      config.config.xpath || config.config.target
-        ? validateElementTarget(config.config)
+      hasElementTargetSourceField(config.config)
+        ? validateElementTargetSource(config.config)
         : null,
       validateElementActionTiming(config.config),
     ),
@@ -263,7 +261,7 @@ const actionValidators = createActionValidatorMap({
     ),
   set_contenteditable: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   extract_text: (config) => validateDataCaptureConfig(config.config),
@@ -321,12 +319,12 @@ const actionValidators = createActionValidatorMap({
   },
   assert_element: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       validateElementActionTiming(config.config),
     ),
   assert_text: (config) =>
     firstValidation(
-      validateElementTarget(config.config),
+      validateElementTargetSource(config.config),
       requiredActionString(config.config.text, "text", "Assertion text is required"),
       validateRequiredEnumValue(
         config.config.match_mode,
@@ -567,6 +565,27 @@ function validateElementTarget(
     : validationError(xpathField, options.message ?? "Element target is required");
 }
 
+function validateElementTargetSource(
+  config: unknown,
+  options: {
+    xpathField?: string;
+    targetField?: string;
+    refField?: string;
+    message?: string;
+    refMessage?: string;
+  } = {},
+) {
+  const refField = options.refField ?? "target_ref";
+  if (hasConfiguredField(config, refField)) {
+    return requiredActionString(
+      asRecord(config)[refField] as string | null | undefined,
+      refField,
+      options.refMessage ?? "Target ref is required",
+    );
+  }
+  return validateElementTarget(config, options);
+}
+
 function validateElementActionTiming(config: unknown) {
   const record = asRecord(config);
   return firstValidation(
@@ -605,11 +624,12 @@ function validateRequiredEnumValue(
 function validateDataCaptureConfig(config: {
   xpath?: string | null;
   target?: unknown;
+  target_ref?: string | null;
   output_name: string;
   timeout_ms?: number | null;
 }) {
   return firstValidation(
-    validateElementTarget(config),
+    validateElementTargetSource(config),
     requiredActionString(config.output_name, "output_name", "Output name is required"),
     optionalPositive(config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
   );
@@ -840,6 +860,20 @@ function hasElementTargetField(
     (typeof xpath === "string" && xpath.trim()) ||
       hasStructuredElementTarget(record[targetField]),
   );
+}
+
+function hasElementTargetSourceField(
+  config: unknown,
+  xpathField = "xpath",
+  targetField = "target",
+  refField = "target_ref",
+): boolean {
+  return hasConfiguredField(config, refField) || hasElementTargetField(config, xpathField, targetField);
+}
+
+function hasConfiguredField(config: unknown, field: string): boolean {
+  const record = asRecord(config);
+  return Object.prototype.hasOwnProperty.call(record, field) && record[field] != null;
 }
 
 function hasStructuredElementTarget(target: unknown): boolean {

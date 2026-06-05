@@ -46,4 +46,20 @@ describe("backend action validation registry", () => {
       message: "Unsupported action type: legacy_action",
     });
   });
+
+  test("accepts Find Element refs as element target sources for non-click actions", () => {
+    expect(
+      validateActionConfig({
+        type: "hover",
+        config: { target_ref: "current_card" },
+      } as ActionConfig),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "extract_text",
+        config: { target_ref: "current_card", output_name: "card_text" },
+      } as ActionConfig),
+    ).toBeNull();
+  });
 });

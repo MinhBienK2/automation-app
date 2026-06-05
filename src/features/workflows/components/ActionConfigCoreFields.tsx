@@ -4,7 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
-import { ElementTargetFields } from "./ActionConfigElementSharedFields";
+import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
@@ -72,7 +72,7 @@ export function CoreActionFields({
             </Label>
           ) : null}
           {config.config.condition.startsWith("element_") ? (
-            <ElementTargetFields config={config} onChange={onChange} />
+            <ElementTargetSourceFields config={config} onChange={onChange} />
           ) : null}
           {config.config.condition === "text_visible" ? (
             <Label>
@@ -128,7 +128,7 @@ export function CoreActionFields({
     case "input_text":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
+          <ElementTargetSourceFields config={config} onChange={onChange} />
           <TemplateTextareaField
             label="Text"
             value={config.config.text}
