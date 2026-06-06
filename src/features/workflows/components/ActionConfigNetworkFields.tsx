@@ -2,6 +2,7 @@ import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 
 export function NetworkWaitFields({
   config,
@@ -13,7 +14,7 @@ export function NetworkWaitFields({
   includeStatus: boolean;
 }) {
   return (
-    <>
+    <ActionConfigFieldGroup title="Network match">
       <Label>
         URL contains
         <Input
@@ -48,6 +49,6 @@ export function NetworkWaitFields({
           }
         />
       </Label>
-    </>
+    </ActionConfigFieldGroup>
   );
 }

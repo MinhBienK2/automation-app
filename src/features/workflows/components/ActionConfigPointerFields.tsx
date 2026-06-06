@@ -9,6 +9,7 @@ import {
   ElementTargetSourceFields,
   StructuredTargetFields,
 } from "./ActionConfigElementSharedFields";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 
 const SCROLL_TARGET_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -23,47 +24,61 @@ export function PointerActionFields({
 }: ActionFieldsProps): ReactNode | null {
   switch (config.type) {
     case "clear_input":
-      return <ElementTargetSourceFields config={config} onChange={onChange} />;
+      return (
+        <ActionConfigFieldGroup title="Element target">
+          <ElementTargetSourceFields config={config} onChange={onChange} />
+        </ActionConfigFieldGroup>
+      );
     case "click":
-      return <ElementTargetSourceFields config={config} onChange={onChange} />;
+      return (
+        <ActionConfigFieldGroup title="Element target">
+          <ElementTargetSourceFields config={config} onChange={onChange} />
+        </ActionConfigFieldGroup>
+      );
     case "find_element":
       return (
         <>
-          <ElementTargetFields config={config} onChange={onChange} />
-          <Label>
-            Output name
-            <Input
-              value={config.config.output_name}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "output_name", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            In viewport
-            <Select
-              value={config.config.filter?.in_viewport === false ? "false" : "true"}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "in_viewport", event.currentTarget.value))
-              }
-            >
-              <option value="true">Required</option>
-              <option value="false">Any matched element</option>
-            </Select>
-          </Label>
-          <Label>
-            Rank
-            <Select
-              value={config.config.rank ?? "nearest_viewport_center"}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "rank", event.currentTarget.value))
-              }
-            >
-              <option value="nearest_viewport_center">Nearest viewport center</option>
-              <option value="largest_visible_area">Largest visible area</option>
-              <option value="first">First match</option>
-            </Select>
-          </Label>
+          <ActionConfigFieldGroup title="Element search">
+            <ElementTargetFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Element result">
+            <Label>
+              Output name
+              <Input
+                value={config.config.output_name}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "output_name", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Match ranking">
+            <Label>
+              In viewport
+              <Select
+                value={config.config.filter?.in_viewport === false ? "false" : "true"}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "in_viewport", event.currentTarget.value))
+                }
+              >
+                <option value="true">Required</option>
+                <option value="false">Any matched element</option>
+              </Select>
+            </Label>
+            <Label>
+              Rank
+              <Select
+                value={config.config.rank ?? "nearest_viewport_center"}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "rank", event.currentTarget.value))
+                }
+              >
+                <option value="nearest_viewport_center">Nearest viewport center</option>
+                <option value="largest_visible_area">Largest visible area</option>
+                <option value="first">First match</option>
+              </Select>
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "scroll": {
@@ -71,21 +86,23 @@ export function PointerActionFields({
       const usesTargetRef = config.config.target_ref != null;
       return (
         <>
-          <Label>
-            Mode
-            <Select
-              value={mode}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
-              }
-            >
-              <option value="page">Page Scroll</option>
-              <option value="into_view">Scroll To Element</option>
-              <option value="until_element_visible">Scroll Until Element Visible</option>
-            </Select>
-          </Label>
+          <ActionConfigFieldGroup title="Scroll mode">
+            <Label>
+              Mode
+              <Select
+                value={mode}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "mode", event.currentTarget.value))
+                }
+              >
+                <option value="page">Page Scroll</option>
+                <option value="into_view">Scroll To Element</option>
+                <option value="until_element_visible">Scroll Until Element Visible</option>
+              </Select>
+            </Label>
+          </ActionConfigFieldGroup>
           {mode === "page" ? (
-            <>
+            <ActionConfigFieldGroup title="Page scroll gesture">
               <Label>
                 Scroll style
                 <Select
@@ -129,51 +146,55 @@ export function PointerActionFields({
                   }
                 />
               </Label>
-            </>
+            </ActionConfigFieldGroup>
           ) : (
             <>
-              {mode === "into_view" ? (
-                <ElementTargetSourceFields
-                  config={config}
-                  onChange={onChange}
-                  showConstraints={false}
-                />
-              ) : (
-                <StructuredTargetFields
-                  config={config}
-                  onChange={onChange}
-                  showConstraints={false}
-                />
-              )}
-              {mode === "until_element_visible" || !usesTargetRef ? (
+              <ActionConfigFieldGroup
+                title={mode === "into_view" ? "Scroll target" : "Search target"}
+              >
+                {mode === "into_view" ? (
+                  <ElementTargetSourceFields
+                    config={config}
+                    onChange={onChange}
+                    showConstraints={false}
+                  />
+                ) : (
+                  <StructuredTargetFields
+                    config={config}
+                    onChange={onChange}
+                    showConstraints={false}
+                  />
+                )}
+                {mode === "until_element_visible" || !usesTargetRef ? (
+                  <Label>
+                    Iframe XPath
+                    <Input
+                      value={config.config.iframe_xpath ?? ""}
+                      onChange={(event) =>
+                        onChange(
+                          updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
+                        )
+                      }
+                      placeholder="Optional iframe XPath"
+                    />
+                  </Label>
+                ) : null}
                 <Label>
-                  Iframe XPath
+                  Timeout ms
                   <Input
-                    value={config.config.iframe_xpath ?? ""}
+                    min="1"
+                    type="number"
+                    value={config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS}
                     onChange={(event) =>
                       onChange(
-                        updateActionConfigField(config, "iframe_xpath", event.currentTarget.value),
+                        updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
                       )
                     }
-                    placeholder="Optional iframe XPath"
                   />
                 </Label>
-              ) : null}
-              <Label>
-                Timeout ms
-                <Input
-                  min="1"
-                  type="number"
-                  value={config.config.timeout_ms ?? SCROLL_TARGET_DEFAULT_TIMEOUT_MS}
-                  onChange={(event) =>
-                    onChange(
-                      updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                    )
-                  }
-                />
-              </Label>
+              </ActionConfigFieldGroup>
               {mode === "until_element_visible" ? (
-                <>
+                <ActionConfigFieldGroup title="Search scroll gesture">
                   <Label>
                     Direction
                     <Select
@@ -203,7 +224,7 @@ export function PointerActionFields({
                       }
                     />
                   </Label>
-                </>
+                </ActionConfigFieldGroup>
               ) : null}
             </>
           )}

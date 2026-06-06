@@ -9,6 +9,7 @@ import {
   ElementTargetSourceFields,
   StructuredTargetFields,
 } from "./ActionConfigElementSharedFields";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -23,28 +24,32 @@ export function FormActionFields({
     case "select_option":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <Label>
-            Match by
-            <Select
-              value={config.config.match_by}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "match_by", event.currentTarget.value))
-              }
-            >
-              <option value="label">Label</option>
-              <option value="value">Value</option>
-            </Select>
-          </Label>
-          <Label>
-            Value
-            <Input
-              value={config.config.value}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ActionConfigFieldGroup title="Selection target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Option match">
+            <Label>
+              Match by
+              <Select
+                value={config.config.match_by}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "match_by", event.currentTarget.value))
+                }
+              >
+                <option value="label">Label</option>
+                <option value="value">Value</option>
+              </Select>
+            </Label>
+            <Label>
+              Value
+              <Input
+                value={config.config.value}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "value", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "press_key":
@@ -73,7 +78,11 @@ export function FormActionFields({
         </Label>
       );
     case "hover":
-      return <ElementTargetSourceFields config={config} onChange={onChange} />;
+      return (
+        <ActionConfigFieldGroup title="Element target">
+          <ElementTargetSourceFields config={config} onChange={onChange} />
+        </ActionConfigFieldGroup>
+      );
     case "double_click":
     case "right_click":
     case "focus_element":
@@ -83,7 +92,11 @@ export function FormActionFields({
     case "uncheck":
     case "toggle_checkbox":
     case "select_radio":
-      return <ElementTargetSourceFields config={config} onChange={onChange} />;
+      return (
+        <ActionConfigFieldGroup title="Element target">
+          <ElementTargetSourceFields config={config} onChange={onChange} />
+        </ActionConfigFieldGroup>
+      );
     case "drag_and_drop":
       return (
         <>
@@ -115,16 +128,20 @@ export function FormActionFields({
     case "type_sequence":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <Label>
-            Text
-            <Textarea
-              value={config.config.text}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ActionConfigFieldGroup title="Typing target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Typed text">
+            <Label>
+              Text
+              <Textarea
+                value={config.config.text}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "text", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "set_clipboard":
@@ -142,76 +159,88 @@ export function FormActionFields({
     case "upload_file":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <Label>
-            Files
-            <Textarea
-              value={config.config.files.join("\n")}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "files", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ActionConfigFieldGroup title="Upload target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="File list">
+            <Label>
+              Files
+              <Textarea
+                value={config.config.files.join("\n")}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "files", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "submit_form":
       return (
-        <>
+        <ActionConfigFieldGroup title="Form target">
           <ElementTargetSourceFields config={config} onChange={onChange} />
-        </>
+        </ActionConfigFieldGroup>
       );
     case "select_custom_option":
       return (
         <>
-          <StructuredTargetFields
-            config={config}
-            onChange={onChange}
-            targetField="trigger_target"
-          />
-          <Label>
-            Option text
-            <Input
-              value={config.config.option_text}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "option_text", event.currentTarget.value),
-                )
-              }
+          <ActionConfigFieldGroup title="Custom select trigger">
+            <StructuredTargetFields
+              config={config}
+              onChange={onChange}
+              targetField="trigger_target"
             />
-          </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Custom option">
+            <Label>
+              Option text
+              <Input
+                value={config.config.option_text}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "option_text", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "set_contenteditable":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <Label>
-            Text
-            <Textarea
-              value={config.config.text}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Clear before input
-            <Select
-              value={String(config.config.clear_before_input)}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(
-                    config,
-                    "clear_before_input",
-                    event.currentTarget.value,
-                  ),
-                )
-              }
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </Select>
-          </Label>
+          <ActionConfigFieldGroup title="Editable target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Editable content">
+            <Label>
+              Text
+              <Textarea
+                value={config.config.text}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "text", event.currentTarget.value))
+                }
+              />
+            </Label>
+            <Label>
+              Clear before input
+              <Select
+                value={String(config.config.clear_before_input)}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(
+                      config,
+                      "clear_before_input",
+                      event.currentTarget.value,
+                    ),
+                  )
+                }
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
 
@@ -220,30 +249,6 @@ export function FormActionFields({
       return null;
   }
 }
-
-function ActionConfigFieldGroup({
-  title,
-  nested = false,
-  children,
-}: {
-  title: string;
-  nested?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <fieldset
-      className={
-        nested
-          ? "action-config-field-group action-config-field-group-nested"
-          : "action-config-field-group"
-      }
-    >
-      <legend>{title}</legend>
-      <div className="action-config-field-group-grid">{children}</div>
-    </fieldset>
-  );
-}
-
 function DragTargetPositionFields({
   config,
   onChange,

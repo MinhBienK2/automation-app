@@ -5,6 +5,7 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -25,56 +26,62 @@ export function CaptureActionFields({
       return (
         <>
           <DataCaptureFields config={config} onChange={onChange} />
-          <Label>
-            Attribute
-            <Input
-              value={config.config.attribute}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "attribute", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
+          <ActionConfigFieldGroup title="Extraction attribute">
+            <Label>
+              Attribute
+              <Input
+                value={config.config.attribute}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "attribute", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "take_screenshot":
       return (
         <>
-          <Label>
-            Path
-            <Input
-              value={config.config.path}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "path", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Output name
-            <Input
-              value={config.config.output_name ?? ""}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "output_name", event.currentTarget.value),
-                )
-              }
-            />
-          </Label>
-          <Label>
-            Full page
-            <Select
-              value={String(config.config.full_page)}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "full_page", event.currentTarget.value),
-                )
-              }
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </Select>
-          </Label>
+          <ActionConfigFieldGroup title="Screenshot artifact">
+            <Label>
+              Path
+              <Input
+                value={config.config.path}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "path", event.currentTarget.value))
+                }
+              />
+            </Label>
+            <Label>
+              Full page
+              <Select
+                value={String(config.config.full_page)}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "full_page", event.currentTarget.value),
+                  )
+                }
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Screenshot output">
+            <Label>
+              Output name
+              <Input
+                value={config.config.output_name ?? ""}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "output_name", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
 
@@ -105,18 +112,22 @@ function DataCaptureFields({
 }) {
   return (
     <>
-      <ElementTargetSourceFields config={config} onChange={onChange} />
-      <Label>
-        Output name
-        <Input
-          value={config.config.output_name}
-          onChange={(event) =>
-            onChange(
-              updateActionConfigField(config, "output_name", event.currentTarget.value),
-            )
-          }
-        />
-      </Label>
+      <ActionConfigFieldGroup title="Capture target">
+        <ElementTargetSourceFields config={config} onChange={onChange} />
+      </ActionConfigFieldGroup>
+      <ActionConfigFieldGroup title="Capture output">
+        <Label>
+          Output name
+          <Input
+            value={config.config.output_name}
+            onChange={(event) =>
+              onChange(
+                updateActionConfigField(config, "output_name", event.currentTarget.value),
+              )
+            }
+          />
+        </Label>
+      </ActionConfigFieldGroup>
     </>
   );
 }

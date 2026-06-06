@@ -374,6 +374,67 @@ describe("ActionConfigEditor", () => {
     });
   });
 
+  test("groups condition-specific Wait fields", () => {
+    render(
+      <ActionConfigEditor
+        config={{
+          type: "wait",
+          config: { condition: "text_visible", text: "Volume ready" },
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const conditionGroup = screen.getByRole("group", { name: "Wait condition" });
+    const textGroup = screen.getByRole("group", { name: "Text wait" });
+
+    expect(within(conditionGroup).getByLabelText("Condition")).toHaveValue("text_visible");
+    expect(within(textGroup).getByLabelText("Text")).toHaveValue("Volume ready");
+    expect(screen.queryByLabelText("Duration ms")).not.toBeInTheDocument();
+  });
+
+  test("groups target and option matching fields for Select Option", () => {
+    render(
+      <ActionConfigEditor
+        config={{
+          type: "select_option",
+          config: {
+            target: { locators: [{ kind: "xpath", value: "//select" }] },
+            match_by: "label",
+            value: "HD",
+          },
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const targetGroup = screen.getByRole("group", { name: "Selection target" });
+    const optionGroup = screen.getByRole("group", { name: "Option match" });
+
+    expect(within(targetGroup).getByLabelText("Target locator")).toHaveValue("//select");
+    expect(within(optionGroup).getByLabelText("Match by")).toHaveValue("label");
+    expect(within(optionGroup).getByLabelText("Value")).toHaveValue("HD");
+  });
+
+  test("groups screenshot artifact and output fields", () => {
+    render(
+      <ActionConfigEditor
+        config={{
+          type: "take_screenshot",
+          config: { path: "video-player.png", full_page: false, output_name: "player_shot" },
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const artifactGroup = screen.getByRole("group", { name: "Screenshot artifact" });
+    const outputGroup = screen.getByRole("group", { name: "Screenshot output" });
+
+    expect(within(artifactGroup).getByLabelText("Path")).toHaveValue("video-player.png");
+    expect(within(artifactGroup).getByLabelText("Full page")).toHaveValue("false");
+    expect(within(outputGroup).getByLabelText("Output name")).toHaveValue("player_shot");
+  });
+
   test("Set Viewport editor omits launch-time device shape controls", () => {
     render(
       <ActionConfigEditor
@@ -385,8 +446,9 @@ describe("ActionConfigEditor", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Width")).toBeInTheDocument();
-    expect(screen.getByLabelText("Height")).toBeInTheDocument();
+    const viewportGroup = screen.getByRole("group", { name: "Viewport size" });
+    expect(within(viewportGroup).getByLabelText("Width")).toBeInTheDocument();
+    expect(within(viewportGroup).getByLabelText("Height")).toBeInTheDocument();
     expect(screen.queryByLabelText("Device scale factor")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Mobile")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Touch")).not.toBeInTheDocument();

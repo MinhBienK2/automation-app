@@ -5,6 +5,7 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -21,21 +22,23 @@ export function LogicActionFields({
       return null;
     case "repeat_times":
       return (
-        <Label>
-          Times
-          <Input
-            min="1"
-            type="number"
-            value={config.config.times}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "times", event.currentTarget.value))
-            }
-          />
-        </Label>
+        <ActionConfigFieldGroup title="Repeat count">
+          <Label>
+            Times
+            <Input
+              min="1"
+              type="number"
+              value={config.config.times}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "times", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </ActionConfigFieldGroup>
       );
     case "repeat_for_each":
       return (
-        <>
+        <ActionConfigFieldGroup title="Iteration source">
           <Label>
             Items source
             <Select
@@ -102,11 +105,11 @@ export function LogicActionFields({
               />
             </Label>
           )}
-        </>
+        </ActionConfigFieldGroup>
       );
     case "retry_block":
       return (
-        <>
+        <ActionConfigFieldGroup title="Retry policy">
           <Label>
             Max attempts
             <Input
@@ -131,11 +134,11 @@ export function LogicActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
     case "stop_workflow":
       return (
-        <>
+        <ActionConfigFieldGroup title="Terminal result">
           <Label>
             Status
             <Select
@@ -157,7 +160,7 @@ export function LogicActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
 
     default:
