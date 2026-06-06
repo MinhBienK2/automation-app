@@ -23,9 +23,10 @@ Preserve these unless the task explicitly changes them.
 - Mission Control sidebar order is Overview, Projects, Runs, Evidence,
   Schedules, Identities, App Settings. Overview is the default first screen.
 - Projects is the only sidebar entry for workflow authoring inventory. The
-  selected project has Workflows, Subflows, and Settings tabs. Workflows and
-  subflows shown there are scoped to the selected project, and Project
-  Environment management lives in the selected project's Settings tab.
+  selected project shows Workflows, Subflows, and Settings as a collection menu
+  inside the project list sidebar. Workflows and subflows shown there are
+  scoped to the selected project, and Project Environment management lives in
+  the selected project's Settings collection.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.
@@ -118,8 +119,8 @@ Preserve these unless the task explicitly changes them.
 - Scroll authoring exposes Page Scroll, Scroll To Element, and Scroll Until Element Visible labels while preserving the serialized `page`, `into_view`, and `until_element_visible` modes. Page Scroll shows Scroll style, Direction, and Pixels; Scroll style defaults to Human-like and can switch to Smooth single wheel. Scroll To Element supports Use locator or Use Find Element ref, optional Iframe XPath, and Timeout ms defaulting to `60000`; Scroll Until Element Visible shows locator target, timeout, Direction, and Pixels for the repeated page-scroll search gesture without low-level target constraint fields.
 - Browser identity belongs in Workflow Settings Browser Launch. Launch-time identity settings are not represented as in-run action nodes in the current workflow contract.
 - Subflows are reusable graph fragments, not standalone runnable scenarios.
-  They are reachable from the selected project's Subflows tab, can be created,
-  opened, saved, duplicated, and deleted, and show usage warnings when
+  They are reachable from the selected project's Subflows collection, can be
+  created, opened, saved, duplicated, and deleted, and show usage warnings when
   referenced by workflows. Deleting a referenced subflow is blocked.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP

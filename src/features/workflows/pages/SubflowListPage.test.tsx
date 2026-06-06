@@ -20,7 +20,11 @@ describe("Subflow list integration", () => {
 
   async function openSubflows() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    await userEvent.click(await screen.findByRole("tab", { name: "Subflows" }));
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    const collections = await within(projectList).findByRole("navigation", {
+      name: "Default Project collections",
+    });
+    await userEvent.click(within(collections).getByRole("button", { name: "Subflows" }));
   }
 
   test("lists project subflows and duplicates one from the sidebar route", async () => {

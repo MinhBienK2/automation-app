@@ -341,6 +341,12 @@
   gap: 8px;
 }
 
+.project-list-item {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .project-row {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
@@ -395,8 +401,29 @@
   background: #0e151d;
 }
 
+.project-collection-menu {
+  display: grid;
+  gap: 6px;
+  padding-left: 28px;
+}
+
+.project-collection-item {
+  width: 100%;
+  min-height: 32px;
+  justify-content: flex-start;
+  padding: 0 10px;
+  border-color: transparent;
+  color: #9aaebd;
+}
+
+.project-collection-item[data-active="true"] {
+  border-color: rgba(50, 211, 230, 0.58);
+  background: #0e151d;
+  color: #32d3e6;
+}
+
 .projects-detail-panel,
-.project-tab-panel {
+.project-collection-panel {
   display: grid;
   gap: 16px;
   min-width: 0;
@@ -421,33 +448,17 @@
   white-space: nowrap;
 }
 
-.project-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.project-tab {
-  min-height: 34px;
-}
-
-.project-tab[data-active="true"] {
-  border-color: rgba(50, 211, 230, 0.58);
-  color: #32d3e6;
-}
-
-.project-tab-panel > .app-screen {
+.project-collection-panel > .app-screen {
   width: 100%;
   margin: 0;
   padding: 0;
 }
 
-.project-tab-panel > .app-screen .app-header {
+.project-collection-panel > .app-screen .app-header {
   padding-bottom: 16px;
 }
 
-.project-tab-panel > .settings-project-environments-panel {
+.project-collection-panel > .settings-project-environments-panel {
   max-width: none;
 }
 

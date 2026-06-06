@@ -13,20 +13,20 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import type { Project } from "../../../types/workflow";
 
-export type ProjectTab = "workflows" | "subflows" | "settings";
+export type ProjectCollection = "workflows" | "subflows" | "settings";
 
 type ProjectsPageProps = {
   projects: Project[];
   selectedProject: Project | null;
-  activeTab: ProjectTab;
+  activeCollection: ProjectCollection;
   error: string;
   children: ReactNode;
   onSelectProject: (projectId: string) => void;
   onCreateProject: (input: { name: string; description?: string | null }) => Promise<void>;
-  onTabChange: (tab: ProjectTab) => void;
+  onCollectionChange: (collection: ProjectCollection) => void;
 };
 
-const projectTabs: Array<{ id: ProjectTab; label: string }> = [
+const projectCollections: Array<{ id: ProjectCollection; label: string }> = [
   { id: "workflows", label: "Workflows" },
   { id: "subflows", label: "Subflows" },
   { id: "settings", label: "Settings" },
@@ -35,12 +35,12 @@ const projectTabs: Array<{ id: ProjectTab; label: string }> = [
 export function ProjectsPage({
   projects,
   selectedProject,
-  activeTab,
+  activeCollection,
   error,
   children,
   onSelectProject,
   onCreateProject,
-  onTabChange,
+  onCollectionChange,
 }: ProjectsPageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectNameDraft, setProjectNameDraft] = useState("");
@@ -71,8 +71,9 @@ export function ProjectsPage({
     setProjectError("");
   }
 
-  const activeTabLabel =
-    projectTabs.find((tab) => tab.id === activeTab)?.label ?? "Workflows";
+  const activeCollectionLabel =
+    projectCollections.find((collection) => collection.id === activeCollection)?.label ??
+    "Workflows";
 
   return (
     <section className="app-screen projects-screen" aria-label="Projects">
@@ -114,19 +115,46 @@ export function ProjectsPage({
               {projects.map((project) => {
                 const active = selectedProject?.id === project.id;
                 return (
-                  <button
-                    className="project-row"
-                    data-active={active ? "true" : "false"}
-                    key={project.id}
-                    type="button"
-                    onClick={() => onSelectProject(project.id)}
-                  >
-                    <Folder aria-hidden="true" />
-                    <span>
-                      <strong>{project.name}</strong>
-                      {project.description ? <small>{project.description}</small> : null}
-                    </span>
-                  </button>
+                  <div className="project-list-item" key={project.id}>
+                    <button
+                      className="project-row"
+                      data-active={active ? "true" : "false"}
+                      type="button"
+                      onClick={() => onSelectProject(project.id)}
+                    >
+                      <Folder aria-hidden="true" />
+                      <span>
+                        <strong>{project.name}</strong>
+                        {project.description ? <small>{project.description}</small> : null}
+                      </span>
+                    </button>
+                    {active ? (
+                      <nav
+                        aria-label={`${project.name} collections`}
+                        className="project-collection-menu"
+                      >
+                        {projectCollections.map((collection) => (
+                          <Button
+                            aria-current={
+                              activeCollection === collection.id ? "page" : undefined
+                            }
+                            className="project-collection-item"
+                            data-active={
+                              activeCollection === collection.id ? "true" : "false"
+                            }
+                            key={collection.id}
+                            type="button"
+                            variant={
+                              activeCollection === collection.id ? "default" : "ghost"
+                            }
+                            onClick={() => onCollectionChange(collection.id)}
+                          >
+                            {collection.label}
+                          </Button>
+                        ))}
+                      </nav>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
@@ -141,32 +169,11 @@ export function ProjectsPage({
                   <p className="eyebrow">Selected Project</p>
                   <h2>{selectedProject.name}</h2>
                 </div>
-                <nav
-                  aria-label="Project sections"
-                  className="project-tabs"
-                  role="tablist"
-                >
-                  {projectTabs.map((tab) => (
-                    <Button
-                      aria-selected={activeTab === tab.id}
-                      className="project-tab"
-                      data-active={activeTab === tab.id ? "true" : "false"}
-                      key={tab.id}
-                      role="tab"
-                      type="button"
-                      variant={activeTab === tab.id ? "default" : "ghost"}
-                      onClick={() => onTabChange(tab.id)}
-                    >
-                      {tab.label}
-                    </Button>
-                  ))}
-                </nav>
               </div>
 
               <section
-                aria-label={`${selectedProject.name} ${activeTabLabel}`}
-                className="project-tab-panel"
-                role="tabpanel"
+                aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
+                className="project-collection-panel"
               >
                 {children}
               </section>

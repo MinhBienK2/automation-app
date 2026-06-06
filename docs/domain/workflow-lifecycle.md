@@ -69,8 +69,8 @@
 
 ## Subflow Authoring
 
-- The selected project's Subflows tab lists reusable subflows for that project
-  with description, usage count, open, duplicate, and delete actions.
+- The selected project's Subflows collection lists reusable subflows for that
+  project with description, usage count, open, duplicate, and delete actions.
 - Creating a subflow persists a saved graph fragment with a start node and the
   same graph DTO shape as workflows.
 - Opening a subflow loads its graph and usage list. The editor has Save,

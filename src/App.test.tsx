@@ -72,14 +72,22 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(within(scope).getByRole("button", { name: "Launch Run" }));
   }
 
-  async function openWorkflows() {
+  async function getProjectCollections() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    await screen.findByRole("tab", { name: "Workflows" });
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    return within(projectList).findByRole("navigation", {
+      name: "Default Project collections",
+    });
+  }
+
+  async function openWorkflows() {
+    const collections = await getProjectCollections();
+    await within(collections).findByRole("button", { name: "Workflows" });
   }
 
   async function openProjectTab(tabName: "Workflows" | "Subflows" | "Settings") {
-    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    await userEvent.click(await screen.findByRole("tab", { name: tabName }));
+    const collections = await getProjectCollections();
+    await userEvent.click(within(collections).getByRole("button", { name: tabName }));
   }
 
   test("opens settings from the sidebar and persists the autosave preference", async () => {
@@ -163,6 +171,26 @@ describe("App settings and graph autosave", () => {
         },
       );
     });
+  });
+
+  test("renders project collections in the project list sidebar instead of the detail header", async () => {
+    mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
+
+    renderApp();
+
+    const collections = await getProjectCollections();
+
+    expect(screen.queryByRole("tablist", { name: "Project sections" }))
+      .not.toBeInTheDocument();
+    expect(within(collections).getByRole("button", { name: "Workflows" }))
+      .toHaveAttribute("aria-current", "page");
+    expect(within(collections).getByRole("button", { name: "Subflows" }))
+      .toBeInTheDocument();
+    expect(within(collections).getByRole("button", { name: "Settings" }))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(collections).getByRole("button", { name: "Subflows" }));
+    expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
   });
 
   test("edits Project Environment browser launch posture from the project settings tab", async () => {

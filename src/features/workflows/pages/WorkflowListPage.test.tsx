@@ -35,7 +35,11 @@ describe("Workflow list integration", () => {
 
   async function openWorkflows() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    await screen.findByRole("tab", { name: "Workflows" });
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    const collections = await within(projectList).findByRole("navigation", {
+      name: "Default Project collections",
+    });
+    await within(collections).findByRole("button", { name: "Workflows" });
   }
 
   test("hides step counts and raw updated timestamps from workflow cards", async () => {

@@ -35,8 +35,8 @@ Mission Control is an Electron desktop app for building and running browser auto
   diagnostics, and read-only historical identity references.
 - Mission Control navigation is a typed in-memory target contract across
   Overview, Projects, Runs, Evidence, Schedules, Identities, App Settings, and
-  graph issues. The Projects workspace contains project-scoped Workflows,
-  Subflows, and Settings tabs.
+  graph issues. The Projects workspace exposes project-scoped Workflows,
+  Subflows, and Settings collections from the selected project's list sidebar.
   Targets carry ids and optional focus metadata, while stale durable targets
   produce visible unavailable states instead of falling back silently.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
@@ -91,7 +91,7 @@ Users can:
 - Create workflows in the default project with the project default environment,
   an existing project environment, or a new isolated environment.
 - Create and inspect Project Environments from the selected project's Settings
-  tab.
+  collection.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
 - Turn graph autosave on or off from App Settings.
 - Run a full workflow.
@@ -100,8 +100,8 @@ Users can:
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
 - Create, open, save, duplicate, and delete reusable subflows from the selected
-  project's Subflows tab. Deletion is blocked when a subflow is referenced by
-  workflows.
+  project's Subflows collection. Deletion is blocked when a subflow is
+  referenced by workflows.
 - Add Call Subflow nodes to workflow graphs, map inputs into the subflow, and
   inspect usage warnings before saving subflow changes.
 - Configure the workflow's browser identity and launch behavior before running it.

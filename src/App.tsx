@@ -5,7 +5,10 @@ import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorer
 import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
 import { ProjectEnvironmentSettings } from "./features/projects/components/ProjectEnvironmentSettings";
-import { ProjectsPage, type ProjectTab } from "./features/projects/pages/ProjectsPage";
+import {
+  ProjectsPage,
+  type ProjectCollection,
+} from "./features/projects/pages/ProjectsPage";
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
@@ -391,7 +394,8 @@ function App() {
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [projectTab, setProjectTab] = useState<ProjectTab>("workflows");
+  const [projectCollection, setProjectCollection] =
+    useState<ProjectCollection>("workflows");
   const [projectEnvironments, setProjectEnvironments] = useState<ProjectEnvironment[]>([]);
   const [subflows, setSubflows] = useState<SubflowSummary[]>([]);
   const [subflowsLoading, setSubflowsLoading] = useState(false);
@@ -702,7 +706,7 @@ function App() {
     try {
       const project = await createProjectCommand(input);
       setSelectedProjectId(project.id);
-      setProjectTab("workflows");
+      setProjectCollection("workflows");
       setProjects(await listProjects());
       setProjectEnvironments(await listProjectEnvironments(project.id));
       setSubflows(await listSubflows(project.id));
@@ -941,7 +945,7 @@ function App() {
       const loaded = await getWorkflow(id);
       if (!loaded) {
         setScreen("projects");
-        setProjectTab("workflows");
+        setProjectCollection("workflows");
         setSelectedWorkflowId(null);
         setDetail(null);
         setWorkflowGraph(null);
@@ -1096,7 +1100,7 @@ function App() {
         setGraphIssues([]);
         setGraphIssuesNeedRecheck(false);
         setScreen("projects");
-        setProjectTab("workflows");
+        setProjectCollection("workflows");
       }
       await loadWorkflows();
     } catch (error) {
@@ -1152,7 +1156,7 @@ function App() {
         setSelectedSubflowGraph(null);
         setSelectedSubflowUsage([]);
         setScreen("projects");
-        setProjectTab("subflows");
+        setProjectCollection("subflows");
       }
     } catch (error) {
       setAppError(commandMessage(error));
@@ -1166,7 +1170,7 @@ function App() {
       if (!loadedSubflow) {
         setAppError("Subflow not found");
         setScreen("projects");
-        setProjectTab("subflows");
+        setProjectCollection("subflows");
         return;
       }
       const [graph, usage] = await Promise.all([
@@ -1600,9 +1604,9 @@ function App() {
     }
   }
 
-  function openProjects(tab: ProjectTab = "workflows") {
+  function openProjects(collection: ProjectCollection = "workflows") {
     setScreen("projects");
-    setProjectTab(tab);
+    setProjectCollection(collection);
     setSidebarCollapsed(false);
     setAppError("");
     void (async () => {
@@ -1611,18 +1615,18 @@ function App() {
         selectedProjectId && loaded.projects.some((project) => project.id === selectedProjectId)
           ? selectedProjectId
           : loaded.projects[0]?.id ?? currentProjectId();
-      if (tab === "subflows" || tab === "settings") {
+      if (collection === "subflows" || collection === "settings") {
         await loadSubflowsForProject(projectId);
       }
     })();
   }
 
-  function changeProjectTab(tab: ProjectTab) {
-    setProjectTab(tab);
-    if (tab === "subflows") {
+  function changeProjectCollection(collection: ProjectCollection) {
+    setProjectCollection(collection);
+    if (collection === "subflows") {
       void loadSubflowsForProject();
     }
-    if (tab === "settings") {
+    if (collection === "settings") {
       void loadProjectModel();
     }
   }
@@ -2082,7 +2086,7 @@ function App() {
       onOpenOverview={() => openOverview()}
       onOpenEvidence={() => openEvidence({})}
       onOpenIdentities={() => openIdentities(null)}
-      onOpenProjects={() => openProjects(projectTab)}
+      onOpenProjects={() => openProjects(projectCollection)}
       onOpenSchedules={openSchedules}
       onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
@@ -2177,15 +2181,15 @@ function App() {
         <ProjectsPage
           projects={projects}
           selectedProject={selectedProject}
-          activeTab={projectTab}
+          activeCollection={projectCollection}
           error=""
           onSelectProject={(projectId) => {
             void selectProject(projectId);
           }}
           onCreateProject={createProject}
-          onTabChange={changeProjectTab}
+          onCollectionChange={changeProjectCollection}
         >
-          {projectTab === "subflows" ? (
+          {projectCollection === "subflows" ? (
             <SubflowListPage
               subflows={subflows}
               loading={subflowsLoading}
@@ -2200,7 +2204,7 @@ function App() {
                 void loadSubflowsForProject();
               }}
             />
-          ) : projectTab === "settings" ? (
+          ) : projectCollection === "settings" ? (
             <ProjectEnvironmentSettings
               projectEnvironments={selectedProjectEnvironments}
               error={appError}

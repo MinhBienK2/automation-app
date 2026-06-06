@@ -69,7 +69,11 @@ describe("Workflow graph editor integration", () => {
 
   async function openWorkflowDetails() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    await screen.findByRole("tab", { name: "Workflows" });
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    const collections = await within(projectList).findByRole("navigation", {
+      name: "Default Project collections",
+    });
+    await within(collections).findByRole("button", { name: "Workflows" });
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
   }
 
