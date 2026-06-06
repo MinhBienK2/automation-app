@@ -62,4 +62,45 @@ describe("backend action validation registry", () => {
       } as ActionConfig),
     ).toBeNull();
   });
+
+  test("validates Drag and Drop destination positioning", () => {
+    expect(
+      validateActionConfig({
+        type: "drag_and_drop",
+        config: {
+          source_target: { locators: [{ kind: "test_id", value: "volume-thumb" }] },
+          target_target: { locators: [{ kind: "test_id", value: "volume-track" }] },
+          target_position: { mode: "percent", x_percent: 82, y_percent: 50 },
+        },
+      } as ActionConfig),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "drag_and_drop",
+        config: {
+          source_target: { locators: [{ kind: "test_id", value: "volume-thumb" }] },
+          target_target: { locators: [{ kind: "test_id", value: "volume-track" }] },
+          target_position: { mode: "percent", x_percent: 125, y_percent: 50 },
+        },
+      } as ActionConfig),
+    ).toEqual({
+      field: "target_position.x_percent",
+      message: "Target X percent must be between 0 and 100",
+    });
+
+    expect(
+      validateActionConfig({
+        type: "drag_and_drop",
+        config: {
+          source_target: { locators: [{ kind: "test_id", value: "volume-thumb" }] },
+          target_target: { locators: [{ kind: "test_id", value: "volume-track" }] },
+          target_position: { mode: "offset", x_px: Number.NaN, y_px: 8 },
+        },
+      } as ActionConfig),
+    ).toEqual({
+      field: "target_position.x_px",
+      message: "Target X offset must be a finite number",
+    });
+  });
 });

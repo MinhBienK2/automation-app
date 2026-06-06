@@ -590,6 +590,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
       fields: [
         { name: "Source XPath", description: "XPath của element cần kéo." },
         { name: "Target XPath", description: "XPath của vùng hoặc element đích để thả." },
+        { name: "Destination position", description: "Vị trí thả trong target: tâm target, phần trăm bên trong target, hoặc offset pixel từ góc trái trên của target." },
         { name: "Iframe XPath", description: iframeField.vi },
         { name: "Wait until", description: waitUntilField.vi },
         { name: "Timeout ms", description: timeoutField.vi },
@@ -604,6 +605,7 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
       fields: [
         { name: "Source XPath", description: "XPath of the element to drag." },
         { name: "Target XPath", description: "XPath of the drop target element or area." },
+        { name: "Destination position", description: "Drop point inside the target: target center, percent inside the target, or pixel offset from the target's top-left corner." },
         { name: "Iframe XPath", description: iframeField.en },
         { name: "Wait until", description: waitUntilField.en },
         { name: "Timeout ms", description: timeoutField.en },
@@ -947,7 +949,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "select_radio":
       return targetSourceFields;
     case "drag_and_drop":
-      return [...sourceTargetFields, ...destinationTargetFields];
+      return [...sourceTargetFields, ...destinationTargetFields, "Destination position"];
     case "type_sequence":
       return [...targetSourceFields, "Text"];
     case "set_clipboard":

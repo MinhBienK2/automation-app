@@ -97,6 +97,7 @@ export function FormActionFields({
             onChange={onChange}
             targetField="target_target"
           />
+          <DragTargetPositionFields config={config} onChange={onChange} />
         </>
       );
     case "type_sequence":
@@ -206,4 +207,119 @@ export function FormActionFields({
     default:
       return null;
   }
+}
+
+function DragTargetPositionFields({
+  config,
+  onChange,
+}: {
+  config: Extract<ActionConfig, { type: "drag_and_drop" }>;
+  onChange: (config: ActionConfig) => void;
+}) {
+  const position = config.config.target_position ?? { mode: "center" as const };
+
+  const updatePosition = (
+    targetPosition: NonNullable<typeof config.config.target_position>,
+  ) => {
+    onChange({
+      type: "drag_and_drop",
+      config: {
+        ...config.config,
+        target_position: targetPosition,
+      },
+    });
+  };
+
+  return (
+    <>
+      <Label>
+        Destination position
+        <Select
+          value={position.mode}
+          onChange={(event) => {
+            const mode = event.currentTarget.value;
+            if (mode === "percent") {
+              updatePosition({ mode: "percent", x_percent: 50, y_percent: 50 });
+              return;
+            }
+            if (mode === "offset") {
+              updatePosition({ mode: "offset", x_px: 0, y_px: 0 });
+              return;
+            }
+            updatePosition({ mode: "center" });
+          }}
+        >
+          <option value="center">Center of target</option>
+          <option value="percent">Percent inside target</option>
+          <option value="offset">Pixel offset inside target</option>
+        </Select>
+      </Label>
+
+      {position.mode === "percent" ? (
+        <>
+          <Label>
+            X percent
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={position.x_percent}
+              onChange={(event) =>
+                updatePosition({
+                  ...position,
+                  x_percent: Number(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Y percent
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={position.y_percent}
+              onChange={(event) =>
+                updatePosition({
+                  ...position,
+                  y_percent: Number(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+        </>
+      ) : null}
+
+      {position.mode === "offset" ? (
+        <>
+          <Label>
+            X offset px
+            <Input
+              type="number"
+              value={position.x_px}
+              onChange={(event) =>
+                updatePosition({
+                  ...position,
+                  x_px: Number(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Y offset px
+            <Input
+              type="number"
+              value={position.y_px}
+              onChange={(event) =>
+                updatePosition({
+                  ...position,
+                  y_px: Number(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+        </>
+      ) : null}
+    </>
+  );
 }

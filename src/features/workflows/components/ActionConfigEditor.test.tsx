@@ -322,6 +322,47 @@ describe("ActionConfigEditor", () => {
     expect(screen.getByLabelText("Timeout ms")).toBeInTheDocument();
   });
 
+  test("Drag and Drop editor exposes destination position controls", async () => {
+    const onChange = vi.fn();
+    const config: ActionConfig = {
+      type: "drag_and_drop",
+      config: {
+        source_target: { locators: [{ kind: "test_id", value: "volume-thumb" }] },
+        target_target: { locators: [{ kind: "test_id", value: "volume-track" }] },
+        target_position: { mode: "percent", x_percent: 82, y_percent: 50 },
+      },
+    } as ActionConfig;
+
+    function Harness() {
+      const [currentConfig, setCurrentConfig] = useState(config);
+      return (
+        <ActionConfigEditor
+          config={currentConfig}
+          onChange={(nextConfig) => {
+            setCurrentConfig(nextConfig);
+            onChange(nextConfig);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    expect(screen.getByLabelText("Destination position")).toHaveValue("percent");
+    expect(screen.getByLabelText("X percent")).toHaveValue(82);
+    expect(screen.getByLabelText("Y percent")).toHaveValue(50);
+
+    await userEvent.clear(screen.getByLabelText("X percent"));
+    await userEvent.type(screen.getByLabelText("X percent"), "75");
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "drag_and_drop",
+      config: expect.objectContaining({
+        target_position: { mode: "percent", x_percent: 75, y_percent: 50 },
+      }),
+    });
+  });
+
   test("Set Viewport editor omits launch-time device shape controls", () => {
     render(
       <ActionConfigEditor

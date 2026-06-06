@@ -192,6 +192,7 @@ const actionValidators = createActionValidatorMap({
         message: "Target element target is required",
       }),
       validateElementActionTiming(config.config),
+      validateDragTargetPosition(config.config.target_position),
     ),
   focus_element: (config) =>
     firstValidation(
@@ -542,6 +543,18 @@ function optionalNonNegative(value: number | null | undefined, field: string, me
     : validationError(field, message);
 }
 
+function finiteValue(value: unknown, field: string, message: string) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? null
+    : validationError(field, message);
+}
+
+function percentValue(value: unknown, field: string, message: string) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100
+    ? null
+    : validationError(field, message);
+}
+
 function zeroOrPositiveInteger(value: number | null | undefined, field: string, message: string) {
   return typeof value === "number" &&
     Number.isInteger(value) &&
@@ -596,6 +609,48 @@ function validateElementActionTiming(config: unknown) {
       "Wait until must be attached, visible, enabled, or clickable",
     ),
     optionalPositive(record.timeout_ms as number | null | undefined, "timeout_ms", "Timeout must be greater than 0"),
+  );
+}
+
+function validateDragTargetPosition(value: unknown) {
+  if (value == null) return null;
+  const position = asRecord(value);
+  const modeValidation = validateRequiredEnumValue(
+    position.mode,
+    ["center", "percent", "offset"],
+    "target_position.mode",
+    "Target position mode must be center, percent, or offset",
+  );
+  if (modeValidation) return modeValidation;
+
+  if (position.mode === "center") return null;
+
+  if (position.mode === "percent") {
+    return firstValidation(
+      percentValue(
+        position.x_percent,
+        "target_position.x_percent",
+        "Target X percent must be between 0 and 100",
+      ),
+      percentValue(
+        position.y_percent,
+        "target_position.y_percent",
+        "Target Y percent must be between 0 and 100",
+      ),
+    );
+  }
+
+  return firstValidation(
+    finiteValue(
+      position.x_px,
+      "target_position.x_px",
+      "Target X offset must be a finite number",
+    ),
+    finiteValue(
+      position.y_px,
+      "target_position.y_px",
+      "Target Y offset must be a finite number",
+    ),
   );
 }
 

@@ -3172,6 +3172,44 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("drags to a percentage inside the target element when target position is configured", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("drag", "Drag", {
+            type: "drag_and_drop",
+            config: {
+              source_xpath: "#thumb",
+              target_xpath: "#track",
+              target_position: { mode: "percent", x_percent: 82, y_percent: 50 },
+              wait_until: null,
+              timeout_ms: null,
+            },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "move:60:40",
+        "mouseDown:left",
+        "move:92:40",
+        "mouseUp:left",
+      ]),
+    );
+    expect(page.events).not.toContain("dragTo:#thumb:#track");
+  });
+
   test("registers dialog actions through one-shot page handlers", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({
