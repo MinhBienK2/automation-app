@@ -6,6 +6,7 @@ import { Select } from "../../../components/ui/select";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 
@@ -23,81 +24,93 @@ export function OutputActionFields({
   switch (config.type) {
     case "set_variable":
       return (
-        <SetVariablesConfigFields
-          config={config.config}
-          onChange={(nextConfig) => onChange({ type: "set_variable", config: nextConfig })}
-        />
+        <ActionConfigFieldGroup title="Variable rows">
+          <SetVariablesConfigFields
+            config={config.config}
+            onChange={(nextConfig) => onChange({ type: "set_variable", config: nextConfig })}
+          />
+        </ActionConfigFieldGroup>
       );
     case "set_json_variables":
       return (
-        <Label>
-          JSON variables
-          <Textarea
-            value={config.config.json}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "json", event.currentTarget.value))
-            }
-          />
-        </Label>
+        <ActionConfigFieldGroup title="JSON variables">
+          <Label>
+            JSON variables
+            <Textarea
+              value={config.config.json}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "json", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </ActionConfigFieldGroup>
       );
     case "assert_element":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <Label>
-            State
-            <Select
-              value={config.config.state}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "state", event.currentTarget.value))
-              }
-            >
-              <option value="visible">Visible</option>
-              <option value="hidden">Hidden</option>
-              <option value="attached">Attached</option>
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </Select>
-          </Label>
+          <ActionConfigFieldGroup title="Assertion target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Element state">
+            <Label>
+              State
+              <Select
+                value={config.config.state}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "state", event.currentTarget.value))
+                }
+              >
+                <option value="visible">Visible</option>
+                <option value="hidden">Hidden</option>
+                <option value="attached">Attached</option>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
     case "assert_text":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <TemplateTextareaField
-            label="Text"
-            value={config.config.text}
-            onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
-            variableOptions={variableOptions}
-          />
-          <Label>
-            Match mode
-            <Select
-              value={config.config.match_mode}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "match_mode", event.currentTarget.value),
-                )
-              }
-            >
-              <option value="contains">Contains</option>
-              <option value="equals">Equals</option>
-            </Select>
-          </Label>
-          <Label>
-            Timeout ms
-            <Input
-              min="1"
-              type="number"
-              value={config.config.timeout_ms ?? 3000}
-              onChange={(event) =>
-                onChange(
-                  updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
-                )
-              }
+          <ActionConfigFieldGroup title="Assertion target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Text assertion">
+            <TemplateTextareaField
+              label="Text"
+              value={config.config.text}
+              onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
+              variableOptions={variableOptions}
             />
-          </Label>
+            <Label>
+              Match mode
+              <Select
+                value={config.config.match_mode}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "match_mode", event.currentTarget.value),
+                  )
+                }
+              >
+                <option value="contains">Contains</option>
+                <option value="equals">Equals</option>
+              </Select>
+            </Label>
+            <Label>
+              Timeout ms
+              <Input
+                min="1"
+                type="number"
+                value={config.config.timeout_ms ?? 3000}
+                onChange={(event) =>
+                  onChange(
+                    updateActionConfigField(config, "timeout_ms", event.currentTarget.value),
+                  )
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
         </>
       );
 

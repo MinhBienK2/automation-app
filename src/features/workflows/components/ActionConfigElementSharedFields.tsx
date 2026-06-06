@@ -211,11 +211,13 @@ export function StructuredTargetFields({
   config,
   onChange,
   targetField = "target",
+  labelPrefix = "Target",
   showConstraints = true,
 }: {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
   targetField?: "target" | "source_target" | "target_target" | "trigger_target";
+  labelPrefix?: string;
   showConstraints?: boolean;
 }) {
   const rawConfig = config.config as Record<string, unknown>;
@@ -287,7 +289,7 @@ export function StructuredTargetFields({
   return (
     <>
       <Label>
-        Target locator type
+        {labelPrefix} locator type
         <Select
           value={kind}
           onChange={(event) =>
@@ -305,7 +307,7 @@ export function StructuredTargetFields({
         </Select>
       </Label>
       <Label>
-        Target locator
+        {labelPrefix} locator
         <Input
           value={value}
           onChange={(event) => updateLocator({ value: event.currentTarget.value })}
@@ -314,7 +316,7 @@ export function StructuredTargetFields({
       </Label>
       {kind === "role" ? (
         <Label>
-          Target role
+          {labelPrefix} role
           <Input
             value={locator?.role ?? "button"}
             onChange={(event) => updateLocator({ role: event.currentTarget.value })}
@@ -323,7 +325,7 @@ export function StructuredTargetFields({
       ) : null}
       {kind === "attribute" ? (
         <Label>
-          Target attribute
+          {labelPrefix} attribute
           <Input
             value={locator?.attribute ?? ""}
             onChange={(event) => updateLocator({ attribute: event.currentTarget.value })}
@@ -333,7 +335,7 @@ export function StructuredTargetFields({
       {showConstraints ? (
         <>
           <Label>
-            Target visibility
+            {labelPrefix} visibility
             <Select
               value={
                 constraints?.visible === true
@@ -350,7 +352,7 @@ export function StructuredTargetFields({
             </Select>
           </Label>
           <Label>
-            Target enabled
+            {labelPrefix} enabled
             <Select
               value={
                 constraints?.enabled === true
@@ -367,14 +369,14 @@ export function StructuredTargetFields({
             </Select>
           </Label>
           <Label>
-            Target contains text
+            {labelPrefix} contains text
             <Input
               value={constraints?.contains_text ?? ""}
               onChange={(event) => updateConstraint("contains_text", event.currentTarget.value)}
             />
           </Label>
           <Label>
-            Target index
+            {labelPrefix} index
             <Input
               min="0"
               type="number"

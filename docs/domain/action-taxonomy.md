@@ -21,7 +21,7 @@ The primary Add Action palette is filtered by the capability registry in
 compiler/runner orchestration but are not promoted as ordinary in-run choices.
 
 - Navigation: page navigation, browser history, and tab movement.
-- Element Interaction: click, find element, hover, drag/drop, focus/blur, and scroll.
+- Element Interaction: click, find element, hover, drag/drop with optional destination positioning inside the target, focus/blur, and scroll.
 - Form Fields: fill, clear, select, checkbox/radio, upload, submit, custom dropdown, and rich text.
 - Keyboard: key presses, hotkeys, character-by-character typing, clipboard, and paste.
 - Wait: fixed duration/condition waits and random duration waits.

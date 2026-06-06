@@ -180,6 +180,21 @@ describe("step help content", () => {
     ]);
   });
 
+  test("Drag and Drop help follows the grouped source and drop setup fields", () => {
+    expect(stepHelpContent.drag_and_drop.en.fieldReference!.map((field) => field.name))
+      .toEqual([
+        "Source locator type",
+        "Source locator",
+        "Target locator type",
+        "Target locator",
+        "Destination position",
+        "X percent",
+        "Y percent",
+        "X offset px",
+        "Y offset px",
+      ]);
+  });
+
   test("provides a detailed field reference for every action", () => {
     for (const actionType of allActionOptions) {
       for (const language of ["vi", "en"] as const) {

@@ -5,6 +5,7 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import { ElementTargetSourceFields } from "./ActionConfigElementSharedFields";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { TemplateTextareaField, type VariableOption } from "./TemplateTextField";
 
 type ActionFieldsProps = {
@@ -21,7 +22,7 @@ export function CoreActionFields({
   switch (config.type) {
     case "navigate":
       return (
-        <>
+        <ActionConfigFieldGroup title="Navigation target">
           <Label>
             URL
             <Input
@@ -31,76 +32,86 @@ export function CoreActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
     case "wait":
       return (
         <>
-          <Label>
-            Condition
-            <Select
-              value={config.config.condition}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "condition", event.currentTarget.value))
-              }
-            >
-              <option value="duration">Duration</option>
-              <option value="element_visible">Element visible</option>
-              <option value="element_hidden">Element hidden</option>
-              <option value="element_attached">Element attached</option>
-              <option value="element_detached">Element detached</option>
-              <option value="text_visible">Text visible</option>
-              <option value="url_contains">URL contains</option>
-              <option value="page_load">Page load</option>
-              <option value="element_enabled">Element enabled</option>
-              <option value="element_disabled">Element disabled</option>
-            </Select>
-          </Label>
-          {config.config.condition === "duration" ? (
+          <ActionConfigFieldGroup title="Wait condition">
             <Label>
-              Duration ms
-              <Input
-                min="1"
-                type="number"
-                value={config.config.duration_ms ?? 1000}
+              Condition
+              <Select
+                value={config.config.condition}
                 onChange={(event) =>
-                  onChange(
-                    updateActionConfigField(config, "duration_ms", event.currentTarget.value),
-                  )
+                  onChange(updateActionConfigField(config, "condition", event.currentTarget.value))
                 }
-              />
+              >
+                <option value="duration">Duration</option>
+                <option value="element_visible">Element visible</option>
+                <option value="element_hidden">Element hidden</option>
+                <option value="element_attached">Element attached</option>
+                <option value="element_detached">Element detached</option>
+                <option value="text_visible">Text visible</option>
+                <option value="url_contains">URL contains</option>
+                <option value="page_load">Page load</option>
+                <option value="element_enabled">Element enabled</option>
+                <option value="element_disabled">Element disabled</option>
+              </Select>
             </Label>
+          </ActionConfigFieldGroup>
+          {config.config.condition === "duration" ? (
+            <ActionConfigFieldGroup title="Duration wait">
+              <Label>
+                Duration ms
+                <Input
+                  min="1"
+                  type="number"
+                  value={config.config.duration_ms ?? 1000}
+                  onChange={(event) =>
+                    onChange(
+                      updateActionConfigField(config, "duration_ms", event.currentTarget.value),
+                    )
+                  }
+                />
+              </Label>
+            </ActionConfigFieldGroup>
           ) : null}
           {config.config.condition.startsWith("element_") ? (
-            <ElementTargetSourceFields config={config} onChange={onChange} />
+            <ActionConfigFieldGroup title="Element wait target">
+              <ElementTargetSourceFields config={config} onChange={onChange} />
+            </ActionConfigFieldGroup>
           ) : null}
           {config.config.condition === "text_visible" ? (
-            <Label>
-              Text
-              <Input
-                value={config.config.text ?? ""}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "text", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <ActionConfigFieldGroup title="Text wait">
+              <Label>
+                Text
+                <Input
+                  value={config.config.text ?? ""}
+                  onChange={(event) =>
+                    onChange(updateActionConfigField(config, "text", event.currentTarget.value))
+                  }
+                />
+              </Label>
+            </ActionConfigFieldGroup>
           ) : null}
           {config.config.condition === "url_contains" ? (
-            <Label>
-              URL contains
-              <Input
-                value={config.config.url ?? ""}
-                onChange={(event) =>
-                  onChange(updateActionConfigField(config, "url", event.currentTarget.value))
-                }
-              />
-            </Label>
+            <ActionConfigFieldGroup title="URL wait">
+              <Label>
+                URL contains
+                <Input
+                  value={config.config.url ?? ""}
+                  onChange={(event) =>
+                    onChange(updateActionConfigField(config, "url", event.currentTarget.value))
+                  }
+                />
+              </Label>
+            </ActionConfigFieldGroup>
           ) : null}
         </>
       );
     case "random_wait":
       return (
-        <>
+        <ActionConfigFieldGroup title="Wait range">
           <Label>
             Minimum wait ms
             <Input
@@ -123,18 +134,22 @@ export function CoreActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
     case "input_text":
       return (
         <>
-          <ElementTargetSourceFields config={config} onChange={onChange} />
-          <TemplateTextareaField
-            label="Text"
-            value={config.config.text}
-            onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
-            variableOptions={variableOptions}
-          />
+          <ActionConfigFieldGroup title="Fill target">
+            <ElementTargetSourceFields config={config} onChange={onChange} />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Text entry">
+            <TemplateTextareaField
+              label="Text"
+              value={config.config.text}
+              onChange={(value) => onChange(updateActionConfigField(config, "text", value))}
+              variableOptions={variableOptions}
+            />
+          </ActionConfigFieldGroup>
         </>
       );
 

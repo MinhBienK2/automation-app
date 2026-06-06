@@ -4,6 +4,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
+import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 
 type ActionFieldsProps = {
   config: ActionConfig;
@@ -18,24 +19,52 @@ export function SessionActionFields({
     case "set_cookie":
       return (
         <>
-          <Label>
-            Name
-            <Input
-              value={config.config.name}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "name", event.currentTarget.value))
-              }
-            />
-          </Label>
-          <Label>
-            Value
-            <Textarea
-              value={config.config.value}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "value", event.currentTarget.value))
-              }
-            />
-          </Label>
+          <ActionConfigFieldGroup title="Cookie value">
+            <Label>
+              Name
+              <Input
+                value={config.config.name}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "name", event.currentTarget.value))
+                }
+              />
+            </Label>
+            <Label>
+              Value
+              <Textarea
+                value={config.config.value}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "value", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Cookie scope">
+            <Label>
+              Domain
+              <Input
+                value={config.config.domain ?? ""}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "domain", event.currentTarget.value))
+                }
+                placeholder="Current host"
+              />
+            </Label>
+            <Label>
+              Path
+              <Input
+                value={config.config.path ?? "/"}
+                onChange={(event) =>
+                  onChange(updateActionConfigField(config, "path", event.currentTarget.value))
+                }
+              />
+            </Label>
+          </ActionConfigFieldGroup>
+        </>
+      );
+    case "clear_cookies":
+      return (
+        <ActionConfigFieldGroup title="Cookie scope">
           <Label>
             Domain
             <Input
@@ -43,36 +72,14 @@ export function SessionActionFields({
               onChange={(event) =>
                 onChange(updateActionConfigField(config, "domain", event.currentTarget.value))
               }
-              placeholder="Current host"
+              placeholder="Blank clears visible cookies"
             />
           </Label>
-          <Label>
-            Path
-            <Input
-              value={config.config.path ?? "/"}
-              onChange={(event) =>
-                onChange(updateActionConfigField(config, "path", event.currentTarget.value))
-              }
-            />
-          </Label>
-        </>
-      );
-    case "clear_cookies":
-      return (
-        <Label>
-          Domain
-          <Input
-            value={config.config.domain ?? ""}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "domain", event.currentTarget.value))
-            }
-            placeholder="Blank clears visible cookies"
-          />
-        </Label>
+        </ActionConfigFieldGroup>
       );
     case "set_viewport":
       return (
-        <>
+        <ActionConfigFieldGroup title="Viewport size">
           <Label>
             Width
             <Input
@@ -95,11 +102,11 @@ export function SessionActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
     case "set_geolocation":
       return (
-        <>
+        <ActionConfigFieldGroup title="Geolocation coordinates">
           <Label>
             Latitude
             <Input
@@ -134,25 +141,27 @@ export function SessionActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
     case "set_extra_headers":
       return (
-        <Label>
-          Headers
-          <Textarea
-            value={config.config.headers
-              .map((header) => `${header.name}: ${header.value}`)
-              .join("\n")}
-            onChange={(event) =>
-              onChange(updateActionConfigField(config, "headers", event.currentTarget.value))
-            }
-          />
-        </Label>
+        <ActionConfigFieldGroup title="Request headers">
+          <Label>
+            Headers
+            <Textarea
+              value={config.config.headers
+                .map((header) => `${header.name}: ${header.value}`)
+                .join("\n")}
+              onChange={(event) =>
+                onChange(updateActionConfigField(config, "headers", event.currentTarget.value))
+              }
+            />
+          </Label>
+        </ActionConfigFieldGroup>
       );
     case "grant_permission":
       return (
-        <>
+        <ActionConfigFieldGroup title="Permission scope">
           <Label>
             Origin
             <Input
@@ -172,7 +181,7 @@ export function SessionActionFields({
               }
             />
           </Label>
-        </>
+        </ActionConfigFieldGroup>
       );
 
     default:

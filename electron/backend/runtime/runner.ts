@@ -7,6 +7,7 @@ import type {
   CompiledGraphStep,
   CompiledNestedAction,
   CompiledWorkflowGraph,
+  DragTargetPosition,
   ElementLocator,
   ElementTarget,
   RunMode,
@@ -135,6 +136,13 @@ type ScrollViewport = {
 };
 
 type ScrollBox = {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+};
+
+type PointerBox = {
   x?: number;
   y?: number;
   width: number;
@@ -1198,10 +1206,71 @@ export class BrowserWorkflowRunner {
       runtime.signal,
       undefined,
     );
+
+    const targetPosition = action.config.target_position;
+    if (targetPosition && targetPosition.mode !== "center") {
+      await this.executePositionedDragAndDrop(
+        runtime,
+        source,
+        target,
+        targetPosition,
+        action.config.timeout_ms,
+      );
+      return;
+    }
+
     if (!source.dragTo) {
       throw new Error("drag_and_drop requires driver dragTo support");
     }
     await source.dragTo(target, { timeout: action.config.timeout_ms ?? undefined });
+  }
+
+  private async executePositionedDragAndDrop(
+    runtime: Runtime,
+    source: BrowserDriverLocator,
+    target: BrowserDriverLocator,
+    position: DragTargetPosition,
+    timeoutMs: number | null | undefined,
+  ) {
+    const mouse = runtime.page.mouse;
+    if (!mouse?.move || !mouse.down || !mouse.up) {
+      throw new Error("drag_and_drop target_position requires driver mouse support");
+    }
+
+    await nativePointerLocatorIntoView(source, timeoutMs);
+    await nativePointerLocatorIntoView(target, timeoutMs);
+    this.throwIfCancelled(runtime.signal);
+
+    const sourceBox = await this.locatorBoundingBox(source, "source");
+    const targetBox = await this.locatorBoundingBox(target, "target");
+    const sourcePoint = centerPoint(sourceBox);
+    const targetPoint = dragTargetPoint(targetBox, position);
+
+    this.throwIfCancelled(runtime.signal);
+    await mouse.move(sourcePoint.x, sourcePoint.y);
+    this.throwIfCancelled(runtime.signal);
+    await mouse.down({ button: "left" });
+    try {
+      this.throwIfCancelled(runtime.signal);
+      await mouse.move(targetPoint.x, targetPoint.y);
+      this.throwIfCancelled(runtime.signal);
+    } finally {
+      await mouse.up({ button: "left" });
+    }
+  }
+
+  private async locatorBoundingBox(
+    locator: BrowserDriverLocator,
+    role: "source" | "target",
+  ): Promise<PointerBox> {
+    if (!locator.boundingBox) {
+      throw new Error(`drag_and_drop ${role} requires driver boundingBox support`);
+    }
+    const box = await locator.boundingBox();
+    if (!box || !Number.isFinite(box.width) || !Number.isFinite(box.height)) {
+      throw new Error(`Drag ${role} element has no visible bounding box`);
+    }
+    return box;
   }
 
   private async executeScroll(
@@ -1630,6 +1699,31 @@ export class BrowserWorkflowRunner {
       throw new RunnerStop("stopped", "Run stopped");
     }
   }
+}
+
+function centerPoint(box: PointerBox) {
+  return {
+    x: (box.x ?? 0) + box.width / 2,
+    y: (box.y ?? 0) + box.height / 2,
+  };
+}
+
+function dragTargetPoint(box: PointerBox, position: DragTargetPosition) {
+  if (position.mode === "percent") {
+    return {
+      x: (box.x ?? 0) + box.width * (position.x_percent / 100),
+      y: (box.y ?? 0) + box.height * (position.y_percent / 100),
+    };
+  }
+
+  if (position.mode === "offset") {
+    return {
+      x: (box.x ?? 0) + position.x_px,
+      y: (box.y ?? 0) + position.y_px,
+    };
+  }
+
+  return centerPoint(box);
 }
 
 async function submitFormTarget(locator: BrowserDriverLocator) {

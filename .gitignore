@@ -39,3 +39,5 @@ vite.config.js
 .codex
 CLAUDE.md
 .claude
+
+.worktrees/

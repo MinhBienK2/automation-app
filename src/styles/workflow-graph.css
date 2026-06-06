@@ -601,6 +601,35 @@
   line-height: 1.45;
 }
 
+.action-config-field-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #233240;
+  border-radius: 8px;
+  background: #121c26;
+}
+
+.action-config-field-group legend {
+  padding: 0 6px;
+  color: #e7eef5;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.action-config-field-group-grid {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.action-config-field-group-nested {
+  padding: 10px;
+  background: #0b1016;
+}
+
 .router-case-table {
   display: grid;
   gap: 10px;

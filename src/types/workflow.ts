@@ -90,6 +90,10 @@ export type VariableAssignment = {
 export type ScrollMode = "page" | "into_view" | "until_element_visible";
 export type ScrollDirection = "up" | "down" | "left" | "right";
 export type ScrollStyle = "human_like" | "smooth_single";
+export type DragTargetPosition =
+  | { mode: "center" }
+  | { mode: "percent"; x_percent: number; y_percent: number }
+  | { mode: "offset"; x_px: number; y_px: number };
 
 export type Project = {
   id: string;
@@ -512,6 +516,7 @@ export type ActionConfig =
         source_target?: ElementTarget | null;
         target_xpath?: string | null;
         target_target?: ElementTarget | null;
+        target_position?: DragTargetPosition | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
         timeout_ms?: number | null;
