@@ -7,16 +7,22 @@ import { OperationsOverviewPage } from "./features/overview/pages/OperationsOver
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
+import { SubflowListPage } from "./features/workflows/pages/SubflowListPage";
+import { SubflowDetailPage } from "./features/workflows/pages/SubflowDetailPage";
 import { AppShell } from "./layouts/AppShell";
 import {
   closeIdentityRetainedSession,
   cleanupOrphanedBrowserProfiles,
+  createProjectEnvironment as createProjectEnvironmentCommand,
+  createSubflow as createSubflowCommand,
   createWorkflow as createWorkflowCommand,
   createSchedule,
+  deleteSubflow as deleteSubflowCommand,
   deleteWorkflow as deleteWorkflowCommand,
   deleteSchedule,
   discardRecordingSession,
   disableSchedule,
+  duplicateSubflow as duplicateSubflowCommand,
   duplicateWorkflow as duplicateWorkflowCommand,
   enableSchedule,
   exportWorkflowPackage,
@@ -26,6 +32,9 @@ import {
   getEvidenceScreenshotPreview,
   getIdentityLabOverview,
   getCloakBrowserDiagnostics,
+  getSubflow,
+  getSubflowGraph,
+  getSubflowUsage,
   getWorkflowGraph,
   getOperationalRunDetail,
   getOperationsOverview,
@@ -35,9 +44,12 @@ import {
   importWorkflowPackage,
   installCloakBrowserBinary,
   listEvidenceItems,
+  listProjectEnvironments,
+  listProjects,
   listRunStates,
   listScheduleEvents,
   listSchedules,
+  listSubflows,
   listWorkflows,
   previewWorkflowPackage,
   resetWorkflowBrowserIdentity as resetWorkflowBrowserIdentityCommand,
@@ -45,6 +57,7 @@ import {
   runWorkflow as runWorkflowCommand,
   runWorkflowFromNode as runWorkflowFromNodeCommand,
   saveRecordingDraft,
+  saveSubflowGraph,
   saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
@@ -85,6 +98,8 @@ import type {
   CloakBrowserDiagnostics,
   GraphValidationIssue,
   GraphNodeType,
+  Project,
+  ProjectEnvironment,
   RecordingSession,
   RecordingWorkflowDraft,
   ReviewedRecordingStep,
@@ -100,6 +115,10 @@ import type {
   OperationsNavigationTarget,
   OperationsOverview,
   RunState,
+  Subflow,
+  SubflowSummary,
+  SubflowUsage,
+  WorkflowCreateOptions,
   WorkflowGraph,
   WorkflowDetail,
   WorkflowPackage,
@@ -114,7 +133,7 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "overview" | "list" | "detail" | "settings" | "schedules" | "runs" | "evidence" | "identities";
+type AppScreen = "overview" | "list" | "detail" | "subflows" | "subflow-detail" | "settings" | "schedules" | "runs" | "evidence" | "identities";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -266,6 +285,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "call_subflow":
     case "merge":
       return "out";
     case "if":
@@ -364,6 +384,16 @@ function App() {
   const [screen, setScreen] = useState<AppScreen>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectEnvironments, setProjectEnvironments] = useState<ProjectEnvironment[]>([]);
+  const [subflows, setSubflows] = useState<SubflowSummary[]>([]);
+  const [subflowsLoading, setSubflowsLoading] = useState(false);
+  const [selectedSubflow, setSelectedSubflow] = useState<Subflow | null>(null);
+  const [selectedSubflowGraph, setSelectedSubflowGraph] =
+    useState<WorkflowGraph | null>(null);
+  const [selectedSubflowUsage, setSelectedSubflowUsage] = useState<SubflowUsage[]>([]);
+  const [subflowGraphSaveStatus, setSubflowGraphSaveStatus] =
+    useState<GraphSaveStatus>("saved");
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
   const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
   const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
@@ -431,6 +461,8 @@ function App() {
     useState<WorkflowDialogMode>(null);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [workflowNameDraft, setWorkflowNameDraft] = useState("");
+  const [workflowEnvironmentDraft, setWorkflowEnvironmentDraft] =
+    useState("project_default");
   const [recordingSession, setRecordingSession] =
     useState<RecordingSession | null>(null);
   const [recordingDraft, setRecordingDraft] =
@@ -466,6 +498,7 @@ function App() {
   }, [savedGraphRevision]);
 
   useEffect(() => {
+    void loadProjectModel();
     void loadWorkflows();
     void loadSchedules();
     void refreshRunStates();
@@ -527,6 +560,102 @@ function App() {
   async function loadWorkflows() {
     const items = await listWorkflows();
     setWorkflows(items);
+  }
+
+  async function loadProjectModel() {
+    try {
+      const loadedProjects = await listProjects();
+      setProjects(loadedProjects);
+      const projectId = loadedProjects[0]?.id ?? null;
+      if (!projectId) {
+        setProjectEnvironments([]);
+        return { projects: loadedProjects, environments: [] as ProjectEnvironment[] };
+      }
+      const environments = await listProjectEnvironments(projectId);
+      setProjectEnvironments(environments);
+      return { projects: loadedProjects, environments };
+    } catch (error) {
+      setAppError(commandMessage(error));
+      return { projects: [] as Project[], environments: [] as ProjectEnvironment[] };
+    }
+  }
+
+  function currentProjectId() {
+    return (
+      projects[0]?.id ??
+      projectEnvironments[0]?.project_id ??
+      workflows.find((workflow) => workflow.project_id)?.project_id ??
+      null
+    );
+  }
+
+  async function ensureProjectId() {
+    const existingProjectId = currentProjectId();
+    if (existingProjectId) return existingProjectId;
+    const loaded = await loadProjectModel();
+    return loaded.projects[0]?.id ?? null;
+  }
+
+  function workflowCreateOptions(
+    projectId: string,
+    environmentDraft: string,
+  ): WorkflowCreateOptions {
+    if (environmentDraft.startsWith("existing:")) {
+      return {
+        project_id: projectId,
+        environment: {
+          mode: "existing",
+          environment_id: environmentDraft.slice("existing:".length),
+        },
+      };
+    }
+    if (environmentDraft === "isolated") {
+      return {
+        project_id: projectId,
+        environment: { mode: "isolated" },
+      };
+    }
+    return {
+      project_id: projectId,
+      environment: { mode: "project_default" },
+    };
+  }
+
+  async function loadSubflowsForProject(projectId?: string | null) {
+    setSubflowsLoading(true);
+    try {
+      const resolvedProjectId = projectId ?? (await ensureProjectId());
+      if (!resolvedProjectId) {
+        setSubflows([]);
+        setAppError("Project not found");
+        return [];
+      }
+      const items = await listSubflows(resolvedProjectId);
+      setSubflows(items);
+      setAppError("");
+      return items;
+    } catch (error) {
+      setAppError(commandMessage(error));
+      return [];
+    } finally {
+      setSubflowsLoading(false);
+    }
+  }
+
+  async function createProjectEnvironment(input: { name: string; description?: string | null }) {
+    setAppError("");
+    const projectId = await ensureProjectId();
+    if (!projectId) {
+      setAppError("Project not found");
+      return;
+    }
+    try {
+      await createProjectEnvironmentCommand(projectId, input);
+      const environments = await listProjectEnvironments(projectId);
+      setProjectEnvironments(environments);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
   }
 
   async function loadSchedules() {
@@ -823,7 +952,9 @@ function App() {
     setWorkflowDialogMode("create");
     setEditingWorkflowId(null);
     setWorkflowNameDraft("");
+    setWorkflowEnvironmentDraft("project_default");
     setAppError("");
+    void loadProjectModel();
   }
 
   function openEditWorkflowDialog(workflow: WorkflowSummary) {
@@ -834,6 +965,7 @@ function App() {
     setWorkflowDialogMode(null);
     setEditingWorkflowId(null);
     setWorkflowNameDraft("");
+    setWorkflowEnvironmentDraft("project_default");
     setAppError("");
   }
 
@@ -843,7 +975,15 @@ function App() {
 
     try {
       if (workflowDialogMode === "create") {
-        const created = await createWorkflowCommand(workflowNameDraft);
+        const projectId = await ensureProjectId();
+        if (!projectId) {
+          setAppError("Project not found");
+          return;
+        }
+        const created = await createWorkflowCommand(
+          workflowNameDraft,
+          workflowCreateOptions(projectId, workflowEnvironmentDraft),
+        );
         closeWorkflowDialog();
         await loadWorkflows();
         await openWorkflow(created.id);
@@ -908,6 +1048,92 @@ function App() {
       await duplicateWorkflowCommand(workflow.id, copyName);
       await loadWorkflows();
     } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function createProjectSubflow(input: { name: string; description?: string | null }) {
+    setAppError("");
+    const projectId = await ensureProjectId();
+    if (!projectId) {
+      setAppError("Project not found");
+      return;
+    }
+
+    try {
+      await createSubflowCommand(projectId, input);
+      await loadSubflowsForProject(projectId);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function duplicateProjectSubflow(subflow: SubflowSummary | Subflow) {
+    setAppError("");
+    try {
+      await duplicateSubflowCommand(subflow.id, `Copy of ${subflow.name}`);
+      await loadSubflowsForProject(subflow.project_id);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function deleteProjectSubflow(subflow: SubflowSummary | Subflow) {
+    setAppError("");
+    try {
+      await deleteSubflowCommand(subflow.id);
+      await loadSubflowsForProject(subflow.project_id);
+      if (selectedSubflow?.id === subflow.id) {
+        setSelectedSubflow(null);
+        setSelectedSubflowGraph(null);
+        setSelectedSubflowUsage([]);
+        setScreen("subflows");
+      }
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function openSubflowDetail(subflowId: string) {
+    setAppError("");
+    try {
+      const loadedSubflow = await getSubflow(subflowId);
+      if (!loadedSubflow) {
+        setAppError("Subflow not found");
+        setScreen("subflows");
+        return;
+      }
+      const [graph, usage] = await Promise.all([
+        getSubflowGraph(subflowId),
+        getSubflowUsage(subflowId),
+      ]);
+      setSelectedSubflow(loadedSubflow);
+      setSelectedSubflowGraph(graph);
+      setSelectedSubflowUsage(usage);
+      setSubflowGraphSaveStatus("saved");
+      setSidebarCollapsed(true);
+      setScreen("subflow-detail");
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  function changeSubflowGraph(nextGraph: WorkflowGraph) {
+    setSelectedSubflowGraph(nextGraph);
+    setSubflowGraphSaveStatus("unsaved");
+  }
+
+  async function saveCurrentSubflowGraph() {
+    if (!selectedSubflow || !selectedSubflowGraph) return;
+    setAppError("");
+    setSubflowGraphSaveStatus("saving");
+    try {
+      await saveSubflowGraph(selectedSubflow.id, selectedSubflowGraph);
+      setSubflowGraphSaveStatus("saved");
+      setSelectedSubflowUsage(await getSubflowUsage(selectedSubflow.id));
+      await loadSubflowsForProject(selectedSubflow.project_id);
+    } catch (error) {
+      setSubflowGraphSaveStatus("failed");
       setAppError(commandMessage(error));
     }
   }
@@ -1324,6 +1550,7 @@ function App() {
   function openSettings() {
     setScreen("settings");
     setAppError("");
+    void loadProjectModel();
     void loadSettingsDiagnostics();
   }
 
@@ -1340,6 +1567,28 @@ function App() {
     setFocusedRunDetail(null);
     setMissingRunId(null);
     void refreshRunStates();
+  }
+
+  function openSubflows() {
+    setScreen("subflows");
+    setAppError("");
+    setSelectedSubflow(null);
+    setSelectedSubflowGraph(null);
+    setSelectedSubflowUsage([]);
+    void (async () => {
+      const loaded = await loadProjectModel();
+      const projectId = loaded.projects[0]?.id ?? currentProjectId();
+      await loadSubflowsForProject(projectId);
+    })();
+  }
+
+  function backToSubflows() {
+    setScreen("subflows");
+    setAppError("");
+    setSelectedSubflow(null);
+    setSelectedSubflowGraph(null);
+    setSelectedSubflowUsage([]);
+    void loadSubflowsForProject();
   }
 
   function openEvidence(nextQuery: EvidenceListRequest = evidenceQuery) {
@@ -1717,6 +1966,8 @@ function App() {
           ? "settings"
           : screen === "schedules"
             ? "schedules"
+            : screen === "subflows" || screen === "subflow-detail"
+              ? "subflows"
             : screen === "runs"
               ? "runs"
               : screen === "evidence"
@@ -1732,6 +1983,7 @@ function App() {
       onOpenEvidence={() => openEvidence({})}
       onOpenIdentities={() => openIdentities(null)}
       onOpenSchedules={openSchedules}
+      onOpenSubflows={openSubflows}
       onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
       onOpenWorkflows={backToList}
@@ -1793,11 +2045,13 @@ function App() {
       ) : screen === "settings" ? (
         <SettingsPage
           graphAutosaveEnabled={graphAutosaveEnabled}
+          projectEnvironments={projectEnvironments}
           diagnostics={settingsDiagnostics}
           diagnosticsLoading={settingsDiagnosticsLoading}
           diagnosticsError={settingsDiagnosticsError}
           maintenanceMessage={settingsMaintenanceMessage}
           onGraphAutosaveEnabledChange={updateGraphAutosaveEnabled}
+          onCreateProjectEnvironment={createProjectEnvironment}
           onRefreshDiagnostics={loadSettingsDiagnostics}
           onInstallBinary={installSettingsBrowserBinary}
           onCleanupProfiles={cleanupSettingsBrowserProfiles}
@@ -1820,6 +2074,36 @@ function App() {
           }}
           onOpenWorkflow={(workflowId) => {
             void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
+          }}
+        />
+      ) : screen === "subflow-detail" && selectedSubflow ? (
+        <SubflowDetailPage
+          subflow={selectedSubflow}
+          usage={selectedSubflowUsage}
+          graph={selectedSubflowGraph}
+          graphSaveStatus={graphSaveStatusLabel(subflowGraphSaveStatus)}
+          appError={appError}
+          onBack={backToSubflows}
+          onGraphChange={changeSubflowGraph}
+          onSaveGraph={() => {
+            void saveCurrentSubflowGraph();
+          }}
+          onDuplicateSubflow={duplicateProjectSubflow}
+          onDeleteSubflow={deleteProjectSubflow}
+        />
+      ) : screen === "subflows" ? (
+        <SubflowListPage
+          subflows={subflows}
+          loading={subflowsLoading}
+          error={appError}
+          onCreateSubflow={createProjectSubflow}
+          onDuplicateSubflow={duplicateProjectSubflow}
+          onDeleteSubflow={deleteProjectSubflow}
+          onOpenSubflow={(subflowId) => {
+            void openSubflowDetail(subflowId);
+          }}
+          onRefresh={() => {
+            void loadSubflowsForProject();
           }}
         />
       ) : screen === "runs" ? (
@@ -1870,11 +2154,14 @@ function App() {
           workflows={workflows}
           workflowDialogMode={workflowDialogMode}
           workflowNameDraft={workflowNameDraft}
+          workflowEnvironmentDraft={workflowEnvironmentDraft}
+          projectEnvironments={projectEnvironments}
           appError={appError}
           runState={runState}
           runSnapshots={runSnapshots}
           activeRunWorkflowName={activeRunWorkflowName}
           onWorkflowNameDraftChange={setWorkflowNameDraft}
+          onWorkflowEnvironmentDraftChange={setWorkflowEnvironmentDraft}
           onSubmitWorkflowDialog={submitWorkflowDialog}
           onOpenCreateWorkflow={openCreateWorkflowDialog}
           onOpenEditWorkflow={openEditWorkflowDialog}

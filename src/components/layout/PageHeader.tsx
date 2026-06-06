@@ -6,6 +6,7 @@ type PageHeaderProps = {
   ariaLabel: string;
   eyebrow: string;
   title: string;
+  breadcrumbLabel?: string;
   backLabel?: string;
   meta?: string[];
   status?: ReactNode;
@@ -17,6 +18,7 @@ export function PageHeader({
   ariaLabel,
   eyebrow,
   title,
+  breadcrumbLabel = "Workflows",
   backLabel,
   meta = [],
   status,
@@ -45,7 +47,7 @@ export function PageHeader({
               type="button"
               onClick={onBack}
             >
-              Workflows
+              {breadcrumbLabel}
             </Button>
             <span aria-hidden="true" className="page-breadcrumb-separator">
               /

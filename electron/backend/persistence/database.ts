@@ -43,15 +43,51 @@ export function initializeDatabase(paths: AppPaths) {
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
 
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS project_environments (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      is_default INTEGER NOT NULL DEFAULT 0,
+      browser_launch_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS workflows (
       id TEXT PRIMARY KEY,
+      project_id TEXT,
+      environment_id TEXT,
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       tags_json TEXT NOT NULL DEFAULT '[]',
       graph_json TEXT NOT NULL,
       settings_json TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+      FOREIGN KEY (environment_id) REFERENCES project_environments(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS subflows (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      graph_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS runs (
@@ -143,10 +179,19 @@ export function initializeDatabase(paths: AppPaths) {
 
     CREATE INDEX IF NOT EXISTS idx_operational_attention_events_workflow_created_at
       ON operational_attention_events(workflow_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_project_environments_project_default
+      ON project_environments(project_id, is_default);
+
+    CREATE INDEX IF NOT EXISTS idx_subflows_project_updated_at
+      ON subflows(project_id, updated_at DESC);
   `);
   migrateWorkflowSchema(database);
   migrateRunSchema(database);
   database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_workflows_project_updated_at
+      ON workflows(project_id, updated_at DESC);
+
     CREATE INDEX IF NOT EXISTS idx_runs_source_started_at
       ON runs(source, started_at DESC);
   `);
@@ -169,6 +214,12 @@ function migrateWorkflowSchema(database: DatabaseSync) {
   }
   if (!columns.has("settings_json")) {
     database.exec("ALTER TABLE workflows ADD COLUMN settings_json TEXT");
+  }
+  if (!columns.has("project_id")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN project_id TEXT");
+  }
+  if (!columns.has("environment_id")) {
+    database.exec("ALTER TABLE workflows ADD COLUMN environment_id TEXT");
   }
 }
 

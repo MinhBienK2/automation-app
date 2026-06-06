@@ -18,6 +18,7 @@ import {
 import type {
   ActionConfig,
   CompiledWorkflowGraph,
+  GraphNodeType,
   RunState,
   WorkflowGraph,
   WorkflowPackage,
@@ -36,6 +37,64 @@ vi.mock("electron", () => ({
 }));
 
 const tempRoots: string[] = [];
+
+type ProjectWorkflow = {
+  id: string;
+  name: string;
+  project_id: string;
+  environment_id: string;
+};
+
+type TestProject = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type TestProjectEnvironment = {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  is_default: boolean;
+  browser_launch: WorkflowSettings["browser_launch"];
+  created_at: string;
+  updated_at: string;
+};
+
+type TestSubflow = {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type ProjectWorkflowTestHandlers = {
+  listProjects(): TestProject[];
+  createProject(input: { name: string; description?: string | null }): TestProject;
+  listProjectEnvironments(projectId: string): TestProjectEnvironment[];
+  createProjectEnvironment(
+    projectId: string,
+    input: {
+      name: string;
+      description?: string | null;
+      browser_launch?: WorkflowSettings["browser_launch"];
+      is_default?: boolean;
+    },
+  ): TestProjectEnvironment;
+  setWorkflowEnvironment(workflowId: string, environmentId: string): ProjectWorkflow;
+  createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
+  listSubflows(projectId: string): Array<TestSubflow & { used_by_count: number }>;
+  getSubflowGraph(subflowId: string): WorkflowGraph;
+  saveSubflowGraph(subflowId: string, graph: WorkflowGraph): void;
+  duplicateSubflow(subflowId: string, name: string): TestSubflow;
+  deleteSubflow(subflowId: string): void;
+  getSubflowUsage(subflowId: string): Array<{ workflow_id: string; workflow_name: string }>;
+};
 
 afterEach(async () => {
   vi.useRealTimers();
@@ -155,6 +214,248 @@ describe("Electron workflow command handlers", () => {
 
     handlers.deleteWorkflow(created.id);
     expect(handlers.getWorkflow(created.id)).toBeNull();
+  });
+
+  test("creates a default project and project environment for new workflows", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+
+    const projects = projectHandlers.listProjects();
+    expect(projects).toEqual([
+      expect.objectContaining({
+        name: "Default Project",
+      }),
+    ]);
+
+    const project = projects[0];
+    const environments = projectHandlers.listProjectEnvironments(project.id);
+    expect(environments).toEqual([
+      expect.objectContaining({
+        project_id: project.id,
+        name: "Project Default Environment",
+        is_default: true,
+      }),
+    ]);
+
+    const workflow = handlers.createWorkflow("Environment-aware workflow");
+    const listRow = handlers.listWorkflows().find((item) => item.id === workflow.id);
+
+    expect(workflow).toMatchObject({
+      project_id: project.id,
+      environment_id: expect.any(String),
+    });
+    expect(workflow.environment_id).not.toBe(environments[0].id);
+    expect(listRow).toMatchObject({
+      project_id: project.id,
+      environment_id: workflow.environment_id,
+      environment_name: "Environment-aware workflow isolated environment",
+    });
+  });
+
+  test("runs workflows with the selected project environment browser launch settings", async () => {
+    const runner = {
+      run: vi.fn(async () => ({
+        status: "success" as const,
+        mode: "run_workflow" as const,
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["visit"],
+        outputs: {},
+        error: null,
+      })),
+      getRetainedSessionState: vi.fn(),
+      getRetainedSessionStates: vi.fn(() => []),
+    };
+    const { handlers } = await createTestHandlers({ runner });
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const workflow = handlers.createWorkflow("Environment run") as ProjectWorkflow;
+    const projectId = workflow.project_id;
+    const defaultEnvironment = projectHandlers.listProjectEnvironments(projectId)[0];
+    const selectedEnvironment = projectHandlers.createProjectEnvironment(projectId, {
+      name: "Proxy identity",
+      description: "Project-level browser posture",
+      browser_launch: {
+        ...defaultEnvironment.browser_launch,
+        headless: true,
+        proxy_enabled: true,
+        proxy_server: "http://proxy.internal:8080",
+        timezone: "Asia/Ho_Chi_Minh",
+        locale: "vi-VN",
+      },
+    });
+    handlers.saveWorkflowGraph(workflow.id, runnableGraph());
+
+    projectHandlers.setWorkflowEnvironment(workflow.id, selectedEnvironment.id);
+    await handlers.runWorkflow(workflow.id);
+
+    expect(runner.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          browser_launch: expect.objectContaining({
+            proxy_enabled: true,
+            proxy_server: "http://proxy.internal:8080",
+            timezone: "Asia/Ho_Chi_Minh",
+            locale: "vi-VN",
+            headless: true,
+          }),
+        }),
+      }),
+    );
+  });
+
+  test("persists subflows, reports workflow usage, duplicates safely, and blocks used deletion", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const workflow = handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
+    const subflow = projectHandlers.createSubflow(workflow.project_id, {
+      name: "Login",
+      description: "Reusable login fragment",
+    });
+    const subflowGraph = subflowGraphWithAction("fill-username", "Fill username");
+
+    projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
+    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+
+    expect(projectHandlers.listSubflows(workflow.project_id)).toEqual([
+      expect.objectContaining({
+        id: subflow.id,
+        project_id: workflow.project_id,
+        name: "Login",
+        used_by_count: 1,
+      }),
+    ]);
+    expect(projectHandlers.getSubflowUsage(subflow.id)).toEqual([
+      expect.objectContaining({
+        workflow_id: workflow.id,
+        workflow_name: "Checkout E2E",
+      }),
+    ]);
+    expect(() => projectHandlers.deleteSubflow(subflow.id)).toThrow(
+      "Subflow is used by 1 workflow",
+    );
+
+    const duplicated = projectHandlers.duplicateSubflow(subflow.id, "Login copy");
+    expect(duplicated).toMatchObject({
+      project_id: workflow.project_id,
+      name: "Login copy",
+    });
+    expect(projectHandlers.getSubflowGraph(duplicated.id)).toEqual({
+      ...subflowGraph,
+      migration_notes: [],
+    });
+  });
+
+  test("validates and expands Call Subflow nodes inside the caller run plan", async () => {
+    const runner = {
+      run: vi.fn(async () => ({
+        status: "success" as const,
+        mode: "run_workflow" as const,
+        target_step_id: null,
+        current_step_id: null,
+        current_step_number: null,
+        completed_step_ids: ["call-login"],
+        outputs: {},
+        error: null,
+      })),
+      getRetainedSessionState: vi.fn(),
+      getRetainedSessionStates: vi.fn(() => []),
+    };
+    const { handlers } = await createTestHandlers({ runner });
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const workflow = handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
+    const subflow = projectHandlers.createSubflow(workflow.project_id, { name: "Login" });
+    projectHandlers.saveSubflowGraph(
+      subflow.id,
+      subflowGraphWithAction("fill-username", "Fill username"),
+    );
+    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+
+    expect(handlers.validateWorkflowRun(workflow.id).filter((issue) => issue.level === "error"))
+      .toEqual([]);
+    await handlers.runWorkflow(workflow.id);
+
+    const compiledGraph = runner.run.mock.calls[0][0].graph as CompiledWorkflowGraph;
+    expect(compiledGraph.steps).toEqual([
+      expect.objectContaining({
+        node_id: "call-login::__inputs",
+        label: "Checkout E2E > Login > Inputs",
+        config: {
+          type: "set_variable",
+          config: expect.objectContaining({
+            variables: [
+              {
+                name: "username",
+                value_type: "text",
+                value: "{{account.username}}",
+              },
+            ],
+          }),
+        },
+      }),
+      expect.objectContaining({
+        node_id: "call-login::fill-username",
+        label: "Checkout E2E > Login > Fill username",
+        config: { type: "input_text", config: expect.objectContaining({ text: "{{username}}" }) },
+      }),
+    ]);
+  });
+
+  test("blocks missing, cross-project, and invalid Call Subflow references before run", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const firstWorkflow = handlers.createWorkflow("First project workflow") as ProjectWorkflow;
+    const secondProject = projectHandlers.createProject({ name: "Second Project" });
+    const crossProjectSubflow = projectHandlers.createSubflow(secondProject.id, {
+      name: "Other Project Login",
+    });
+    projectHandlers.saveSubflowGraph(
+      crossProjectSubflow.id,
+      subflowGraphWithAction("other-step", "Other step"),
+    );
+
+    handlers.saveWorkflowGraph(
+      firstWorkflow.id,
+      workflowGraphCallingSubflow("missing-subflow"),
+    );
+    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+      expect.objectContaining({
+        source: "graph",
+        node_id: "call-login",
+        level: "error",
+        message: "Call Subflow references a missing subflow",
+      }),
+    );
+
+    handlers.saveWorkflowGraph(
+      firstWorkflow.id,
+      workflowGraphCallingSubflow(crossProjectSubflow.id),
+    );
+    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+      expect.objectContaining({
+        source: "graph",
+        node_id: "call-login",
+        level: "error",
+        message: "Call Subflow must reference a subflow in the same project",
+      }),
+    );
+
+    const invalidSubflow = projectHandlers.createSubflow(firstWorkflow.project_id, {
+      name: "Invalid Login",
+    });
+    projectHandlers.saveSubflowGraph(invalidSubflow.id, startOnlyGraph());
+    handlers.saveWorkflowGraph(
+      firstWorkflow.id,
+      workflowGraphCallingSubflow(invalidSubflow.id),
+    );
+    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+      expect.objectContaining({
+        source: "graph",
+        node_id: "call-login",
+        level: "error",
+        message: "Referenced subflow has blocking validation errors",
+      }),
+    );
   });
 
   test("defaults new workflow browser launch fonts from the detected repo-local CloakBrowser bundle", async () => {
@@ -839,16 +1140,13 @@ describe("Electron workflow command handlers", () => {
       },
     });
     database
-      .prepare("UPDATE workflows SET settings_json = ? WHERE id = ?")
+      .prepare("UPDATE project_environments SET browser_launch_json = ? WHERE id = ?")
       .run(
         JSON.stringify({
-          ...missingSettings,
-          browser_launch: {
-            ...missingSettings.browser_launch,
-            fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
-          },
+          ...missingSettings.browser_launch,
+          fingerprint_fonts_dir: path.join(os.tmpdir(), "missing-font-bundle"),
         }),
-        missing.id,
+        String(missing.environment_id),
       );
 
     const diagnostics = await handlers.getCloakBrowserDiagnostics();
@@ -1516,6 +1814,54 @@ describe("Electron workflow command handlers", () => {
       name: "Imported package (imported)",
       description: "Shared",
       tags: ["imported"],
+    });
+  });
+
+  test("exports referenced subflows and remaps Call Subflow ids on package import", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const workflow = handlers.createWorkflow("Checkout E2E") as ProjectWorkflow;
+    const subflow = projectHandlers.createSubflow(workflow.project_id, { name: "Login" });
+    const subflowGraph = subflowGraphWithAction("fill-username", "Fill username");
+    projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
+    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+
+    const packageValue = handlers.exportWorkflowPackage(workflow.id, {
+      include_flow: true,
+      settings_sections: [],
+    });
+
+    expect(packageValue.included_sections).toContain("subflows");
+    expect(packageValue.subflows).toEqual([
+      expect.objectContaining({
+        id: subflow.id,
+        project_id: workflow.project_id,
+        name: "Login",
+      }),
+    ]);
+
+    const imported = handlers.importWorkflowPackage(
+      {
+        ...packageValue,
+        workflow: { ...packageValue.workflow, name: "Imported Checkout" },
+      },
+      {
+        include_flow: true,
+        settings_sections: [],
+      },
+    ) as { workflow: ProjectWorkflow };
+    const importedGraph = handlers.getWorkflowGraph(imported.workflow.id);
+    const importedCallNode = importedGraph.nodes.find(
+      (node) => node.node_type === "call_subflow",
+    );
+    const importedSubflowId = (importedCallNode?.config as { subflow_id?: string } | null)
+      ?.subflow_id;
+
+    expect(importedSubflowId).toEqual(expect.any(String));
+    expect(importedSubflowId).not.toBe(subflow.id);
+    expect(projectHandlers.getSubflowGraph(importedSubflowId ?? "")).toEqual({
+      ...subflowGraph,
+      migration_notes: [],
     });
   });
 
@@ -4547,6 +4893,93 @@ function runnableGraph(): WorkflowGraph {
         source_node_id: "start",
         source_port: "out",
         target_node_id: "visit",
+        target_port: "in",
+      },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function workflowGraphCallingSubflow(subflowId: string): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+      {
+        id: "call-login",
+        node_type: "call_subflow" as GraphNodeType,
+        label: "Call Login",
+        position: { x: 200, y: 0 },
+        config: {
+          subflow_id: subflowId,
+          input_mapping: [{ input_name: "username", value: "{{account.username}}" }],
+          output_prefix: "login",
+        },
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: "start-call-login",
+        source_node_id: "start",
+        source_port: "out",
+        target_node_id: "call-login",
+        target_port: "in",
+      },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function subflowGraphWithAction(nodeId: string, label: string): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+      {
+        id: nodeId,
+        node_type: "action",
+        label,
+        position: { x: 220, y: 0 },
+        config: {
+          type: "input_text",
+          config: {
+            target: { locators: [{ kind: "xpath", value: "//*[@name='username']" }] },
+            text: "{{username}}",
+            clear_before_input: true,
+            wait_until: "visible",
+            timeout_ms: 60000,
+          },
+        },
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: `start-${nodeId}`,
+        source_node_id: "start",
+        source_port: "out",
+        target_node_id: nodeId,
         target_port: "in",
       },
     ],

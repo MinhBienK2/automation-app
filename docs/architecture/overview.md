@@ -37,7 +37,10 @@ Node/TypeScript backend
   -> electron/backend/scheduling/scheduler.ts in-app schedule engine
   -> electron/backend/persistence/database.ts SQLite bootstrap
 SQLite
+  -> projects
+  -> project_environments
   -> workflows
+  -> subflows
   -> runs
   -> run_steps
   -> workflow_schedules
@@ -49,10 +52,10 @@ SQLite
 ## Runtime State
 
 The renderer command boundary is Electron IPC. The TypeScript backend owns
-workflow CRUD, graph document storage, Workflow Settings,
-package import/export, graph validation/compilation, workflow scheduling, SQLite
-persistence, backend-owned browser recorder session lifecycle, run lifecycle
-orchestration, and CloakBrowser execution.
+project/environment CRUD, workflow CRUD, subflow CRUD, graph document storage,
+Workflow Settings, package import/export, graph validation/compilation,
+workflow scheduling, SQLite persistence, backend-owned browser recorder session
+lifecycle, run lifecycle orchestration, and CloakBrowser execution.
 The Operations Overview read model is also backend-owned: it merges current
 process run snapshots with persisted runs, schedule decisions, launch-block
 attention, and sanitized evidence metadata before returning a bounded DTO to
@@ -88,7 +91,8 @@ payloads.
   browser-config compatibility mapping, persona resolution, local duplication
   settings, and browser identity seed helpers.
 - Workflow package service owns workflow package preview, import preparation,
-  selected-section validation, and export sanitization.
+  referenced-subflow preparation and id remapping, selected-section validation,
+  and export sanitization.
 - Browser recorder session manager owns active in-memory recorder sessions,
   including new-workflow settings drafts, existing-workflow settings snapshots,
   sanitized browser identity metadata, backend browser launch/cleanup,

@@ -10,7 +10,9 @@ import type {
   IdentityLabOverviewRequest,
   IdentityLabTarget,
   OperationsOverviewRequest,
+  ProjectEnvironmentInput,
   WorkflowBrowserConfig,
+  WorkflowCreateOptions,
   WorkflowDeleteOptions,
   WorkflowExport,
   WorkflowGraph,
@@ -34,6 +36,71 @@ function bridge() {
 
 export function listWorkflows() {
   return bridge().listWorkflows();
+}
+
+export function listProjects() {
+  return bridge().listProjects();
+}
+
+export function createProject(input: { name: string; description?: string | null }) {
+  return bridge().createProject(input);
+}
+
+export function listProjectEnvironments(projectId: string) {
+  return bridge().listProjectEnvironments(projectId);
+}
+
+export function createProjectEnvironment(
+  projectId: string,
+  input: ProjectEnvironmentInput,
+) {
+  return bridge().createProjectEnvironment(projectId, input);
+}
+
+export function updateProjectEnvironment(
+  environmentId: string,
+  input: Partial<ProjectEnvironmentInput>,
+) {
+  return bridge().updateProjectEnvironment(environmentId, input);
+}
+
+export function setWorkflowEnvironment(workflowId: string, environmentId: string) {
+  return bridge().setWorkflowEnvironment(workflowId, environmentId);
+}
+
+export function createSubflow(
+  projectId: string,
+  input: { name: string; description?: string | null },
+) {
+  return bridge().createSubflow(projectId, input);
+}
+
+export function listSubflows(projectId: string) {
+  return bridge().listSubflows(projectId);
+}
+
+export function getSubflow(subflowId: string) {
+  return bridge().getSubflow(subflowId);
+}
+
+export function getSubflowGraph(subflowId: string) {
+  return bridge().getSubflowGraph(subflowId);
+}
+
+export function saveSubflowGraph(subflowId: string, graph: WorkflowGraph) {
+  return bridge().saveSubflowGraph(subflowId, graph);
+}
+
+export function duplicateSubflow(subflowId: string, name: string) {
+  return bridge().duplicateSubflow(subflowId, name);
+}
+
+export function deleteSubflow(subflowId: string) {
+  return bridge().deleteSubflow(subflowId);
+}
+
+export function getSubflowUsage(subflowId: string) {
+  return bridge().getSubflowUsage(subflowId);
 }
 
 export function getWorkflow(id: string) {
@@ -96,8 +163,8 @@ export function validateWorkflowRun(workflowId: string) {
   return bridge().validateWorkflowRun(workflowId);
 }
 
-export function createWorkflow(name: string) {
-  return bridge().createWorkflow(name);
+export function createWorkflow(name: string, options?: WorkflowCreateOptions) {
+  return bridge().createWorkflow(name, options);
 }
 
 export function renameWorkflow(id: string, name: string) {

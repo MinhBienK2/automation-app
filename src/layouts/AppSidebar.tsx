@@ -1,7 +1,7 @@
 import { Button } from "../components/ui/button";
-import { Activity, CalendarClock, Files, Fingerprint, Gauge, ListTree, Settings } from "lucide-react";
+import { Activity, CalendarClock, Files, Fingerprint, Gauge, GitBranch, ListTree, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "overview" | "workflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
+type AppSidebarActiveItem = "overview" | "workflows" | "subflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
@@ -12,6 +12,7 @@ type AppSidebarProps = {
   onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
+  onOpenSubflows: () => void;
   onOpenWorkflows: () => void;
   onToggle: () => void;
 };
@@ -59,6 +60,7 @@ export function AppSidebar({
   onOpenRunCenter,
   onOpenSchedules,
   onOpenSettings,
+  onOpenSubflows,
   onOpenWorkflows,
   onToggle,
 }: AppSidebarProps) {
@@ -94,6 +96,19 @@ export function AppSidebar({
         >
           <ListTree aria-hidden="true" className="sidebar-item-icon" />
           <span>Workflows</span>
+        </Button>
+        <Button
+          className={
+            activeItem === "subflows"
+              ? "sidebar-nav-item sidebar-nav-item-active"
+              : "sidebar-nav-item"
+          }
+          variant="secondary"
+          type="button"
+          onClick={onOpenSubflows}
+        >
+          <GitBranch aria-hidden="true" className="sidebar-item-icon" />
+          <span>Subflows</span>
         </Button>
         <Button
           className={

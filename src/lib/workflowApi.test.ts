@@ -5,6 +5,9 @@ import {
 } from "../tests/mocks/electron";
 import {
   cleanupOrphanedBrowserProfiles,
+  createProject,
+  createProjectEnvironment,
+  createSubflow,
   createSchedule,
   deleteWorkflow,
   deleteSchedule,
@@ -13,9 +16,13 @@ import {
   exportWorkflow,
   exportWorkflowPackage,
   duplicateWorkflow,
+  duplicateSubflow,
   dryRunValidateConfig,
   compileWorkflowGraph,
   getWorkflowSettings,
+  getSubflow,
+  getSubflowGraph,
+  getSubflowUsage,
   generateRecordingDraft,
   getRecordingDraft,
   getRecordingSession,
@@ -27,6 +34,9 @@ import {
   getOperationalRunDetail,
   getOperationsOverview,
   listEvidenceItems,
+  listProjects,
+  listProjectEnvironments,
+  listSubflows,
   getEvidenceDetail,
   getEvidenceScreenshotPreview,
   revealEvidenceArtifact,
@@ -42,6 +52,7 @@ import {
   runWorkflowFromNode,
   listRunStates,
   saveWorkflowSettings,
+  saveSubflowGraph,
   saveRecordingDraft,
   startRecordingSession,
   installCloakBrowserBinary,
@@ -57,6 +68,9 @@ import {
   validateWorkflowRun,
   validateSchedule,
   previewWorkflowPackage,
+  setWorkflowEnvironment,
+  deleteSubflow,
+  updateProjectEnvironment,
 } from "./workflowApi";
 import type {
   WorkflowExport,
@@ -111,7 +125,38 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.getIdentityLabOverview.mockResolvedValue(undefined);
     workflowBridgeMock.getIdentityLabDetail.mockResolvedValue(undefined);
     workflowBridgeMock.closeIdentityRetainedSession.mockResolvedValue(undefined);
+    workflowBridgeMock.listProjects.mockResolvedValue(undefined);
+    workflowBridgeMock.createProject.mockResolvedValue(undefined);
+    workflowBridgeMock.listProjectEnvironments.mockResolvedValue(undefined);
+    workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
+    workflowBridgeMock.updateProjectEnvironment.mockResolvedValue(undefined);
+    workflowBridgeMock.setWorkflowEnvironment.mockResolvedValue(undefined);
+    workflowBridgeMock.createSubflow.mockResolvedValue(undefined);
+    workflowBridgeMock.listSubflows.mockResolvedValue(undefined);
+    workflowBridgeMock.getSubflow.mockResolvedValue(undefined);
+    workflowBridgeMock.getSubflowGraph.mockResolvedValue(undefined);
+    workflowBridgeMock.saveSubflowGraph.mockResolvedValue(undefined);
+    workflowBridgeMock.duplicateSubflow.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteSubflow.mockResolvedValue(undefined);
+    workflowBridgeMock.getSubflowUsage.mockResolvedValue(undefined);
 
+    await listProjects();
+    await createProject({ name: "Owned Lab", description: "staging" });
+    await listProjectEnvironments("project-1");
+    await createProjectEnvironment("project-1", {
+      name: "Staging identity",
+      description: "Proxy posture",
+    });
+    await updateProjectEnvironment("environment-1", { name: "Updated" });
+    await setWorkflowEnvironment("workflow-1", "environment-1");
+    await createSubflow("project-1", { name: "Login" });
+    await listSubflows("project-1");
+    await getSubflow("subflow-1");
+    await getSubflowGraph("subflow-1");
+    await saveSubflowGraph("subflow-1", { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } });
+    await duplicateSubflow("subflow-1", "Login copy");
+    await deleteSubflow("subflow-1");
+    await getSubflowUsage("subflow-1");
     await validateSchedule({
       workflow_id: "workflow-1",
       name: "Hourly",
@@ -185,6 +230,40 @@ describe("workflow API phase ten commands", () => {
     await cleanupOrphanedBrowserProfiles();
     await deleteWorkflow("workflow-1", { deleteBrowserProfile: true });
 
+    expect(workflowBridgeMock.listProjects).toHaveBeenCalled();
+    expect(workflowBridgeMock.createProject).toHaveBeenCalledWith({
+      name: "Owned Lab",
+      description: "staging",
+    });
+    expect(workflowBridgeMock.listProjectEnvironments).toHaveBeenCalledWith("project-1");
+    expect(workflowBridgeMock.createProjectEnvironment).toHaveBeenCalledWith(
+      "project-1",
+      { name: "Staging identity", description: "Proxy posture" },
+    );
+    expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
+      "environment-1",
+      { name: "Updated" },
+    );
+    expect(workflowBridgeMock.setWorkflowEnvironment).toHaveBeenCalledWith(
+      "workflow-1",
+      "environment-1",
+    );
+    expect(workflowBridgeMock.createSubflow).toHaveBeenCalledWith("project-1", {
+      name: "Login",
+    });
+    expect(workflowBridgeMock.listSubflows).toHaveBeenCalledWith("project-1");
+    expect(workflowBridgeMock.getSubflow).toHaveBeenCalledWith("subflow-1");
+    expect(workflowBridgeMock.getSubflowGraph).toHaveBeenCalledWith("subflow-1");
+    expect(workflowBridgeMock.saveSubflowGraph).toHaveBeenCalledWith(
+      "subflow-1",
+      { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+    );
+    expect(workflowBridgeMock.duplicateSubflow).toHaveBeenCalledWith(
+      "subflow-1",
+      "Login copy",
+    );
+    expect(workflowBridgeMock.deleteSubflow).toHaveBeenCalledWith("subflow-1");
+    expect(workflowBridgeMock.getSubflowUsage).toHaveBeenCalledWith("subflow-1");
     expect(workflowBridgeMock.validateSchedule).toHaveBeenCalledWith({
       workflow_id: "workflow-1",
       name: "Hourly",

@@ -26,6 +26,7 @@ const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
 const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   start: true,
   action: true,
+  call_subflow: true,
   if: true,
   switch: true,
   merge: true,

@@ -41,6 +41,44 @@ Checks: focused page/component test; `npx tsc --noEmit` when types or props chan
 
 Update docs: workflow lifecycle, frontend architecture, run-state contract if monitoring/status changes.
 
+## Change Projects, Environments, Or Subflows
+
+Use when changing project grouping, Project Environment browser launch
+selection, workflow create environment choices, subflow CRUD, Call Subflow graph
+nodes, or workflow package subflow import/export.
+
+Read: `domain/product-model.md`, `domain/workflow-lifecycle.md`,
+`domain/user-visible-invariants.md`, `domain/execution-semantics.md`,
+`architecture/overview.md`, `architecture/frontend.md`,
+`architecture/persistence.md`, `architecture/command-boundary.md`,
+`contracts/electron-ipc.md`, `contracts/workflow-types.md`,
+`contracts/run-state.md`; also read `DESIGN.md` before layout or styling
+changes.
+
+Verify: `src/App.tsx`, `src/features/settings/`,
+`src/features/workflows/pages/WorkflowListPage.tsx`,
+`src/features/workflows/pages/SubflowListPage.tsx`,
+`src/features/workflows/pages/SubflowDetailPage.tsx`,
+`src/features/workflows/components/WorkflowGraph*`,
+`src/features/workflows/lib/workflowGraph.ts`, `src/layouts/`,
+`src/lib/workflowApi.ts`, `src/types/electron.ts`,
+`src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`,
+`electron/backend/commands.ts`, `electron/backend/graph/validateGraph.ts`,
+`electron/backend/graph/compiler.ts`,
+`electron/backend/persistence/database.ts`,
+`electron/backend/persistence/workflowRepository.ts`,
+`electron/backend/services/workflowPackageService.ts`
+
+Checks: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts electron/backend/graph/compiler.test.ts electron/backend/graph/validateGraph.test.ts electron/backend/services/workflowPackageService.test.ts src/lib/workflowApi.test.ts`,
+focused workflow/settings page tests, `npx tsc --noEmit`,
+`npm run build:electron`, `npm test`, `npm run build`.
+
+Update docs: product model, workflow lifecycle, user-visible invariants,
+execution semantics, architecture overview, frontend architecture, persistence
+architecture, command boundary, Electron IPC contract, workflow types,
+run-state contract, README smoke checklist, and this route when ownership,
+payloads, or checks change.
+
 ## Change User-Facing Styling Or Layout
 
 Read: `DESIGN.md`, `architecture/frontend.md`, `domain/user-visible-invariants.md`
@@ -128,7 +166,7 @@ changes.
 
 Verify: `src/App.tsx`, `src/layouts/`, `src/features/overview/`,
 `src/features/evidence/`, `src/features/identities/`, `src/features/runs/`,
-`src/features/schedules/`, `src/features/settings/`,
+`src/features/schedules/`, `src/features/settings/`, `src/features/workflows/`,
 `src/types/workflow.ts`, `electron/backend/operations/operationsRepository.ts`
 
 Checks: `npm test -- src/App.test.tsx src/layouts/AppShell.test.tsx src/AppCss.test.ts`,

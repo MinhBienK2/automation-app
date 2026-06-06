@@ -17,11 +17,20 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   identity workspace with list/detail posture, latest observed evidence,
   sanitized diagnostics, historical identity references, retained-session close,
   guarded reset, and navigation to Evidence/Runs/Workflow Settings.
-- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, including graph autosave, environment readiness diagnostics, guarded maintenance commands, and graph shortcut guidance.
+- `src/features/settings/pages/SettingsPage.tsx`: app-level settings,
+  Project Environment management, graph autosave, environment readiness
+  diagnostics, guarded maintenance commands, and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
-- `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen with icon-only row actions, including direct Run for saved workflow state and the Record Workflow entry point.
+- `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen
+  with environment-aware create flow, selected-environment display, icon-only
+  row actions, direct Run for saved workflow state, and the Record Workflow
+  entry point.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
+- `src/features/workflows/pages/SubflowListPage.tsx`: subflow list,
+  create, open, duplicate, delete, and usage-count presentation.
+- `src/features/workflows/pages/SubflowDetailPage.tsx`: reusable subflow graph
+  editor with usage warnings and save/duplicate/delete actions.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
@@ -80,7 +89,20 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   runs/workflows back into existing destinations. Identity evidence opens
   Identity Lab as a read-only historical target carrying workflow, run, and
   evidence context.
-- Workflow list direct Run, delete, duplicate, and Workflow Package import/export interaction. List Run calls the existing `runWorkflow` command against saved workflow state and leaves the user on the list while run snapshot polling continues. Active row status, row Run disabling, and row Stop are scoped to that workflow's run id. Delete opens an in-app confirmation dialog with Delete private browser profile data checked by default. Duplicate calls `duplicateWorkflow` so local copies preserve the saved graph and non-storage settings while receiving a fresh browser identity/profile/fingerprint. Export chooses Flow and selected Workflow Settings sections, then delegates native Save dialog and package JSON writing to the Electron backend. Import reads package JSON from the browser file input, previews available sections, always creates a new workflow, refreshes the list, and opens the imported workflow.
+- Workflow list create, direct Run, delete, duplicate, and Workflow Package
+  import/export interaction. Create chooses project default, existing, or
+  isolated environment options. List Run calls the existing `runWorkflow`
+  command against saved workflow state and leaves the user on the list while
+  run snapshot polling continues. Active row status, row Run disabling, and row
+  Stop are scoped to that workflow's run id. Delete opens an in-app
+  confirmation dialog with Delete private browser profile data checked by
+  default. Duplicate calls `duplicateWorkflow` so local copies preserve the
+  saved graph and non-storage settings while receiving a fresh browser
+  identity/profile/fingerprint. Export chooses Flow and selected Workflow
+  Settings sections, then delegates native Save dialog and package JSON writing
+  to the Electron backend. Import reads package JSON from the browser file
+  input, previews available sections, always creates a new workflow, refreshes
+  the list, and opens the imported workflow.
 - Browser recorder UI orchestration. The workflow list starts a backend-owned
   new-workflow recorder session. The workflow detail header does not expose a
   Record Replacement entry point. The review dialog stops the session, loads a
@@ -95,6 +117,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Runs owns the cross-workflow session monitor. It lists run snapshots, shows source/status/current step/error context, calls `stopRun(runId)` for selected active runs, and can render one bounded persisted-run detail loaded from an Overview navigation target.
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
+- Subflows navigation state in the app shell/sidebar, plus list/detail state,
+  create/duplicate/delete command state, graph save status, and usage-warning
+  presentation. Subflow graph editors run in subflow mode, which hides Call
+  Subflow from Add Logic and does not expose run controls.
 - Selected-node label editing stays in the inspector. Connections and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing belongs in node Help and graph port hover tooltips, not a separate inspector panel.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter so the canvas component renders stable primary name, secondary kind, and compact meta strings without parsing action configs itself.
 - Canvas port tooltip copy for every graph node type. Tooltip text explains input vs output direction plus branch, continuation, terminal, retry, merge, loop, random-choice, and recovery semantics before users create a link. Port handles use custom canvas tooltip rendering without native `title` tooltips, delay display by 1 second, and raise the hovered React Flow node wrapper so the tooltip stays above neighboring nodes.
@@ -114,10 +140,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   controls.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
-- Settings navigation state in the app shell/sidebar, plus app-level
-  diagnostics refresh, CloakBrowser install/check, and orphaned inactive
-  profile cleanup command state. Settings displays environment readiness from
-  sanitized diagnostics and does not expose raw binary/cache/profile/font paths.
+- Settings navigation state in the app shell/sidebar, plus Project Environment
+  list/create state, app-level diagnostics refresh, CloakBrowser install/check,
+  and orphaned inactive profile cleanup command state. Settings displays
+  environment readiness from sanitized diagnostics and does not expose raw
+  binary/cache/profile/font paths.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview/Runs-to-Evidence handoff state.

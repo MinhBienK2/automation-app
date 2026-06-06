@@ -765,15 +765,20 @@ async function cloakBrowserBinaryEvidence() {
 }
 
 async function cloakBrowserWrapperVersion() {
-  try {
-    const packageJson = await fs.readFile(
-      path.join(process.cwd(), "node_modules", "cloakbrowser", "package.json"),
-      "utf8",
-    );
-    const parsed = JSON.parse(packageJson) as { version?: unknown };
-    return typeof parsed.version === "string" ? parsed.version : null;
-  } catch {
-    return null;
+  let currentDir = process.cwd();
+  while (true) {
+    try {
+      const packageJson = await fs.readFile(
+        path.join(currentDir, "node_modules", "cloakbrowser", "package.json"),
+        "utf8",
+      );
+      const parsed = JSON.parse(packageJson) as { version?: unknown };
+      return typeof parsed.version === "string" ? parsed.version : null;
+    } catch {
+      const parentDir = path.dirname(currentDir);
+      if (parentDir === currentDir) return null;
+      currentDir = parentDir;
+    }
   }
 }
 

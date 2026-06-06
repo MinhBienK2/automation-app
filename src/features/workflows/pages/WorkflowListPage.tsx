@@ -13,17 +13,22 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Select } from "../../../components/ui/select";
 import { runStatusLabel } from "../../../lib/workflowUi";
+import type { ProjectEnvironment } from "../../../types/workflow";
 
 type WorkflowListPageProps = {
   workflows: WorkflowSummary[];
   workflowDialogMode: "create" | "edit" | null;
   workflowNameDraft: string;
+  workflowEnvironmentDraft: string;
+  projectEnvironments: ProjectEnvironment[];
   appError: string;
   runState: RunState;
   runSnapshots: WorkflowRunSnapshot[];
   activeRunWorkflowName?: string | null;
   onWorkflowNameDraftChange: (name: string) => void;
+  onWorkflowEnvironmentDraftChange: (value: string) => void;
   onSubmitWorkflowDialog: (event: React.FormEvent) => void;
   onOpenCreateWorkflow: () => void;
   onOpenEditWorkflow: (workflow: WorkflowSummary) => void;
@@ -42,11 +47,14 @@ export function WorkflowListPage({
   workflows,
   workflowDialogMode,
   workflowNameDraft,
+  workflowEnvironmentDraft,
+  projectEnvironments,
   appError,
   runState,
   runSnapshots,
   activeRunWorkflowName,
   onWorkflowNameDraftChange,
+  onWorkflowEnvironmentDraftChange,
   onSubmitWorkflowDialog,
   onOpenCreateWorkflow,
   onOpenEditWorkflow,
@@ -141,6 +149,11 @@ export function WorkflowListPage({
                     {activeRun ? (
                       <p className="muted workflow-row-run-status" role="status">
                         {runStatusLabel(activeRun.state)}
+                      </p>
+                    ) : null}
+                    {workflow.environment_name ? (
+                      <p className="muted workflow-row-environment">
+                        Environment: {workflow.environment_name}
                       </p>
                     ) : null}
                   </div>
@@ -241,6 +254,28 @@ export function WorkflowListPage({
                 }
                 placeholder="Login flow"
               />
+              {workflowDialogMode === "create" ? (
+                <Label htmlFor="workflow-environment">
+                  Workflow environment
+                  <Select
+                    id="workflow-environment"
+                    value={workflowEnvironmentDraft}
+                    onChange={(event) =>
+                      onWorkflowEnvironmentDraftChange(event.currentTarget.value)
+                    }
+                  >
+                    <option value="project_default">Project default environment</option>
+                    <option value="isolated">Create isolated environment</option>
+                    {projectEnvironments
+                      .filter((environment) => !environment.is_default)
+                      .map((environment) => (
+                        <option key={environment.id} value={`existing:${environment.id}`}>
+                          Existing: {environment.name}
+                        </option>
+                      ))}
+                  </Select>
+                </Label>
+              ) : null}
               {appError ? <p className="field-error">{appError}</p> : null}
               <DialogFooter className="form-actions">
                 <Button shape="pill" type="submit">

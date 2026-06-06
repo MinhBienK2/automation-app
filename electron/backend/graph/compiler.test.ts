@@ -394,6 +394,64 @@ describe("TypeScript graph compiler parity", () => {
     expect(plan.steps.map((step) => step.node_id)).toEqual(["second"]);
   });
 
+  test("compiles run-from-selected plans across Call Subflow nodes", () => {
+    const subflowGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("fill", "action", { config: inputTextAction("//email", "{{ email }}") }),
+      ],
+      [edge("start", "out", "fill", "in")],
+    );
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("before", "action", { config: waitAction(100) }),
+        graphNode("call-login", "call_subflow", {
+          config: {
+            subflow_id: "subflow-login",
+            input_mapping: [{ input_name: "email", value: "{{ account.email }}" }],
+          },
+        }),
+        graphNode("after", "action", { config: clickAction("//continue") }),
+      ],
+      [
+        edge("start", "out", "before", "in"),
+        edge("before", "out", "call-login", "in"),
+        edge("call-login", "out", "after", "in"),
+      ],
+    );
+    const options = {
+      projectId: "project-1",
+      workflowLabel: "Checkout",
+      resolveSubflow: (subflowId: string) =>
+        subflowId === "subflow-login"
+          ? {
+              id: "subflow-login",
+              project_id: "project-1",
+              name: "Login",
+              graph: subflowGraph,
+            }
+          : null,
+    };
+
+    const plan = compileWorkflowGraphFromNode(graph, "before", options);
+    const afterPlan = compileWorkflowGraphFromNode(graph, "after", options);
+
+    expect(plan.steps.map((step) => step.node_id)).toEqual([
+      "before",
+      "call-login::__inputs",
+      "call-login::fill",
+      "after",
+    ]);
+    expect(plan.steps.map((step) => step.label)).toEqual([
+      "Before",
+      "Checkout > Login > Inputs",
+      "Checkout > Login > Fill",
+      "After",
+    ]);
+    expect(afterPlan.steps.map((step) => step.node_id)).toEqual(["after"]);
+  });
+
   test("rejects selected nodes inside nested branch bodies", () => {
     const graph = graphOf(
       [

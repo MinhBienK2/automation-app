@@ -521,6 +521,8 @@ export function nodePorts(nodeType: GraphNodeType): GraphPort[] {
       return [inputPort("in", "In")];
     case "merge":
       return [inputPort("in", "In"), outputPort("out", "Out")];
+    case "call_subflow":
+      return [inputPort("in", "In"), outputPort("out", "Out")];
     case "router":
       return [
         inputPort("in", "In"),
@@ -649,6 +651,7 @@ export function graphNodeLabel(nodeType: GraphNodeType) {
   if (nodeType === "set_variable") return "Set Variables";
   if (nodeType === "set_json_variables") return "Set JSON Variables";
   if (nodeType === "random_choice") return "Random Choice";
+  if (nodeType === "call_subflow") return "Call Subflow";
 
   return nodeType
     .split("_")
@@ -686,6 +689,10 @@ function graphCanvasNodeMetaLabel(node: GraphNode) {
       return Array.isArray(config.choices) ? `${config.choices.length} choices` : null;
     case "set_variable":
       return Array.isArray(config.variables) ? `${config.variables.length} vars` : null;
+    case "call_subflow":
+      return typeof config.subflow_id === "string" && config.subflow_id.trim()
+        ? compactText(config.subflow_id.trim(), 28)
+        : "No subflow";
     default:
       return null;
   }
@@ -826,6 +833,8 @@ function defaultGraphNodeConfig(nodeType: GraphNodeType): unknown {
       return { name: "output", match: "equals", value: "" };
     case "domain_allowlist":
       return { domains: [] };
+    case "call_subflow":
+      return { subflow_id: "", input_mapping: [], output_prefix: null };
     default:
       return {};
   }

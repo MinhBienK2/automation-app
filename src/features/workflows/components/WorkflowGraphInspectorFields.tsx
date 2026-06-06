@@ -766,6 +766,49 @@ export function NodeConfigFields({
           </Label>
         </div>
       );
+    case "call_subflow": {
+      const config = callSubflowConfig(node.config);
+      return (
+        <div className="graph-config-fields">
+          <Label>
+            Subflow id
+            <Input
+              value={config.subflow_id}
+              onChange={(event) =>
+                updateConfig({
+                  ...config,
+                  subflow_id: event.currentTarget.value,
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Input mapping
+            <Textarea
+              value={formatSubflowInputMapping(config.input_mapping)}
+              onChange={(event) =>
+                updateConfig({
+                  ...config,
+                  input_mapping: parseSubflowInputMapping(event.currentTarget.value),
+                })
+              }
+            />
+          </Label>
+          <Label>
+            Output prefix
+            <Input
+              value={config.output_prefix ?? ""}
+              onChange={(event) =>
+                updateConfig({
+                  ...config,
+                  output_prefix: event.currentTarget.value.trim() || null,
+                })
+              }
+            />
+          </Label>
+        </div>
+      );
+    }
     case "try_catch":
     case "fallback":
     case "break_loop":
@@ -803,6 +846,54 @@ export function NodeConfigFields({
     default:
       return null;
   }
+}
+
+function callSubflowConfig(config: unknown) {
+  const value = objectConfig(config);
+  const inputMapping = Array.isArray(value.input_mapping)
+    ? value.input_mapping.flatMap((item) => {
+        const itemRecord = objectConfig(item);
+        const inputName =
+          typeof itemRecord.input_name === "string" ? itemRecord.input_name.trim() : "";
+        const mappedValue = typeof itemRecord.value === "string" ? itemRecord.value : "";
+        return inputName ? [{ input_name: inputName, value: mappedValue }] : [];
+      })
+    : [];
+  return {
+    subflow_id: typeof value.subflow_id === "string" ? value.subflow_id : "",
+    input_mapping: inputMapping,
+    output_prefix:
+      typeof value.output_prefix === "string" && value.output_prefix.trim()
+        ? value.output_prefix.trim()
+        : null,
+  };
+}
+
+function formatSubflowInputMapping(
+  inputMapping: Array<{ input_name: string; value: string }>,
+) {
+  return inputMapping
+    .map((item) => `${item.input_name}=${item.value}`)
+    .join("\n");
+}
+
+function parseSubflowInputMapping(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .flatMap((line) => {
+      const separatorIndex = line.indexOf("=");
+      const inputName =
+        separatorIndex >= 0 ? line.slice(0, separatorIndex).trim() : line.trim();
+      if (!inputName) return [];
+      return [
+        {
+          input_name: inputName,
+          value: separatorIndex >= 0 ? line.slice(separatorIndex + 1).trim() : "",
+        },
+      ];
+    });
 }
 
 function actionTypeFromConfig(config: ActionConfig | null): ActionType | null {

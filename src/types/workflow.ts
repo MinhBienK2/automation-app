@@ -91,10 +91,21 @@ export type ScrollMode = "page" | "into_view" | "until_element_visible";
 export type ScrollDirection = "up" | "down" | "left" | "right";
 export type ScrollStyle = "human_like" | "smooth_single";
 
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkflowSummary = {
   id: string;
   name: string;
   step_count: number;
+  project_id?: string | null;
+  environment_id?: string | null;
+  environment_name?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -102,6 +113,8 @@ export type WorkflowSummary = {
 export type Workflow = {
   id: string;
   name: string;
+  project_id?: string | null;
+  environment_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -210,6 +223,34 @@ export type WorkflowSettingsBrowserLaunch = Omit<WorkflowBrowserConfig, "workflo
   humanize: boolean;
   human_preset: WorkflowHumanPreset;
   run_from_selected_enabled?: boolean;
+};
+
+export type ProjectEnvironment = {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  is_default: boolean;
+  browser_launch: WorkflowSettingsBrowserLaunch;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectEnvironmentInput = {
+  name: string;
+  description?: string | null;
+  is_default?: boolean | null;
+  browser_launch?: WorkflowSettingsBrowserLaunch | null;
+};
+
+export type WorkflowEnvironmentSelection =
+  | { mode: "project_default" }
+  | { mode: "existing"; environment_id: string }
+  | { mode: "isolated"; name?: string | null };
+
+export type WorkflowCreateOptions = {
+  project_id?: string | null;
+  environment?: WorkflowEnvironmentSelection | null;
 };
 
 export type WorkflowSettingsEnvironment = {
@@ -909,6 +950,7 @@ export type GraphNodeType =
   | "end_success"
   | "end_failure"
   | "action"
+  | "call_subflow"
   | "merge"
   | "router"
   | "random_choice"
@@ -950,6 +992,15 @@ export type GraphPort = {
   direction: GraphPortDirection;
 };
 
+export type CallSubflowGraphConfig = {
+  subflow_id: string;
+  input_mapping: Array<{
+    input_name: string;
+    value: string;
+  }>;
+  output_prefix?: string | null;
+};
+
 export type GraphNode = {
   id: string;
   node_type: GraphNodeType;
@@ -977,6 +1028,26 @@ export type WorkflowGraph = {
   edges: GraphEdge[];
   viewport: GraphViewport;
   migration_notes?: WorkflowGraphMigrationNote[];
+};
+
+export type Subflow = {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  graph: WorkflowGraph;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubflowSummary = Omit<Subflow, "graph"> & {
+  used_by_count: number;
+};
+
+export type SubflowUsage = {
+  workflow_id: string;
+  workflow_name: string;
 };
 
 export type GraphValidationIssue = {
@@ -1506,12 +1577,14 @@ export type WorkflowPackage = {
   included_sections: string[];
   omitted_fields: string[];
   flow?: WorkflowGraph | null;
+  subflows?: Subflow[] | null;
   settings?: WorkflowPackageSettings | null;
 };
 
 export type WorkflowPackagePreview = {
   workflow_name: string;
   includes_flow: boolean;
+  subflows: Array<{ id: string; name: string }>;
   settings_sections: WorkflowSettingsSectionId[];
   omitted_fields: string[];
 };

@@ -2,9 +2,21 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import type { GraphNode } from "../../../types/workflow";
+import { logicNodeGroups } from "./WorkflowGraphPalettes";
 import { NodeHelpDialog } from "./WorkflowGraphPalettes";
 
 describe("NodeHelpDialog", () => {
+  test("exposes Call Subflow in the workflow logic palette grouping", () => {
+    expect(logicNodeGroups).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Reuse",
+          nodes: expect.arrayContaining(["call_subflow"]),
+        }),
+      ]),
+    );
+  });
+
   test("renders graph-native node help as collapsible parent sections and field groups", async () => {
     const ifNode: GraphNode = {
       id: "node-if",

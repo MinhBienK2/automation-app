@@ -36,6 +36,7 @@ export const logicNodeGroups: Array<{
   nodes: GraphNodeType[];
 }> = [
   { label: "Branching", nodes: ["if", "switch", "router", "random_choice", "merge"] },
+  { label: "Reuse", nodes: ["call_subflow"] },
   {
     label: "Loops",
     nodes: [
@@ -63,6 +64,7 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   merge: "Let multiple branch paths continue into one shared path.",
   router: "Evaluate prioritized cases and run the first matching branch.",
   random_choice: "Choose one weighted branch at runtime.",
+  call_subflow: "Run a reusable subflow from this project.",
   if: "Branch the workflow into True and False paths.",
   switch: "Route execution to a matching case or a default path.",
   repeat_times: "Run a loop path a fixed number of times.",

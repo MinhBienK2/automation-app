@@ -76,6 +76,7 @@ import { WorkflowGraphToolbar } from "./WorkflowGraphToolbar";
 
 type WorkflowGraphEditorProps = {
   graph: WorkflowGraph;
+  graphKind?: "workflow" | "subflow";
   runState: RunState;
   validationIssues: GraphValidationIssue[];
   selectionRequest?: GraphSelectionRequest | null;
@@ -245,6 +246,7 @@ export function getVisibleNodeInsertionPosition(
 
 export function WorkflowGraphEditor({
   graph,
+  graphKind = "workflow",
   runState,
   validationIssues,
   selectionRequest,
@@ -1028,6 +1030,7 @@ export function WorkflowGraphEditor({
       }}
     >
       <WorkflowGraphToolbar
+        graphKind={graphKind}
         isArrangeSelectionDisabled={
           runState.status === "running" || selection.nodeIds.length < 2
         }

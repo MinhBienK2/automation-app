@@ -9,6 +9,20 @@ type BridgeMock = {
 };
 
 const methodNames: BridgeMethodName[] = [
+  "listProjects",
+  "createProject",
+  "listProjectEnvironments",
+  "createProjectEnvironment",
+  "updateProjectEnvironment",
+  "setWorkflowEnvironment",
+  "createSubflow",
+  "listSubflows",
+  "getSubflow",
+  "getSubflowGraph",
+  "saveSubflowGraph",
+  "duplicateSubflow",
+  "deleteSubflow",
+  "getSubflowUsage",
   "listWorkflows",
   "getWorkflow",
   "getWorkflowBrowserConfig",
@@ -90,6 +104,10 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   workflowCommandCallMock(command, args);
 
   if (!(command in commands)) {
+    if (command === "list_projects") return defaultProjects();
+    if (command === "list_project_environments") return defaultProjectEnvironments();
+    if (command === "list_subflows") return [];
+    if (command === "get_subflow_usage") return [];
     if (command === "get_operations_overview") return defaultOperationsOverview();
     if (command === "get_operational_run_detail") return null;
     if (command === "list_evidence_items") return defaultEvidencePage();
@@ -109,6 +127,33 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
   return typeof handler === "function"
     ? (handler as CommandHandler)(args)
     : handler;
+}
+
+function defaultProjects() {
+  return [
+    {
+      id: "project-1",
+      name: "Default Project",
+      description: "",
+      created_at: "2026-05-27T00:00:00.000Z",
+      updated_at: "2026-05-27T00:00:00.000Z",
+    },
+  ];
+}
+
+function defaultProjectEnvironments() {
+  return [
+    {
+      id: "environment-1",
+      project_id: "project-1",
+      name: "Project Default Environment",
+      description: "",
+      is_default: true,
+      browser_launch: null,
+      created_at: "2026-05-27T00:00:00.000Z",
+      updated_at: "2026-05-27T00:00:00.000Z",
+    },
+  ];
 }
 
 function defaultEvidencePage() {
@@ -217,8 +262,53 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   workflowBridgeMock.validateWorkflowRun.mockImplementation((workflowId: string) =>
     resolveCommand(commands, "validate_workflow_run", { workflowId }),
   );
-  workflowBridgeMock.createWorkflow.mockImplementation((name: string) =>
-    resolveCommand(commands, "create_workflow", { name }),
+  workflowBridgeMock.listProjects.mockImplementation(() =>
+    resolveCommand(commands, "list_projects", undefined),
+  );
+  workflowBridgeMock.createProject.mockImplementation((input: unknown) =>
+    resolveCommand(commands, "create_project", { input }),
+  );
+  workflowBridgeMock.listProjectEnvironments.mockImplementation((projectId: string) =>
+    resolveCommand(commands, "list_project_environments", { projectId }),
+  );
+  workflowBridgeMock.createProjectEnvironment.mockImplementation(
+    (projectId: string, input: unknown) =>
+      resolveCommand(commands, "create_project_environment", { projectId, input }),
+  );
+  workflowBridgeMock.updateProjectEnvironment.mockImplementation(
+    (environmentId: string, input: unknown) =>
+      resolveCommand(commands, "update_project_environment", { environmentId, input }),
+  );
+  workflowBridgeMock.setWorkflowEnvironment.mockImplementation(
+    (workflowId: string, environmentId: string) =>
+      resolveCommand(commands, "set_workflow_environment", { workflowId, environmentId }),
+  );
+  workflowBridgeMock.createSubflow.mockImplementation((projectId: string, input: unknown) =>
+    resolveCommand(commands, "create_subflow", { projectId, input }),
+  );
+  workflowBridgeMock.listSubflows.mockImplementation((projectId: string) =>
+    resolveCommand(commands, "list_subflows", { projectId }),
+  );
+  workflowBridgeMock.getSubflow.mockImplementation((subflowId: string) =>
+    resolveCommand(commands, "get_subflow", { subflowId }),
+  );
+  workflowBridgeMock.getSubflowGraph.mockImplementation((subflowId: string) =>
+    resolveCommand(commands, "get_subflow_graph", { subflowId }),
+  );
+  workflowBridgeMock.saveSubflowGraph.mockImplementation((subflowId: string, graph: unknown) =>
+    resolveCommand(commands, "save_subflow_graph", { subflowId, graph }),
+  );
+  workflowBridgeMock.duplicateSubflow.mockImplementation((subflowId: string, name: string) =>
+    resolveCommand(commands, "duplicate_subflow", { subflowId, name }),
+  );
+  workflowBridgeMock.deleteSubflow.mockImplementation((subflowId: string) =>
+    resolveCommand(commands, "delete_subflow", { subflowId }),
+  );
+  workflowBridgeMock.getSubflowUsage.mockImplementation((subflowId: string) =>
+    resolveCommand(commands, "get_subflow_usage", { subflowId }),
+  );
+  workflowBridgeMock.createWorkflow.mockImplementation((name: string, options: unknown) =>
+    resolveCommand(commands, "create_workflow", { name, options }),
   );
   workflowBridgeMock.renameWorkflow.mockImplementation((id: string, name: string) =>
     resolveCommand(commands, "rename_workflow", { id, name }),

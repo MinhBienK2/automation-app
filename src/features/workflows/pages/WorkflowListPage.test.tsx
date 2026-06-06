@@ -63,8 +63,39 @@ describe("Workflow list integration", () => {
   });
 
   test("lists workflows and creates a workflow from a dialog", async () => {
+    const project = {
+      id: "project-1",
+      name: "Default Project",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const environments = [
+      {
+        id: "environment-default",
+        project_id: project.id,
+        name: "Project Default Environment",
+        description: "",
+        is_default: true,
+        browser_launch: null,
+        created_at: "1",
+        updated_at: "1",
+      },
+      {
+        id: "environment-staging",
+        project_id: project.id,
+        name: "Staging Chrome",
+        description: "Shared staging posture",
+        is_default: false,
+        browser_launch: null,
+        created_at: "1",
+        updated_at: "1",
+      },
+    ];
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([]),
+      list_projects: [project],
+      list_project_environments: environments,
       create_workflow: workflow,
       get_workflow: { workflow, steps: [] },
     });
@@ -82,11 +113,25 @@ describe("Workflow list integration", () => {
     const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
 
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
+    expect(within(dialog).getByText("Project default environment")).toBeInTheDocument();
+    expect(within(dialog).getByText("Create isolated environment")).toBeInTheDocument();
+    expect(within(dialog).getByText("Existing: Staging Chrome")).toBeInTheDocument();
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText("Workflow environment"),
+      "existing:environment-staging",
+    );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
     await waitFor(() => {
       expect(workflowBridgeMock.createWorkflow).toHaveBeenCalledWith(
         "Login flow",
+        {
+          project_id: project.id,
+          environment: {
+            mode: "existing",
+            environment_id: "environment-staging",
+          },
+        },
       );
     });
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))

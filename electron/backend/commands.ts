@@ -25,13 +25,20 @@ import type {
   IdentityLabOverviewRequest,
   IdentityLabTarget,
   OperationsOverviewRequest,
+  Project,
+  ProjectEnvironment,
+  ProjectEnvironmentInput,
   RunValidationIssue,
   ScheduleValidationIssue,
   SettingsValidationIssue,
+  Subflow,
+  SubflowSummary,
+  SubflowUsage,
   Workflow,
   WorkflowBrowserConfig,
   WorkflowDeleteOptions,
   WorkflowDetail,
+  WorkflowCreateOptions,
   WorkflowExport,
   WorkflowGraph,
   WorkflowPackage,
@@ -194,6 +201,171 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   });
   const recordingDrafts = new Map<string, RecordingWorkflowDraft>();
 
+  ensureProjectModelReady();
+
+  function ensureProjectModelReady() {
+    const project = ensureDefaultProject();
+    ensureDefaultProjectEnvironment(project);
+    for (const workflow of repository.listWorkflows()) {
+      const projectId = workflow.project_id ?? project.id;
+      const existingEnvironment = workflow.environment_id
+        ? repository.getProjectEnvironment(workflow.environment_id)
+        : null;
+      if (existingEnvironment && existingEnvironment.project_id === projectId) {
+        if (!workflow.project_id) {
+          repository.assignWorkflowProjectEnvironment(workflow.id, projectId, existingEnvironment.id);
+        }
+        continue;
+      }
+      const settings = getSettings(workflow.id);
+      const environment = repository.createProjectEnvironment(projectId, {
+        name: `${workflow.name} environment`,
+        description: "Migrated workflow browser launch settings",
+        browser_launch: settings.browser_launch,
+        is_default: false,
+      });
+      repository.assignWorkflowProjectEnvironment(workflow.id, projectId, environment.id);
+    }
+  }
+
+  function ensureDefaultProject(): Project {
+    const existing = repository.listProjects()[0];
+    if (existing) return existing;
+    return repository.createProject("Default Project");
+  }
+
+  function ensureDefaultProjectEnvironment(project: Project): ProjectEnvironment {
+    const existing = repository.getDefaultProjectEnvironment(project.id);
+    if (existing) return existing;
+    return repository.createProjectEnvironment(project.id, {
+      name: "Project Default Environment",
+      description: "Default project-owned browser identity and launch posture",
+      browser_launch: defaultEnvironmentBrowserLaunch("Project Default Environment"),
+      is_default: true,
+    });
+  }
+
+  function defaultEnvironmentBrowserLaunch(name: string): WorkflowSettings["browser_launch"] {
+    const now = new Date().toISOString();
+    return settingsService.defaultWorkflowSettings(
+      {
+        id: `environment-${randomUUID()}`,
+        name,
+        created_at: now,
+        updated_at: now,
+      },
+      { randomizeIdentity: true },
+    ).browser_launch;
+  }
+
+  function requireProject(projectId: string): Project {
+    const project = repository.getProject(projectId);
+    if (!project) throw commandError("Project not found", "projectId");
+    return project;
+  }
+
+  function requireProjectEnvironment(environmentId: string): ProjectEnvironment {
+    const environment = repository.getProjectEnvironment(environmentId);
+    if (!environment) {
+      throw commandError("Project environment not found", "environmentId");
+    }
+    return environment;
+  }
+
+  function selectedProjectEnvironment(workflowId: string): ProjectEnvironment | null {
+    const workflow = requireWorkflow(workflowId);
+    return workflow.environment_id
+      ? repository.getProjectEnvironment(workflow.environment_id)
+      : null;
+  }
+
+  function settingsWithSelectedEnvironment(
+    workflowId: string,
+    settings: WorkflowSettings,
+  ): WorkflowSettings {
+    const environment = selectedProjectEnvironment(workflowId);
+    return environment
+      ? { ...settings, browser_launch: environment.browser_launch }
+      : settings;
+  }
+
+  function graphContextForWorkflow(workflow: WorkflowSummary) {
+    return {
+      projectId: workflow.project_id ?? null,
+      workflowLabel: workflow.name,
+      resolveSubflow(subflowId: string) {
+        const subflow = repository.getSubflow(subflowId);
+        return subflow
+          ? {
+              id: subflow.id,
+              project_id: subflow.project_id,
+              name: subflow.name,
+              graph: migrateWorkflowGraph(subflow.graph),
+            }
+          : null;
+      },
+    };
+  }
+
+  function referencedSubflowsForWorkflowGraph(
+    workflow: WorkflowSummary,
+    graph: WorkflowGraph,
+  ): Subflow[] {
+    const projectId = workflow.project_id;
+    if (!projectId) return [];
+    const referencedIds = callSubflowIds(graph);
+    return referencedIds.map((subflowId) => {
+      const subflow = repository.getSubflow(subflowId);
+      if (!subflow) {
+        throw commandError("Workflow references a missing subflow", "workflow.graph");
+      }
+      if (subflow.project_id !== projectId) {
+        throw commandError(
+          "Workflow references a subflow outside its project",
+          "workflow.graph",
+        );
+      }
+      return subflow;
+    });
+  }
+
+  function callSubflowIds(graph: WorkflowGraph): string[] {
+    return [
+      ...new Set(
+        graph.nodes
+          .filter((node) => node.node_type === "call_subflow")
+          .map((node) => (node.config as { subflow_id?: unknown }).subflow_id)
+          .filter((subflowId): subflowId is string =>
+            typeof subflowId === "string" && subflowId.trim().length > 0
+          ),
+      ),
+    ];
+  }
+
+  function remapCallSubflowIds(
+    graph: WorkflowGraph,
+    subflowIdMap: Map<string, string>,
+  ): WorkflowGraph {
+    return {
+      ...graph,
+      nodes: graph.nodes.map((node) => {
+        if (node.node_type !== "call_subflow") return node;
+        const config = node.config as { subflow_id?: unknown };
+        const nextSubflowId =
+          typeof config.subflow_id === "string"
+            ? subflowIdMap.get(config.subflow_id) ?? config.subflow_id
+            : config.subflow_id;
+        return {
+          ...node,
+          config: {
+            ...asRecord(node.config),
+            subflow_id: nextSubflowId,
+          },
+        };
+      }),
+    };
+  }
+
   function requireWorkflow(workflowId: string): WorkflowSummary {
     const workflow = repository.getWorkflowSummary(workflowId);
     if (!workflow) {
@@ -205,8 +377,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   function getSettings(workflowId: string): WorkflowSettings {
     const persisted = repository.getWorkflowSettings(workflowId);
     const workflow = requireWorkflow(workflowId);
-    if (persisted) return settingsService.normalizeWorkflowSettings(persisted, workflow);
-    return settingsService.defaultWorkflowSettings(workflow);
+    const normalized = persisted
+      ? settingsService.normalizeWorkflowSettings(persisted, workflow)
+      : settingsService.defaultWorkflowSettings(workflow);
+    return settingsWithSelectedEnvironment(workflowId, normalized);
   }
 
   function lastRunAtForWorkflow(workflowId: string): string | null {
@@ -357,6 +531,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       updated_at: timestamp,
       created_at: activeSettings.created_at ?? workflow.created_at,
     };
+    const selectedEnvironment = selectedProjectEnvironment(workflowId);
+    if (selectedEnvironment) {
+      repository.updateProjectEnvironment(selectedEnvironment.id, {
+        browser_launch: normalized.browser_launch,
+      });
+    }
     repository.saveWorkflowSettings(workflowId, normalized);
     return normalized;
   }
@@ -635,17 +815,72 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return detail;
   }
 
-  function createWorkflow(name: string): Workflow {
+  function createWorkflow(name: string, options: WorkflowCreateOptions = {}): Workflow {
     const normalized = name.trim();
     if (!normalized) {
       throw commandError("Workflow name is required", "name");
     }
-    const workflow = repository.createWorkflow(normalized, createDraftGraph());
-    repository.saveWorkflowSettings(
-      workflow.id,
-      settingsService.defaultWorkflowSettings(workflow, { randomizeIdentity: true }),
+    const project = options.project_id
+      ? requireProject(options.project_id)
+      : ensureDefaultProject();
+    const workflow = repository.createWorkflow(
+      normalized,
+      createDraftGraph(),
+      new Date(),
+      { projectId: project.id, environmentId: null },
     );
-    return workflow;
+    const defaultSettings = settingsService.defaultWorkflowSettings(workflow, {
+      randomizeIdentity: true,
+    });
+    const environment = resolveWorkflowCreationEnvironment({
+      project,
+      workflowName: normalized,
+      selection: options.environment ?? { mode: "isolated" },
+      defaultBrowserLaunch: defaultSettings.browser_launch,
+    });
+    repository.assignWorkflowProjectEnvironment(workflow.id, project.id, environment.id);
+    repository.saveWorkflowSettings(workflow.id, {
+      ...defaultSettings,
+      browser_launch: environment.browser_launch,
+    });
+    return {
+      ...workflow,
+      project_id: project.id,
+      environment_id: environment.id,
+    };
+  }
+
+  function resolveWorkflowCreationEnvironment({
+    project,
+    workflowName,
+    selection,
+    defaultBrowserLaunch,
+  }: {
+    project: Project;
+    workflowName: string;
+    selection: NonNullable<WorkflowCreateOptions["environment"]>;
+    defaultBrowserLaunch: WorkflowSettings["browser_launch"];
+  }): ProjectEnvironment {
+    if (selection.mode === "existing") {
+      const environment = requireProjectEnvironment(selection.environment_id);
+      if (environment.project_id !== project.id) {
+        throw commandError(
+          "Workflow environment must belong to the selected project",
+          "environment_id",
+        );
+      }
+      return environment;
+    }
+    if (selection.mode === "isolated") {
+      const environmentName = selection.name?.trim() || `${workflowName} isolated environment`;
+      return repository.createProjectEnvironment(project.id, {
+        name: environmentName,
+        description: "Isolated workflow browser identity and launch posture",
+        browser_launch: defaultBrowserLaunch,
+        is_default: false,
+      });
+    }
+    return ensureDefaultProjectEnvironment(project);
   }
 
   function getWorkflowGraph(workflowId: string): WorkflowGraph {
@@ -662,9 +897,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   function validateWorkflowRun(workflowId: string): RunValidationIssue[] {
+    const workflow = requireWorkflow(workflowId);
     const graph = getWorkflowGraph(workflowId);
     return [
-      ...validateGraph(graph).map((issue) => ({
+      ...validateGraph(graph, graphContextForWorkflow(workflow)).map((issue) => ({
         source: "graph" as const,
         field: null,
         node_id: issue.node_id ?? null,
@@ -702,11 +938,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       }
       throw commandError(firstError.message, firstError.field ?? firstError.node_id ?? "workflowId");
     }
-    if (compileGraph(graph).steps.length === 0) {
+    const graphContext = graphContextForWorkflow(workflow);
+    if (compileGraph(graph, graphContext).steps.length === 0) {
       throw commandError("Workflow graph has no executable steps", "graph");
     }
 
-    const compiledGraph = compileWorkflowRunPlan(graph, settings);
+    const compiledGraph = compileWorkflowRunPlan(graph, settings, graphContext);
     return runManager.startWorkflowRun({
       workflow,
       source,
@@ -744,6 +981,145 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   }
 
   return {
+    listProjects(): Project[] {
+      return repository.listProjects();
+    },
+
+    createProject(input: { name: string; description?: string | null }): Project {
+      const name = input.name.trim();
+      if (!name) throw commandError("Project name is required", "name");
+      const project = repository.createProject(name, input.description?.trim() ?? "");
+      ensureDefaultProjectEnvironment(project);
+      return project;
+    },
+
+    listProjectEnvironments(projectId: string): ProjectEnvironment[] {
+      requireProject(projectId);
+      return repository.listProjectEnvironments(projectId);
+    },
+
+    createProjectEnvironment(
+      projectId: string,
+      input: ProjectEnvironmentInput,
+    ): ProjectEnvironment {
+      requireProject(projectId);
+      const name = input.name.trim();
+      if (!name) throw commandError("Environment name is required", "name");
+      return repository.createProjectEnvironment(projectId, {
+        name,
+        description: input.description?.trim() ?? "",
+        is_default: Boolean(input.is_default),
+        browser_launch: input.browser_launch ?? defaultEnvironmentBrowserLaunch(name),
+      });
+    },
+
+    updateProjectEnvironment(
+      environmentId: string,
+      input: Partial<ProjectEnvironmentInput>,
+    ): ProjectEnvironment {
+      const current = requireProjectEnvironment(environmentId);
+      if (input.name != null && !input.name.trim()) {
+        throw commandError("Environment name is required", "name");
+      }
+      const updated = repository.updateProjectEnvironment(environmentId, {
+        ...input,
+        name: input.name?.trim(),
+        description: input.description?.trim(),
+      });
+      if (!updated) throw commandError("Project environment not found", "environmentId");
+      if (!repository.getDefaultProjectEnvironment(current.project_id)) {
+        repository.updateProjectEnvironment(updated.id, { is_default: true });
+        return requireProjectEnvironment(updated.id);
+      }
+      return updated;
+    },
+
+    setWorkflowEnvironment(workflowId: string, environmentId: string): Workflow {
+      const workflow = requireWorkflow(workflowId);
+      const environment = requireProjectEnvironment(environmentId);
+      if (workflow.project_id !== environment.project_id) {
+        throw commandError(
+          "Workflow environment must belong to the same project",
+          "environmentId",
+        );
+      }
+      repository.setWorkflowEnvironment(workflowId, environmentId);
+      const settings = getSettings(workflowId);
+      repository.saveWorkflowSettings(workflowId, settings);
+      return {
+        ...summaryToWorkflow(requireWorkflow(workflowId)),
+        project_id: environment.project_id,
+        environment_id: environment.id,
+      };
+    },
+
+    createSubflow(
+      projectId: string,
+      input: { name: string; description?: string | null },
+    ): Subflow {
+      requireProject(projectId);
+      const name = input.name.trim();
+      if (!name) throw commandError("Subflow name is required", "name");
+      return repository.createSubflow(
+        projectId,
+        name,
+        input.description?.trim() ?? "",
+        createDraftGraph(),
+      );
+    },
+
+    listSubflows(projectId: string): SubflowSummary[] {
+      requireProject(projectId);
+      return repository.listSubflows(projectId);
+    },
+
+    getSubflow(subflowId: string): Subflow {
+      const subflow = repository.getSubflow(subflowId);
+      if (!subflow) throw commandError("Subflow not found", "subflowId");
+      return subflow;
+    },
+
+    getSubflowGraph(subflowId: string): WorkflowGraph {
+      const graph = repository.getSubflowGraph(subflowId);
+      if (!graph) throw commandError("Subflow not found", "subflowId");
+      return migrateWorkflowGraph(graph);
+    },
+
+    saveSubflowGraph(subflowId: string, graph: WorkflowGraph) {
+      const subflow = repository.getSubflow(subflowId);
+      if (!subflow) throw commandError("Subflow not found", "subflowId");
+      const migrated = migrateWorkflowGraph(graph);
+      const nestedCall = migrated.nodes.find((node) => node.node_type === "call_subflow");
+      if (nestedCall) {
+        throw commandError("Subflows cannot call subflows in the MVP", nestedCall.id);
+      }
+      assertNoUnsupportedGraphDiscriminants(migrated);
+      repository.saveSubflowGraph(subflowId, migrated);
+    },
+
+    duplicateSubflow(subflowId: string, name: string): Subflow {
+      const normalized = name.trim();
+      if (!normalized) throw commandError("Subflow name is required", "name");
+      const duplicate = repository.duplicateSubflow(subflowId, normalized);
+      if (!duplicate) throw commandError("Subflow not found", "subflowId");
+      return duplicate;
+    },
+
+    deleteSubflow(subflowId: string) {
+      const usage = repository.getSubflowUsage(subflowId);
+      if (usage.length > 0) {
+        throw commandError(`Subflow is used by ${usage.length} workflow${usage.length === 1 ? "" : "s"}`, "subflowId");
+      }
+      repository.deleteSubflow(subflowId);
+    },
+
+    getSubflowUsage(subflowId: string): SubflowUsage[] {
+      if (!repository.getSubflow(subflowId)) {
+        throw commandError("Subflow not found", "subflowId");
+      }
+      return repository.getSubflowUsage(subflowId);
+    },
+
     listWorkflows() {
       return repository.listWorkflows();
     },
@@ -959,6 +1335,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
       const graph = getWorkflowGraph(workflowId);
       const compiledGraph = compileWorkflowGraphFromNode(graph, startNodeId, {
+        ...graphContextForWorkflow(workflow),
         mode: settings.run_policy.run_from_selected_mode,
       });
       if (compiledGraph.steps.length === 0) {
@@ -1165,11 +1542,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     ): WorkflowPackage {
       const workflow = requireWorkflow(workflowId);
       const settings = getSettings(workflowId);
+      const flow = options.include_flow ? getWorkflowGraph(workflowId) : null;
       return packageService.exportWorkflowPackage({
         workflowName: workflow.name,
-        flow: options.include_flow ? getWorkflowGraph(workflowId) : null,
+        flow,
         settings,
         options,
+        subflows: flow ? referencedSubflowsForWorkflowGraph(workflow, flow) : [],
       });
     },
 
@@ -1186,8 +1565,21 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       context.database.exec("BEGIN IMMEDIATE");
       try {
         const workflow = createWorkflow(preparedImport.importedName);
+        const subflowIdMap = new Map<string, string>();
+        for (const subflow of preparedImport.subflows) {
+          const createdSubflow = repository.createSubflow(
+            workflow.project_id ?? ensureDefaultProject().id,
+            subflow.name,
+            subflow.description,
+            migrateWorkflowGraph(subflow.graph),
+          );
+          subflowIdMap.set(subflow.id, createdSubflow.id);
+        }
         if (options.include_flow && preparedImport.flow) {
-          repository.saveWorkflowGraph(workflow.id, preparedImport.flow);
+          repository.saveWorkflowGraph(
+            workflow.id,
+            remapCallSubflowIds(preparedImport.flow, subflowIdMap),
+          );
         }
 
         if (preparedImport.candidateSettings) {
@@ -1226,10 +1618,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         );
       }
       const graph = getWorkflowGraph(workflowId);
-      if (compileGraph(graph).steps.length === 0) {
+      const workflow = requireWorkflow(workflowId);
+      const graphContext = graphContextForWorkflow(workflow);
+      if (compileGraph(graph, graphContext).steps.length === 0) {
         throw commandError("Workflow graph has no executable steps", "graph");
       }
-      const compiledGraph = compileWorkflowRunPlan(graph, settings);
+      const compiledGraph = compileWorkflowRunPlan(graph, settings, graphContext);
       const batchSettings: WorkflowSettings = {
         ...settings,
         run_policy: {
@@ -1690,15 +2084,20 @@ async function loadCloakBrowserDiagnosticsModule(): Promise<CloakBrowserDiagnost
 }
 
 async function cloakWrapperVersion() {
-  try {
-    const packageJson = await fs.readFile(
-      path.join(process.cwd(), "node_modules", "cloakbrowser", "package.json"),
-      "utf8",
-    );
-    const parsed = JSON.parse(packageJson) as { version?: unknown };
-    return typeof parsed.version === "string" ? parsed.version : null;
-  } catch {
-    return null;
+  let currentDir = process.cwd();
+  while (true) {
+    try {
+      const packageJson = await fs.readFile(
+        path.join(currentDir, "node_modules", "cloakbrowser", "package.json"),
+        "utf8",
+      );
+      const parsed = JSON.parse(packageJson) as { version?: unknown };
+      return typeof parsed.version === "string" ? parsed.version : null;
+    } catch {
+      const parentDir = path.dirname(currentDir);
+      if (parentDir === currentDir) return null;
+      currentDir = parentDir;
+    }
   }
 }
 
@@ -1809,6 +2208,12 @@ function isUnsupportedGraphDiscriminantMessage(message: string) {
 
 function commandError(message: string, field?: string): CommandError {
   return { message, field };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 function isCommandError(error: unknown): error is CommandError {

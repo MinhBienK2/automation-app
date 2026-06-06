@@ -32,6 +32,7 @@ import type {
   CloakBrowserDiagnostics,
   Workflow,
   WorkflowBrowserConfig,
+  WorkflowCreateOptions,
   WorkflowDeleteOptions,
   WorkflowDetail,
   WorkflowExport,
@@ -49,9 +50,38 @@ import type {
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
+  Project,
+  ProjectEnvironment,
+  ProjectEnvironmentInput,
+  Subflow,
+  SubflowSummary,
+  SubflowUsage,
 } from "./workflow.js";
 
 export type WorkflowElectronBridge = {
+  listProjects(): Promise<Project[]>;
+  createProject(input: { name: string; description?: string | null }): Promise<Project>;
+  listProjectEnvironments(projectId: string): Promise<ProjectEnvironment[]>;
+  createProjectEnvironment(
+    projectId: string,
+    input: ProjectEnvironmentInput,
+  ): Promise<ProjectEnvironment>;
+  updateProjectEnvironment(
+    environmentId: string,
+    input: Partial<ProjectEnvironmentInput>,
+  ): Promise<ProjectEnvironment>;
+  setWorkflowEnvironment(workflowId: string, environmentId: string): Promise<Workflow>;
+  createSubflow(
+    projectId: string,
+    input: { name: string; description?: string | null },
+  ): Promise<Subflow>;
+  listSubflows(projectId: string): Promise<SubflowSummary[]>;
+  getSubflow(subflowId: string): Promise<Subflow>;
+  getSubflowGraph(subflowId: string): Promise<WorkflowGraph>;
+  saveSubflowGraph(subflowId: string, graph: WorkflowGraph): Promise<void>;
+  duplicateSubflow(subflowId: string, name: string): Promise<Subflow>;
+  deleteSubflow(subflowId: string): Promise<void>;
+  getSubflowUsage(subflowId: string): Promise<SubflowUsage[]>;
   listWorkflows(): Promise<WorkflowSummary[]>;
   getWorkflow(id: string): Promise<WorkflowDetail | null>;
   getWorkflowBrowserConfig(workflowId: string): Promise<WorkflowBrowserConfig>;
@@ -77,7 +107,7 @@ export type WorkflowElectronBridge = {
   installCloakBrowserBinary(): Promise<CloakBrowserDiagnostics>;
   cleanupOrphanedBrowserProfiles(): Promise<BrowserProfileCleanupResult>;
   validateWorkflowRun(workflowId: string): Promise<RunValidationIssue[]>;
-  createWorkflow(name: string): Promise<Workflow>;
+  createWorkflow(name: string, options?: WorkflowCreateOptions): Promise<Workflow>;
   renameWorkflow(id: string, name: string): Promise<void>;
   deleteWorkflow(id: string, options?: WorkflowDeleteOptions): Promise<void>;
   duplicateWorkflow(workflowId: string, name: string): Promise<WorkflowDetail>;

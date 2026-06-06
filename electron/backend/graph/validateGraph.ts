@@ -20,11 +20,22 @@ type ValidationError = {
   message: string;
 };
 
+export type WorkflowGraphValidationOptions = {
+  graphKind?: "workflow" | "subflow";
+  projectId?: string | null;
+  resolveSubflow?: (subflowId: string) => {
+    id: string;
+    project_id: string;
+    graph: WorkflowGraph;
+  } | null;
+};
+
 const supportedGraphNodeTypes = new Set<string>([
   "start",
   "end_success",
   "end_failure",
   "action",
+  "call_subflow",
   "merge",
   "router",
   "random_choice",
@@ -47,7 +58,10 @@ const supportedGraphNodeTypes = new Set<string>([
   "domain_allowlist",
 ]);
 
-export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssue[] {
+export function validateWorkflowGraph(
+  graph: WorkflowGraph,
+  options: WorkflowGraphValidationOptions = {},
+): GraphValidationIssue[] {
   const normalizedGraph = migrateWorkflowGraph(graph);
   const issues: GraphValidationIssue[] = [];
   if (normalizedGraph.version !== 1 && normalizedGraph.version !== 2) {
@@ -139,7 +153,7 @@ export function validateWorkflowGraph(graph: WorkflowGraph): GraphValidationIssu
   }
 
   for (const node of graphToValidate.nodes) {
-    pushNodeSemanticIssues(graphToValidate, node, issues);
+    pushNodeSemanticIssues(graphToValidate, node, issues, options);
   }
 
   if (startCount === 1) {
@@ -185,6 +199,7 @@ function pushNodeSemanticIssues(
   graph: WorkflowGraph,
   node: GraphNode,
   issues: GraphValidationIssue[],
+  options: WorkflowGraphValidationOptions,
 ) {
   if (!supportedGraphNodeTypes.has(String(node.node_type))) {
     issues.push(error(node.id, null, unsupportedGraphNodeTypeMessage(node.node_type)));
@@ -194,7 +209,11 @@ function pushNodeSemanticIssues(
   switch (node.node_type) {
     case "start":
       if (!hasOutgoing(graph, node.id, "out")) {
-        issues.push(warning(node.id, null, "Start is not connected; this draft has no executable work"));
+        if (options.graphKind === "subflow") {
+          issues.push(error(node.id, null, "Subflow must have a valid start path"));
+        } else {
+          issues.push(warning(node.id, null, "Start is not connected; this draft has no executable work"));
+        }
       }
       break;
     case "action":
@@ -207,6 +226,10 @@ function pushNodeSemanticIssues(
           issues.push(error(node.id, null, `Node ${node.label} has invalid action config: ${validation.message}`));
         }
       }
+      break;
+    case "call_subflow":
+      pushCallSubflowIssues(node, issues, options);
+      warnMissingContinuation(graph, node, "out", "Call Subflow out is unconnected; workflow ends successfully here", issues);
       break;
     case "if":
       pushConditionIssue(node, issues);
@@ -330,6 +353,40 @@ function pushNodeSemanticIssues(
   }
 }
 
+function pushCallSubflowIssues(
+  node: GraphNode,
+  issues: GraphValidationIssue[],
+  options: WorkflowGraphValidationOptions,
+) {
+  if (options.graphKind === "subflow") {
+    issues.push(error(node.id, null, "Subflows cannot call subflows in the MVP"));
+    return;
+  }
+  const subflowId = stringField(node.config, "subflow_id");
+  if (!subflowId) {
+    issues.push(error(node.id, null, "Call Subflow requires a subflow"));
+    return;
+  }
+  if (!options.resolveSubflow) return;
+  const subflow = options.resolveSubflow(subflowId);
+  if (!subflow) {
+    issues.push(error(node.id, null, "Call Subflow references a missing subflow"));
+    return;
+  }
+  if (options.projectId && subflow.project_id !== options.projectId) {
+    issues.push(error(node.id, null, "Call Subflow must reference a subflow in the same project"));
+    return;
+  }
+  const subflowIssues = validateWorkflowGraph(subflow.graph, {
+    ...options,
+    graphKind: "subflow",
+    projectId: subflow.project_id,
+  });
+  if (subflowIssues.some((issue) => issue.level === "error")) {
+    issues.push(error(node.id, null, "Referenced subflow has blocking validation errors"));
+  }
+}
+
 function expectedPorts(node: GraphNode): GraphPort[] {
   switch (node.node_type) {
     case "start":
@@ -340,6 +397,8 @@ function expectedPorts(node: GraphNode): GraphPort[] {
     case "continue_loop":
     case "stop_workflow":
       return [inputPort("in", "In")];
+    case "call_subflow":
+      return [inputPort("in", "In"), outputPort("out", "Out")];
     case "merge":
       return [inputPort("in", "In"), outputPort("out", "Out")];
     case "router": {

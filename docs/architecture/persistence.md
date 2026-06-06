@@ -2,7 +2,10 @@
 
 ## Purpose
 
-Persistence stores workflows, versioned workflow graph authoring data, per-workflow settings, schedules, schedule events, runs, run steps, and operational attention events in SQLite. Electron/Node now owns the production persistence layer.
+Persistence stores projects, project environments, workflows, reusable subflows,
+versioned workflow graph authoring data, per-workflow settings, schedules,
+schedule events, runs, run steps, and operational attention events in SQLite.
+Electron/Node now owns the production persistence layer.
 
 ## Key Files
 
@@ -16,7 +19,13 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 ## Current Behavior
 
 - Electron app data uses `appData/automation-app`.
-- The current schema creates document-shaped `workflows`, queryable `runs` and `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and `operational_attention_events`.
+- The current schema creates `projects`, `project_environments`,
+  document-shaped `workflows`, reusable `subflows`, queryable `runs` and
+  `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and
+  `operational_attention_events`.
+- A default project and default project environment are created for existing
+  local data. Workflows store `project_id` and selected `environment_id`;
+  subflows and project environments store `project_id`.
 - `runs.source` stores durable run provenance as `manual` or `schedule`.
   Existing local rows are migrated by marking rows referenced by started
   schedule events as `schedule`; all other legacy rows become `manual`.
@@ -28,17 +37,24 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
   `workflow_schedule_events(schedule_id, created_at DESC)`, and
   `workflow_schedule_events(workflow_id, created_at DESC)`,
   `operational_attention_events(created_at DESC)`, and
-  `operational_attention_events(workflow_id, created_at DESC)`.
+  `operational_attention_events(workflow_id, created_at DESC)`, plus project
+  lookup indexes for project environments, workflows, and subflows.
 - `listWorkflows` returns workflow summaries used by the workflow list.
 - Summaries sort by `updated_at DESC`, then name ascending.
 - `getWorkflow` returns workflow metadata; product graph authoring data is loaded from `getWorkflowGraph`.
 - New workflows create a `Start -> New node` draft workflow graph with an unconfigured action node saved as `config: null`.
 - Workflow graph authoring data is stored in `workflows.graph_json`.
 - Workflow Settings are stored in `workflows.settings_json`.
+- Subflow graph authoring data is stored in `subflows.graph_json`.
+- Project Environment Browser Launch settings are stored in
+  `project_environments.browser_launch_json`.
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.
-- Workflow package import validates selected flow/settings before creating a workflow and writes workflow, graph, and settings inside one SQLite transaction. Failed validation or save errors roll back the whole import.
+- Workflow package import validates selected flow/settings and referenced
+  subflows before creating a workflow. It writes recreated subflows, remapped
+  workflow graph, and settings inside one SQLite transaction. Failed validation
+  or save errors roll back the whole import.
 - Run evidence outputs store app-local artifact paths under run-scoped evidence directories; run rows persist the resulting output JSON and step error/trace JSON for audit. `run_steps` keeps the existing top-level compiled graph rows and appends executed nested action trace rows with parent control node id and sequence metadata inside `trace_json`, allowing branch, loop, and retry paths to be reconstructed from durable storage.
 - Schedule rows store schedule config JSON, enabled state, next run time, and the latest schedule event summary.
 - Schedule event rows store scheduling decisions such as started, skipped, missed, failed-to-start, and disabled. Skipped/missed events exist even when no run row is created. Schedule event history by schedule id or workflow id uses descending created-time indexes.
@@ -73,6 +89,7 @@ Persistence stores workflows, versioned workflow graph authoring data, per-workf
 - Serialization/deserialization of stored action config JSON.
 - Serialization/deserialization of stored workflow graph JSON.
 - Persistence of Workflow Settings rows.
+- Persistence of project rows, project environment rows, and subflow rows.
 - Persistence of workflow schedule rows and schedule event rows.
 - Persistence of operational attention rows and bounded operations read queries.
 - Persistence of durable run source and bounded evidence read queries.

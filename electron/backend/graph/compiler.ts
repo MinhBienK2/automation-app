@@ -14,7 +14,10 @@ import type {
   WorkflowRunFromSelectedMode,
   WorkflowSettings,
 } from "../../../src/types/workflow.js";
-import { validateWorkflowGraph as validateWorkflowGraphModule } from "./validateGraph.js";
+import {
+  validateWorkflowGraph as validateWorkflowGraphModule,
+  type WorkflowGraphValidationOptions,
+} from "./validateGraph.js";
 import { migrateWorkflowGraph } from "./migration.js";
 
 export { validateActionConfig } from "../actions/validation.js";
@@ -23,6 +26,20 @@ export { validateWorkflowGraph } from "./validateGraph.js";
 type ValidationError = {
   field: string;
   message: string;
+};
+
+type CompileSubflowReference = {
+  id: string;
+  project_id: string;
+  name: string;
+  graph: WorkflowGraph;
+};
+
+export type CompileWorkflowGraphOptions = Omit<WorkflowGraphValidationOptions, "resolveSubflow"> & {
+  workflowLabel?: string | null;
+  labelPrefix?: string[];
+  nodeIdPrefix?: string;
+  resolveSubflow?: (subflowId: string) => CompileSubflowReference | null;
 };
 
 const nestedStepKeys = [
@@ -40,9 +57,12 @@ const nestedStepKeys = [
   "timeout_steps",
 ] as const;
 
-export function compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGraph {
+export function compileWorkflowGraph(
+  graph: WorkflowGraph,
+  options: CompileWorkflowGraphOptions = {},
+): CompiledWorkflowGraph {
   const normalizedGraph = migrateWorkflowGraph(graph);
-  const blocking = validateWorkflowGraphModule(normalizedGraph).find((issue) => issue.level === "error");
+  const blocking = validateWorkflowGraphModule(normalizedGraph, options).find((issue) => issue.level === "error");
   if (blocking) {
     throw validationError("graph", blocking.message);
   }
@@ -53,15 +73,16 @@ export function compileWorkflowGraph(graph: WorkflowGraph): CompiledWorkflowGrap
   }
 
   const steps: CompiledGraphStep[] = [];
-  compileTransition(normalizedGraph, nextTransition(normalizedGraph, start.id, "out"), new Set(), steps);
+  compileTransition(normalizedGraph, nextTransition(normalizedGraph, start.id, "out"), new Set(), steps, options);
   return { steps };
 }
 
 export function compileWorkflowRunPlan(
   graph: WorkflowGraph,
   settings: WorkflowSettings,
+  options: CompileWorkflowGraphOptions = {},
 ): CompiledWorkflowGraph {
-  const compiled = compileWorkflowGraph(migrateWorkflowGraph(graph)).steps.map((step) => ({
+  const compiled = compileWorkflowGraph(migrateWorkflowGraph(graph), options).steps.map((step) => ({
     ...step,
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(step.config)),
   }));
@@ -73,7 +94,7 @@ export function compileWorkflowRunPlan(
   };
 }
 
-type CompileWorkflowGraphFromNodeOptions = {
+type CompileWorkflowGraphFromNodeOptions = CompileWorkflowGraphOptions & {
   mode?: WorkflowRunFromSelectedMode;
 };
 
@@ -83,7 +104,7 @@ export function compileWorkflowGraphFromNode(
   options: CompileWorkflowGraphFromNodeOptions = {},
 ): CompiledWorkflowGraph {
   const normalizedGraph = migrateWorkflowGraph(graph);
-  const blocking = validateWorkflowGraphModule(normalizedGraph).find((issue) => issue.level === "error");
+  const blocking = validateWorkflowGraphModule(normalizedGraph, options).find((issue) => issue.level === "error");
   if (blocking) {
     throw validationError("graph", blocking.message);
   }
@@ -99,6 +120,7 @@ export function compileWorkflowGraphFromNode(
 
   const steps: CompiledGraphStep[] = [];
   compilePath(normalizedGraph, startNodeId, new Set(), steps, {
+    ...options,
     stopAfterCurrentNode: options.mode === "selected_only",
   });
   const compiled = steps.map((stepValue) => ({
@@ -106,7 +128,7 @@ export function compileWorkflowGraphFromNode(
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
   }));
   const withWaits = insertWaitBetweenGraphNodes(compiled);
-  const fullCompiled = compileWorkflowGraph(normalizedGraph).steps.map((stepValue) => ({
+  const fullCompiled = compileWorkflowGraph(normalizedGraph, options).steps.map((stepValue) => ({
     ...stepValue,
     config: applyNestedWaitBetweenNodes(applyExecutionDefaults(stepValue.config)),
   }));
@@ -122,7 +144,7 @@ function compilePath(
   nodeId: string | null,
   visited: Set<string>,
   steps: CompiledGraphStep[],
-  options: { stopAfterCurrentNode?: boolean } = {},
+  options: CompileWorkflowGraphOptions & { stopAfterCurrentNode?: boolean } = {},
 ) {
   if (!nodeId) return;
   if (visited.has(nodeId)) {
@@ -141,7 +163,7 @@ function compilePath(
         steps.push(step(node, {
           type: "stop_workflow",
           config: { status: "success", reason: null, close_browser: true },
-        }));
+        }, options));
       }
       return;
     case "end_failure":
@@ -152,14 +174,18 @@ function compilePath(
           reason: stringField(node.config, "reason") ?? "Graph reached failure end",
           close_browser: closeBrowserConfig(node.config),
         },
-      }));
+      }, options));
       return;
     case "action":
-      steps.push(step(node, node.config as ActionConfig));
+      steps.push(step(node, node.config as ActionConfig, options));
+      compileContinuation(graph, node.id, "out", visited, steps, options);
+      break;
+    case "call_subflow":
+      compileCallSubflow(node, options, steps);
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "merge":
-      steps.push(step(node, { type: "graph_noop", config: { kind: "merge" } }));
+      steps.push(step(node, { type: "graph_noop", config: { kind: "merge" } }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "router": {
@@ -172,11 +198,11 @@ function compilePath(
             id: caseValue.id,
             label: caseValue.label,
             condition: caseValue.condition,
-            steps: compileNestedConfigs(graph, node.id, `case_${caseValue.id}`, visited),
+            steps: compileNestedConfigs(graph, node.id, `case_${caseValue.id}`, visited, options),
           })),
-          default_steps: compileNestedConfigs(graph, node.id, "default", visited),
+          default_steps: compileNestedConfigs(graph, node.id, "default", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -190,10 +216,10 @@ function compilePath(
             id: choice.id,
             label: choice.label,
             weight: choice.weight,
-            steps: compileNestedConfigs(graph, node.id, `choice_${choice.id}`, visited),
+            steps: compileNestedConfigs(graph, node.id, `choice_${choice.id}`, visited, options),
           })),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -203,10 +229,10 @@ function compilePath(
         type: "if_condition",
         config: {
           condition,
-          then_steps: compileNestedConfigs(graph, node.id, "true", visited),
-          else_steps: compileNestedConfigs(graph, node.id, "false", visited),
+          then_steps: compileNestedConfigs(graph, node.id, "true", visited, options),
+          else_steps: compileNestedConfigs(graph, node.id, "false", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -219,11 +245,11 @@ function compilePath(
           expression,
           cases: caseValues.map((value, index) => ({
             value,
-            steps: compileNestedConfigs(graph, node.id, `case_${index + 1}`, visited),
+            steps: compileNestedConfigs(graph, node.id, `case_${index + 1}`, visited, options),
           })),
-          default_steps: compileNestedConfigs(graph, node.id, "default", visited),
+          default_steps: compileNestedConfigs(graph, node.id, "default", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -232,9 +258,9 @@ function compilePath(
         type: "repeat_times",
         config: {
           times: positiveInteger(node.config, "times", "Repeat times must be greater than 0"),
-          steps: compileNestedConfigs(graph, node.id, "loop", visited),
+          steps: compileNestedConfigs(graph, node.id, "loop", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -248,9 +274,9 @@ function compilePath(
           items: arrayVariable
             ? []
             : stringArray(node.config, "items", "Items are required"),
-          steps: compileNestedConfigs(graph, node.id, "loop", visited),
+          steps: compileNestedConfigs(graph, node.id, "loop", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -261,9 +287,9 @@ function compilePath(
           condition: nodeCondition(node),
           max_attempts: optionalPositiveInteger(node.config, "max_attempts"),
           timeout_ms: optionalPositiveInteger(node.config, "timeout_ms"),
-          steps: compileNestedConfigs(graph, node.id, "loop", visited),
+          steps: compileNestedConfigs(graph, node.id, "loop", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -274,10 +300,10 @@ function compilePath(
           condition: nodeCondition(node),
           max_attempts: optionalPositiveInteger(node.config, "max_attempts"),
           timeout_ms: optionalPositiveInteger(node.config, "timeout_ms"),
-          steps: compileNestedConfigs(graph, node.id, "loop", visited),
-          timeout_steps: compileNestedConfigs(graph, node.id, "timeout", visited),
+          steps: compileNestedConfigs(graph, node.id, "loop", visited, options),
+          timeout_steps: compileNestedConfigs(graph, node.id, "timeout", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -287,10 +313,10 @@ function compilePath(
         config: {
           max_attempts: positiveInteger(node.config, "max_attempts", "Max attempts must be greater than 0"),
           delay_ms: optionalPositiveInteger(node.config, "delay_ms"),
-          steps: compileNestedConfigs(graph, node.id, "try", visited),
-          failed_steps: compileNestedConfigs(graph, node.id, "failed", visited),
+          steps: compileNestedConfigs(graph, node.id, "try", visited, options),
+          failed_steps: compileNestedConfigs(graph, node.id, "failed", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "success", visited, steps, options);
       break;
     }
@@ -298,12 +324,12 @@ function compilePath(
       steps.push(step(node, {
         type: "try_catch",
         config: {
-          try_steps: compileNestedConfigs(graph, node.id, "try", visited),
-          success_steps: compileNestedConfigs(graph, node.id, "success", visited),
-          error_steps: compileNestedConfigs(graph, node.id, "error", visited),
-          finally_steps: compileNestedConfigs(graph, node.id, "finally", visited),
+          try_steps: compileNestedConfigs(graph, node.id, "try", visited, options),
+          success_steps: compileNestedConfigs(graph, node.id, "success", visited, options),
+          error_steps: compileNestedConfigs(graph, node.id, "error", visited, options),
+          finally_steps: compileNestedConfigs(graph, node.id, "finally", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
@@ -311,18 +337,18 @@ function compilePath(
       steps.push(step(node, {
         type: "fallback_block",
         config: {
-          primary_steps: compileNestedConfigs(graph, node.id, "primary", visited),
-          fallback_steps: compileNestedConfigs(graph, node.id, "fallback", visited),
+          primary_steps: compileNestedConfigs(graph, node.id, "primary", visited, options),
+          fallback_steps: compileNestedConfigs(graph, node.id, "fallback", visited, options),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "done", visited, steps, options);
       break;
     }
     case "break_loop":
-      steps.push(step(node, { type: "break_loop", config: {} }));
+      steps.push(step(node, { type: "break_loop", config: {} }, options));
       return;
     case "continue_loop":
-      steps.push(step(node, { type: "continue_loop", config: {} }));
+      steps.push(step(node, { type: "continue_loop", config: {} }, options));
       return;
     case "stop_workflow":
       steps.push(step(node, {
@@ -332,17 +358,17 @@ function compilePath(
           reason: stringField(node.config, "reason"),
           close_browser: closeBrowserConfig(node.config),
         },
-      }));
+      }, options));
       return;
     case "set_variable":
-      steps.push(step(node, setVariableActionConfig(node)));
+      steps.push(step(node, setVariableActionConfig(node), options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "set_json_variables":
       steps.push(step(node, {
         type: "set_json_variables",
         config: { json: requiredString(node.config, "json", "JSON variables are required") },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "transform_variable":
@@ -353,7 +379,7 @@ function compilePath(
           target_name: requiredString(node.config, "target_name", "Target output is required"),
           expression: stringField(node.config, "expression") ?? "",
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "assert_output":
@@ -364,14 +390,14 @@ function compilePath(
           match_mode: stringField(node.config, "match") === "contains" ? "contains" : "equals",
           value: requiredString(node.config, "value", "Expected output value is required"),
         },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "domain_allowlist":
       steps.push(step(node, {
         type: "domain_allowlist",
         config: { domains: stringArray(node.config, "domains", "Allowed domains are required") },
-      }));
+      }, options));
       compileContinuation(graph, node.id, "out", visited, steps, options);
       break;
     case "start":
@@ -390,10 +416,10 @@ function compileContinuation(
   sourcePort: string,
   visited: Set<string>,
   steps: CompiledGraphStep[],
-  options: { stopAfterCurrentNode?: boolean },
+  options: CompileWorkflowGraphOptions & { stopAfterCurrentNode?: boolean },
 ) {
   if (options.stopAfterCurrentNode) return;
-  compileTransition(graph, nextTransition(graph, nodeId, sourcePort), visited, steps);
+  compileTransition(graph, nextTransition(graph, nodeId, sourcePort), visited, steps, options);
 }
 
 type GraphTransition = {
@@ -406,10 +432,11 @@ function compileTransition(
   transition: GraphTransition,
   visited: Set<string>,
   steps: CompiledGraphStep[],
+  options: CompileWorkflowGraphOptions = {},
 ) {
   if (!transition) return;
   pushEdgeDelayStep(graph, transition.edge, transition.targetNodeId, steps);
-  compilePath(graph, transition.targetNodeId, visited, steps);
+  compilePath(graph, transition.targetNodeId, visited, steps, options);
 }
 
 function pushEdgeDelayStep(
@@ -447,9 +474,16 @@ function compileNestedConfigs(
   sourceNodeId: string,
   sourcePort: string,
   visited: Set<string>,
+  options: CompileWorkflowGraphOptions = {},
 ): CompiledNestedAction[] {
   const nestedSteps: CompiledGraphStep[] = [];
-  compileTransition(graph, nextTransition(graph, sourceNodeId, sourcePort), new Set(visited), nestedSteps);
+  compileTransition(
+    graph,
+    nextTransition(graph, sourceNodeId, sourcePort),
+    new Set(visited),
+    nestedSteps,
+    options,
+  );
   return nestedSteps.map((compiledStep) => ({
     ...compiledStep.config,
     graph_node_id: compiledStep.node_id,
@@ -457,12 +491,99 @@ function compileNestedConfigs(
   }));
 }
 
-function step(node: GraphNode, config: ActionConfig): CompiledGraphStep {
+function step(
+  node: GraphNode,
+  config: ActionConfig,
+  options: CompileWorkflowGraphOptions = {},
+): CompiledGraphStep {
   return {
-    node_id: node.id,
-    label: node.label,
+    node_id: prefixedNodeId(node, options),
+    label: prefixedLabel(node.label, options),
     config,
   };
+}
+
+function prefixedNodeId(node: GraphNode, options: CompileWorkflowGraphOptions) {
+  return `${options.nodeIdPrefix ?? ""}${node.id}`;
+}
+
+function prefixedLabel(label: string, options: CompileWorkflowGraphOptions) {
+  return [...(options.labelPrefix ?? []), label].filter(Boolean).join(" > ");
+}
+
+function compileCallSubflow(
+  node: GraphNode,
+  options: CompileWorkflowGraphOptions,
+  steps: CompiledGraphStep[],
+) {
+  const subflowId = requiredString(node.config, "subflow_id", "Call Subflow requires a subflow");
+  if (!options.resolveSubflow) {
+    throw validationError("subflow_id", "Call Subflow cannot be compiled without a subflow resolver");
+  }
+  const subflow = options.resolveSubflow(subflowId);
+  if (!subflow) {
+    throw validationError("subflow_id", "Call Subflow references a missing subflow");
+  }
+  if (options.projectId && subflow.project_id !== options.projectId) {
+    throw validationError("subflow_id", "Call Subflow must reference a subflow in the same project");
+  }
+
+  const inputMapping = callSubflowInputMapping(node.config);
+  if (inputMapping.length > 0) {
+    steps.push({
+      node_id: `${prefixedNodeId(node, options)}::__inputs`,
+      label: prefixedLabel("Inputs", {
+        ...options,
+        labelPrefix: callSubflowLabelPrefix(options, subflow),
+      }),
+      config: {
+        type: "set_variable",
+        config: {
+          name: null,
+          value: null,
+          value_type: null,
+          variables: inputMapping.map((mapping) => ({
+            name: mapping.input_name,
+            value_type: "text" as const,
+            value: mapping.value,
+          })),
+        },
+      },
+    });
+  }
+
+  const compiled = compileWorkflowGraph(subflow.graph, {
+    ...options,
+    graphKind: "subflow",
+    projectId: subflow.project_id,
+    nodeIdPrefix: `${prefixedNodeId(node, options)}::`,
+    labelPrefix: callSubflowLabelPrefix(options, subflow),
+  });
+  steps.push(...compiled.steps);
+}
+
+function callSubflowLabelPrefix(
+  options: CompileWorkflowGraphOptions,
+  subflow: CompileSubflowReference,
+) {
+  return [
+    ...(options.workflowLabel ? [options.workflowLabel] : []),
+    subflow.name,
+  ];
+}
+
+function callSubflowInputMapping(config: unknown): Array<{ input_name: string; value: string }> {
+  const value = asRecord(config).input_mapping;
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const record = asRecord(item);
+      return {
+        input_name: stringField(record, "input_name") ?? "",
+        value: typeof record.value === "string" ? record.value : "",
+      };
+    })
+    .filter((item) => item.input_name.trim());
 }
 
 function settingsPreludeSteps(settings: WorkflowSettings): CompiledGraphStep[] {
@@ -586,6 +707,7 @@ function mainContinuationPort(nodeType: GraphNodeType) {
     case "transform_variable":
     case "assert_output":
     case "domain_allowlist":
+    case "call_subflow":
     case "merge":
       return "out";
     case "if":

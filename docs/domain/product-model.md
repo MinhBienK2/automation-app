@@ -7,6 +7,17 @@ Mission Control is an Electron desktop app for building and running browser auto
 ## Core Concepts
 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
+- A project groups workflows, reusable subflows, and reusable browser launch
+  environments. The current MVP creates and uses a default project for existing
+  local data.
+- A Project Environment is a named reusable Browser Launch configuration inside
+  one project. Workflows select one environment for launch/session identity;
+  Workflow Settings still owns per-workflow run policy, graph defaults, and
+  initial variables.
+- A subflow is a reusable non-runnable graph fragment inside one project.
+  Workflows call subflows through `call_subflow` graph nodes; subflows run in
+  the caller's browser context and do not create independent runs or browser
+  sessions.
 - An action config is the executable behavior produced by graph compilation.
 - A run executes compiled graph action configs through the Electron CloakBrowser runner and reports progress to the UI.
 - Operations Overview is the default Mission Control workspace. It combines
@@ -23,7 +34,8 @@ Mission Control is an Electron desktop app for building and running browser auto
   evidence, matching run/evidence summaries, rotation history, sanitized
   diagnostics, and read-only historical identity references.
 - Mission Control navigation is a typed in-memory target contract across
-  Overview, Workflows, Runs, Evidence, Schedules, Identities, and graph issues.
+  Overview, Workflows, Subflows, Runs, Evidence, Schedules, Identities, and
+  graph issues.
   Targets carry ids and optional focus metadata, while stale durable targets
   produce visible unavailable states instead of falling back silently.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
@@ -43,8 +55,27 @@ Mission Control is an Electron desktop app for building and running browser auto
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from Settings.
-- Workflow Settings is the per-workflow configuration aggregate for workflow identity, run policy, browser launch, graph authoring defaults, and initial environment variables.
-- The Browser Launch section is identity-oriented. New workflows automatically get a browser identity with a stable `identity_id`, editable display name, stable `profile_dir`, fixed CloakBrowser fingerprint seed, and a stored persona selected from `src/lib/personaCatalog.ts`. The persona binds the OS/browser bucket, viewport/window dimensions, timezone/locale metadata, proxy/geo policy, WebRTC mode, font bundle metadata, and behavior timing profile so the identity is explainable and less clustered than one fixed desktop shape. Reuse login session only controls persistent storage; it does not rotate the fingerprint identity. The section also owns proxy server/credentials/bypass, timezone/locale/GeoIP, supported WebRTC IP policy values, the humanize toggle and `default`/`careful` preset, and headed/headless policy. New workflows enable GeoIP by default so blank timezone/locale fields are resolved from the current public or proxy exit IP; blank legacy location settings normalize back to GeoIP, while operators who need GeoIP off should set explicit timezone and locale. Settings validation warns when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities.
+- Workflow Settings is the per-workflow configuration aggregate for run policy,
+  graph authoring defaults, selected-environment browser launch overlay, and
+  initial environment variables.
+- The Browser Launch section is identity-oriented. New Project Environments
+  automatically get a browser identity with a stable `identity_id`, editable
+  display name, stable `profile_dir`, fixed CloakBrowser fingerprint seed, and
+  a stored persona selected from `src/lib/personaCatalog.ts`. The persona binds
+  the OS/browser bucket, viewport/window dimensions, timezone/locale metadata,
+  proxy/geo policy, WebRTC mode, font bundle metadata, and behavior timing
+  profile so the identity is explainable and less clustered than one fixed
+  desktop shape. Reuse login session only controls persistent storage; it does
+  not rotate the fingerprint identity. The section also owns proxy
+  server/credentials/bypass, timezone/locale/GeoIP, supported WebRTC IP policy
+  values, the humanize toggle and `default`/`careful` preset, and
+  headed/headless policy. New project environments enable GeoIP by default so
+  blank timezone/locale fields are resolved from the current public or proxy
+  exit IP; blank legacy location settings normalize back to GeoIP, while
+  operators who need GeoIP off should set explicit timezone and locale.
+  Settings validation warns when proxy-enabled identities lack explicit
+  timezone/locale and GeoIP is off, and when a configured fingerprint fonts
+  directory can create a stable font hash across identities.
 - CloakBrowser diagnostics are backend commands. They report wrapper/binary/cache/display/GeoIP status and browser profile metadata with bounded approximate profile sizes, and provide explicit binary install/check plus orphaned inactive profile cleanup without exposing browser storage or secrets to the renderer.
 - The Run Policy section owns maximum workflow duration, terminal browser retention, the Allow Run JavaScript policy, Run from selected enablement/scope, and batch defaults for headless mode, concurrency, and stopping after the first failed row.
 - The Graph section owns the default duration-only wait copied onto newly created graph links.
@@ -55,6 +86,9 @@ Mission Control is an Electron desktop app for building and running browser auto
 Users can:
 
 - Create, rename, open, and delete workflows.
+- Create workflows in the default project with the project default environment,
+  an existing project environment, or a new isolated environment.
+- Create and inspect Project Environments from Settings.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
 - Turn graph autosave on or off from Settings.
 - Run a full workflow.
@@ -62,9 +96,14 @@ Users can:
 - Stop an active run, including a selected run from Runs when multiple isolated workflows are active.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
+- Create, open, save, duplicate, and delete reusable subflows from the Subflows
+  workspace. Deletion is blocked when a subflow is referenced by workflows.
+- Add Call Subflow nodes to workflow graphs, map inputs into the subflow, and
+  inspect usage warnings before saving subflow changes.
 - Configure the workflow's browser identity and launch behavior before running it.
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
-- Export workflow packages containing Flow and selected Workflow Settings sections.
+- Export workflow packages containing Flow, selected Workflow Settings
+  sections, and referenced subflows.
 - Import workflow packages as new workflows without overwriting existing workflows.
 - Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
@@ -110,14 +149,16 @@ Users can:
   workflow identity through the existing backend rotation command, and navigate
   to related Evidence, Runs, or Workflow Settings.
 - Open Settings to inspect sanitized environment readiness, trigger a guarded
-  CloakBrowser binary install/check, and clean up orphaned inactive browser
-  profiles.
+  CloakBrowser binary install/check, clean up orphaned inactive browser
+  profiles, and manage Project Environments.
 
 ## Current Source Files
 
 - Frontend types: `src/types/workflow.ts`
 - Shared persona catalog: `src/lib/personaCatalog.ts`
 - UI orchestration: `src/App.tsx`
+- Subflow pages: `src/features/workflows/pages/SubflowListPage.tsx`,
+  `src/features/workflows/pages/SubflowDetailPage.tsx`
 - Electron bridge wrappers: `src/lib/workflowApi.ts`
 - Electron bridge type: `src/types/electron.ts`
 - Electron main/preload: `electron/main.ts`, `electron/preload.cts`

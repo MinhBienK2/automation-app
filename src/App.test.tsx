@@ -100,6 +100,62 @@ describe("App settings and graph autosave", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
+  test("shows project environments in settings and creates one", async () => {
+    const project = {
+      id: "project-1",
+      name: "Default Project",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const defaultEnvironment = {
+      id: "environment-default",
+      project_id: project.id,
+      name: "Project Default Environment",
+      description: "Default browser posture",
+      is_default: true,
+      browser_launch: null,
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_projects: [project],
+      list_project_environments: [defaultEnvironment],
+      create_project_environment: {
+        ...defaultEnvironment,
+        id: "environment-staging",
+        name: "Staging Chrome",
+        description: "",
+        is_default: false,
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+
+    expect(await screen.findByRole("heading", { name: "Project environments" }))
+      .toBeInTheDocument();
+    expect(screen.getByText("Project Default Environment")).toBeInTheDocument();
+    expect(screen.getByText("Default")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Create Environment" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Environment" });
+    await userEvent.type(within(dialog).getByLabelText("Environment name"), "Staging Chrome");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.createProjectEnvironment).toHaveBeenCalledWith(
+        project.id,
+        {
+          name: "Staging Chrome",
+          description: null,
+        },
+      );
+    });
+  });
+
   test("lands on Overview with operational panels and refreshes the durable aggregate", async () => {
     let overviewCalls = 0;
     mockWorkflowBridgeCommands({

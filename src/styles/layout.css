@@ -334,6 +334,40 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.settings-environment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-environment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: #0b1016;
+}
+
+.settings-environment-row h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-environment-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(57, 217, 138, 0.34);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-success);
+  font-size: 12px;
+}
+
 .settings-readiness-item {
   display: grid;
   gap: 5px;

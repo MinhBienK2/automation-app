@@ -109,6 +109,7 @@ describe("workflow graph helpers", () => {
     const mergeNode = createDefaultGraphNode("merge", { x: 40, y: 50 });
     const routerNode = createDefaultGraphNode("router", { x: 50, y: 60 });
     const randomChoiceNode = createDefaultGraphNode("random_choice" as GraphNodeType, { x: 60, y: 70 });
+    const callSubflowNode = createDefaultGraphNode("call_subflow", { x: 70, y: 80 });
 
     expect(ifNode.node_type).toBe("if");
     expect(ifNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
@@ -158,6 +159,16 @@ describe("workflow graph helpers", () => {
       "output:choice_1:Choice 1",
       "output:choice_2:Choice 2",
       "output:done:Done",
+    ]);
+    expect(callSubflowNode.label).toBe("Call Subflow");
+    expect(callSubflowNode.config).toEqual({
+      subflow_id: "",
+      input_mapping: [],
+      output_prefix: null,
+    });
+    expect(callSubflowNode.ports.map((port) => `${port.direction}:${port.id}`)).toEqual([
+      "input:in",
+      "output:out",
     ]);
   });
 
@@ -215,6 +226,10 @@ describe("workflow graph helpers", () => {
       "done",
     ]);
     expect(nodePorts("set_json_variables").map((port) => port.id)).toEqual([
+      "in",
+      "out",
+    ]);
+    expect(nodePorts("call_subflow").map((port) => port.id)).toEqual([
       "in",
       "out",
     ]);

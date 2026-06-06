@@ -155,6 +155,48 @@ const baseGraphNodeHelpContent: Record<GraphNodeType, BilingualGraphNodeHelp> = 
       commonMistakes: ["Leaving a New node unconfigured; the graph can be saved but validate/run will be blocked."],
     },
   },
+  call_subflow: {
+    vi: {
+      title: "Call Subflow Help",
+      summary: "Chạy một subflow cùng project trong cùng browser context và output store.",
+      useWhen: ["Dùng để tái sử dụng đường graph đã chuẩn hóa như login hoặc setup account state."],
+      fields: [
+        field("Subflow id", "Subflow trong cùng project sẽ được gọi.", [
+          "Subflow khác project hoặc bị xóa sẽ chặn validate/run.",
+          "Subflow graph không được chứa Call Subflow trong MVP.",
+        ]),
+        field("Input mapping", "Danh sách input_name=value truyền vào subflow trước khi chạy.", [
+          "Mỗi dòng ánh xạ một input.",
+          "Value có thể dùng template output giống các field text khác.",
+        ]),
+        field("Output prefix", "Prefix tùy chọn cho output do subflow tạo.", [
+          "Dùng khi nhiều lần gọi cùng một subflow và cần phân biệt output.",
+        ]),
+      ],
+      examples: ["Subflow id: subflow-login", "Input mapping: email={{account.email}}"],
+      commonMistakes: ["Gọi subflow thuộc project khác.", "Để trống Subflow id rồi validate/run."],
+    },
+    en: {
+      title: "Call Subflow Help",
+      summary: "Run a same-project subflow in the same browser context and output store.",
+      useWhen: ["Use for reusable graph paths such as login or account-state setup."],
+      fields: [
+        field("Subflow id", "Same-project subflow to call.", [
+          "A deleted or cross-project subflow blocks validate/run.",
+          "Subflow graphs cannot contain Call Subflow nodes in the MVP.",
+        ]),
+        field("Input mapping", "input_name=value lines passed to the subflow before it runs.", [
+          "Each line maps one input.",
+          "Values may use output templates like other text fields.",
+        ]),
+        field("Output prefix", "Optional prefix for outputs created by the subflow.", [
+          "Use it when calling the same subflow more than once and outputs need separation.",
+        ]),
+      ],
+      examples: ["Subflow id: subflow-login", "Input mapping: email={{account.email}}"],
+      commonMistakes: ["Calling a subflow from another project.", "Leaving Subflow id empty before validate/run."],
+    },
+  },
   merge: {
     vi: nodeWithFields("Merge", "Cho nhiều nhánh quay về một luồng chung mà không chờ nhánh khác.", [
       field("Ports", "Nối nhiều nhánh vào In và một continuation từ Out.", [

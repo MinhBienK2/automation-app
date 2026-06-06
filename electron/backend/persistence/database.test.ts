@@ -16,6 +16,40 @@ afterEach(async () => {
 });
 
 describe("Electron database initialization", () => {
+  test("creates project, environment, and subflow persistence tables", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-db-"));
+    tempRoots.push(tempRoot);
+    const paths = createAppPaths(tempRoot);
+
+    const database = initializeDatabase(paths);
+    const tables = database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => (row as { name: string }).name);
+    const workflowColumns = database
+      .prepare("PRAGMA table_info(workflows)")
+      .all()
+      .map((row) => (row as { name: string }).name);
+
+    expect(tables).toEqual(
+      expect.arrayContaining(["projects", "project_environments", "subflows"]),
+    );
+    expect(workflowColumns).toEqual(
+      expect.arrayContaining(["project_id", "environment_id"]),
+    );
+    expect(indexSql(database, "idx_project_environments_project_default")).toBe(
+      "CREATE INDEX idx_project_environments_project_default ON project_environments(project_id, is_default)",
+    );
+    expect(indexSql(database, "idx_workflows_project_updated_at")).toBe(
+      "CREATE INDEX idx_workflows_project_updated_at ON workflows(project_id, updated_at DESC)",
+    );
+    expect(indexSql(database, "idx_subflows_project_updated_at")).toBe(
+      "CREATE INDEX idx_subflows_project_updated_at ON subflows(project_id, updated_at DESC)",
+    );
+
+    database.close();
+  });
+
   test("creates idempotent indexes for run and schedule lookup queries", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "automation-db-"));
     tempRoots.push(tempRoot);

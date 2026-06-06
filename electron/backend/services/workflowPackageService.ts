@@ -11,6 +11,7 @@ import type {
   WorkflowSettingsBrowserLaunch,
   WorkflowSettingsSectionId,
   WorkflowSummary,
+  Subflow,
 } from "../../../src/types/workflow.js";
 
 type WorkflowPackageServiceDependencies = {
@@ -39,11 +40,13 @@ export class WorkflowPackageService {
     flow,
     settings,
     options,
+    subflows = [],
   }: {
     workflowName: string;
     flow: WorkflowGraph | null;
     settings: WorkflowSettings;
     options: WorkflowPackageExportOptions;
+    subflows?: Subflow[];
   }): WorkflowPackage {
     const { packageSettings, omittedFields } = buildPackageSettings(
       settings,
@@ -56,10 +59,12 @@ export class WorkflowPackageService {
       workflow: { name: workflowName },
       included_sections: [
         ...(options.include_flow ? ["flow"] : []),
+        ...(subflows.length > 0 ? ["subflows"] : []),
         ...options.settings_sections.map((section) => `settings.${section}`),
       ],
       omitted_fields: omittedFields,
       flow: options.include_flow ? flow : null,
+      subflows,
       settings: packageSettings,
     };
   }
@@ -69,6 +74,10 @@ export class WorkflowPackageService {
     return {
       workflow_name: packageValue.workflow.name,
       includes_flow: Boolean(packageValue.flow),
+      subflows: packageValue.subflows?.map((subflow) => ({
+        id: subflow.id,
+        name: subflow.name,
+      })) ?? [],
       settings_sections: packageSettingsSections(packageValue),
       omitted_fields: packageValue.omitted_fields,
     };
@@ -122,6 +131,7 @@ export class WorkflowPackageService {
     return {
       importedName,
       flow,
+      subflows: packageValue.subflows ?? [],
       candidateSettings,
     };
   }

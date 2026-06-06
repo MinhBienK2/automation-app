@@ -4,7 +4,14 @@
 
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
-- Repository trims and stores the workflow with timestamps, creates a `Start -> New node` draft graph, and persists default Workflow Settings with a browser identity. `New node` is an unconfigured action node with `config: null`.
+- Repository trims and stores the workflow with timestamps, associates it with
+  the default project, selects a Project Environment according to the create
+  options, creates a `Start -> New node` draft graph, and persists default
+  Workflow Settings over the selected environment. `New node` is an
+  unconfigured action node with `config: null`.
+- The workflow list Create dialog can use the project default environment,
+  create an isolated environment for the new workflow, or attach an existing
+  non-default project environment.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh backend-generated browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
 - If a manual full-run launch from Graph Builder or the workflow list is
@@ -32,7 +39,11 @@
   link, or multi-item selection opens the graph inspector as a right-side
   drawer; closing the drawer clears the selection.
 - Users can add supported graph nodes from grouped canvas toolbar pickers. The toolbar shows icon controls for undo, redo, select mode, pan mode, fit view, auto arrange, arrange selection, and shortcuts, followed by New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes are inserted near the center of the currently visible canvas view, with a small stagger to keep repeated additions reachable. Auto arrange repositions graph nodes through layered workflow layout into deterministic execution lanes, wrapping long main paths into left-to-right rows instead of one horizontal line, and can be undone. Arrange selection is available for multi-node selections, keeps unselected nodes fixed, and can be undone. There is no Add Output toolbar group; output-producing behavior comes from capture actions under Add Action. Add Variable exposes Set Variables and Set JSON Variables. Add End exposes End Success, End Failure, and Stop Workflow.
-- The Add Logic palette exposes Branching (If, Switch), Loops (Repeat Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop), and Recovery (Retry).
+- The workflow Add Logic palette exposes Branching (If, Switch), Loops (Repeat
+  Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop),
+  Recovery (Retry), and Reuse (Call Subflow). The subflow editor uses the same
+  graph editor in subflow mode and hides Call Subflow so MVP subflows cannot
+  call other subflows.
 - The action picker uses semantic groups from `docs/domain/action-taxonomy.md`, filters choices through the action capability registry, hides graph-internal actions from the main picker, and displays intent-focused labels such as Fill Field for `input_text`.
 - Graph canvas nodes keep the operator-edited node name as the primary label and show the underlying action or graph node kind as secondary metadata. Action nodes also show compact configuration context when available, such as wait duration, random wait range, URL, key, hotkey, or target locator, so renamed nodes remain identifiable without opening the inspector.
 - Users can connect edges through explicit source/target ports with left-button drag, hover graph ports for 1 second to read one custom tooltip explaining what each port means and which direction to connect, reconnect ports to replace prior source/target links, click React Flow canvas edges to select/delete links, edit a selected link's none/fixed/random wait in the inspector drawer, use the link context menu for link-scoped actions, read edge direction through arrowed React Flow links with execution-order labels on the edge, create new links with the workflow's current Graph link wait copied onto the edge, delete edges, drag nodes by holding the node body, box-select graph items by dragging empty canvas space, pan the canvas by holding Space while dragging, the pan toolbar mode, or viewport controls, duplicate/delete/copy nodes from the node context menu, open detailed node help from the inspector drawer or node context menu, rename any selected non-start node through the inspector drawer, change action node type through the inspector drawer's searchable action dropdown, edit action config, and edit structured config for branch, loop, retry, variable, assertion, domain allowlist, stop, and failure-end nodes.
@@ -56,6 +67,20 @@
 - `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects same-workflow/profile/batch conflicts, creates a run-id scoped SQLite run record, and starts the Electron CloakBrowser runner.
 - Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
 
+## Subflow Authoring
+
+- The Subflows sidebar page lists reusable subflows for the default project
+  with description, usage count, open, duplicate, and delete actions.
+- Creating a subflow persists a saved graph fragment with a start node and the
+  same graph DTO shape as workflows.
+- Opening a subflow loads its graph and usage list. The editor has Save,
+  Duplicate, and Delete actions, but no Launch Run action because subflows are
+  reusable implementation units rather than product scenarios.
+- When a subflow is used by workflows, the detail page warns that saving changes
+  affects the next run of those callers. Delete is blocked while usage exists.
+- Saving a subflow graph validates subflow-specific constraints, including no
+  nested Call Subflow nodes in the MVP.
+
 ## Schedule Workflow
 
 - The Schedules sidebar page lists all workflow schedules with workflow name, enabled state, schedule summary, next run time, last status, and last reason.
@@ -70,7 +95,19 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, applies Browser Launch identity settings before launch including profile directory, fixed fingerprint seed, fingerprint fonts directory, proxy, explicit or detected local timezone/locale, supported WebRTC policy values, humanize toggle/preset, and headless mode, prepends Environment initial variables before the first graph step, compiles edge delays as synthetic wait steps before their target nodes, promotes graph domain allowlists into a pre-navigation run policy, enforces maximum workflow duration, rejects Run JavaScript when Run Policy disables direct script execution, and applies browser retention as the default terminal session policy. Authors use explicit Wait and Random Wait nodes when a workflow needs a business-semantic pause.
+- `run_workflow` loads and validates saved Workflow Settings, overlays the
+  workflow's selected Project Environment Browser Launch settings before launch
+  including profile directory, fixed fingerprint seed, fingerprint fonts
+  directory, proxy, explicit or detected local timezone/locale, supported
+  WebRTC policy values, humanize toggle/preset, and headless mode, prepends
+  Environment initial variables before the first graph step, compiles edge
+  delays as synthetic wait steps before their target nodes, expands Call
+  Subflow nodes into the caller's compiled plan with nested labels and mapped
+  inputs, promotes graph domain allowlists into a pre-navigation run policy,
+  enforces maximum workflow duration, rejects Run JavaScript when Run Policy
+  disables direct script execution, and applies browser retention as the
+  default terminal session policy. Authors use explicit Wait and Random Wait
+  nodes when a workflow needs a business-semantic pause.
 - Reset identity in Workflow Settings is an in-app confirmation that delegates to `resetWorkflowBrowserIdentity`. The command owns identity generation, persists old/new identity evidence in `migration_notes`, rejects active workflow/profile/retained-session resets, preserves non-storage preferences, and returns saved settings to the dialog.
 - Identity Lab can close the selected workflow/profile's retained session
   through `closeIdentityRetainedSession`. Closing a retained session clears only
@@ -134,6 +171,8 @@
 - Canceling the native Save dialog leaves the export dialog open and does not create a file.
 - The Electron backend writes the package to the path returned by the native Save dialog; canceling the dialog leaves the workflow unchanged.
 - Flow export uses the saved `WorkflowGraph`.
+- Flow export includes subflows referenced by Call Subflow nodes and validates
+  that referenced subflows belong to the same project.
 - Settings export uses selected Workflow Settings sections and sanitizes machine-local or sensitive fields by default, including the browser launch proxy password, proxy URL credentials, and local fingerprint font directories.
 
 ## Import Workflow Package
@@ -141,7 +180,12 @@
 - Import Workflow accepts a JSON workflow package file from the workflow list.
 - The UI calls `preview_workflow_package` before import and shows package workflow name, Flow availability, Settings sections, and sanitized omitted fields.
 - Import calls `import_workflow_package` with the selected Flow and Settings sections.
-- Import validates selected Flow and Settings first, then transactionally creates a new workflow named `<package workflow name> (imported)`, saves selected Flow to the new workflow id, saves selected Settings after remapping `workflow_id`, refreshes the list, and opens the imported workflow.
+- Import validates selected Flow, referenced subflows, and Settings first, then
+  transactionally creates a new workflow named `<package workflow name>
+  (imported)`, recreates referenced subflows in the target project, remaps Call
+  Subflow ids in the imported Flow, saves selected Flow to the new workflow id,
+  saves selected Settings after remapping `workflow_id`, refreshes the list,
+  and opens the imported workflow.
 - Import does not overwrite or merge into an existing workflow.
 - Failed import validation or persistence rolls back without leaving a partial workflow.
 

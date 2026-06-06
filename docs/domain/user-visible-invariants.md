@@ -6,7 +6,10 @@ Preserve these unless the task explicitly changes them.
 
 - Blank workflow names are rejected.
 - Opening a workflow shows the visual graph builder as the only workflow authoring surface.
-- New workflows have a `Start -> New node` draft graph.
+- New workflows have a `Start -> New node` draft graph and are created with
+  either the project default environment, an existing project environment, or a
+  newly created isolated environment.
+- Workflow list cards show the selected environment name when one is available.
 - Workflow list `Edit` opens Workflow Settings at General.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph and non-storage copied settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint, and disables Run from selected for the copy.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Delete private browser profile data is checked by default, and keeping profile data requires unchecking it. Deleting profile data removes only unshared inactive profile directories. Backend deletion rejects while the workflow is actively running, while its persistent profile is used by an active run, or while a retained browser session still owns the workflow/profile.
@@ -17,8 +20,9 @@ Preserve these unless the task explicitly changes them.
 - Overview is the default Mission Control entry point. It shows backend-owned
   durable metrics, live operations, attention, activity, recent evidence
   metadata, and upcoming schedules for the operator's local day.
-- Mission Control sidebar order is Overview, Workflows, Runs, Evidence,
-  Schedules, Identities, Settings. Overview is the default first screen.
+- Mission Control sidebar order is Overview, Workflows, Subflows, Runs,
+  Evidence, Schedules, Identities, Settings. Overview is the default first
+  screen.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.
@@ -38,7 +42,13 @@ Preserve these unless the task explicitly changes them.
 - Schedule history entries with run ids can open the matching Runs target, and
   all schedule history entries can open the owning Workflow target. A stale or
   deleted schedule target renders an unavailable target message.
-- Workflow package export can include Flow and selected Workflow Settings sections. Export opens the native system Save dialog so users can choose the folder and file name. Export sanitizes machine-local or sensitive settings fields by default, including proxy passwords, credentials embedded in proxy URLs, and local fingerprint font directories.
+- Workflow package export can include Flow, selected Workflow Settings
+  sections, and subflows referenced by Call Subflow nodes. Export opens the
+  native system Save dialog so users can choose the folder and file name.
+  Export sanitizes machine-local or sensitive settings fields by default,
+  including proxy passwords, credentials embedded in proxy URLs, and local
+  fingerprint font directories. Package import recreates referenced subflows
+  and remaps Call Subflow ids before saving the imported workflow graph.
 - Workflow detail collapses the app sidebar into the icon rail when opened and
   exposes a compact header command bar. Settings, Validate, and Save are
   accessible icon controls with tooltips; Settings opens Workflow Settings at
@@ -46,13 +56,16 @@ Preserve these unless the task explicitly changes them.
   while running, and Run from selected appears only when its workflow setting
   makes it relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
+- Workflow Settings Browser Launch values are sourced from the workflow's
+  selected Project Environment at run time. Per-workflow settings remain the
+  UI surface for run policy, graph defaults, and initial variables.
 - Workflow Settings Run Policy exposes maximum workflow duration, browser retention, Allow Run JavaScript, and a grouped Run from selected control. When Run from selected is enabled, the group shows a scope select with `selected_only` for running only the selected node and `from_selected` for running from that node through the downstream main path. Batch concurrency, batch headless, and stop-on-first-failed-row values remain visible but disabled with a pause note until Batch Run UI is ready.
 - Workflow Settings Graph exposes the new link wait default for newly created graph links in one grouped control. It supports no default wait, fixed duration milliseconds, or random min/max milliseconds, and changing it must not rewrite existing links.
 - Workflow Settings Environment exposes initial variable values as typed rows for graph template/runtime context.
 - Workflow Settings Browser Launch exposes browser identity controls. Each workflow has a stable read-only `identity_id`, editable display name, fixed CloakBrowser fingerprint seed, stored persona metadata, and optional fingerprint fonts directory. Backend-generated identities use high-entropy `bi_<32 hex>` ids. `profile_dir` remains internal storage metadata and is not shown as a separate Browser Launch field. The seed is always visible in the dialog; renaming the display name does not change profile storage, persona, or the fingerprint seed.
 - Workflow Settings Browser Launch exposes Reset identity as the browser identity rotation control. Reset uses an in-app confirmation dialog, saves pending settings before invoking the backend reset command, creates a new backend-generated identity id/profile directory/fingerprint seed, records a migration-note audit event, preserves non-storage preferences such as proxy, locale, and fingerprint fonts directory, and disables Run from selected in Run Policy until a fresh retained session exists.
 - Workflow Settings Browser Launch exposes a Reuse login session checkbox. Turning it on uses the identity's stable persistent browser profile; turning it off clears `profile_name` so the run uses temporary browser storage while keeping the same identity seed and disables Run from selected in Run Policy.
-- Workflow Settings Browser Launch exposes proxy URL/credentials/bypass, timezone, locale, detected local machine timezone/locale, GeoIP, fingerprint fonts directory, a Humanize browser input toggle, a Humanize preset select with `default` and `careful`, and headless launch controls. New workflows enable GeoIP by default so blank timezone/locale fields resolve from the current public or proxy exit IP; blank legacy location settings normalize back to GeoIP. Running with GeoIP off requires explicit timezone and locale values. A stored persona from the catalog binds viewport/window dimensions, OS/browser bucket, region rationale, font bundle metadata, and timing profile for identity context.
+- Workflow Settings Browser Launch exposes the selected environment's proxy URL/credentials/bypass, timezone, locale, detected local machine timezone/locale, GeoIP, fingerprint fonts directory, a Humanize browser input toggle, a Humanize preset select with `default` and `careful`, and headless launch controls. New project environments enable GeoIP by default so blank timezone/locale fields resolve from the current public or proxy exit IP; blank legacy location settings normalize back to GeoIP. Running with GeoIP off requires explicit timezone and locale values. A stored persona from the catalog binds viewport/window dimensions, OS/browser bucket, region rationale, font bundle metadata, and timing profile for identity context.
 - Workflow Settings validation warns operators when proxy-enabled identities lack explicit timezone/locale and GeoIP is off, and when a configured fingerprint fonts directory can create a stable font hash across identities. CloakBrowser diagnostics inspect configured font directories and report missing/unreadable directories, file counts, normalized hashes, expected family coverage, shared-directory warnings, and bounded approximate profile sizes instead of placeholder status.
 - Set Viewport is an in-run viewport-size action. Active authoring exposes width and height only; Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile viewport, or touch input controls.
 - Workflow Settings saves, backend identity reset, and workflow deletion must reject browser identity profile reset/delete while a workflow/profile run is active or a retained browser session is still active for that workflow/profile.
@@ -66,16 +79,16 @@ Preserve these unless the task explicitly changes them.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and uses nested collapsible sections for best-fit guidance, non-goals, precedence, field explanations, examples, related graph actions, common mistakes, and safety notes when present. Detailed field, example, related-action, and mistake items are also individually collapsible. It explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
-- App Settings includes only current app-level preferences, environment
-  readiness diagnostics, guarded local maintenance commands, and graph shortcut
-  guidance. It does not introduce policy, retention, notification, or theme
-  systems. Diagnostics display CloakBrowser, GeoIP, headed display, font,
+- App Settings includes current app-level preferences, Project Environment
+  management, environment readiness diagnostics, guarded local maintenance
+  commands, and graph shortcut guidance. It does not introduce notification or
+  theme systems. Diagnostics display CloakBrowser, GeoIP, headed display, font,
   profile-count, and smoke readiness without raw binary/cache/profile/font
   paths.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
-- Run from selected is a workflow-detail action. It is hidden unless enabled in Workflow Settings Run Policy, runs from exactly one selected main-path node using the retained browser session, saves visible graph/settings first, and is disabled unless Reuse login session is enabled, browser retention is `retain`, and the retained session matches the workflow/profile directory. Its Run Policy scope controls whether execution covers only the selected node or continues from that node through the downstream main path.
+- Run from selected is a workflow-detail action. It is hidden unless enabled in Workflow Settings Run Policy, runs from exactly one selected main-path node using the retained browser session, saves visible graph/settings first, and is disabled unless Reuse login session is enabled, browser retention is `retain`, and the retained session matches the workflow/profile directory. Its Run Policy scope controls whether execution covers only the selected node or continues from that node through the downstream main path. Call Subflow nodes and nodes downstream from them are valid main-path selections when the referenced subflows are valid.
 - If the retained browser was closed manually, Run from selected remains unavailable or fails with a readable stale-session message; it must not silently launch a new browser from the selected node.
 - If saving the visible graph fails before a run, the run does not start.
 - If saving dirty Workflow Settings fails before a run, the run does not start.
@@ -92,12 +105,22 @@ Preserve these unless the task explicitly changes them.
 - Unconfigured action graph nodes can be saved as drafts but block validation/compile/run until an action type is selected.
 - The main graph toolbar exposes icon controls for undo, redo, select mode, pan mode, fit view, auto arrange, arrange selection, and shortcuts, plus New node, Add Action, Add Logic, Add Variable, and Add End. Toolbar-created nodes appear near the center of the currently visible canvas view instead of a fixed graph origin. Auto arrange repositions nodes through layered workflow layout into deterministic execution lanes, wrapping long main paths into left-to-right rows so large graphs stay reachable, and is part of graph undo history. Arrange selection is available for multi-node selections, keeps unselected nodes fixed, and is also part of graph undo history. It does not expose Add Output.
 - The graph toolbar exposes a Shortcuts action that opens graph mouse and keyboard guidance without leaving the workspace.
-- Add Logic stays beginner-focused: Branching, Loops, and Recovery/Retry are visible. Branching includes If, Switch, Router, and Merge.
+- Add Logic stays beginner-focused: Branching, Loops, Recovery/Retry, and
+  Reuse are visible for workflow graphs. Branching includes If, Switch, Router,
+  and Merge. Reuse includes Call Subflow. Subflow graphs hide Call Subflow in
+  the Add Logic palette.
 - Add Action uses semantic groups and user-intent labels. User-facing labels may differ from serialized action types, for example Fill Field still saves as `input_text`.
 - Targetable action editors default Target locator type to XPath, while still allowing Test ID, Role, Label, Placeholder, Text, CSS, and Attribute locators.
 - Targetable single-target action editors expose Target source as an exclusive choice. Use locator shows target locator fields; Use Find Element ref hides locator fields and shows only Target ref so operators do not mistake locator visibility/text/index constraints as active while using a runtime ref.
 - Scroll authoring exposes Page Scroll, Scroll To Element, and Scroll Until Element Visible labels while preserving the serialized `page`, `into_view`, and `until_element_visible` modes. Page Scroll shows Scroll style, Direction, and Pixels; Scroll style defaults to Human-like and can switch to Smooth single wheel. Scroll To Element supports Use locator or Use Find Element ref, optional Iframe XPath, and Timeout ms defaulting to `60000`; Scroll Until Element Visible shows locator target, timeout, Direction, and Pixels for the repeated page-scroll search gesture without low-level target constraint fields.
 - Browser identity belongs in Workflow Settings Browser Launch. Launch-time identity settings are not represented as in-run action nodes in the current workflow contract.
+- Subflows are reusable graph fragments, not standalone runnable scenarios.
+  They are reachable from the Subflows sidebar page, can be created, opened,
+  saved, duplicated, and deleted, and show usage warnings when referenced by
+  workflows. Deleting a referenced subflow is blocked.
+- Call Subflow nodes run a same-project subflow inside the caller's existing
+  run, browser context, output store, evidence path, and retention policy. MVP
+  subflows cannot call other subflows.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum. Link waits use the same duration constraints but stay scoped to the edge transition.
 - Graph canvas nodes show the saved node label as the primary text and keep the underlying action or graph-node kind visible as secondary text. Compact metadata may appear after the kind when it helps identify the node, but full configuration details remain in the inspector.
 - Selecting a graph link clears node selection and shows link-scoped actions, including none/fixed/random link wait editing. Selecting a node clears link selection and shows node-scoped inspector content.

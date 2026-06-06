@@ -151,7 +151,9 @@ export function RunMonitorDrawer({
   const hasError = runState.status === "failed" && Boolean(runState.error);
 
   useEffect(() => {
-    timelineEndRef.current?.scrollIntoView({ block: "end" });
+    if (typeof timelineEndRef.current?.scrollIntoView === "function") {
+      timelineEndRef.current.scrollIntoView({ block: "end" });
+    }
   }, [timeline.length]);
 
   return (

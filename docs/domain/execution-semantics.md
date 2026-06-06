@@ -8,7 +8,10 @@
 - `test_step` executes from the first step through the selected step.
 - During the Electron migration, graph validation and compilation are owned by `electron/backend/graph/compiler.ts`.
 - Browser execution runs through the Electron backend `BrowserWorkflowRunner`, backed by npm `cloakbrowser` by default and Playwright-compatible page/context APIs. Setting `AUTOMATION_BROWSER_ENGINE=camoufox` selects the local Camoufox Firefox-compatible runtime for lab runs when the binary exists at `CAMOUFOX_EXECUTABLE_PATH` or `~/.cache/camoufox/camoufox`. Browser launch, retained-session state, and browser identity evidence are delegated to `electron/backend/browser/sessionManager.ts`.
-- Visual graphs compile to executable action configs, including graph-internal control configs for router, switch, guarded loops, try/catch, fallback, loop break/continue, output assertions, transforms, Merge no-ops, explicit unsupported subworkflow placeholders, and domain allowlists.
+- Visual graphs compile to executable action configs, including graph-internal
+  control configs for router, switch, guarded loops, try/catch, fallback, loop
+  break/continue, output assertions, transforms, Merge no-ops, Call Subflow
+  expansion, and domain allowlists.
 - Unknown graph node, action, nested action, and condition discriminants are
   validation errors before normal save/import/run boundaries. If a malformed
   compiled plan reaches the runner directly, unknown action and condition kinds
@@ -17,11 +20,19 @@
 - Graph control blocks compile branch ports into nested action configs, then continue from explicit continuation ports. `If`, `Switch`, `Router`, and `Try/Catch` continue from `done`; retry continues from `success`; loop, repeat-until, and fallback blocks continue from `done`.
 - Router nodes evaluate cases in saved order using `first_match` semantics. The first matching case branch runs; when no cases match, the default branch runs. Missing case/default branches are no-ops, and a missing `done` continuation ends successfully after Router.
 - Merge nodes compile as internal no-op graph steps so run progress can show the convergence point. Merge does not touch browser page, output store, network policy, or session state.
+- Call Subflow nodes resolve a same-project subflow, optionally compile input
+  mapping into a `set_variable` step, then inline the subflow's graph steps into
+  the caller's compiled plan with prefixed node ids and nested labels. Subflow
+  steps share the caller's run id, browser context, output store, evidence path,
+  domain policy, cancellation, and terminal browser retention. They do not
+  launch a new browser, create a nested run row, or override the caller's
+  Project Environment. Nested Call Subflow nodes inside subflows are rejected in
+  the MVP.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
 - Command handlers pass the compiled graph and persisted settings to the Electron runner for `run_workflow`; runner outputs and action traces return through the shared run-state contract.
-- Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. `run_policy.run_from_selected_mode` controls whether the sub-plan stops after the selected node or continues through the downstream main path. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
+- Command handlers pass a selected-node compiled sub-plan to the runner for `run_workflow_from_node`; this path does not launch a new browser and fails if no matching retained session exists. `run_policy.run_from_selected_mode` controls whether the sub-plan stops after the selected node or continues through the downstream main path. The selected-node compiler uses the same subflow resolver as full workflow runs so selected-node plans can start on, or continue through, Call Subflow nodes. Merge cannot be selected as the start node because it is a graph-native no-op, not an executable browser or control decision.
 - Command handlers manage run-id scoped workflow runs. They block only same-workflow conflicts, shared persistent browser profile conflicts, and batch conflicts, then persist begin/finish records to SQLite `runs`, persist compiled top-level step evidence and executed nested action traces to `run_steps`, and update the matching live run snapshot from runner progress callbacks.
 - Run persistence records durable `source` provenance as `manual` or
   `schedule` at run creation so historical evidence filtering remains
@@ -31,14 +42,21 @@
   validation before a run row exists write sanitized operational attention for
   Overview. Scheduled validation failures continue to use schedule events and
   are not duplicated into operational attention rows.
-- `run_workflow` loads Workflow Settings before starting the runner. Settings validation and run validation happen before browser launch.
-- Environment initial variables from Workflow Settings compile into setup actions before graph actions.
+- `run_workflow` loads Workflow Settings and the workflow's selected Project
+  Environment before starting the runner. Settings validation and run
+  validation happen before browser launch.
+- Environment initial variables from Workflow Settings compile into setup
+  actions before graph actions. Browser Launch settings are resolved from the
+  selected Project Environment before the runner launches the browser.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - Run Policy `execute_js_enabled` defaults to enabled. When disabled, `execute_js` fails before script evaluation with a clear Run Policy error so lower-risk profiles can reject direct DOM scripting while keeping the action available for authorized workflows.
-- `run_workflow_from_node` requires Run Policy `run_from_selected_enabled`, Browser Launch `persistent_profile`, Run Policy browser retention `retain`, and a retained session owned by the same workflow/profile directory. Temporary retained sessions are not eligible.
+- `run_workflow_from_node` requires Run Policy `run_from_selected_enabled`,
+  selected-environment Browser Launch `persistent_profile`, Run Policy browser
+  retention `retain`, and a retained session owned by the same workflow/profile
+  directory. Temporary retained sessions are not eligible.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
 - `set_json_variables` renders its JSON text, requires a root object, and writes flattened keys into the browser output store.
 - `repeat_for_each` can use either a manual item list or an `array_variable` that points at an array in the browser output store. Missing or non-array variable sources fail the action before running the loop body.
@@ -95,7 +113,27 @@
   guarded command. This releases only the retained in-memory browser context;
   it does not remove the persistent profile directory, saved identity settings,
   cookies/login state, evidence files, or historical run rows.
-- Workflow Settings Browser Launch resolves the browser identity before the browser starts. `BrowserSessionManager` maps persistent versus temporary storage, stable profile directory, fingerprint seed, fingerprint fonts directory, proxy server/bypass/credentials, explicit timezone/locale or local machine timezone/locale, GeoIP, supported WebRTC policy values, humanize toggle/preset, and headless mode into CloakBrowser launch options. New workflows enable GeoIP by default, and blank legacy location settings normalize back to GeoIP, so CloakBrowser resolves blank timezone/locale fields from the current public or proxy exit IP. Running with GeoIP off requires explicit timezone and locale values. It also applies the current CloakBrowser/Fingerprint.com lab mitigation flags: `--fingerprint-noise=false`, `--fingerprint-storage-quota=500`, and `--fingerprint-platform=windows`. When `AUTOMATION_BROWSER_ENGINE=camoufox`, the session manager maps the same storage/proxy/timezone/locale/headless/download settings into Playwright Firefox options and records Camoufox runtime evidence; CloakBrowser-only fingerprint flags are intentionally not passed to Firefox. Persona viewport/window dimensions stay in sanitized identity evidence for audit, but Browser Launch still does not send explicit Playwright `viewport`, `userAgent`, `--window-size`, or CloakBrowser screen-size overrides. In-run Set Viewport can still change runtime viewport later.
+- The selected Project Environment Browser Launch resolves the browser identity
+  before the browser starts. `BrowserSessionManager` maps persistent versus
+  temporary storage, stable profile directory, fingerprint seed, fingerprint
+  fonts directory, proxy server/bypass/credentials, explicit timezone/locale or
+  local machine timezone/locale, GeoIP, supported WebRTC policy values,
+  humanize toggle/preset, and headless mode into CloakBrowser launch options.
+  New project environments enable GeoIP by default, and blank legacy location
+  settings normalize back to GeoIP, so CloakBrowser resolves blank
+  timezone/locale fields from the current public or proxy exit IP. Running with
+  GeoIP off requires explicit timezone and locale values. It also applies the
+  current CloakBrowser/Fingerprint.com lab mitigation flags:
+  `--fingerprint-noise=false`, `--fingerprint-storage-quota=500`, and
+  `--fingerprint-platform=windows`. When `AUTOMATION_BROWSER_ENGINE=camoufox`,
+  the session manager maps the same storage/proxy/timezone/locale/headless/download
+  settings into Playwright Firefox options and records Camoufox runtime
+  evidence; CloakBrowser-only fingerprint flags are intentionally not passed to
+  Firefox. Persona viewport/window dimensions stay in sanitized identity
+  evidence for audit, but Browser Launch still does not send explicit
+  Playwright `viewport`, `userAgent`, `--window-size`, or CloakBrowser
+  screen-size overrides. In-run Set Viewport can still change runtime viewport
+  later.
 - Real headed CloakBrowser launches on Linux require `DISPLAY` or `WAYLAND_DISPLAY`; otherwise the runner fails with a clear startup prerequisite error before starting Chromium.
 - Temporary CloakBrowser contexts are used unless Workflow Settings Browser Launch selects a persistent profile. Persistent profile data is stored under the user's app data directory in `automation-app/browser-profiles/<profile_dir>`, not under the OS temp directory. Disabling Reuse login session changes storage mode only and keeps the identity fingerprint seed stable.
 - `browser_identity` run evidence records CloakBrowser wrapper/binary version, binary installed status, fingerprint seed hash, configured fingerprint font hash when available, sanitized selected persona metadata and rationale, timezone/locale source, GeoIP/supported WebRTC policy, active advanced override names such as `fingerprint_fonts_dir`, and configured humanization status/preset. Package export redacts proxy passwords, proxy URL credentials, and local fingerprint font directories.

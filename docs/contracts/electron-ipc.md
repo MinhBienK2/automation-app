@@ -37,6 +37,20 @@ string map.
 ## Current Commands
 
 - `listWorkflows`
+- `listProjects`
+- `createProject`
+- `listProjectEnvironments`
+- `createProjectEnvironment`
+- `updateProjectEnvironment`
+- `setWorkflowEnvironment`
+- `createSubflow`
+- `listSubflows`
+- `getSubflow`
+- `getSubflowGraph`
+- `saveSubflowGraph`
+- `duplicateSubflow`
+- `deleteSubflow`
+- `getSubflowUsage`
 - `getWorkflow`
 - `createWorkflow`
 - `renameWorkflow`
@@ -98,6 +112,12 @@ string map.
 - `saveRecordingDraft`
 - `dryRunValidateConfig`
 
+Project commands expose default-project and project-environment management to
+the renderer. `createWorkflow(name, options?)` accepts optional project and
+environment selection; omitted options use the legacy isolated-default path for
+compatibility. Subflow commands expose project-scoped reusable graphs, usage
+queries, guarded deletion, and graph save/load.
+
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend
 deletes the workflow's private browser profile directory only if no other
@@ -113,6 +133,8 @@ profile is active or a retained session still owns the profile.
 
 `runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
 new `run_id`, workflow metadata, source, start time, and nested run state.
+Both commands resolve the workflow's selected Project Environment before
+browser launch or retained-session checks.
 `stopRun` accepts an optional run id and returns the stopped snapshot; omitting
 the run id is valid only when exactly one workflow run is active. `listRunStates`
 returns the current app-session run snapshots for multi-run monitoring.
@@ -210,12 +232,13 @@ or historical runs.
 ## Persistence And Command Parity
 
 Electron main initializes SQLite in app data, and Node command handlers now use
-the TypeScript workflow repository for workflow CRUD, graph documents, Workflow
-Settings and workflow package import/export.
+the TypeScript workflow repository for project/environment CRUD, workflow CRUD,
+subflow CRUD, graph documents, Workflow Settings and workflow package
+import/export.
 
-Graph validation/compilation, run orchestration, SQLite persistence, workflow
-package import/export, and CloakBrowser runner execution are owned by the
-Electron backend.
+Graph validation/compilation, Call Subflow resolution, run orchestration,
+SQLite persistence, workflow package import/export, and CloakBrowser runner
+execution are owned by the Electron backend.
 
 Workflow schedule CRUD, schedule validation, enable-time workflow readiness
 checks, schedule event history, and the in-app scheduler tick are owned by the

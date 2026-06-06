@@ -20,6 +20,7 @@ import {
 type NodePaletteGroups = Array<{ label: string; nodes: GraphNodeType[] }>;
 
 type WorkflowGraphToolbarProps = {
+  graphKind?: "workflow" | "subflow";
   isArrangeSelectionDisabled: boolean;
   isArranging: boolean;
   isPanMode: boolean;
@@ -42,6 +43,7 @@ type WorkflowGraphToolbarProps = {
 };
 
 export function WorkflowGraphToolbar({
+  graphKind = "workflow",
   isArrangeSelectionDisabled,
   isArranging,
   isPanMode,
@@ -57,6 +59,16 @@ export function WorkflowGraphToolbar({
   onTogglePanMode,
   onUndo,
 }: WorkflowGraphToolbarProps) {
+  const visibleLogicNodeGroups =
+    graphKind === "subflow"
+      ? logicNodeGroups
+          .map((group) => ({
+            ...group,
+            nodes: group.nodes.filter((nodeType) => nodeType !== "call_subflow"),
+          }))
+          .filter((group) => group.nodes.length > 0)
+      : logicNodeGroups;
+
   return (
     <div className="graph-toolbar" role="toolbar" aria-label="Graph tools">
       <div className="graph-icon-tools" aria-label="Graph edit and view tools">
@@ -135,7 +147,7 @@ export function WorkflowGraphToolbar({
             "Choose a logic node",
             "Add Logic Node",
             "Search logic nodes",
-            logicNodeGroups,
+            visibleLogicNodeGroups,
           )
         }
       >

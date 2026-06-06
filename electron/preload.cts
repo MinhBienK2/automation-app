@@ -27,6 +27,32 @@ async function invokeWorkflow<T>(
 }
 
 const workflowApi: WorkflowElectronBridge = {
+  listProjects: () => invokeWorkflow("listProjects"),
+  createProject: (input) => invokeWorkflow("createProject", input),
+  listProjectEnvironments: (projectId) =>
+    invokeWorkflow("listProjectEnvironments", projectId),
+  createProjectEnvironment: (projectId, input) =>
+    invokeWorkflow("createProjectEnvironment", projectId, input),
+  updateProjectEnvironment: (environmentId, input) =>
+    invokeWorkflow("updateProjectEnvironment", environmentId, input),
+  setWorkflowEnvironment: (workflowId, environmentId) =>
+    invokeWorkflow("setWorkflowEnvironment", workflowId, environmentId),
+  createSubflow: (projectId, input) =>
+    invokeWorkflow("createSubflow", projectId, input),
+  listSubflows: (projectId) =>
+    invokeWorkflow("listSubflows", projectId),
+  getSubflow: (subflowId) =>
+    invokeWorkflow("getSubflow", subflowId),
+  getSubflowGraph: (subflowId) =>
+    invokeWorkflow("getSubflowGraph", subflowId),
+  saveSubflowGraph: (subflowId, graph) =>
+    invokeWorkflow("saveSubflowGraph", subflowId, graph),
+  duplicateSubflow: (subflowId, name) =>
+    invokeWorkflow("duplicateSubflow", subflowId, name),
+  deleteSubflow: (subflowId) =>
+    invokeWorkflow("deleteSubflow", subflowId),
+  getSubflowUsage: (subflowId) =>
+    invokeWorkflow("getSubflowUsage", subflowId),
   listWorkflows: () => invokeWorkflow("listWorkflows"),
   getWorkflow: (id) => invokeWorkflow("getWorkflow", id),
   getWorkflowBrowserConfig: (workflowId) =>
@@ -60,8 +86,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("cleanupOrphanedBrowserProfiles"),
   validateWorkflowRun: (workflowId) =>
     invokeWorkflow("validateWorkflowRun", workflowId),
-  createWorkflow: (name) =>
-    invokeWorkflow("createWorkflow", name),
+  createWorkflow: (name, options) =>
+    invokeWorkflow("createWorkflow", name, options),
   renameWorkflow: (id, name) =>
     invokeWorkflow("renameWorkflow", id, name),
   deleteWorkflow: (id, options) =>

@@ -16,11 +16,22 @@
 
 Frontend and backend must agree on:
 
-- `WorkflowSummary`: `id`, `name`, `step_count`, `created_at`, `updated_at`.
-- `Workflow`: `id`, `name`, `created_at`, `updated_at`.
+- `Project`: `id`, `name`, optional description, default flag, timestamps.
+- `ProjectEnvironment`: project-scoped reusable Browser Launch settings with
+  `id`, `project_id`, `name`, optional description, `is_default`,
+  `browser_launch`, and timestamps.
+- `WorkflowSummary`: `id`, `project_id`, `environment_id`, optional
+  `environment_name`, `name`, `step_count`, `created_at`, `updated_at`.
+- `Workflow`: `id`, `project_id`, `environment_id`, `name`, `created_at`,
+  `updated_at`.
 - `WorkflowDetail`: workflow metadata, while the product UI loads graph authoring data through `get_workflow_graph`.
 - `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `run_policy`, `browser_launch`, `graph_defaults`, and `environment` sections.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
+- `Subflow`: project-scoped reusable graph fragment with `id`, `project_id`,
+  `name`, optional description, `graph`, and timestamps.
+- `SubflowSummary`: subflow list DTO with `used_by_count`.
+- `SubflowUsage`: workflows that reference a subflow through Call Subflow
+  nodes.
 - `GraphNode`: `id`, `node_type`, `label`, `position`, `config`, `ports`, optional `group_id`.
 - `GraphEdge`: `id`, `source_node_id`, `source_port`, `target_node_id`, `target_port`, optional `label`, optional `condition`, optional `delay`.
 - `CompiledWorkflowGraph`: `steps`, where each compiled step carries `node_id`, `label`, and `config`, plus optional `domain_policy` with allowed domains resolved from graph allowlist nodes.
@@ -67,7 +78,10 @@ Frontend and backend must agree on:
   posture, latest observed browser identity evidence, matching run/evidence
   summary, rotation history, sanitized diagnostics, and action availability,
   or a read-only historical identity reference with safe source context.
-- `WorkflowPackage`: product-facing import/export JSON with `kind: "workflow_package"`, `version: 2`, workflow name metadata, `included_sections`, `omitted_fields`, optional `flow`, and optional partial `settings`.
+- `WorkflowPackage`: product-facing import/export JSON with `kind:
+  "workflow_package"`, `version: 2`, workflow name metadata,
+  `included_sections`, `omitted_fields`, optional `flow`, optional partial
+  `settings`, and optional referenced `subflows`.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
 - `RecordingSession`: backend-owned recorder lifecycle DTO with session id,
@@ -87,7 +101,10 @@ Frontend and backend must agree on:
 
 ## Workflow Settings Shape
 
-Workflow Settings are persisted separately from graph JSON:
+Workflow Settings are persisted separately from graph JSON. Browser Launch
+inside Workflow Settings is the saved selected-environment overlay returned to
+legacy callers; workflow execution resolves Browser Launch from the workflow's
+selected Project Environment:
 
 ```text
 {
@@ -184,6 +201,9 @@ Workflow Package v2 is the current user-facing import/export format. It is graph
   included_sections: ["flow", "settings.general"],
   omitted_fields: ["settings.browser_launch.proxy_password"],
   flow: WorkflowGraph | null,
+  subflows: [
+    { id, project_id, name, description, graph }
+  ],
   settings: {
     general,
     run_policy,
@@ -197,6 +217,11 @@ Workflow Package v2 is the current user-facing import/export format. It is graph
 Package export options serialize as `{ include_flow, settings_sections }`, where `settings_sections` contains Workflow Settings section ids. Package import uses the same option shape, always creates a new workflow, and remaps selected settings to the new workflow id.
 
 Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI review point before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
+
+When Flow includes Call Subflow nodes, export includes each same-project
+referenced subflow in `subflows` and adds `subflows` to `included_sections`.
+Import recreates those subflows in the target project and remaps Call Subflow
+`subflow_id` values in the imported graph before saving it.
 
 Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and local `settings.browser_launch.fingerprint_fonts_dir`.
 
@@ -454,13 +479,33 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `repeat_for_each` item name with either a literal item list or a variable-array source.
 - `while` and `repeat_until` conditions plus loop guard settings.
 - `retry` max attempts and delay.
+- `call_subflow` project-local subflow reference, input mapping, and optional
+  output prefix metadata.
 - `wait` duration/condition waits and `random_wait` min/max duration waits.
 - `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `domain_allowlist`, `end_success`, and `end_failure`.
 
-The main graph toolbar exposes beginner-facing authoring groups: New node, Add Action, Add Logic, Add Variable, and Add End.
+The main graph toolbar exposes beginner-facing authoring groups: New node, Add
+Action, Add Logic, Add Variable, and Add End. Workflow graphs include Call
+Subflow in Add Logic under Reuse; subflow graphs hide Call Subflow.
 
-The Electron backend compiler currently emits action, `if`, `switch`, `router`, `random_choice`, `merge`, `repeat_times`, `repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`, loop break/continue, stop, variable, JSON variable, output assertion, domain allowlist, success end, and failure end graph nodes. Graph-native control blocks compile branch ports into nested action configs and then continue through explicit continuation ports. Nested compiled action configs retain their source graph node id/label so runner traces and persisted `run_steps` rows can identify the exact executed branch/body action.
-The compiler can also compile a sub-plan from one selected main-path node when Run from selected is enabled. `run_policy.run_from_selected_mode` chooses whether that sub-plan contains only the selected node (`selected_only`) or the selected node through the downstream main path (`from_selected`). Nodes inside branch/loop/retry/try/fallback bodies are rejected for run-from-selected until nested execution semantics are designed.
+The Electron backend compiler currently emits action, `call_subflow`, `if`,
+`switch`, `router`, `random_choice`, `merge`, `repeat_times`,
+`repeat_for_each`, `while`, `repeat_until`, `retry`, `try_catch`, `fallback`,
+loop break/continue, stop, variable, JSON variable, output assertion, domain
+allowlist, success end, and failure end graph nodes. Graph-native control
+blocks compile branch ports into nested action configs and then continue
+through explicit continuation ports. Call Subflow resolves same-project
+subflows, compiles mapped inputs as variables, and inlines subflow graph steps
+with prefixed ids/labels into the caller plan. Nested compiled action configs
+retain their source graph node id/label so runner traces and persisted
+`run_steps` rows can identify the exact executed branch/body action.
+The compiler can also compile a sub-plan from one selected main-path node when
+Run from selected is enabled. `run_policy.run_from_selected_mode` chooses
+whether that sub-plan contains only the selected node (`selected_only`) or the
+selected node through the downstream main path (`from_selected`). Selected-node
+plans use the same subflow resolver as full workflow plans. Nodes inside
+branch/loop/retry/try/fallback bodies are rejected for run-from-selected until
+nested execution semantics are designed.
 
 Settings prelude compilation is represented in TypeScript. It can prepend Environment initial variables. Browser Launch identity settings are applied by the runner/session manager rather than compiled into graph prelude actions.
 
@@ -469,6 +514,8 @@ Executable frontend/backend ports must agree:
 - `start`: output `out`
 - `end_success` / `end_failure`: input `in`
 - `action`: input `in`, output `out`; `config: null` is a saveable draft marker but blocks validation/compile/run.
+- `call_subflow`: input `in`, output `out`; config stores
+  `{ subflow_id, input_mapping, output_prefix }`.
 - `merge`: input `in`, output `out`; input `in` may receive multiple incoming edges and compiles to an internal no-op step.
 - `router`: input `in`, outputs `case_<id>` for each configured stable-id case, `default`, and `done`.
 - `random_choice`: input `in`, outputs `choice_<id>` for each configured stable-id weighted choice, and `done`.
