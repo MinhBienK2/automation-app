@@ -3,16 +3,15 @@ import { AppSidebar } from "./AppSidebar";
 
 type AppShellProps = {
   children: ReactNode;
-  activeItem: "overview" | "workflows" | "subflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
+  activeItem: "overview" | "projects" | "runs" | "evidence" | "schedules" | "identities" | "settings";
   sidebarCollapsed: boolean;
   onOpenOverview: () => void;
   onOpenEvidence: () => void;
   onOpenIdentities: () => void;
+  onOpenProjects: () => void;
   onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
-  onOpenSubflows: () => void;
-  onOpenWorkflows: () => void;
   onToggleSidebar: () => void;
 };
 
@@ -23,11 +22,10 @@ export function AppShell({
   onOpenOverview,
   onOpenEvidence,
   onOpenIdentities,
+  onOpenProjects,
   onOpenSchedules,
   onOpenRunCenter,
   onOpenSettings,
-  onOpenSubflows,
-  onOpenWorkflows,
   onToggleSidebar,
 }: AppShellProps) {
   return (
@@ -38,11 +36,10 @@ export function AppShell({
         onOpenOverview={onOpenOverview}
         onOpenEvidence={onOpenEvidence}
         onOpenIdentities={onOpenIdentities}
+        onOpenProjects={onOpenProjects}
         onOpenSchedules={onOpenSchedules}
         onOpenRunCenter={onOpenRunCenter}
         onOpenSettings={onOpenSettings}
-        onOpenSubflows={onOpenSubflows}
-        onOpenWorkflows={onOpenWorkflows}
         onToggle={onToggleSidebar}
       />
 

@@ -15,6 +15,7 @@ import {
   workflowDetailScenario,
 } from "./tests/mocks/workflowScenarios";
 import { renderApp } from "./tests/utils/renderApp";
+import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
 
 function diagnosticsFixture() {
   return {
@@ -72,7 +73,13 @@ describe("App settings and graph autosave", () => {
   }
 
   async function openWorkflows() {
-    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await screen.findByRole("tab", { name: "Workflows" });
+  }
+
+  async function openProjectTab(tabName: "Workflows" | "Subflows" | "Settings") {
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await userEvent.click(await screen.findByRole("tab", { name: tabName }));
   }
 
   test("opens settings from the sidebar and persists the autosave preference", async () => {
@@ -80,9 +87,11 @@ describe("App settings and graph autosave", () => {
 
     const { unmount } = renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
 
-    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Project environments" }))
+      .not.toBeInTheDocument();
     const autosaveToggle = screen.getByRole("switch", {
       name: "Autosave graph changes",
     });
@@ -94,13 +103,13 @@ describe("App settings and graph autosave", () => {
     unmount();
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
     expect(
       screen.getByRole("switch", { name: "Autosave graph changes" }),
     ).toHaveAttribute("aria-checked", "false");
   });
 
-  test("shows project environments in settings and creates one", async () => {
+  test("shows project environments in the project settings tab and creates one", async () => {
     const project = {
       id: "project-1",
       name: "Default Project",
@@ -133,11 +142,11 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    await openProjectTab("Settings");
 
     expect(await screen.findByRole("heading", { name: "Project environments" }))
       .toBeInTheDocument();
-    expect(screen.getByText("Project Default Environment")).toBeInTheDocument();
+    expect(screen.getAllByText("Project Default Environment").length).toBeGreaterThan(0);
     expect(screen.getByText("Default")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Create Environment" }));
@@ -152,6 +161,69 @@ describe("App settings and graph autosave", () => {
           name: "Staging Chrome",
           description: null,
         },
+      );
+    });
+  });
+
+  test("edits Project Environment browser launch posture from the project settings tab", async () => {
+    const project = {
+      id: "project-1",
+      name: "Default Project",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const browserLaunch = defaultWorkflowSettings({
+      workflowId: "environment-staging",
+      workflowName: "Staging Chrome",
+      createdAt: "1",
+      updatedAt: "1",
+    }).browser_launch;
+    const stagingEnvironment = {
+      id: "environment-staging",
+      project_id: project.id,
+      name: "Staging Chrome",
+      description: "Shared staging posture",
+      is_default: false,
+      browser_launch: {
+        ...browserLaunch,
+        headless: false,
+      },
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_projects: [project],
+      list_project_environments: [stagingEnvironment],
+      update_project_environment: {
+        ...stagingEnvironment,
+        browser_launch: {
+          ...stagingEnvironment.browser_launch,
+          headless: true,
+        },
+      },
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Open Staging Chrome environment",
+    }));
+    await userEvent.click(screen.getByRole("switch", { name: "Headless browser" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save Environment" }));
+
+    await waitFor(() => {
+      expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
+        "environment-staging",
+        expect.objectContaining({
+          name: "Staging Chrome",
+          description: "Shared staging posture",
+          browser_launch: expect.objectContaining({
+            headless: true,
+          }),
+        }),
       );
     });
   });
@@ -257,7 +329,7 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Workflows" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Projects" })).toBeInTheDocument();
     expect(screen.getByText("Active Runs")).toBeInTheDocument();
     expect(screen.getByText("Succeeded Today")).toBeInTheDocument();
     expect(screen.getByText("Attention Needed")).toBeInTheDocument();
@@ -645,7 +717,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
 
     expect(await screen.findByRole("region", { name: "Environment readiness" })).toHaveTextContent("CloakBrowser");
     expect(screen.getByRole("region", { name: "Environment readiness" })).toHaveTextContent("GeoIP available");
@@ -665,7 +737,7 @@ describe("App settings and graph autosave", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
 
     const shortcuts = await screen.findByRole("region", { name: "Graph shortcuts" });
     expect(within(shortcuts).getByText("Drag empty canvas")).toBeInTheDocument();

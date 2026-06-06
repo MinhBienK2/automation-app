@@ -27,14 +27,16 @@
   .workflow-graph-layout,
   .graph-shortcut-guide,
   .overview-kpi-grid,
-    .overview-grid,
-    .evidence-toolbar,
-    .evidence-workspace,
-    .evidence-grid,
-    .identity-kpi-grid,
-    .identity-workspace,
-    .settings-readiness-grid,
-    .workflow-settings-body,
+  .overview-grid,
+  .evidence-toolbar,
+  .evidence-workspace,
+  .evidence-grid,
+  .identity-kpi-grid,
+  .identity-workspace,
+  .projects-workspace,
+  .settings-environment-workspace,
+  .settings-readiness-grid,
+  .workflow-settings-body,
   .workflow-settings-grid,
   .settings-field-group-grid,
   .workflow-settings-identity-row,
@@ -42,17 +44,18 @@
     grid-template-columns: 1fr;
   }
 
-    .overview-row,
-    .activity-bucket,
-    .evidence-metadata div,
-    .identity-row,
-    .identity-definition-list div,
-    .run-step-summary {
+  .overview-row,
+  .activity-bucket,
+  .evidence-metadata div,
+  .identity-row,
+  .identity-definition-list div,
+  .run-step-summary {
     grid-template-columns: 1fr;
   }
 
   .workflow-settings-section-header,
   .workflow-settings-help-header,
+  .projects-detail-header,
   .run-issue-header,
   .run-issue-item {
     display: grid;

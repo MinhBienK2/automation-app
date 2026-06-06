@@ -20,9 +20,12 @@ Preserve these unless the task explicitly changes them.
 - Overview is the default Mission Control entry point. It shows backend-owned
   durable metrics, live operations, attention, activity, recent evidence
   metadata, and upcoming schedules for the operator's local day.
-- Mission Control sidebar order is Overview, Workflows, Subflows, Runs,
-  Evidence, Schedules, Identities, Settings. Overview is the default first
-  screen.
+- Mission Control sidebar order is Overview, Projects, Runs, Evidence,
+  Schedules, Identities, App Settings. Overview is the default first screen.
+- Projects is the only sidebar entry for workflow authoring inventory. The
+  selected project has Workflows, Subflows, and Settings tabs. Workflows and
+  subflows shown there are scoped to the selected project, and Project
+  Environment management lives in the selected project's Settings tab.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.
@@ -30,7 +33,7 @@ Preserve these unless the task explicitly changes them.
   only broad historical evidence browser; Overview recent evidence opens
   Evidence focused on the selected evidence id, and Runs selected run details
   can open Evidence filtered to that run.
-- Identities is a separate sidebar page after Schedules and before Settings.
+- Identities is a separate sidebar page after Schedules and before App Settings.
   It lists workflow-owned current browser identities, shows managed identity
   posture/diagnostics/run context, and opens read-only historical references
   for old identity ids from evidence or rotation history.
@@ -78,13 +81,13 @@ Preserve these unless the task explicitly changes them.
   retained session blocks the backend command.
 - Workflow Settings section help exposes a compact English/Vietnamese language toggle and uses nested collapsible sections for best-fit guidance, non-goals, precedence, field explanations, examples, related graph actions, common mistakes, and safety notes when present. Detailed field, example, related-action, and mistake items are also individually collapsible. It explains each section field in enough detail for an operator to decide what the field controls and when to use it.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
-- Graph autosave is an app-level setting. It is enabled by default and can be changed from Settings.
-- App Settings includes current app-level preferences, Project Environment
-  management, environment readiness diagnostics, guarded local maintenance
-  commands, and graph shortcut guidance. It does not introduce notification or
-  theme systems. Diagnostics display CloakBrowser, GeoIP, headed display, font,
-  profile-count, and smoke readiness without raw binary/cache/profile/font
-  paths.
+- Graph autosave is an app-level setting. It is enabled by default and can be changed from App Settings.
+- App Settings includes current app-level graph autosave preferences,
+  environment readiness diagnostics, guarded local maintenance commands, and
+  graph shortcut guidance. It does not manage Project Environments and does not
+  introduce notification or theme systems. Diagnostics display CloakBrowser,
+  GeoIP, headed display, font, profile-count, and smoke readiness without raw
+  binary/cache/profile/font paths.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
@@ -115,9 +118,9 @@ Preserve these unless the task explicitly changes them.
 - Scroll authoring exposes Page Scroll, Scroll To Element, and Scroll Until Element Visible labels while preserving the serialized `page`, `into_view`, and `until_element_visible` modes. Page Scroll shows Scroll style, Direction, and Pixels; Scroll style defaults to Human-like and can switch to Smooth single wheel. Scroll To Element supports Use locator or Use Find Element ref, optional Iframe XPath, and Timeout ms defaulting to `60000`; Scroll Until Element Visible shows locator target, timeout, Direction, and Pixels for the repeated page-scroll search gesture without low-level target constraint fields.
 - Browser identity belongs in Workflow Settings Browser Launch. Launch-time identity settings are not represented as in-run action nodes in the current workflow contract.
 - Subflows are reusable graph fragments, not standalone runnable scenarios.
-  They are reachable from the Subflows sidebar page, can be created, opened,
-  saved, duplicated, and deleted, and show usage warnings when referenced by
-  workflows. Deleting a referenced subflow is blocked.
+  They are reachable from the selected project's Subflows tab, can be created,
+  opened, saved, duplicated, and deleted, and show usage warnings when
+  referenced by workflows. Deleting a referenced subflow is blocked.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP
   subflows cannot call other subflows.
@@ -144,7 +147,7 @@ Preserve these unless the task explicitly changes them.
 - Workflow list does not expose raw `updated_at` values; graph editing state belongs in the detail screen.
 - Workflow deletion uses an in-app confirmation dialog, not the browser-native confirm prompt.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
-- Settings is a separate app screen reachable from the sidebar.
+- App Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
 - Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
 - Runs can render one selected persisted run detail opened from Overview or
@@ -160,7 +163,7 @@ Preserve these unless the task explicitly changes them.
   sanitized Identity Lab DTOs and does not expose raw profile paths, browser
   storage, cookies, tokens, proxy credentials, absolute local font/binary paths,
   or raw arbitrary run outputs.
-- Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
+- App Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Mission Control must remain usable at compact desktop widths such as

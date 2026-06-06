@@ -48,7 +48,7 @@
 - Graph canvas nodes keep the operator-edited node name as the primary label and show the underlying action or graph node kind as secondary metadata. Action nodes also show compact configuration context when available, such as wait duration, random wait range, URL, key, hotkey, or target locator, so renamed nodes remain identifiable without opening the inspector.
 - Users can connect edges through explicit source/target ports with left-button drag, hover graph ports for 1 second to read one custom tooltip explaining what each port means and which direction to connect, reconnect ports to replace prior source/target links, click React Flow canvas edges to select/delete links, edit a selected link's none/fixed/random wait in the inspector drawer, use the link context menu for link-scoped actions, read edge direction through arrowed React Flow links with execution-order labels on the edge, create new links with the workflow's current Graph link wait copied onto the edge, delete edges, drag nodes by holding the node body, box-select graph items by dragging empty canvas space, pan the canvas by holding Space while dragging, the pan toolbar mode, or viewport controls, duplicate/delete/copy nodes from the node context menu, open detailed node help from the inspector drawer or node context menu, rename any selected non-start node through the inspector drawer, change action node type through the inspector drawer's searchable action dropdown, edit action config, and edit structured config for branch, loop, retry, variable, assertion, domain allowlist, stop, and failure-end nodes.
 - The graph editor supports app-level multi-selection, bulk duplicate, bulk delete, copy, paste, undo, redo, and shortcuts for graph edit commands. Bulk duplicate copies selected non-start nodes and internal links only; copy/paste uses an editor-local clipboard and creates fresh ids. Undo/redo tracks graph snapshots only, not run state, validation results, settings, or workflow metadata.
-- The graph toolbar exposes a Shortcuts dialog, and Settings includes the same graph shortcut guide for navigation, selection, editing, run, and save controls.
+- The graph toolbar exposes a Shortcuts dialog, and App Settings includes the same graph shortcut guide for navigation, selection, editing, run, and save controls.
 - Configured action node help reuses the same decision-guide action help content used by action/step forms. Graph-native node help uses the same popup structure and explains node purpose, expected use, minimum setup, port semantics, workflow examples, related nodes, and safety-sensitive guidance when relevant. Help popups use nested collapsible sections so readers can keep parent topics open and expand child groups, individual fields, options, outputs, examples, and related-node details only when needed.
 - Set Variables edits typed rows in one node. The Set Variables editor stays tabular and scrolls horizontally when the inspector is too narrow. Set JSON Variables accepts a JSON object and flattens nested object keys into dot-path runtime variables while preserving arrays whole.
 - Template-capable text fields expose an Insert variable picker. The picker includes known variables from Set Variables, Set JSON Variables, and output-producing actions when available. Inserted `{{variable.path}}` tokens remain editable and are highlighted in the preview.
@@ -60,7 +60,7 @@
 - Workflow Settings Run Policy keeps maximum duration, browser retention, Allow Run JavaScript, and Run from selected enablement/scope editable. Batch defaults remain visible, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
 - Workflow Settings Graph owns the workflow detail Live Run visibility toggle, the Follow current default when Live Run is enabled, and the default duration-only wait copied onto newly created graph links. New settings default Live Run on and Follow current off. Changing the link wait does not rewrite existing graph links.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
-- Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from Settings and then use manual Save.
+- Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from App Settings and then use manual Save.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
 - Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
@@ -69,7 +69,7 @@
 
 ## Subflow Authoring
 
-- The Subflows sidebar page lists reusable subflows for the default project
+- The selected project's Subflows tab lists reusable subflows for that project
   with description, usage count, open, duplicate, and delete actions.
 - Creating a subflow persists a saved graph fragment with a start node and the
   same graph DTO shape as workflows.

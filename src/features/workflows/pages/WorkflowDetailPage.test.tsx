@@ -31,7 +31,8 @@ describe("Workflow detail integration", () => {
   }
 
   async function openWorkflows() {
-    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await screen.findByRole("tab", { name: "Workflows" });
   }
 
   async function openWorkflowDetails() {

@@ -4,6 +4,7 @@ import type {
   GraphValidationIssue,
   GraphEdgeDelay,
   RunState,
+  SubflowSummary,
   WorkflowGraph,
   WorkflowDetail,
 } from "../../../types/workflow";
@@ -21,12 +22,14 @@ import {
 
 type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
+  environmentName?: string | null;
   isRunning: boolean;
   appError: string;
   graphSaveStatus: string;
   runState: RunState;
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
+  subflowOptions?: SubflowSummary[];
   graphIssuesNeedRecheck: boolean;
   defaultEdgeDelay?: GraphEdgeDelay | null;
   liveRunEnabled: boolean;
@@ -47,12 +50,14 @@ type WorkflowDetailPageProps = {
 
 export function WorkflowDetailPage({
   detail,
+  environmentName = null,
   isRunning,
   appError,
   graphSaveStatus,
   runState,
   workflowGraph,
   graphIssues,
+  subflowOptions = [],
   graphIssuesNeedRecheck,
   defaultEdgeDelay,
   liveRunEnabled,
@@ -148,7 +153,10 @@ export function WorkflowDetailPage({
         ariaLabel="Workflow detail header"
         backLabel="Back to Workflows"
         eyebrow="Workflow Detail"
-        meta={[graphSaveStatus]}
+        meta={[
+          graphSaveStatus,
+          ...(environmentName ? [`Environment: ${environmentName}`] : []),
+        ]}
         status={
           <RunStatusBar
             state={runState}
@@ -262,6 +270,7 @@ export function WorkflowDetailPage({
             graph={workflowGraph}
             runState={runState}
             validationIssues={graphIssues}
+            subflowOptions={subflowOptions}
             selectionRequest={selectionRequest}
             defaultEdgeDelay={defaultEdgeDelay}
             onChange={onGraphChange}

@@ -34,8 +34,9 @@ Mission Control is an Electron desktop app for building and running browser auto
   evidence, matching run/evidence summaries, rotation history, sanitized
   diagnostics, and read-only historical identity references.
 - Mission Control navigation is a typed in-memory target contract across
-  Overview, Workflows, Subflows, Runs, Evidence, Schedules, Identities, and
-  graph issues.
+  Overview, Projects, Runs, Evidence, Schedules, Identities, App Settings, and
+  graph issues. The Projects workspace contains project-scoped Workflows,
+  Subflows, and Settings tabs.
   Targets carry ids and optional focus metadata, while stale durable targets
   produce visible unavailable states instead of falling back silently.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.
@@ -54,7 +55,7 @@ Mission Control is an Electron desktop app for building and running browser auto
   paths that can replay through the normal `upload_file` action.
 - The visual graph editor is the primary UI for graph logic. It can add/connect/delete nodes through React Flow, edit action and structured graph configs, validate graph issues, run graphs, and show run progress through canvas node state. Graph-native nodes are the user-facing way to express control flow; backend compilation maps them to internal `ActionConfig` control variants.
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
-- Graph autosave is an app-level editing preference controlled from Settings.
+- Graph autosave is an app-level editing preference controlled from App Settings.
 - Workflow Settings is the per-workflow configuration aggregate for run policy,
   graph authoring defaults, selected-environment browser launch overlay, and
   initial environment variables.
@@ -85,19 +86,22 @@ Mission Control is an Electron desktop app for building and running browser auto
 
 Users can:
 
-- Create, rename, open, and delete workflows.
+- Create and select projects.
+- Create, rename, open, and delete workflows inside a selected project.
 - Create workflows in the default project with the project default environment,
   an existing project environment, or a new isolated environment.
-- Create and inspect Project Environments from Settings.
+- Create and inspect Project Environments from the selected project's Settings
+  tab.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
-- Turn graph autosave on or off from Settings.
+- Turn graph autosave on or off from App Settings.
 - Run a full workflow.
 - Test a selected step with visible progress.
 - Stop an active run, including a selected run from Runs when multiple isolated workflows are active.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
-- Create, open, save, duplicate, and delete reusable subflows from the Subflows
-  workspace. Deletion is blocked when a subflow is referenced by workflows.
+- Create, open, save, duplicate, and delete reusable subflows from the selected
+  project's Subflows tab. Deletion is blocked when a subflow is referenced by
+  workflows.
 - Add Call Subflow nodes to workflow graphs, map inputs into the subflow, and
   inspect usage warnings before saving subflow changes.
 - Configure the workflow's browser identity and launch behavior before running it.
@@ -148,15 +152,17 @@ Users can:
   active retained session without deleting profile data, reset a guarded
   workflow identity through the existing backend rotation command, and navigate
   to related Evidence, Runs, or Workflow Settings.
-- Open Settings to inspect sanitized environment readiness, trigger a guarded
-  CloakBrowser binary install/check, clean up orphaned inactive browser
-  profiles, and manage Project Environments.
+- Open App Settings to inspect sanitized environment readiness, trigger a
+  guarded CloakBrowser binary install/check, clean up orphaned inactive browser
+  profiles, control graph autosave, and view graph shortcut guidance.
 
 ## Current Source Files
 
 - Frontend types: `src/types/workflow.ts`
 - Shared persona catalog: `src/lib/personaCatalog.ts`
 - UI orchestration: `src/App.tsx`
+- Project workspace: `src/features/projects/pages/ProjectsPage.tsx`,
+  `src/features/projects/components/ProjectEnvironmentSettings.tsx`
 - Subflow pages: `src/features/workflows/pages/SubflowListPage.tsx`,
   `src/features/workflows/pages/SubflowDetailPage.tsx`
 - Electron bridge wrappers: `src/lib/workflowApi.ts`

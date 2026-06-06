@@ -5,6 +5,7 @@ import type {
   GraphNode,
   GraphValidationIssue,
   RunState,
+  SubflowSummary,
   WorkflowGraph,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
@@ -30,6 +31,7 @@ type WorkflowGraphInspectorProps = {
   selectionSummary: SelectionSummary | null;
   selectedEdge: GraphEdge | null;
   selectedNode: GraphNode | null;
+  subflowOptions?: SubflowSummary[];
   onCopySelection: () => void;
   onDeleteSelection: () => void;
   onDeleteSelectedEdge: () => void;
@@ -50,6 +52,7 @@ export function WorkflowGraphInspector({
   selectionSummary,
   selectedEdge,
   selectedNode,
+  subflowOptions = [],
   onCopySelection,
   onDeleteSelection,
   onDeleteSelectedEdge,
@@ -196,6 +199,7 @@ export function WorkflowGraphInspector({
           <NodeConfigFields
             node={selectedNode}
             onChange={onUpdateNode}
+            subflowOptions={subflowOptions}
             variableOptions={variableOptions}
           />
           <Button type="button" variant="secondary" onClick={onFocusSelectedNode}>

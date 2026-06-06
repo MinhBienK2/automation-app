@@ -17,9 +17,15 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   identity workspace with list/detail posture, latest observed evidence,
   sanitized diagnostics, historical identity references, retained-session close,
   guarded reset, and navigation to Evidence/Runs/Workflow Settings.
-- `src/features/settings/pages/SettingsPage.tsx`: app-level settings,
-  Project Environment management, graph autosave, environment readiness
-  diagnostics, guarded maintenance commands, and graph shortcut guidance.
+- `src/features/projects/pages/ProjectsPage.tsx`: project workspace shell with
+  selected-project state, Workflows/Subflows/Settings tabs, and project
+  creation.
+- `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
+  project Project Environment list/create/edit surface, including Browser
+  Launch settings reuse.
+- `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
+  autosave, environment readiness diagnostics, guarded maintenance commands,
+  and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen
@@ -70,8 +76,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,
   supports manual refresh, and navigates returned workflow/run/schedule
-  references into existing Workflows, Runs, Schedules, and focused Evidence
-  destinations.
+  references into existing Projects/Workflows, Runs, Schedules, and focused
+  Evidence destinations.
 - The app shell owns a typed in-memory Mission Control navigation target
   router. Sidebar navigation, Overview cards, Evidence links, Identity links,
   schedule history links, and selected run details route through that contract
@@ -79,6 +85,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Missing durable run or schedule targets render explicit stale-target states.
   Opening workflow detail also collapses the sidebar to the icon rail so the
   graph workspace starts with more horizontal room.
+- Projects is the sidebar entry for project-scoped authoring inventory. The
+  Projects workspace owns selected-project state and routes its Workflows,
+  Subflows, and Settings tabs to the existing workflow list, subflow list, and
+  Project Environment settings surfaces.
 - The app shell no longer renders a top command/search header or Alerts
   shortcut. Cross-workspace movement stays in the sidebar and explicit in-page
   links.
@@ -117,10 +127,10 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Runs owns the cross-workflow session monitor. It lists run snapshots, shows source/status/current step/error context, calls `stopRun(runId)` for selected active runs, and can render one bounded persisted-run detail loaded from an Overview navigation target.
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
-- Subflows navigation state in the app shell/sidebar, plus list/detail state,
-  create/duplicate/delete command state, graph save status, and usage-warning
-  presentation. Subflow graph editors run in subflow mode, which hides Call
-  Subflow from Add Logic and does not expose run controls.
+- Subflows navigation state inside the selected project's Subflows tab, plus
+  list/detail state, create/duplicate/delete command state, graph save status,
+  and usage-warning presentation. Subflow graph editors run in subflow mode,
+  which hides Call Subflow from Add Logic and does not expose run controls.
 - Selected-node label editing stays in the inspector. Connections and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing belongs in node Help and graph port hover tooltips, not a separate inspector panel.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter so the canvas component renders stable primary name, secondary kind, and compact meta strings without parsing action configs itself.
 - Canvas port tooltip copy for every graph node type. Tooltip text explains input vs output direction plus branch, continuation, terminal, retry, merge, loop, random-choice, and recovery semantics before users create a link. Port handles use custom canvas tooltip rendering without native `title` tooltips, delay display by 1 second, and raise the hovered React Flow node wrapper so the tooltip stays above neighboring nodes.
@@ -140,11 +150,12 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   controls.
 - Command invocation through `workflowApi.ts` and `window.workflowApi`.
 - UI-only labels, summaries, grouping, and failure suggestions.
-- Settings navigation state in the app shell/sidebar, plus Project Environment
-  list/create state, app-level diagnostics refresh, CloakBrowser install/check,
-  and orphaned inactive profile cleanup command state. Settings displays
-  environment readiness from sanitized diagnostics and does not expose raw
-  binary/cache/profile/font paths.
+- App Settings navigation state in the app shell/sidebar, plus app-level graph
+  autosave, diagnostics refresh, CloakBrowser install/check, and orphaned
+  inactive profile cleanup command state. App Settings displays environment
+  readiness from sanitized diagnostics and does not expose raw
+  binary/cache/profile/font paths. Project Environment list/create/edit state
+  belongs to the selected project's Settings tab.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview/Runs-to-Evidence handoff state.

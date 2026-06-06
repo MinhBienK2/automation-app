@@ -556,7 +556,7 @@ function RunPolicySettingsSection({
   );
 }
 
-function BrowserLaunchSettingsSection({
+export function BrowserLaunchSettingsSection({
   value,
   onChange,
   onResetBrowserIdentity,
@@ -583,7 +583,7 @@ function BrowserLaunchSettingsSection({
     <div className="settings-form-grid">
       <SettingsFieldGroup
         title="Session & identity"
-        description="Persistent storage, browser identity, and operator controls for this workflow."
+        description="Persistent storage, browser identity, and operator controls for this launch environment."
       >
         <SwitchField
           checked={persistent}
@@ -617,16 +617,17 @@ function BrowserLaunchSettingsSection({
             onChange={(event) => onChange({ ...value, fingerprint_seed: event.currentTarget.value.trim() })}
           />
         </label>
-        <div className="settings-field-group-actions">
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={!onResetBrowserIdentity}
-            onClick={() => setResetIdentityOpen(true)}
-          >
-            Reset identity
-          </Button>
-        </div>
+        {onResetBrowserIdentity ? (
+          <div className="settings-field-group-actions">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setResetIdentityOpen(true)}
+            >
+              Reset identity
+            </Button>
+          </div>
+        ) : null}
         <Dialog open={resetIdentityOpen} onOpenChange={setResetIdentityOpen}>
           <DialogContent>
             <DialogHeader>

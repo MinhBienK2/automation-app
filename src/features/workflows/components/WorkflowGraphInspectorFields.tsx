@@ -6,6 +6,7 @@ import type {
   GraphPort,
   RouterGraphCase,
   RouterGraphConfig,
+  SubflowSummary,
   WorkflowCondition,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
@@ -85,12 +86,14 @@ type NodeConfigFieldsProps = {
   node: GraphNode;
   onChange: (node: GraphNode) => void;
   variableOptions?: VariableOption[];
+  subflowOptions?: SubflowSummary[];
 };
 
 export function NodeConfigFields({
   node,
   onChange,
   variableOptions,
+  subflowOptions = [],
 }: NodeConfigFieldsProps) {
   function updateConfig(config: unknown) {
     onChange({ ...node, config });
@@ -768,20 +771,51 @@ export function NodeConfigFields({
       );
     case "call_subflow": {
       const config = callSubflowConfig(node.config);
+      const selectedSubflow = subflowOptions.find(
+        (subflow) => subflow.id === config.subflow_id,
+      );
       return (
         <div className="graph-config-fields">
-          <Label>
-            Subflow id
-            <Input
-              value={config.subflow_id}
-              onChange={(event) =>
-                updateConfig({
-                  ...config,
-                  subflow_id: event.currentTarget.value,
-                })
-              }
-            />
-          </Label>
+          {subflowOptions.length > 0 ? (
+            <Label>
+              Subflow
+              <Select
+                value={config.subflow_id}
+                onChange={(event) =>
+                  updateConfig({
+                    ...config,
+                    subflow_id: event.currentTarget.value,
+                  })
+                }
+              >
+                <option value="">Select a subflow</option>
+                {subflowOptions.map((subflow) => (
+                  <option key={subflow.id} value={subflow.id}>
+                    {subflow.name}
+                  </option>
+                ))}
+              </Select>
+            </Label>
+          ) : (
+            <Label>
+              Subflow id
+              <Input
+                value={config.subflow_id}
+                onChange={(event) =>
+                  updateConfig({
+                    ...config,
+                    subflow_id: event.currentTarget.value,
+                  })
+                }
+              />
+            </Label>
+          )}
+          {selectedSubflow ? (
+            <p className="muted">
+              Used by {selectedSubflow.used_by_count}{" "}
+              {selectedSubflow.used_by_count === 1 ? "workflow" : "workflows"}
+            </p>
+          ) : null}
           <Label>
             Input mapping
             <Textarea

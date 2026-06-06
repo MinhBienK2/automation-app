@@ -18,6 +18,11 @@ describe("Subflow list integration", () => {
     resetWorkflowBridge();
   });
 
+  async function openSubflows() {
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await userEvent.click(await screen.findByRole("tab", { name: "Subflows" }));
+  }
+
   test("lists project subflows and duplicates one from the sidebar route", async () => {
     const subflow: SubflowSummary = {
       id: "subflow-login",
@@ -37,7 +42,7 @@ describe("Subflow list integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Subflows" }));
+    await openSubflows();
 
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
     const row = (await screen.findByText("Login Subflow")).closest("[data-slot='card']");
@@ -85,7 +90,7 @@ describe("Subflow list integration", () => {
 
     renderApp();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Subflows" }));
+    await openSubflows();
     const row = (await screen.findByText("Login Subflow")).closest("[data-slot='card']");
     await userEvent.click(
       within(row as HTMLElement).getByRole("button", { name: "Open Login Subflow" }),

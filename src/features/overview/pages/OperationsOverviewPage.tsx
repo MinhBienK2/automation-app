@@ -49,7 +49,7 @@ export function OperationsOverviewPage({
             Refresh Overview
           </Button>
           <Button type="button" onClick={onOpenWorkflows}>
-            Open Workflows
+            Open Projects
           </Button>
         </div>
       </header>

@@ -55,7 +55,7 @@ Read: `domain/product-model.md`, `domain/workflow-lifecycle.md`,
 `contracts/run-state.md`; also read `DESIGN.md` before layout or styling
 changes.
 
-Verify: `src/App.tsx`, `src/features/settings/`,
+Verify: `src/App.tsx`, `src/features/projects/`, `src/features/settings/`,
 `src/features/workflows/pages/WorkflowListPage.tsx`,
 `src/features/workflows/pages/SubflowListPage.tsx`,
 `src/features/workflows/pages/SubflowDetailPage.tsx`,
@@ -164,7 +164,7 @@ Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
 `contracts/workflow-types.md`; also read `DESIGN.md` before layout or styling
 changes.
 
-Verify: `src/App.tsx`, `src/layouts/`, `src/features/overview/`,
+Verify: `src/App.tsx`, `src/layouts/`, `src/features/projects/`, `src/features/overview/`,
 `src/features/evidence/`, `src/features/identities/`, `src/features/runs/`,
 `src/features/schedules/`, `src/features/settings/`, `src/features/workflows/`,
 `src/types/workflow.ts`, `electron/backend/operations/operationsRepository.ts`

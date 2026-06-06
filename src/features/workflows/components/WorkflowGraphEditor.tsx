@@ -28,6 +28,7 @@ import type {
   GraphPort,
   GraphValidationIssue,
   RunState,
+  SubflowSummary,
   WorkflowGraph,
 } from "../../../types/workflow";
 import {
@@ -79,6 +80,7 @@ type WorkflowGraphEditorProps = {
   graphKind?: "workflow" | "subflow";
   runState: RunState;
   validationIssues: GraphValidationIssue[];
+  subflowOptions?: SubflowSummary[];
   selectionRequest?: GraphSelectionRequest | null;
   onChange: (graph: WorkflowGraph) => void;
   onRunGraph?: () => void;
@@ -249,6 +251,7 @@ export function WorkflowGraphEditor({
   graphKind = "workflow",
   runState,
   validationIssues,
+  subflowOptions = [],
   selectionRequest,
   defaultEdgeDelay = null,
   onChange,
@@ -1173,6 +1176,7 @@ export function WorkflowGraphEditor({
               selectionSummary={selectionSummary}
               selectedEdge={selectedEdge}
               selectedNode={selectedNode}
+              subflowOptions={subflowOptions}
               onCopySelection={copySelection}
               onDeleteSelection={deleteSelection}
               onDeleteSelectedEdge={deleteSelectedEdge}

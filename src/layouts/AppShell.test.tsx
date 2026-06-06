@@ -42,10 +42,12 @@ describe("App shell", () => {
     const logo = screen.getByRole("img", { name: "Mission Control logo" });
     expect(logo.getAttribute("src")).toContain("app-logo.svg");
     expect(screen.getByText("Mission Control")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Workflows" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Projects" })).toHaveAttribute(
       "data-slot",
       "button",
     );
+    expect(screen.queryByRole("button", { name: "Workflows" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Subflows" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Runs" })).toHaveAttribute(
       "data-slot",
       "button",
@@ -55,13 +57,12 @@ describe("App shell", () => {
       .map((item) => item.textContent);
     expect(navItems).toEqual([
       "Overview",
-      "Workflows",
-      "Subflows",
+      "Projects",
       "Runs",
       "Evidence",
       "Schedules",
       "Identities",
-      "Settings",
+      "App Settings",
     ]);
     expect(screen.queryByRole("button", { name: "Run Center" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Identities" })).toBeInTheDocument();

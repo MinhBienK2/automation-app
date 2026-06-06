@@ -34,7 +34,8 @@ describe("Workflow list integration", () => {
   }
 
   async function openWorkflows() {
-    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await screen.findByRole("tab", { name: "Workflows" });
   }
 
   test("hides step counts and raw updated timestamps from workflow cards", async () => {
@@ -136,6 +137,31 @@ describe("Workflow list integration", () => {
     });
     expect(await screen.findByRole("button", { name: "Back to Workflows" }))
       .toBeInTheDocument();
+  });
+
+  test("shows the selected project environment in the workflow detail header", async () => {
+    const environmentAwareWorkflow = {
+      ...workflow,
+      project_id: "project-1",
+      environment_id: "environment-staging",
+      environment_name: "Staging Chrome",
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      list_workflows: [environmentAwareWorkflow],
+      get_workflow: {
+        workflow: environmentAwareWorkflow,
+        steps: [],
+      },
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+
+    const header = await screen.findByRole("region", { name: "Workflow detail header" });
+    expect(within(header).getByText("Environment: Staging Chrome")).toBeInTheDocument();
   });
 
   test("records a workflow from the list and saves a reviewed draft", async () => {

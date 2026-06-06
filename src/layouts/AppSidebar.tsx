@@ -1,7 +1,7 @@
 import { Button } from "../components/ui/button";
-import { Activity, CalendarClock, Files, Fingerprint, Gauge, GitBranch, ListTree, Settings } from "lucide-react";
+import { Activity, CalendarClock, Files, Fingerprint, Folder, Gauge, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "overview" | "workflows" | "subflows" | "runs" | "evidence" | "schedules" | "identities" | "settings";
+type AppSidebarActiveItem = "overview" | "projects" | "runs" | "evidence" | "schedules" | "identities" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
@@ -9,11 +9,10 @@ type AppSidebarProps = {
   onOpenOverview: () => void;
   onOpenEvidence: () => void;
   onOpenIdentities: () => void;
+  onOpenProjects: () => void;
   onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
-  onOpenSubflows: () => void;
-  onOpenWorkflows: () => void;
   onToggle: () => void;
 };
 
@@ -57,11 +56,10 @@ export function AppSidebar({
   onOpenOverview,
   onOpenEvidence,
   onOpenIdentities,
+  onOpenProjects,
   onOpenRunCenter,
   onOpenSchedules,
   onOpenSettings,
-  onOpenSubflows,
-  onOpenWorkflows,
   onToggle,
 }: AppSidebarProps) {
   return (
@@ -86,29 +84,16 @@ export function AppSidebar({
         </Button>
         <Button
           className={
-            activeItem === "workflows"
+            activeItem === "projects"
               ? "sidebar-nav-item sidebar-nav-item-active"
               : "sidebar-nav-item"
           }
           variant="secondary"
           type="button"
-          onClick={onOpenWorkflows}
+          onClick={onOpenProjects}
         >
-          <ListTree aria-hidden="true" className="sidebar-item-icon" />
-          <span>Workflows</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "subflows"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenSubflows}
-        >
-          <GitBranch aria-hidden="true" className="sidebar-item-icon" />
-          <span>Subflows</span>
+          <Folder aria-hidden="true" className="sidebar-item-icon" />
+          <span>Projects</span>
         </Button>
         <Button
           className={
@@ -173,7 +158,7 @@ export function AppSidebar({
           onClick={onOpenSettings}
         >
           <Settings aria-hidden="true" className="sidebar-item-icon" />
-          <span>Settings</span>
+          <span>App Settings</span>
         </Button>
       </nav>
       <Button

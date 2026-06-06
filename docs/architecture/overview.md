@@ -70,9 +70,9 @@ workflow and identity snapshot, returns read-only historical references for old
 identity ids, and sanitizes diagnostics before renderer display.
 The renderer owns cross-workspace Mission Control routing only as typed
 in-memory navigation targets. Those targets connect sidebar navigation,
-Overview, Evidence, Identity Lab, Runs, Schedules, Workflows, and graph issue
-focus without creating a persisted navigation table or exposing raw backend
-payloads.
+Overview, Projects, Evidence, Identity Lab, Runs, Schedules, Workflows inside
+Projects, and graph issue focus without creating a persisted navigation table
+or exposing raw backend payloads.
 
 ## Boundaries
 
