@@ -322,7 +322,7 @@ describe("ActionConfigEditor", () => {
     expect(screen.getByLabelText("Timeout ms")).toBeInTheDocument();
   });
 
-  test("Drag and Drop editor exposes destination position controls", async () => {
+  test("Drag and Drop editor groups source and drop setup fields", async () => {
     const onChange = vi.fn();
     const config: ActionConfig = {
       type: "drag_and_drop",
@@ -348,12 +348,23 @@ describe("ActionConfigEditor", () => {
 
     render(<Harness />);
 
-    expect(screen.getByLabelText("Destination position")).toHaveValue("percent");
-    expect(screen.getByLabelText("X percent")).toHaveValue(82);
-    expect(screen.getByLabelText("Y percent")).toHaveValue(50);
+    const dragSource = screen.getByRole("group", { name: "Drag source" });
+    const dropSetup = screen.getByRole("group", { name: "Drop setup" });
+    const dropTarget = within(dropSetup).getByRole("group", { name: "Drop target" });
+    const dropPoint = within(dropSetup).getByRole("group", { name: "Drop point" });
 
-    await userEvent.clear(screen.getByLabelText("X percent"));
-    await userEvent.type(screen.getByLabelText("X percent"), "75");
+    expect(within(dragSource).getByLabelText("Source locator type")).toHaveValue("test_id");
+    expect(within(dragSource).getByLabelText("Source locator")).toHaveValue("volume-thumb");
+    expect(within(dragSource).queryByLabelText("Source visibility")).not.toBeInTheDocument();
+    expect(within(dropTarget).getByLabelText("Target locator type")).toHaveValue("test_id");
+    expect(within(dropTarget).getByLabelText("Target locator")).toHaveValue("volume-track");
+    expect(within(dropTarget).queryByLabelText("Target visibility")).not.toBeInTheDocument();
+    expect(within(dropPoint).getByLabelText("Destination position")).toHaveValue("percent");
+    expect(within(dropPoint).getByLabelText("X percent")).toHaveValue(82);
+    expect(within(dropPoint).getByLabelText("Y percent")).toHaveValue(50);
+
+    await userEvent.clear(within(dropPoint).getByLabelText("X percent"));
+    await userEvent.type(within(dropPoint).getByLabelText("X percent"), "75");
 
     expect(onChange).toHaveBeenLastCalledWith({
       type: "drag_and_drop",

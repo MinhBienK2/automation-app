@@ -87,17 +87,29 @@ export function FormActionFields({
     case "drag_and_drop":
       return (
         <>
-          <StructuredTargetFields
-            config={config}
-            onChange={onChange}
-            targetField="source_target"
-          />
-          <StructuredTargetFields
-            config={config}
-            onChange={onChange}
-            targetField="target_target"
-          />
-          <DragTargetPositionFields config={config} onChange={onChange} />
+          <ActionConfigFieldGroup title="Drag source">
+            <StructuredTargetFields
+              config={config}
+              onChange={onChange}
+              targetField="source_target"
+              labelPrefix="Source"
+              showConstraints={false}
+            />
+          </ActionConfigFieldGroup>
+          <ActionConfigFieldGroup title="Drop setup">
+            <ActionConfigFieldGroup title="Drop target" nested>
+              <StructuredTargetFields
+                config={config}
+                onChange={onChange}
+                targetField="target_target"
+                labelPrefix="Target"
+                showConstraints={false}
+              />
+            </ActionConfigFieldGroup>
+            <ActionConfigFieldGroup title="Drop point" nested>
+              <DragTargetPositionFields config={config} onChange={onChange} />
+            </ActionConfigFieldGroup>
+          </ActionConfigFieldGroup>
         </>
       );
     case "type_sequence":
@@ -207,6 +219,29 @@ export function FormActionFields({
     default:
       return null;
   }
+}
+
+function ActionConfigFieldGroup({
+  title,
+  nested = false,
+  children,
+}: {
+  title: string;
+  nested?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset
+      className={
+        nested
+          ? "action-config-field-group action-config-field-group-nested"
+          : "action-config-field-group"
+      }
+    >
+      <legend>{title}</legend>
+      <div className="action-config-field-group-grid">{children}</div>
+    </fieldset>
+  );
 }
 
 function DragTargetPositionFields({

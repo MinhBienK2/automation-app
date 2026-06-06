@@ -588,30 +588,32 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
       summary: "Kéo một element nguồn và thả vào element đích.",
       useWhen: ["Dùng để sắp xếp card, kéo item vào vùng drop, hoặc thao tác UI dạng kanban."],
       fields: [
-        { name: "Source XPath", description: "XPath của element cần kéo." },
-        { name: "Target XPath", description: "XPath của vùng hoặc element đích để thả." },
+        { name: "Source locator", description: "Locator của element cần kéo." },
+        { name: "Target locator", description: "Locator của vùng hoặc element đích để thả." },
         { name: "Destination position", description: "Vị trí thả trong target: tâm target, phần trăm bên trong target, hoặc offset pixel từ góc trái trên của target." },
-        { name: "Iframe XPath", description: iframeField.vi },
-        { name: "Wait until", description: waitUntilField.vi },
-        { name: "Timeout ms", description: timeoutField.vi },
+        { name: "X percent", description: "Tọa độ ngang trong target khi Destination position là Percent inside target." },
+        { name: "Y percent", description: "Tọa độ dọc trong target khi Destination position là Percent inside target." },
+        { name: "X offset px", description: "Số pixel ngang tính từ góc trái trên của target khi dùng Pixel offset." },
+        { name: "Y offset px", description: "Số pixel dọc tính từ góc trái trên của target khi dùng Pixel offset." },
       ],
-      examples: ["Source XPath: //*[@id='card-1'], Target XPath: //*[@id='done-lane']"],
-      commonMistakes: ["XPath nguồn và đích phải là hai element khác nhau.", "Một số app custom có thể cần selector ổn định hơn absolute XPath."],
+      examples: ["Source locator: card-1, Target locator: done-lane", "Destination position: Percent inside target, X percent: 82, Y percent: 50"],
+      commonMistakes: ["Source và target phải là hai element đúng vai trò, ví dụ thumb cần kéo và track/vùng thả.", "Slider thường cần Percent inside target thay vì Center of target."],
     },
     en: {
       title: "Drag and Drop Help",
       summary: "Drag a source element and drop it onto a target element.",
       useWhen: ["Use for reordering cards, moving items into drop zones, or kanban-style UIs."],
       fields: [
-        { name: "Source XPath", description: "XPath of the element to drag." },
-        { name: "Target XPath", description: "XPath of the drop target element or area." },
+        { name: "Source locator", description: "Locator for the element to drag." },
+        { name: "Target locator", description: "Locator for the drop target element or area." },
         { name: "Destination position", description: "Drop point inside the target: target center, percent inside the target, or pixel offset from the target's top-left corner." },
-        { name: "Iframe XPath", description: iframeField.en },
-        { name: "Wait until", description: waitUntilField.en },
-        { name: "Timeout ms", description: timeoutField.en },
+        { name: "X percent", description: "Horizontal coordinate inside the target when Destination position is Percent inside target." },
+        { name: "Y percent", description: "Vertical coordinate inside the target when Destination position is Percent inside target." },
+        { name: "X offset px", description: "Horizontal pixels from the target's top-left corner when using Pixel offset." },
+        { name: "Y offset px", description: "Vertical pixels from the target's top-left corner when using Pixel offset." },
       ],
-      examples: ["Source XPath: //*[@id='card-1'], Target XPath: //*[@id='done-lane']"],
-      commonMistakes: ["Source and target XPath should point to different elements.", "Some custom apps need a more stable selector than absolute XPath."],
+      examples: ["Source locator: card-1, Target locator: done-lane", "Destination position: Percent inside target, X percent: 82, Y percent: 50"],
+      commonMistakes: ["Source and target should be the right elements for their roles, such as the draggable thumb and the track/drop zone.", "Sliders usually need Percent inside target instead of Center of target."],
     },
   },
   type_sequence: {
@@ -893,18 +895,17 @@ function actualFieldNames(actionType: ActionType): string[] {
   const sourceTargetFields = [
     "Source locator type",
     "Source locator",
-    "Source visibility",
-    "Source enabled",
-    "Source contains text",
-    "Source index",
   ];
-  const destinationTargetFields = [
-    "Destination locator type",
-    "Destination locator",
-    "Destination visibility",
-    "Destination enabled",
-    "Destination contains text",
-    "Destination index",
+  const dropTargetFields = [
+    "Target locator type",
+    "Target locator",
+  ];
+  const dropPointFields = [
+    "Destination position",
+    "X percent",
+    "Y percent",
+    "X offset px",
+    "Y offset px",
   ];
   const triggerTargetFields = [
     "Trigger locator type",
@@ -949,7 +950,7 @@ function actualFieldNames(actionType: ActionType): string[] {
     case "select_radio":
       return targetSourceFields;
     case "drag_and_drop":
-      return [...sourceTargetFields, ...destinationTargetFields, "Destination position"];
+      return [...sourceTargetFields, ...dropTargetFields, ...dropPointFields];
     case "type_sequence":
       return [...targetSourceFields, "Text"];
     case "set_clipboard":
@@ -1112,6 +1113,11 @@ function fieldRequiredWhen(
         "navigate:Wait until": "Tùy chọn; mặc định là Load.",
         "scroll:Target locator": "Bắt buộc với Scroll To Element và Scroll Until Element Visible; không cần với Page Scroll.",
         "click:Offset X / Offset Y": "Chỉ bắt buộc khi Position là Offset.",
+        "drag_and_drop:Destination position": "Tùy chọn; mặc định là Center of target.",
+        "drag_and_drop:X percent": "Bắt buộc khi Destination position là Percent inside target.",
+        "drag_and_drop:Y percent": "Bắt buộc khi Destination position là Percent inside target.",
+        "drag_and_drop:X offset px": "Bắt buộc khi Destination position là Pixel offset inside target.",
+        "drag_and_drop:Y offset px": "Bắt buộc khi Destination position là Pixel offset inside target.",
         "go_back:No fields": "Action này không có field cấu hình.",
         "go_forward:No fields": "Action này không có field cấu hình.",
         "reload:No fields": "Action này không có field cấu hình.",
@@ -1127,6 +1133,11 @@ function fieldRequiredWhen(
         "navigate:Wait until": "Optional; defaults to Load.",
         "scroll:Target locator": "Required for Scroll To Element and Scroll Until Element Visible; not needed for Page Scroll.",
         "click:Offset X / Offset Y": "Required only when Position is Offset.",
+        "drag_and_drop:Destination position": "Optional; defaults to Center of target.",
+        "drag_and_drop:X percent": "Required when Destination position is Percent inside target.",
+        "drag_and_drop:Y percent": "Required when Destination position is Percent inside target.",
+        "drag_and_drop:X offset px": "Required when Destination position is Pixel offset inside target.",
+        "drag_and_drop:Y offset px": "Required when Destination position is Pixel offset inside target.",
         "go_back:No fields": "This action has no configurable fields.",
         "go_forward:No fields": "This action has no configurable fields.",
         "reload:No fields": "This action has no configurable fields.",
@@ -1268,6 +1279,13 @@ function fieldDescription(
 
 function fieldCategory(actionType: ActionType, fieldName: string): HelpFieldCategory {
   if (fieldName === "No fields") return "optional";
+  if (actionType === "drag_and_drop" && fieldName === "Destination position") return "optional";
+  if (actionType === "drag_and_drop" && (fieldName === "X offset px" || fieldName === "Y offset px")) {
+    return "advanced";
+  }
+  if (actionType === "drag_and_drop" && (fieldName === "X percent" || fieldName === "Y percent")) {
+    return "optional";
+  }
   if (isLocatorTypeField(fieldName) || isLocatorValueField(fieldName)) return "required";
   if (fieldName.endsWith("role") || fieldName.endsWith("attribute") || isLocatorConstraintField(fieldName)) {
     return "optional";
@@ -1392,6 +1410,13 @@ function fieldExample(
   const vi = language === "vi";
   if (fieldName === "Target source") return "Use locator";
   if (fieldName === "Target ref") return "current_card";
+  if (actionType === "drag_and_drop" && fieldName === "Destination position") {
+    return "Percent inside target";
+  }
+  if (actionType === "drag_and_drop" && fieldName === "X percent") return "82";
+  if (actionType === "drag_and_drop" && fieldName === "Y percent") return "50";
+  if (actionType === "drag_and_drop" && fieldName === "X offset px") return "180";
+  if (actionType === "drag_and_drop" && fieldName === "Y offset px") return "12";
   if (isLocatorTypeField(fieldName)) return "XPath";
   if (isLocatorValueField(fieldName)) return "//*[@id='submit']";
   if (fieldName.endsWith("visibility")) return "Visible";
