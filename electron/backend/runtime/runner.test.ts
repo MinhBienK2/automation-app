@@ -1296,7 +1296,7 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(true);
   });
 
-  test("reports the compiled label for failed inlined subflow steps", async () => {
+  test("reports diagnostics for failed inlined subflow steps", async () => {
     const runner = new BrowserWorkflowRunner({
       appPaths: await createTempAppPaths(),
       driver: createFakeDriver(new FakeContext()),
@@ -1322,8 +1322,83 @@ describe("BrowserWorkflowRunner", () => {
         step_name: "Login subflow > Assert email",
         action_type: "assert_output",
         reason: "Output email did not equal ready",
+        diagnostics: {
+          compiled_step_id: "call-login::assert-email",
+          parent_step_id: "call-login",
+          subflow_node_id: "assert-email",
+          label_path: ["Login subflow", "Assert email"],
+          action_summary: "Output email equals ready",
+        },
       }),
     );
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "call-login::assert-email",
+        label: "Login subflow > Assert email",
+        action_type: "assert_output",
+        status: "failed",
+        action_summary: "Output email equals ready",
+      }),
+    ]);
+  });
+
+  test("summarizes failed click targets in runtime diagnostics", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(new NativeFailingActionPage())),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          {
+            ...step("call-subflow::new-node", "Main > subflow-001 > Click", {
+              type: "click",
+              config: { xpath: "//button[hello]" },
+            }),
+            metadata: {
+              subflow: {
+                id: "subflow-001",
+                name: "subflow-001",
+                step_number: 2,
+                step_count: 3,
+              },
+            },
+          },
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatchObject({
+      step_id: "call-subflow::new-node",
+      step_name: "Main > subflow-001 > Click",
+      action_type: "click",
+      diagnostics: {
+        compiled_step_id: "call-subflow::new-node",
+        parent_step_id: "call-subflow",
+        subflow_node_id: "new-node",
+        label_path: ["Main", "subflow-001", "Click"],
+        action_summary: "XPath //button[hello]",
+        subflow_id: "subflow-001",
+        subflow_name: "subflow-001",
+        subflow_step_number: 2,
+        subflow_step_count: 3,
+      },
+    });
+    expect(result.outputs?.__action_traces).toEqual([
+      expect.objectContaining({
+        node_id: "call-subflow::new-node",
+        action_type: "click",
+        status: "failed",
+        action_summary: "XPath //button[hello]",
+        subflow_name: "subflow-001",
+        subflow_step_number: 2,
+        subflow_step_count: 3,
+      }),
+    ]);
   });
 
   test("retains temporary browser sessions when run policy and terminal node do not request closure", async () => {

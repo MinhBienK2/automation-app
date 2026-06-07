@@ -1031,6 +1031,17 @@ describe("Workflow detail integration", () => {
           step_name: "Login subflow > Assert email",
           action_type: "assert_output",
           reason: "Output email did not equal ready",
+          diagnostics: {
+            compiled_step_id: "call-login::assert-email",
+            parent_step_id: "call-login",
+            subflow_node_id: "assert-email",
+            label_path: ["Login subflow", "Assert email"],
+            action_summary: "Output email equals ready",
+            subflow_id: "subflow-login",
+            subflow_name: "Login subflow",
+            subflow_step_number: 2,
+            subflow_step_count: 3,
+          },
         },
       },
     });
@@ -1050,6 +1061,12 @@ describe("Workflow detail integration", () => {
     expect(
       within(panel).getByText("Run failed at step 1: Login subflow > Assert email"),
     ).toBeInTheDocument();
+    expect(within(panel).getByText("Location: Login subflow > Assert email"))
+      .toBeInTheDocument();
+    expect(within(panel).getByText("Subflow step: 2 of 3 · node assert_output"))
+      .toBeInTheDocument();
+    expect(within(panel).getByText("Action target: Output email equals ready"))
+      .toBeInTheDocument();
 
     const editor = screen.getByRole("region", { name: "Visual Graph" });
     const callSubflowButton = within(editor).getByRole("button", {

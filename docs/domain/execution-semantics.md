@@ -67,7 +67,7 @@
 - Browser identity, proxy, profile, and download behavior belong in Workflow Settings Browser Launch, not in in-run action nodes.
 - `set_viewport` changes only runtime viewport width and height. Workflow Settings Browser Launch no longer exposes viewport width, viewport height, device scale factor, mobile mode, or touch capability controls.
 - Click, double click, hover, fill, select, checkbox, and drag/drop prefer CloakBrowser-patched locator/frame APIs so CloakBrowser owns supported humanization.
-- Runner action traces record compact action mode/status metadata. Nested branch/body traces also record parent control node id, sequence order, timestamps, output summary, evidence summary, and failure reason when present. The runner also keeps an internal interaction capability map: CloakBrowser-native for supported element/page/frame APIs, CloakBrowser-assisted or custom human behavior for app-owned interaction timing such as scroll, and direct DOM for read/assert/storage or final fallback paths.
+- Runner action traces record compact action mode/status metadata. Failed traces also include a compact action summary when available, such as the target locator or output assertion, and inlined Call Subflow step ordinal metadata when present, so monitor/log views can distinguish repeated labels. Nested branch/body traces also record parent control node id, sequence order, timestamps, output summary, evidence summary, and failure reason when present. The runner also keeps an internal interaction capability map: CloakBrowser-native for supported element/page/frame APIs, CloakBrowser-assisted or custom human behavior for app-owned interaction timing such as scroll, and direct DOM for read/assert/storage or final fallback paths.
 - Select Radio tries the CloakBrowser locator `check()` path first, then locator click, and only falls back to DOM checked/input/change mutation if the native paths fail.
 - Submit Form with a target tries locator click/press first and only falls back to DOM `requestSubmit`; Submit Form without a target uses custom Enter key hold timing on the page keyboard.
 - Right Click uses custom human movement to the resolved target followed by right-button down/up, avoiding CloakBrowser patched click paths that do not preserve the right-button option.
@@ -90,10 +90,14 @@
   persisted outputs and run steps. Screenshot preview, artifact reveal, and
   evidence-bundle export are backend commands that revalidate run-scoped
   artifact paths under the app evidence directory before touching files.
-- Failures carry step id, step number, compiled step name, action type, and
-  reason when available. Inlined Call Subflow failures keep the nested compiled
-  label, such as `<subflow> > <node>`, so the failure text identifies the
-  failing subflow node.
+- Failures carry step id, step number, compiled step name, action type, reason,
+  and optional diagnostics when available. Diagnostics preserve the original
+  compiled step id, split Call Subflow ids into parent/subflow node ids, expose
+  subflow id/name plus step number/count, expose a label path, and include an
+  action summary. Inlined Call Subflow failures keep the nested compiled label,
+  such as `<subflow> > <node>`, while UI can add the subflow step ordinal and
+  serialized action/node type plus action summary to disambiguate repeated node
+  labels.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 
 ## Batch Execution

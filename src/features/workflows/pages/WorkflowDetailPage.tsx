@@ -311,9 +311,21 @@ function mapRunStateToMainGraph(runState: RunState, graph: WorkflowGraph | null)
     error: runState.error
       ? {
           ...runState.error,
+          diagnostics: runState.error.diagnostics ?? runtimeDiagnosticsFromStepId(runState.error.step_id),
           step_id: resolveMainGraphNodeId(runState.error.step_id, graphNodeIds),
         }
       : null,
+  };
+}
+
+function runtimeDiagnosticsFromStepId(stepId: string | null | undefined) {
+  if (!stepId) return null;
+  const separatorIndex = stepId.indexOf("::");
+  if (separatorIndex < 0) return null;
+  return {
+    compiled_step_id: stepId,
+    parent_step_id: stepId.slice(0, separatorIndex) || null,
+    subflow_node_id: stepId.slice(separatorIndex + 2) || null,
   };
 }
 

@@ -32,7 +32,7 @@ export function RunIssuePanel({
   const header = issuePanelHeader(firstIssue.severity);
   const summary = issuePanelSummary(firstIssue.severity, totalBlockingIssues);
   const firstIssueSummary = summarizeIssueMessage(firstIssue.message);
-  const firstIssueHasDetails = hasIssueDetails(firstIssue.message, firstIssueSummary);
+  const firstIssueHasDetails = hasIssueDetails(firstIssue, firstIssueSummary);
   const firstIssueExpanded = expandedIssueIds.has(firstIssue.id);
   const listedIssues = firstIssue.severity === "blocking" ? issues : issues.slice(1);
   const toggleDetails = (issueId: string) => {
@@ -66,6 +66,16 @@ export function RunIssuePanel({
             <p className="run-issue-stale-note">
               Run issues may be out of date after graph edits.
             </p>
+          ) : null}
+          {firstIssue.context.length ? (
+            <div className="run-issue-suggestions">
+              <span>Failure context</span>
+              <ul>
+                {firstIssue.context.map((contextLine) => (
+                  <li key={contextLine}>{contextLine}</li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </div>
         <div className="run-issue-header-actions">
@@ -110,7 +120,7 @@ export function RunIssuePanel({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => copyIssueDetails(firstIssue.message)}
+              onClick={() => copyIssueDetails(firstIssue)}
             >
               <ClipboardCopy aria-hidden="true" />
               Copy details
@@ -119,20 +129,30 @@ export function RunIssuePanel({
         </div>
       </div>
       {firstIssueHasDetails && firstIssue.severity !== "blocking" && firstIssueExpanded ? (
-        <pre className="run-issue-details">{firstIssue.message}</pre>
+        <pre className="run-issue-details">{issueDetailsText(firstIssue)}</pre>
       ) : null}
 
       {listedIssues.length ? (
         <div className="run-issue-list">
           {listedIssues.map((issue) => {
             const issueSummary = summarizeIssueMessage(issue.message);
-            const issueHasDetails = hasIssueDetails(issue.message, issueSummary);
+            const issueHasDetails = hasIssueDetails(issue, issueSummary);
             const expanded = expandedIssueIds.has(issue.id);
             return (
               <article className="run-issue-item" key={issue.id}>
                 <div>
                   <h3>{issue.title}</h3>
                   <p className="run-issue-summary-text">{issueSummary}</p>
+                  {issue.context.length ? (
+                    <div className="run-issue-suggestions">
+                      <span>Failure context</span>
+                      <ul>
+                        {issue.context.map((contextLine) => (
+                          <li key={contextLine}>{contextLine}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   {issueHasDetails ? (
                     <div className="run-issue-detail-actions">
                       <Button
@@ -146,7 +166,7 @@ export function RunIssuePanel({
                     </div>
                   ) : null}
                   {expanded ? (
-                    <pre className="run-issue-details">{issue.message}</pre>
+                    <pre className="run-issue-details">{issueDetailsText(issue)}</pre>
                   ) : null}
                 </div>
                 {issue.suggestions.length ? (
@@ -206,12 +226,26 @@ function summarizeIssueMessage(message: string) {
   return `${firstLine.slice(0, 177)}...`;
 }
 
-function hasIssueDetails(message: string, summary: string) {
-  return message.includes("\n") || message.trim() !== summary;
+function hasIssueDetails(issue: RunIssue, summary: string) {
+  return (
+    issue.message.includes("\n") ||
+    issue.message.trim() !== summary ||
+    issue.diagnostics.length > 0
+  );
 }
 
-function copyIssueDetails(message: string) {
-  void navigator.clipboard?.writeText(message);
+function issueDetailsText(issue: RunIssue) {
+  if (!issue.diagnostics.length) return issue.message;
+  return [
+    issue.message,
+    "",
+    "Diagnostics:",
+    ...issue.diagnostics.map((diagnostic) => `- ${diagnostic}`),
+  ].join("\n");
+}
+
+function copyIssueDetails(issue: RunIssue) {
+  void navigator.clipboard?.writeText(issueDetailsText(issue));
 }
 
 function issuePanelHeader(severity: RunIssue["severity"]) {

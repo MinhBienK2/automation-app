@@ -15,6 +15,12 @@ Preserve these unless the task explicitly changes them.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph and non-storage copied settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint, and disables Run from selected for the copy.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Delete private browser profile data is checked by default, and keeping profile data requires unchecking it. Deleting profile data removes only unshared inactive profile directories. Backend deletion rejects while the workflow is actively running, while its persistent profile is used by an active run, or while a retained browser session still owns the workflow/profile.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
+- Runtime failure UI names the failed compiled step path and includes subflow
+  step number/count, failing serialized action/node type such as `node click`,
+  and action context such as target locator, URL, duration, or output assertion
+  when available. Raw compiled node ids are diagnostic details rather than the
+  primary explanation, and inlined Call Subflow failures still highlight/focus
+  the Call Subflow node in the main graph.
 - Workflow list exposes Import Workflow. Import rejects workflow package files
   larger than 5 MB before reading JSON, shows a preview, and always creates a
   new workflow in the selected project on success; it never overwrites an
@@ -231,8 +237,8 @@ Preserve these unless the task explicitly changes them.
 - Running a graph shows status in the page header, displays a live run navigator with a chronological node-activity log timeline, and reflects graph progress through canvas node state. Each node occurrence is one timeline row whose status changes from running to completed or failed; future pending graph nodes do not appear in the log, and timeline rows do not visually activate just because the graph current node is active. Follow current is configured in Workflow Settings and can automatically select and center the current graph node, while timeline row selection performs graph focus on demand.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
 - Runtime failures from inlined Call Subflow steps show the nested compiled
-  subflow label in the failure text and focus/highlight the calling subflow node
-  on the main workflow graph.
+  subflow label, subflow step number/count, and failing serialized action/node
+  type, then focus/highlight the calling subflow node on the main workflow graph.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector drawer mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
 - Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure. The currently running node uses a prominent cyan border, tinted fill, ring, and glow so active execution remains visible on large dark graphs.

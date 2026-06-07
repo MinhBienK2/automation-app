@@ -452,6 +452,71 @@ describe("TypeScript graph compiler parity", () => {
     expect(afterPlan.steps.map((step) => step.node_id)).toEqual(["after"]);
   });
 
+  test("annotates inlined Call Subflow steps with subflow order metadata", () => {
+    const subflowGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("fill", "action", { config: inputTextAction("//email", "{{ email }}") }),
+        graphNode("submit", "action", { config: clickAction("//button[@type='submit']") }),
+      ],
+      [
+        edge("start", "out", "fill", "in"),
+        edge("fill", "out", "submit", "in"),
+      ],
+    );
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("call-login", "call_subflow", {
+          config: { subflow_id: "subflow-login", input_mapping: [] },
+        }),
+      ],
+      [edge("start", "out", "call-login", "in")],
+    );
+
+    const plan = compileWorkflowRunPlan(graph, workflowSettings(), {
+      projectId: "project-1",
+      workflowLabel: "Checkout",
+      resolveSubflow: (subflowId: string) =>
+        subflowId === "subflow-login"
+          ? {
+              id: "subflow-login",
+              project_id: "project-1",
+              name: "Login",
+              graph: subflowGraph,
+            }
+          : null,
+    });
+
+    expect(plan.steps.map((step) => ({
+      node_id: step.node_id,
+      metadata: step.metadata,
+    }))).toEqual([
+      {
+        node_id: "call-login::fill",
+        metadata: {
+          subflow: {
+            id: "subflow-login",
+            name: "Login",
+            step_number: 1,
+            step_count: 2,
+          },
+        },
+      },
+      {
+        node_id: "call-login::submit",
+        metadata: {
+          subflow: {
+            id: "subflow-login",
+            name: "Login",
+            step_number: 2,
+            step_count: 2,
+          },
+        },
+      },
+    ]);
+  });
+
   test("rejects Call Subflow references that compile to no executable steps", () => {
     const emptySubflowGraph = graphOf(
       [

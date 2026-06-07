@@ -96,4 +96,46 @@ describe("RunMonitorDrawer", () => {
     expect(within(timeline).getByText("2 events")).toBeInTheDocument();
     expect(scrollIntoViewMock).toHaveBeenCalledTimes(1);
   });
+
+  test("shows runtime failure action context", () => {
+    render(
+      <RunMonitorDrawer
+        graph={graph}
+        runState={{
+          ...baseRunState,
+          status: "failed",
+          current_step_id: null,
+          current_step_number: null,
+          completed_step_ids: ["step-1"],
+          error: {
+            step_id: "step-2",
+            step_number: 2,
+            step_name: "Checkout > Click button",
+            action_type: "click",
+            reason: "frame.click: Timeout 30000ms exceeded",
+            diagnostics: {
+              compiled_step_id: "step-2",
+              subflow_node_id: "click-button",
+              label_path: ["Checkout", "Click button"],
+              action_summary: "CSS button",
+              subflow_id: "subflow-checkout",
+              subflow_name: "Checkout",
+              subflow_step_number: 2,
+              subflow_step_count: 4,
+            },
+          },
+        }}
+        onClose={vi.fn()}
+        onFocusNode={vi.fn()}
+      />,
+    );
+
+    const issue = screen.getByRole("region", { name: "Run monitor issue" });
+    expect(within(issue).getByText("Location: Checkout > Click button"))
+      .toBeInTheDocument();
+    expect(within(issue).getByText("Subflow step: 2 of 4 · node click"))
+      .toBeInTheDocument();
+    expect(within(issue).getByText("Action target: CSS button"))
+      .toBeInTheDocument();
+  });
 });

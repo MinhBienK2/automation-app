@@ -488,6 +488,7 @@ function compileNestedConfigs(
     ...compiledStep.config,
     graph_node_id: compiledStep.node_id,
     graph_label: compiledStep.label,
+    ...(compiledStep.metadata ? { graph_metadata: compiledStep.metadata } : {}),
   }));
 }
 
@@ -562,7 +563,18 @@ function compileCallSubflow(
   if (compiled.steps.length === 0) {
     throw validationError("subflow_id", "Referenced subflow has no executable steps");
   }
-  steps.push(...compiled.steps);
+  steps.push(...compiled.steps.map((compiledStep, index) => ({
+    ...compiledStep,
+    metadata: {
+      ...(compiledStep.metadata ?? {}),
+      subflow: {
+        id: subflow.id,
+        name: subflow.name,
+        step_number: index + 1,
+        step_count: compiled.steps.length,
+      },
+    },
+  })));
 }
 
 function callSubflowLabelPrefix(

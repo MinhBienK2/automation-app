@@ -1062,15 +1062,26 @@ export type GraphValidationIssue = {
   message: string;
 };
 
+export type CompiledStepMetadata = {
+  subflow?: {
+    id: string;
+    name: string;
+    step_number: number;
+    step_count: number;
+  } | null;
+};
+
 export type CompiledGraphStep = {
   node_id: string;
   label: string;
   config: ActionConfig;
+  metadata?: CompiledStepMetadata | null;
 };
 
 export type CompiledNestedAction = ActionConfig & {
   graph_node_id?: string;
   graph_label?: string;
+  graph_metadata?: CompiledStepMetadata | null;
 };
 
 export type CompiledWorkflowGraph = {
@@ -1759,6 +1770,18 @@ export type RecordingWorkflowDraft = {
   warnings: RecordingWarning[];
 };
 
+export type RunErrorDiagnostics = {
+  compiled_step_id?: string | null;
+  parent_step_id?: string | null;
+  subflow_node_id?: string | null;
+  subflow_id?: string | null;
+  subflow_name?: string | null;
+  subflow_step_number?: number | null;
+  subflow_step_count?: number | null;
+  label_path?: string[];
+  action_summary?: string | null;
+};
+
 export type RunState = {
   status: RunStatus;
   mode: RunMode;
@@ -1779,6 +1802,7 @@ export type RunState = {
     step_name?: string | null;
     action_type: string;
     reason: string;
+    diagnostics?: RunErrorDiagnostics | null;
   };
 };
 

@@ -291,6 +291,8 @@ export type RunIssue = {
   edge_id?: string | null;
   step_number?: number | null;
   action_type?: string | null;
+  context: string[];
+  diagnostics: string[];
   suggestions: string[];
 };
 
@@ -313,6 +315,8 @@ export function buildRunIssues({
     message: issueMessageContext(issue),
     node_id: issue.node_id,
     edge_id: issue.edge_id,
+    context: [],
+    diagnostics: [],
     suggestions: [],
   }));
 
@@ -323,6 +327,8 @@ export function buildRunIssues({
   if (runState.status === "failed" && runState.error) {
     const actionLabel = actionLabelForRunError(runState.error.action_type);
     const stepLabel = runState.error.step_name?.trim() || actionLabel;
+    const context = runtimeFailureContext(runState.error);
+    const diagnostics = runtimeFailureDiagnostics(runState.error);
     return [
       {
         id: `runtime-${runState.error.step_id ?? runState.error.step_number}`,
@@ -332,6 +338,8 @@ export function buildRunIssues({
         node_id: runState.error.step_id,
         step_number: runState.error.step_number,
         action_type: runState.error.action_type,
+        context,
+        diagnostics,
         suggestions: suggestionsFor(
           runState.error.reason,
           runState.error.action_type,
@@ -348,6 +356,8 @@ export function buildRunIssues({
         severity: "system",
         title: "Could not start run",
         message: appError.trim(),
+        context: [],
+        diagnostics: [],
         suggestions: [],
       },
       ...blockingRunIssues,
@@ -363,6 +373,48 @@ export function buildRunIssues({
 
 function actionLabelForRunError(actionType: string) {
   return actionLabels[actionType as ActionType] ?? actionType;
+}
+
+function runtimeFailureContext(error: NonNullable<RunState["error"]>) {
+  const context: string[] = [];
+  const labelPath = error.diagnostics?.label_path
+    ?.map((part) => part.trim())
+    .filter(Boolean);
+  const location = labelPath?.length
+    ? labelPath.join(" > ")
+    : error.step_name?.trim() || null;
+  if (location) context.push(`Location: ${location}`);
+  const subflowContext = runtimeFailureSubflowContext(error);
+  if (subflowContext) context.push(subflowContext);
+  const actionSummary = error.diagnostics?.action_summary?.trim();
+  if (actionSummary) context.push(`Action target: ${actionSummary}`);
+  return context;
+}
+
+function runtimeFailureSubflowContext(error: NonNullable<RunState["error"]>) {
+  const stepNumber = error.diagnostics?.subflow_step_number;
+  const stepCount = error.diagnostics?.subflow_step_count;
+  const actionType = error.action_type.trim();
+  if (typeof stepNumber !== "number" && !actionType) return null;
+  const stepLabel = typeof stepNumber === "number"
+    ? `Subflow step: ${stepNumber}${typeof stepCount === "number" ? ` of ${stepCount}` : ""}`
+    : "Subflow step";
+  return actionType ? `${stepLabel} · node ${actionType}` : stepLabel;
+}
+
+function runtimeFailureDiagnostics(error: NonNullable<RunState["error"]>) {
+  const diagnostics: string[] = [];
+  const compiledStepId = error.diagnostics?.compiled_step_id?.trim();
+  const parentStepId = error.diagnostics?.parent_step_id?.trim();
+  const subflowNodeId = error.diagnostics?.subflow_node_id?.trim();
+  const subflowId = error.diagnostics?.subflow_id?.trim();
+  const subflowName = error.diagnostics?.subflow_name?.trim();
+  if (compiledStepId) diagnostics.push(`Compiled step id: ${compiledStepId}`);
+  if (parentStepId) diagnostics.push(`Parent step id: ${parentStepId}`);
+  if (subflowNodeId) diagnostics.push(`Subflow node id: ${subflowNodeId}`);
+  if (subflowId) diagnostics.push(`Subflow id: ${subflowId}`);
+  if (subflowName) diagnostics.push(`Subflow name: ${subflowName}`);
+  return diagnostics;
 }
 
 function issueMessageContext(issue: GraphValidationIssue) {

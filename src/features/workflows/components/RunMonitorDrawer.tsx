@@ -149,6 +149,11 @@ export function RunMonitorDrawer({
     nodeLabel(nodeById, currentNodeId) ?? runState.error?.step_name ?? "No active node";
   const timeline = useMemo(() => buildTimeline(graph, runState), [graph, runState]);
   const hasError = runState.status === "failed" && Boolean(runState.error);
+  const errorLocation = runState.error?.diagnostics?.label_path?.length
+    ? runState.error.diagnostics.label_path.join(" > ")
+    : runState.error?.step_name?.trim() || null;
+  const errorSubflowContext = runState.error ? subflowContextLine(runState.error) : null;
+  const errorActionSummary = runState.error?.diagnostics?.action_summary?.trim() || null;
 
   useEffect(() => {
     if (typeof timelineEndRef.current?.scrollIntoView === "function") {
@@ -180,6 +185,9 @@ export function RunMonitorDrawer({
           <span>Runtime failure</span>
           <h3>Step {runState.error.step_number}: {runState.error.step_name ?? currentLabel}</h3>
           <p>{runState.error.reason.split(/\r?\n/)[0]}</p>
+          {errorLocation ? <p>Location: {errorLocation}</p> : null}
+          {errorSubflowContext ? <p>{errorSubflowContext}</p> : null}
+          {errorActionSummary ? <p>Action target: {errorActionSummary}</p> : null}
           <div className="run-monitor-actions">
             <Button
               type="button"
@@ -239,4 +247,15 @@ export function RunMonitorDrawer({
       </section>
     </aside>
   );
+}
+
+function subflowContextLine(error: NonNullable<RunState["error"]>) {
+  const stepNumber = error.diagnostics?.subflow_step_number;
+  const stepCount = error.diagnostics?.subflow_step_count;
+  const actionType = error.action_type.trim();
+  if (typeof stepNumber !== "number" && !actionType) return null;
+  const stepLabel = typeof stepNumber === "number"
+    ? `Subflow step: ${stepNumber}${typeof stepCount === "number" ? ` of ${stepCount}` : ""}`
+    : "Subflow step";
+  return actionType ? `${stepLabel} · node ${actionType}` : stepLabel;
 }
