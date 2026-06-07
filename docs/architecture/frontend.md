@@ -74,8 +74,15 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - User interaction state.
 - Form rendering and local validation display.
 - Visual graph editing state before persistence.
-- App-level graph autosave preference and graph save status presentation.
+- App-level graph autosave preference and graph save status presentation,
+  including disabled Save actions while workflow or subflow graph content has no
+  changes.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
+- Workflow and subflow detail exit protection for pending graph edits, using
+  the shared unsaved changes dialog to save before navigation, discard the
+  visible draft, or keep editing. Workflow detail uses the prompt for
+  manual-save graph changes and failed autosave; autosave-enabled workflow
+  navigation does not prompt unless autosave has failed.
 - Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
 - Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; project identity regeneration also uses an in-app confirmation dialog before delegating to `resetProjectEnvironmentBrowserIdentity`. The renderer does not create identity ids, fingerprint seeds, or delete browser profile directories directly.
 - Overview is the default app screen. It calls `getOperationsOverview` with
@@ -149,10 +156,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
 - Subflows navigation state inside the selected project's Subflows collection,
-  plus list/detail state, create/duplicate/delete command state, graph save
-  status, usage-warning presentation, and workflow-graph selection extraction
-  into a new project subflow. Subflow graph editors run in subflow mode, which
-  hides Add Subflow and does not expose run controls.
+  plus list/detail state, list-scoped create/duplicate/delete command state,
+  graph save status, usage-warning presentation, and workflow-graph selection
+  extraction into a new project subflow. Subflow detail exposes Save only in its
+  header and keeps duplicate/delete on the list. Subflow graph editors run in
+  subflow mode, which hides Add Subflow and does not expose run controls.
 - Selected-node label editing stays in the inspector. Connections and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing belongs in node Help and graph port hover tooltips, not a separate inspector panel.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter
   so the canvas component renders stable primary name, secondary kind, compact

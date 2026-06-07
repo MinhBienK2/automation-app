@@ -92,6 +92,7 @@ import {
 } from "./features/workflows/lib/workflowSettings";
 import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
 import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
+import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
 import { Button } from "./components/ui/button";
 import {
   Dialog,
@@ -152,6 +153,7 @@ type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 type OverviewFocus = NonNullable<Extract<MissionControlTarget, { type: "overview" }>["focus"]>;
+type GraphExitNavigation = () => void | Promise<void>;
 
 const appSettingsStorageKey = "workflow-manager:settings:v1";
 const workflowPackageSections: WorkflowSettingsSectionId[] = [
@@ -336,6 +338,16 @@ function graphSaveStatusLabel(status: GraphSaveStatus) {
   }
 }
 
+function graphEditableContentKey(graph: WorkflowGraph | null) {
+  if (!graph) return "";
+  return JSON.stringify({
+    version: graph.version,
+    nodes: graph.nodes,
+    edges: graph.edges,
+    migration_notes: graph.migration_notes ?? [],
+  });
+}
+
 function latestRunSnapshot(snapshots: WorkflowRunSnapshot[]) {
   return [...snapshots].sort((left, right) =>
     right.started_at.localeCompare(left.started_at),
@@ -502,8 +514,10 @@ function App() {
     useState<ProjectPackagePreview | null>(null);
   const [appError, setAppError] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [graphExitDialogOpen, setGraphExitDialogOpen] = useState(false);
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
+  const pendingGraphExitNavigationRef = useRef<GraphExitNavigation | null>(null);
 
   useEffect(() => {
     graphRevisionRef.current = graphRevision;
@@ -572,6 +586,79 @@ function App() {
     savedGraphRevision,
     workflowGraph,
   ]);
+
+  function hasPendingWorkflowGraphChanges() {
+    if (screen !== "detail" || !detail || !workflowGraph) return false;
+    if (graphAutosaveEnabled) return graphSaveStatus === "failed";
+    return graphRevisionRef.current !== savedGraphRevisionRef.current;
+  }
+
+  function hasPendingSubflowGraphChanges() {
+    return (
+      screen === "subflow-detail" &&
+      Boolean(selectedSubflow && selectedSubflowGraph) &&
+      subflowGraphSaveStatus !== "saved"
+    );
+  }
+
+  function shouldConfirmGraphExit() {
+    return hasPendingWorkflowGraphChanges() || hasPendingSubflowGraphChanges();
+  }
+
+  async function requestGraphExitNavigation(navigation: GraphExitNavigation) {
+    if (shouldConfirmGraphExit()) {
+      pendingGraphExitNavigationRef.current = navigation;
+      setGraphExitDialogOpen(true);
+      return false;
+    }
+
+    await navigation();
+    return true;
+  }
+
+  function clearGraphExitNavigation() {
+    pendingGraphExitNavigationRef.current = null;
+    setGraphExitDialogOpen(false);
+  }
+
+  function discardGraphExitChanges() {
+    if (hasPendingWorkflowGraphChanges()) {
+      savedGraphRevisionRef.current = graphRevisionRef.current;
+      setSavedGraphRevision(graphRevisionRef.current);
+      setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
+    }
+    if (hasPendingSubflowGraphChanges()) {
+      setSubflowGraphSaveStatus("saved");
+    }
+  }
+
+  async function runPendingGraphExitNavigation() {
+    const navigation = pendingGraphExitNavigationRef.current;
+    clearGraphExitNavigation();
+    await navigation?.();
+  }
+
+  async function saveGraphExitChanges() {
+    if (hasPendingWorkflowGraphChanges()) {
+      return Boolean(await persistCurrentGraph());
+    }
+    if (hasPendingSubflowGraphChanges()) {
+      return Boolean(await saveCurrentSubflowGraph());
+    }
+    return true;
+  }
+
+  async function saveGraphExitChangesAndNavigate() {
+    const saved = await saveGraphExitChanges();
+    if (!saved) return false;
+    await runPendingGraphExitNavigation();
+    return true;
+  }
+
+  function discardGraphExitChangesAndNavigate() {
+    discardGraphExitChanges();
+    void runPendingGraphExitNavigation();
+  }
 
   async function loadWorkflows() {
     const items = await listWorkflows();
@@ -1041,6 +1128,10 @@ function App() {
   }
 
   async function openWorkflow(id: string) {
+    await requestGraphExitNavigation(() => performOpenWorkflow(id));
+  }
+
+  async function performOpenWorkflow(id: string) {
     setAppError("");
 
     try {
@@ -1293,6 +1384,10 @@ function App() {
   }
 
   async function openSubflowDetail(subflowId: string) {
+    await requestGraphExitNavigation(() => performOpenSubflowDetail(subflowId));
+  }
+
+  async function performOpenSubflowDetail(subflowId: string) {
     setAppError("");
     try {
       const loadedSubflow = await getSubflow(subflowId);
@@ -1318,12 +1413,15 @@ function App() {
   }
 
   function changeSubflowGraph(nextGraph: WorkflowGraph) {
+    const hasEditableChange =
+      graphEditableContentKey(selectedSubflowGraph) !== graphEditableContentKey(nextGraph);
     setSelectedSubflowGraph(nextGraph);
+    if (!hasEditableChange) return;
     setSubflowGraphSaveStatus("unsaved");
   }
 
   async function saveCurrentSubflowGraph() {
-    if (!selectedSubflow || !selectedSubflowGraph) return;
+    if (!selectedSubflow || !selectedSubflowGraph) return true;
     setAppError("");
     setSubflowGraphSaveStatus("saving");
     try {
@@ -1331,9 +1429,11 @@ function App() {
       setSubflowGraphSaveStatus("saved");
       setSelectedSubflowUsage(await getSubflowUsage(selectedSubflow.id));
       await loadSubflowsForProject(selectedSubflow.project_id);
+      return true;
     } catch (error) {
       setSubflowGraphSaveStatus("failed");
       setAppError(commandMessage(error));
+      return false;
     }
   }
 
@@ -1735,6 +1835,10 @@ function App() {
   }
 
   function openProjects(collection: ProjectCollection = "workflows") {
+    void requestGraphExitNavigation(() => performOpenProjects(collection));
+  }
+
+  function performOpenProjects(collection: ProjectCollection = "workflows") {
     setScreen("projects");
     setProjectCollection(collection);
     setSidebarCollapsed(false);
@@ -1762,11 +1866,17 @@ function App() {
   }
 
   function backToList() {
-    openProjects("workflows");
-    void loadWorkflows();
+    void requestGraphExitNavigation(() => {
+      performOpenProjects("workflows");
+      void loadWorkflows();
+    });
   }
 
   function openOverview(focus: OverviewFocus | null = null) {
+    void requestGraphExitNavigation(() => performOpenOverview(focus));
+  }
+
+  function performOpenOverview(focus: OverviewFocus | null = null) {
     setScreen("overview");
     setOverviewFocus(focus);
     setAppError("");
@@ -1774,12 +1884,20 @@ function App() {
   }
 
   function openSettings() {
+    void requestGraphExitNavigation(performOpenSettings);
+  }
+
+  function performOpenSettings() {
     setScreen("settings");
     setAppError("");
     void loadSettingsDiagnostics();
   }
 
   function openSchedules() {
+    void requestGraphExitNavigation(performOpenSchedules);
+  }
+
+  function performOpenSchedules() {
     setScreen("schedules");
     setAppError("");
     setFocusedScheduleId(null);
@@ -1787,13 +1905,19 @@ function App() {
   }
 
   function backToSubflows() {
-    setSelectedSubflow(null);
-    setSelectedSubflowGraph(null);
-    setSelectedSubflowUsage([]);
-    openProjects("subflows");
+    void requestGraphExitNavigation(() => {
+      setSelectedSubflow(null);
+      setSelectedSubflowGraph(null);
+      setSelectedSubflowUsage([]);
+      performOpenProjects("subflows");
+    });
   }
 
   function openEvidence(nextQuery: EvidenceListRequest = evidenceQuery) {
+    void requestGraphExitNavigation(() => performOpenEvidence(nextQuery));
+  }
+
+  function performOpenEvidence(nextQuery: EvidenceListRequest = evidenceQuery) {
     setScreen("evidence");
     setAppError("");
     setEvidenceDetailError("");
@@ -1801,6 +1925,10 @@ function App() {
   }
 
   function openIdentities(target: IdentityLabTarget | null = identityLabTarget) {
+    void requestGraphExitNavigation(() => performOpenIdentities(target));
+  }
+
+  function performOpenIdentities(target: IdentityLabTarget | null = identityLabTarget) {
     setScreen("identities");
     setAppError("");
     setIdentityLabTarget(target);
@@ -1916,13 +2044,18 @@ function App() {
   }
 
   async function navigateToMissionControlTarget(target: MissionControlTarget) {
+    await requestGraphExitNavigation(() => performNavigateToMissionControlTarget(target));
+  }
+
+  async function performNavigateToMissionControlTarget(target: MissionControlTarget) {
     if (target.type === "overview") {
-      openOverview(target.focus ?? null);
+      performOpenOverview(target.focus ?? null);
       return;
     }
     if (target.type === "workflow") {
       if (target.mode === "list") {
-        backToList();
+        performOpenProjects("workflows");
+        void loadWorkflows();
         return;
       }
       if (target.mode === "settings") {
@@ -1934,25 +2067,25 @@ function App() {
         await openWorkflowSettings(workflow, "browser_launch");
         return;
       }
-      await openWorkflow(target.workflow_id);
+      await performOpenWorkflow(target.workflow_id);
       return;
     }
     if (target.type === "evidence") {
-      openEvidence({
+      performOpenEvidence({
         ...(target.filters ?? {}),
         ...(target.evidence_id ? { focus_evidence_id: target.evidence_id } : {}),
       });
       return;
     }
     if (target.type === "identity") {
-      openIdentities(target.target);
+      performOpenIdentities(target.target);
       return;
     }
     if (target.type === "schedule") {
       await openScheduleTarget(target.schedule_id, target.schedule_event_id);
       return;
     }
-    await openWorkflow(target.workflow_id);
+    await performOpenWorkflow(target.workflow_id);
     if (target.node_id) {
       setSelectedGraphNodeId(target.node_id);
     }
@@ -2023,7 +2156,10 @@ function App() {
   }
 
   const changeWorkflowGraph = useCallback((nextGraph: WorkflowGraph) => {
+    const hasEditableChange =
+      graphEditableContentKey(workflowGraph) !== graphEditableContentKey(nextGraph);
     setWorkflowGraph(nextGraph);
+    if (!hasEditableChange) return;
     setGraphIssuesNeedRecheck((current) => current || graphIssues.length > 0);
     setGraphRevision((current) => {
       const nextRevision = current + 1;
@@ -2031,7 +2167,7 @@ function App() {
       return nextRevision;
     });
     setGraphSaveStatus(graphAutosaveEnabled ? "unsaved" : "off");
-  }, [graphAutosaveEnabled, graphIssues.length]);
+  }, [graphAutosaveEnabled, graphIssues.length, workflowGraph]);
 
   const changeWorkflowSettings = useCallback(
     (nextSettings: WorkflowSettings) => {
@@ -2141,6 +2277,14 @@ function App() {
         isRunning,
       })
     : { enabled: false, reason: "No workflow graph is loaded.", visible: false };
+  const canSaveWorkflowGraph =
+    Boolean(detail && workflowGraph) &&
+    graphSaveStatus !== "saving" &&
+    (graphRevision !== savedGraphRevision || graphSaveStatus === "failed");
+  const canSaveSubflowGraph =
+    Boolean(selectedSubflow && selectedSubflowGraph) &&
+    subflowGraphSaveStatus !== "saved" &&
+    subflowGraphSaveStatus !== "saving";
   const detailEnvironmentName = detail
     ? (
         workflows.find((workflow) => workflow.id === detail.workflow.id)?.environment_name ??
@@ -2359,14 +2503,13 @@ function App() {
           usage={selectedSubflowUsage}
           graph={selectedSubflowGraph}
           graphSaveStatus={graphSaveStatusLabel(subflowGraphSaveStatus)}
+          canSaveGraph={canSaveSubflowGraph}
           appError={appError}
           onBack={backToSubflows}
           onGraphChange={changeSubflowGraph}
           onSaveGraph={() => {
             void saveCurrentSubflowGraph();
           }}
-          onDuplicateSubflow={duplicateProjectSubflow}
-          onDeleteSubflow={deleteProjectSubflow}
         />
       ) : screen === "detail" && detail ? (
         <>
@@ -2377,6 +2520,7 @@ function App() {
             isRunning={isRunning}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
+            canSaveGraph={canSaveWorkflowGraph}
             runState={detailRunState}
             workflowGraph={workflowGraph}
             graphIssues={graphIssues}
@@ -2443,6 +2587,12 @@ function App() {
         onSaveSettings={persistWorkflowSettings}
         onResetBrowserIdentity={resetWorkflowBrowserIdentity}
         onDiscardChanges={discardWorkflowSettingsChanges}
+      />
+      <UnsavedChangesDialog
+        open={graphExitDialogOpen}
+        onKeepEditing={clearGraphExitNavigation}
+        onDiscardChanges={discardGraphExitChangesAndNavigate}
+        onSaveAndClose={saveGraphExitChangesAndNavigate}
       />
       {toastMessage ? (
         <div className="toast-alert app-toast" role="status">

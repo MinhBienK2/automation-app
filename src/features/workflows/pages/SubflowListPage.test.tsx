@@ -106,6 +106,11 @@ describe("Subflow list integration", () => {
     expect(
       within(header).getByRole("button", { name: "Subflows" }),
     ).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(within(header).queryByRole("button", { name: "Duplicate Login Subflow" }))
+      .not.toBeInTheDocument();
+    expect(within(header).queryByRole("button", { name: "Delete Login Subflow" }))
+      .not.toBeInTheDocument();
     expect(screen.getByText("Used by 1 workflow")).toBeInTheDocument();
     expect(screen.getByText("Checkout E2E")).toBeInTheDocument();
     expect(
@@ -115,15 +120,18 @@ describe("Subflow list integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add Logic" }));
     const logicPalette = await screen.findByRole("dialog", { name: "Choose a logic node" });
     expect(within(logicPalette).queryByText("Call Subflow")).not.toBeInTheDocument();
-    await userEvent.click(within(logicPalette).getByRole("button", { name: "Close dialog" }));
+    await userEvent.click(within(logicPalette).getByRole("button", { name: /^Merge/ }));
+
+    expect(within(header).getByRole("button", { name: "Save" })).not.toBeDisabled();
 
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(workflowBridgeMock.saveSubflowGraph).toHaveBeenCalledWith(
         "subflow-login",
         expect.objectContaining({
-          nodes: graph.nodes,
-          edges: graph.edges,
+          nodes: expect.arrayContaining([
+            expect.objectContaining({ node_type: "merge" }),
+          ]),
         }),
       );
     });

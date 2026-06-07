@@ -118,7 +118,12 @@
 - Workflow Settings Run Policy keeps maximum duration, browser retention, Allow Run JavaScript, and Run from selected enablement/scope editable. Batch defaults remain visible, but the batch concurrency, batch headless, and stop-on-first-failed-row controls are disabled until Batch Run has a first-class UI flow.
 - Workflow Settings Graph owns the workflow detail Live Run visibility toggle, the Follow current default when Live Run is enabled, and the default duration-only wait copied onto newly created graph links. New settings default Live Run on and Follow current off. Changing the link wait does not rewrite existing graph links.
 - Closing Workflow Settings with unsaved edits opens a confirmation dialog that can save and close, discard changes back to the last saved settings snapshot, or keep editing.
-- Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from App Settings and then use manual Save.
+- Graph autosave is enabled by default and persists graph edits after changes. Users can turn autosave off from App Settings and then use manual Save. Workflow detail manual Save is disabled until the loaded graph has content changes, or until a failed autosave can be retried.
+- Leaving workflow detail with manual-save graph changes or failed autosave
+  opens the shared unsaved changes dialog. Save and close persists the visible
+  graph before navigation, Discard changes abandons the draft, and Keep editing
+  stays on the detail page. When graph autosave is enabled and has not failed,
+  navigation does not prompt.
 - Autosave failures keep the visible draft graph in the UI and show a readable save status. Save can be used to retry.
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
 - Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
@@ -132,9 +137,14 @@
 - Creating a subflow persists a saved graph fragment with a start node and the
   same graph DTO shape as workflows.
 - Opening a subflow loads its graph and usage list, and the detail header shows
-  the owning project name. The editor has Save,
-  Duplicate, and Delete actions, but no Launch Run action because subflows are
-  reusable implementation units rather than product scenarios.
+  the owning project name. The editor header has Save only, disabled until the
+  subflow graph has content changes. Duplicate and Delete stay on the Subflows
+  collection list, and subflow detail has no Launch Run action because subflows
+  are reusable implementation units rather than product scenarios.
+- Leaving subflow detail with unsaved graph changes opens the same unsaved
+  changes dialog, with Save and close persisting the subflow graph before
+  navigation, Discard changes leaving without saving, and Keep editing staying
+  on the subflow detail page.
 - When a subflow is used by workflows, the detail page warns that saving changes
   affects the next run of those callers. Delete is blocked while usage exists.
 - Saving a subflow graph validates subflow-specific constraints, including no

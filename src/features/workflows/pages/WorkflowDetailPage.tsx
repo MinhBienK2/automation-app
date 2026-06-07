@@ -27,6 +27,7 @@ type WorkflowDetailPageProps = {
   isRunning: boolean;
   appError: string;
   graphSaveStatus: string;
+  canSaveGraph: boolean;
   runState: RunState;
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
@@ -60,6 +61,7 @@ export function WorkflowDetailPage({
   isRunning,
   appError,
   graphSaveStatus,
+  canSaveGraph,
   runState,
   workflowGraph,
   graphIssues,
@@ -200,6 +202,7 @@ export function WorkflowDetailPage({
               type="button"
               label="Save"
               onClick={onSaveGraph}
+              disabled={!canSaveGraph}
             >
               <Save aria-hidden="true" />
             </IconButton>

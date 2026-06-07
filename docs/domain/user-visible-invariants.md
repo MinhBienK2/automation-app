@@ -89,9 +89,11 @@ Preserve these unless the task explicitly changes them.
   exposes a compact header command bar with the owning project name in header
   metadata. Settings, Validate, and Save are
   accessible icon controls with tooltips; Settings opens Workflow Settings at
-  Browser Launch. `Launch Run` is the primary text action, Stop appears only
-  while running, and Run from selected appears only when its workflow setting
-  makes it relevant.
+  Browser Launch. Save is disabled while the loaded graph has no content
+  changes, and enables when graph content changes or a failed autosave can be
+  retried. `Launch Run` is the primary text action, Stop appears only while
+  running, and Run from selected appears only when its workflow setting makes it
+  relevant.
 - Workflow Settings contains General, Graph, Run Policy, Browser Launch, and Environment sections. Related controls are grouped inside each section so users can scan settings by purpose. It is per-workflow and distinct from the app-level Settings screen. Settings are saved through a single dialog-level Save Settings action rather than separate section save buttons.
 - Workflow Settings Browser Launch values are sourced from the workflow's
   selected project saved session or private workflow session at run time.
@@ -124,6 +126,11 @@ Preserve these unless the task explicitly changes them.
   GeoIP, headed display, font, profile-count, and smoke readiness without raw
   binary/cache/profile/font paths.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
+- Leaving workflow detail or subflow detail with unsaved graph edits asks
+  whether to Save and close, Discard changes, or Keep editing. Workflow detail
+  asks when graph autosave is off and the visible graph has unsaved revisions,
+  or when autosave has failed. Workflow detail does not ask while autosave is
+  enabled and has not failed.
 - Running from the graph workspace saves the visible graph before execution.
 - Running from the graph workspace saves dirty Workflow Settings sections before execution.
 - Run from selected is a workflow-detail action. It is hidden unless enabled in Workflow Settings Run Policy, runs from exactly one selected main-path node using the retained browser session, saves visible graph/settings first, and is disabled unless Reuse login session is enabled, browser retention is `retain`, and the retained session matches the workflow/profile directory. Its Run Policy scope controls whether execution covers only the selected node or continues from that node through the downstream main path. Call Subflow nodes and nodes downstream from them are valid main-path selections when the referenced subflows are valid.
@@ -163,7 +170,9 @@ Preserve these unless the task explicitly changes them.
   They are reachable from the selected project's Subflows collection, can be
   created, opened, saved, duplicated, and deleted, and show usage warnings when
   referenced by workflows. Opening a subflow detail shows the owning project
-  name in header metadata. Deleting a referenced subflow is blocked.
+  name in header metadata. The subflow detail header exposes Save only, disabled
+  until graph content changes; duplicate and delete actions stay on the Subflows
+  collection list. Deleting a referenced subflow is blocked.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP
   subflows cannot call other subflows.

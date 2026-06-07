@@ -1,4 +1,4 @@
-import { Copy, Save, Trash2 } from "lucide-react";
+import { Save } from "lucide-react";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { IconButton } from "../../../components/ui/icon-button";
 import { initialRunState } from "../../../lib/workflowUi";
@@ -15,12 +15,11 @@ type SubflowDetailPageProps = {
   usage: SubflowUsage[];
   graph: WorkflowGraph | null;
   graphSaveStatus: string;
+  canSaveGraph: boolean;
   appError: string;
   onBack: () => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onSaveGraph: () => void;
-  onDuplicateSubflow: (subflow: Subflow) => Promise<void>;
-  onDeleteSubflow: (subflow: Subflow) => Promise<void>;
 };
 
 export function SubflowDetailPage({
@@ -29,12 +28,11 @@ export function SubflowDetailPage({
   usage,
   graph,
   graphSaveStatus,
+  canSaveGraph,
   appError,
   onBack,
   onGraphChange,
   onSaveGraph,
-  onDuplicateSubflow,
-  onDeleteSubflow,
 }: SubflowDetailPageProps) {
   const usageCount = usage.length;
   const usageLabel = `${usageCount} ${usageCount === 1 ? "workflow" : "workflows"}`;
@@ -62,30 +60,9 @@ export function SubflowDetailPage({
               type="button"
               label="Save"
               onClick={onSaveGraph}
+              disabled={!canSaveGraph}
             >
               <Save aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              className="workflow-command-icon"
-              variant="secondary"
-              type="button"
-              label={`Duplicate ${subflow.name}`}
-              onClick={() => {
-                void onDuplicateSubflow(subflow);
-              }}
-            >
-              <Copy aria-hidden="true" />
-            </IconButton>
-            <IconButton
-              className="workflow-command-icon"
-              variant="destructive"
-              type="button"
-              label={`Delete ${subflow.name}`}
-              onClick={() => {
-                void onDeleteSubflow(subflow);
-              }}
-            >
-              <Trash2 aria-hidden="true" />
             </IconButton>
           </div>
         }
