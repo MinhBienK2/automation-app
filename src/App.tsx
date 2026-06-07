@@ -31,6 +31,7 @@ import {
   duplicateProject as duplicateProjectCommand,
   duplicateWorkflow as duplicateWorkflowCommand,
   enableSchedule,
+  exportProjectPackage,
   exportWorkflowPackage,
   generateRecordingDraft,
   exportEvidenceBundle,
@@ -46,6 +47,7 @@ import {
   getRunState,
   getWorkflow,
   getWorkflowSettings,
+  importProjectPackage,
   importWorkflowPackage,
   installCloakBrowserBinary,
   listEvidenceItems,
@@ -56,6 +58,7 @@ import {
   listSchedules,
   listSubflows,
   listWorkflows,
+  previewProjectPackage,
   previewWorkflowPackage,
   resetWorkflowBrowserIdentity as resetWorkflowBrowserIdentityCommand,
   renameWorkflow as renameWorkflowCommand,
@@ -63,6 +66,7 @@ import {
   runWorkflowFromNode as runWorkflowFromNodeCommand,
   saveRecordingDraft,
   saveSubflowGraph,
+  saveProjectPackageFile,
   saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
@@ -109,6 +113,8 @@ import type {
   Project,
   ProjectEnvironment,
   ProjectEnvironmentInput,
+  ProjectPackage,
+  ProjectPackagePreview,
   RecordingSession,
   RecordingWorkflowDraft,
   ReviewedRecordingStep,
@@ -156,6 +162,7 @@ const workflowPackageSections: WorkflowSettingsSectionId[] = [
   "environment",
 ];
 const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
+const projectPackageFileSizeLimitBytes = 20 * 1024 * 1024;
 
 function readGraphAutosaveEnabled() {
   try {
@@ -489,6 +496,10 @@ function App() {
   const [importPackageIncludeFlow, setImportPackageIncludeFlow] = useState(true);
   const [importPackageSections, setImportPackageSections] =
     useState<WorkflowSettingsSectionId[]>([]);
+  const [importProjectPackageValue, setImportProjectPackageValue] =
+    useState<ProjectPackage | null>(null);
+  const [importProjectPackagePreview, setImportProjectPackagePreview] =
+    useState<ProjectPackagePreview | null>(null);
   const [appError, setAppError] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const graphRevisionRef = useRef(graphRevision);
@@ -738,6 +749,64 @@ function App() {
       setSubflows(await listSubflows(project.id));
       await loadWorkflows();
       setToastMessage("Project duplicated.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function exportProjectPackageFile(projectId: string) {
+    setAppError("");
+    try {
+      const packageValue = await exportProjectPackage(projectId);
+      const filePath = await saveProjectPackageFile(packageValue);
+      if (!filePath) return;
+      setToastMessage("Project exported.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function importProjectPackageFile(file: File | null) {
+    if (!file) return;
+    setAppError("");
+    if (file.size > projectPackageFileSizeLimitBytes) {
+      setAppError("Project package file must be 20 MB or smaller");
+      return;
+    }
+
+    try {
+      const packageValue = JSON.parse(await file.text()) as ProjectPackage;
+      const preview = await previewProjectPackage(packageValue);
+      setImportProjectPackageValue(packageValue);
+      setImportProjectPackagePreview(preview);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  function closeImportProjectPackageDialog() {
+    setImportProjectPackageValue(null);
+    setImportProjectPackagePreview(null);
+    setAppError("");
+  }
+
+  async function submitImportProjectPackage(event: React.FormEvent) {
+    event.preventDefault();
+    if (!importProjectPackageValue) return;
+    setAppError("");
+
+    try {
+      const project = await importProjectPackage(importProjectPackageValue);
+      closeImportProjectPackageDialog();
+      setSelectedProjectId(project.id);
+      setProjectCollection("workflows");
+      setProjects(await listProjects());
+      setProjectEnvironments(await listProjectEnvironments(project.id));
+      setSubflows(await listSubflows(project.id));
+      await loadWorkflows();
+      setToastMessage("Project imported.");
       window.setTimeout(() => setToastMessage(""), 2200);
     } catch (error) {
       setAppError(commandMessage(error));
@@ -2188,6 +2257,7 @@ function App() {
             void selectProject(projectId);
           }}
           onCreateProject={createProject}
+          onImportProjectPackageFile={importProjectPackageFile}
           onCollectionChange={changeProjectCollection}
         >
           {projectCollection === "subflows" ? (
@@ -2212,6 +2282,7 @@ function App() {
               error={appError}
               onUpdateProject={updateProject}
               onDuplicateProject={duplicateProject}
+              onExportProjectPackage={exportProjectPackageFile}
               onDeleteProject={deleteProject}
               onUpdateProjectEnvironment={updateProjectEnvironment}
               onResetProjectEnvironmentBrowserIdentity={
@@ -2442,6 +2513,68 @@ function App() {
                   variant="secondary"
                   type="button"
                   onClick={closeImportPackageDialog}
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <Dialog
+        open={Boolean(importProjectPackageValue && importProjectPackagePreview)}
+        onOpenChange={(open) => {
+          if (!open) closeImportProjectPackageDialog();
+        }}
+      >
+        {importProjectPackagePreview ? (
+          <DialogContent className="workflow-dialog">
+            <DialogHeader>
+              <p className="eyebrow">Package</p>
+              <DialogTitle>Import Project</DialogTitle>
+              <DialogDescription>
+                Import creates a new project and never overwrites an existing one.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="workflow-dialog-form" onSubmit={submitImportProjectPackage}>
+              <dl className="package-preview-list">
+                <div>
+                  <dt>Name</dt>
+                  <dd>{importProjectPackagePreview.project_name}</dd>
+                </div>
+                <div>
+                  <dt>Workflows</dt>
+                  <dd>
+                    {importProjectPackagePreview.workflows.length > 0
+                      ? importProjectPackagePreview.workflows
+                          .map((workflow) => workflow.name)
+                          .join(", ")
+                      : "None"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Subflows</dt>
+                  <dd>{importProjectPackagePreview.subflows.length}</dd>
+                </div>
+                <div>
+                  <dt>Sessions</dt>
+                  <dd>{importProjectPackagePreview.environments.length}</dd>
+                </div>
+              </dl>
+              {importProjectPackagePreview.omitted_fields.length > 0 ? (
+                <p className="muted">
+                  Sanitized fields: {importProjectPackagePreview.omitted_fields.join(", ")}
+                </p>
+              ) : null}
+              {appError ? <p className="field-error">{appError}</p> : null}
+              <DialogFooter className="form-actions">
+                <Button shape="pill" type="submit">
+                  Import
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeImportProjectPackageDialog}
                 >
                   Cancel
                 </Button>

@@ -1,4 +1,4 @@
-import { Folder, Plus, Search } from "lucide-react";
+import { Folder, Plus, Search, Upload } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -23,6 +23,7 @@ type ProjectsPageProps = {
   children: ReactNode;
   onSelectProject: (projectId: string) => void;
   onCreateProject: (input: { name: string; description?: string | null }) => Promise<void>;
+  onImportProjectPackageFile: (file: File | null) => void;
   onCollectionChange: (collection: ProjectCollection) => void;
 };
 
@@ -40,6 +41,7 @@ export function ProjectsPage({
   children,
   onSelectProject,
   onCreateProject,
+  onImportProjectPackageFile,
   onCollectionChange,
 }: ProjectsPageProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -99,6 +101,20 @@ export function ProjectsPage({
           <div className="header-stats" aria-label="Project summary">
             <span>{projects.length} projects</span>
           </div>
+          <label className="workflow-import-button">
+            <Upload aria-hidden="true" />
+            Import project
+            <input
+              aria-label="Project package file"
+              className="workflow-package-file-input"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                onImportProjectPackageFile(event.currentTarget.files?.[0] ?? null);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
           <Button shape="pill" type="button" onClick={() => setCreateDialogOpen(true)}>
             <Plus aria-hidden="true" />
             Create Project

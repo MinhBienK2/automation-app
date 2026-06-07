@@ -46,7 +46,7 @@ Update docs: workflow lifecycle, frontend architecture, run-state contract if mo
 Use when changing project grouping, project saved-session browser launch
 selection, workflow create session choices, compatibility Project Environment
 rows, subflow CRUD, Call Subflow graph nodes, or workflow package subflow
-import/export.
+import/export, or project package import/export.
 
 Read: `domain/product-model.md`, `domain/workflow-lifecycle.md`,
 `domain/user-visible-invariants.md`, `domain/execution-semantics.md`,
@@ -68,7 +68,8 @@ Verify: `src/App.tsx`, `src/features/projects/`, `src/features/settings/`,
 `electron/backend/graph/compiler.ts`,
 `electron/backend/persistence/database.ts`,
 `electron/backend/persistence/workflowRepository.ts`,
-`electron/backend/services/workflowPackageService.ts`
+`electron/backend/services/workflowPackageService.ts`,
+`electron/backend/services/projectPackageService.ts`
 
 Checks: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts electron/backend/graph/compiler.test.ts electron/backend/graph/validateGraph.test.ts electron/backend/services/workflowPackageService.test.ts src/lib/workflowApi.test.ts`,
 focused workflow/settings page tests, `npx tsc --noEmit`,

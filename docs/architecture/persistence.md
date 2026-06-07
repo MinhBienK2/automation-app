@@ -74,6 +74,13 @@ Electron/Node now owns the production persistence layer.
   imported project-environment/session row when Browser Launch is selected
   inside one SQLite transaction. Failed validation or save errors roll back the
   whole import.
+- Project package import validates packaged sessions, subflows, workflows,
+  graphs, and Workflow Settings before persistence. It writes the imported
+  project row, recreated project-environment/session rows with fresh browser
+  identities/profiles, recreated subflows, workflows, remapped workflow graphs,
+  and settings inside one SQLite transaction. Failed validation or save errors
+  roll back the whole import. Project packages do not persist or restore runs,
+  evidence, schedules, app settings, or browser profile storage.
 - Run evidence outputs store app-local artifact paths under run-scoped evidence directories; run rows persist the resulting output JSON and step error/trace JSON for audit. `run_steps` keeps the existing top-level compiled graph rows and appends executed nested action trace rows with parent control node id and sequence metadata inside `trace_json`, allowing branch, loop, and retry paths to be reconstructed from durable storage.
 - Schedule rows store schedule config JSON, enabled state, next run time, and the latest schedule event summary.
 - Schedule event rows store scheduling decisions such as started, skipped, missed, failed-to-start, and disabled. Skipped/missed events exist even when no run row is created. Schedule event history by schedule id or workflow id uses descending created-time indexes.

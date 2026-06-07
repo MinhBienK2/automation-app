@@ -44,11 +44,29 @@
   non-storage settings, remaps copied Call Subflow references to copied
   subflows, and gives copied browser sessions fresh identity/profile/fingerprint
   values so the new project does not reuse the source project's saved sessions.
+- Export project calls `exportProjectPackage` and then `saveProjectPackageFile`
+  to write a `.project.json` package through the native Save dialog. The
+  package includes project metadata, saved/private project sessions, subflows,
+  workflows, saved graphs, and Workflow Settings, with proxy secrets, proxy URL
+  credentials, local fingerprint font directories, and preflight fields
+  sanitized.
 - Delete project opens an in-app confirmation before calling `deleteProject`.
   The backend rejects deletion while any workflow in that project has an active
   run, active profile, or retained session, then deletes the project's
   workflows, subflows, and saved-session rows. The UI selects the next available
   project after deletion.
+
+## Project Import
+
+- Import project accepts a JSON project package from the Projects workspace
+  header next to Create Project, previews workflows, subflows, sessions, and
+  sanitized omitted fields, then calls `importProjectPackage`. Import validates
+  package graphs/settings first, transactionally creates `<project name>
+  (imported)`, recreates sessions, subflows, workflows, remaps Call Subflow ids
+  and workflow session ids, gives imported sessions fresh
+  identity/profile/fingerprint values, selects the new project, and switches to
+  Workflows. It does not import runs, evidence, schedules, app settings, or
+  browser profile storage.
 
 ## Open Detail
 

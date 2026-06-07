@@ -20,13 +20,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/projects/pages/ProjectsPage.tsx`: project workspace shell with
   selected-project state, project search/selection, fixed
   Workflows/Subflows/Settings collection tabs in the detail panel, and project
-  creation.
+  creation plus project package import from the workspace header.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
   project settings surface with grouped Project details controls for rename,
-  duplicate, and delete actions, plus Browser fingerprint controls for editing
-  the saved-session fingerprint seed and confirming backend-owned identity
-  regeneration/profile deletion without exposing a duplicate full Browser Launch
-  editor.
+  duplicate, export package, and delete actions, plus Browser fingerprint
+  controls for editing the saved-session fingerprint seed and confirming
+  backend-owned identity regeneration/profile deletion without exposing a
+  duplicate full Browser Launch editor.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, environment readiness diagnostics, guarded maintenance commands,
   and graph shortcut guidance.
@@ -97,12 +97,17 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   different project resets the active collection to Workflows so operators do
   not land in the previous project's Settings or Subflows context. Project
   Settings owns project rename, duplicate, delete confirmation, and
-  saved-session identity actions. Project creation selects the new project,
-  switches to Workflows, and refreshes workflow summaries because the backend
-  creates the project's default `Main` workflow; duplicate
-  and delete refresh project/workflow/subflow state and keep selection on a
-  valid project. Its project list sidebar and selected collection content are
-  independent scroll regions inside the Projects workspace viewport.
+  saved-session identity actions. Project package export delegates package
+  creation and native Save dialog writing to the backend. Project package import
+  lives in the Projects workspace header next to Create Project, reads JSON from
+  a browser file input, previews package workflows/subflows/sessions and omitted
+  fields, then creates and selects a new imported project.
+  Project creation selects the new project, switches to Workflows, and refreshes
+  workflow summaries because the backend creates the project's default `Main`
+  workflow; duplicate, import, and delete refresh project/workflow/subflow state
+  and keep selection on a valid project. Its project list sidebar and selected
+  collection content are independent scroll regions inside the Projects
+  workspace viewport.
 - The app shell no longer renders a top command/search header or Alerts
   shortcut. Cross-workspace movement stays in the sidebar and explicit in-page
   links.

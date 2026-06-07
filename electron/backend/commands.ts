@@ -28,6 +28,8 @@ import type {
   Project,
   ProjectEnvironment,
   ProjectEnvironmentInput,
+  ProjectPackage,
+  ProjectPackagePreview,
   RunValidationIssue,
   ScheduleValidationIssue,
   SettingsValidationIssue,
@@ -80,6 +82,7 @@ import { sanitizePathSegment } from "./evidence/artifacts.js";
 import { EvidenceRepository } from "./evidence/evidenceRepository.js";
 import { IdentityRepository } from "./identity/identityRepository.js";
 import { migrateWorkflowGraph } from "./graph/migration.js";
+import { ProjectPackageService } from "./services/projectPackageService.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
 import { WorkflowRepository } from "./persistence/workflowRepository.js";
 import { WorkflowScheduleRepository } from "./scheduling/workflowScheduleRepository.js";
@@ -131,6 +134,7 @@ type CommandContext = {
   recorderDriver?: BrowserDriver;
   recorderUsesDefaultDriver?: boolean;
   saveWorkflowPackageFile?: (packageValue: WorkflowPackage) => Promise<string | null>;
+  saveProjectPackageFile?: (packageValue: ProjectPackage) => Promise<string | null>;
   revealEvidenceArtifact?: (absolutePath: string) => void | Promise<void>;
   selectEvidenceBundleDirectory?: () => Promise<string | null>;
   defaultFingerprintFontsDir?: string | null | (() => string | null);
@@ -173,6 +177,12 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     defaultFingerprintFontsDir: () => resolveDefaultFingerprintFontsDir(context.defaultFingerprintFontsDir),
   });
   const packageService = new WorkflowPackageService({
+    migrateGraph: migrateWorkflowGraph,
+    validateGraph,
+    validateSettings: (settings) => settingsService.validateSettings(settings),
+    defaultSettings: settingsService.defaultWorkflowSettings,
+  });
+  const projectPackageService = new ProjectPackageService({
     migrateGraph: migrateWorkflowGraph,
     validateGraph,
     validateSettings: (settings) => settingsService.validateSettings(settings),
@@ -650,6 +660,86 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
               copiedEnvironment.browser_launch,
             ),
           );
+        }
+      }
+
+      context.database.exec("COMMIT");
+      return createdProject;
+    } catch (error) {
+      context.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  function importProjectPackageCascade(packageValue: ProjectPackage): Project {
+    const preparedImport = projectPackageService.prepareImport({ packageValue });
+    context.database.exec("BEGIN IMMEDIATE");
+    try {
+      const createdProject = repository.createProject(
+        preparedImport.importedName,
+        preparedImport.description,
+      );
+      const environmentIdMap = new Map<string, string>();
+      for (const environment of preparedImport.environments) {
+        const createdEnvironment = repository.createProjectEnvironment(createdProject.id, {
+          name: environment.name,
+          description: environment.description,
+          is_default: environment.is_default,
+          browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
+        });
+        environmentIdMap.set(environment.id, createdEnvironment.id);
+      }
+      const defaultEnvironment =
+        repository.getDefaultProjectEnvironment(createdProject.id) ??
+        ensureDefaultProjectEnvironment(createdProject);
+
+      const subflowIdMap = new Map<string, string>();
+      for (const subflow of preparedImport.subflows) {
+        const createdSubflow = repository.createSubflow(
+          createdProject.id,
+          subflow.name,
+          subflow.description,
+          migrateWorkflowGraph(subflow.graph),
+        );
+        subflowIdMap.set(subflow.id, createdSubflow.id);
+      }
+
+      for (const packagedWorkflow of preparedImport.workflows) {
+        const createdEnvironmentId = packagedWorkflow.environment_id
+          ? environmentIdMap.get(packagedWorkflow.environment_id) ?? defaultEnvironment.id
+          : defaultEnvironment.id;
+        const createdWorkflow = createWorkflow(packagedWorkflow.name, {
+          project_id: createdProject.id,
+          environment: {
+            mode: "existing",
+            environment_id: createdEnvironmentId,
+          },
+        });
+        if (packagedWorkflow.flow) {
+          repository.saveWorkflowGraph(
+            createdWorkflow.id,
+            remapCallSubflowIds(packagedWorkflow.flow, subflowIdMap),
+          );
+        }
+        if (packagedWorkflow.settings) {
+          const createdEnvironment = requireProjectEnvironment(createdEnvironmentId);
+          saveSettings(createdWorkflow.id, {
+            ...packagedWorkflow.settings,
+            workflow_id: createdWorkflow.id,
+            general: {
+              ...packagedWorkflow.settings.general,
+              name: createdWorkflow.name,
+              created_at: createdWorkflow.created_at,
+              updated_at: createdWorkflow.updated_at,
+            },
+            run_policy: {
+              ...packagedWorkflow.settings.run_policy,
+              run_from_selected_enabled: false,
+            },
+            browser_launch: createdEnvironment.browser_launch,
+            created_at: createdWorkflow.created_at,
+            updated_at: createdWorkflow.updated_at,
+          });
         }
       }
 
@@ -1315,6 +1405,37 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     duplicateProject(projectId: string): Project {
       return duplicateProjectCascade(projectId);
+    },
+
+    exportProjectPackage(projectId: string): ProjectPackage {
+      const project = requireProject(projectId);
+      const environments = repository.listProjectEnvironments(project.id);
+      const subflows = repository
+        .listSubflows(project.id)
+        .map((subflow) => repository.getSubflow(subflow.id))
+        .filter((subflow): subflow is Subflow => Boolean(subflow));
+      const workflows = repository
+        .listWorkflows()
+        .filter((workflow) => workflow.project_id === project.id)
+        .map((workflow) => ({
+          workflow,
+          flow: getWorkflowGraph(workflow.id),
+          settings: getSettings(workflow.id),
+        }));
+      return projectPackageService.exportProjectPackage({
+        project,
+        environments,
+        subflows,
+        workflows,
+      });
+    },
+
+    previewProjectPackage(packageValue: ProjectPackage): ProjectPackagePreview {
+      return projectPackageService.previewProjectPackage(packageValue);
+    },
+
+    importProjectPackage(packageValue: ProjectPackage): Project {
+      return importProjectPackageCascade(packageValue);
     },
 
     deleteProject(projectId: string) {
@@ -2172,6 +2293,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         throw commandError("Workflow package file saving is not available");
       }
       return context.saveWorkflowPackageFile(packageValue);
+    },
+
+    async saveProjectPackageFile(packageValue: ProjectPackage) {
+      if (!context.saveProjectPackageFile) {
+        throw commandError("Project package file saving is not available");
+      }
+      return context.saveProjectPackageFile(packageValue);
     },
   };
 }

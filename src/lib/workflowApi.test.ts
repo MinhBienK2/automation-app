@@ -16,6 +16,7 @@ import {
   enableSchedule,
   exportWorkflow,
   exportWorkflowPackage,
+  exportProjectPackage,
   duplicateWorkflow,
   duplicateProject,
   duplicateSubflow,
@@ -49,6 +50,7 @@ import {
   getWorkflowGraph,
   importWorkflow,
   importWorkflowPackage,
+  importProjectPackage,
   runWorkflow,
   runWorkflowFromNode,
   listRunStates,
@@ -69,13 +71,16 @@ import {
   validateWorkflowRun,
   validateSchedule,
   previewWorkflowPackage,
+  previewProjectPackage,
   setWorkflowEnvironment,
   deleteSubflow,
   updateProjectEnvironment,
   updateProject,
   resetProjectEnvironmentBrowserIdentity,
+  saveProjectPackageFile,
 } from "./workflowApi";
 import type {
+  ProjectPackage,
   WorkflowExport,
   WorkflowGraph,
   WorkflowPackage,
@@ -131,6 +136,10 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.createProject.mockResolvedValue(undefined);
     workflowBridgeMock.updateProject.mockResolvedValue(undefined);
     workflowBridgeMock.duplicateProject.mockResolvedValue(undefined);
+    workflowBridgeMock.exportProjectPackage.mockResolvedValue(undefined);
+    workflowBridgeMock.previewProjectPackage.mockResolvedValue(undefined);
+    workflowBridgeMock.importProjectPackage.mockResolvedValue(undefined);
+    workflowBridgeMock.saveProjectPackageFile.mockResolvedValue(undefined);
     workflowBridgeMock.deleteProject.mockResolvedValue(undefined);
     workflowBridgeMock.listProjectEnvironments.mockResolvedValue(undefined);
     workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
@@ -150,6 +159,20 @@ describe("workflow API phase ten commands", () => {
     await createProject({ name: "Owned Lab", description: "staging" });
     await updateProject("project-1", { name: "Owned Lab 2", description: "" });
     await duplicateProject("project-1");
+    const projectPackage: ProjectPackage = {
+      kind: "project_package",
+      version: 1,
+      project: { name: "Owned Lab 2", description: "" },
+      included_sections: ["project", "environments", "subflows", "workflows"],
+      omitted_fields: [],
+      environments: [],
+      subflows: [],
+      workflows: [],
+    };
+    await exportProjectPackage("project-1");
+    await previewProjectPackage(projectPackage);
+    await importProjectPackage(projectPackage);
+    await saveProjectPackageFile(projectPackage);
     await deleteProject("project-1");
     await listProjectEnvironments("project-1");
     await createProjectEnvironment("project-1", {
@@ -249,6 +272,10 @@ describe("workflow API phase ten commands", () => {
       { name: "Owned Lab 2", description: "" },
     );
     expect(workflowBridgeMock.duplicateProject).toHaveBeenCalledWith("project-1");
+    expect(workflowBridgeMock.exportProjectPackage).toHaveBeenCalledWith("project-1");
+    expect(workflowBridgeMock.previewProjectPackage).toHaveBeenCalledWith(projectPackage);
+    expect(workflowBridgeMock.importProjectPackage).toHaveBeenCalledWith(projectPackage);
+    expect(workflowBridgeMock.saveProjectPackageFile).toHaveBeenCalledWith(projectPackage);
     expect(workflowBridgeMock.deleteProject).toHaveBeenCalledWith("project-1");
     expect(workflowBridgeMock.listProjectEnvironments).toHaveBeenCalledWith("project-1");
     expect(workflowBridgeMock.createProjectEnvironment).toHaveBeenCalledWith(

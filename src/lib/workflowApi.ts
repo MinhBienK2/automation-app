@@ -10,6 +10,7 @@ import type {
   IdentityLabOverviewRequest,
   IdentityLabTarget,
   OperationsOverviewRequest,
+  ProjectPackage,
   ProjectEnvironmentInput,
   WorkflowBrowserConfig,
   WorkflowCreateOptions,
@@ -55,6 +56,18 @@ export function updateProject(
 
 export function duplicateProject(projectId: string) {
   return bridge().duplicateProject(projectId);
+}
+
+export function exportProjectPackage(projectId: string) {
+  return bridge().exportProjectPackage(projectId);
+}
+
+export function previewProjectPackage(packageValue: ProjectPackage) {
+  return bridge().previewProjectPackage(packageValue);
+}
+
+export function importProjectPackage(packageValue: ProjectPackage) {
+  return bridge().importProjectPackage(packageValue);
 }
 
 export function deleteProject(projectId: string) {
@@ -337,6 +350,10 @@ export function importWorkflowPackage(
 
 export function saveWorkflowPackageFile(packageValue: WorkflowPackage) {
   return bridge().saveWorkflowPackageFile(packageValue);
+}
+
+export function saveProjectPackageFile(packageValue: ProjectPackage) {
+  return bridge().saveProjectPackageFile(packageValue);
 }
 
 export function runBatchWorkflow(workflowId: string, request: BatchRunRequest) {

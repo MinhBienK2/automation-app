@@ -17,6 +17,7 @@ Node/Electron backend.
 - Run lifecycle manager: `electron/backend/runtime/runManager.ts`
 - Workflow settings service: `electron/backend/services/workflowSettingsService.ts`
 - Workflow package service: `electron/backend/services/workflowPackageService.ts`
+- Project package service: `electron/backend/services/projectPackageService.ts`
 - Electron SQLite bootstrap: `electron/backend/persistence/database.ts`
 - Electron repository: `electron/backend/persistence/workflowRepository.ts`
 - Operations read model: `electron/backend/operations/operationsRepository.ts`
@@ -80,9 +81,10 @@ Node/Electron backend.
   full Project Environment list/create/editor. Project creation stays
   backend-owned through `createProject`, which creates the project, default
   saved session, and initial `Main` workflow transactionally. Project
-  rename/duplicate/delete stays backend-owned through `updateProject`,
-  `duplicateProject`, and `deleteProject`, and project identity regeneration stays backend-owned
-  through `resetProjectEnvironmentBrowserIdentity`.
+  rename/duplicate/export-package/import-package/delete stays backend-owned
+  through `updateProject`, `duplicateProject`, `exportProjectPackage`,
+  `importProjectPackage`, and `deleteProject`, and project identity regeneration
+  stays backend-owned through `resetProjectEnvironmentBrowserIdentity`.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
@@ -107,6 +109,13 @@ Node/Electron backend.
   any imported session writes in a SQLite transaction. Export sanitization
   removes proxy secrets, proxy URL credentials, and local fingerprint font
   directories.
+- Project package import/export delegates preview/import preparation,
+  package-local session/subflow/workflow validation, Call Subflow id remapping
+  preparation, and export sanitization to `ProjectPackageService`; command
+  handlers create the imported project, recreated sessions, subflows, workflows,
+  graphs, and settings inside one SQLite transaction. Imported project sessions
+  get fresh identity/profile/fingerprint values and do not restore runs,
+  evidence, schedules, app settings, or browser profile storage.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.
 - Product-facing project copy goes through `duplicateProject`, which copies the

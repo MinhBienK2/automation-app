@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -25,6 +26,7 @@ type ProjectEnvironmentSettingsProps = {
     input: { name?: string; description?: string | null },
   ) => Promise<void>;
   onDuplicateProject: (projectId: string) => Promise<void>;
+  onExportProjectPackage: (projectId: string) => Promise<void>;
   onDeleteProject: (projectId: string) => Promise<void>;
   onUpdateProjectEnvironment: (
     environmentId: string,
@@ -41,6 +43,7 @@ export function ProjectEnvironmentSettings({
   error,
   onUpdateProject,
   onDuplicateProject,
+  onExportProjectPackage,
   onDeleteProject,
   onUpdateProjectEnvironment,
   onResetProjectEnvironmentBrowserIdentity,
@@ -55,6 +58,7 @@ export function ProjectEnvironmentSettings({
   const [localError, setLocalError] = useState("");
   const [savingProject, setSavingProject] = useState(false);
   const [duplicatingProject, setDuplicatingProject] = useState(false);
+  const [exportingProject, setExportingProject] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
   const [savingSeed, setSavingSeed] = useState(false);
   const [regeneratingIdentity, setRegeneratingIdentity] = useState(false);
@@ -102,6 +106,17 @@ export function ProjectEnvironmentSettings({
       await onDuplicateProject(project.id);
     } finally {
       setDuplicatingProject(false);
+    }
+  }
+
+  async function exportProjectPackage() {
+    if (!project) return;
+    setLocalError("");
+    setExportingProject(true);
+    try {
+      await onExportProjectPackage(project.id);
+    } finally {
+      setExportingProject(false);
     }
   }
 
@@ -157,7 +172,8 @@ export function ProjectEnvironmentSettings({
     setRegenerateDialogOpen(false);
   }
 
-  const projectActionPending = savingProject || duplicatingProject || deletingProject;
+  const projectActionPending =
+    savingProject || duplicatingProject || exportingProject || deletingProject;
 
   return (
     <section
@@ -167,7 +183,6 @@ export function ProjectEnvironmentSettings({
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Project Settings</p>
-          <h2>Project identity</h2>
         </div>
       </div>
 
@@ -214,6 +229,18 @@ export function ProjectEnvironmentSettings({
             disabled={!project || projectActionPending}
           >
             Duplicate project
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              void exportProjectPackage();
+            }}
+            disabled={!project || projectActionPending}
+          >
+            <Download aria-hidden="true" />
+            Export project
           </Button>
           <Button
             type="button"

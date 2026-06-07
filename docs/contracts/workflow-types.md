@@ -80,6 +80,10 @@ Frontend and backend must agree on:
   "workflow_package"`, `version: 2`, workflow name metadata,
   `included_sections`, `omitted_fields`, optional `flow`, optional partial
   `settings`, and optional referenced `subflows`.
+- `ProjectPackage`: product-facing project import/export JSON with `kind:
+  "project_package"`, `version: 1`, project metadata, `included_sections`,
+  `omitted_fields`, sanitized project sessions, subflows, workflows, saved
+  graphs, and Workflow Settings.
 - `WorkflowSchedule`: persisted schedule DTO with workflow id/name, schedule name, enabled state, kind, next run time, last event summary, and timestamps.
 - `WorkflowScheduleEvent`: persisted scheduler audit event for started, skipped, missed, failed-to-start, and disabled decisions.
 - `RecordingSession`: backend-owned recorder lifecycle DTO with session id,
@@ -236,6 +240,48 @@ there. Imports that omit Browser Launch use the target project's saved session
 without rewriting it.
 
 Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and local `settings.browser_launch.fingerprint_fonts_dir`.
+
+## Project Package Shape
+
+Project Package v1 is the current project-scoped import/export format:
+
+```text
+{
+  kind: "project_package",
+  version: 1,
+  project: { name, description },
+  included_sections: ["project", "environments", "subflows", "workflows"],
+  omitted_fields: ["environments.<id>.browser_launch.proxy_password"],
+  environments: ProjectEnvironment[],
+  subflows: Subflow[],
+  workflows: [
+    {
+      id,
+      project_id,
+      environment_id,
+      name,
+      flow: WorkflowGraph,
+      settings: WorkflowSettings
+    }
+  ]
+}
+```
+
+Project package preview serializes as `{ project_name, workflows, subflows,
+environments, omitted_fields }`. Export always captures the whole selected
+project: project metadata, saved/private project sessions, subflows, workflows,
+saved graphs, and Workflow Settings. Export sanitizes the same sensitive/local
+Browser Launch fields as workflow packages, using package paths rooted at the
+environment or workflow id.
+
+Import validates package sessions, subflows, workflows, graphs, and settings
+before persistence, then creates a new `<project name> (imported)` project.
+It recreates project sessions with fresh identity/profile/fingerprint values,
+recreates subflows, creates workflows in the imported project, remaps workflow
+`environment_id` and Call Subflow `subflow_id` references, saves settings to
+the new workflow ids, and disables Run from selected on imported workflows.
+Project packages do not include or restore runs, evidence, schedules, app
+settings, or browser profile storage.
 
 `BrowserProfileDiagnostics` reports profile directory, identity/workflow
 metadata, bounded approximate size, last modified time, last run time, and active-session

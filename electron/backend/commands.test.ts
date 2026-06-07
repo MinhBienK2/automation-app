@@ -19,6 +19,7 @@ import type {
   ActionConfig,
   CompiledWorkflowGraph,
   GraphNodeType,
+  ProjectPackage,
   RunState,
   WorkflowGraph,
   WorkflowPackage,
@@ -99,6 +100,10 @@ type ProjectWorkflowTestHandlers = {
     },
   ): TestProjectEnvironment;
   resetProjectEnvironmentBrowserIdentity(environmentId: string): TestProjectEnvironment;
+  exportProjectPackage(projectId: string): ProjectPackage;
+  previewProjectPackage(packageValue: ProjectPackage): unknown;
+  importProjectPackage(packageValue: ProjectPackage): TestProject;
+  saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
   setWorkflowEnvironment(workflowId: string, environmentId: string): ProjectWorkflow;
   createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
   listSubflows(projectId: string): Array<TestSubflow & { used_by_count: number }>;
@@ -336,6 +341,148 @@ describe("Electron workflow command handlers", () => {
     expect(() => projectHandlers.getSubflowGraph(subflow.id)).toThrow("Subflow not found");
     expect(projectHandlers.listProjects().some((item) => item.id === duplicatedProject.id))
       .toBe(true);
+  });
+
+  test("exports and imports project packages as independent projects", async () => {
+    let savedProjectPackage: ProjectPackage | null = null;
+    const { handlers } = await createTestHandlers({
+      async saveProjectPackageFile(packageValue) {
+        savedProjectPackage = packageValue;
+        return "/tmp/staging-project.project.json";
+      },
+    });
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const sourceProject = projectHandlers.updateProject(
+      projectHandlers.listProjects()[0].id,
+      { name: "Staging Project", description: "Owned staging flows" },
+    );
+    const sourceWorkflow = handlers.createWorkflow("Checkout E2E", {
+      project_id: sourceProject.id,
+      environment: { mode: "isolated", name: "Checkout private session" },
+    }) as ProjectWorkflow;
+    const sourceSettings = handlers.getWorkflowSettings(sourceWorkflow.id);
+    handlers.saveWorkflowSettings(sourceWorkflow.id, {
+      ...sourceSettings,
+      browser_launch: {
+        ...sourceSettings.browser_launch,
+        proxy_enabled: true,
+        proxy_server: "https://proxy.example:8443",
+        proxy_username: "user",
+        proxy_password: "secret",
+      },
+      environment: {
+        initial_variables: [{ name: "account.username", value_type: "text", value: "qa-user" }],
+      },
+    });
+    const sourceSubflow = projectHandlers.createSubflow(sourceProject.id, {
+      name: "Login helper",
+    });
+    projectHandlers.saveSubflowGraph(
+      sourceSubflow.id,
+      subflowGraphWithAction("fill-username", "Fill username"),
+    );
+    handlers.saveWorkflowGraph(
+      sourceWorkflow.id,
+      workflowGraphCallingSubflow(sourceSubflow.id),
+    );
+
+    const packageValue = projectHandlers.exportProjectPackage(sourceProject.id);
+    const filePath = await projectHandlers.saveProjectPackageFile(packageValue);
+
+    expect(filePath).toBe("/tmp/staging-project.project.json");
+    expect(savedProjectPackage).toBe(packageValue);
+    expect(packageValue).toMatchObject({
+      kind: "project_package",
+      version: 1,
+      project: { name: "Staging Project", description: "Owned staging flows" },
+    });
+    expect(packageValue.environments.some((environment) =>
+      environment.browser_launch.proxy_password === null &&
+      environment.browser_launch.proxy_server === "https://proxy.example:8443"
+    )).toBe(true);
+    expect(JSON.stringify(packageValue)).not.toContain("secret");
+    expect(JSON.stringify(packageValue)).not.toContain("user:pass");
+    expect(projectHandlers.previewProjectPackage(packageValue)).toMatchObject({
+      project_name: "Staging Project",
+      workflows: [{ id: sourceWorkflow.id, name: "Checkout E2E" }],
+      subflows: [{ id: sourceSubflow.id, name: "Login helper" }],
+    });
+
+    const importedProject = projectHandlers.importProjectPackage(packageValue);
+    const importedWorkflows = handlers
+      .listWorkflows()
+      .filter((item) => item.project_id === importedProject.id);
+    const importedSubflows = projectHandlers.listSubflows(importedProject.id);
+    const importedWorkflow = importedWorkflows.find((item) => item.name === "Checkout E2E");
+    const importedGraph = handlers.getWorkflowGraph(importedWorkflow?.id ?? "");
+    const importedCallNode = importedGraph.nodes.find((node) => node.id === "call-login");
+    const importedSettings = handlers.getWorkflowSettings(importedWorkflow?.id ?? "");
+    const importedWorkflowEnvironment = projectHandlers
+      .listProjectEnvironments(importedProject.id)
+      .find((environment) => environment.id === importedWorkflow?.environment_id);
+
+    expect(importedProject).toMatchObject({
+      name: "Staging Project (imported)",
+      description: "Owned staging flows",
+    });
+    expect(importedProject.id).not.toBe(sourceProject.id);
+    expect(importedWorkflow).toMatchObject({
+      project_id: importedProject.id,
+      environment_name: "Checkout private session",
+    });
+    expect(importedWorkflow?.id).not.toBe(sourceWorkflow.id);
+    expect(importedSubflows).toHaveLength(1);
+    expect(importedSubflows[0]).toMatchObject({
+      project_id: importedProject.id,
+      name: "Login helper",
+      used_by_count: 1,
+    });
+    expect((importedCallNode?.config as { subflow_id?: string } | null)?.subflow_id)
+      .toBe(importedSubflows[0].id);
+    expect(importedSettings.environment.initial_variables).toEqual([
+      { name: "account.username", value_type: "text", value: "qa-user" },
+    ]);
+    expect(importedWorkflowEnvironment?.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
+    expect(importedWorkflowEnvironment?.browser_launch.identity_id)
+      .not.toBe(packageValue.environments.find((item) => item.id === sourceWorkflow.environment_id)
+        ?.browser_launch.identity_id);
+    expect(importedSettings.browser_launch).toEqual(importedWorkflowEnvironment?.browser_launch);
+    expect(importedSettings.browser_launch.proxy_password).toBeNull();
+    expect(importedSettings.browser_launch.proxy_server).toBe("https://proxy.example:8443");
+  });
+
+  test("rejects invalid project package imports without creating orphan projects", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const project = projectHandlers.listProjects()[0];
+    const workflow = handlers.createWorkflow("Checkout E2E", {
+      project_id: project.id,
+      environment: { mode: "project_default" },
+    }) as ProjectWorkflow;
+    const subflow = projectHandlers.createSubflow(project.id, { name: "Login helper" });
+    projectHandlers.saveSubflowGraph(
+      subflow.id,
+      subflowGraphWithAction("fill-username", "Fill username"),
+    );
+    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+    const packageValue = projectHandlers.exportProjectPackage(project.id);
+    const initialProjectIds = projectHandlers.listProjects().map((item) => item.id);
+
+    expect(() =>
+      projectHandlers.importProjectPackage({
+        ...packageValue,
+        subflows: [],
+        workflows: packageValue.workflows.map((item) => ({
+          ...item,
+          flow: workflowGraphCallingSubflow(subflow.id),
+        })),
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Project package is missing a referenced subflow",
+      field: "package.subflows",
+    }));
+
+    expect(projectHandlers.listProjects().map((item) => item.id)).toEqual(initialProjectIds);
   });
 
   test("creates a Main workflow when creating a project", async () => {

@@ -1567,6 +1567,39 @@ export type WorkflowPackagePreview = {
   omitted_fields: string[];
 };
 
+export type ProjectPackageWorkflow = {
+  id: string;
+  project_id?: string | null;
+  environment_id?: string | null;
+  name: string;
+  flow?: WorkflowGraph | null;
+  settings?: WorkflowSettings | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ProjectPackage = {
+  kind: "project_package";
+  version: 1;
+  project: {
+    name: string;
+    description?: string | null;
+  };
+  included_sections: string[];
+  omitted_fields: string[];
+  environments: ProjectEnvironment[];
+  subflows: Subflow[];
+  workflows: ProjectPackageWorkflow[];
+};
+
+export type ProjectPackagePreview = {
+  project_name: string;
+  workflows: Array<{ id: string; name: string }>;
+  subflows: Array<{ id: string; name: string }>;
+  environments: Array<{ id: string; name: string; is_default: boolean }>;
+  omitted_fields: string[];
+};
+
 export type RecordingSessionMode = "new_workflow" | "replace_current_graph";
 export type RecordingSessionStatus =
   | "starting"

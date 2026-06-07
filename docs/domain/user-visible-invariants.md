@@ -35,14 +35,23 @@ Preserve these unless the task explicitly changes them.
   to Workflows, and the project identity controls live in the
   selected project's Settings collection. The auto-created default project is
   named `Main`. Creating a project automatically creates a workflow named
-  `Main` inside that project using its project saved session. Project Settings shows a `Project identity` heading, a
+  `Main` inside that project using its project saved session. The Projects
+  workspace header exposes Import project next to Create Project because import
+  creates a separate project rather than mutating the selected one. Project
+  Settings shows a `Project identity` heading, a
   `Project details` group with editable Project name, Save project name,
   Duplicate project, and Delete project, plus a `Browser fingerprint` group,
   editable Fingerprint seed, read-only Identity, Save fingerprint seed, and
   Regenerate identity without exposing a full Browser Launch editor. Duplicate
   project creates and selects an independent project copy with copied workflows
   and subflows, remapped Call Subflow references, and fresh browser
-  identities/profiles. Delete project opens an in-app confirmation warning that
+  identities/profiles. Project Settings exposes Export project for the selected
+  project. Export writes a `.project.json` package through the native Save
+  dialog with sensitive/local Browser Launch fields sanitized. Import previews
+  the package, creates and selects a new project, remaps workflow/subflow/session
+  ids, and gives imported sessions fresh
+  identities/profiles without importing runs, evidence, schedules, app settings,
+  or browser profile storage. Delete project opens an in-app confirmation warning that
   workflows, subflows, and saved browser sessions inside the project will be
   deleted; Cancel keeps the project, and confirmation removes the selected
   project after backend active-run/retained-session guards pass. Regenerate

@@ -40,6 +40,8 @@ import type {
   WorkflowPackageExportOptions,
   WorkflowPackageImportOptions,
   WorkflowPackagePreview,
+  ProjectPackage,
+  ProjectPackagePreview,
   WorkflowRunSnapshot,
   WorkflowSchedule,
   WorkflowScheduleEvent,
@@ -65,6 +67,11 @@ export type WorkflowElectronBridge = {
     input: { name?: string; description?: string | null },
   ): Promise<Project>;
   duplicateProject(projectId: string): Promise<Project>;
+  exportProjectPackage(projectId: string): Promise<ProjectPackage>;
+  previewProjectPackage(
+    packageValue: ProjectPackage,
+  ): Promise<ProjectPackagePreview>;
+  importProjectPackage(packageValue: ProjectPackage): Promise<Project>;
   deleteProject(projectId: string): Promise<void>;
   listProjectEnvironments(projectId: string): Promise<ProjectEnvironment[]>;
   createProjectEnvironment(
@@ -197,6 +204,7 @@ export type WorkflowElectronBridge = {
   ): Promise<WorkflowDetail>;
   dryRunValidateConfig(config: ActionConfig): Promise<void>;
   saveWorkflowPackageFile(packageValue: WorkflowPackage): Promise<string | null>;
+  saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
 };
 
 declare global {

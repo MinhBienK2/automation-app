@@ -97,6 +97,11 @@ Users can:
 - Create, select, rename, duplicate, and delete projects. Newly created
   projects automatically contain a project saved session and a draft workflow
   named `Main`.
+- Export and import project packages containing project metadata, saved-session
+  launch posture, private workflow sessions, workflows, saved graphs/settings,
+  and subflows. Import creates a new project with fresh browser
+  identities/profiles and does not import runs, evidence, schedules, app
+  settings, or browser profile storage.
 - Create, rename, open, and delete workflows inside a selected project.
 - Create workflows in the default `Main` project by reusing the project saved
   session, or by creating a new private workflow session.

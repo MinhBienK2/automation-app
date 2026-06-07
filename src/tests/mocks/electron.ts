@@ -13,6 +13,9 @@ const methodNames: BridgeMethodName[] = [
   "createProject",
   "updateProject",
   "duplicateProject",
+  "exportProjectPackage",
+  "previewProjectPackage",
+  "importProjectPackage",
   "deleteProject",
   "listProjectEnvironments",
   "createProjectEnvironment",
@@ -87,6 +90,7 @@ const methodNames: BridgeMethodName[] = [
   "saveRecordingDraft",
   "dryRunValidateConfig",
   "saveWorkflowPackageFile",
+  "saveProjectPackageFile",
 ];
 
 export const workflowBridgeMock = Object.fromEntries(
@@ -276,6 +280,19 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.duplicateProject.mockImplementation((projectId: string) =>
     resolveCommand(commands, "duplicate_project", { projectId }),
+  );
+  workflowBridgeMock.exportProjectPackage.mockImplementation((projectId: string) =>
+    resolveCommand(commands, "export_project_package", { projectId }),
+  );
+  workflowBridgeMock.previewProjectPackage.mockImplementation((packageValue: unknown) =>
+    resolveCommand(commands, "preview_project_package", {
+      package: packageValue,
+    }),
+  );
+  workflowBridgeMock.importProjectPackage.mockImplementation((packageValue: unknown) =>
+    resolveCommand(commands, "import_project_package", {
+      package: packageValue,
+    }),
   );
   workflowBridgeMock.deleteProject.mockImplementation((projectId: string) =>
     resolveCommand(commands, "delete_project", { projectId }),
@@ -486,6 +503,11 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.saveWorkflowPackageFile.mockImplementation((packageValue: unknown) =>
     resolveCommand(commands, "save_workflow_package_file", {
+      package: packageValue,
+    }),
+  );
+  workflowBridgeMock.saveProjectPackageFile.mockImplementation((packageValue: unknown) =>
+    resolveCommand(commands, "save_project_package_file", {
       package: packageValue,
     }),
   );

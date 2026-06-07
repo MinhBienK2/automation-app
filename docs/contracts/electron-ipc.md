@@ -41,6 +41,9 @@ string map.
 - `createProject`
 - `updateProject`
 - `duplicateProject`
+- `exportProjectPackage`
+- `previewProjectPackage`
+- `importProjectPackage`
 - `deleteProject`
 - `listProjectEnvironments`
 - `createProjectEnvironment`
@@ -104,6 +107,7 @@ string map.
 - `previewWorkflowPackage`
 - `importWorkflowPackage`
 - `saveWorkflowPackageFile`
+- `saveProjectPackageFile`
 - `runBatchWorkflow`
 - `startRecordingSession`
 - `getRecordingSession`
@@ -143,6 +147,15 @@ Settings sections plus optional `target_project_id`. When present, the backend
 creates the imported workflow and recreated subflows in that project. Importing
 Browser Launch creates a private imported workflow session instead of mutating
 the target project's saved session.
+
+`exportProjectPackage(projectId)` returns a full `project_package` JSON payload
+for the selected project. `previewProjectPackage(packageValue)` validates and
+summarizes project package contents. `importProjectPackage(packageValue)`
+validates the package, then creates a new `<project name> (imported)` project
+with recreated sessions, subflows, workflows, remapped Call Subflow ids, and
+fresh imported browser identities/profiles. It does not import runs, evidence,
+schedules, app settings, or browser profile storage. `saveProjectPackageFile`
+owns the native Save dialog and JSON file write for `.project.json` exports.
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend
@@ -248,7 +261,8 @@ or historical runs.
 - Bridge method arguments use the shared TypeScript DTO shapes; no casing conversion
   happens at the Electron boundary.
 - Native save-dialog and file-writing behavior is owned by Electron main through
-  `saveWorkflowPackageFile`; package JSON is not written from the renderer.
+  `saveWorkflowPackageFile` and `saveProjectPackageFile`; package JSON is not
+  written from the renderer.
 - Command errors serialize as `{ message: string, field?: string | null }`.
 - Recorder DTOs use the `Recording*` prefix. Session snapshots and recording
   events sent to the renderer must not include browser secrets such as proxy
