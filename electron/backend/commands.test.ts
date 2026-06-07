@@ -223,7 +223,7 @@ describe("Electron workflow command handlers", () => {
     const projects = projectHandlers.listProjects();
     expect(projects).toEqual([
       expect.objectContaining({
-        name: "Default Project",
+        name: "Main",
       }),
     ]);
 

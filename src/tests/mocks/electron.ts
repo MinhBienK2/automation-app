@@ -133,7 +133,7 @@ function defaultProjects() {
   return [
     {
       id: "project-1",
-      name: "Default Project",
+      name: "Main",
       description: "",
       created_at: "2026-05-27T00:00:00.000Z",
       updated_at: "2026-05-27T00:00:00.000Z",

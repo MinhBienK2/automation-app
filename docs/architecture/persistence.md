@@ -24,9 +24,10 @@ Electron/Node now owns the production persistence layer.
   document-shaped `workflows`, reusable `subflows`, queryable `runs` and
   `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and
   `operational_attention_events`.
-- A default project and default project saved session are created for existing
-  local data. Workflows store `project_id` and selected `environment_id`;
-  subflows and compatibility project-environment/session rows store `project_id`.
+- A default project named `Main` and default project saved session are created
+  for existing local data. Workflows store `project_id` and selected
+  `environment_id`; subflows and compatibility project-environment/session rows
+  store `project_id`.
 - `runs.source` stores durable run provenance as `manual` or `schedule`.
   Existing local rows are migrated by marking rows referenced by started
   schedule events as `schedule`; all other legacy rows become `manual`.

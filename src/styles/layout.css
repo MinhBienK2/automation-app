@@ -462,10 +462,6 @@
   padding-bottom: 16px;
 }
 
-.project-collection-panel > .settings-project-environments-panel {
-  max-width: none;
-}
-
 .settings-screen {
   align-content: start;
 }
@@ -478,15 +474,22 @@
 }
 
 .settings-project-environments-panel {
-  max-width: 1180px;
+  max-width: 720px;
 }
 
-.settings-project-environments-panel .field strong {
+.project-session-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.project-session-summary p {
+  margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--app-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.5;
 }
 
 .project-session-code {

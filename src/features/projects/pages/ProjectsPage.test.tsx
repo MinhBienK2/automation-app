@@ -5,7 +5,7 @@ import type { Project } from "../../../types/workflow";
 
 const project: Project = {
   id: "project-1",
-  name: "Default Project",
+  name: "Main",
   description: "Owned staging workflows",
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
@@ -33,12 +33,12 @@ describe("ProjectsPage", () => {
 
     const projectList = screen.getByRole("complementary", { name: "Project list" });
     expect(within(projectList).getByRole("navigation", {
-      name: "Default Project collections",
+      name: "Main collections",
     })).toBeInTheDocument();
 
     const detail = screen.getByRole("region", { name: "Project detail" });
     expect(within(detail).getByRole("region", {
-      name: "Default Project Workflows",
+      name: "Main Workflows",
     })).toBeInTheDocument();
     expect(within(detail).getByRole("heading", { name: "Workflows" })).toBeInTheDocument();
     expect(within(detail).queryByText("Selected Project")).not.toBeInTheDocument();

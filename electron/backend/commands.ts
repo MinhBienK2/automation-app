@@ -231,7 +231,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   function ensureDefaultProject(): Project {
     const existing = repository.listProjects()[0];
     if (existing) return existing;
-    return repository.createProject("Default Project");
+    return repository.createProject("Main");
   }
 
   function ensureDefaultProjectEnvironment(project: Project): ProjectEnvironment {

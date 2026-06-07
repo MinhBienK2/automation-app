@@ -76,7 +76,7 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
     const projectList = await screen.findByRole("complementary", { name: "Project list" });
     return within(projectList).findByRole("navigation", {
-      name: "Default Project collections",
+      name: "Main collections",
     });
   }
 
@@ -120,7 +120,7 @@ describe("App settings and graph autosave", () => {
   test("shows the project saved session in the project settings tab", async () => {
     const project = {
       id: "project-1",
-      name: "Default Project",
+      name: "Main",
       description: "",
       created_at: "1",
       updated_at: "1",
@@ -151,11 +151,15 @@ describe("App settings and graph autosave", () => {
 
     await openProjectTab("Settings");
 
-    expect(await screen.findByRole("heading", { name: "Project saved session" }))
-      .toBeInTheDocument();
-    expect(screen.getByText(browserLaunch.fingerprint_seed)).toBeInTheDocument();
-    expect(screen.getByText(browserLaunch.identity_id)).toBeInTheDocument();
-    expect(screen.getByText("Persistent browser profile")).toBeInTheDocument();
+    expect(
+      await screen.findByText(`Fingerprint seed: ${browserLaunch.fingerprint_seed}`),
+    ).toBeInTheDocument();
+    expect(screen.getByText(`Identity: ${browserLaunch.identity_id}`)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Project saved session" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByText("Reuse choice")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved browser data")).not.toBeInTheDocument();
+    expect(screen.queryByText("Persistent browser profile")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create Environment" }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "Headless browser" }))
@@ -180,60 +184,6 @@ describe("App settings and graph autosave", () => {
 
     await userEvent.click(within(collections).getByRole("button", { name: "Subflows" }));
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
-  });
-
-  test("marks the project saved session as default from the project settings tab", async () => {
-    const project = {
-      id: "project-1",
-      name: "Default Project",
-      description: "",
-      created_at: "1",
-      updated_at: "1",
-    };
-    const browserLaunch = defaultWorkflowSettings({
-      workflowId: "environment-staging",
-      workflowName: "Project saved session",
-      createdAt: "1",
-      updatedAt: "1",
-    }).browser_launch;
-    const stagingEnvironment = {
-      id: "environment-staging",
-      project_id: project.id,
-      name: "Project saved session",
-      description: "Shared saved browser session",
-      is_default: false,
-      browser_launch: browserLaunch,
-      created_at: "1",
-      updated_at: "1",
-    };
-    mockWorkflowBridgeCommands({
-      ...listWorkflowScenario([workflow]),
-      list_projects: [project],
-      list_project_environments: [stagingEnvironment],
-      update_project_environment: {
-        ...stagingEnvironment,
-        browser_launch: {
-          ...stagingEnvironment.browser_launch,
-          headless: true,
-        },
-      },
-    });
-
-    renderApp();
-
-    await openProjectTab("Settings");
-    await userEvent.click(await screen.findByRole("button", {
-      name: "Make project saved session default",
-    }));
-
-    await waitFor(() => {
-      expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
-        "environment-staging",
-        expect.objectContaining({
-          is_default: true,
-        }),
-      );
-    });
   });
 
   test("lands on Overview with operational panels and refreshes the durable aggregate", async () => {

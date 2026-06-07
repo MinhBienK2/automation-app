@@ -27,7 +27,9 @@ Preserve these unless the task explicitly changes them.
   selected project shows Workflows, Subflows, and Settings as a collection menu
   inside the project list sidebar. Workflows and subflows shown there are
   scoped to the selected project, and the project saved session summary lives
-  in the selected project's Settings collection.
+  in the selected project's Settings collection. The auto-created default
+  project is named `Main`, and its Settings summary shows only
+  `Fingerprint seed: ...` and `Identity: ...`.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.

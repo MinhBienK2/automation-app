@@ -21,9 +21,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   selected-project state, the project-list Workflows/Subflows/Settings
   collection menu, and project creation.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
-  project saved-session summary surface showing the default fingerprint seed,
-  identity id, and persistent browser profile reuse state without exposing a
-  duplicate full Browser Launch editor.
+  project saved-session summary surface showing only the default fingerprint
+  seed and identity id without exposing a duplicate full Browser Launch editor.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, environment readiness diagnostics, guarded maintenance commands,
   and graph shortcut guidance.

@@ -5,10 +5,11 @@
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, associates it with
-  the default project, selects either the project saved session or a new private
-  workflow session according to the create options, creates a `Start -> New
-  node` draft graph, and persists default Workflow Settings over the selected
-  session. `New node` is an unconfigured action node with `config: null`.
+  the default `Main` project, selects either the project saved session or a new
+  private workflow session according to the create options, creates a
+  `Start -> New node` draft graph, and persists default Workflow Settings over
+  the selected session. `New node` is an unconfigured action node with
+  `config: null`.
 - The workflow list Create dialog can reuse the project saved session or create
   a new workflow session. Omitted backend create options also use the project
   saved session by default.

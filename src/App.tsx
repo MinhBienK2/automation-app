@@ -70,7 +70,6 @@ import {
   startRecordingSession,
   stopRecordingSession,
   stopRun as stopRunCommand,
-  updateProjectEnvironment as updateProjectEnvironmentCommand,
   updateSchedule,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
@@ -106,7 +105,6 @@ import type {
   GraphNodeType,
   Project,
   ProjectEnvironment,
-  ProjectEnvironmentInput,
   RecordingSession,
   RecordingWorkflowDraft,
   ReviewedRecordingStep,
@@ -656,19 +654,6 @@ function App() {
       return [];
     } finally {
       setSubflowsLoading(false);
-    }
-  }
-
-  async function updateProjectEnvironment(
-    environmentId: string,
-    input: Partial<ProjectEnvironmentInput>,
-  ) {
-    setAppError("");
-    try {
-      const updated = await updateProjectEnvironmentCommand(environmentId, input);
-      setProjectEnvironments(await listProjectEnvironments(updated.project_id));
-    } catch (error) {
-      setAppError(commandMessage(error));
     }
   }
 
@@ -2191,7 +2176,6 @@ function App() {
             <ProjectEnvironmentSettings
               projectEnvironments={selectedProjectEnvironments}
               error={appError}
-              onUpdateProjectEnvironment={updateProjectEnvironment}
             />
           ) : (
             <WorkflowListPage

@@ -8,14 +8,15 @@ Mission Control is an Electron desktop app for building and running browser auto
 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
 - A project groups workflows, reusable subflows, and one project saved browser
-  session. The current MVP creates and uses a default project for existing
-  local data.
+  session. The current MVP creates and uses a default project named `Main` for
+  existing local data.
 - A project saved session is the project-owned default fingerprint identity and
   persistent browser profile. It stores the stable fingerprint seed plus the
   profile directory that preserves cookies, localStorage, sessionStorage, and
   login state across browser restarts. The persisted table/DTO is still named
   `project_environments` for compatibility, but the product UI exposes it as a
-  single saved session instead of a full environment list.
+  single saved session with only the fingerprint seed and identity id visible
+  instead of a full environment list.
 - A subflow is a reusable non-runnable graph fragment inside one project.
   Workflows call subflows through `call_subflow` graph nodes; subflows run in
   the caller's browser context and do not create independent runs or browser
@@ -91,8 +92,8 @@ Users can:
 
 - Create and select projects.
 - Create, rename, open, and delete workflows inside a selected project.
-- Create workflows in the default project by reusing the project saved session,
-  or by creating a new private workflow session.
+- Create workflows in the default `Main` project by reusing the project saved
+  session, or by creating a new private workflow session.
 - Inspect the selected project's saved session from the selected project's
   Settings collection.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
