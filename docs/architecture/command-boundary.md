@@ -77,8 +77,10 @@ Node/Electron backend.
   logic. Browser Launch settings for project saved sessions and private
   workflow sessions are backend-owned, and subflow delete is guarded by workflow
   usage. The renderer exposes grouped project identity controls instead of a
-  full Project Environment list/create/editor, and project identity regeneration
-  stays backend-owned through `resetProjectEnvironmentBrowserIdentity`.
+  full Project Environment list/create/editor, project rename/duplicate/delete
+  stays backend-owned through `updateProject`, `duplicateProject`, and
+  `deleteProject`, and project identity regeneration stays backend-owned
+  through `resetProjectEnvironmentBrowserIdentity`.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
@@ -103,6 +105,16 @@ Node/Electron backend.
   credentials, and local fingerprint font directories.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.
+- Product-facing project copy goes through `duplicateProject`, which copies the
+  project row, project environments, subflows, workflows, graphs, and
+  non-storage settings, remaps copied Call Subflow references, creates fresh
+  browser identity/profile/fingerprint values for copied sessions, and disables
+  copied workflows' Run from selected state.
+- Product-facing project deletion goes through `deleteProject`. It rejects while
+  any workflow in that project has an active run, active profile, or retained
+  session, deletes workflows before deleting the project row so no workflow is
+  orphaned, and removes only unshared local profile directories after the
+  persisted deletion succeeds.
 - CloakBrowser operational commands stay in the backend: diagnostics report wrapper/binary/cache/display/GeoIP/font/profile metadata plus last smoke summary fields, install triggers `ensureBinary()`, and orphan cleanup deletes only inactive profile directories that no workflow references. Font diagnostics inspect configured font directories directly and report file counts, total bytes, normalized content hash, expected family coverage, missing/unreadable directories, and shared-directory warnings. Profile-size diagnostics are bounded by traversal entry/depth/time limits so the command path does not recursively walk unbounded Chromium storage.
 - Workflow Settings validation is service-owned and emits fingerprint-coherence warnings for proxy identities without timezone/locale or GeoIP, and for configured fingerprint fonts directories that can create a stable font hash across identities.
 - Workflow deletion accepts an explicit profile-data choice from the renderer. It keeps browser profile data by default, deletes only unshared profile directories when requested, and rejects deletion while that workflow has an active run, while that workflow's profile is owned by an active run, or while that workflow's retained browser session still owns the profile.

@@ -11,6 +11,9 @@ type BridgeMock = {
 const methodNames: BridgeMethodName[] = [
   "listProjects",
   "createProject",
+  "updateProject",
+  "duplicateProject",
+  "deleteProject",
   "listProjectEnvironments",
   "createProjectEnvironment",
   "updateProjectEnvironment",
@@ -268,6 +271,16 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.createProject.mockImplementation((input: unknown) =>
     resolveCommand(commands, "create_project", { input }),
+  );
+  workflowBridgeMock.updateProject.mockImplementation(
+    (projectId: string, input: unknown) =>
+      resolveCommand(commands, "update_project", { projectId, input }),
+  );
+  workflowBridgeMock.duplicateProject.mockImplementation((projectId: string) =>
+    resolveCommand(commands, "duplicate_project", { projectId }),
+  );
+  workflowBridgeMock.deleteProject.mockImplementation((projectId: string) =>
+    resolveCommand(commands, "delete_project", { projectId }),
   );
   workflowBridgeMock.listProjectEnvironments.mockImplementation((projectId: string) =>
     resolveCommand(commands, "list_project_environments", { projectId }),

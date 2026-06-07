@@ -28,6 +28,14 @@ Electron/Node now owns the production persistence layer.
   for existing local data. Workflows store `project_id` and selected
   `environment_id`; subflows and compatibility project-environment/session rows
   store `project_id`.
+- Project rename updates the `projects` row. Product-facing project deletion
+  deletes workflows for that project before deleting the project row so workflow
+  run/schedule/attention cascades apply and no projectless workflow rows are
+  left behind; subflows and project-environment/session rows cascade from the
+  project row. Product-facing project duplication creates a new project, copies
+  project environments, subflows, and workflows, remaps copied workflow Call
+  Subflow references to copied subflows, and stores fresh browser identity
+  values for copied sessions.
 - `runs.source` stores durable run provenance as `manual` or `schedule`.
   Existing local rows are migrated by marking rows referenced by started
   schedule events as `schedule`; all other legacy rows become `manual`.

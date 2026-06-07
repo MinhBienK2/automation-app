@@ -11,13 +11,21 @@ import {
 import { Input } from "../../../components/ui/input";
 import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
 import type {
+  Project,
   ProjectEnvironment,
   ProjectEnvironmentInput,
 } from "../../../types/workflow";
 
 type ProjectEnvironmentSettingsProps = {
+  project: Project | null;
   projectEnvironments: ProjectEnvironment[];
   error: string;
+  onUpdateProject: (
+    projectId: string,
+    input: { name?: string; description?: string | null },
+  ) => Promise<void>;
+  onDuplicateProject: (projectId: string) => Promise<void>;
+  onDeleteProject: (projectId: string) => Promise<void>;
   onUpdateProjectEnvironment: (
     environmentId: string,
     input: Partial<ProjectEnvironmentInput>,
@@ -28,8 +36,12 @@ type ProjectEnvironmentSettingsProps = {
 };
 
 export function ProjectEnvironmentSettings({
+  project,
   projectEnvironments,
   error,
+  onUpdateProject,
+  onDuplicateProject,
+  onDeleteProject,
   onUpdateProjectEnvironment,
   onResetProjectEnvironmentBrowserIdentity,
 }: ProjectEnvironmentSettingsProps) {
@@ -38,18 +50,72 @@ export function ProjectEnvironmentSettings({
     projectEnvironments[0] ??
     null;
   const browserLaunch = projectSession?.browser_launch ?? null;
+  const [projectNameDraft, setProjectNameDraft] = useState(project?.name ?? "");
   const [seedDraft, setSeedDraft] = useState(browserLaunch?.fingerprint_seed ?? "");
   const [localError, setLocalError] = useState("");
+  const [savingProject, setSavingProject] = useState(false);
+  const [duplicatingProject, setDuplicatingProject] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
   const [savingSeed, setSavingSeed] = useState(false);
   const [regeneratingIdentity, setRegeneratingIdentity] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const savedProjectName = project?.name ?? "";
   const savedSeed = browserLaunch?.fingerprint_seed ?? "";
+  const projectNameChanged = projectNameDraft.trim() !== savedProjectName;
   const seedChanged = seedDraft.trim() !== savedSeed;
+
+  useEffect(() => {
+    setProjectNameDraft(savedProjectName);
+    setLocalError("");
+  }, [project?.id, savedProjectName]);
 
   useEffect(() => {
     setSeedDraft(savedSeed);
     setLocalError("");
   }, [projectSession?.id, savedSeed]);
+
+  async function saveProjectName() {
+    if (!project) return;
+    const nextName = projectNameDraft.trim();
+    if (!nextName) {
+      setLocalError("Project name is required.");
+      return;
+    }
+    setLocalError("");
+    setSavingProject(true);
+    try {
+      await onUpdateProject(project.id, {
+        name: nextName,
+        description: project.description,
+      });
+    } finally {
+      setSavingProject(false);
+    }
+  }
+
+  async function duplicateProject() {
+    if (!project) return;
+    setLocalError("");
+    setDuplicatingProject(true);
+    try {
+      await onDuplicateProject(project.id);
+    } finally {
+      setDuplicatingProject(false);
+    }
+  }
+
+  async function confirmDeleteProject() {
+    if (!project) return;
+    setLocalError("");
+    setDeletingProject(true);
+    try {
+      await onDeleteProject(project.id);
+      setDeleteDialogOpen(false);
+    } finally {
+      setDeletingProject(false);
+    }
+  }
 
   async function saveFingerprintSeed() {
     if (!projectSession || !browserLaunch) return;
@@ -91,6 +157,8 @@ export function ProjectEnvironmentSettings({
     setRegenerateDialogOpen(false);
   }
 
+  const projectActionPending = savingProject || duplicatingProject || deletingProject;
+
   return (
     <section
       className="panel settings-panel settings-project-environments-panel"
@@ -113,6 +181,51 @@ export function ProjectEnvironmentSettings({
           {localError}
         </p>
       ) : null}
+
+      <SettingsFieldGroup title="Project details">
+        <label className="field project-session-seed-field">
+          <span>Project name</span>
+          <Input
+            aria-label="Project name"
+            value={projectNameDraft}
+            disabled={!project || projectActionPending}
+            onChange={(event) => setProjectNameDraft(event.target.value)}
+          />
+        </label>
+
+        <div className="project-session-actions">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              void saveProjectName();
+            }}
+            disabled={!project || !projectNameChanged || projectActionPending}
+          >
+            Save project name
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              void duplicateProject();
+            }}
+            disabled={!project || projectActionPending}
+          >
+            Duplicate project
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={!project || projectActionPending}
+          >
+            Delete project
+          </Button>
+        </div>
+      </SettingsFieldGroup>
 
       <SettingsFieldGroup title="Browser fingerprint">
         <label className="field project-session-seed-field">
@@ -185,6 +298,38 @@ export function ProjectEnvironmentSettings({
               disabled={!projectSession || regeneratingIdentity}
             >
               Regenerate and delete profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete project?</DialogTitle>
+            <DialogDescription>
+              This will delete the project and every workflow, subflow, and saved
+              browser session inside it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deletingProject}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                void confirmDeleteProject();
+              }}
+              disabled={!project || deletingProject}
+            >
+              Delete project
             </Button>
           </DialogFooter>
         </DialogContent>

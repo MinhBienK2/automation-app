@@ -29,6 +29,11 @@ async function invokeWorkflow<T>(
 const workflowApi: WorkflowElectronBridge = {
   listProjects: () => invokeWorkflow("listProjects"),
   createProject: (input) => invokeWorkflow("createProject", input),
+  updateProject: (projectId, input) =>
+    invokeWorkflow("updateProject", projectId, input),
+  duplicateProject: (projectId) =>
+    invokeWorkflow("duplicateProject", projectId),
+  deleteProject: (projectId) => invokeWorkflow("deleteProject", projectId),
   listProjectEnvironments: (projectId) =>
     invokeWorkflow("listProjectEnvironments", projectId),
   createProjectEnvironment: (projectId, input) =>

@@ -39,6 +39,9 @@ string map.
 - `listWorkflows`
 - `listProjects`
 - `createProject`
+- `updateProject`
+- `duplicateProject`
+- `deleteProject`
 - `listProjectEnvironments`
 - `createProjectEnvironment`
 - `updateProjectEnvironment`
@@ -114,11 +117,18 @@ string map.
 - `dryRunValidateConfig`
 
 Project commands expose default-project and compatibility project-session
-management to the renderer. `createWorkflow(name, options?)` accepts optional
-project and session/environment selection; omitted options use the project saved
-session by default. The renderer's create dialog exposes only reuse project
-saved session or create new workflow session, while older `existing`
-environment selections remain accepted at the command boundary for compatibility.
+management to the renderer. `updateProject(projectId, input)` renames or updates
+the selected project metadata. `duplicateProject(projectId)` creates an
+independent `Copy of <name>` project with copied environments, subflows,
+workflows, remapped Call Subflow references, and fresh browser
+identity/profile/fingerprint values for copied sessions. `deleteProject(projectId)`
+deletes the project after active-run/profile/retained-session guards pass,
+removing workflows before the project row so workflows are not orphaned.
+`createWorkflow(name, options?)` accepts optional project and session/environment
+selection; omitted options use the project saved session by default. The
+renderer's create dialog exposes only reuse project saved session or create new
+workflow session, while older `existing` environment selections remain accepted
+at the command boundary for compatibility.
 `updateProjectEnvironment` lets Project Settings save a fingerprint seed change
 inside the selected session Browser Launch payload. `resetProjectEnvironmentBrowserIdentity(environmentId)`
 returns the updated project session after backend-generating a new identity id,

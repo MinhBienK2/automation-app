@@ -61,6 +61,12 @@ import type {
 export type WorkflowElectronBridge = {
   listProjects(): Promise<Project[]>;
   createProject(input: { name: string; description?: string | null }): Promise<Project>;
+  updateProject(
+    projectId: string,
+    input: { name?: string; description?: string | null },
+  ): Promise<Project>;
+  duplicateProject(projectId: string): Promise<Project>;
+  deleteProject(projectId: string): Promise<void>;
   listProjectEnvironments(projectId: string): Promise<ProjectEnvironment[]>;
   createProjectEnvironment(
     projectId: string,

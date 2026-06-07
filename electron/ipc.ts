@@ -1,6 +1,9 @@
 export const workflowIpcChannels = {
   listProjects: "workflow:listProjects",
   createProject: "workflow:createProject",
+  updateProject: "workflow:updateProject",
+  duplicateProject: "workflow:duplicateProject",
+  deleteProject: "workflow:deleteProject",
   listProjectEnvironments: "workflow:listProjectEnvironments",
   createProjectEnvironment: "workflow:createProjectEnvironment",
   updateProjectEnvironment: "workflow:updateProjectEnvironment",

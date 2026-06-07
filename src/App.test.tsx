@@ -173,6 +173,146 @@ describe("App settings and graph autosave", () => {
       .not.toBeInTheDocument();
   });
 
+  test("renames, duplicates, and confirms project deletion from project settings", async () => {
+    let projects = [
+      {
+        id: "project-1",
+        name: "Main",
+        description: "",
+        created_at: "1",
+        updated_at: "1",
+      },
+    ];
+    const browserLaunch = defaultWorkflowSettings({
+      workflowId: "environment-default",
+      workflowName: "Project saved session",
+      createdAt: "1",
+      updatedAt: "1",
+    }).browser_launch;
+    const environmentsByProject = new Map([
+      [
+        "project-1",
+        [
+          {
+            id: "environment-default",
+            project_id: "project-1",
+            name: "Project saved session",
+            description: "Default saved browser session",
+            is_default: true,
+            browser_launch: browserLaunch,
+            created_at: "1",
+            updated_at: "1",
+          },
+        ],
+      ],
+    ]);
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_projects: () => projects,
+      list_project_environments: ({ projectId }: { projectId: string }) =>
+        environmentsByProject.get(projectId) ?? [],
+      update_project: ({
+        projectId,
+        input,
+      }: {
+        projectId: string;
+        input: { name?: string; description?: string | null };
+      }) => {
+        const updated = {
+          ...projects.find((project) => project.id === projectId)!,
+          name: input.name ?? projects.find((project) => project.id === projectId)!.name,
+          description:
+            input.description ??
+            projects.find((project) => project.id === projectId)!.description,
+          updated_at: "2",
+        };
+        projects = projects.map((project) =>
+          project.id === projectId ? updated : project,
+        );
+        return updated;
+      },
+      duplicate_project: ({ projectId }: { projectId: string }) => {
+        const source = projects.find((project) => project.id === projectId)!;
+        const duplicated = {
+          ...source,
+          id: "project-copy",
+          name: `Copy of ${source.name}`,
+          created_at: "3",
+          updated_at: "3",
+        };
+        projects = [...projects, duplicated];
+        environmentsByProject.set("project-copy", [
+          {
+            ...environmentsByProject.get(projectId)![0],
+            id: "environment-copy",
+            project_id: "project-copy",
+            created_at: "3",
+            updated_at: "3",
+          },
+        ]);
+        return duplicated;
+      },
+      delete_project: ({ projectId }: { projectId: string }) => {
+        projects = projects.filter((project) => project.id !== projectId);
+        environmentsByProject.delete(projectId);
+        return null;
+      },
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    const nameInput = await screen.findByRole("textbox", { name: "Project name" });
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Owned Lab");
+    await userEvent.click(screen.getByRole("button", { name: "Save project name" }));
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("update_project", {
+        projectId: "project-1",
+        input: { name: "Owned Lab", description: "" },
+      });
+    });
+    expect(await screen.findByDisplayValue("Owned Lab")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Duplicate project" }));
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("duplicate_project", {
+        projectId: "project-1",
+      });
+    });
+    expect(await screen.findByDisplayValue("Copy of Owned Lab")).toBeInTheDocument();
+
+    workflowCommandCallMock.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Delete project" }));
+    const dialog = await screen.findByRole("dialog", { name: "Delete project?" });
+    expect(within(dialog).getByText(
+      "This will delete the project and every workflow, subflow, and saved browser session inside it.",
+    )).toBeInTheDocument();
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "delete_project",
+      expect.anything(),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Delete project?" }))
+        .not.toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete project" }));
+    const confirmationDialog = await screen.findByRole("dialog", {
+      name: "Delete project?",
+    });
+    await userEvent.click(within(confirmationDialog).getByRole("button", {
+      name: "Delete project",
+    }));
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("delete_project", {
+        projectId: "project-copy",
+      });
+    });
+    expect(await screen.findByDisplayValue("Owned Lab")).toBeInTheDocument();
+  });
+
   test("saves an edited project fingerprint seed", async () => {
     const project = {
       id: "project-1",

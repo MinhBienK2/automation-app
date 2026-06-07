@@ -46,6 +46,21 @@ export function createProject(input: { name: string; description?: string | null
   return bridge().createProject(input);
 }
 
+export function updateProject(
+  projectId: string,
+  input: { name?: string; description?: string | null },
+) {
+  return bridge().updateProject(projectId, input);
+}
+
+export function duplicateProject(projectId: string) {
+  return bridge().duplicateProject(projectId);
+}
+
+export function deleteProject(projectId: string) {
+  return bridge().deleteProject(projectId);
+}
+
 export function listProjectEnvironments(projectId: string) {
   return bridge().listProjectEnvironments(projectId);
 }

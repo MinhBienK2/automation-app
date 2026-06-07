@@ -451,6 +451,23 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     );
   }
 
+  function duplicateProjectBrowserLaunch(
+    browserLaunch: WorkflowSettings["browser_launch"],
+  ): WorkflowSettings["browser_launch"] {
+    const identityId = createHighEntropyBrowserIdentityId();
+    return {
+      ...browserLaunch,
+      identity_id: identityId,
+      profile_dir: identityId,
+      profile_name:
+        browserLaunch.session_mode === "persistent_profile" ? identityId : null,
+      fingerprint_seed: deriveFingerprintSeedFromIdentityId(
+        identityId,
+        usedProjectEnvironmentFingerprintSeeds(),
+      ),
+    };
+  }
+
   function assertCanResetProjectEnvironmentBrowserIdentity(
     environment: ProjectEnvironment,
   ) {
@@ -540,6 +557,110 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return updated;
   }
 
+  function duplicateProjectWorkflowSettings(
+    sourceSettings: WorkflowSettings,
+    created: Workflow,
+    browserLaunch: WorkflowSettings["browser_launch"],
+  ): WorkflowSettings {
+    const copied = structuredClone(sourceSettings);
+    return {
+      ...copied,
+      workflow_id: created.id,
+      general: {
+        ...copied.general,
+        name: created.name,
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+      },
+      run_policy: {
+        ...copied.run_policy,
+        run_from_selected_enabled: false,
+      },
+      browser_launch: browserLaunch,
+      created_at: created.created_at,
+      updated_at: created.updated_at,
+    };
+  }
+
+  function duplicateProjectCascade(projectId: string): Project {
+    const sourceProject = requireProject(projectId);
+    const sourceEnvironments = repository.listProjectEnvironments(sourceProject.id);
+    const sourceSubflows = repository
+      .listSubflows(sourceProject.id)
+      .map((subflow) => repository.getSubflow(subflow.id))
+      .filter((subflow): subflow is Subflow => Boolean(subflow));
+    const sourceWorkflows = repository
+      .listWorkflows()
+      .filter((workflow) => workflow.project_id === sourceProject.id);
+
+    context.database.exec("BEGIN IMMEDIATE");
+    try {
+      const createdProject = repository.createProject(
+        `Copy of ${sourceProject.name}`,
+        sourceProject.description,
+      );
+      const environmentIdMap = new Map<string, string>();
+      for (const environment of sourceEnvironments) {
+        const copiedEnvironment = repository.createProjectEnvironment(createdProject.id, {
+          name: environment.name,
+          description: environment.description,
+          is_default: environment.is_default,
+          browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
+        });
+        environmentIdMap.set(environment.id, copiedEnvironment.id);
+      }
+      const defaultEnvironment =
+        repository.getDefaultProjectEnvironment(createdProject.id) ??
+        ensureDefaultProjectEnvironment(createdProject);
+
+      const subflowIdMap = new Map<string, string>();
+      for (const subflow of sourceSubflows) {
+        const copiedSubflow = repository.createSubflow(
+          createdProject.id,
+          subflow.name,
+          subflow.description,
+          subflow.graph,
+        );
+        subflowIdMap.set(subflow.id, copiedSubflow.id);
+      }
+
+      for (const workflow of sourceWorkflows) {
+        const copiedEnvironmentId = workflow.environment_id
+          ? environmentIdMap.get(workflow.environment_id) ?? defaultEnvironment.id
+          : defaultEnvironment.id;
+        const copiedWorkflow = createWorkflow(workflow.name, {
+          project_id: createdProject.id,
+          environment: { mode: "existing", environment_id: copiedEnvironmentId },
+        });
+        const graph = repository.getWorkflowGraph(workflow.id);
+        if (graph) {
+          repository.saveWorkflowGraph(
+            copiedWorkflow.id,
+            remapCallSubflowIds(graph, subflowIdMap),
+          );
+        }
+        const settings = repository.getWorkflowSettings(workflow.id);
+        if (settings) {
+          const copiedEnvironment = requireProjectEnvironment(copiedEnvironmentId);
+          saveSettings(
+            copiedWorkflow.id,
+            duplicateProjectWorkflowSettings(
+              settings,
+              copiedWorkflow,
+              copiedEnvironment.browser_launch,
+            ),
+          );
+        }
+      }
+
+      context.database.exec("COMMIT");
+      return createdProject;
+    } catch (error) {
+      context.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
   function assertNoUnsupportedGraphDiscriminants(graph: WorkflowGraph) {
     const issue = validateGraph(graph).find(
       (candidate) =>
@@ -607,6 +728,65 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         if (workflow.environment_id === environmentId) return false;
         return browserProfileKey(getSettings(workflow.id)) === profileDir;
       });
+  }
+
+  function isProfileReferencedOutsideProject(
+    projectId: string,
+    workflowIds: Set<string>,
+    profileDir: string,
+  ) {
+    for (const project of repository.listProjects()) {
+      if (project.id === projectId) continue;
+      for (const environment of repository.listProjectEnvironments(project.id)) {
+        if (projectEnvironmentProfileKey(environment) === profileDir) return true;
+      }
+    }
+    return repository
+      .listWorkflows()
+      .some((workflow) => {
+        if (workflowIds.has(workflow.id)) return false;
+        return browserProfileKey(getSettings(workflow.id)) === profileDir;
+      });
+  }
+
+  function deleteProjectCascade(projectId: string) {
+    const project = requireProject(projectId);
+    const workflows = repository
+      .listWorkflows()
+      .filter((workflow) => workflow.project_id === project.id);
+    const workflowIds = new Set(workflows.map((workflow) => workflow.id));
+    for (const workflow of workflows) {
+      assertWorkflowDeletionAllowed(workflow.id, getSettings(workflow.id));
+    }
+
+    const profileDirs = new Set<string>();
+    for (const environment of repository.listProjectEnvironments(project.id)) {
+      const profileDir = projectEnvironmentProfileKey(environment);
+      if (profileDir) profileDirs.add(profileDir);
+    }
+    for (const workflow of workflows) {
+      const profileDir = browserProfileKey(getSettings(workflow.id));
+      if (profileDir) profileDirs.add(profileDir);
+    }
+    const deletableProfileDirs = [...profileDirs].filter(
+      (profileDir) => !isProfileReferencedOutsideProject(project.id, workflowIds, profileDir),
+    );
+
+    context.database.exec("BEGIN IMMEDIATE");
+    try {
+      repository.deleteProject(project.id);
+      context.database.exec("COMMIT");
+    } catch (error) {
+      context.database.exec("ROLLBACK");
+      throw error;
+    }
+
+    for (const profileDir of deletableProfileDirs) {
+      nodeFs.rmSync(path.join(context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
+        recursive: true,
+        force: true,
+      });
+    }
   }
 
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
@@ -1100,6 +1280,31 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       const project = repository.createProject(name, input.description?.trim() ?? "");
       ensureDefaultProjectEnvironment(project);
       return project;
+    },
+
+    updateProject(
+      projectId: string,
+      input: { name?: string; description?: string | null },
+    ): Project {
+      requireProject(projectId);
+      if (input.name != null && !input.name.trim()) {
+        throw commandError("Project name is required", "name");
+      }
+      const updated = repository.updateProject(projectId, {
+        name: input.name?.trim(),
+        description:
+          input.description === undefined ? undefined : input.description?.trim() ?? "",
+      });
+      if (!updated) throw commandError("Project not found", "projectId");
+      return updated;
+    },
+
+    duplicateProject(projectId: string): Project {
+      return duplicateProjectCascade(projectId);
+    },
+
+    deleteProject(projectId: string) {
+      deleteProjectCascade(projectId);
     },
 
     listProjectEnvironments(projectId: string): ProjectEnvironment[] {

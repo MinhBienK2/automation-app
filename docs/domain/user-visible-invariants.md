@@ -29,11 +29,19 @@ Preserve these unless the task explicitly changes them.
   scoped to the selected project, and the project identity controls live in the
   selected project's Settings collection. The auto-created default project is
   named `Main`. Project Settings shows a `Project identity` heading, a
-  `Browser fingerprint` group, editable Fingerprint seed, read-only Identity,
-  Save fingerprint seed, and Regenerate identity without exposing a full Browser
-  Launch editor. Regenerate identity opens an in-app confirmation warning that
-  the current local project browser profile will be deleted; Cancel keeps the
-  current identity unchanged, and confirmation invokes the backend reset.
+  `Project details` group with editable Project name, Save project name,
+  Duplicate project, and Delete project, plus a `Browser fingerprint` group,
+  editable Fingerprint seed, read-only Identity, Save fingerprint seed, and
+  Regenerate identity without exposing a full Browser Launch editor. Duplicate
+  project creates and selects an independent project copy with copied workflows
+  and subflows, remapped Call Subflow references, and fresh browser
+  identities/profiles. Delete project opens an in-app confirmation warning that
+  workflows, subflows, and saved browser sessions inside the project will be
+  deleted; Cancel keeps the project, and confirmation removes the selected
+  project after backend active-run/retained-session guards pass. Regenerate
+  identity opens an in-app confirmation warning that the current local project
+  browser profile will be deleted; Cancel keeps the current identity unchanged,
+  and confirmation invokes the backend reset.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.

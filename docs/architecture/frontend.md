@@ -21,7 +21,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   selected-project state, the project-list Workflows/Subflows/Settings
   collection menu, and project creation.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
-  project identity surface with grouped Browser fingerprint controls for editing
+  project settings surface with grouped Project details controls for rename,
+  duplicate, and delete actions, plus Browser fingerprint controls for editing
   the saved-session fingerprint seed and confirming backend-owned identity
   regeneration/profile deletion without exposing a duplicate full Browser Launch
   editor.
@@ -90,9 +91,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Projects is the sidebar entry for project-scoped authoring inventory. The
   Projects workspace owns selected-project state and routes its Workflows,
   Subflows, and Settings collection menu to the existing workflow list, subflow
-  list, and project saved-session settings surface. Its project list sidebar
-  and selected collection content are independent scroll regions inside the
-  Projects workspace viewport.
+  list, and project settings surface. Project Settings owns project rename,
+  duplicate, delete confirmation, and saved-session identity actions; duplicate
+  and delete refresh project/workflow/subflow state and keep selection on a
+  valid project. Its project list sidebar and selected collection content are
+  independent scroll regions inside the Projects workspace viewport.
 - The app shell no longer renders a top command/search header or Alerts
   shortcut. Cross-workspace movement stays in the sidebar and explicit in-page
   links.

@@ -21,6 +21,20 @@
   Manual Validate does not write this audit row.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
 
+## Project Settings
+
+- Projects -> Settings can rename the selected project through `updateProject`.
+- Duplicate project calls `duplicateProject`, creates `Copy of <project name>`,
+  copies project environments, subflows, workflows, workflow graphs, and
+  non-storage settings, remaps copied Call Subflow references to copied
+  subflows, and gives copied browser sessions fresh identity/profile/fingerprint
+  values so the new project does not reuse the source project's saved sessions.
+- Delete project opens an in-app confirmation before calling `deleteProject`.
+  The backend rejects deletion while any workflow in that project has an active
+  run, active profile, or retained session, then deletes the project's
+  workflows, subflows, and saved-session rows. The UI selects the next available
+  project after deletion.
+
 ## Open Detail
 
 - UI calls `get_workflow`.

@@ -94,6 +94,35 @@ export class WorkflowRepository {
     return row ? rowToProject(row) : null;
   }
 
+  updateProject(
+    projectId: string,
+    input: { name?: string; description?: string | null },
+    now = new Date(),
+  ): Project | null {
+    const current = this.getProject(projectId);
+    if (!current) return null;
+    const timestamp = now.toISOString();
+    const next: Project = {
+      ...current,
+      name: input.name ?? current.name,
+      description: input.description ?? current.description,
+      updated_at: timestamp,
+    };
+    this.database
+      .prepare(
+        `UPDATE projects
+         SET name = ?, description = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(next.name, next.description, timestamp, projectId);
+    return next;
+  }
+
+  deleteProject(projectId: string) {
+    this.database.prepare("DELETE FROM workflows WHERE project_id = ?").run(projectId);
+    this.database.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
+  }
+
   createProjectEnvironment(
     projectId: string,
     input: ProjectEnvironmentInput & { browser_launch: ProjectEnvironment["browser_launch"] },

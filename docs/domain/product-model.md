@@ -92,7 +92,7 @@ Mission Control is an Electron desktop app for building and running browser auto
 
 Users can:
 
-- Create and select projects.
+- Create, select, rename, duplicate, and delete projects.
 - Create, rename, open, and delete workflows inside a selected project.
 - Create workflows in the default `Main` project by reusing the project saved
   session, or by creating a new private workflow session.
@@ -100,6 +100,10 @@ Users can:
   Settings collection, edit its fingerprint seed, or regenerate its backend-owned
   identity/profile/seed after confirming that the old local profile will be
   deleted.
+- Manage the selected project from the selected project's Settings collection:
+  rename it, duplicate it as an independent project copy with copied workflows
+  and subflows plus fresh browser identities, or delete it and all workflows,
+  subflows, and saved browser sessions inside it after confirmation.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
 - Turn graph autosave on or off from App Settings.
 - Run a full workflow.

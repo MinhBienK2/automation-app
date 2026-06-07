@@ -76,6 +76,9 @@ type TestSubflow = {
 type ProjectWorkflowTestHandlers = {
   listProjects(): TestProject[];
   createProject(input: { name: string; description?: string | null }): TestProject;
+  updateProject(projectId: string, input: { name?: string; description?: string | null }): TestProject;
+  duplicateProject(projectId: string): TestProject;
+  deleteProject(projectId: string): void;
   listProjectEnvironments(projectId: string): TestProjectEnvironment[];
   createProjectEnvironment(
     projectId: string,
@@ -265,6 +268,74 @@ describe("Electron workflow command handlers", () => {
       environment: { mode: "isolated" },
     });
     expect(isolated.environment_id).not.toBe(environments[0].id);
+  });
+
+  test("renames, duplicates, and deletes projects from project settings", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const project = projectHandlers.listProjects()[0];
+    const renamed = projectHandlers.updateProject(project.id, {
+      name: "Staging Project",
+      description: "Owned staging flows",
+    });
+    expect(renamed).toMatchObject({
+      id: project.id,
+      name: "Staging Project",
+      description: "Owned staging flows",
+    });
+    expect(() => projectHandlers.updateProject(project.id, { name: "   " }))
+      .toThrow("Project name is required");
+
+    const workflow = handlers.createWorkflow("Checkout E2E", {
+      project_id: project.id,
+      environment: { mode: "isolated" },
+    }) as ProjectWorkflow;
+    const subflow = projectHandlers.createSubflow(project.id, { name: "Login" });
+    projectHandlers.saveSubflowGraph(
+      subflow.id,
+      subflowGraphWithAction("fill-username", "Fill username"),
+    );
+    handlers.saveWorkflowGraph(workflow.id, workflowGraphCallingSubflow(subflow.id));
+    const sourceSettings = handlers.getWorkflowSettings(workflow.id);
+
+    const duplicatedProject = projectHandlers.duplicateProject(project.id);
+
+    expect(duplicatedProject).toMatchObject({
+      name: "Copy of Staging Project",
+      description: "Owned staging flows",
+    });
+    const copiedWorkflows = handlers
+      .listWorkflows()
+      .filter((item) => item.project_id === duplicatedProject.id);
+    expect(copiedWorkflows).toHaveLength(1);
+    expect(copiedWorkflows[0]).toMatchObject({
+      name: "Checkout E2E",
+      project_id: duplicatedProject.id,
+    });
+    const copiedSubflows = projectHandlers.listSubflows(duplicatedProject.id);
+    expect(copiedSubflows).toHaveLength(1);
+    expect(copiedSubflows[0]).toMatchObject({
+      name: "Login",
+      project_id: duplicatedProject.id,
+      used_by_count: 1,
+    });
+    const copiedGraph = handlers.getWorkflowGraph(copiedWorkflows[0].id);
+    const copiedCallNode = copiedGraph.nodes.find((node) => node.id === "call-login");
+    expect((copiedCallNode?.config as { subflow_id?: string } | null)?.subflow_id)
+      .toBe(copiedSubflows[0].id);
+    const copiedSettings = handlers.getWorkflowSettings(copiedWorkflows[0].id);
+    expect(copiedSettings.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
+    expect(copiedSettings.browser_launch.identity_id)
+      .not.toBe(sourceSettings.browser_launch.identity_id);
+
+    projectHandlers.deleteProject(project.id);
+
+    expect(projectHandlers.listProjects().some((item) => item.id === project.id))
+      .toBe(false);
+    expect(handlers.listWorkflows().some((item) => item.id === workflow.id)).toBe(false);
+    expect(() => projectHandlers.getSubflowGraph(subflow.id)).toThrow("Subflow not found");
+    expect(projectHandlers.listProjects().some((item) => item.id === duplicatedProject.id))
+      .toBe(true);
   });
 
   test("regenerates a project saved session browser identity", async () => {

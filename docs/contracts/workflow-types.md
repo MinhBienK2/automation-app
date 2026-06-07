@@ -251,6 +251,13 @@ profile directories are retained.
 
 `resetProjectEnvironmentBrowserIdentity` is the command boundary for project saved-session identity rotation. After UI confirmation, it returns the updated project environment after replacing `identity_id`, persistent profile fields, and `fingerprint_seed`, while preserving non-storage Browser Launch preferences and deleting the old unshared local project profile directory.
 
+`updateProject` returns the updated `Project` after trimming non-empty project
+names. `duplicateProject` returns the newly created `Project` after copying
+project environments, subflows, workflows, workflow graphs, and settings into a
+new project with remapped copied subflow references and fresh browser identity
+storage values. `deleteProject` returns no payload; it removes the project and
+its contained workflows/subflows/sessions after command guards pass.
+
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_policy.run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 
 ## Batch Run Shape

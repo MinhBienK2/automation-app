@@ -23,11 +23,13 @@ import {
   createWorkflow as createWorkflowCommand,
   createSchedule,
   deleteSubflow as deleteSubflowCommand,
+  deleteProject as deleteProjectCommand,
   deleteWorkflow as deleteWorkflowCommand,
   deleteSchedule,
   discardRecordingSession,
   disableSchedule,
   duplicateSubflow as duplicateSubflowCommand,
+  duplicateProject as duplicateProjectCommand,
   duplicateWorkflow as duplicateWorkflowCommand,
   enableSchedule,
   exportWorkflowPackage,
@@ -71,6 +73,7 @@ import {
   stopRecordingSession,
   stopRun as stopRunCommand,
   resetProjectEnvironmentBrowserIdentity as resetProjectEnvironmentBrowserIdentityCommand,
+  updateProject as updateProjectCommand,
   updateProjectEnvironment as updateProjectEnvironmentCommand,
   updateSchedule,
   validateWorkflowGraph,
@@ -708,6 +711,62 @@ function App() {
       setProjects(await listProjects());
       setProjectEnvironments(await listProjectEnvironments(project.id));
       setSubflows(await listSubflows(project.id));
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function updateProject(
+    projectId: string,
+    input: { name?: string; description?: string | null },
+  ) {
+    setAppError("");
+    try {
+      const project = await updateProjectCommand(projectId, input);
+      setSelectedProjectId(project.id);
+      setProjects(await listProjects());
+      setToastMessage("Project updated.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function duplicateProject(projectId: string) {
+    setAppError("");
+    try {
+      const project = await duplicateProjectCommand(projectId);
+      setSelectedProjectId(project.id);
+      setProjectCollection("settings");
+      setProjects(await listProjects());
+      setProjectEnvironments(await listProjectEnvironments(project.id));
+      setSubflows(await listSubflows(project.id));
+      await loadWorkflows();
+      setToastMessage("Project duplicated.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function deleteProject(projectId: string) {
+    setAppError("");
+    try {
+      await deleteProjectCommand(projectId);
+      const loadedProjects = await listProjects();
+      const nextProjectId = loadedProjects[0]?.id ?? null;
+      setProjects(loadedProjects);
+      setSelectedProjectId(nextProjectId);
+      if (nextProjectId) {
+        setProjectEnvironments(await listProjectEnvironments(nextProjectId));
+        setSubflows(await listSubflows(nextProjectId));
+      } else {
+        setProjectEnvironments([]);
+        setSubflows([]);
+      }
+      await loadWorkflows();
+      setToastMessage("Project deleted.");
+      window.setTimeout(() => setToastMessage(""), 2200);
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -2204,8 +2263,12 @@ function App() {
             />
           ) : projectCollection === "settings" ? (
             <ProjectEnvironmentSettings
+              project={selectedProject}
               projectEnvironments={selectedProjectEnvironments}
               error={appError}
+              onUpdateProject={updateProject}
+              onDuplicateProject={duplicateProject}
+              onDeleteProject={deleteProject}
               onUpdateProjectEnvironment={updateProjectEnvironment}
               onResetProjectEnvironmentBrowserIdentity={
                 resetProjectEnvironmentBrowserIdentity

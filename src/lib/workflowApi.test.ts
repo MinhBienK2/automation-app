@@ -10,12 +10,14 @@ import {
   createSubflow,
   createSchedule,
   deleteWorkflow,
+  deleteProject,
   deleteSchedule,
   disableSchedule,
   enableSchedule,
   exportWorkflow,
   exportWorkflowPackage,
   duplicateWorkflow,
+  duplicateProject,
   duplicateSubflow,
   dryRunValidateConfig,
   compileWorkflowGraph,
@@ -71,6 +73,7 @@ import {
   setWorkflowEnvironment,
   deleteSubflow,
   updateProjectEnvironment,
+  updateProject,
   resetProjectEnvironmentBrowserIdentity,
 } from "./workflowApi";
 import type {
@@ -128,6 +131,9 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.closeIdentityRetainedSession.mockResolvedValue(undefined);
     workflowBridgeMock.listProjects.mockResolvedValue(undefined);
     workflowBridgeMock.createProject.mockResolvedValue(undefined);
+    workflowBridgeMock.updateProject.mockResolvedValue(undefined);
+    workflowBridgeMock.duplicateProject.mockResolvedValue(undefined);
+    workflowBridgeMock.deleteProject.mockResolvedValue(undefined);
     workflowBridgeMock.listProjectEnvironments.mockResolvedValue(undefined);
     workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.updateProjectEnvironment.mockResolvedValue(undefined);
@@ -144,6 +150,9 @@ describe("workflow API phase ten commands", () => {
 
     await listProjects();
     await createProject({ name: "Owned Lab", description: "staging" });
+    await updateProject("project-1", { name: "Owned Lab 2", description: "" });
+    await duplicateProject("project-1");
+    await deleteProject("project-1");
     await listProjectEnvironments("project-1");
     await createProjectEnvironment("project-1", {
       name: "Staging identity",
@@ -238,6 +247,12 @@ describe("workflow API phase ten commands", () => {
       name: "Owned Lab",
       description: "staging",
     });
+    expect(workflowBridgeMock.updateProject).toHaveBeenCalledWith(
+      "project-1",
+      { name: "Owned Lab 2", description: "" },
+    );
+    expect(workflowBridgeMock.duplicateProject).toHaveBeenCalledWith("project-1");
+    expect(workflowBridgeMock.deleteProject).toHaveBeenCalledWith("project-1");
     expect(workflowBridgeMock.listProjectEnvironments).toHaveBeenCalledWith("project-1");
     expect(workflowBridgeMock.createProjectEnvironment).toHaveBeenCalledWith(
       "project-1",
