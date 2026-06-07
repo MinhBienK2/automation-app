@@ -492,8 +492,10 @@ Current frontend graph authoring supports explicit port connection, edge deletio
 - `stop_workflow`, `set_variable`, `set_json_variables`, `transform_variable`, `assert_output`, `domain_allowlist`, `end_success`, and `end_failure`.
 
 The main graph toolbar exposes beginner-facing authoring groups: New node, Add
-Action, Add Logic, Add Variable, and Add End. Workflow graphs include Call
-Subflow in Add Logic under Reuse; subflow graphs hide Call Subflow.
+Action, Add Subflow, Add Logic, Add Variable, and Add End. Workflow graphs use
+Add Subflow to choose a same-project subflow and create a configured
+`call_subflow` node labeled with the subflow name; subflow graphs hide Add
+Subflow.
 
 The Electron backend compiler currently emits action, `call_subflow`, `if`,
 `switch`, `router`, `random_choice`, `merge`, `repeat_times`,

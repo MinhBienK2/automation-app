@@ -4,6 +4,7 @@ import type {
   ActionType,
   GraphNode,
   GraphNodeType,
+  SubflowSummary,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import {
@@ -36,7 +37,6 @@ export const logicNodeGroups: Array<{
   nodes: GraphNodeType[];
 }> = [
   { label: "Branching", nodes: ["if", "switch", "router", "random_choice", "merge"] },
-  { label: "Reuse", nodes: ["call_subflow"] },
   {
     label: "Loops",
     nodes: [
@@ -85,6 +85,95 @@ const graphNodeDescriptions: Partial<Record<GraphNodeType, string>> = {
   end_success: "End the graph successfully.",
   end_failure: "End the graph as a failure.",
 };
+
+type SubflowNodePaletteProps = {
+  open: boolean;
+  subflows: SubflowSummary[];
+  onOpenChange: (open: boolean) => void;
+  onSelectSubflow: (subflow: SubflowSummary) => void;
+};
+
+export function SubflowNodePalette({
+  open,
+  subflows,
+  onOpenChange,
+  onSelectSubflow,
+}: SubflowNodePaletteProps) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleSubflows = useMemo(() => {
+    if (!normalizedQuery) return subflows;
+    return subflows.filter((subflow) => {
+      const haystack = [subflow.name, subflow.description ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [normalizedQuery, subflows]);
+
+  function resetPalette() {
+    setQuery("");
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) resetPalette();
+      }}
+    >
+      <DialogContent className="add-step-palette">
+        <DialogHeader>
+          <p className="eyebrow">Add Subflow</p>
+          <DialogTitle>Choose a subflow</DialogTitle>
+          <DialogDescription>
+            Select a reusable graph path from this project and add it as a configured subflow node.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Input
+          aria-label="Search subflows"
+          placeholder="Search subflows..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+
+        <div className="subflow-picker-results" aria-label="Subflow results">
+          {visibleSubflows.length === 0 ? (
+            <div className="empty-state panel">
+              <h2>No subflows in this project</h2>
+              <p className="muted">
+                Create one from Projects &gt; Subflows before adding it here.
+              </p>
+            </div>
+          ) : (
+            visibleSubflows.map((subflow) => (
+              <Button
+                className="subflow-picker-result"
+                data-value={subflow.id}
+                key={subflow.id}
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  onSelectSubflow(subflow);
+                  resetPalette();
+                }}
+              >
+                <span>{subflow.name}</span>
+                <small>
+                  {[subflow.description, `${subflow.used_by_count} ${subflow.used_by_count === 1 ? "workflow" : "workflows"}`]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              </Button>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 type GraphNodePaletteProps = {
   palette: {

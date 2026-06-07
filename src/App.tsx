@@ -988,14 +988,15 @@ function App() {
 
       setSelectedWorkflowId(id);
       setDetail(loaded);
-      if (loaded.workflow.project_id) {
-        setSelectedProjectId(loaded.workflow.project_id);
+      const workflowProjectId = loaded.workflow.project_id ?? currentProjectId();
+      if (workflowProjectId) {
+        setSelectedProjectId(workflowProjectId);
         try {
-          setProjectEnvironments(await listProjectEnvironments(loaded.workflow.project_id));
+          setProjectEnvironments(await listProjectEnvironments(workflowProjectId));
         } catch {
           // Keep the workflow detail usable even if project metadata is temporarily unavailable.
         }
-        await loadSubflowsForProject(loaded.workflow.project_id);
+        await loadSubflowsForProject(workflowProjectId);
       }
       try {
         setWorkflowGraph(await getWorkflowGraph(id));

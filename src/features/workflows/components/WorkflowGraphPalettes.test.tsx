@@ -6,15 +6,8 @@ import { logicNodeGroups } from "./WorkflowGraphPalettes";
 import { NodeHelpDialog } from "./WorkflowGraphPalettes";
 
 describe("NodeHelpDialog", () => {
-  test("exposes Call Subflow in the workflow logic palette grouping", () => {
-    expect(logicNodeGroups).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: "Reuse",
-          nodes: expect.arrayContaining(["call_subflow"]),
-        }),
-      ]),
-    );
+  test("keeps Call Subflow out of the generic logic palette", () => {
+    expect(logicNodeGroups.flatMap((group) => group.nodes)).not.toContain("call_subflow");
   });
 
   test("renders graph-native node help as collapsible parent sections and field groups", async () => {

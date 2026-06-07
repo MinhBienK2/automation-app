@@ -329,6 +329,23 @@
   cursor: grab;
 }
 
+.graph-node-subflow {
+  border-color: rgba(50, 211, 230, 0.56);
+  background:
+    linear-gradient(90deg, rgba(50, 211, 230, 0.22), transparent 36%),
+    #0b1016;
+  box-shadow: 0 0 0 1px rgba(50, 211, 230, 0.12) inset;
+}
+
+.graph-node-subflow::before {
+  position: absolute;
+  inset: 8px auto 8px 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: #32d3e6;
+  content: "";
+}
+
 .graph-node-button {
   position: relative;
   z-index: 1;
@@ -368,6 +385,14 @@
   white-space: nowrap;
   color: #667d8d;
   font-size: 11px;
+}
+
+.graph-node-subflow .graph-node-button {
+  padding-left: 16px;
+}
+
+.graph-node-subflow .graph-node-button small {
+  color: #9aaebd;
 }
 
 .graph-node-drag-surface {
@@ -516,6 +541,44 @@
 
 .graph-arrange-error {
   color: #f4b740;
+}
+
+.subflow-picker-results {
+  display: grid;
+  gap: 8px;
+  min-height: 160px;
+}
+
+.subflow-picker-result {
+  display: grid;
+  justify-content: stretch;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid #233240;
+  background: #0e151d;
+  text-align: left;
+}
+
+.subflow-picker-result:hover {
+  border-color: rgba(50, 211, 230, 0.56);
+  background: #121c26;
+}
+
+.subflow-picker-result span,
+.subflow-picker-result small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subflow-picker-result span {
+  color: #e7eef5;
+}
+
+.subflow-picker-result small {
+  color: #9aaebd;
+  font-size: 12px;
 }
 
 .graph-selected-edge {

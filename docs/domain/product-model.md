@@ -115,8 +115,9 @@ Users can:
 - Create, open, save, duplicate, and delete reusable subflows from the selected
   project's Subflows collection. Deletion is blocked when a subflow is
   referenced by workflows.
-- Add Call Subflow nodes to workflow graphs, map inputs into the subflow, and
-  inspect usage warnings before saving subflow changes.
+- Add reusable subflows to workflow graphs from the dedicated Add Subflow
+  toolbar picker, map inputs into the subflow, and inspect usage warnings before
+  saving subflow changes.
 - Configure the workflow's browser identity and launch behavior before running it.
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
 - Export workflow packages containing Flow, selected Workflow Settings

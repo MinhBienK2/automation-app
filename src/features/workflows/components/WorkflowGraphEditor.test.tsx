@@ -183,6 +183,73 @@ describe("Workflow graph editor integration", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("adds a configured subflow node from a dedicated subflow picker", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      list_subflows: [
+        {
+          id: "subflow-login",
+          project_id: "project-1",
+          name: "Login",
+          description: "Reusable login path",
+          tags: [],
+          used_by_count: 2,
+          created_at: "2026-05-27T00:00:00.000Z",
+          updated_at: "2026-05-27T00:00:00.000Z",
+        },
+      ],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Subflow" }));
+    const subflowPicker = await screen.findByRole("dialog", { name: "Choose a subflow" });
+    expect(within(subflowPicker).getByLabelText("Search subflows")).toBeInTheDocument();
+    await userEvent.click(within(subflowPicker).getByRole("button", { name: /Login/ }));
+
+    const subflowNodeButton = within(editor).getByRole("button", {
+      name: "Graph canvas node node-call_subflow-42",
+    });
+    expect(subflowNodeButton).toHaveTextContent("Login");
+    expect(subflowNodeButton.closest(".graph-node")).toHaveClass("graph-node-subflow");
+
+    const inspectorDrawer = within(editor).getByRole("complementary", {
+      name: "Graph inspector drawer",
+    });
+    expect(within(inspectorDrawer).getByRole("heading", { name: "Login" }))
+      .toBeInTheDocument();
+    expect(within(inspectorDrawer).getByLabelText("Subflow")).toHaveDisplayValue("Login");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
+        "save_workflow_graph",
+        expect.objectContaining({
+          workflowId: "workflow-1",
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: "node-call_subflow-42",
+                node_type: "call_subflow",
+                label: "Login",
+                config: expect.objectContaining({
+                  subflow_id: "subflow-login",
+                  input_mapping: [],
+                  output_prefix: null,
+                }),
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+  });
+
   test("uses select-first canvas dragging with temporary spacebar panning", () => {
     expect(workflowGraphEditorSource).toContain("connectionDragThreshold={0}");
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");
@@ -288,7 +355,7 @@ describe("Workflow graph editor integration", () => {
       workflowGraphEditorSource.match(
         /getVisibleNodeInsertionPosition\(\s*currentGraph\.nodes\.length,/g,
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
     expect(workflowGraphEditorSource).not.toContain(
       "x: 120 + currentGraph.nodes.length * 48",
     );

@@ -52,6 +52,7 @@ export function WorkflowGraphNode({
     <div
       className={[
         "graph-node",
+        data.nodeType === "call_subflow" ? "graph-node-subflow" : "",
         selected ? "graph-node-selected" : "",
         data.hasIssue ? "graph-node-has-issue" : "",
         graphStatusClass(data.status),

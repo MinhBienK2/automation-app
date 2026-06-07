@@ -72,6 +72,7 @@ import {
   LinkContextMenu,
   NodeContextMenu,
   NodeHelpDialog,
+  SubflowNodePalette,
 } from "./WorkflowGraphPalettes";
 import { WorkflowGraphToolbar } from "./WorkflowGraphToolbar";
 
@@ -261,6 +262,7 @@ export function WorkflowGraphEditor({
   onValidateGraph,
 }: WorkflowGraphEditorProps) {
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
+  const [isSubflowPaletteOpen, setIsSubflowPaletteOpen] = useState(false);
   const [nodePalette, setNodePalette] = useState<{
     title: string;
     eyebrow: string;
@@ -719,6 +721,31 @@ export function WorkflowGraphEditor({
     setIsActionPaletteOpen(false);
   }
 
+  function addSubflowNode(subflow: SubflowSummary) {
+    const currentGraph = graphRef.current;
+    const node = {
+      ...createDefaultGraphNode(
+        "call_subflow",
+        getVisibleNodeInsertionPosition(
+          currentGraph.nodes.length,
+          reactFlowInstance,
+          graphCanvasRef.current,
+        ),
+      ),
+      label: subflow.name,
+      config: {
+        subflow_id: subflow.id,
+        input_mapping: [],
+        output_prefix: null,
+      },
+    };
+    commitGraphChange(
+      { ...currentGraph, nodes: [...currentGraph.nodes, node] },
+      { nodeIds: [node.id], edgeIds: [] },
+    );
+    setIsSubflowPaletteOpen(false);
+  }
+
   function updateNode(nextNode: GraphNode) {
     const currentGraph = graphRef.current;
     const nextGraph = {
@@ -1041,6 +1068,7 @@ export function WorkflowGraphEditor({
         isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
+        onAddSubflow={() => setIsSubflowPaletteOpen(true)}
         onArrangeSelection={arrangeSelection}
         onAutoArrange={autoArrangeGraph}
         onFitView={() => reactFlowInstance?.fitView()}
@@ -1196,6 +1224,12 @@ export function WorkflowGraphEditor({
         open={isActionPaletteOpen}
         onOpenChange={setIsActionPaletteOpen}
         onSelectAction={addActionNode}
+      />
+      <SubflowNodePalette
+        open={isSubflowPaletteOpen}
+        subflows={subflowOptions}
+        onOpenChange={setIsSubflowPaletteOpen}
+        onSelectSubflow={addSubflowNode}
       />
       <GraphNodePalette
         palette={nodePalette}

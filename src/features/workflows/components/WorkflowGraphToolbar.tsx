@@ -1,5 +1,6 @@
 import {
   AlignHorizontalDistributeCenter,
+  Blocks,
   Hand,
   Keyboard,
   Maximize,
@@ -26,6 +27,7 @@ type WorkflowGraphToolbarProps = {
   isPanMode: boolean;
   onAddAction: () => void;
   onAddNewNode: () => void;
+  onAddSubflow: () => void;
   onArrangeSelection: () => void;
   onAutoArrange: () => void;
   onFitView: () => void;
@@ -49,6 +51,7 @@ export function WorkflowGraphToolbar({
   isPanMode,
   onAddAction,
   onAddNewNode,
+  onAddSubflow,
   onArrangeSelection,
   onAutoArrange,
   onFitView,
@@ -139,6 +142,12 @@ export function WorkflowGraphToolbar({
       <Button type="button" variant="secondary" onClick={onAddAction}>
         Add Action
       </Button>
+      {graphKind === "workflow" ? (
+        <Button type="button" variant="secondary" onClick={onAddSubflow}>
+          <Blocks aria-hidden="true" />
+          Add Subflow
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="secondary"
