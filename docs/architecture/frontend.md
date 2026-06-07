@@ -93,11 +93,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Subflows, and Settings collection tabs to the existing workflow list, subflow
   list, and project settings surface. The project list sidebar owns local
   project search/filtering and project selection only, so collection navigation
-  stays fixed in the detail panel when many projects exist. Project Settings
-  owns project rename, duplicate, delete confirmation, and saved-session
-  identity actions. Project creation selects the new project, switches to
-  Workflows, and refreshes workflow summaries because the backend creates the
-  project's default `Main` workflow; duplicate
+  stays fixed in the detail panel when many projects exist. Selecting a
+  different project resets the active collection to Workflows so operators do
+  not land in the previous project's Settings or Subflows context. Project
+  Settings owns project rename, duplicate, delete confirmation, and
+  saved-session identity actions. Project creation selects the new project,
+  switches to Workflows, and refreshes workflow summaries because the backend
+  creates the project's default `Main` workflow; duplicate
   and delete refresh project/workflow/subflow state and keep selection on a
   valid project. Its project list sidebar and selected collection content are
   independent scroll regions inside the Projects workspace viewport.

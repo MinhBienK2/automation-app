@@ -500,6 +500,64 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
   });
 
+  test("resets to Workflows when selecting a different project", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Main",
+        description: "",
+        created_at: "1",
+        updated_at: "1",
+      },
+      {
+        id: "project-2",
+        name: "Owned Staging",
+        description: "Second project",
+        created_at: "2",
+        updated_at: "2",
+      },
+    ];
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([
+        {
+          ...workflow,
+          project_id: "project-1",
+          environment_id: "environment-project-1",
+          environment_name: "Project saved session",
+        },
+      ]),
+      list_projects: projects,
+      list_project_environments: ({ projectId }: { projectId: string }) => [
+        {
+          id: `environment-${projectId}`,
+          project_id: projectId,
+          name: "Project saved session",
+          description: "",
+          is_default: true,
+          browser_launch: null,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      list_subflows: [],
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    expect(await screen.findByRole("heading", { name: "Project identity" }))
+      .toBeInTheDocument();
+
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    await userEvent.click(within(projectList).getByRole("button", { name: /Owned Staging/ }));
+
+    const sections = await screen.findByRole("navigation", { name: "Project sections" });
+    expect(within(sections).getByRole("button", { name: "Workflows" }))
+      .toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("heading", { name: "Workflows" })).toBeInTheDocument();
+  });
+
   test("shows the auto-created Main workflow after creating a project", async () => {
     const existingProject = {
       id: "project-1",

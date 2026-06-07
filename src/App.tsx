@@ -683,6 +683,9 @@ function App() {
 
   async function selectProject(projectId: string) {
     setAppError("");
+    if (projectId !== selectedProjectId) {
+      setProjectCollection("workflows");
+    }
     setSelectedProjectId(projectId);
     try {
       const environments = await listProjectEnvironments(projectId);

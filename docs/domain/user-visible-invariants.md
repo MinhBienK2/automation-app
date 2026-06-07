@@ -27,7 +27,8 @@ Preserve these unless the task explicitly changes them.
   project list sidebar provides project search/filtering and project
   selection. The selected project shows Workflows, Subflows, and Settings as
   fixed tabs in the detail panel. Workflows and subflows shown there are scoped
-  to the selected project, and the project identity controls live in the
+  to the selected project, selecting a different project resets the detail tabs
+  to Workflows, and the project identity controls live in the
   selected project's Settings collection. The auto-created default project is
   named `Main`. Creating a project automatically creates a workflow named
   `Main` inside that project using its project saved session. Project Settings shows a `Project identity` heading, a
