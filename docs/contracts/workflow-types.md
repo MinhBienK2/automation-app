@@ -212,14 +212,28 @@ Workflow Package v2 is the current user-facing import/export format. It is graph
 }
 ```
 
-Package export options serialize as `{ include_flow, settings_sections }`, where `settings_sections` contains Workflow Settings section ids. Package import uses the same option shape, always creates a new workflow, and remaps selected settings to the new workflow id.
+Package export options serialize as `{ include_flow, settings_sections }`,
+where `settings_sections` contains Workflow Settings section ids. Package
+import options serialize as `{ include_flow, settings_sections,
+target_project_id? }`, always create a new workflow in the target project, and
+remap selected settings to the new workflow id.
 
-Package preview serializes as `{ workflow_name, includes_flow, settings_sections, omitted_fields }`. Preview is the UI review point before import. Package import validates selected flow/settings before creation and saves workflow, graph, and settings in one SQLite transaction so failed imports do not leave orphan workflows.
+Package preview serializes as `{ workflow_name, includes_flow,
+settings_sections, omitted_fields }`. Preview is the UI review point before
+import. Package import validates selected flow/settings and packaged subflows
+before creation and saves workflow, recreated subflows, graph, settings, and
+any private imported session in one SQLite transaction so failed imports do not
+leave orphan workflows.
 
 When Flow includes Call Subflow nodes, export includes each same-project
 referenced subflow in `subflows` and adds `subflows` to `included_sections`.
 Import recreates those subflows in the target project and remaps Call Subflow
 `subflow_id` values in the imported graph before saving it.
+
+When Browser Launch is selected during import, the backend creates a private
+imported workflow session and saves the sanitized package Browser Launch values
+there. Imports that omit Browser Launch use the target project's saved session
+without rewriting it.
 
 Export sanitizes machine-local or sensitive fields by default: `settings.browser_launch.proxy_password`, credentials embedded in `settings.browser_launch.proxy_server`, and local `settings.browser_launch.fingerprint_fonts_dir`.
 

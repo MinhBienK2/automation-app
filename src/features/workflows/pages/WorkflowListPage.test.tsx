@@ -725,6 +725,9 @@ describe("Workflow list integration", () => {
     const importedWorkflow = {
       id: "workflow-imported",
       name: "Imported package (imported)",
+      project_id: "project-1",
+      environment_id: "environment-imported",
+      environment_name: "Imported package imported session",
       created_at: "3",
       updated_at: "3",
     };
@@ -793,6 +796,7 @@ describe("Workflow list integration", () => {
         {
           include_flow: true,
           settings_sections: ["general"],
+          target_project_id: "project-1",
         },
       );
     });

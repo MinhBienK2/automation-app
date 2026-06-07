@@ -19,7 +19,11 @@
   blocked by graph/settings validation before a run row is created, the backend
   records one sanitized `launch_blocked` operational attention row for Overview.
   Manual Validate does not write this audit row.
-- The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
+- The workflow list header exposes Import Workflow for JSON workflow packages.
+  Import rejects files larger than 5 MB before reading JSON, previews valid
+  packages, and always creates a new workflow in the selected project on
+  success; it never overwrites an existing workflow or the selected project's
+  saved session.
 
 ## Project Create
 
@@ -216,13 +220,18 @@
 
 - Import Workflow accepts a JSON workflow package file from the workflow list.
 - The UI calls `preview_workflow_package` before import and shows package workflow name, Flow availability, Settings sections, and sanitized omitted fields.
-- Import calls `import_workflow_package` with the selected Flow and Settings sections.
+- Import calls `import_workflow_package` with the selected Flow, Settings
+  sections, and selected project id.
 - Import validates selected Flow, referenced subflows, and Settings first, then
   transactionally creates a new workflow named `<package workflow name>
-  (imported)`, recreates referenced subflows in the target project, remaps Call
-  Subflow ids in the imported Flow, saves selected Flow to the new workflow id,
-  saves selected Settings after remapping `workflow_id`, refreshes the list,
-  and opens the imported workflow.
+  (imported)` in the target project, recreates referenced subflows in that
+  project, remaps Call Subflow ids in the imported Flow, saves selected Flow to
+  the new workflow id, saves selected Settings after remapping `workflow_id`,
+  refreshes the list, and opens the imported workflow.
+- Importing the Browser Launch settings section creates a private imported
+  workflow session for the new workflow before saving the sanitized package
+  Browser Launch values. Imports that omit Browser Launch use the target
+  project's saved session without mutating it.
 - Import does not overwrite or merge into an existing workflow.
 - Failed import validation or persistence rolls back without leaving a partial workflow.
 

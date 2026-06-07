@@ -1421,6 +1421,7 @@ function App() {
       const imported = await importWorkflowPackage(importPackage, {
         include_flow: importPackageIncludeFlow,
         settings_sections: importPackageSections,
+        target_project_id: currentProjectId(),
       });
       closeImportPackageDialog();
       await loadWorkflows();

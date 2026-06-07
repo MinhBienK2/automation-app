@@ -420,6 +420,7 @@ describe("workflow API phase ten commands", () => {
     await importWorkflowPackage(workflowPackage, {
       include_flow: true,
       settings_sections: ["general", "browser_launch"],
+      target_project_id: "project-1",
     });
 
     expect(workflowBridgeMock.exportWorkflowPackage).toHaveBeenCalledWith(
@@ -437,6 +438,7 @@ describe("workflow API phase ten commands", () => {
       {
         include_flow: true,
         settings_sections: ["general", "browser_launch"],
+        target_project_id: "project-1",
       },
     );
   });

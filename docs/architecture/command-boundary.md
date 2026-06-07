@@ -100,11 +100,13 @@ Node/Electron backend.
 - Product-facing batch execution remains globally exclusive with normal workflow execution, shares run-manager stop handling and persisted run records, and rejects starts while any normal run is active.
 - Product-facing scheduled execution uses the same saved-workflow run path as manual `runWorkflow`, uses run-manager workflow/profile/batch conflict checks instead of a global normal-run lock, and records skipped/missed/failed scheduler decisions in schedule events.
 - Workflow package import delegates preview/import preparation, selected-section
-  validation, referenced-subflow preparation, Call Subflow id remapping, and
-  export sanitization to `WorkflowPackageService`; command handlers still wrap
-  workflow, recreated subflows, graph, and settings writes in a SQLite
-  transaction. Export sanitization removes proxy secrets, proxy URL
-  credentials, and local fingerprint font directories.
+  validation, referenced packaged-subflow validation, Call Subflow id remapping,
+  and export sanitization to `WorkflowPackageService`; command handlers still
+  resolve the target project, choose the project saved session or a private
+  imported session, and wrap workflow, recreated subflows, graph, settings, and
+  any imported session writes in a SQLite transaction. Export sanitization
+  removes proxy secrets, proxy URL credentials, and local fingerprint font
+  directories.
 - Production BrowserWindows keep `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`; renderer access stays limited to the typed preload bridge.
 - Product-facing local copy goes through `duplicateWorkflow`, which copies the saved graph and non-storage local settings without package-export sanitization, but creates a fresh browser identity/profile/fingerprint and disables Run from selected so the copy does not reuse the source session.
 - Product-facing project copy goes through `duplicateProject`, which copies the

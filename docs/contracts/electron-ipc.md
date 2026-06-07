@@ -138,6 +138,12 @@ Browser Launch preferences and deleting the old unshared local project profile
 directory after UI confirmation. Subflow commands expose project-scoped
 reusable graphs, usage queries, guarded deletion, and graph save/load.
 
+`importWorkflowPackage(packageValue, options)` accepts the selected Flow and
+Settings sections plus optional `target_project_id`. When present, the backend
+creates the imported workflow and recreated subflows in that project. Importing
+Browser Launch creates a private imported workflow session instead of mutating
+the target project's saved session.
+
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend
 deletes the workflow's private browser profile directory only if no other

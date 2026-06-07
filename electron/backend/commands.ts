@@ -1892,14 +1892,26 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       options: WorkflowPackageImportOptions,
     ): WorkflowDetail {
       const preparedImport = packageService.prepareImport({ packageValue, options });
+      const targetProjectId = options.target_project_id?.trim() || ensureDefaultProject().id;
+      const importsBrowserLaunch =
+        options.settings_sections.includes("browser_launch") &&
+        Boolean(packageValue.settings?.browser_launch);
 
       context.database.exec("BEGIN IMMEDIATE");
       try {
-        const workflow = createWorkflow(preparedImport.importedName);
+        const workflow = createWorkflow(preparedImport.importedName, {
+          project_id: targetProjectId,
+          environment: importsBrowserLaunch
+            ? {
+                mode: "isolated",
+                name: `${packageValue.workflow.name} imported session`,
+              }
+            : { mode: "project_default" },
+        });
         const subflowIdMap = new Map<string, string>();
         for (const subflow of preparedImport.subflows) {
           const createdSubflow = repository.createSubflow(
-            workflow.project_id ?? ensureDefaultProject().id,
+            workflow.project_id ?? targetProjectId,
             subflow.name,
             subflow.description,
             migrateWorkflowGraph(subflow.graph),
@@ -1914,9 +1926,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         }
 
         if (preparedImport.candidateSettings) {
+          const baseSettings = getSettings(workflow.id);
           saveSettings(workflow.id, {
+            ...baseSettings,
             ...preparedImport.candidateSettings,
             workflow_id: workflow.id,
+            browser_launch: importsBrowserLaunch
+              ? preparedImport.candidateSettings.browser_launch
+              : baseSettings.browser_launch,
             general: {
               ...preparedImport.candidateSettings.general,
               name: workflow.name,

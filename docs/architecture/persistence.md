@@ -69,9 +69,11 @@ Electron/Node now owns the production persistence layer.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.
 - Workflow package import validates selected flow/settings and referenced
-  subflows before creating a workflow. It writes recreated subflows, remapped
-  workflow graph, and settings inside one SQLite transaction. Failed validation
-  or save errors roll back the whole import.
+  packaged subflows before creating a workflow. It writes the target-project
+  workflow, recreated subflows, remapped workflow graph, settings, and a private
+  imported project-environment/session row when Browser Launch is selected
+  inside one SQLite transaction. Failed validation or save errors roll back the
+  whole import.
 - Run evidence outputs store app-local artifact paths under run-scoped evidence directories; run rows persist the resulting output JSON and step error/trace JSON for audit. `run_steps` keeps the existing top-level compiled graph rows and appends executed nested action trace rows with parent control node id and sequence metadata inside `trace_json`, allowing branch, loop, and retry paths to be reconstructed from durable storage.
 - Schedule rows store schedule config JSON, enabled state, next run time, and the latest schedule event summary.
 - Schedule event rows store scheduling decisions such as started, skipped, missed, failed-to-start, and disabled. Skipped/missed events exist even when no run row is created. Schedule event history by schedule id or workflow id uses descending created-time indexes.

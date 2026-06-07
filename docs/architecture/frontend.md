@@ -125,8 +125,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   identity/profile/fingerprint. Export chooses Flow and selected Workflow
   Settings sections, then delegates native Save dialog and package JSON writing
   to the Electron backend. Import reads package JSON from the browser file
-  input, previews available sections, always creates a new workflow, refreshes
-  the list, and opens the imported workflow.
+  input, previews available sections, sends the selected project id as the
+  import target, always creates a new workflow, refreshes the list, and opens
+  the imported workflow.
 - Browser recorder UI orchestration. The workflow list starts a backend-owned
   new-workflow recorder session. The workflow detail header does not expose a
   Record Replacement entry point. The review dialog stops the session, loads a

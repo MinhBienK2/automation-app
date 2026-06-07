@@ -1984,6 +1984,59 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
+  test("imports workflow packages into the target project without mutating its saved session", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const sourceWorkflow = handlers.createWorkflow("Source package") as ProjectWorkflow;
+    const targetProject = projectHandlers.createProject({ name: "Target Project" });
+    const targetDefaultEnvironment = projectHandlers.listProjectEnvironments(targetProject.id)[0];
+    const targetSavedSessionBefore = structuredClone(targetDefaultEnvironment.browser_launch);
+    const sourceSettings = handlers.getWorkflowSettings(sourceWorkflow.id);
+    handlers.saveWorkflowSettings(sourceWorkflow.id, {
+      ...sourceSettings,
+      browser_launch: {
+        ...sourceSettings.browser_launch,
+        proxy_enabled: true,
+        proxy_server: "http://proxy.owned.test:8080",
+        proxy_username: null,
+        proxy_password: "secret",
+      },
+    });
+    const packageValue = handlers.exportWorkflowPackage(sourceWorkflow.id, {
+      include_flow: true,
+      settings_sections: ["browser_launch"],
+    });
+
+    const imported = handlers.importWorkflowPackage(
+      {
+        ...packageValue,
+        workflow: { name: "Imported into target" },
+      },
+      {
+        include_flow: true,
+        settings_sections: ["browser_launch"],
+        target_project_id: targetProject.id,
+      },
+    ) as { workflow: ProjectWorkflow };
+    const targetSavedSessionAfter = projectHandlers.listProjectEnvironments(targetProject.id)
+      .find((environment) => environment.id === targetDefaultEnvironment.id);
+
+    expect(imported.workflow.project_id).toBe(targetProject.id);
+    expect(imported.workflow.environment_id).not.toBe(targetDefaultEnvironment.id);
+    expect(handlers.listWorkflows().find((item) => item.id === imported.workflow.id))
+      .toMatchObject({
+        project_id: targetProject.id,
+        environment_name: "Imported into target imported session",
+      });
+    expect(targetSavedSessionAfter?.browser_launch).toEqual(targetSavedSessionBefore);
+    expect(handlers.getWorkflowSettings(imported.workflow.id).browser_launch)
+      .toMatchObject({
+        proxy_enabled: true,
+        proxy_server: "http://proxy.owned.test:8080",
+        proxy_password: null,
+      });
+  });
+
   test("exports referenced subflows and remaps Call Subflow ids on package import", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
@@ -2015,6 +2068,7 @@ describe("Electron workflow command handlers", () => {
       {
         include_flow: true,
         settings_sections: [],
+        target_project_id: workflow.project_id,
       },
     ) as { workflow: ProjectWorkflow };
     const importedGraph = handlers.getWorkflowGraph(imported.workflow.id);
@@ -2030,6 +2084,10 @@ describe("Electron workflow command handlers", () => {
       ...subflowGraph,
       migration_notes: [],
     });
+    expect(
+      projectHandlers.listSubflows(imported.workflow.project_id)
+        .some((subflow) => subflow.id === importedSubflowId),
+    ).toBe(true);
   });
 
   test("rejects invalid workflow package imports without creating orphan workflows", async () => {
@@ -2165,6 +2223,54 @@ describe("Electron workflow command handlers", () => {
     ).toThrow(expect.objectContaining({
       message: "Node Unknown has invalid action config: Unsupported action type: mystery_action",
       field: "package.flow",
+    }));
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+
+    const missingPackagedSubflowPackage: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Missing packaged subflow" },
+      included_sections: ["flow", "subflows"],
+      omitted_fields: [],
+      flow: workflowGraphCallingSubflow("packaged-login"),
+      subflows: [],
+      settings: null,
+    };
+    expect(() =>
+      handlers.importWorkflowPackage(missingPackagedSubflowPackage, {
+        include_flow: true,
+        settings_sections: [],
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Workflow package is missing a referenced subflow",
+      field: "package.subflows",
+    }));
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+
+    const invalidPackagedSubflowPackage: WorkflowPackage = {
+      ...missingPackagedSubflowPackage,
+      workflow: { name: "Invalid packaged subflow" },
+      subflows: [
+        {
+          id: "packaged-login",
+          project_id: "source-project",
+          name: "Broken Login",
+          description: "",
+          tags: [],
+          graph: startOnlyGraph(),
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+    };
+    expect(() =>
+      handlers.importWorkflowPackage(invalidPackagedSubflowPackage, {
+        include_flow: true,
+        settings_sections: [],
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Referenced subflow has blocking validation errors",
+      field: "package.subflows",
     }));
     expect(handlers.listWorkflows()).toHaveLength(initialCount);
   });

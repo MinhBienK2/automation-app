@@ -1535,6 +1535,7 @@ export type WorkflowPackageExportOptions = {
 export type WorkflowPackageImportOptions = {
   include_flow: boolean;
   settings_sections: WorkflowSettingsSectionId[];
+  target_project_id?: string | null;
 };
 
 export type WorkflowPackageSettings = Partial<{
