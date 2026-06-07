@@ -256,10 +256,12 @@ const actionValidators = createActionValidatorMap({
     ),
   select_custom_option: (config) =>
     firstValidation(
-      validateElementTarget(config.config, {
+      validateElementTargetSource(config.config, {
         xpathField: "trigger_xpath",
         targetField: "trigger_target",
+        refField: "trigger_ref",
         message: "Trigger element target is required",
+        refMessage: "Trigger ref is required",
       }),
       requiredActionString(config.config.option_text, "option_text", "Option text is required"),
       optionalPositive(config.config.timeout_ms, "timeout_ms", "Timeout must be greater than 0"),
@@ -888,9 +890,13 @@ function validateWorkflowCondition(condition: WorkflowCondition) {
     case "url_contains":
       if (!condition.value.trim()) throw validationError("value", "Condition value is required");
       break;
-    case "element_visible":
-      if (!condition.target && !condition.xpath?.trim()) throw validationError("xpath", "Condition XPath is required");
+    case "element_visible": {
+      const validation = validateElementTargetSource(condition, {
+        message: "Condition XPath is required",
+      });
+      if (validation) throw validation;
       break;
+    }
     default:
       throw validationError(
         "kind",

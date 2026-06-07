@@ -627,9 +627,13 @@ single-target actions may use that name in `target_ref` instead of a direct
 target. Element refs are not portable across runs and their serialized outputs
 are evidence metadata. Drag and Drop may use `source_ref` for the draggable
 source and `target_ref` for the destination target; each endpoint can still use
-its direct locator fields independently. Scroll Until Element Visible still uses
-locator target fields because it may need to create or reveal an element that is
-not yet resolved.
+its direct locator fields independently. Custom Select may use `trigger_ref` for
+the dropdown trigger instead of `trigger_target`/`trigger_xpath`. Scroll Until
+Element Visible still uses locator target fields because it may need to create
+or reveal an element that is not yet resolved.
+`WorkflowCondition` values with `kind: "element_visible"` may use legacy `xpath`,
+structured `target`, or `target_ref` from a prior `find_element`; graph
+validation and compiled graph-internal actions must preserve that same contract.
 
 Graph-internal Merge and Router configs use:
 

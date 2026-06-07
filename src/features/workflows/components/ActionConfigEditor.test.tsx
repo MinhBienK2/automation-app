@@ -467,6 +467,60 @@ describe("ActionConfigEditor", () => {
     expect(within(optionGroup).getByLabelText("Value")).toHaveValue("HD");
   });
 
+  test("Custom Select trigger switches between locator and Find Element ref", async () => {
+    const onChange = vi.fn();
+    const config: ActionConfig = {
+      type: "select_custom_option",
+      config: {
+        trigger_ref: "current_dropdown",
+        trigger_target: {
+          locators: [{ kind: "css", value: ".custom-select-trigger" }],
+          constraints: null,
+          iframe: null,
+        },
+        option_text: "HD",
+      },
+    } as ActionConfig;
+
+    function Harness() {
+      const [currentConfig, setCurrentConfig] = useState(config);
+      return (
+        <ActionConfigEditor
+          config={currentConfig}
+          onChange={(nextConfig) => {
+            setCurrentConfig(nextConfig);
+            onChange(nextConfig);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const triggerGroup = screen.getByRole("group", { name: "Custom select trigger" });
+    const triggerSource = within(triggerGroup).getByRole("group", { name: "Trigger source" });
+
+    expect(within(triggerSource).getByRole("button", { name: "Use Find Element ref" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(within(triggerGroup).getByLabelText("Trigger ref")).toHaveValue("current_dropdown");
+    expect(within(triggerGroup).queryByLabelText("Trigger locator")).not.toBeInTheDocument();
+
+    await userEvent.click(within(triggerSource).getByRole("button", { name: "Use locator" }));
+
+    expect(within(triggerGroup).getByLabelText("Trigger locator")).toHaveValue(".custom-select-trigger");
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "select_custom_option",
+      config: expect.objectContaining({
+        trigger_ref: null,
+        trigger_target: {
+          locators: [{ kind: "css", value: ".custom-select-trigger" }],
+          constraints: null,
+          iframe: null,
+        },
+      }),
+    });
+  });
+
   test("groups screenshot artifact and output fields", () => {
     render(
       <ActionConfigEditor

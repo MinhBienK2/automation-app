@@ -837,7 +837,7 @@ function nodeCondition(node: GraphNode): WorkflowCondition {
 }
 
 function validateWorkflowCondition(condition: WorkflowCondition) {
-  const conditionRecord = condition as { kind?: unknown };
+  const conditionRecord = condition as { kind?: unknown; target_ref?: unknown };
   switch (condition.kind) {
     case "output_equals":
     case "output_contains":
@@ -851,7 +851,16 @@ function validateWorkflowCondition(condition: WorkflowCondition) {
       if (!condition.value.trim()) throw validationError("value", "Condition value is required");
       break;
     case "element_visible":
-      if (!condition.target && !condition.xpath?.trim()) throw validationError("xpath", "Condition XPath is required");
+      if (
+        Object.prototype.hasOwnProperty.call(conditionRecord, "target_ref") &&
+        conditionRecord.target_ref != null
+      ) {
+        if (typeof conditionRecord.target_ref !== "string" || !conditionRecord.target_ref.trim()) {
+          throw validationError("target_ref", "Target ref is required");
+        }
+      } else if (!condition.target && !condition.xpath?.trim()) {
+        throw validationError("xpath", "Condition XPath is required");
+      }
       break;
     default:
       throw validationError(

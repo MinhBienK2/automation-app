@@ -591,7 +591,7 @@ function graphNodeFieldOptions(
       graphOption("Output contains", "output_contains", vi ? "Output chỉ cần chứa đoạn mong đợi." : "Output only needs to contain the expected fragment.", vi ? "Dùng cho text dài hoặc thông báo có prefix/suffix." : "Use for long text or messages with prefix/suffix.", vi ? "Tránh khi cần khớp tuyệt đối." : "Avoid when exact matching is required."),
       graphOption("Text visible", "text_visible", vi ? "Trang hiện tại phải hiển thị text." : "The current page must show the text.", vi ? "Dùng khi trạng thái nằm trên UI." : "Use when the state is visible in the UI.", vi ? "Tránh với text theo ngôn ngữ động." : "Avoid locale-dependent text."),
       graphOption("URL contains", "url_contains", vi ? "URL hiện tại chứa đoạn mong đợi." : "Current URL contains the expected fragment.", vi ? "Dùng sau login hoặc điều hướng." : "Use after login or navigation.", vi ? "Tránh với SPA không đổi URL." : "Avoid SPAs that do not change URL."),
-      graphOption("Element visible", "element_visible", vi ? "Element XPath phải visible." : "Element XPath must be visible.", vi ? "Dùng khi nhánh phụ thuộc một control đang hiện." : "Use when branching depends on a visible control.", vi ? "Tránh nếu chỉ cần DOM presence." : "Avoid when DOM presence is enough."),
+      graphOption("Element visible", "element_visible", vi ? "Element XPath hoặc Find Element ref phải visible." : "Element XPath or Find Element ref must be visible.", vi ? "Dùng khi nhánh phụ thuộc một control đang hiện." : "Use when branching depends on a visible control.", vi ? "Tránh nếu chỉ cần DOM presence." : "Avoid when DOM presence is enough."),
     ];
   }
   if (nodeType === "assert_output" && fieldName === "Match") {

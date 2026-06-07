@@ -3487,6 +3487,157 @@ describe("BrowserWorkflowRunner", () => {
     );
   });
 
+  test("uses runtime element refs as Custom Select triggers", async () => {
+    const page = new RankedElementPage({
+      ".custom-trigger": [
+        { x: 20, y: -220, width: 120, height: 40 },
+        { x: 640, y: 340, width: 120, height: 40 },
+      ],
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-trigger", "Find Trigger", {
+            type: "find_element",
+            config: {
+              output_name: "current_dropdown",
+              target: {
+                locators: [{ kind: "css", value: ".custom-trigger" }],
+                constraints: { visible: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("select-hd", "Select HD", {
+            type: "select_custom_option",
+            config: { trigger_ref: "current_dropdown", option_text: "HD" },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "nth:.custom-trigger:1",
+        "click:.custom-trigger >> nth=1",
+        "locator:text=HD",
+        "click:text=HD",
+      ]),
+    );
+  });
+
+  test("element-visible logic conditions consume runtime element refs", async () => {
+    const page = new FakePage();
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-panel", "Find Panel", {
+            type: "find_element",
+            config: {
+              output_name: "hidden_panel",
+              target: { locators: [{ kind: "css", value: "#hidden" }] },
+              rank: "first",
+            },
+          }),
+          step("branch", "Branch", {
+            type: "if_condition",
+            config: {
+              condition: { kind: "element_visible", target_ref: "hidden_panel" },
+              then_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "visible_result", value_type: "text", value: "yes" },
+                    ],
+                  },
+                },
+              ],
+              else_steps: [
+                {
+                  type: "set_variable",
+                  config: {
+                    variables: [
+                      { name: "visible_result", value_type: "text", value: "no" },
+                    ],
+                  },
+                },
+              ],
+            },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.visible_result).toBe("no");
+    expect(page.events).toEqual(expect.arrayContaining(["isVisible:#hidden"]));
+    expect(page.events).not.toContain("isVisible:body");
+  });
+
+  test("blurs the element resolved from a runtime ref", async () => {
+    const page = new RankedElementPage({
+      ".focus-field": [
+        { x: 10, y: -100, width: 180, height: 36 },
+        { x: 500, y: 300, width: 180, height: 36 },
+      ],
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-field", "Find Field", {
+            type: "find_element",
+            config: {
+              output_name: "current_field",
+              target: {
+                locators: [{ kind: "css", value: ".focus-field" }],
+                constraints: { visible: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("blur-field", "Blur Field", {
+            type: "blur_element",
+            config: { target_ref: "current_field" },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "nth:.focus-field:1",
+        "evaluate:.focus-field >> nth=1",
+      ]),
+    );
+    expect(page.events).not.toContain("press:Tab");
+  });
+
   test("lets data capture actions consume runtime element refs", async () => {
     const page = new RankedElementPage({
       ".owned-card": [

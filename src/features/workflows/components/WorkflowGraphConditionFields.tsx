@@ -1,6 +1,7 @@
 import type { WorkflowCondition } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { Select } from "../../../components/ui/select";
 
 type ConditionFieldsProps = {
@@ -69,15 +70,47 @@ export function ConditionFields({ condition, onChange }: ConditionFieldsProps) {
         </Label>
       ) : null}
       {condition.kind === "element_visible" ? (
-        <Label>
-          XPath
-          <Input
-            value={condition.xpath ?? ""}
-            onChange={(event) =>
-              onChange({ ...condition, xpath: event.currentTarget.value })
-            }
-          />
-        </Label>
+        <>
+          <div className="grid gap-1.5">
+            <Label>Element source</Label>
+            <SegmentedControl
+              ariaLabel="Element source"
+              value={condition.target_ref != null ? "ref" : "xpath"}
+              options={[
+                { label: "Use XPath", value: "xpath" },
+                { label: "Use Find Element ref", value: "ref" },
+              ]}
+              onValueChange={(value) =>
+                onChange({
+                  ...condition,
+                  target: value === "xpath" ? null : condition.target,
+                  target_ref: value === "ref" ? (condition.target_ref ?? "") : null,
+                })
+              }
+            />
+          </div>
+          {condition.target_ref != null ? (
+            <Label>
+              Target ref
+              <Input
+                value={condition.target_ref ?? ""}
+                onChange={(event) =>
+                  onChange({ ...condition, target_ref: event.currentTarget.value })
+                }
+              />
+            </Label>
+          ) : (
+            <Label>
+              XPath
+              <Input
+                value={condition.xpath ?? ""}
+                onChange={(event) =>
+                  onChange({ ...condition, xpath: event.currentTarget.value })
+                }
+              />
+            </Label>
+          )}
+        </>
       ) : null}
     </>
   );

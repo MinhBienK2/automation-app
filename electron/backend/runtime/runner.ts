@@ -597,8 +597,8 @@ export class BrowserWorkflowRunner {
       focus_element: async (action) => {
         await (await this.locatorForAction(runtime, action.config)).click();
       },
-      blur_element: async () => {
-        await runtime.page.keyboard?.press("Tab");
+      blur_element: async (action) => {
+        await blurElementTarget(await this.locatorForAction(runtime, action.config));
       },
       upload_file: async (action) => {
         await requireLocatorMethod(
@@ -617,7 +617,7 @@ export class BrowserWorkflowRunner {
         }
       },
       select_custom_option: async (action) => {
-        await (await locatorFor(runtime.page, action.config.trigger_target, action.config.trigger_xpath)).click();
+        await (await this.locatorForCustomSelectTrigger(runtime, action)).click();
         await runtime.page.locator(`text=${action.config.option_text}`).click();
       },
       set_contenteditable: async (action) => {
@@ -1257,6 +1257,30 @@ export class BrowserWorkflowRunner {
     );
   }
 
+  private async locatorForCustomSelectTrigger(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "select_custom_option" }>,
+  ) {
+    if (action.config.trigger_ref != null) {
+      const refName = action.config.trigger_ref.trim();
+      if (!refName) {
+        throw new Error("Trigger ref is required");
+      }
+      const ref = runtime.elementRefs.get(refName);
+      if (!ref) {
+        throw new Error(`Element ref not found: ${action.config.trigger_ref}`);
+      }
+      return locatorForRuntimeElementRef(runtime.page, ref);
+    }
+
+    return locatorFor(
+      runtime.page,
+      action.config.trigger_target,
+      action.config.trigger_xpath,
+      action.config.iframe_xpath,
+    );
+  }
+
   private async executePositionedDragAndDrop(
     runtime: Runtime,
     source: BrowserDriverLocator,
@@ -1803,6 +1827,12 @@ async function submitFormTarget(locator: BrowserDriverLocator) {
   }
 
   throw firstActionFailure(failures, "submit_form could not click, press, or submit the target");
+}
+
+async function blurElementTarget(locator: BrowserDriverLocator) {
+  await requireLocatorMethod(locator, "evaluate", "blur_element")((element: Element) => {
+    if (element instanceof HTMLElement) element.blur();
+  });
 }
 
 async function selectRadioTarget(locator: BrowserDriverLocator) {
@@ -3008,6 +3038,7 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
     text?: string;
     target?: unknown;
     xpath?: string | null;
+    target_ref?: string | null;
   };
   if (typed.kind === "output_equals") return String(runtime.outputs[typed.name ?? ""]) === typed.value;
   if (typed.kind === "output_contains") {
@@ -3023,6 +3054,17 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
     return Boolean(await runtime.page.locator(`text=${typed.text ?? ""}`).isVisible?.());
   }
   if (typed.kind === "element_visible") {
+    if (typed.target_ref != null) {
+      const refName = typed.target_ref.trim();
+      if (!refName) {
+        throw new Error("Target ref is required");
+      }
+      const ref = runtime.elementRefs.get(refName);
+      if (!ref) {
+        throw new Error(`Element ref not found: ${typed.target_ref}`);
+      }
+      return Boolean(await (await locatorForRuntimeElementRef(runtime.page, ref)).isVisible?.());
+    }
     return Boolean(
       await (await locatorFor(runtime.page, typed.target, typed.xpath ?? "body")).isVisible?.(),
     );

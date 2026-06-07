@@ -190,10 +190,15 @@ export function FormActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Custom select trigger">
-            <StructuredTargetFields
+            <ElementTargetSourceFields
               config={config}
               onChange={onChange}
               targetField="trigger_target"
+              refField="trigger_ref"
+              labelPrefix="Trigger"
+              sourceLabel="Trigger source"
+              refLabel="Trigger ref"
+              description="This action opens the custom select with the element resolved by a previous Find Element node."
             />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Custom option">

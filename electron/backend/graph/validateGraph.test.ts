@@ -58,4 +58,47 @@ describe("graph validation module", () => {
       ]),
     );
   });
+
+  test("accepts Find Element refs for element-visible graph conditions", () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        { id: "start", node_type: "start", label: "Start", position: { x: 0, y: 0 }, config: {} },
+        {
+          id: "if-visible",
+          node_type: "if",
+          label: "Panel visible?",
+          position: { x: 180, y: 0 },
+          config: {
+            condition: { kind: "element_visible", target_ref: "current_panel" },
+          },
+        },
+        {
+          id: "done",
+          node_type: "end_success",
+          label: "Done",
+          position: { x: 360, y: 0 },
+          config: {},
+        },
+      ],
+      edges: [
+        {
+          id: "edge-start-if",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "if-visible",
+          target_port: "in",
+        },
+        {
+          id: "edge-if-done",
+          source_node_id: "if-visible",
+          source_port: "done",
+          target_node_id: "done",
+          target_port: "in",
+        },
+      ],
+    } as WorkflowGraph;
+
+    expect(validateWorkflowGraph(graph).filter((issue) => issue.level === "error")).toEqual([]);
+  });
 });

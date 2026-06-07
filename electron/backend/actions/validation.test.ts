@@ -63,6 +63,52 @@ describe("backend action validation registry", () => {
     ).toBeNull();
   });
 
+  test("accepts Find Element refs for Custom Select triggers", () => {
+    expect(
+      validateActionConfig({
+        type: "select_custom_option",
+        config: { trigger_ref: "current_dropdown", option_text: "HD" },
+      } as ActionConfig),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "select_custom_option",
+        config: { trigger_ref: "", option_text: "HD" },
+      } as ActionConfig),
+    ).toEqual({
+      field: "trigger_ref",
+      message: "Trigger ref is required",
+    });
+  });
+
+  test("accepts Find Element refs for element-visible logic conditions", () => {
+    expect(
+      validateActionConfig({
+        type: "if_condition",
+        config: {
+          condition: { kind: "element_visible", target_ref: "current_panel" },
+          then_steps: [],
+          else_steps: [],
+        },
+      } as ActionConfig),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "if_condition",
+        config: {
+          condition: { kind: "element_visible", target_ref: "" },
+          then_steps: [],
+          else_steps: [],
+        },
+      } as ActionConfig),
+    ).toEqual({
+      field: "condition.target_ref",
+      message: "Target ref is required",
+    });
+  });
+
   test("validates Drag and Drop destination positioning", () => {
     expect(
       validateActionConfig({

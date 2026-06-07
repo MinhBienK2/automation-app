@@ -920,6 +920,8 @@ function actualFieldNames(actionType: ActionType): string[] {
     "Y offset px",
   ];
   const triggerTargetFields = [
+    "Trigger source",
+    "Trigger ref",
     "Trigger locator type",
     "Trigger locator",
     "Trigger visibility",
@@ -1158,12 +1160,22 @@ function fieldRequiredWhen(
       };
 
   if (specific[key]) return specific[key];
-  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
+  if (
+    fieldName === "Target source" ||
+    fieldName === "Source selection" ||
+    fieldName === "Drop target source" ||
+    fieldName === "Trigger source"
+  ) {
     return vi
       ? "Bắt buộc; chọn Use locator để nhập locator trực tiếp hoặc Use Find Element ref để dùng ref runtime từ node Find Element trước đó."
       : "Required; choose Use locator for direct locator fields or Use Find Element ref for a runtime ref from a previous Find Element node.";
   }
-  if (fieldName === "Target ref" || fieldName === "Source ref" || fieldName === "Drop target ref") {
+  if (
+    fieldName === "Target ref" ||
+    fieldName === "Source ref" ||
+    fieldName === "Drop target ref" ||
+    fieldName === "Trigger ref"
+  ) {
     return vi
       ? "Bắt buộc khi endpoint chọn Use Find Element ref; bỏ trống khi dùng locator trực tiếp."
       : "Required when the endpoint uses Find Element ref; leave blank when using a direct locator.";
@@ -1234,12 +1246,22 @@ function fieldDescription(
       ? "Tên output lưu id choice đã được chọn để audit hoặc dùng ở node logic sau."
       : "Output name that stores the selected choice id for audit or later logic nodes.";
   }
-  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
+  if (
+    fieldName === "Target source" ||
+    fieldName === "Source selection" ||
+    fieldName === "Drop target source" ||
+    fieldName === "Trigger source"
+  ) {
     return vi
       ? "Chọn nguồn target cho action: locator trực tiếp hoặc ref đã resolve từ Find Element."
       : "Chooses the action target source: a direct locator or a resolved Find Element ref.";
   }
-  if (fieldName === "Target ref" || fieldName === "Source ref" || fieldName === "Drop target ref") {
+  if (
+    fieldName === "Target ref" ||
+    fieldName === "Source ref" ||
+    fieldName === "Drop target ref" ||
+    fieldName === "Trigger ref"
+  ) {
     return vi
       ? "Tên output_name của node Find Element đã chạy trước trong cùng run."
       : "The output_name from a previous Find Element node in the same run.";
@@ -1349,12 +1371,22 @@ function fieldValueGuidance(
   const vi = language === "vi";
   const details = fieldDetails(actionType, language, fieldName);
   if (fieldName === "No fields") return undefined;
-  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
+  if (
+    fieldName === "Target source" ||
+    fieldName === "Source selection" ||
+    fieldName === "Drop target source" ||
+    fieldName === "Trigger source"
+  ) {
     return vi
       ? "Dùng locator cho target tĩnh; dùng Find Element ref khi cần chọn một element đã được lọc/rank theo viewport hoặc danh sách động."
       : "Use locator for static targets; use Find Element ref when the target was filtered/ranked by viewport or a dynamic list.";
   }
-  if (fieldName === "Target ref" || fieldName === "Source ref" || fieldName === "Drop target ref") {
+  if (
+    fieldName === "Target ref" ||
+    fieldName === "Source ref" ||
+    fieldName === "Drop target ref" ||
+    fieldName === "Trigger ref"
+  ) {
     return vi
       ? "Nhập chính xác Output name của Find Element, ví dụ current_card."
       : "Enter the exact Find Element Output name, for example current_card.";
@@ -1420,10 +1452,16 @@ function fieldExample(
   fieldName: string,
 ) {
   const vi = language === "vi";
-  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
+  if (
+    fieldName === "Target source" ||
+    fieldName === "Source selection" ||
+    fieldName === "Drop target source" ||
+    fieldName === "Trigger source"
+  ) {
     return "Use locator";
   }
   if (fieldName === "Target ref" || fieldName === "Source ref") return "current_card";
+  if (fieldName === "Trigger ref") return "current_dropdown";
   if (fieldName === "Drop target ref") return "current_lane";
   if (actionType === "drag_and_drop" && fieldName === "Destination position") {
     return "Percent inside target";
