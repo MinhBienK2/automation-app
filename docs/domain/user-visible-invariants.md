@@ -39,7 +39,7 @@ Preserve these unless the task explicitly changes them.
   workspace header exposes Import project next to Create Project because import
   creates a separate project rather than mutating the selected one. Project
   Settings shows a `Project identity` heading, a
-  `Project details` group with editable Project name, Save project name,
+  `Project details` group with editable Project name, Save,
   Duplicate project, and Delete project, plus a `Browser fingerprint` group,
   editable Fingerprint seed, read-only Identity, Save fingerprint seed, and
   Regenerate identity without exposing a full Browser Launch editor. Duplicate

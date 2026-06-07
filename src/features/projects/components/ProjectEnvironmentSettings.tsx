@@ -183,6 +183,7 @@ export function ProjectEnvironmentSettings({
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Project Settings</p>
+          <h2>Project identity</h2>
         </div>
       </div>
 
@@ -198,17 +199,16 @@ export function ProjectEnvironmentSettings({
       ) : null}
 
       <SettingsFieldGroup title="Project details">
-        <label className="field project-session-seed-field">
-          <span>Project name</span>
-          <Input
-            aria-label="Project name"
-            value={projectNameDraft}
-            disabled={!project || projectActionPending}
-            onChange={(event) => setProjectNameDraft(event.target.value)}
-          />
-        </label>
-
-        <div className="project-session-actions">
+        <div className="project-name-control">
+          <label className="field project-session-seed-field">
+            <span>Project name</span>
+            <Input
+              aria-label="Project name"
+              value={projectNameDraft}
+              disabled={!project || projectActionPending}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+            />
+          </label>
           <Button
             type="button"
             size="sm"
@@ -217,8 +217,11 @@ export function ProjectEnvironmentSettings({
             }}
             disabled={!project || !projectNameChanged || projectActionPending}
           >
-            Save project name
+            Save
           </Button>
+        </div>
+
+        <div className="project-session-actions">
           <Button
             type="button"
             size="sm"

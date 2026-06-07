@@ -265,7 +265,7 @@ describe("App settings and graph autosave", () => {
     const nameInput = await screen.findByRole("textbox", { name: "Project name" });
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Owned Lab");
-    await userEvent.click(screen.getByRole("button", { name: "Save project name" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith("update_project", {
         projectId: "project-1",
