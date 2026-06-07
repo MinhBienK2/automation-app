@@ -497,6 +497,73 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
   });
 
+  test("shows the auto-created Main workflow after creating a project", async () => {
+    const existingProject = {
+      id: "project-1",
+      name: "Main",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const createdProject = {
+      id: "project-2",
+      name: "Owned Staging",
+      description: "",
+      created_at: "2",
+      updated_at: "2",
+    };
+    const createdWorkflow = {
+      ...workflow,
+      id: "workflow-main",
+      name: "Main",
+      project_id: createdProject.id,
+      environment_id: "environment-project-2",
+      environment_name: "Project saved session",
+    };
+    const createdEnvironment = {
+      id: "environment-project-2",
+      project_id: createdProject.id,
+      name: "Project saved session",
+      description: "",
+      is_default: true,
+      browser_launch: null,
+      created_at: "2",
+      updated_at: "2",
+    };
+
+    let projectCreated = false;
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      list_projects: () =>
+        projectCreated ? [existingProject, createdProject] : [existingProject],
+      create_project: () => {
+        projectCreated = true;
+        return createdProject;
+      },
+      list_project_environments: ({ projectId }: { projectId: string }) =>
+        projectId === createdProject.id ? [createdEnvironment] : [],
+      list_workflows: () => [createdWorkflow],
+      list_subflows: [],
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Project" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Project" });
+    await userEvent.type(within(dialog).getByLabelText("Project name"), "Owned Staging");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    const workflowList = await screen.findByRole("region", { name: "Workflow list" });
+    expect(within(workflowList).getByRole("heading", { name: "Main" }))
+      .toBeInTheDocument();
+    expect(within(workflowList).getByText("Environment: Project saved session"))
+      .toBeInTheDocument();
+    await waitFor(() => {
+      expect(workflowBridgeMock.listWorkflows).toHaveBeenCalled();
+    });
+  });
+
   test("lands on Overview with operational panels and refreshes the durable aggregate", async () => {
     let overviewCalls = 0;
     mockWorkflowBridgeCommands({

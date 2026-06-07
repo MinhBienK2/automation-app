@@ -21,6 +21,17 @@
   Manual Validate does not write this audit row.
 - The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
 
+## Project Create
+
+- Projects UI calls `createProject` through `src/lib/workflowApi.ts`.
+- Electron backend commands validate a non-blank project name before
+  persistence.
+- The command transactionally creates the project, its default project saved
+  session, and one normal draft workflow named `Main` that uses that project
+  saved session.
+- UI selects the created project, switches to its Workflows collection, and
+  refreshes workflows so the `Main` workflow is visible immediately.
+
 ## Project Settings
 
 - Projects -> Settings can rename the selected project through `updateProject`.

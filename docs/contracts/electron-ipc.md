@@ -116,7 +116,9 @@ string map.
 - `dryRunValidateConfig`
 
 Project commands expose default-project and compatibility project-session
-management to the renderer. `updateProject(projectId, input)` renames or updates
+management to the renderer. `createProject(input)` creates the project, default
+project saved session, and an initial draft workflow named `Main` in one
+transaction, then returns the created `Project`. `updateProject(projectId, input)` renames or updates
 the selected project metadata. `duplicateProject(projectId)` creates an
 independent `Copy of <name>` project with copied environments, subflows,
 workflows, remapped Call Subflow references, and fresh browser

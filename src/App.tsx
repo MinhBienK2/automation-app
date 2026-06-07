@@ -700,6 +700,7 @@ function App() {
       setSelectedProjectId(project.id);
       setProjectCollection("workflows");
       setProjects(await listProjects());
+      await loadWorkflows();
       setProjectEnvironments(await listProjectEnvironments(project.id));
       setSubflows(await listSubflows(project.id));
     } catch (error) {

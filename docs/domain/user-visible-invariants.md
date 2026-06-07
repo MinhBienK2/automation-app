@@ -28,7 +28,8 @@ Preserve these unless the task explicitly changes them.
   inside the project list sidebar. Workflows and subflows shown there are
   scoped to the selected project, and the project identity controls live in the
   selected project's Settings collection. The auto-created default project is
-  named `Main`. Project Settings shows a `Project identity` heading, a
+  named `Main`. Creating a project automatically creates a workflow named
+  `Main` inside that project using its project saved session. Project Settings shows a `Project identity` heading, a
   `Project details` group with editable Project name, Save project name,
   Duplicate project, and Delete project, plus a `Browser fingerprint` group,
   editable Fingerprint seed, read-only Identity, Save fingerprint seed, and

@@ -92,7 +92,9 @@ Mission Control is an Electron desktop app for building and running browser auto
 
 Users can:
 
-- Create, select, rename, duplicate, and delete projects.
+- Create, select, rename, duplicate, and delete projects. Newly created
+  projects automatically contain a project saved session and a draft workflow
+  named `Main`.
 - Create, rename, open, and delete workflows inside a selected project.
 - Create workflows in the default `Main` project by reusing the project saved
   session, or by creating a new private workflow session.

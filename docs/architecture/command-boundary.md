@@ -77,9 +77,11 @@ Node/Electron backend.
   logic. Browser Launch settings for project saved sessions and private
   workflow sessions are backend-owned, and subflow delete is guarded by workflow
   usage. The renderer exposes grouped project identity controls instead of a
-  full Project Environment list/create/editor, project rename/duplicate/delete
-  stays backend-owned through `updateProject`, `duplicateProject`, and
-  `deleteProject`, and project identity regeneration stays backend-owned
+  full Project Environment list/create/editor. Project creation stays
+  backend-owned through `createProject`, which creates the project, default
+  saved session, and initial `Main` workflow transactionally. Project
+  rename/duplicate/delete stays backend-owned through `updateProject`,
+  `duplicateProject`, and `deleteProject`, and project identity regeneration stays backend-owned
   through `resetProjectEnvironmentBrowserIdentity`.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
