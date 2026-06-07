@@ -187,6 +187,23 @@ describe("App CSS", () => {
     expect(css).not.toContain(".projects-detail-header");
   });
 
+  test("lets Project Settings fill the detail column with inline project-name save", () => {
+    const projectSettingsPanel = cssRule(".settings-project-environments-panel");
+    const projectNameControl = cssRule(".project-name-control");
+
+    expect(projectSettingsPanel).toContain("width: 100%");
+    expect(projectSettingsPanel).toContain("max-width: none");
+    expect(projectNameControl).toContain("display: grid");
+    expect(projectNameControl).toContain("grid-template-columns: minmax(0, 1fr) auto");
+    expect(projectNameControl).toContain("align-items: end");
+  });
+
+  test("uses a filled red treatment for destructive buttons", () => {
+    expect(buttonSource).toContain("bg-[var(--app-danger)]");
+    expect(buttonSource).toContain("hover:bg-[var(--app-danger-hover)]");
+    expect(buttonSource).not.toContain("destructive:\n          \"border-[var(--app-danger-border)] bg-[var(--app-surface)]");
+  });
+
   test("keeps Projects sidebar and collection content as independent scroll regions", () => {
     const projectsScreen = cssRule(".projects-screen");
     const projectsWorkspace = cssRule(".projects-workspace");

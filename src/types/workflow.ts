@@ -514,8 +514,10 @@ export type ActionConfig =
       config: {
         source_xpath?: string | null;
         source_target?: ElementTarget | null;
+        source_ref?: string | null;
         target_xpath?: string | null;
         target_target?: ElementTarget | null;
+        target_ref?: string | null;
         target_position?: DragTargetPosition | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;
@@ -592,6 +594,7 @@ export type ActionConfig =
       config: {
         trigger_xpath?: string | null;
         trigger_target?: ElementTarget | null;
+        trigger_ref?: string | null;
         option_text: string;
         iframe_xpath?: string | null;
         timeout_ms?: number | null;
@@ -902,7 +905,12 @@ export type WorkflowCondition =
   | { kind: "output_contains"; name: string; value: string }
   | { kind: "text_visible"; text: string }
   | { kind: "url_contains"; value: string }
-  | { kind: "element_visible"; xpath?: string | null; target?: ElementTarget | null };
+  | {
+      kind: "element_visible";
+      xpath?: string | null;
+      target?: ElementTarget | null;
+      target_ref?: string | null;
+    };
 
 export type RouterGraphCase = {
   id: string;

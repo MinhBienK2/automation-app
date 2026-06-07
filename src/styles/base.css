@@ -13,6 +13,9 @@
   --app-accent-border: rgba(50, 211, 230, 0.48);
   --app-accent-border-strong: rgba(50, 211, 230, 0.72);
   --app-focus-ring: rgba(50, 211, 230, 0.18);
+  --app-danger: #f06467;
+  --app-danger-hover: #ff787b;
+  --app-danger-contrast: #0b1016;
   --app-danger-text: #f06467;
   --app-danger-border: rgba(240, 100, 103, 0.42);
   --app-danger-border-strong: rgba(240, 100, 103, 0.72);

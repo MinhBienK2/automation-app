@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import type { GraphNode, SubflowSummary } from "../../../types/workflow";
 import { nodePorts } from "../lib/workflowGraph";
@@ -38,6 +40,59 @@ describe("WorkflowGraphInspectorFields", () => {
     expect(within(conditionGroup).getByLabelText("Condition kind")).toHaveValue("url_contains");
     expect(within(loopGuardGroup).getByLabelText("Loop max attempts")).toHaveValue(5);
     expect(within(loopGuardGroup).getByLabelText("Loop timeout ms")).toHaveValue(12000);
+  });
+
+  test("element-visible graph conditions can target a Find Element ref", async () => {
+    const onChange = vi.fn();
+    const node = graphNode({
+      node_type: "while",
+      config: {
+        condition: {
+          kind: "element_visible",
+          xpath: "//*[@id='legacy-panel']",
+          target_ref: "current_panel",
+        },
+        max_attempts: 5,
+      },
+    });
+
+    function Harness() {
+      const [currentNode, setCurrentNode] = useState(node);
+      return (
+        <NodeConfigFields
+          node={currentNode}
+          onChange={(nextNode) => {
+            setCurrentNode(nextNode);
+            onChange(nextNode);
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    const conditionGroup = screen.getByRole("group", { name: "Condition" });
+    const elementSource = within(conditionGroup).getByRole("group", { name: "Element source" });
+
+    expect(within(conditionGroup).getByLabelText("Condition kind")).toHaveValue("element_visible");
+    expect(within(elementSource).getByRole("button", { name: "Use Find Element ref" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(within(conditionGroup).getByLabelText("Target ref")).toHaveValue("current_panel");
+    expect(within(conditionGroup).queryByLabelText("XPath")).not.toBeInTheDocument();
+
+    await userEvent.click(within(elementSource).getByRole("button", { name: "Use XPath" }));
+
+    expect(within(conditionGroup).getByLabelText("XPath")).toHaveValue("//*[@id='legacy-panel']");
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          condition: expect.objectContaining({
+            target_ref: null,
+            xpath: "//*[@id='legacy-panel']",
+          }),
+        }),
+      }),
+    );
   });
 
   test("groups router decision cases separately from the default route", () => {

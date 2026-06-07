@@ -3,6 +3,7 @@ import type { ActionConfig } from "../../../types/workflow";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
+import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { Textarea } from "../../../components/ui/textarea";
 import { updateActionConfigField } from "../lib/workflowStepForm";
 import {
@@ -101,22 +102,26 @@ export function FormActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Drag source">
-            <StructuredTargetFields
+            <DragEndpointSourceFields
               config={config}
               onChange={onChange}
+              refField="source_ref"
               targetField="source_target"
               labelPrefix="Source"
-              showConstraints={false}
+              selectionLabel="Source selection"
+              refLabel="Source ref"
             />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Drop setup">
             <ActionConfigFieldGroup title="Drop target" nested>
-              <StructuredTargetFields
+              <DragEndpointSourceFields
                 config={config}
                 onChange={onChange}
+                refField="target_ref"
                 targetField="target_target"
                 labelPrefix="Target"
-                showConstraints={false}
+                selectionLabel="Drop target source"
+                refLabel="Drop target ref"
               />
             </ActionConfigFieldGroup>
             <ActionConfigFieldGroup title="Drop point" nested>
@@ -185,10 +190,15 @@ export function FormActionFields({
       return (
         <>
           <ActionConfigFieldGroup title="Custom select trigger">
-            <StructuredTargetFields
+            <ElementTargetSourceFields
               config={config}
               onChange={onChange}
               targetField="trigger_target"
+              refField="trigger_ref"
+              labelPrefix="Trigger"
+              sourceLabel="Trigger source"
+              refLabel="Trigger ref"
+              description="This action opens the custom select with the element resolved by a previous Find Element node."
             />
           </ActionConfigFieldGroup>
           <ActionConfigFieldGroup title="Custom option">
@@ -360,6 +370,78 @@ function DragTargetPositionFields({
           </Label>
         </>
       ) : null}
+    </>
+  );
+}
+
+function DragEndpointSourceFields({
+  config,
+  onChange,
+  refField,
+  targetField,
+  labelPrefix,
+  selectionLabel,
+  refLabel,
+}: {
+  config: Extract<ActionConfig, { type: "drag_and_drop" }>;
+  onChange: (config: ActionConfig) => void;
+  refField: "source_ref" | "target_ref";
+  targetField: "source_target" | "target_target";
+  labelPrefix: string;
+  selectionLabel: string;
+  refLabel: string;
+}) {
+  const rawConfig = config.config as Record<string, unknown>;
+  const refValue = rawConfig[refField] as string | null | undefined;
+  const targetSource = refValue != null ? "ref" : "locator";
+
+  const updateRef = (nextValue: string | null) => {
+    onChange({
+      ...config,
+      config: {
+        ...config.config,
+        [refField]: nextValue,
+      },
+    } as ActionConfig);
+  };
+
+  return (
+    <>
+      <div className="grid gap-1.5">
+        <Label>{selectionLabel}</Label>
+        <SegmentedControl
+          ariaLabel={selectionLabel}
+          value={targetSource}
+          options={[
+            { label: "Use locator", value: "locator" },
+            { label: "Use Find Element ref", value: "ref" },
+          ]}
+          onValueChange={(value) => updateRef(value === "ref" ? (refValue ?? "") : null)}
+        />
+      </div>
+      {targetSource === "ref" ? (
+        <>
+          <Label>
+            {refLabel}
+            <Input
+              value={refValue ?? ""}
+              onChange={(event) => updateRef(event.currentTarget.value)}
+              placeholder="Output name from Find Element"
+            />
+          </Label>
+          <p className="text-xs leading-5 text-[var(--app-text-muted)]">
+            This endpoint uses the element resolved by a previous Find Element node in this run.
+          </p>
+        </>
+      ) : (
+        <StructuredTargetFields
+          config={config}
+          onChange={onChange}
+          targetField={targetField}
+          labelPrefix={labelPrefix}
+          showConstraints={false}
+        />
+      )}
     </>
   );
 }

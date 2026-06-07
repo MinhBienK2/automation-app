@@ -257,6 +257,14 @@ describe("workflow step form config helpers", () => {
         option_text: "Vietnam",
       },
     });
+    expect(updateActionConfigField(customSelectConfig, "trigger_ref", "current_dropdown")).toEqual({
+      type: "select_custom_option",
+      config: {
+        trigger_xpath: "//*[@role='combobox']",
+        trigger_ref: "current_dropdown",
+        option_text: "Old",
+      },
+    });
     expect(updateActionConfigField(editableConfig, "clear_before_input", "false")).toEqual({
       type: "set_contenteditable",
       config: {

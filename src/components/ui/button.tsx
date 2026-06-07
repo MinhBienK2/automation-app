@@ -20,7 +20,7 @@ const buttonVariants = cva(
         ghost:
           "border-transparent bg-transparent text-[var(--app-text)] hover:border-[var(--app-border-strong)] hover:bg-[var(--app-surface)]",
         destructive:
-          "border-[var(--app-danger-border)] bg-[var(--app-surface)] text-[var(--app-danger-text)] hover:border-[var(--app-danger-border-strong)]",
+          "border-[var(--app-danger)] bg-[var(--app-danger)] text-[var(--app-danger-contrast)] hover:border-[var(--app-danger-hover)] hover:bg-[var(--app-danger-hover)]",
       },
       size: {
         default: "h-10 px-4",

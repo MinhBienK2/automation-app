@@ -578,7 +578,21 @@
 }
 
 .settings-project-environments-panel {
-  max-width: 720px;
+  width: 100%;
+  max-width: none;
+}
+
+.project-name-control {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  min-width: 0;
+}
+
+.project-name-control .field {
+  min-width: 0;
 }
 
 .project-session-value-row {

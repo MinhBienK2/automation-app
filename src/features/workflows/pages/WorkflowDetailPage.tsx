@@ -23,9 +23,11 @@ import {
 type WorkflowDetailPageProps = {
   detail: WorkflowDetail;
   environmentName?: string | null;
+  projectName?: string | null;
   isRunning: boolean;
   appError: string;
   graphSaveStatus: string;
+  canSaveGraph: boolean;
   runState: RunState;
   workflowGraph: WorkflowGraph | null;
   graphIssues: GraphValidationIssue[];
@@ -56,9 +58,11 @@ type WorkflowDetailPageProps = {
 export function WorkflowDetailPage({
   detail,
   environmentName = null,
+  projectName = null,
   isRunning,
   appError,
   graphSaveStatus,
+  canSaveGraph,
   runState,
   workflowGraph,
   graphIssues,
@@ -166,6 +170,7 @@ export function WorkflowDetailPage({
         eyebrow="Workflow Detail"
         meta={[
           graphSaveStatus,
+          ...(projectName ? [`Project: ${projectName}`] : []),
           ...(environmentName ? [`Environment: ${environmentName}`] : []),
         ]}
         status={
@@ -203,6 +208,7 @@ export function WorkflowDetailPage({
               type="button"
               label="Save"
               onClick={onSaveGraph}
+              disabled={!canSaveGraph}
             >
               <Save aria-hidden="true" />
             </IconButton>

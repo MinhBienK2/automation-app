@@ -15,8 +15,13 @@ import {
   workflowDetailScenario,
 } from "./tests/mocks/workflowScenarios";
 import { renderApp } from "./tests/utils/renderApp";
+import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
-import type { ProjectEnvironmentInput, ProjectPackage } from "./types/workflow";
+import type {
+  ProjectEnvironmentInput,
+  ProjectPackage,
+  SubflowSummary,
+} from "./types/workflow";
 
 function diagnosticsFixture() {
   return {
@@ -89,6 +94,16 @@ describe("App settings and graph autosave", () => {
   async function openProjectTab(tabName: "Workflows" | "Subflows" | "Settings") {
     const collections = await getProjectCollections();
     await userEvent.click(within(collections).getByRole("button", { name: tabName }));
+  }
+
+  async function addNavigateActionNode() {
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Action" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose an action type" }))
+        .querySelector('[data-value="navigate"]') as HTMLElement,
+    );
+    return editor;
   }
 
   test("opens settings from the sidebar and persists the autosave preference", async () => {
@@ -265,7 +280,7 @@ describe("App settings and graph autosave", () => {
     const nameInput = await screen.findByRole("textbox", { name: "Project name" });
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Owned Lab");
-    await userEvent.click(screen.getByRole("button", { name: "Save project name" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(workflowCommandCallMock).toHaveBeenCalledWith("update_project", {
         projectId: "project-1",
@@ -1334,6 +1349,163 @@ describe("App settings and graph autosave", () => {
     expect(workflowCommandCallMock).not.toHaveBeenCalledWith("run_workflow", {
       workflowId: "workflow-1",
     });
+  });
+
+  test("disables workflow detail Save until manual-save graph changes exist", async () => {
+    window.localStorage.setItem(
+      "workflow-manager:settings:v1",
+      JSON.stringify({ graphAutosaveEnabled: false }),
+    );
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    const header = await screen.findByRole("region", { name: "Workflow detail header" });
+    expect(within(header).getByRole("button", { name: "Save" })).toBeDisabled();
+
+    await addNavigateActionNode();
+
+    expect(within(header).getByRole("button", { name: "Save" })).not.toBeDisabled();
+  });
+
+  test("asks before leaving a workflow detail with manual-save graph changes", async () => {
+    window.localStorage.setItem(
+      "workflow-manager:settings:v1",
+      JSON.stringify({ graphAutosaveEnabled: false }),
+    );
+    const saveGraph = vi.fn().mockResolvedValue(undefined);
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: saveGraph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await addNavigateActionNode();
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
+
+    const confirmDialog = await screen.findByRole("dialog", { name: "Unsaved changes" });
+    expect(within(confirmDialog).getByText(/You have unsaved changes/i)).toBeInTheDocument();
+
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Keep editing" }));
+    expect(await screen.findByRole("region", { name: "Workflow detail header" }))
+      .toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog", { name: "Unsaved changes" }))
+        .getByRole("button", { name: "Save and close" }),
+    );
+
+    await waitFor(() => {
+      expect(saveGraph).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workflowId: "workflow-1",
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({ id: "node-action-42", node_type: "action" }),
+            ]),
+          }),
+        }),
+      );
+    });
+    expect(await screen.findByRole("button", { name: "Create Workflow" })).toBeInTheDocument();
+  });
+
+  test("does not ask before leaving a workflow detail after autosave has saved", async () => {
+    const saveGraph = vi.fn().mockResolvedValue(undefined);
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: saveGraph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await addNavigateActionNode();
+
+    await waitFor(() => {
+      expect(saveGraph).toHaveBeenCalled();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "App Settings" }));
+
+    expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Unsaved changes" })).not.toBeInTheDocument();
+  });
+
+  test("asks before leaving a workflow detail when autosave has failed", async () => {
+    const saveGraph = vi.fn()
+      .mockRejectedValueOnce(new Error("disk is full"))
+      .mockResolvedValue(undefined);
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      save_workflow_graph: saveGraph,
+    });
+
+    renderApp();
+
+    await openWorkflows();
+    await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+    await addNavigateActionNode();
+
+    expect(await screen.findByText("Autosave failed")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "App Settings" }));
+
+    const confirmDialog = await screen.findByRole("dialog", { name: "Unsaved changes" });
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Save and close" }));
+
+    await waitFor(() => {
+      expect(saveGraph).toHaveBeenCalledTimes(2);
+    });
+    expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
+  });
+
+  test("asks before leaving a subflow detail with unsaved graph changes", async () => {
+    const graph = linearGraphFromSteps([]);
+    const subflow: SubflowSummary = {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "",
+      tags: [],
+      used_by_count: 0,
+      created_at: "1",
+      updated_at: "1",
+    };
+    const saveSubflow = vi.fn().mockResolvedValue(undefined);
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_subflows: [subflow],
+      get_subflow: { ...subflow, graph },
+      get_subflow_graph: graph,
+      get_subflow_usage: [],
+      save_subflow_graph: saveSubflow,
+    });
+
+    renderApp();
+
+    await openProjectTab("Subflows");
+    await userEvent.click(await screen.findByRole("button", { name: "Open Login Subflow" }));
+    await addNavigateActionNode();
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Subflows" }));
+
+    const confirmDialog = await screen.findByRole("dialog", { name: "Unsaved changes" });
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Discard changes" }));
+
+    expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
+    expect(saveSubflow).not.toHaveBeenCalled();
   });
 
   test("renders primary graph actions only in the workflow header", async () => {

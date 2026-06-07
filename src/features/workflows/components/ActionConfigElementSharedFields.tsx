@@ -54,26 +54,39 @@ export function ElementTargetSourceFields({
   config,
   onChange,
   showConstraints = true,
+  targetField = "target",
+  refField = "target_ref",
+  labelPrefix = "Target",
+  sourceLabel = `${labelPrefix} source`,
+  refLabel = `${labelPrefix} ref`,
+  description = "This action uses the element resolved by a previous Find Element node in this run.",
 }: {
   config: ActionConfig;
   onChange: (config: ActionConfig) => void;
   showConstraints?: boolean;
+  targetField?: "target" | "source_target" | "target_target" | "trigger_target";
+  refField?: "target_ref" | "source_ref" | "trigger_ref";
+  labelPrefix?: string;
+  sourceLabel?: string;
+  refLabel?: string;
+  description?: string;
 }) {
-  const targetRef = (config.config as { target_ref?: string | null }).target_ref;
+  const rawConfig = config.config as Record<string, unknown>;
+  const targetRef = rawConfig[refField] as string | null | undefined;
   const [targetSource, setTargetSource] = useState<"locator" | "ref">(
     targetRef != null ? "ref" : "locator",
   );
 
   useEffect(() => {
     setTargetSource(targetRef != null ? "ref" : "locator");
-  }, [config.type, targetRef]);
+  }, [config.type, refField, targetRef]);
 
   return (
     <>
       <div className="grid gap-1.5">
-        <Label>Target source</Label>
+        <Label>{sourceLabel}</Label>
         <SegmentedControl
-          ariaLabel="Target source"
+          ariaLabel={sourceLabel}
           value={targetSource}
           options={[
             { label: "Use locator", value: "locator" },
@@ -85,7 +98,7 @@ export function ElementTargetSourceFields({
               ...config,
               config: {
                 ...config.config,
-                target_ref: value === "ref" ? (targetRef ?? "") : null,
+                [refField]: value === "ref" ? (targetRef ?? "") : null,
               },
             } as ActionConfig);
           }}
@@ -94,7 +107,7 @@ export function ElementTargetSourceFields({
       {targetSource === "ref" ? (
         <>
           <Label>
-            Target ref
+            {refLabel}
             <Input
               value={targetRef ?? ""}
               onChange={(event) =>
@@ -102,7 +115,7 @@ export function ElementTargetSourceFields({
                   ...config,
                   config: {
                     ...config.config,
-                    target_ref: event.currentTarget.value,
+                    [refField]: event.currentTarget.value,
                   },
                 } as ActionConfig)
               }
@@ -110,13 +123,15 @@ export function ElementTargetSourceFields({
             />
           </Label>
           <p className="text-xs leading-5 text-[var(--app-text-muted)]">
-            This action uses the element resolved by a previous Find Element node in this run.
+            {description}
           </p>
         </>
       ) : (
         <StructuredTargetFields
           config={config}
           onChange={onChange}
+          targetField={targetField}
+          labelPrefix={labelPrefix}
           showConstraints={showConstraints}
         />
       )}

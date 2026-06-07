@@ -183,8 +183,12 @@ describe("step help content", () => {
   test("Drag and Drop help follows the grouped source and drop setup fields", () => {
     expect(stepHelpContent.drag_and_drop.en.fieldReference!.map((field) => field.name))
       .toEqual([
+        "Source selection",
+        "Source ref",
         "Source locator type",
         "Source locator",
+        "Drop target source",
+        "Drop target ref",
         "Target locator type",
         "Target locator",
         "Destination position",

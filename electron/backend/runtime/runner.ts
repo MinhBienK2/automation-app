@@ -616,8 +616,8 @@ export class BrowserWorkflowRunner {
       focus_element: async (action) => {
         await (await this.locatorForAction(runtime, action.config)).click();
       },
-      blur_element: async () => {
-        await runtime.page.keyboard?.press("Tab");
+      blur_element: async (action) => {
+        await blurElementTarget(await this.locatorForAction(runtime, action.config));
       },
       upload_file: async (action) => {
         await requireLocatorMethod(
@@ -636,7 +636,7 @@ export class BrowserWorkflowRunner {
         }
       },
       select_custom_option: async (action) => {
-        await (await locatorFor(runtime.page, action.config.trigger_target, action.config.trigger_xpath)).click();
+        await (await this.locatorForCustomSelectTrigger(runtime, action)).click();
         await runtime.page.locator(`text=${action.config.option_text}`).click();
       },
       set_contenteditable: async (action) => {
@@ -1220,8 +1220,8 @@ export class BrowserWorkflowRunner {
     runtime: Runtime,
     action: Extract<ActionConfig, { type: "drag_and_drop" }>,
   ) {
-    const source = await locatorFor(runtime.page, action.config.source_target, action.config.source_xpath);
-    const target = await locatorFor(runtime.page, action.config.target_target, action.config.target_xpath);
+    const source = await this.locatorForDragEndpoint(runtime, action, "source");
+    const target = await this.locatorForDragEndpoint(runtime, action, "target");
     await this.waitForElementReadiness(
       source,
       action.config.wait_until ?? null,
@@ -1253,6 +1253,62 @@ export class BrowserWorkflowRunner {
       throw new Error("drag_and_drop requires driver dragTo support");
     }
     await source.dragTo(target, { timeout: action.config.timeout_ms ?? undefined });
+  }
+
+  private async locatorForDragEndpoint(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "drag_and_drop" }>,
+    endpoint: "source" | "target",
+  ): Promise<BrowserDriverLocator> {
+    const refName = endpoint === "source" ? action.config.source_ref : action.config.target_ref;
+    if (refName?.trim()) {
+      const trimmedRefName = refName.trim();
+      const ref = runtime.elementRefs.get(trimmedRefName);
+      if (!ref) {
+        throw new Error(`Element ref not found: ${refName}`);
+      }
+      return locatorForRuntimeElementRef(runtime.page, ref);
+    }
+
+    if (endpoint === "source") {
+      return locatorFor(
+        runtime.page,
+        action.config.source_target,
+        action.config.source_xpath,
+        action.config.iframe_xpath,
+      );
+    }
+
+    return locatorFor(
+      runtime.page,
+      action.config.target_target,
+      action.config.target_xpath,
+      action.config.iframe_xpath,
+    );
+  }
+
+  private async locatorForCustomSelectTrigger(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "select_custom_option" }>,
+  ) {
+    if (action.config.trigger_ref != null) {
+      const refName = action.config.trigger_ref.trim();
+      if (!refName) {
+        throw new Error("Trigger ref is required");
+      }
+      const ref = runtime.elementRefs.get(refName);
+      if (!ref) {
+        throw new Error(`Element ref not found: ${action.config.trigger_ref}`);
+      }
+      return locatorForRuntimeElementRef(runtime.page, ref);
+    }
+
+    return locatorFor(
+      runtime.page,
+      action.config.trigger_target,
+      action.config.trigger_xpath,
+      action.config.iframe_xpath,
+    );
   }
 
   private async executePositionedDragAndDrop(
@@ -1801,6 +1857,12 @@ async function submitFormTarget(locator: BrowserDriverLocator) {
   }
 
   throw firstActionFailure(failures, "submit_form could not click, press, or submit the target");
+}
+
+async function blurElementTarget(locator: BrowserDriverLocator) {
+  await requireLocatorMethod(locator, "evaluate", "blur_element")((element: Element) => {
+    if (element instanceof HTMLElement) element.blur();
+  });
 }
 
 async function selectRadioTarget(locator: BrowserDriverLocator) {
@@ -3255,6 +3317,7 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
     text?: string;
     target?: unknown;
     xpath?: string | null;
+    target_ref?: string | null;
   };
   if (typed.kind === "output_equals") return String(runtime.outputs[typed.name ?? ""]) === typed.value;
   if (typed.kind === "output_contains") {
@@ -3270,6 +3333,17 @@ async function conditionMatches(runtime: Runtime, condition: unknown) {
     return Boolean(await runtime.page.locator(`text=${typed.text ?? ""}`).isVisible?.());
   }
   if (typed.kind === "element_visible") {
+    if (typed.target_ref != null) {
+      const refName = typed.target_ref.trim();
+      if (!refName) {
+        throw new Error("Target ref is required");
+      }
+      const ref = runtime.elementRefs.get(refName);
+      if (!ref) {
+        throw new Error(`Element ref not found: ${typed.target_ref}`);
+      }
+      return Boolean(await (await locatorForRuntimeElementRef(runtime.page, ref)).isVisible?.());
+    }
     return Boolean(
       await (await locatorFor(runtime.page, typed.target, typed.xpath ?? "body")).isVisible?.(),
     );

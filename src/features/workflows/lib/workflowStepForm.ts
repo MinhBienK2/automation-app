@@ -53,6 +53,7 @@ export type ActionConfigField =
   | "wait_until"
   | "xpath"
   | "trigger_xpath"
+  | "trigger_ref"
   | "times"
   | "full_page"
   | "accuracy"
@@ -741,6 +742,13 @@ function updateSelectCustomOptionConfigField(
     return {
       type: "select_custom_option",
       config: { ...config.config, iframe_xpath: value || null },
+    };
+  }
+
+  if (field === "trigger_ref") {
+    return {
+      type: "select_custom_option",
+      config: { ...config.config, trigger_ref: value || null },
     };
   }
 
