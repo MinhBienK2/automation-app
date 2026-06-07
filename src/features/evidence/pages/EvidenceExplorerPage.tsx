@@ -273,13 +273,6 @@ function EvidenceDetailView({
         {item.relative_path ? <div><dt>Path</dt><dd>{item.relative_path}</dd></div> : null}
       </dl>
       <div className="evidence-actions">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => onNavigate({ type: "run", run_id: item.run.id })}
-        >
-          Open Run
-        </Button>
         {item.workflow ? (
           <Button
             type="button"

@@ -190,6 +190,34 @@ describe("App CSS", () => {
     expect(projectsDetailPanel).toContain("overflow-y: auto");
   });
 
+  test("styles the selected project collection menu as a nested navigation group", () => {
+    const projectCollectionMenu = cssRule(".project-collection-menu");
+    const projectCollectionRail = cssRule(".project-collection-menu::before");
+    const projectCollectionItem = cssRule(".project-collection-item");
+    const projectCollectionItemActive = cssRule('.project-collection-item[data-active="true"]');
+    const projectCollectionItemActiveRail = cssRule(
+      '.project-collection-item[data-active="true"]::before',
+    );
+    const projectCollectionItemHover = cssRule(
+      '.project-collection-item:hover:not([data-active="true"])',
+    );
+    const projectCollectionItemFocus = cssRule(".project-collection-item:focus-visible");
+
+    expect(projectCollectionMenu).toContain("position: relative");
+    expect(projectCollectionMenu).toContain("margin-left: 14px");
+    expect(projectCollectionMenu).toContain("padding: 8px 0 2px 18px");
+    expect(projectCollectionRail).toContain("background: linear-gradient");
+    expect(projectCollectionItem).toContain("position: relative");
+    expect(projectCollectionItem).toContain("border-radius: 8px");
+    expect(projectCollectionItem).toContain("overflow: hidden");
+    expect(projectCollectionItem).toContain("white-space: nowrap");
+    expect(projectCollectionItemActive).toContain("background: linear-gradient");
+    expect(projectCollectionItemActive).toContain("color: #e7eef5");
+    expect(projectCollectionItemActiveRail).toContain("background: #32d3e6");
+    expect(projectCollectionItemHover).toContain("background: rgba(23, 36, 49, 0.46)");
+    expect(projectCollectionItemFocus).toContain("box-shadow: 0 0 0 2px rgba(50, 211, 230, 0.18)");
+  });
+
   test("keeps workflow detail command actions on one desktop row", () => {
     const runActions = cssRule(".page-detail-header .run-actions");
 

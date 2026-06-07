@@ -9,7 +9,6 @@
 - Run issue presentation: `src/features/workflows/components/RunIssuePanel.tsx`
 - Run Monitor drawer: `src/features/workflows/components/RunMonitorDrawer.tsx`
 - Status bar: `src/features/workflows/components/RunStatusBar.tsx`
-- Runs: `src/features/runs/pages/RunCenterPage.tsx`
 - Electron runner: `electron/backend/runtime/runner.ts`
 - Browser session manager: `electron/backend/browser/sessionManager.ts`
 - Electron command handlers: `electron/backend/commands.ts`
@@ -53,7 +52,7 @@ The snapshot also mirrors the top-level run-state fields for compatibility with
 older UI helpers that expect a direct `RunState`.
 The same `manual`/`schedule` source is persisted on SQLite `runs.source` when a
 run row begins. Session snapshots and durable history therefore use the same
-source vocabulary for Runs, Overview, and Evidence filtering.
+source vocabulary for Overview, workflow row status, and Evidence filtering.
 
 ## Lifecycle
 
@@ -102,7 +101,6 @@ source vocabulary for Runs, Overview, and Evidence filtering.
   a separate Follow current toggle. Timeline row selection performs graph focus
   on demand.
 - Workflow list rows display the active snapshot for their workflow, disable only the affected row Run action, and expose row-level Stop for that run id.
-- Runs displays all session run snapshots and can stop a selected active run by id.
 - Workflow detail renders `Run from selected` only when the Workflow Settings Run Policy toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Call Subflow nodes are supported selected starts; Merge is not a supported selected start because it compiles to an internal no-op graph marker.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
 - Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation.

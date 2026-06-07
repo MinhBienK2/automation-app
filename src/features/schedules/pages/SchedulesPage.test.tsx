@@ -22,6 +22,7 @@ describe("SchedulesPage", () => {
 
   test("renders schedules with actions and event history", async () => {
     const onToggleSchedule = vi.fn();
+    const onOpenWorkflow = vi.fn();
     render(
       <SchedulesPage
         schedules={[
@@ -47,6 +48,7 @@ describe("SchedulesPage", () => {
         onDeleteSchedule={vi.fn()}
         onToggleSchedule={onToggleSchedule}
         onLoadEvents={vi.fn()}
+        onOpenWorkflow={onOpenWorkflow}
       />,
     );
 
@@ -64,6 +66,10 @@ describe("SchedulesPage", () => {
     const historyDialog = await screen.findByRole("dialog", { name: "Schedule History" });
     expect(historyDialog).toBeInTheDocument();
     expect(within(historyDialog).getByText("active_run")).toBeInTheDocument();
+    expect(within(historyDialog).queryByRole("button", { name: "Open Run" }))
+      .not.toBeInTheDocument();
+    await userEvent.click(within(historyDialog).getByRole("button", { name: "Open Workflow" }));
+    expect(onOpenWorkflow).toHaveBeenCalledWith("workflow-1");
   });
 
   test("creates an interval schedule and keeps validation errors visible", async () => {

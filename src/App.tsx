@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
-import { RunCenterPage } from "./features/runs/pages/RunCenterPage";
 import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
 import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
@@ -43,7 +42,6 @@ import {
   getSubflowGraph,
   getSubflowUsage,
   getWorkflowGraph,
-  getOperationalRunDetail,
   getOperationsOverview,
   getRunState,
   getWorkflow,
@@ -122,7 +120,6 @@ import type {
   IdentityLabOverview,
   IdentityLabTarget,
   MissionControlTarget,
-  OperationalRunDetail,
   OperationsNavigationTarget,
   OperationsOverview,
   RunState,
@@ -144,7 +141,7 @@ import type {
 } from "./types/workflow";
 import "./App.css";
 
-type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "runs" | "evidence" | "identities";
+type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "evidence" | "identities";
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -361,9 +358,6 @@ function operationsTargetToMissionTarget(
   if (target.type === "workflow") {
     return { type: "workflow", workflow_id: target.workflow_id };
   }
-  if (target.type === "run") {
-    return { type: "run", run_id: target.run_id };
-  }
   if (target.type === "schedule") {
     return { type: "schedule", schedule_id: target.schedule_id };
   }
@@ -416,9 +410,6 @@ function App() {
     useState<OperationsOverview | null>(null);
   const [operationsOverviewLoading, setOperationsOverviewLoading] = useState(false);
   const [overviewFocus, setOverviewFocus] = useState<OverviewFocus | null>(null);
-  const [focusedRunDetail, setFocusedRunDetail] =
-    useState<OperationalRunDetail | null>(null);
-  const [missingRunId, setMissingRunId] = useState<string | null>(null);
   const [evidencePage, setEvidencePage] = useState<EvidencePage | null>(null);
   const [evidenceQuery, setEvidenceQuery] = useState<EvidenceListRequest>({});
   const [evidenceLoading, setEvidenceLoading] = useState(false);
@@ -795,25 +786,6 @@ function App() {
       setAppError(commandMessage(error));
     } finally {
       setOperationsOverviewLoading(false);
-    }
-  }
-
-  async function loadFocusedRunDetail(runId: string) {
-    try {
-      const detail = await getOperationalRunDetail(runId);
-      if (!detail) {
-        setFocusedRunDetail(null);
-        setMissingRunId(runId);
-        setAppError("Run not found");
-        return;
-      }
-      setFocusedRunDetail(detail);
-      setMissingRunId(null);
-      setAppError("");
-    } catch (error) {
-      setFocusedRunDetail(null);
-      setMissingRunId(runId);
-      setAppError(commandMessage(error));
     }
   }
 
@@ -1713,14 +1685,6 @@ function App() {
     void loadSchedules();
   }
 
-  function openRunCenter() {
-    setScreen("runs");
-    setAppError("");
-    setFocusedRunDetail(null);
-    setMissingRunId(null);
-    void refreshRunStates();
-  }
-
   function backToSubflows() {
     setSelectedSubflow(null);
     setSelectedSubflowGraph(null);
@@ -1752,14 +1716,6 @@ function App() {
 
   function openIdentityEvidence(workflowId: string, identityId: string) {
     openEvidence({ workflow_id: workflowId, identity_id: identityId });
-  }
-
-  function openIdentityRun(runId: string) {
-    setScreen("runs");
-    setAppError("");
-    setMissingRunId(null);
-    void refreshRunStates();
-    void loadFocusedRunDetail(runId);
   }
 
   async function openIdentityWorkflowSettings(workflowId: string) {
@@ -1878,17 +1834,6 @@ function App() {
         return;
       }
       await openWorkflow(target.workflow_id);
-      return;
-    }
-    if (target.type === "run") {
-      setScreen("runs");
-      setAppError("");
-      setMissingRunId(null);
-      void refreshRunStates();
-      await loadFocusedRunDetail(target.run_id);
-      if (target.evidence_id) {
-        openEvidence({ run_id: target.run_id, focus_evidence_id: target.evidence_id });
-      }
       return;
     }
     if (target.type === "evidence") {
@@ -2127,10 +2072,8 @@ function App() {
           ? "settings"
           : screen === "schedules"
             ? "schedules"
-            : screen === "projects" || screen === "detail" || screen === "subflow-detail"
+          : screen === "projects" || screen === "detail" || screen === "subflow-detail"
               ? "projects"
-            : screen === "runs"
-              ? "runs"
               : screen === "evidence"
                 ? "evidence"
                 : screen === "identities"
@@ -2145,7 +2088,6 @@ function App() {
       onOpenIdentities={() => openIdentities(null)}
       onOpenProjects={() => openProjects(projectCollection)}
       onOpenSchedules={openSchedules}
-      onOpenRunCenter={openRunCenter}
       onOpenSettings={openSettings}
       onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
     >
@@ -2189,7 +2131,6 @@ function App() {
           onRefresh={() => loadIdentityLabOverview(identityLabTarget)}
           onSelect={selectIdentity}
           onOpenEvidence={openIdentityEvidence}
-          onOpenRun={openIdentityRun}
           onOpenWorkflow={(workflowId) => {
             void openWorkflow(workflowId);
           }}
@@ -2227,9 +2168,6 @@ function App() {
           onDeleteSchedule={removeSchedule}
           onToggleSchedule={toggleSchedule}
           onLoadEvents={loadScheduleHistory}
-          onOpenRun={(runId) => {
-            void navigateToMissionControlTarget({ type: "run", run_id: runId });
-          }}
           onOpenWorkflow={(workflowId) => {
             void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
           }}
@@ -2317,21 +2255,6 @@ function App() {
           }}
           onDuplicateSubflow={duplicateProjectSubflow}
           onDeleteSubflow={deleteProjectSubflow}
-        />
-      ) : screen === "runs" ? (
-        <RunCenterPage
-          runSnapshots={runSnapshots}
-          focusedRunDetail={focusedRunDetail}
-          missingRunId={missingRunId}
-          error={appError}
-          onStopRun={(runId) => stopRun(runId)}
-          onOpenEvidence={(runId) => openEvidence({ run_id: runId })}
-          onOpenWorkflow={(workflowId) => {
-            void navigateToMissionControlTarget({ type: "workflow", workflow_id: workflowId });
-          }}
-          onOpenIdentity={(target) => {
-            void navigateToMissionControlTarget({ type: "identity", target });
-          }}
         />
       ) : screen === "detail" && detail ? (
         <>

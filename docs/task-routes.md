@@ -148,7 +148,7 @@ Update docs: workflow lifecycle, user-visible invariants, frontend architecture,
 
 Read: `domain/product-model.md`, `domain/user-visible-invariants.md`, `domain/workflow-lifecycle.md`, `domain/execution-semantics.md`, `architecture/overview.md`, `architecture/frontend.md`, `architecture/persistence.md`, `architecture/command-boundary.md`, `contracts/electron-ipc.md`, `contracts/workflow-types.md`
 
-Verify: `src/App.tsx`, `src/features/overview/`, `src/features/runs/`, `src/layouts/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/backend/operations/operationsRepository.ts`, `electron/backend/persistence/database.ts`, `electron/backend/commands.ts`
+Verify: `src/App.tsx`, `src/features/overview/`, `src/layouts/`, `src/lib/workflowApi.ts`, `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`, `electron/preload.cts`, `electron/backend/operations/operationsRepository.ts`, `electron/backend/persistence/database.ts`, `electron/backend/commands.ts`
 
 Checks: `npm test -- electron/backend/persistence/database.test.ts electron/backend/commands.test.ts`, `npm test -- src/App.test.tsx src/layouts/AppShell.test.tsx`, `npm test -- src/AppCss.test.ts`, `npx tsc --noEmit`, `npm run build:electron`, `npm test`
 
@@ -166,7 +166,7 @@ Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
 changes.
 
 Verify: `src/App.tsx`, `src/layouts/`, `src/features/projects/`, `src/features/overview/`,
-`src/features/evidence/`, `src/features/identities/`, `src/features/runs/`,
+`src/features/evidence/`, `src/features/identities/`,
 `src/features/schedules/`, `src/features/settings/`, `src/features/workflows/`,
 `src/types/workflow.ts`, `electron/backend/operations/operationsRepository.ts`
 
@@ -189,7 +189,7 @@ Read: `domain/product-model.md`, `domain/user-visible-invariants.md`,
 `contracts/run-state.md`
 
 Verify: `src/App.tsx`, `src/features/evidence/`, `src/features/overview/`,
-`src/features/runs/`, `src/layouts/`, `src/lib/workflowApi.ts`,
+`src/layouts/`, `src/lib/workflowApi.ts`,
 `src/types/electron.ts`, `src/types/workflow.ts`, `electron/ipc.ts`,
 `electron/preload.cts`, `electron/backend/evidence/evidenceRepository.ts`,
 `electron/backend/persistence/database.ts`, `electron/backend/runtime/runManager.ts`,
@@ -244,7 +244,7 @@ Update docs: execution semantics, runner architecture, run-state contract, impac
 
 Read: `domain/execution-semantics.md`, `architecture/frontend.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/App.tsx`, `src/features/runs/`, `src/features/workflows/pages/`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runtime/runManager.ts`, `electron/backend/runtime/runner.ts`
+Verify: `src/App.tsx`, `src/features/workflows/pages/`, `src/features/workflows/components/WorkflowGraphEditor.tsx`, `src/features/workflows/components/RunStatusBar.tsx`, `src/features/workflows/components/RunIssuePanel.tsx`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`, `electron/backend/commands.ts`, `electron/backend/runtime/runManager.ts`, `electron/backend/runtime/runner.ts`
 
 Checks: `npm test -- src/features/workflows/pages/WorkflowListPage.test.tsx src/features/workflows/pages/WorkflowDetailPage.test.tsx`, `npm test -- src/lib/workflowApi.test.ts`, `npm test -- electron/backend/commands.test.ts`
 

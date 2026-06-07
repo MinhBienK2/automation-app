@@ -39,8 +39,8 @@ Mission Control is an Electron desktop app for building and running browser auto
   evidence, matching run/evidence summaries, rotation history, sanitized
   diagnostics, and read-only historical identity references.
 - Mission Control navigation is a typed in-memory target contract across
-  Overview, Projects, Runs, Evidence, Schedules, Identities, App Settings, and
-  graph issues. The Projects workspace exposes project-scoped Workflows,
+  Overview, Projects, Evidence, Schedules, Identities, App Settings, and graph
+  issues. The Projects workspace exposes project-scoped Workflows,
   Subflows, and Settings collections from the selected project's list sidebar.
   Targets carry ids and optional focus metadata, while stale durable targets
   produce visible unavailable states instead of falling back silently.
@@ -108,7 +108,8 @@ Users can:
 - Turn graph autosave on or off from App Settings.
 - Run a full workflow.
 - Test a selected step with visible progress.
-- Stop an active run, including a selected run from Runs when multiple isolated workflows are active.
+- Stop an active run from the workflow list row, workflow detail header, or
+  graph run controls.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
 - Create, open, save, duplicate, and delete reusable subflows from the selected
@@ -124,7 +125,6 @@ Users can:
 - Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
-- Open Runs to monitor concurrent workflow run snapshots and stop a selected active run by run id.
 - Start, inspect, stop, and discard backend-owned browser recording sessions.
   Recorder sessions launch through backend browser/session infrastructure,
   inject page-side capture, observe top-level page navigation, and collect raw
@@ -163,7 +163,7 @@ Users can:
 - Open Identities to inspect current managed browser identities, close an
   active retained session without deleting profile data, reset a guarded
   workflow identity through the existing backend rotation command, and navigate
-  to related Evidence, Runs, or Workflow Settings.
+  to related Evidence or Workflow Settings.
 - Open App Settings to inspect sanitized environment readiness, trigger a
   guarded CloakBrowser binary install/check, clean up orphaned inactive browser
   profiles, control graph autosave, and view graph shortcut guidance.

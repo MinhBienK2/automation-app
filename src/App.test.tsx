@@ -524,7 +524,7 @@ describe("App settings and graph autosave", () => {
                 current_step_number: 2,
                 started_at: "2026-05-27T00:00:00.000Z",
                 identity_display_name: "Login identity",
-                navigation_target: { type: "run", run_id: "run-1" },
+                navigation_target: { type: "workflow", workflow_id: workflow.id },
               },
             ],
             total: 1,
@@ -567,7 +567,6 @@ describe("App settings and graph autosave", () => {
                 workflow: { id: workflow.id, name: workflow.name },
                 node_id: "visit",
                 navigation_targets: {
-                  run: { type: "run", run_id: "run-1" },
                   workflow: { type: "workflow", workflow_id: workflow.id },
                 },
               },
@@ -660,7 +659,7 @@ describe("App settings and graph autosave", () => {
           step_number: 1,
           relative_path: "runs/run-1/screenshots/001-visit.png",
           file_state: "unchecked",
-          navigation_targets: { run: true, workflow: true },
+          navigation_targets: { workflow: true },
         },
       ],
       next_cursor: null,
@@ -711,7 +710,6 @@ describe("App settings and graph autosave", () => {
               workflow: { id: workflow.id, name: workflow.name },
               node_id: "visit",
               navigation_targets: {
-                run: { type: "run", run_id: "run-1" },
                 workflow: { type: "workflow", workflow_id: workflow.id },
                 evidence: { type: "evidence", evidence_id: "ev-shot" },
               },
@@ -732,6 +730,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("button", { name: "Export Selection" })).toBeDisabled();
     expect(screen.getByRole("region", { name: "Evidence results" })).toHaveTextContent("001-visit.png");
     expect(screen.getByRole("region", { name: "Evidence detail" })).toHaveTextContent("runs/run-1/screenshots/001-visit.png");
+    expect(screen.queryByRole("button", { name: "Open Run" })).not.toBeInTheDocument();
     expect(screen.getByText("1 malformed evidence item skipped.")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Overview" }));
@@ -768,7 +767,7 @@ describe("App settings and graph autosave", () => {
           step_number: 1,
           relative_path: null,
           file_state: "unchecked",
-          navigation_targets: { run: true, workflow: true },
+          navigation_targets: { workflow: true },
         },
       ],
       next_cursor: null,
@@ -820,6 +819,7 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Open Identity" }));
 
     expect(await screen.findByRole("heading", { name: "Identity Lab" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Related Run" })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(getIdentityLabOverview).toHaveBeenLastCalledWith({
         selected_target: {
@@ -913,6 +913,7 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByRole("region", { name: "Managed identities" })).toHaveTextContent("QA identity");
     expect(screen.getByRole("region", { name: "Identity detail" })).toHaveTextContent("Proxy");
     expect(screen.getByRole("region", { name: "Identity detail" })).toHaveTextContent("seed-hash");
+    expect(screen.queryByRole("button", { name: "Open Last Run" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Open Evidence" }));
     await waitFor(() => {

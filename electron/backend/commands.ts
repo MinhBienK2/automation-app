@@ -1691,10 +1691,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return operationsRepository.getOverview(request, runManager.listRunStates());
     },
 
-    getOperationalRunDetail(runId: string) {
-      return operationsRepository.getRunDetail(runId);
-    },
-
     listEvidenceItems(request: EvidenceListRequest = {}) {
       return evidenceRepository.listEvidenceItems(request);
     },

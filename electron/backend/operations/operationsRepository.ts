@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type {
-  OperationalRunDetail,
   OperationsOverview,
   OperationsOverviewRequest,
   OverviewActivityBucket,
@@ -60,16 +59,6 @@ type ScheduleRow = {
   next_run_at: string | null;
   last_status: WorkflowScheduleStatus | null;
   last_reason: string | null;
-};
-
-type StepRow = {
-  node_id: string | null;
-  step_number: number;
-  action_type: string;
-  status: string;
-  started_at: string | null;
-  finished_at: string | null;
-  error_json: string | null;
 };
 
 const defaultLimits = {
@@ -161,60 +150,6 @@ export class OperationsRepository {
     };
   }
 
-  getRunDetail(runId: string): OperationalRunDetail {
-    const row = this.database
-      .prepare(
-        `SELECT
-          runs.id,
-          runs.workflow_id,
-          workflows.name AS workflow_name,
-          runs.status,
-          runs.started_at,
-          runs.finished_at,
-          runs.settings_snapshot_json,
-          runs.outputs_json,
-          runs.error_json
-         FROM runs
-         INNER JOIN workflows ON workflows.id = runs.workflow_id
-         WHERE runs.id = ?`,
-      )
-      .get(runId) as RunRow | undefined;
-    if (!row) {
-      throw { message: "Run not found", field: "runId" };
-    }
-    const stepRows = this.database
-      .prepare(
-        `SELECT node_id, step_number, action_type, status, started_at, finished_at, error_json
-         FROM run_steps
-         WHERE run_id = ?
-         ORDER BY step_number ASC
-         LIMIT 101`,
-      )
-      .all(runId) as StepRow[];
-    const evidence = evidenceItemsFromRun(row, 51);
-    return {
-      run_id: row.id,
-      workflow: { id: row.workflow_id, name: row.workflow_name },
-      identity: runIdentity(row),
-      status: row.status,
-      started_at: row.started_at,
-      finished_at: row.finished_at,
-      sanitized_error_summary: errorSummary(row.error_json),
-      step_summaries: stepRows.slice(0, 100).map((step) => ({
-        node_id: step.node_id,
-        step_number: step.step_number,
-        action_type: step.action_type,
-        status: step.status,
-        started_at: step.started_at,
-        finished_at: step.finished_at,
-        sanitized_error_summary: errorSummary(step.error_json),
-      })),
-      step_summaries_has_more: stepRows.length > 100,
-      evidence_metadata: evidence.items.slice(0, 50),
-      evidence_metadata_has_more: evidence.total > 50,
-    };
-  }
-
   private liveRunFromSnapshot(snapshot: WorkflowRunSnapshot): OverviewLiveRun {
     return {
       run_id: snapshot.run_id,
@@ -226,7 +161,7 @@ export class OperationsRepository {
       current_step_number: snapshot.state.current_step_number,
       started_at: snapshot.started_at,
       identity_display_name: this.identityDisplayName(snapshot.run_id, snapshot.workflow_id),
-      navigation_target: { type: "run", run_id: snapshot.run_id },
+      navigation_target: { type: "workflow", workflow_id: snapshot.workflow_id },
     };
   }
 
@@ -305,7 +240,7 @@ export class OperationsRepository {
       summary: errorSummary(row.error_json) ?? "Workflow run failed",
       workflow: { id: row.workflow_id, name: row.workflow_name },
       run_id: row.id,
-      navigation_target: { type: "run", run_id: row.id },
+      navigation_target: { type: "workflow", workflow_id: row.workflow_id },
     }));
   }
 
@@ -496,7 +431,6 @@ function evidenceItemsFromRun(row: RunRow, limit: number) {
       workflow: { id: row.workflow_id, name: row.workflow_name },
       node_id: stringValue(record?.node_id),
       navigation_targets: {
-        run: { type: "run", run_id: row.id },
         workflow: { type: "workflow", workflow_id: row.workflow_id },
         evidence: { type: "evidence", evidence_id: evidenceId(row.id, artifactKind, path) },
       },
@@ -504,17 +438,6 @@ function evidenceItemsFromRun(row: RunRow, limit: number) {
     if (items.length >= limit) break;
   }
   return { items, total: evidence.length };
-}
-
-function runIdentity(row: RunRow): OperationalRunDetail["identity"] {
-  const settings = parseJsonRecord(row.settings_snapshot_json);
-  const browserLaunch = parseJsonRecord(settings?.browser_launch);
-  const identityId = stringValue(browserLaunch?.identity_id);
-  if (!identityId) return null;
-  return {
-    id: identityId,
-    display_name: stringValue(browserLaunch?.display_name),
-  };
 }
 
 function validateRange(request: OperationsOverviewRequest) {

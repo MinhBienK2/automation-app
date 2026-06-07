@@ -138,11 +138,12 @@
 - Workflow detail renders the Live Run navigator only when saved Graph settings enable Live Run. The saved Follow current setting controls whether active run progress automatically selects and centers the current graph node; the navigator itself does not expose a separate Follow current toggle.
 - Overview loads a bounded operations aggregate through `getOperationsOverview`,
   which rejects local-day UTC ranges over 48 hours before building hourly
-  activity buckets, and can navigate persisted run references into Runs through
-  `getOperationalRunDetail`.
+  activity buckets. Live and failed run references navigate to the owning
+  workflow, while recent evidence references can open Evidence focused on the
+  selected evidence id.
 - Evidence loads durable persisted run evidence through `listEvidenceItems`.
-  Overview recent evidence can focus a specific evidence id, and Runs selected
-  durable run detail can open Evidence with a `run_id` filter.
+  Overview recent evidence can focus a specific evidence id, and Evidence
+  queries can still filter by `run_id`.
 - Identity Lab loads current workflow-owned browser identity posture through
   `getIdentityLabOverview` / `getIdentityLabDetail`. Evidence details with an
   identity id open Identity Lab as a read-only historical identity reference

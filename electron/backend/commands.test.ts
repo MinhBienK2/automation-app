@@ -3245,7 +3245,7 @@ describe("Electron workflow command handlers", () => {
     });
   });
 
-  test("aggregates persisted runs schedule attention evidence schedules and selected run detail", async () => {
+  test("aggregates persisted runs schedule attention evidence and schedules", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
     const { handlers, database } = await createTestHandlers();
@@ -3345,11 +3345,18 @@ describe("Electron workflow command handlers", () => {
       "run_failed",
       "schedule_event",
     ]);
+    expect(overview.attention.items[0]).toMatchObject({
+      run_id: "run-failed",
+      navigation_target: { type: "workflow", workflow_id: workflow.id },
+    });
     expect(overview.recent_evidence.items).toEqual([
       expect.objectContaining({
         artifact_kind: "screenshot",
         relative_path_or_label: "runs/run-success/screenshots/001-shot.png",
         run_id: "run-success",
+        navigation_targets: expect.objectContaining({
+          workflow: { type: "workflow", workflow_id: workflow.id },
+        }),
       }),
     ]);
     expect(overview.upcoming_schedules.items).toEqual([
@@ -3360,19 +3367,6 @@ describe("Electron workflow command handlers", () => {
       }),
     ]);
 
-    expect(handlers.getOperationalRunDetail("run-failed")).toMatchObject({
-      run_id: "run-failed",
-      workflow: { id: workflow.id, name: "Evidence flow" },
-      status: "failed",
-      sanitized_error_summary: "Assertion failed",
-      step_summaries: [
-        expect.objectContaining({
-          node_id: "assert",
-          action_type: "assert_text",
-          status: "failed",
-        }),
-      ],
-    });
   });
 
   test("surfaces recent evidence beyond newer output rows without evidence", async () => {

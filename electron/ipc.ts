@@ -45,7 +45,6 @@ export const workflowIpcChannels = {
   getRunState: "workflow:getRunState",
   listRunStates: "workflow:listRunStates",
   getOperationsOverview: "workflow:getOperationsOverview",
-  getOperationalRunDetail: "workflow:getOperationalRunDetail",
   listEvidenceItems: "workflow:listEvidenceItems",
   getEvidenceDetail: "workflow:getEvidenceDetail",
   getEvidenceScreenshotPreview: "workflow:getEvidenceScreenshotPreview",

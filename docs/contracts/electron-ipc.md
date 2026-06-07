@@ -81,7 +81,6 @@ string map.
 - `getRunState`
 - `listRunStates`
 - `getOperationsOverview`
-- `getOperationalRunDetail`
 - `listEvidenceItems`
 - `getEvidenceDetail`
 - `getEvidenceScreenshotPreview`
@@ -211,9 +210,8 @@ returns the bounded `OperationsOverview` read model for the operator's local
 day expressed as UTC boundaries. The backend validates the range, rejects
 ranges over 48 hours before building hourly buckets, applies list limits,
 computes KPI/activity/attention meaning, and returns only safe evidence
-metadata. `getOperationalRunDetail(runId)` returns one bounded persisted run
-summary for Overview-to-Runs navigation; it is not an unbounded run-history or
-artifact-opening API.
+metadata. Live and failed run references point to the owning workflow, while
+recent evidence references can open Evidence by evidence id.
 
 `listEvidenceItems(request?)` returns a bounded historical evidence page derived
 from all matching persisted run outputs and run steps.

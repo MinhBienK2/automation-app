@@ -48,17 +48,13 @@ describe("App shell", () => {
     );
     expect(screen.queryByRole("button", { name: "Workflows" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Subflows" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Runs" })).toHaveAttribute(
-      "data-slot",
-      "button",
-    );
+    expect(screen.queryByRole("button", { name: "Runs" })).not.toBeInTheDocument();
     const navItems = within(screen.getByRole("navigation", { name: "Main navigation" }))
       .getAllByRole("button")
       .map((item) => item.textContent);
     expect(navItems).toEqual([
       "Overview",
       "Projects",
-      "Runs",
       "Evidence",
       "Schedules",
       "Identities",

@@ -1138,7 +1138,6 @@ export type WorkflowScheduleEventFilter = {
 
 export type OperationsNavigationTarget =
   | { type: "workflow"; workflow_id: string }
-  | { type: "run"; run_id: string }
   | { type: "schedule"; schedule_id: string }
   | { type: "evidence"; evidence_id: string };
 
@@ -1149,7 +1148,6 @@ export type MissionControlTarget =
       workflow_id: string;
       mode?: "list" | "detail" | "graph" | "settings";
     }
-  | { type: "run"; run_id: string; step_id?: string | null; evidence_id?: string | null }
   | { type: "evidence"; evidence_id?: string | null; filters?: EvidenceListRequest | null }
   | { type: "identity"; target: IdentityLabTarget }
   | { type: "schedule"; schedule_id?: string | null; schedule_event_id?: string | null }
@@ -1230,7 +1228,6 @@ export type OverviewEvidenceItem = {
   workflow: { id: string; name: string };
   node_id?: string | null;
   navigation_targets: {
-    run?: OperationsNavigationTarget;
     workflow?: OperationsNavigationTarget;
     evidence?: OperationsNavigationTarget;
   };
@@ -1267,30 +1264,6 @@ export type OperationsOverview = {
   recent_evidence: BoundedOperationsList<OverviewEvidenceItem>;
   upcoming_schedules: BoundedOperationsList<OverviewUpcomingSchedule>;
   data_warnings: { evidence_items_skipped: number };
-};
-
-export type OperationalRunStepSummary = {
-  node_id: string | null;
-  step_number: number;
-  action_type: string;
-  status: string;
-  started_at?: string | null;
-  finished_at?: string | null;
-  sanitized_error_summary?: string | null;
-};
-
-export type OperationalRunDetail = {
-  run_id: string;
-  workflow: { id: string; name: string };
-  identity?: { id: string; display_name?: string | null } | null;
-  status: RunStatus;
-  started_at: string;
-  finished_at?: string | null;
-  sanitized_error_summary?: string | null;
-  step_summaries: OperationalRunStepSummary[];
-  step_summaries_has_more: boolean;
-  evidence_metadata: OverviewEvidenceItem[];
-  evidence_metadata_has_more: boolean;
 };
 
 export type EvidenceKind =
@@ -1336,7 +1309,6 @@ export type EvidenceListItem = {
   relative_path?: string | null;
   file_state?: EvidenceFileState;
   navigation_targets: {
-    run: boolean;
     workflow: boolean;
   };
 };

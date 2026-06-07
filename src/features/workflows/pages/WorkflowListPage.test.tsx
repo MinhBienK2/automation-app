@@ -518,7 +518,7 @@ describe("Workflow list integration", () => {
     expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-1");
   });
 
-  test("Runs renders multiple active runs and stops the selected run", async () => {
+  test("workflow list handles multiple active runs without a Runs sidebar workspace", async () => {
     const secondWorkflow = {
       id: "workflow-2",
       name: "Support flow",
@@ -563,18 +563,15 @@ describe("Workflow list integration", () => {
 
     await openWorkflows();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Runs" }));
+    expect(screen.queryByRole("button", { name: "Runs" })).not.toBeInTheDocument();
 
-    const runCenter = await screen.findByRole("region", { name: "Runs" });
-    expect(within(runCenter).getByRole("heading", { name: "Runs" }))
-      .toBeInTheDocument();
-    expect(within(runCenter).getByText("Login flow")).toBeInTheDocument();
-    expect(within(runCenter).getByText("Support flow")).toBeInTheDocument();
-    expect(within(runCenter).getByText("schedule")).toBeInTheDocument();
+    const loginCard = (await screen.findByText("Login flow")).closest("[data-slot='card']");
+    const supportCard = (await screen.findByText("Support flow")).closest("[data-slot='card']");
+    expect(within(loginCard as HTMLElement).getByText("Running step 1")).toBeInTheDocument();
+    expect(within(supportCard as HTMLElement).getByText("Running")).toBeInTheDocument();
 
-    const supportRow = within(runCenter).getByText("Support flow").closest("tr");
-    await userEvent.click(within(supportRow as HTMLElement).getByRole("button", {
-      name: "Stop Support flow run",
+    await userEvent.click(within(supportCard as HTMLElement).getByRole("button", {
+      name: "Stop Support flow",
     }));
 
     expect(workflowBridgeMock.stopRun).toHaveBeenCalledWith("run-2");
