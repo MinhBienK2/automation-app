@@ -122,6 +122,9 @@ Users can:
 - Add reusable subflows to workflow graphs from the dedicated Add Subflow
   toolbar picker, map inputs into the subflow, and inspect usage warnings before
   saving subflow changes.
+- Create a reusable subflow from selected workflow graph nodes. The creation
+  dialog can either only persist the new subflow or persist it and replace the
+  selected nodes with a configured Call Subflow node.
 - Configure the workflow's browser identity and launch behavior before running it.
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
 - Export workflow packages containing Flow, selected Workflow Settings

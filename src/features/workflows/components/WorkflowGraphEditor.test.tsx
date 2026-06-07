@@ -1848,6 +1848,193 @@ describe("Workflow graph editor integration", () => {
       .toHaveTextContent("2 nodes selected");
   });
 
+  test("creates a reusable subflow from selected workflow nodes without changing the workflow graph", async () => {
+    const fillStep = {
+      ...sleepStep,
+      id: "step-2",
+      name: "Fill credentials",
+      order_index: 1,
+      action_type: "input_text" as const,
+      config: {
+        type: "input_text" as const,
+        config: {
+          target: { locators: [{ kind: "css" as const, value: "#email" }], constraints: {} },
+          text: "qa@example.test",
+          clear_before_input: true,
+        },
+      },
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep, fillStep]),
+      create_subflow: {
+        id: "subflow-selected",
+        project_id: "project-1",
+        name: "Login block",
+        description: "",
+        tags: [],
+        graph: { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+        created_at: "2026-05-27T00:00:00.000Z",
+        updated_at: "2026-05-27T00:00:00.000Z",
+      },
+      save_subflow_graph: undefined,
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-2" }), {
+      shiftKey: true,
+    });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Create subflow" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Create subflow from selection",
+    });
+    await userEvent.type(within(dialog).getByLabelText("Subflow name"), "Login block");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Chỉ tạo" }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("create_subflow", {
+        projectId: "project-1",
+        input: { name: "Login block", description: null },
+      });
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
+        "save_subflow_graph",
+        expect.objectContaining({
+          subflowId: "subflow-selected",
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({ id: "start", node_type: "start" }),
+              expect.objectContaining({ id: "step-1", label: "Wait for page" }),
+              expect.objectContaining({ id: "step-2", label: "Fill credentials" }),
+            ]),
+            edges: expect.arrayContaining([
+              expect.objectContaining({
+                source_node_id: "start",
+                target_node_id: "step-1",
+              }),
+              expect.objectContaining({
+                source_node_id: "step-1",
+                target_node_id: "step-2",
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "save_workflow_graph",
+      expect.anything(),
+    );
+    expect(within(editor).getByRole("button", { name: "Graph canvas node step-1" }))
+      .toBeInTheDocument();
+    expect(within(editor).getByRole("button", { name: "Graph canvas node step-2" }))
+      .toBeInTheDocument();
+  });
+
+  test("creates a reusable subflow and replaces the selected workflow nodes with a Call Subflow node", async () => {
+    const fillStep = {
+      ...sleepStep,
+      id: "step-2",
+      name: "Fill credentials",
+      order_index: 1,
+      action_type: "input_text" as const,
+      config: {
+        type: "input_text" as const,
+        config: {
+          target: { locators: [{ kind: "css" as const, value: "#email" }], constraints: {} },
+          text: "qa@example.test",
+          clear_before_input: true,
+        },
+      },
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep, fillStep]),
+      create_subflow: {
+        id: "subflow-selected",
+        project_id: "project-1",
+        name: "Login block",
+        description: "",
+        tags: [],
+        graph: { version: 2, nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+        created_at: "2026-05-27T00:00:00.000Z",
+        updated_at: "2026-05-27T00:00:00.000Z",
+      },
+      save_subflow_graph: undefined,
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-1" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Graph canvas node step-2" }), {
+      shiftKey: true,
+    });
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Create subflow" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Create subflow from selection",
+    });
+    await userEvent.type(within(dialog).getByLabelText("Subflow name"), "Login block");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Tạo và thay thế" }));
+
+    await waitFor(() => {
+      expect(within(editor).getByRole("button", { name: "Graph canvas node node-call_subflow-42" }))
+        .toHaveTextContent("Login block");
+    });
+    expect(within(editor).queryByRole("button", { name: "Graph canvas node step-1" }))
+      .not.toBeInTheDocument();
+    expect(within(editor).queryByRole("button", { name: "Graph canvas node step-2" }))
+      .not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
+        "save_workflow_graph",
+        expect.objectContaining({
+          workflowId: "workflow-1",
+          graph: expect.objectContaining({
+            nodes: expect.arrayContaining([
+              expect.objectContaining({
+                id: "node-call_subflow-42",
+                node_type: "call_subflow",
+                label: "Login block",
+                config: expect.objectContaining({
+                  subflow_id: "subflow-selected",
+                  input_mapping: [],
+                  output_prefix: null,
+                }),
+              }),
+            ]),
+            edges: expect.arrayContaining([
+              expect.objectContaining({
+                source_node_id: "start",
+                target_node_id: "node-call_subflow-42",
+              }),
+              expect.objectContaining({
+                source_node_id: "node-call_subflow-42",
+                target_node_id: "end_success",
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+    const saveCall = workflowCommandCallMock.mock.calls.find(
+      ([command]) => command === "save_workflow_graph",
+    );
+    const savedGraph = saveCall?.[1] as { graph?: { nodes?: Array<{ id: string }> } };
+    expect(savedGraph.graph?.nodes?.map((node) => node.id)).not.toContain("step-1");
+    expect(savedGraph.graph?.nodes?.map((node) => node.id)).not.toContain("step-2");
+  });
+
   test("handles graph keyboard shortcuts without firing inside config fields", async () => {
     mockWorkflowBridgeCommands({
       ...workflowDetailScenario([]),

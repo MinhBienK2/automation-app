@@ -142,9 +142,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
 - Subflows navigation state inside the selected project's Subflows collection,
   plus list/detail state, create/duplicate/delete command state, graph save
-  status, and usage-warning presentation. Subflow graph editors run in subflow
-  mode, which hides Add Subflow and does not expose run
-  controls.
+  status, usage-warning presentation, and workflow-graph selection extraction
+  into a new project subflow. Subflow graph editors run in subflow mode, which
+  hides Add Subflow and does not expose run controls.
 - Selected-node label editing stays in the inspector. Connections and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing belongs in node Help and graph port hover tooltips, not a separate inspector panel.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter
   so the canvas component renders stable primary name, secondary kind, compact
@@ -158,7 +158,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Action and graph-native logic config editing groups related controls by purpose without changing serialized config shapes. Multi-field editors separate targets from entered content, matching/value controls, output names, mode-specific fields, runtime policy, artifacts, and branch/loop/retry tables; single-field actions remain flat to keep the inspector dense.
 - Variable authoring UI for Set Variables, Set JSON Variables, Repeat For Each manual/array modes, and template token insertion/highlighting in supported text fields.
 - Variable picker catalogs known graph variables from Set Variables rows, Set JSON Variables keys, and output-producing action nodes when available.
-- Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, undo/redo, and graph-scoped keyboard shortcuts without changing persisted `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside the active graph workspace.
+- Editor-only graph selection, clipboard, and history state. These drive multi-selection summaries, bulk duplicate/delete/copy/paste, create-subflow-from-selection, undo/redo, and graph-scoped keyboard shortcuts without changing persisted `WorkflowGraph` shape or swallowing page-level clipboard shortcuts outside the active graph workspace. Workflow selection extraction builds the reusable subflow graph in the editor, then `App.tsx` persists it through existing `createSubflow` and `saveSubflowGraph` wrappers before the optional replace path rewrites the workflow graph draft to a configured Call Subflow node.
 - Select-first graph canvas interaction. Workflow detail opens with no selected
   graph item, and selecting a node, link, or multi-item selection opens the
   inspector as a right-side drawer over a full-width canvas. Empty-canvas drag

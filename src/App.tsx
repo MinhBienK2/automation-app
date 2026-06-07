@@ -1170,6 +1170,32 @@ function App() {
     }
   }
 
+  async function createWorkflowSelectionSubflow(input: {
+    name: string;
+    graph: WorkflowGraph;
+  }) {
+    setAppError("");
+    const projectId = detail?.workflow.project_id ?? (await ensureProjectId());
+    if (!projectId) {
+      setAppError("Project not found");
+      throw new Error("Project not found");
+    }
+
+    try {
+      const createdSubflow = await createSubflowCommand(projectId, {
+        name: input.name,
+        description: null,
+      });
+      await saveSubflowGraph(createdSubflow.id, input.graph);
+      await loadSubflowsForProject(projectId);
+      return createdSubflow;
+    } catch (error) {
+      const message = commandMessage(error);
+      setAppError(message);
+      throw new Error(message);
+    }
+  }
+
   async function duplicateProjectSubflow(subflow: SubflowSummary | Subflow) {
     setAppError("");
     try {
@@ -2280,6 +2306,7 @@ function App() {
             onBack={backToList}
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => stopRun(detailRunSnapshot?.run_id ?? null)}
+            onCreateSubflowFromSelection={createWorkflowSelectionSubflow}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
             onRunGraphFromSelected={runGraphFromSelectedNode}

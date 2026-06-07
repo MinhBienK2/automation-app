@@ -705,6 +705,16 @@
   font-size: 12px;
 }
 
+.graph-subflow-create-error {
+  padding: 8px 10px;
+  border: 1px solid rgba(244, 183, 64, 0.45);
+  border-radius: 8px;
+  background: rgba(244, 183, 64, 0.12);
+  color: #f4b740;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .graph-config-fields {
   display: grid;
   gap: 10px;

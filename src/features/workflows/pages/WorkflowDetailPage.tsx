@@ -37,6 +37,10 @@ type WorkflowDetailPageProps = {
   onBack: () => void;
   onOpenWorkflowSettings: () => void;
   onStopRun: () => void;
+  onCreateSubflowFromSelection?: (input: {
+    name: string;
+    graph: WorkflowGraph;
+  }) => Promise<{ id: string; name: string }>;
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
   onRunGraphFromSelected: () => void;
@@ -65,6 +69,7 @@ export function WorkflowDetailPage({
   onBack,
   onOpenWorkflowSettings,
   onStopRun,
+  onCreateSubflowFromSelection,
   onGraphChange,
   onRunGraph,
   onRunGraphFromSelected,
@@ -273,6 +278,7 @@ export function WorkflowDetailPage({
             subflowOptions={subflowOptions}
             selectionRequest={selectionRequest}
             defaultEdgeDelay={defaultEdgeDelay}
+            onCreateSubflowFromSelection={onCreateSubflowFromSelection}
             onChange={onGraphChange}
             onRunGraph={onRunGraph}
             onSelectedNodeChange={onSelectedGraphNodeChange}

@@ -33,6 +33,7 @@ type WorkflowGraphInspectorProps = {
   selectedNode: GraphNode | null;
   subflowOptions?: SubflowSummary[];
   onCopySelection: () => void;
+  onCreateSubflowFromSelection?: () => void;
   onDeleteSelection: () => void;
   onDeleteSelectedEdge: () => void;
   onDeleteSelectedNode: () => void;
@@ -54,6 +55,7 @@ export function WorkflowGraphInspector({
   selectedNode,
   subflowOptions = [],
   onCopySelection,
+  onCreateSubflowFromSelection,
   onDeleteSelection,
   onDeleteSelectedEdge,
   onDeleteSelectedNode,
@@ -98,6 +100,16 @@ export function WorkflowGraphInspector({
           <Button type="button" variant="secondary" onClick={onCopySelection}>
             Copy selection
           </Button>
+          {onCreateSubflowFromSelection && selectionSummary.nodeCount > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCreateSubflowFromSelection}
+              disabled={runState.status === "running"}
+            >
+              Create subflow
+            </Button>
+          ) : null}
           <Button type="button" variant="destructive" onClick={onDeleteSelection}>
             Delete selection
           </Button>
