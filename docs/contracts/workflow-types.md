@@ -249,6 +249,8 @@ profile directories are retained.
 
 `resetWorkflowBrowserIdentity` is the command boundary for operator-triggered identity rotation. It returns the persisted Workflow Settings after replacing `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona, proxy bypass, locale/timezone, humanization, and `fingerprint_fonts_dir` are preserved, `run_policy.run_from_selected_enabled` is reset to false, and a `migration_notes` entry records old/new identity evidence.
 
+`resetProjectEnvironmentBrowserIdentity` is the command boundary for project saved-session identity rotation. After UI confirmation, it returns the updated project environment after replacing `identity_id`, persistent profile fields, and `fingerprint_seed`, while preserving non-storage Browser Launch preferences and deleting the old unshared local project profile directory.
+
 Local workflow duplication is not a workflow package export. The `duplicate_workflow` command copies the saved graph and non-storage Workflow Settings to a new workflow id, including local fields that package export sanitizes for external sharing. Browser Launch gets a fresh backend-generated `identity_id`, `profile_dir`, `profile_name` when persistent sessions are enabled, and `fingerprint_seed`; copied preferences such as persona and `fingerprint_fonts_dir` are preserved, and `run_policy.run_from_selected_enabled` is reset to false so the copy cannot reuse the source retained session.
 
 ## Batch Run Shape

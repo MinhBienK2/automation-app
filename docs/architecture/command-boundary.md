@@ -110,8 +110,9 @@ Node/Electron backend.
 - Project saved-session identity rotation is command-owned through
   `resetProjectEnvironmentBrowserIdentity`. The backend generates the new
   high-entropy identity id, derives the CloakBrowser-compatible seed, updates
-  matching profile fields, preserves non-storage Browser Launch preferences, and
-  rejects reset while a workflow using that environment has an active run,
+  matching profile fields, preserves non-storage Browser Launch preferences,
+  deletes the old unshared project profile directory after the persisted update,
+  and rejects reset while a workflow using that environment has an active run,
   active profile, or retained session.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.

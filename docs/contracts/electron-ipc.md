@@ -123,8 +123,9 @@ environment selections remain accepted at the command boundary for compatibility
 inside the selected session Browser Launch payload. `resetProjectEnvironmentBrowserIdentity(environmentId)`
 returns the updated project session after backend-generating a new identity id,
 profile fields, and deterministic fingerprint seed while preserving non-storage
-Browser Launch preferences. Subflow commands expose project-scoped reusable
-graphs, usage queries, guarded deletion, and graph save/load.
+Browser Launch preferences and deleting the old unshared local project profile
+directory after UI confirmation. Subflow commands expose project-scoped
+reusable graphs, usage queries, guarded deletion, and graph save/load.
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend

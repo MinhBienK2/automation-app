@@ -442,6 +442,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     return seeds;
   }
 
+  function projectEnvironmentProfileKey(environment: ProjectEnvironment) {
+    if (environment.browser_launch.session_mode !== "persistent_profile") return null;
+    return (
+      environment.browser_launch.profile_dir?.trim() ||
+      environment.browser_launch.profile_name?.trim() ||
+      null
+    );
+  }
+
   function assertCanResetProjectEnvironmentBrowserIdentity(
     environment: ProjectEnvironment,
   ) {
@@ -504,6 +513,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
   ): ProjectEnvironment {
     const environment = requireProjectEnvironment(environmentId);
     assertCanResetProjectEnvironmentBrowserIdentity(environment);
+    const oldProfileDir = projectEnvironmentProfileKey(environment);
     const identityId = createHighEntropyBrowserIdentityId();
     const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
       identityId,
@@ -522,6 +532,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       },
     });
     if (!updated) throw commandError("Project environment not found", "environmentId");
+    deleteProjectEnvironmentProfileDirectoryIfPrivate(
+      environment.id,
+      oldProfileDir,
+      projectEnvironmentProfileKey(updated),
+    );
     return updated;
   }
 
@@ -554,6 +569,42 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       .listWorkflows()
       .some((workflow) => {
         if (workflow.id === workflowId) return false;
+        return browserProfileKey(getSettings(workflow.id)) === profileDir;
+      });
+  }
+
+  function deleteProjectEnvironmentProfileDirectoryIfPrivate(
+    environmentId: string,
+    profileDir: string | null,
+    nextProfileDir: string | null,
+  ) {
+    if (
+      !profileDir ||
+      profileDir === nextProfileDir ||
+      isProfileReferencedOutsideProjectEnvironment(environmentId, profileDir)
+    ) {
+      return;
+    }
+    nodeFs.rmSync(path.join(context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
+      recursive: true,
+      force: true,
+    });
+  }
+
+  function isProfileReferencedOutsideProjectEnvironment(
+    environmentId: string,
+    profileDir: string,
+  ) {
+    for (const project of repository.listProjects()) {
+      for (const environment of repository.listProjectEnvironments(project.id)) {
+        if (environment.id === environmentId) continue;
+        if (projectEnvironmentProfileKey(environment) === profileDir) return true;
+      }
+    }
+    return repository
+      .listWorkflows()
+      .some((workflow) => {
+        if (workflow.environment_id === environmentId) return false;
         return browserProfileKey(getSettings(workflow.id)) === profileDir;
       });
   }

@@ -268,7 +268,7 @@ describe("Electron workflow command handlers", () => {
   });
 
   test("regenerates a project saved session browser identity", async () => {
-    const { handlers } = await createTestHandlers();
+    const { handlers, appPaths } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
     const project = projectHandlers.listProjects()[0];
     const environment = projectHandlers.listProjectEnvironments(project.id)[0];
@@ -282,6 +282,11 @@ describe("Electron workflow command handlers", () => {
         humanize: false,
       },
     });
+    const oldProfileDir = customized.browser_launch.profile_dir;
+    if (!oldProfileDir) throw new Error("Expected project profile directory");
+    const oldProfilePath = path.join(appPaths.browserProfilesDir, oldProfileDir);
+    await fs.mkdir(oldProfilePath, { recursive: true });
+    await fs.writeFile(path.join(oldProfilePath, "state.json"), "{}");
 
     const rotated = projectHandlers.resetProjectEnvironmentBrowserIdentity(customized.id);
 
@@ -306,6 +311,7 @@ describe("Electron workflow command handlers", () => {
         identity_id: rotated.browser_launch.identity_id,
         fingerprint_seed: rotated.browser_launch.fingerprint_seed,
       });
+    await expect(fs.stat(oldProfilePath)).rejects.toThrow();
   });
 
   test("runs workflows with the selected project environment browser launch settings", async () => {

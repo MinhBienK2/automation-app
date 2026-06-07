@@ -22,8 +22,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   collection menu, and project creation.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
   project identity surface with grouped Browser fingerprint controls for editing
-  the saved-session fingerprint seed and regenerating the backend-owned identity
-  without exposing a duplicate full Browser Launch editor.
+  the saved-session fingerprint seed and confirming backend-owned identity
+  regeneration/profile deletion without exposing a duplicate full Browser Launch
+  editor.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, environment readiness diagnostics, guarded maintenance commands,
   and graph shortcut guidance.
@@ -73,7 +74,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - App-level graph autosave preference and graph save status presentation.
 - Graph validation/run controls and presentation of validation issues for the selected node or selected link.
 - Workflow Settings editing through list Edit and detail Settings, grouped related controls within each section, Run Policy lifecycle controls including the grouped Run from selected scope plus paused read-only batch defaults, Browser Launch, Graph link-wait authoring defaults, Environment initial variables, dialog-level saving for all dirty sections, unsaved-close confirmation, bilingual nested collapsible section help with individually collapsible field, example, related-action, and mistake guidance, and run-before-save orchestration.
-- Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; project identity regeneration delegates to `resetProjectEnvironmentBrowserIdentity`. The renderer does not create identity ids or fingerprint seeds.
+- Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; project identity regeneration also uses an in-app confirmation dialog before delegating to `resetProjectEnvironmentBrowserIdentity`. The renderer does not create identity ids, fingerprint seeds, or delete browser profile directories directly.
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,
   supports manual refresh, and navigates returned workflow/run/schedule

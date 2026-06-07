@@ -17,7 +17,8 @@ Mission Control is an Electron desktop app for building and running browser auto
   `project_environments` for compatibility, but the product UI exposes it as a
   grouped Project identity surface with an editable fingerprint seed, read-only
   identity id, and backend-owned identity regeneration instead of a full
-  environment list.
+  environment list. Regeneration is confirmed in the UI before it replaces the
+  identity and deletes the old local project profile directory.
 - A subflow is a reusable non-runnable graph fragment inside one project.
   Workflows call subflows through `call_subflow` graph nodes; subflows run in
   the caller's browser context and do not create independent runs or browser
@@ -97,7 +98,8 @@ Users can:
   session, or by creating a new private workflow session.
 - Inspect the selected project's saved session from the selected project's
   Settings collection, edit its fingerprint seed, or regenerate its backend-owned
-  identity/profile/seed.
+  identity/profile/seed after confirming that the old local profile will be
+  deleted.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
 - Turn graph autosave on or off from App Settings.
 - Run a full workflow.

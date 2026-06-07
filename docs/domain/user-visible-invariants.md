@@ -31,7 +31,9 @@ Preserve these unless the task explicitly changes them.
   named `Main`. Project Settings shows a `Project identity` heading, a
   `Browser fingerprint` group, editable Fingerprint seed, read-only Identity,
   Save fingerprint seed, and Regenerate identity without exposing a full Browser
-  Launch editor.
+  Launch editor. Regenerate identity opens an in-app confirmation warning that
+  the current local project browser profile will be deleted; Cancel keeps the
+  current identity unchanged, and confirmation invokes the backend reset.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.

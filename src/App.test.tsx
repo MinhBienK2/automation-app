@@ -288,8 +288,42 @@ describe("App settings and graph autosave", () => {
     renderApp();
 
     await openProjectTab("Settings");
+    workflowCommandCallMock.mockClear();
+
     await userEvent.click(await screen.findByRole("button", {
       name: "Regenerate identity",
+    }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Regenerate project identity?",
+    });
+    expect(within(dialog).getByText(
+      "This will create a new fingerprint seed and identity, then delete the current local browser profile for this project session.",
+    )).toBeInTheDocument();
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "reset_project_environment_browser_identity",
+      expect.anything(),
+    );
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", {
+        name: "Regenerate project identity?",
+      })).not.toBeInTheDocument();
+    });
+    expect(workflowCommandCallMock).not.toHaveBeenCalledWith(
+      "reset_project_environment_browser_identity",
+      expect.anything(),
+    );
+
+    await userEvent.click(screen.getByRole("button", {
+      name: "Regenerate identity",
+    }));
+    const confirmationDialog = await screen.findByRole("dialog", {
+      name: "Regenerate project identity?",
+    });
+    await userEvent.click(within(confirmationDialog).getByRole("button", {
+      name: "Regenerate and delete profile",
     }));
 
     await waitFor(() => {

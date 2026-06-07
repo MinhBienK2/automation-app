@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
 import type {
@@ -34,6 +42,7 @@ export function ProjectEnvironmentSettings({
   const [localError, setLocalError] = useState("");
   const [savingSeed, setSavingSeed] = useState(false);
   const [regeneratingIdentity, setRegeneratingIdentity] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const savedSeed = browserLaunch?.fingerprint_seed ?? "";
   const seedChanged = seedDraft.trim() !== savedSeed;
 
@@ -75,6 +84,11 @@ export function ProjectEnvironmentSettings({
     } finally {
       setRegeneratingIdentity(false);
     }
+  }
+
+  async function confirmRegenerateIdentity() {
+    await regenerateIdentity();
+    setRegenerateDialogOpen(false);
   }
 
   return (
@@ -135,7 +149,7 @@ export function ProjectEnvironmentSettings({
             size="sm"
             variant="secondary"
             onClick={() => {
-              void regenerateIdentity();
+              setRegenerateDialogOpen(true);
             }}
             disabled={!projectSession || savingSeed || regeneratingIdentity}
           >
@@ -143,6 +157,38 @@ export function ProjectEnvironmentSettings({
           </Button>
         </div>
       </SettingsFieldGroup>
+
+      <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Regenerate project identity?</DialogTitle>
+            <DialogDescription>
+              This will create a new fingerprint seed and identity, then delete the
+              current local browser profile for this project session.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRegenerateDialogOpen(false)}
+              disabled={regeneratingIdentity}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                void confirmRegenerateIdentity();
+              }}
+              disabled={!projectSession || regeneratingIdentity}
+            >
+              Regenerate and delete profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
