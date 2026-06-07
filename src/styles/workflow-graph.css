@@ -317,6 +317,9 @@
 }
 
 .graph-node {
+  --graph-node-accent: #314758;
+  --graph-node-accent-bg: rgba(49, 71, 88, 0.2);
+
   position: relative;
   display: grid;
   width: 160px;
@@ -329,21 +332,75 @@
   cursor: grab;
 }
 
-.graph-node-subflow {
-  border-color: rgba(50, 211, 230, 0.56);
+.graph-node-action {
+  --graph-node-accent: #32d3e6;
+  --graph-node-accent-bg: rgba(50, 211, 230, 0.12);
+
+  border-color: rgba(50, 211, 230, 0.38);
   background:
-    linear-gradient(90deg, rgba(50, 211, 230, 0.22), transparent 36%),
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
     #0b1016;
-  box-shadow: 0 0 0 1px rgba(50, 211, 230, 0.12) inset;
 }
 
-.graph-node-subflow::before {
+.graph-node-logic {
+  --graph-node-accent: #f4b740;
+  --graph-node-accent-bg: rgba(244, 183, 64, 0.12);
+
+  border-color: rgba(244, 183, 64, 0.42);
+  background:
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
+    #0b1016;
+}
+
+.graph-node-subflow {
+  --graph-node-accent: #ff8a3d;
+  --graph-node-accent-bg: rgba(255, 138, 61, 0.16);
+
+  border-color: rgba(255, 138, 61, 0.56);
+  background:
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 36%),
+    #0b1016;
+  box-shadow: 0 0 0 1px rgba(255, 138, 61, 0.13) inset;
+}
+
+.graph-node-variable {
+  --graph-node-accent: #9aaebd;
+  --graph-node-accent-bg: rgba(154, 174, 189, 0.12);
+
+  border-color: rgba(154, 174, 189, 0.34);
+  background:
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
+    #0b1016;
+}
+
+.graph-node-start,
+.graph-node-end {
+  --graph-node-accent: #667d8d;
+  --graph-node-accent-bg: rgba(102, 125, 141, 0.12);
+
+  border-color: rgba(102, 125, 141, 0.38);
+  background:
+    linear-gradient(90deg, var(--graph-node-accent-bg), transparent 34%),
+    #0b1016;
+}
+
+.graph-node-type-badge {
   position: absolute;
-  inset: 8px auto 8px 8px;
-  width: 3px;
-  border-radius: 999px;
-  background: #32d3e6;
-  content: "";
+  z-index: 3;
+  top: 5px;
+  right: 6px;
+  max-width: 74px;
+  overflow: hidden;
+  padding: 1px 5px;
+  border: 1px solid var(--graph-node-accent);
+  border-radius: 4px;
+  background: rgba(18, 28, 38, 0.92);
+  color: var(--graph-node-accent);
+  font-size: 9px;
+  line-height: 1.35;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .graph-node-button {
@@ -357,7 +414,7 @@
   overflow: hidden;
   min-width: 0;
   min-height: 74px;
-  padding: 8px 10px;
+  padding: 18px 10px 8px;
   border: 0;
   background: transparent;
   color: #e7eef5;
@@ -385,10 +442,6 @@
   white-space: nowrap;
   color: #667d8d;
   font-size: 11px;
-}
-
-.graph-node-subflow .graph-node-button {
-  padding-left: 16px;
 }
 
 .graph-node-subflow .graph-node-button small {

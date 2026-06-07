@@ -250,6 +250,64 @@ describe("Workflow graph editor integration", () => {
     });
   });
 
+  test("marks action logic and subflow nodes with visible category badges", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([sleepStep]),
+      list_subflows: [
+        {
+          id: "subflow-login",
+          project_id: "project-1",
+          name: "Login",
+          description: "Reusable login path",
+          tags: [],
+          used_by_count: 0,
+          created_at: "2026-05-27T00:00:00.000Z",
+          updated_at: "2026-05-27T00:00:00.000Z",
+        },
+      ],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+
+    const actionNode = within(editor)
+      .getByRole("button", { name: "Graph canvas node step-1" })
+      .closest(".graph-node");
+    expect(actionNode).toHaveClass("graph-node-action");
+    expect(within(actionNode as HTMLElement).getByText("Action")).toHaveClass(
+      "graph-node-type-badge",
+    );
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Logic" }));
+    await userEvent.click(
+      (await screen.findByRole("dialog", { name: "Choose a logic node" }))
+        .querySelector('[data-value="if"]') as HTMLElement,
+    );
+    const logicNode = within(editor)
+      .getByRole("button", { name: "Graph canvas node node-if-42" })
+      .closest(".graph-node");
+    expect(logicNode).toHaveClass("graph-node-logic");
+    expect(within(logicNode as HTMLElement).getByText("Logic")).toHaveClass(
+      "graph-node-type-badge",
+    );
+
+    await userEvent.click(within(editor).getByRole("button", { name: "Add Subflow" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog", { name: "Choose a subflow" }))
+        .getByRole("button", { name: /Login/ }),
+    );
+    const subflowNode = within(editor)
+      .getByRole("button", { name: "Graph canvas node node-call_subflow-42" })
+      .closest(".graph-node");
+    expect(subflowNode).toHaveClass("graph-node-subflow");
+    expect(within(subflowNode as HTMLElement).getByText("Subflow")).toHaveClass(
+      "graph-node-type-badge",
+    );
+  });
+
   test("uses select-first canvas dragging with temporary spacebar panning", () => {
     expect(workflowGraphEditorSource).toContain("connectionDragThreshold={0}");
     expect(workflowGraphEditorSource).toContain("connectionRadius={32}");

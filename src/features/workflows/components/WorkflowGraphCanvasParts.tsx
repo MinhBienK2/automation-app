@@ -52,12 +52,13 @@ export function WorkflowGraphNode({
     <div
       className={[
         "graph-node",
-        data.nodeType === "call_subflow" ? "graph-node-subflow" : "",
+        graphNodeCategoryClass(data.nodeType),
         selected ? "graph-node-selected" : "",
         data.hasIssue ? "graph-node-has-issue" : "",
         graphStatusClass(data.status),
       ].filter(Boolean).join(" ")}
     >
+      <span className="graph-node-type-badge">{graphNodeCategoryLabel(data.nodeType)}</span>
       <button
         type="button"
         aria-label={`Graph canvas node ${id}`}
@@ -112,6 +113,46 @@ export function WorkflowGraphNode({
       })}
     </div>
   );
+}
+
+function graphNodeCategoryClass(nodeType: GraphNodeType) {
+  return `graph-node-${graphNodeCategory(nodeType)}`;
+}
+
+function graphNodeCategoryLabel(nodeType: GraphNodeType) {
+  switch (graphNodeCategory(nodeType)) {
+    case "action":
+      return "Action";
+    case "logic":
+      return "Logic";
+    case "subflow":
+      return "Subflow";
+    case "variable":
+      return "Variable";
+    case "end":
+      return "End";
+    default:
+      return "Start";
+  }
+}
+
+function graphNodeCategory(nodeType: GraphNodeType) {
+  if (nodeType === "action") return "action";
+  if (nodeType === "call_subflow") return "subflow";
+  if (nodeType === "start") return "start";
+  if (nodeType === "end_success" || nodeType === "end_failure" || nodeType === "stop_workflow") {
+    return "end";
+  }
+  if (
+    nodeType === "set_variable" ||
+    nodeType === "set_json_variables" ||
+    nodeType === "transform_variable" ||
+    nodeType === "assert_output" ||
+    nodeType === "domain_allowlist"
+  ) {
+    return "variable";
+  }
+  return "logic";
 }
 
 export function WorkflowGraphEdge({

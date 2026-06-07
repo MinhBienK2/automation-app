@@ -145,7 +145,13 @@ Preserve these unless the task explicitly changes them.
   run, browser context, output store, evidence path, and retention policy. MVP
   subflows cannot call other subflows.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum. Link waits use the same duration constraints but stay scoped to the edge transition.
-- Graph canvas nodes show the saved node label as the primary text and keep the underlying action or graph-node kind visible as secondary text. Compact metadata may appear after the kind when it helps identify the node, but full configuration details remain in the inspector.
+- Graph canvas nodes show the saved node label as the primary text, keep the
+  underlying action or graph-node kind visible as secondary text, and expose a
+  compact top-right category badge such as Action, Logic, Subflow, Variable,
+  Start, or End. Action, logic, and subflow nodes use distinct restrained
+  category accent colors while active execution still uses the stronger cyan
+  running treatment. Compact metadata may appear after the kind when it helps
+  identify the node, but full configuration details remain in the inspector.
 - Selecting a graph link clears node selection and shows link-scoped actions, including none/fixed/random link wait editing. Selecting a node clears link selection and shows node-scoped inspector content.
 - Selected non-start graph nodes expose a Node name field in the inspector. Renaming updates the node label used on the canvas, saved graph, compiled step labels, run traces, and node-linked error context without changing the node type or config.
 - Multi-selecting graph nodes or links shows a selection summary with bulk duplicate, copy, and delete actions. Bulk edits never delete, copy, paste, or duplicate the `start` node. Duplicate and paste create fresh ids and only preserve internal links inside the selected/copied fragment.

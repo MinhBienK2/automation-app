@@ -136,6 +136,20 @@ describe("App CSS", () => {
     expect(dialogSource).not.toContain("bg-white");
   });
 
+  test("keeps graph node category colors readable without left rail decoration", () => {
+    const actionNode = cssRule(".graph-node-action");
+    const logicNode = cssRule(".graph-node-logic");
+    const subflowNode = cssRule(".graph-node-subflow");
+
+    expect(css).not.toContain(".graph-node::before");
+    expect(css).not.toContain(".graph-node-subflow::before");
+    expect(actionNode).toContain("--graph-node-accent: #32d3e6");
+    expect(logicNode).toContain("--graph-node-accent: #f4b740");
+    expect(subflowNode).toContain("--graph-node-accent: #ff8a3d");
+    expect(subflowNode).not.toContain("--graph-node-accent: #32d3e6");
+    expect(subflowNode).not.toContain("--graph-node-accent: #f4b740");
+  });
+
   test("lets the workflow detail graph workspace fill the content column", () => {
     const detailScreen = cssRule(".workflow-detail-screen");
     const graphLayout = cssRule(".workflow-graph-layout");
