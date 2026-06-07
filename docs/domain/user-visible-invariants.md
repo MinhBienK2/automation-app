@@ -234,8 +234,8 @@ Preserve these unless the task explicitly changes them.
   validation before browser launch creates one sanitized durable
   `launch_blocked` attention item visible on Overview. Manual Validate alone
   does not create attention.
-- Running a graph shows status in the page header, displays a live run navigator with a chronological node-activity log timeline, and reflects graph progress through canvas node state. Each node occurrence is one timeline row whose status changes from running to completed or failed; future pending graph nodes do not appear in the log, and timeline rows do not visually activate just because the graph current node is active. Follow current is configured in Workflow Settings and can automatically select and center the current graph node, while timeline row selection performs graph focus on demand.
-- Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
+- Running a graph shows a compact status signal in the page header, displays a live run navigator with a chronological node-activity log timeline, and reflects graph progress through canvas node state. Each node occurrence is one timeline row whose status changes from running to completed or failed; future pending graph nodes do not appear in the log, and timeline rows do not visually activate just because the graph current node is active. Follow current is configured in Workflow Settings and can automatically select and center the current graph node, while timeline row selection performs graph focus on demand.
+- Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors, and own the detailed error copy that the compact header status intentionally does not repeat. Issues with graph context can select the affected node or link.
 - Runtime failures from inlined Call Subflow steps show the nested compiled
   subflow label, subflow step number/count, and failing serialized action/node
   type, then focus/highlight the calling subflow node on the main workflow graph.

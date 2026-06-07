@@ -251,6 +251,10 @@ describe("App CSS", () => {
 
   test("keeps run error surfaces dense and text-contained", () => {
     const runActions = cssRule(".page-detail-header .run-actions");
+    const runStatusParagraph = cssRule(".run-status p");
+    const runtimeIssuePanel = cssRule(".run-issue-panel-runtime");
+    const systemIssuePanel = cssRule(".run-issue-panel-system");
+    const blockingIssuePanel = cssRule(".run-issue-panel-blocking");
     const issueSummary = cssRule(".run-issue-summary-text");
     const issueDetails = cssRule(".run-issue-details");
     const inspector = cssRule(".graph-inspector");
@@ -258,6 +262,10 @@ describe("App CSS", () => {
 
     expect(runActions).toContain("display: flex");
     expect(runActions).toContain("width: auto");
+    expect(runStatusParagraph).toBe("");
+    expect(runtimeIssuePanel).toContain("border-color: rgba(240, 100, 103, 0.48)");
+    expect(systemIssuePanel).toContain("border-color: rgba(240, 100, 103, 0.48)");
+    expect(blockingIssuePanel).toContain("border-color: rgba(244, 183, 64, 0.4)");
     expect(issueSummary).toContain("overflow-wrap: anywhere");
     expect(issueDetails).toContain("white-space: pre-wrap");
     expect(issueDetails).toContain("max-height:");

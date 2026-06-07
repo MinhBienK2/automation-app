@@ -13,10 +13,6 @@ export function RunStatusBar({
   error,
   hasBlockingIssues = false,
 }: RunStatusBarProps) {
-  const failure =
-    state.status === "failed" && state.error
-      ? `Failed at step ${state.error.step_number}: ${state.error.reason}`
-      : "";
   const label = runStatusLabel(state, {
     appError: error,
     hasBlockingIssues,
@@ -28,8 +24,6 @@ export function RunStatusBar({
       <Badge variant={state.status === "failed" ? "destructive" : "default"}>
         {label}
       </Badge>
-      {failure ? <p>{failure}</p> : null}
-      {error ? <p>{error}</p> : null}
     </div>
   );
 }

@@ -958,6 +958,9 @@ describe("Workflow detail integration", () => {
 
     const panel = await screen.findByRole("region", { name: "Run issues" });
     expect(within(controlsRow).getByText("Run failed")).toBeInTheDocument();
+    expect(within(controlsRow).queryByText(/Failed at step 1/)).not.toBeInTheDocument();
+    expect(within(controlsRow).queryByText("XPath not found")).not.toBeInTheDocument();
+    expect(panel).toHaveClass("run-issue-panel-runtime");
     expect(within(panel).getByText("Run failed at step 1: Wait")).toBeInTheDocument();
     expect(within(panel).getByText("XPath not found")).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Select failed node" }))

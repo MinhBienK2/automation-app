@@ -48,7 +48,10 @@ export function RunIssuePanel({
   };
 
   return (
-    <section className="run-issue-panel panel" aria-label="Run issues">
+    <section
+      className={`run-issue-panel run-issue-panel-${firstIssue.severity} panel`}
+      aria-label="Run issues"
+    >
       <div className="run-issue-header">
         <div className="run-issue-header-copy">
           <div className="run-issue-badges">

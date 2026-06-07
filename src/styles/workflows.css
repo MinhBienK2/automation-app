@@ -301,11 +301,6 @@
   font-size: 13px;
 }
 
-.run-status p {
-  grid-column: 1 / -1;
-  color: #fca5a5;
-}
-
 .run-monitor-drawer {
   position: fixed;
   top: 152px;
@@ -1003,8 +998,16 @@
   justify-content: end;
 }
 
-.run-issue-panel {
+.run-issue-panel-blocking {
   border-color: rgba(244, 183, 64, 0.4);
+}
+
+.run-issue-panel-runtime {
+  border-color: rgba(240, 100, 103, 0.48);
+}
+
+.run-issue-panel-system {
+  border-color: rgba(240, 100, 103, 0.48);
 }
 
 .run-issue-header p {

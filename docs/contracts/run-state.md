@@ -88,7 +88,8 @@ source vocabulary for Overview, workflow row status, and Evidence filtering.
 ## UI Expectations
 
 - `App.tsx` polls `list_run_states` while any snapshot is running, including runs started from the workflow list or scheduler where the detail graph workspace is not open. It falls back to `get_run_state` only for legacy bridge compatibility.
-- Run status bar displays terminal and error states.
+- Run status bar displays compact terminal and error state labels only; detailed
+  runtime/startup error copy belongs in run issue presentation.
 - Workflow detail exposes a Run Monitor drawer whenever saved Graph settings
   enable Live Run. The Monitor button lets operators open or hide the drawer;
   active runs open it automatically unless the operator closed it for the
