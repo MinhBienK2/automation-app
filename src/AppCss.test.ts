@@ -177,6 +177,7 @@ describe("App CSS", () => {
     const projectsScreen = cssRule(".projects-screen");
     const projectsWorkspace = cssRule(".projects-workspace");
     const projectsListPanel = cssRule(".projects-list-panel");
+    const projectsListScroll = cssRule(".projects-list-scroll");
     const projectsDetailPanel = cssRule(".projects-detail-panel");
 
     expect(projectsScreen).toContain("height: 100vh");
@@ -184,15 +185,17 @@ describe("App CSS", () => {
     expect(projectsScreen).toContain("overflow: hidden");
     expect(projectsWorkspace).toContain("min-height: 0");
     expect(projectsWorkspace).toContain("overflow: hidden");
+    expect(projectsListPanel).toContain("grid-template-rows: auto minmax(0, 1fr)");
     expect(projectsListPanel).toContain("min-height: 0");
-    expect(projectsListPanel).toContain("overflow-y: auto");
+    expect(projectsListPanel).toContain("overflow: hidden");
+    expect(projectsListScroll).toContain("min-height: 0");
+    expect(projectsListScroll).toContain("overflow-y: auto");
     expect(projectsDetailPanel).toContain("min-height: 0");
     expect(projectsDetailPanel).toContain("overflow-y: auto");
   });
 
-  test("styles the selected project collection menu as a nested navigation group", () => {
-    const projectCollectionMenu = cssRule(".project-collection-menu");
-    const projectCollectionRail = cssRule(".project-collection-menu::before");
+  test("styles project collection tabs as fixed detail navigation", () => {
+    const projectCollectionTabs = cssRule(".project-collection-tabs");
     const projectCollectionItem = cssRule(".project-collection-item");
     const projectCollectionItemActive = cssRule('.project-collection-item[data-active="true"]');
     const projectCollectionItemActiveRail = cssRule(
@@ -203,10 +206,9 @@ describe("App CSS", () => {
     );
     const projectCollectionItemFocus = cssRule(".project-collection-item:focus-visible");
 
-    expect(projectCollectionMenu).toContain("position: relative");
-    expect(projectCollectionMenu).toContain("margin-left: 14px");
-    expect(projectCollectionMenu).toContain("padding: 8px 0 2px 18px");
-    expect(projectCollectionRail).toContain("background: linear-gradient");
+    expect(projectCollectionTabs).toContain("position: sticky");
+    expect(projectCollectionTabs).toContain("display: flex");
+    expect(projectCollectionTabs).toContain("background: rgba(14, 21, 29, 0.98)");
     expect(projectCollectionItem).toContain("position: relative");
     expect(projectCollectionItem).toContain("border-radius: 8px");
     expect(projectCollectionItem).toContain("overflow: hidden");

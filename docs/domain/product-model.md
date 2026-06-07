@@ -41,7 +41,9 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Mission Control navigation is a typed in-memory target contract across
   Overview, Projects, Evidence, Schedules, Identities, App Settings, and graph
   issues. The Projects workspace exposes project-scoped Workflows,
-  Subflows, and Settings collections from the selected project's list sidebar.
+  Subflows, and Settings collections through fixed tabs in the selected
+  project's detail panel while the project list sidebar stays focused on
+  search and project selection.
   Targets carry ids and optional focus metadata, while stale durable targets
   produce visible unavailable states instead of falling back silently.
 - A workflow schedule is an in-app automation trigger that starts the latest saved workflow graph and saved Workflow Settings while the Electron app is open.

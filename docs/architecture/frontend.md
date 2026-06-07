@@ -18,8 +18,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   sanitized diagnostics, historical identity references, retained-session close,
   guarded reset, and navigation to Evidence/Workflow Settings.
 - `src/features/projects/pages/ProjectsPage.tsx`: project workspace shell with
-  selected-project state, the project-list Workflows/Subflows/Settings
-  collection menu, and project creation.
+  selected-project state, project search/selection, fixed
+  Workflows/Subflows/Settings collection tabs in the detail panel, and project
+  creation.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
   project settings surface with grouped Project details controls for rename,
   duplicate, and delete actions, plus Browser fingerprint controls for editing
@@ -89,12 +90,14 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   graph workspace starts with more horizontal room.
 - Projects is the sidebar entry for project-scoped authoring inventory. The
   Projects workspace owns selected-project state and routes its Workflows,
-  Subflows, and Settings collection menu to the existing workflow list, subflow
-  list, and project settings surface. Project Settings owns project rename,
-  duplicate, delete confirmation, and saved-session identity actions. Project
-  creation selects the new project, switches to Workflows, and refreshes
-  workflow summaries because the backend creates the project's default `Main`
-  workflow; duplicate
+  Subflows, and Settings collection tabs to the existing workflow list, subflow
+  list, and project settings surface. The project list sidebar owns local
+  project search/filtering and project selection only, so collection navigation
+  stays fixed in the detail panel when many projects exist. Project Settings
+  owns project rename, duplicate, delete confirmation, and saved-session
+  identity actions. Project creation selects the new project, switches to
+  Workflows, and refreshes workflow summaries because the backend creates the
+  project's default `Main` workflow; duplicate
   and delete refresh project/workflow/subflow state and keep selection on a
   valid project. Its project list sidebar and selected collection content are
   independent scroll regions inside the Projects workspace viewport.

@@ -24,9 +24,10 @@ Preserve these unless the task explicitly changes them.
 - Mission Control sidebar order is Overview, Projects, Evidence, Schedules,
   Identities, App Settings. Overview is the default first screen.
 - Projects is the only sidebar entry for workflow authoring inventory. The
-  selected project shows Workflows, Subflows, and Settings as a collection menu
-  inside the project list sidebar. Workflows and subflows shown there are
-  scoped to the selected project, and the project identity controls live in the
+  project list sidebar provides project search/filtering and project
+  selection. The selected project shows Workflows, Subflows, and Settings as
+  fixed tabs in the detail panel. Workflows and subflows shown there are scoped
+  to the selected project, and the project identity controls live in the
   selected project's Settings collection. The auto-created default project is
   named `Main`. Creating a project automatically creates a workflow named
   `Main` inside that project using its project saved session. Project Settings shows a `Project identity` heading, a

@@ -1,4 +1,4 @@
-import { Folder, Plus } from "lucide-react";
+import { Folder, Plus, Search } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -45,6 +45,7 @@ export function ProjectsPage({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectNameDraft, setProjectNameDraft] = useState("");
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");
+  const [projectSearchDraft, setProjectSearchDraft] = useState("");
   const [projectError, setProjectError] = useState("");
 
   async function submitProject(event: FormEvent) {
@@ -74,6 +75,14 @@ export function ProjectsPage({
   const activeCollectionLabel =
     projectCollections.find((collection) => collection.id === activeCollection)?.label ??
     "Workflows";
+  const normalizedProjectSearch = projectSearchDraft.trim().toLocaleLowerCase();
+  const visibleProjects = normalizedProjectSearch
+    ? projects.filter((project) =>
+        `${project.name} ${project.description ?? ""}`
+          .toLocaleLowerCase()
+          .includes(normalizedProjectSearch),
+      )
+    : projects;
 
   return (
     <section className="app-screen projects-screen" aria-label="Projects">
@@ -104,70 +113,88 @@ export function ProjectsPage({
 
       <div className="projects-workspace">
         <aside className="projects-list-panel panel" aria-label="Project list">
+          <div className="projects-list-tools">
+            <div className="projects-list-summary">
+              <span>Projects</span>
+              <small>
+                {visibleProjects.length} of {projects.length}
+              </small>
+            </div>
+            <div className="project-search">
+              <Search aria-hidden="true" />
+              <Label className="sr-only" htmlFor="project-search">
+                Search projects
+              </Label>
+              <Input
+                id="project-search"
+                placeholder="Search projects"
+                value={projectSearchDraft}
+                onChange={(event) => setProjectSearchDraft(event.currentTarget.value)}
+              />
+            </div>
+          </div>
           {projects.length === 0 ? (
             <div className="empty-state">
               <h2>No projects yet</h2>
               <p className="muted">Create a project before authoring workflows.</p>
             </div>
+          ) : visibleProjects.length === 0 ? (
+            <div className="empty-state">
+              <h2>No matching projects</h2>
+              <p className="muted">Try a different project name or description.</p>
+            </div>
           ) : (
-            <div className="projects-list">
-              {projects.map((project) => {
-                const active = selectedProject?.id === project.id;
-                return (
-                  <div className="project-list-item" key={project.id}>
-                    <button
-                      className="project-row"
-                      data-active={active ? "true" : "false"}
-                      type="button"
-                      onClick={() => onSelectProject(project.id)}
-                    >
-                      <Folder aria-hidden="true" />
-                      <span>
-                        <strong>{project.name}</strong>
-                        {project.description ? <small>{project.description}</small> : null}
-                      </span>
-                    </button>
-                    {active ? (
-                      <nav
-                        aria-label={`${project.name} collections`}
-                        className="project-collection-menu"
+            <div className="projects-list-scroll">
+              <div className="projects-list">
+                {visibleProjects.map((project) => {
+                  const active = selectedProject?.id === project.id;
+                  return (
+                    <div className="project-list-item" key={project.id}>
+                      <button
+                        className="project-row"
+                        data-active={active ? "true" : "false"}
+                        type="button"
+                        onClick={() => onSelectProject(project.id)}
                       >
-                        {projectCollections.map((collection) => (
-                          <Button
-                            aria-current={
-                              activeCollection === collection.id ? "page" : undefined
-                            }
-                            className="project-collection-item"
-                            data-active={
-                              activeCollection === collection.id ? "true" : "false"
-                            }
-                            key={collection.id}
-                            type="button"
-                            variant={
-                              activeCollection === collection.id ? "default" : "ghost"
-                            }
-                            onClick={() => onCollectionChange(collection.id)}
-                          >
-                            {collection.label}
-                          </Button>
-                        ))}
-                      </nav>
-                    ) : null}
-                  </div>
-                );
-              })}
+                        <Folder aria-hidden="true" />
+                        <span>
+                          <strong>{project.name}</strong>
+                          {project.description ? <small>{project.description}</small> : null}
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </aside>
 
         <section className="projects-detail-panel" aria-label="Project detail">
           {selectedProject ? (
-            <section
-              aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
-              className="project-collection-panel"
-            >
-              {children}
-            </section>
+            <>
+              <nav aria-label="Project sections" className="project-collection-tabs">
+                {projectCollections.map((collection) => (
+                  <Button
+                    aria-current={activeCollection === collection.id ? "page" : undefined}
+                    className="project-collection-item"
+                    data-active={activeCollection === collection.id ? "true" : "false"}
+                    key={collection.id}
+                    type="button"
+                    variant={activeCollection === collection.id ? "default" : "ghost"}
+                    onClick={() => onCollectionChange(collection.id)}
+                  >
+                    {collection.label}
+                  </Button>
+                ))}
+              </nav>
+              <section
+                aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
+                className="project-collection-panel"
+              >
+                {children}
+              </section>
+            </>
           ) : (
             <div className="empty-state panel">
               <h2>No project selected</h2>

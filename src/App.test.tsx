@@ -75,9 +75,9 @@ describe("App settings and graph autosave", () => {
 
   async function getProjectCollections() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    const projectList = await screen.findByRole("complementary", { name: "Project list" });
-    return within(projectList).findByRole("navigation", {
-      name: "Main collections",
+    const detail = await screen.findByRole("region", { name: "Project detail" });
+    return within(detail).findByRole("navigation", {
+      name: "Project sections",
     });
   }
 
@@ -477,15 +477,18 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByText(rotatedBrowserLaunch.identity_id)).toBeInTheDocument();
   });
 
-  test("renders project collections in the project list sidebar instead of the detail header", async () => {
+  test("keeps project collections fixed in the detail panel while the sidebar filters projects", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    expect(within(projectList).getByLabelText("Search projects")).toBeInTheDocument();
+    expect(within(projectList).queryByRole("navigation")).not.toBeInTheDocument();
+
     const collections = await getProjectCollections();
 
-    expect(screen.queryByRole("tablist", { name: "Project sections" }))
-      .not.toBeInTheDocument();
     expect(within(collections).getByRole("button", { name: "Workflows" }))
       .toHaveAttribute("aria-current", "page");
     expect(within(collections).getByRole("button", { name: "Subflows" }))
