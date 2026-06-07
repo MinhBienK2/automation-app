@@ -103,4 +103,42 @@ describe("backend action validation registry", () => {
       message: "Target X offset must be a finite number",
     });
   });
+
+  test("accepts Find Element refs for Drag and Drop endpoints", () => {
+    expect(
+      validateActionConfig({
+        type: "drag_and_drop",
+        config: {
+          source_ref: "current_thumb",
+          target_ref: "current_track",
+        },
+      } as ActionConfig),
+    ).toBeNull();
+
+    expect(
+      validateActionConfig({
+        type: "drag_and_drop",
+        config: {
+          source_ref: "",
+          target_ref: "current_track",
+        },
+      } as ActionConfig),
+    ).toEqual({
+      field: "source_ref",
+      message: "Source ref is required",
+    });
+
+    expect(
+      validateActionConfig({
+        type: "drag_and_drop",
+        config: {
+          source_ref: "current_thumb",
+          target_ref: "",
+        },
+      } as ActionConfig),
+    ).toEqual({
+      field: "target_ref",
+      message: "Target ref is required",
+    });
+  });
 });

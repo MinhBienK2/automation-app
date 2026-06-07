@@ -514,8 +514,10 @@ export type ActionConfig =
       config: {
         source_xpath?: string | null;
         source_target?: ElementTarget | null;
+        source_ref?: string | null;
         target_xpath?: string | null;
         target_target?: ElementTarget | null;
+        target_ref?: string | null;
         target_position?: DragTargetPosition | null;
         iframe_xpath?: string | null;
         wait_until?: "attached" | "visible" | "enabled" | "clickable" | null;

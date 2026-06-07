@@ -181,15 +181,19 @@ const actionValidators = createActionValidatorMap({
     ),
   drag_and_drop: (config) =>
     firstValidation(
-      validateElementTarget(config.config, {
+      validateElementTargetSource(config.config, {
         xpathField: "source_xpath",
         targetField: "source_target",
+        refField: "source_ref",
         message: "Source element target is required",
+        refMessage: "Source ref is required",
       }),
-      validateElementTarget(config.config, {
+      validateElementTargetSource(config.config, {
         xpathField: "target_xpath",
         targetField: "target_target",
+        refField: "target_ref",
         message: "Target element target is required",
+        refMessage: "Target ref is required",
       }),
       validateElementActionTiming(config.config),
       validateDragTargetPosition(config.config.target_position),

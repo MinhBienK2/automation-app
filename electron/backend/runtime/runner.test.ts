@@ -3210,6 +3210,84 @@ describe("BrowserWorkflowRunner", () => {
     expect(page.events).not.toContain("dragTo:#thumb:#track");
   });
 
+  test("drags source and target elements resolved from runtime refs", async () => {
+    const page = new RankedElementPage({
+      ".drag-card": [
+        { x: 30, y: 40, width: 120, height: 48 },
+        { x: 560, y: 300, width: 120, height: 48 },
+      ],
+      ".drop-lane": [
+        { x: 20, y: -300, width: 220, height: 160 },
+        { x: 620, y: 260, width: 220, height: 160 },
+      ],
+    });
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext(page)),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("find-source", "Find Source", {
+            type: "find_element",
+            config: {
+              output_name: "current_card",
+              target: {
+                locators: [{ kind: "css", value: ".drag-card" }],
+                constraints: { visible: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("find-target", "Find Target", {
+            type: "find_element",
+            config: {
+              output_name: "current_lane",
+              target: {
+                locators: [{ kind: "css", value: ".drop-lane" }],
+                constraints: { visible: true },
+              },
+              filter: { in_viewport: true },
+              rank: "nearest_viewport_center",
+            },
+          }),
+          step("drag", "Drag", {
+            type: "drag_and_drop",
+            config: {
+              source_ref: "current_card",
+              target_ref: "current_lane",
+              wait_until: null,
+              timeout_ms: null,
+            },
+          } as ActionConfig),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.outputs?.current_card).toMatchObject({
+      kind: "element_ref",
+      locator: ".drag-card",
+      index: 1,
+    });
+    expect(result.outputs?.current_lane).toMatchObject({
+      kind: "element_ref",
+      locator: ".drop-lane",
+      index: 1,
+    });
+    expect(page.events).toEqual(
+      expect.arrayContaining([
+        "nth:.drag-card:1",
+        "nth:.drop-lane:1",
+        "dragTo:.drag-card >> nth=1:.drop-lane >> nth=1",
+      ]),
+    );
+  });
+
   test("registers dialog actions through one-shot page handlers", async () => {
     const page = new FakePage();
     const runner = new BrowserWorkflowRunner({

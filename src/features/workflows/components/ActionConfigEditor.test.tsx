@@ -352,10 +352,16 @@ describe("ActionConfigEditor", () => {
     const dropSetup = screen.getByRole("group", { name: "Drop setup" });
     const dropTarget = within(dropSetup).getByRole("group", { name: "Drop target" });
     const dropPoint = within(dropSetup).getByRole("group", { name: "Drop point" });
+    const sourceSelection = within(dragSource).getByRole("group", { name: "Source selection" });
+    const dropTargetSource = within(dropTarget).getByRole("group", { name: "Drop target source" });
 
+    expect(within(sourceSelection).getByRole("button", { name: "Use locator" }))
+      .toHaveAttribute("aria-pressed", "true");
     expect(within(dragSource).getByLabelText("Source locator type")).toHaveValue("test_id");
     expect(within(dragSource).getByLabelText("Source locator")).toHaveValue("volume-thumb");
     expect(within(dragSource).queryByLabelText("Source visibility")).not.toBeInTheDocument();
+    expect(within(dropTargetSource).getByRole("button", { name: "Use locator" }))
+      .toHaveAttribute("aria-pressed", "true");
     expect(within(dropTarget).getByLabelText("Target locator type")).toHaveValue("test_id");
     expect(within(dropTarget).getByLabelText("Target locator")).toHaveValue("volume-track");
     expect(within(dropTarget).queryByLabelText("Target visibility")).not.toBeInTheDocument();
@@ -370,6 +376,51 @@ describe("ActionConfigEditor", () => {
       type: "drag_and_drop",
       config: expect.objectContaining({
         target_position: { mode: "percent", x_percent: 75, y_percent: 50 },
+      }),
+    });
+
+    await userEvent.click(within(sourceSelection).getByRole("button", { name: "Use Find Element ref" }));
+
+    expect(within(dragSource).getByLabelText("Source ref")).toHaveValue("");
+    expect(within(dragSource).queryByLabelText("Source locator")).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "drag_and_drop",
+      config: expect.objectContaining({
+        source_ref: "",
+        source_target: { locators: [{ kind: "test_id", value: "volume-thumb" }] },
+      }),
+    });
+
+    await userEvent.type(within(dragSource).getByLabelText("Source ref"), "current_thumb");
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "drag_and_drop",
+      config: expect.objectContaining({
+        source_ref: "current_thumb",
+      }),
+    });
+
+    await userEvent.click(within(sourceSelection).getByRole("button", { name: "Use locator" }));
+
+    expect(within(dragSource).getByLabelText("Source locator")).toHaveValue("volume-thumb");
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "drag_and_drop",
+      config: expect.objectContaining({
+        source_ref: null,
+      }),
+    });
+
+    await userEvent.click(
+      within(dropTargetSource).getByRole("button", { name: "Use Find Element ref" }),
+    );
+
+    expect(within(dropTarget).getByLabelText("Drop target ref")).toHaveValue("");
+    expect(within(dropTarget).queryByLabelText("Target locator")).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith({
+      type: "drag_and_drop",
+      config: expect.objectContaining({
+        target_ref: "",
+        target_target: { locators: [{ kind: "test_id", value: "volume-track" }] },
       }),
     });
   });

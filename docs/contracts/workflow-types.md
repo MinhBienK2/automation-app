@@ -625,9 +625,11 @@ before the target-scroll phase.
 `find_element` stores a run-local element ref by `output_name`; targetable
 single-target actions may use that name in `target_ref` instead of a direct
 target. Element refs are not portable across runs and their serialized outputs
-are evidence metadata. Scroll Until Element Visible still uses locator target
-fields because it may need to create or reveal an element that is not yet
-resolved.
+are evidence metadata. Drag and Drop may use `source_ref` for the draggable
+source and `target_ref` for the destination target; each endpoint can still use
+its direct locator fields independently. Scroll Until Element Visible still uses
+locator target fields because it may need to create or reveal an element that is
+not yet resolved.
 
 Graph-internal Merge and Router configs use:
 

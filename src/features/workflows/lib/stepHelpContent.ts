@@ -588,7 +588,11 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
       summary: "Kéo một element nguồn và thả vào element đích.",
       useWhen: ["Dùng để sắp xếp card, kéo item vào vùng drop, hoặc thao tác UI dạng kanban."],
       fields: [
+        { name: "Source selection", description: "Chọn locator trực tiếp hoặc ref từ Find Element cho element cần kéo." },
+        { name: "Source ref", description: "Output name của Find Element khi Drag source dùng ref runtime." },
         { name: "Source locator", description: "Locator của element cần kéo." },
+        { name: "Drop target source", description: "Chọn locator trực tiếp hoặc ref từ Find Element cho vùng/element đích." },
+        { name: "Drop target ref", description: "Output name của Find Element khi Drop target dùng ref runtime." },
         { name: "Target locator", description: "Locator của vùng hoặc element đích để thả." },
         { name: "Destination position", description: "Vị trí thả trong target: tâm target, phần trăm bên trong target, hoặc offset pixel từ góc trái trên của target." },
         { name: "X percent", description: "Tọa độ ngang trong target khi Destination position là Percent inside target." },
@@ -604,7 +608,11 @@ const phaseOneStepHelpContent: Record<PhaseOneActionType, BilingualStepHelp> = {
       summary: "Drag a source element and drop it onto a target element.",
       useWhen: ["Use for reordering cards, moving items into drop zones, or kanban-style UIs."],
       fields: [
+        { name: "Source selection", description: "Choose a direct locator or Find Element ref for the element to drag." },
+        { name: "Source ref", description: "Find Element output name when Drag source uses a runtime ref." },
         { name: "Source locator", description: "Locator for the element to drag." },
+        { name: "Drop target source", description: "Choose a direct locator or Find Element ref for the destination element or area." },
+        { name: "Drop target ref", description: "Find Element output name when Drop target uses a runtime ref." },
         { name: "Target locator", description: "Locator for the drop target element or area." },
         { name: "Destination position", description: "Drop point inside the target: target center, percent inside the target, or pixel offset from the target's top-left corner." },
         { name: "X percent", description: "Horizontal coordinate inside the target when Destination position is Percent inside target." },
@@ -893,10 +901,14 @@ function actualFieldNames(actionType: ActionType): string[] {
   ];
   const scrollTargetSourceFields = ["Target source", "Target ref", ...scrollTargetFields];
   const sourceTargetFields = [
+    "Source selection",
+    "Source ref",
     "Source locator type",
     "Source locator",
   ];
   const dropTargetFields = [
+    "Drop target source",
+    "Drop target ref",
     "Target locator type",
     "Target locator",
   ];
@@ -1146,15 +1158,15 @@ function fieldRequiredWhen(
       };
 
   if (specific[key]) return specific[key];
-  if (fieldName === "Target source") {
+  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
     return vi
       ? "Bắt buộc; chọn Use locator để nhập locator trực tiếp hoặc Use Find Element ref để dùng ref runtime từ node Find Element trước đó."
       : "Required; choose Use locator for direct locator fields or Use Find Element ref for a runtime ref from a previous Find Element node.";
   }
-  if (fieldName === "Target ref") {
+  if (fieldName === "Target ref" || fieldName === "Source ref" || fieldName === "Drop target ref") {
     return vi
-      ? "Bắt buộc khi Target source là Use Find Element ref; bỏ trống khi dùng locator trực tiếp."
-      : "Required when Target source is Use Find Element ref; leave blank when using a direct locator.";
+      ? "Bắt buộc khi endpoint chọn Use Find Element ref; bỏ trống khi dùng locator trực tiếp."
+      : "Required when the endpoint uses Find Element ref; leave blank when using a direct locator.";
   }
   if (isLocatorTypeField(fieldName) || isLocatorValueField(fieldName)) {
     return vi
@@ -1222,12 +1234,12 @@ function fieldDescription(
       ? "Tên output lưu id choice đã được chọn để audit hoặc dùng ở node logic sau."
       : "Output name that stores the selected choice id for audit or later logic nodes.";
   }
-  if (fieldName === "Target source") {
+  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
     return vi
       ? "Chọn nguồn target cho action: locator trực tiếp hoặc ref đã resolve từ Find Element."
       : "Chooses the action target source: a direct locator or a resolved Find Element ref.";
   }
-  if (fieldName === "Target ref") {
+  if (fieldName === "Target ref" || fieldName === "Source ref" || fieldName === "Drop target ref") {
     return vi
       ? "Tên output_name của node Find Element đã chạy trước trong cùng run."
       : "The output_name from a previous Find Element node in the same run.";
@@ -1337,12 +1349,12 @@ function fieldValueGuidance(
   const vi = language === "vi";
   const details = fieldDetails(actionType, language, fieldName);
   if (fieldName === "No fields") return undefined;
-  if (fieldName === "Target source") {
+  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
     return vi
       ? "Dùng locator cho target tĩnh; dùng Find Element ref khi cần chọn một element đã được lọc/rank theo viewport hoặc danh sách động."
       : "Use locator for static targets; use Find Element ref when the target was filtered/ranked by viewport or a dynamic list.";
   }
-  if (fieldName === "Target ref") {
+  if (fieldName === "Target ref" || fieldName === "Source ref" || fieldName === "Drop target ref") {
     return vi
       ? "Nhập chính xác Output name của Find Element, ví dụ current_card."
       : "Enter the exact Find Element Output name, for example current_card.";
@@ -1408,8 +1420,11 @@ function fieldExample(
   fieldName: string,
 ) {
   const vi = language === "vi";
-  if (fieldName === "Target source") return "Use locator";
-  if (fieldName === "Target ref") return "current_card";
+  if (fieldName === "Target source" || fieldName === "Source selection" || fieldName === "Drop target source") {
+    return "Use locator";
+  }
+  if (fieldName === "Target ref" || fieldName === "Source ref") return "current_card";
+  if (fieldName === "Drop target ref") return "current_lane";
   if (actionType === "drag_and_drop" && fieldName === "Destination position") {
     return "Percent inside target";
   }

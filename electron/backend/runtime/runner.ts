@@ -1190,8 +1190,8 @@ export class BrowserWorkflowRunner {
     runtime: Runtime,
     action: Extract<ActionConfig, { type: "drag_and_drop" }>,
   ) {
-    const source = await locatorFor(runtime.page, action.config.source_target, action.config.source_xpath);
-    const target = await locatorFor(runtime.page, action.config.target_target, action.config.target_xpath);
+    const source = await this.locatorForDragEndpoint(runtime, action, "source");
+    const target = await this.locatorForDragEndpoint(runtime, action, "target");
     await this.waitForElementReadiness(
       source,
       action.config.wait_until ?? null,
@@ -1223,6 +1223,38 @@ export class BrowserWorkflowRunner {
       throw new Error("drag_and_drop requires driver dragTo support");
     }
     await source.dragTo(target, { timeout: action.config.timeout_ms ?? undefined });
+  }
+
+  private async locatorForDragEndpoint(
+    runtime: Runtime,
+    action: Extract<ActionConfig, { type: "drag_and_drop" }>,
+    endpoint: "source" | "target",
+  ): Promise<BrowserDriverLocator> {
+    const refName = endpoint === "source" ? action.config.source_ref : action.config.target_ref;
+    if (refName?.trim()) {
+      const trimmedRefName = refName.trim();
+      const ref = runtime.elementRefs.get(trimmedRefName);
+      if (!ref) {
+        throw new Error(`Element ref not found: ${refName}`);
+      }
+      return locatorForRuntimeElementRef(runtime.page, ref);
+    }
+
+    if (endpoint === "source") {
+      return locatorFor(
+        runtime.page,
+        action.config.source_target,
+        action.config.source_xpath,
+        action.config.iframe_xpath,
+      );
+    }
+
+    return locatorFor(
+      runtime.page,
+      action.config.target_target,
+      action.config.target_xpath,
+      action.config.iframe_xpath,
+    );
   }
 
   private async executePositionedDragAndDrop(
