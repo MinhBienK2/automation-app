@@ -88,7 +88,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Projects is the sidebar entry for project-scoped authoring inventory. The
   Projects workspace owns selected-project state and routes its Workflows,
   Subflows, and Settings collection menu to the existing workflow list, subflow
-  list, and Project Environment settings surfaces.
+  list, and Project Environment settings surfaces. Its project list sidebar and
+  selected collection content are independent scroll regions inside the
+  Projects workspace viewport.
 - The app shell no longer renders a top command/search header or Alerts
   shortcut. Cross-workspace movement stays in the sidebar and explicit in-page
   links.

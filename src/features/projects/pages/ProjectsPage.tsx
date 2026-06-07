@@ -79,8 +79,7 @@ export function ProjectsPage({
     <section className="app-screen projects-screen" aria-label="Projects">
       <header className="app-header">
         <div>
-          <p className="eyebrow">Project Workspace</p>
-          <h1>Projects</h1>
+          <h2>Project Workspace</h2>
           {selectedProject ? (
             <p className="muted">{selectedProject.name}</p>
           ) : (
@@ -163,21 +162,12 @@ export function ProjectsPage({
 
         <section className="projects-detail-panel" aria-label="Project detail">
           {selectedProject ? (
-            <>
-              <div className="projects-detail-header">
-                <div>
-                  <p className="eyebrow">Selected Project</p>
-                  <h2>{selectedProject.name}</h2>
-                </div>
-              </div>
-
-              <section
-                aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
-                className="project-collection-panel"
-              >
-                {children}
-              </section>
-            </>
+            <section
+              aria-label={`${selectedProject.name} ${activeCollectionLabel}`}
+              className="project-collection-panel"
+            >
+              {children}
+            </section>
           ) : (
             <div className="empty-state panel">
               <h2>No project selected</h2>

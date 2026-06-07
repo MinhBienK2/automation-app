@@ -154,6 +154,42 @@ describe("App CSS", () => {
     expect(inspectorDrawer).toContain("animation: graph-inspector-slide-in");
   });
 
+  test("lets the Projects workspace fill the content column without a nested right header", () => {
+    const projectsScreen = cssRule(".projects-screen");
+    const projectsWorkspace = cssRule(".projects-workspace");
+    const projectsDetailPanel = cssRule(".projects-detail-panel");
+    const projectCollectionPanel = cssRule(".project-collection-panel");
+    const nestedCollectionScreen = cssRule(".project-collection-panel > .app-screen");
+
+    expect(projectsScreen).toContain("width: 100%");
+    expect(projectsScreen).toContain("max-width: none");
+    expect(projectsScreen).toContain("padding-inline: 16px");
+    expect(projectsWorkspace).toContain(
+      "grid-template-columns: minmax(240px, 300px) minmax(0, 1fr)",
+    );
+    expect(projectsDetailPanel).toContain("width: 100%");
+    expect(projectCollectionPanel).toContain("width: 100%");
+    expect(nestedCollectionScreen).toContain("max-width: none");
+    expect(css).not.toContain(".projects-detail-header");
+  });
+
+  test("keeps Projects sidebar and collection content as independent scroll regions", () => {
+    const projectsScreen = cssRule(".projects-screen");
+    const projectsWorkspace = cssRule(".projects-workspace");
+    const projectsListPanel = cssRule(".projects-list-panel");
+    const projectsDetailPanel = cssRule(".projects-detail-panel");
+
+    expect(projectsScreen).toContain("height: 100vh");
+    expect(projectsScreen).toContain("grid-template-rows: auto minmax(0, 1fr)");
+    expect(projectsScreen).toContain("overflow: hidden");
+    expect(projectsWorkspace).toContain("min-height: 0");
+    expect(projectsWorkspace).toContain("overflow: hidden");
+    expect(projectsListPanel).toContain("min-height: 0");
+    expect(projectsListPanel).toContain("overflow-y: auto");
+    expect(projectsDetailPanel).toContain("min-height: 0");
+    expect(projectsDetailPanel).toContain("overflow-y: auto");
+  });
+
   test("keeps workflow detail command actions on one desktop row", () => {
     const runActions = cssRule(".page-detail-header .run-actions");
 
