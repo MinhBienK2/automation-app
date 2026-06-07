@@ -431,6 +431,38 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     );
   }
 
+  function usedProjectEnvironmentFingerprintSeeds() {
+    const seeds = usedFingerprintSeeds();
+    for (const project of repository.listProjects()) {
+      for (const environment of repository.listProjectEnvironments(project.id)) {
+        const seed = environment.browser_launch?.fingerprint_seed;
+        if (seed) seeds.add(seed);
+      }
+    }
+    return seeds;
+  }
+
+  function assertCanResetProjectEnvironmentBrowserIdentity(
+    environment: ProjectEnvironment,
+  ) {
+    for (const workflow of repository.listWorkflows()) {
+      if (workflow.environment_id !== environment.id) continue;
+      const settings = {
+        ...getSettings(workflow.id),
+        browser_launch: environment.browser_launch,
+      };
+      const conflict = activeRunConflict(workflow.id, settings);
+      if (conflict) throw commandError(conflict.message, conflict.field);
+      const profileName = browserProfileKey(settings);
+      if (profileName && runManager.retainedSessionActiveFor(workflow.id, profileName)) {
+        throw commandError(
+          "Close the retained browser session before resetting this project identity",
+          "browser_launch.profile_dir",
+        );
+      }
+    }
+  }
+
   function rotateBrowserIdentity(workflowId: string): WorkflowSettings {
     const settings = getSettings(workflowId);
     assertCanResetBrowserIdentity(workflowId, settings);
@@ -465,6 +497,32 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         },
       ],
     });
+  }
+
+  function rotateProjectEnvironmentBrowserIdentity(
+    environmentId: string,
+  ): ProjectEnvironment {
+    const environment = requireProjectEnvironment(environmentId);
+    assertCanResetProjectEnvironmentBrowserIdentity(environment);
+    const identityId = createHighEntropyBrowserIdentityId();
+    const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
+      identityId,
+      usedProjectEnvironmentFingerprintSeeds(),
+    );
+    const updated = repository.updateProjectEnvironment(environment.id, {
+      browser_launch: {
+        ...environment.browser_launch,
+        identity_id: identityId,
+        profile_dir: identityId,
+        profile_name:
+          environment.browser_launch.session_mode === "persistent_profile"
+            ? identityId
+            : null,
+        fingerprint_seed: fingerprintSeed,
+      },
+    });
+    if (!updated) throw commandError("Project environment not found", "environmentId");
+    return updated;
   }
 
   function assertNoUnsupportedGraphDiscriminants(graph: WorkflowGraph) {
@@ -1032,6 +1090,10 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         return requireProjectEnvironment(updated.id);
       }
       return updated;
+    },
+
+    resetProjectEnvironmentBrowserIdentity(environmentId: string): ProjectEnvironment {
+      return rotateProjectEnvironmentBrowserIdentity(environmentId);
     },
 
     setWorkflowEnvironment(workflowId: string, environmentId: string): Workflow {

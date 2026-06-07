@@ -86,6 +86,16 @@ type ProjectWorkflowTestHandlers = {
       is_default?: boolean;
     },
   ): TestProjectEnvironment;
+  updateProjectEnvironment(
+    environmentId: string,
+    input: {
+      name?: string;
+      description?: string | null;
+      browser_launch?: WorkflowSettings["browser_launch"];
+      is_default?: boolean;
+    },
+  ): TestProjectEnvironment;
+  resetProjectEnvironmentBrowserIdentity(environmentId: string): TestProjectEnvironment;
   setWorkflowEnvironment(workflowId: string, environmentId: string): ProjectWorkflow;
   createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
   listSubflows(projectId: string): Array<TestSubflow & { used_by_count: number }>;
@@ -255,6 +265,47 @@ describe("Electron workflow command handlers", () => {
       environment: { mode: "isolated" },
     });
     expect(isolated.environment_id).not.toBe(environments[0].id);
+  });
+
+  test("regenerates a project saved session browser identity", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+    const project = projectHandlers.listProjects()[0];
+    const environment = projectHandlers.listProjectEnvironments(project.id)[0];
+    const customized = projectHandlers.updateProjectEnvironment(environment.id, {
+      browser_launch: {
+        ...environment.browser_launch,
+        fingerprint_seed: "11111",
+        proxy_url: "http://proxy.owned.test:8080",
+        timezone: "America/New_York",
+        locale: "en-US",
+        humanize: false,
+      },
+    });
+
+    const rotated = projectHandlers.resetProjectEnvironmentBrowserIdentity(customized.id);
+
+    expect(rotated.browser_launch.identity_id).toMatch(/^bi_[a-f0-9]{32}$/);
+    expect(rotated.browser_launch.identity_id).not.toBe(
+      customized.browser_launch.identity_id,
+    );
+    expect(rotated.browser_launch.profile_dir).toBe(rotated.browser_launch.identity_id);
+    expect(rotated.browser_launch.profile_name).toBe(rotated.browser_launch.identity_id);
+    expect(rotated.browser_launch.fingerprint_seed).toBe(
+      deriveFingerprintSeedFromIdentityId(
+        rotated.browser_launch.identity_id,
+        new Set([customized.browser_launch.fingerprint_seed]),
+      ),
+    );
+    expect(rotated.browser_launch.proxy_url).toBe("http://proxy.owned.test:8080");
+    expect(rotated.browser_launch.timezone).toBe("America/New_York");
+    expect(rotated.browser_launch.locale).toBe("en-US");
+    expect(rotated.browser_launch.humanize).toBe(false);
+    expect(projectHandlers.listProjectEnvironments(project.id)[0].browser_launch)
+      .toMatchObject({
+        identity_id: rotated.browser_launch.identity_id,
+        fingerprint_seed: rotated.browser_launch.fingerprint_seed,
+      });
   });
 
   test("runs workflows with the selected project environment browser launch settings", async () => {

@@ -70,6 +70,9 @@ export type WorkflowElectronBridge = {
     environmentId: string,
     input: Partial<ProjectEnvironmentInput>,
   ): Promise<ProjectEnvironment>;
+  resetProjectEnvironmentBrowserIdentity(
+    environmentId: string,
+  ): Promise<ProjectEnvironment>;
   setWorkflowEnvironment(workflowId: string, environmentId: string): Promise<Workflow>;
   createSubflow(
     projectId: string,

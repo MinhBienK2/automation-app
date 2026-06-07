@@ -70,6 +70,8 @@ import {
   startRecordingSession,
   stopRecordingSession,
   stopRun as stopRunCommand,
+  resetProjectEnvironmentBrowserIdentity as resetProjectEnvironmentBrowserIdentityCommand,
+  updateProjectEnvironment as updateProjectEnvironmentCommand,
   updateSchedule,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
@@ -105,6 +107,7 @@ import type {
   GraphNodeType,
   Project,
   ProjectEnvironment,
+  ProjectEnvironmentInput,
   RecordingSession,
   RecordingWorkflowDraft,
   ReviewedRecordingStep,
@@ -654,6 +657,33 @@ function App() {
       return [];
     } finally {
       setSubflowsLoading(false);
+    }
+  }
+
+  async function updateProjectEnvironment(
+    environmentId: string,
+    input: Partial<ProjectEnvironmentInput>,
+  ) {
+    setAppError("");
+    try {
+      const updated = await updateProjectEnvironmentCommand(environmentId, input);
+      setProjectEnvironments(await listProjectEnvironments(updated.project_id));
+      setToastMessage("Fingerprint seed saved.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
+    }
+  }
+
+  async function resetProjectEnvironmentBrowserIdentity(environmentId: string) {
+    setAppError("");
+    try {
+      const updated = await resetProjectEnvironmentBrowserIdentityCommand(environmentId);
+      setProjectEnvironments(await listProjectEnvironments(updated.project_id));
+      setToastMessage("Project identity regenerated.");
+      window.setTimeout(() => setToastMessage(""), 2200);
+    } catch (error) {
+      setAppError(commandMessage(error));
     }
   }
 
@@ -2176,6 +2206,10 @@ function App() {
             <ProjectEnvironmentSettings
               projectEnvironments={selectedProjectEnvironments}
               error={appError}
+              onUpdateProjectEnvironment={updateProjectEnvironment}
+              onResetProjectEnvironmentBrowserIdentity={
+                resetProjectEnvironmentBrowserIdentity
+              }
             />
           ) : (
             <WorkflowListPage

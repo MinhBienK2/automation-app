@@ -76,8 +76,9 @@ Node/Electron backend.
 - Project, compatibility Project Environment/session, and Subflow CRUD command
   logic. Browser Launch settings for project saved sessions and private
   workflow sessions are backend-owned, and subflow delete is guarded by workflow
-  usage. The renderer exposes a single project saved-session summary instead of
-  a full Project Environment list/create/editor.
+  usage. The renderer exposes grouped project identity controls instead of a
+  full Project Environment list/create/editor, and project identity regeneration
+  stays backend-owned through `resetProjectEnvironmentBrowserIdentity`.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
@@ -106,6 +107,12 @@ Node/Electron backend.
 - Workflow Settings validation is service-owned and emits fingerprint-coherence warnings for proxy identities without timezone/locale or GeoIP, and for configured fingerprint fonts directories that can create a stable font hash across identities.
 - Workflow deletion accepts an explicit profile-data choice from the renderer. It keeps browser profile data by default, deletes only unshared profile directories when requested, and rejects deletion while that workflow has an active run, while that workflow's profile is owned by an active run, or while that workflow's retained browser session still owns the profile.
 - Browser identity rotation is command-owned through `resetWorkflowBrowserIdentity`. The backend generates the new high-entropy identity id, derives the CloakBrowser-compatible seed, persists a migration-note audit event, preserves non-storage Browser Launch preferences, disables Run from selected, and rejects reset while the workflow/profile is active or retained.
+- Project saved-session identity rotation is command-owned through
+  `resetProjectEnvironmentBrowserIdentity`. The backend generates the new
+  high-entropy identity id, derives the CloakBrowser-compatible seed, updates
+  matching profile fields, preserves non-storage Browser Launch preferences, and
+  rejects reset while a workflow using that environment has an active run,
+  active profile, or retained session.
 - Workflow Settings saves reject identity profile reset/delete while that workflow's retained browser session still owns the profile.
 - Debug-only fixture generation is not part of the production command surface.
 - List-step authoring commands remain retired from the production command surface.

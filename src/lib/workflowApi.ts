@@ -64,6 +64,10 @@ export function updateProjectEnvironment(
   return bridge().updateProjectEnvironment(environmentId, input);
 }
 
+export function resetProjectEnvironmentBrowserIdentity(environmentId: string) {
+  return bridge().resetProjectEnvironmentBrowserIdentity(environmentId);
+}
+
 export function setWorkflowEnvironment(workflowId: string, environmentId: string) {
   return bridge().setWorkflowEnvironment(workflowId, environmentId);
 }

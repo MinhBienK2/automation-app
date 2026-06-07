@@ -477,19 +477,30 @@
   max-width: 720px;
 }
 
-.project-session-summary {
+.project-session-value-row {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
-.project-session-summary p {
-  margin: 0;
+.project-session-value-row strong {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--app-text);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
+}
+
+.project-session-seed-field input {
+  font-size: 14px;
+}
+
+.project-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 8px;
 }
 
 .project-session-code {

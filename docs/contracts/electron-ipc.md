@@ -42,6 +42,7 @@ string map.
 - `listProjectEnvironments`
 - `createProjectEnvironment`
 - `updateProjectEnvironment`
+- `resetProjectEnvironmentBrowserIdentity`
 - `setWorkflowEnvironment`
 - `createSubflow`
 - `listSubflows`
@@ -118,8 +119,12 @@ project and session/environment selection; omitted options use the project saved
 session by default. The renderer's create dialog exposes only reuse project
 saved session or create new workflow session, while older `existing`
 environment selections remain accepted at the command boundary for compatibility.
-Subflow commands expose project-scoped reusable graphs, usage queries, guarded
-deletion, and graph save/load.
+`updateProjectEnvironment` lets Project Settings save a fingerprint seed change
+inside the selected session Browser Launch payload. `resetProjectEnvironmentBrowserIdentity(environmentId)`
+returns the updated project session after backend-generating a new identity id,
+profile fields, and deterministic fingerprint seed while preserving non-storage
+Browser Launch preferences. Subflow commands expose project-scoped reusable
+graphs, usage queries, guarded deletion, and graph save/load.
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend

@@ -71,6 +71,7 @@ import {
   setWorkflowEnvironment,
   deleteSubflow,
   updateProjectEnvironment,
+  resetProjectEnvironmentBrowserIdentity,
 } from "./workflowApi";
 import type {
   WorkflowExport,
@@ -130,6 +131,7 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.listProjectEnvironments.mockResolvedValue(undefined);
     workflowBridgeMock.createProjectEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.updateProjectEnvironment.mockResolvedValue(undefined);
+    workflowBridgeMock.resetProjectEnvironmentBrowserIdentity.mockResolvedValue(undefined);
     workflowBridgeMock.setWorkflowEnvironment.mockResolvedValue(undefined);
     workflowBridgeMock.createSubflow.mockResolvedValue(undefined);
     workflowBridgeMock.listSubflows.mockResolvedValue(undefined);
@@ -148,6 +150,7 @@ describe("workflow API phase ten commands", () => {
       description: "Proxy posture",
     });
     await updateProjectEnvironment("environment-1", { name: "Updated" });
+    await resetProjectEnvironmentBrowserIdentity("environment-1");
     await setWorkflowEnvironment("workflow-1", "environment-1");
     await createSubflow("project-1", { name: "Login" });
     await listSubflows("project-1");
@@ -243,6 +246,9 @@ describe("workflow API phase ten commands", () => {
     expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
       "environment-1",
       { name: "Updated" },
+    );
+    expect(workflowBridgeMock.resetProjectEnvironmentBrowserIdentity).toHaveBeenCalledWith(
+      "environment-1",
     );
     expect(workflowBridgeMock.setWorkflowEnvironment).toHaveBeenCalledWith(
       "workflow-1",

@@ -26,10 +26,12 @@ Preserve these unless the task explicitly changes them.
 - Projects is the only sidebar entry for workflow authoring inventory. The
   selected project shows Workflows, Subflows, and Settings as a collection menu
   inside the project list sidebar. Workflows and subflows shown there are
-  scoped to the selected project, and the project saved session summary lives
-  in the selected project's Settings collection. The auto-created default
-  project is named `Main`, and its Settings summary shows only
-  `Fingerprint seed: ...` and `Identity: ...`.
+  scoped to the selected project, and the project identity controls live in the
+  selected project's Settings collection. The auto-created default project is
+  named `Main`. Project Settings shows a `Project identity` heading, a
+  `Browser fingerprint` group, editable Fingerprint seed, read-only Identity,
+  Save fingerprint seed, and Regenerate identity without exposing a full Browser
+  Launch editor.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.

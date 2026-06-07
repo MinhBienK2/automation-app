@@ -49,7 +49,9 @@ Electron/Node now owns the production persistence layer.
 - Workflow Settings are stored in `workflows.settings_json`.
 - Subflow graph authoring data is stored in `subflows.graph_json`.
 - Project saved-session and private workflow-session Browser Launch settings
-  are stored in `project_environments.browser_launch_json`.
+  are stored in `project_environments.browser_launch_json`. Project Settings can
+  edit the saved fingerprint seed or ask the backend to regenerate the
+  environment identity/profile/seed in that JSON payload.
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.

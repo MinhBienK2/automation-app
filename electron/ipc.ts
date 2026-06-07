@@ -4,6 +4,8 @@ export const workflowIpcChannels = {
   listProjectEnvironments: "workflow:listProjectEnvironments",
   createProjectEnvironment: "workflow:createProjectEnvironment",
   updateProjectEnvironment: "workflow:updateProjectEnvironment",
+  resetProjectEnvironmentBrowserIdentity:
+    "workflow:resetProjectEnvironmentBrowserIdentity",
   setWorkflowEnvironment: "workflow:setWorkflowEnvironment",
   createSubflow: "workflow:createSubflow",
   listSubflows: "workflow:listSubflows",

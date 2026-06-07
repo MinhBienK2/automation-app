@@ -35,6 +35,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("createProjectEnvironment", projectId, input),
   updateProjectEnvironment: (environmentId, input) =>
     invokeWorkflow("updateProjectEnvironment", environmentId, input),
+  resetProjectEnvironmentBrowserIdentity: (environmentId) =>
+    invokeWorkflow("resetProjectEnvironmentBrowserIdentity", environmentId),
   setWorkflowEnvironment: (workflowId, environmentId) =>
     invokeWorkflow("setWorkflowEnvironment", workflowId, environmentId),
   createSubflow: (projectId, input) =>

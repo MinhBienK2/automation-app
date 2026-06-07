@@ -16,6 +16,7 @@ import {
 } from "./tests/mocks/workflowScenarios";
 import { renderApp } from "./tests/utils/renderApp";
 import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
+import type { ProjectEnvironmentInput } from "./types/workflow";
 
 function diagnosticsFixture() {
   return {
@@ -117,7 +118,7 @@ describe("App settings and graph autosave", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
-  test("shows the project saved session in the project settings tab", async () => {
+  test("shows grouped project identity controls in the project settings tab", async () => {
     const project = {
       id: "project-1",
       name: "Main",
@@ -151,12 +152,18 @@ describe("App settings and graph autosave", () => {
 
     await openProjectTab("Settings");
 
-    expect(
-      await screen.findByText(`Fingerprint seed: ${browserLaunch.fingerprint_seed}`),
-    ).toBeInTheDocument();
-    expect(screen.getByText(`Identity: ${browserLaunch.identity_id}`)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Project saved session" }))
-      .not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Project identity" }))
+      .toBeInTheDocument();
+    const fingerprintGroup = screen.getByRole("group", { name: "Browser fingerprint" });
+    expect(within(fingerprintGroup).getByRole("textbox", { name: "Fingerprint seed" }))
+      .toHaveValue(browserLaunch.fingerprint_seed);
+    expect(within(fingerprintGroup).getByText("Identity")).toBeInTheDocument();
+    expect(within(fingerprintGroup).getByText(browserLaunch.identity_id))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save fingerprint seed" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate identity" }))
+      .toBeInTheDocument();
     expect(screen.queryByText("Reuse choice")).not.toBeInTheDocument();
     expect(screen.queryByText("Saved browser data")).not.toBeInTheDocument();
     expect(screen.queryByText("Persistent browser profile")).not.toBeInTheDocument();
@@ -164,6 +171,136 @@ describe("App settings and graph autosave", () => {
       .not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "Headless browser" }))
       .not.toBeInTheDocument();
+  });
+
+  test("saves an edited project fingerprint seed", async () => {
+    const project = {
+      id: "project-1",
+      name: "Main",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const browserLaunch = defaultWorkflowSettings({
+      workflowId: "environment-default",
+      workflowName: "Project saved session",
+      createdAt: "1",
+      updatedAt: "1",
+    }).browser_launch;
+    let currentEnvironment = {
+      id: "environment-default",
+      project_id: project.id,
+      name: "Project saved session",
+      description: "Default saved browser session",
+      is_default: true,
+      browser_launch: browserLaunch,
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_projects: [project],
+      list_project_environments: () => [currentEnvironment],
+      update_project_environment: ({ input }: { input: Partial<ProjectEnvironmentInput> }) => {
+        currentEnvironment = {
+          ...currentEnvironment,
+          name: input.name ?? currentEnvironment.name,
+          description: input.description ?? currentEnvironment.description,
+          is_default: input.is_default ?? currentEnvironment.is_default,
+          browser_launch: input.browser_launch ?? currentEnvironment.browser_launch,
+          updated_at: "2",
+        };
+        return currentEnvironment;
+      },
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    const seedInput = await screen.findByRole("textbox", { name: "Fingerprint seed" });
+    await userEvent.clear(seedInput);
+    await userEvent.type(seedInput, "81234");
+    await userEvent.click(screen.getByRole("button", { name: "Save fingerprint seed" }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
+        "update_project_environment",
+        expect.objectContaining({
+          environmentId: "environment-default",
+          input: expect.objectContaining({
+            name: "Project saved session",
+            browser_launch: expect.objectContaining({
+              fingerprint_seed: "81234",
+              identity_id: browserLaunch.identity_id,
+            }),
+          }),
+        }),
+      );
+    });
+    expect(await screen.findByDisplayValue("81234")).toBeInTheDocument();
+  });
+
+  test("regenerates the project saved session identity", async () => {
+    const project = {
+      id: "project-1",
+      name: "Main",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const browserLaunch = defaultWorkflowSettings({
+      workflowId: "environment-default",
+      workflowName: "Project saved session",
+      createdAt: "1",
+      updatedAt: "1",
+    }).browser_launch;
+    const rotatedBrowserLaunch = {
+      ...browserLaunch,
+      identity_id: "bi_1234567890abcdef1234567890abcdef",
+      profile_dir: "bi_1234567890abcdef1234567890abcdef",
+      profile_name: "bi_1234567890abcdef1234567890abcdef",
+      fingerprint_seed: "99887",
+    };
+    let currentEnvironment = {
+      id: "environment-default",
+      project_id: project.id,
+      name: "Project saved session",
+      description: "Default saved browser session",
+      is_default: true,
+      browser_launch: browserLaunch,
+      created_at: "1",
+      updated_at: "1",
+    };
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_projects: [project],
+      list_project_environments: () => [currentEnvironment],
+      reset_project_environment_browser_identity: () => {
+        currentEnvironment = {
+          ...currentEnvironment,
+          browser_launch: rotatedBrowserLaunch,
+          updated_at: "2",
+        };
+        return currentEnvironment;
+      },
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    await userEvent.click(await screen.findByRole("button", {
+      name: "Regenerate identity",
+    }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith(
+        "reset_project_environment_browser_identity",
+        { environmentId: "environment-default" },
+      );
+    });
+    expect(await screen.findByDisplayValue(rotatedBrowserLaunch.fingerprint_seed))
+      .toBeInTheDocument();
+    expect(screen.getByText(rotatedBrowserLaunch.identity_id)).toBeInTheDocument();
   });
 
   test("renders project collections in the project list sidebar instead of the detail header", async () => {
