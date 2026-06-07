@@ -683,6 +683,9 @@ function App() {
 
   async function selectProject(projectId: string) {
     setAppError("");
+    if (projectId !== selectedProjectId) {
+      setProjectCollection("workflows");
+    }
     setSelectedProjectId(projectId);
     try {
       const environments = await listProjectEnvironments(projectId);
@@ -700,6 +703,7 @@ function App() {
       setSelectedProjectId(project.id);
       setProjectCollection("workflows");
       setProjects(await listProjects());
+      await loadWorkflows();
       setProjectEnvironments(await listProjectEnvironments(project.id));
       setSubflows(await listSubflows(project.id));
     } catch (error) {

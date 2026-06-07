@@ -247,8 +247,10 @@ profile directories are retained.
 
 `resetProjectEnvironmentBrowserIdentity` is the command boundary for project saved-session identity rotation. After UI confirmation, it returns the updated project environment after replacing `identity_id`, persistent profile fields, and `fingerprint_seed`, while preserving non-storage Browser Launch preferences and deleting the old unshared local project profile directory.
 
-`updateProject` returns the updated `Project` after trimming non-empty project
-names. `duplicateProject` returns the newly created `Project` after copying
+`createProject` returns the created `Project` after trimming a non-empty
+project name and also persists that project's default saved session plus an
+initial draft workflow named `Main`. `updateProject` returns the updated
+`Project` after trimming non-empty project names. `duplicateProject` returns the newly created `Project` after copying
 project environments, subflows, workflows, workflow graphs, and settings into a
 new project with remapped copied subflow references and fresh browser identity
 storage values. `deleteProject` returns no payload; it removes the project and

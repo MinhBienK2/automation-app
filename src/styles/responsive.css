@@ -81,6 +81,18 @@
     margin-left: 0;
   }
 
+  .projects-list-panel {
+    max-height: min(360px, 42vh);
+  }
+
+  .project-collection-tabs {
+    overflow-x: auto;
+  }
+
+  .project-collection-tabs .project-collection-item {
+    flex: 0 0 auto;
+  }
+
   .page-detail-title-main {
     display: grid;
     gap: 10px;

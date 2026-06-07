@@ -28,6 +28,9 @@ Electron/Node now owns the production persistence layer.
   for existing local data. Workflows store `project_id` and selected
   `environment_id`; subflows and compatibility project-environment/session rows
   store `project_id`.
+- Product-facing project creation writes the project row, default project
+  saved-session row, and a normal draft workflow named `Main` in one
+  transaction.
 - Project rename updates the `projects` row. Product-facing project deletion
   deletes workflows for that project before deleting the project row so workflow
   run/schedule/attention cascades apply and no projectless workflow rows are

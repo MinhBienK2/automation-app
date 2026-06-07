@@ -75,9 +75,9 @@ describe("App settings and graph autosave", () => {
 
   async function getProjectCollections() {
     await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
-    const projectList = await screen.findByRole("complementary", { name: "Project list" });
-    return within(projectList).findByRole("navigation", {
-      name: "Main collections",
+    const detail = await screen.findByRole("region", { name: "Project detail" });
+    return within(detail).findByRole("navigation", {
+      name: "Project sections",
     });
   }
 
@@ -477,15 +477,18 @@ describe("App settings and graph autosave", () => {
     expect(screen.getByText(rotatedBrowserLaunch.identity_id)).toBeInTheDocument();
   });
 
-  test("renders project collections in the project list sidebar instead of the detail header", async () => {
+  test("keeps project collections fixed in the detail panel while the sidebar filters projects", async () => {
     mockWorkflowBridgeCommands(listWorkflowScenario([workflow]));
 
     renderApp();
 
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    expect(within(projectList).getByLabelText("Search projects")).toBeInTheDocument();
+    expect(within(projectList).queryByRole("navigation")).not.toBeInTheDocument();
+
     const collections = await getProjectCollections();
 
-    expect(screen.queryByRole("tablist", { name: "Project sections" }))
-      .not.toBeInTheDocument();
     expect(within(collections).getByRole("button", { name: "Workflows" }))
       .toHaveAttribute("aria-current", "page");
     expect(within(collections).getByRole("button", { name: "Subflows" }))
@@ -495,6 +498,131 @@ describe("App settings and graph autosave", () => {
 
     await userEvent.click(within(collections).getByRole("button", { name: "Subflows" }));
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
+  });
+
+  test("resets to Workflows when selecting a different project", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Main",
+        description: "",
+        created_at: "1",
+        updated_at: "1",
+      },
+      {
+        id: "project-2",
+        name: "Owned Staging",
+        description: "Second project",
+        created_at: "2",
+        updated_at: "2",
+      },
+    ];
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([
+        {
+          ...workflow,
+          project_id: "project-1",
+          environment_id: "environment-project-1",
+          environment_name: "Project saved session",
+        },
+      ]),
+      list_projects: projects,
+      list_project_environments: ({ projectId }: { projectId: string }) => [
+        {
+          id: `environment-${projectId}`,
+          project_id: projectId,
+          name: "Project saved session",
+          description: "",
+          is_default: true,
+          browser_launch: null,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      list_subflows: [],
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    expect(await screen.findByRole("heading", { name: "Project identity" }))
+      .toBeInTheDocument();
+
+    const projectList = await screen.findByRole("complementary", { name: "Project list" });
+    await userEvent.click(within(projectList).getByRole("button", { name: /Owned Staging/ }));
+
+    const sections = await screen.findByRole("navigation", { name: "Project sections" });
+    expect(within(sections).getByRole("button", { name: "Workflows" }))
+      .toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("heading", { name: "Workflows" })).toBeInTheDocument();
+  });
+
+  test("shows the auto-created Main workflow after creating a project", async () => {
+    const existingProject = {
+      id: "project-1",
+      name: "Main",
+      description: "",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const createdProject = {
+      id: "project-2",
+      name: "Owned Staging",
+      description: "",
+      created_at: "2",
+      updated_at: "2",
+    };
+    const createdWorkflow = {
+      ...workflow,
+      id: "workflow-main",
+      name: "Main",
+      project_id: createdProject.id,
+      environment_id: "environment-project-2",
+      environment_name: "Project saved session",
+    };
+    const createdEnvironment = {
+      id: "environment-project-2",
+      project_id: createdProject.id,
+      name: "Project saved session",
+      description: "",
+      is_default: true,
+      browser_launch: null,
+      created_at: "2",
+      updated_at: "2",
+    };
+
+    let projectCreated = false;
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      list_projects: () =>
+        projectCreated ? [existingProject, createdProject] : [existingProject],
+      create_project: () => {
+        projectCreated = true;
+        return createdProject;
+      },
+      list_project_environments: ({ projectId }: { projectId: string }) =>
+        projectId === createdProject.id ? [createdEnvironment] : [],
+      list_workflows: () => [createdWorkflow],
+      list_subflows: [],
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Project" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Project" });
+    await userEvent.type(within(dialog).getByLabelText("Project name"), "Owned Staging");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    const workflowList = await screen.findByRole("region", { name: "Workflow list" });
+    expect(within(workflowList).getByRole("heading", { name: "Main" }))
+      .toBeInTheDocument();
+    expect(within(workflowList).getByText("Environment: Project saved session"))
+      .toBeInTheDocument();
+    await waitFor(() => {
+      expect(workflowBridgeMock.listWorkflows).toHaveBeenCalled();
+    });
   });
 
   test("lands on Overview with operational panels and refreshes the durable aggregate", async () => {

@@ -1277,9 +1277,23 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     createProject(input: { name: string; description?: string | null }): Project {
       const name = input.name.trim();
       if (!name) throw commandError("Project name is required", "name");
-      const project = repository.createProject(name, input.description?.trim() ?? "");
-      ensureDefaultProjectEnvironment(project);
-      return project;
+      context.database.exec("BEGIN IMMEDIATE");
+      try {
+        const project = repository.createProject(name, input.description?.trim() ?? "");
+        const environment = ensureDefaultProjectEnvironment(project);
+        createWorkflow("Main", {
+          project_id: project.id,
+          environment: {
+            mode: "existing",
+            environment_id: environment.id,
+          },
+        });
+        context.database.exec("COMMIT");
+        return project;
+      } catch (error) {
+        context.database.exec("ROLLBACK");
+        throw error;
+      }
     },
 
     updateProject(

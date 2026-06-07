@@ -338,6 +338,34 @@ describe("Electron workflow command handlers", () => {
       .toBe(true);
   });
 
+  test("creates a Main workflow when creating a project", async () => {
+    const { handlers } = await createTestHandlers();
+    const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
+
+    const project = projectHandlers.createProject({ name: "Owned Staging" });
+    const environments = projectHandlers.listProjectEnvironments(project.id);
+    const projectWorkflows = handlers
+      .listWorkflows()
+      .filter((item) => item.project_id === project.id);
+
+    expect(projectWorkflows).toEqual([
+      expect.objectContaining({
+        name: "Main",
+        project_id: project.id,
+        environment_id: environments[0].id,
+        environment_name: "Project saved session",
+      }),
+    ]);
+
+    const graph = handlers.getWorkflowGraph(projectWorkflows[0].id);
+    expect(graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "start", node_type: "start" }),
+        expect.objectContaining({ id: "new-node", node_type: "action" }),
+      ]),
+    );
+  });
+
   test("regenerates a project saved session browser identity", async () => {
     const { handlers, appPaths } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
