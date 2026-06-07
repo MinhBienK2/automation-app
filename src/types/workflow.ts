@@ -1535,6 +1535,7 @@ export type WorkflowPackageExportOptions = {
 export type WorkflowPackageImportOptions = {
   include_flow: boolean;
   settings_sections: WorkflowSettingsSectionId[];
+  target_project_id?: string | null;
 };
 
 export type WorkflowPackageSettings = Partial<{
@@ -1563,6 +1564,39 @@ export type WorkflowPackagePreview = {
   includes_flow: boolean;
   subflows: Array<{ id: string; name: string }>;
   settings_sections: WorkflowSettingsSectionId[];
+  omitted_fields: string[];
+};
+
+export type ProjectPackageWorkflow = {
+  id: string;
+  project_id?: string | null;
+  environment_id?: string | null;
+  name: string;
+  flow?: WorkflowGraph | null;
+  settings?: WorkflowSettings | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ProjectPackage = {
+  kind: "project_package";
+  version: 1;
+  project: {
+    name: string;
+    description?: string | null;
+  };
+  included_sections: string[];
+  omitted_fields: string[];
+  environments: ProjectEnvironment[];
+  subflows: Subflow[];
+  workflows: ProjectPackageWorkflow[];
+};
+
+export type ProjectPackagePreview = {
+  project_name: string;
+  workflows: Array<{ id: string; name: string }>;
+  subflows: Array<{ id: string; name: string }>;
+  environments: Array<{ id: string; name: string; is_default: boolean }>;
   omitted_fields: string[];
 };
 

@@ -16,7 +16,7 @@ import {
 } from "./tests/mocks/workflowScenarios";
 import { renderApp } from "./tests/utils/renderApp";
 import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
-import type { ProjectEnvironmentInput } from "./types/workflow";
+import type { ProjectEnvironmentInput, ProjectPackage } from "./types/workflow";
 
 function diagnosticsFixture() {
   return {
@@ -475,6 +475,113 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByDisplayValue(rotatedBrowserLaunch.fingerprint_seed))
       .toBeInTheDocument();
     expect(screen.getByText(rotatedBrowserLaunch.identity_id)).toBeInTheDocument();
+  });
+
+  test("exports project packages from settings and imports project packages from the projects header", async () => {
+    const sourceProject = {
+      id: "project-1",
+      name: "Owned Lab",
+      description: "Staging workflows",
+      created_at: "1",
+      updated_at: "1",
+    };
+    const importedProject = {
+      id: "project-imported",
+      name: "Owned Lab (imported)",
+      description: "Staging workflows",
+      created_at: "2",
+      updated_at: "2",
+    };
+    const projectPackage: ProjectPackage = {
+      kind: "project_package",
+      version: 1,
+      project: { name: "Owned Lab", description: "Staging workflows" },
+      included_sections: ["project", "environments", "subflows", "workflows"],
+      omitted_fields: ["environments.environment-1.browser_launch.proxy_password"],
+      environments: [],
+      subflows: [],
+      workflows: [{ id: "workflow-1", name: "Login flow", flow: null, settings: null }],
+    };
+    let projects = [sourceProject];
+
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_projects: () => projects,
+      list_project_environments: () => [
+        {
+          id: "environment-1",
+          project_id: sourceProject.id,
+          name: "Project saved session",
+          description: "",
+          is_default: true,
+          browser_launch: defaultWorkflowSettings({
+            workflowId: "environment-1",
+            workflowName: "Project saved session",
+            createdAt: "1",
+            updatedAt: "1",
+          }).browser_launch,
+          created_at: "1",
+          updated_at: "1",
+        },
+      ],
+      export_project_package: projectPackage,
+      save_project_package_file: "/tmp/owned-lab.project.json",
+      preview_project_package: {
+        project_name: "Owned Lab",
+        workflows: [{ id: "workflow-1", name: "Login flow" }],
+        subflows: [],
+        environments: [],
+        omitted_fields: ["environments.environment-1.browser_launch.proxy_password"],
+      },
+      import_project_package: () => {
+        projects = [sourceProject, importedProject];
+        return importedProject;
+      },
+    });
+
+    renderApp();
+
+    await openProjectTab("Settings");
+    await userEvent.click(await screen.findByRole("button", { name: "Export project" }));
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("export_project_package", {
+        projectId: "project-1",
+      });
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("save_project_package_file", {
+        package: projectPackage,
+      });
+    });
+    const projectSettings = await screen.findByRole("region", { name: "Project identity" });
+    expect(within(projectSettings).queryByText("Import project")).not.toBeInTheDocument();
+
+    const file = new File([JSON.stringify(projectPackage)], "owned-lab.project.json", {
+      type: "application/json",
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Workflows" }));
+    const projectsHeader = (await screen.findByRole("heading", {
+      name: "Project Workspace",
+    })).closest("header");
+    expect(projectsHeader).not.toBeNull();
+    await userEvent.upload(
+      within(projectsHeader as HTMLElement).getByLabelText("Project package file"),
+      file,
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Import Project" });
+    expect(within(dialog).getByText("Owned Lab")).toBeInTheDocument();
+    expect(within(dialog).getByText("Login flow")).toBeInTheDocument();
+    expect(within(dialog).getByText(/proxy_password/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Import" }));
+
+    await waitFor(() => {
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("preview_project_package", {
+        package: projectPackage,
+      });
+      expect(workflowCommandCallMock).toHaveBeenCalledWith("import_project_package", {
+        package: projectPackage,
+      });
+    });
+    expect(await screen.findByRole("button", { name: /Owned Lab \(imported\)/ }))
+      .toHaveAttribute("data-active", "true");
   });
 
   test("keeps project collections fixed in the detail panel while the sidebar filters projects", async () => {

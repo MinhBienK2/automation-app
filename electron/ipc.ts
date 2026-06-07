@@ -3,6 +3,9 @@ export const workflowIpcChannels = {
   createProject: "workflow:createProject",
   updateProject: "workflow:updateProject",
   duplicateProject: "workflow:duplicateProject",
+  exportProjectPackage: "workflow:exportProjectPackage",
+  previewProjectPackage: "workflow:previewProjectPackage",
+  importProjectPackage: "workflow:importProjectPackage",
   deleteProject: "workflow:deleteProject",
   listProjectEnvironments: "workflow:listProjectEnvironments",
   createProjectEnvironment: "workflow:createProjectEnvironment",
@@ -78,6 +81,7 @@ export const workflowIpcChannels = {
   saveRecordingDraft: "workflow:saveRecordingDraft",
   dryRunValidateConfig: "workflow:dryRunValidateConfig",
   saveWorkflowPackageFile: "workflow:saveWorkflowPackageFile",
+  saveProjectPackageFile: "workflow:saveProjectPackageFile",
 } as const;
 
 export type WorkflowIpcChannelName = keyof typeof workflowIpcChannels;

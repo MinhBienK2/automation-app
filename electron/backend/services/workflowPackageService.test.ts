@@ -82,6 +82,59 @@ describe("WorkflowPackageService", () => {
     expect(validateGraph).toHaveBeenCalled();
     expect(validateSettings).toHaveBeenCalledWith(prepared.candidateSettings);
   });
+
+  test("rejects packages that omit or include invalid referenced subflows", () => {
+    const service = createService({
+      validateGraph: (graph) =>
+        graph.nodes.length === 1
+          ? [{ level: "error", message: "Start-only graph cannot run" } as GraphValidationIssue]
+          : [],
+    });
+    const packageValue: WorkflowPackage = {
+      kind: "workflow_package",
+      version: 2,
+      workflow: { name: "Package with subflow" },
+      included_sections: ["flow", "subflows"],
+      omitted_fields: [],
+      flow: workflowGraphCallingSubflow("login-subflow"),
+      subflows: [],
+      settings: null,
+    };
+
+    expect(() =>
+      service.prepareImport({
+        packageValue,
+        options: { include_flow: true, settings_sections: [] },
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Workflow package is missing a referenced subflow",
+      field: "package.subflows",
+    }));
+
+    expect(() =>
+      service.prepareImport({
+        packageValue: {
+          ...packageValue,
+          subflows: [
+            {
+              id: "login-subflow",
+              project_id: "source-project",
+              name: "Login",
+              description: "",
+              tags: [],
+              graph: startOnlyGraph(),
+              created_at: "1",
+              updated_at: "1",
+            },
+          ],
+        },
+        options: { include_flow: true, settings_sections: [] },
+      }),
+    ).toThrow(expect.objectContaining({
+      message: "Referenced subflow has blocking validation errors",
+      field: "package.subflows",
+    }));
+  });
 });
 
 function createService(overrides: Partial<ConstructorParameters<typeof WorkflowPackageService>[0]> = {}) {
@@ -98,6 +151,61 @@ function workflowGraph(): WorkflowGraph {
   return {
     version: 2,
     nodes: [],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function workflowGraphCallingSubflow(subflowId: string): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+      {
+        id: "call-login",
+        node_type: "call_subflow",
+        label: "Call Login",
+        position: { x: 200, y: 0 },
+        config: { subflow_id: subflowId },
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: "start-call-login",
+        source_node_id: "start",
+        source_port: "out",
+        target_node_id: "call-login",
+        target_port: "in",
+      },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function startOnlyGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+    ],
     edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
   };

@@ -39,6 +39,7 @@ describe("ProjectsPage", () => {
         error=""
         onSelectProject={vi.fn()}
         onCreateProject={vi.fn()}
+        onImportProjectPackageFile={vi.fn()}
         onCollectionChange={vi.fn()}
       >
         <section className="app-screen workflow-list-screen" aria-label="Workflow Library">
@@ -74,5 +75,43 @@ describe("ProjectsPage", () => {
       .not.toBeInTheDocument();
     expect(within(projectList).getByRole("button", { name: /Archive Lab/ }))
       .toBeInTheDocument();
+  });
+
+  test("puts project import next to project creation in the workspace header", async () => {
+    const importProjectPackageFile = vi.fn();
+    const { container } = render(
+      <ProjectsPage
+        projects={[project]}
+        selectedProject={project}
+        activeCollection="workflows"
+        error=""
+        onSelectProject={vi.fn()}
+        onCreateProject={vi.fn()}
+        onImportProjectPackageFile={importProjectPackageFile}
+        onCollectionChange={vi.fn()}
+      >
+        <section className="app-screen workflow-list-screen" aria-label="Workflow Library">
+          <header className="app-header">
+            <h2>Workflows</h2>
+          </header>
+        </section>
+      </ProjectsPage>,
+    );
+
+    const projectsHeader = container.querySelector(".projects-screen > .app-header");
+    expect(projectsHeader).not.toBeNull();
+    expect(within(projectsHeader as HTMLElement).getByRole("button", {
+      name: "Create Project",
+    })).toBeInTheDocument();
+
+    const packageFile = new File(["{}"], "owned-lab.project.json", {
+      type: "application/json",
+    });
+    await userEvent.upload(
+      within(projectsHeader as HTMLElement).getByLabelText("Project package file"),
+      packageFile,
+    );
+
+    expect(importProjectPackageFile).toHaveBeenCalledWith(packageFile);
   });
 });

@@ -11,6 +11,8 @@ const ignoredWatchPath = (watchPath: string) => {
   return (
     normalized.includes("/.local/") ||
     normalized.endsWith("/.local") ||
+    normalized.includes("/.worktrees/") ||
+    normalized.endsWith("/.worktrees") ||
     normalized.includes("/test-results/") ||
     normalized.endsWith("/test-results") ||
     normalized.includes("/src-tauri/") ||
@@ -32,6 +34,14 @@ export default defineConfig(async () => ({
   test: {
     environment: "jsdom",
     setupFiles: "src/tests/setup.ts",
+    exclude: [
+      "**/.worktrees/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/dist-electron/**",
+      "**/release/**",
+      "**/test-results/**",
+    ],
   },
 
   clearScreen: false,

@@ -19,7 +19,11 @@
   blocked by graph/settings validation before a run row is created, the backend
   records one sanitized `launch_blocked` operational attention row for Overview.
   Manual Validate does not write this audit row.
-- The workflow list header exposes Import Workflow for JSON workflow packages. Import rejects files larger than 5 MB before reading JSON, previews valid packages, and always creates a new workflow on success; it never overwrites an existing workflow.
+- The workflow list header exposes Import Workflow for JSON workflow packages.
+  Import rejects files larger than 5 MB before reading JSON, previews valid
+  packages, and always creates a new workflow in the selected project on
+  success; it never overwrites an existing workflow or the selected project's
+  saved session.
 
 ## Project Create
 
@@ -40,11 +44,29 @@
   non-storage settings, remaps copied Call Subflow references to copied
   subflows, and gives copied browser sessions fresh identity/profile/fingerprint
   values so the new project does not reuse the source project's saved sessions.
+- Export project calls `exportProjectPackage` and then `saveProjectPackageFile`
+  to write a `.project.json` package through the native Save dialog. The
+  package includes project metadata, saved/private project sessions, subflows,
+  workflows, saved graphs, and Workflow Settings, with proxy secrets, proxy URL
+  credentials, local fingerprint font directories, and preflight fields
+  sanitized.
 - Delete project opens an in-app confirmation before calling `deleteProject`.
   The backend rejects deletion while any workflow in that project has an active
   run, active profile, or retained session, then deletes the project's
   workflows, subflows, and saved-session rows. The UI selects the next available
   project after deletion.
+
+## Project Import
+
+- Import project accepts a JSON project package from the Projects workspace
+  header next to Create Project, previews workflows, subflows, sessions, and
+  sanitized omitted fields, then calls `importProjectPackage`. Import validates
+  package graphs/settings first, transactionally creates `<project name>
+  (imported)`, recreates sessions, subflows, workflows, remaps Call Subflow ids
+  and workflow session ids, gives imported sessions fresh
+  identity/profile/fingerprint values, selects the new project, and switches to
+  Workflows. It does not import runs, evidence, schedules, app settings, or
+  browser profile storage.
 
 ## Open Detail
 
@@ -216,13 +238,18 @@
 
 - Import Workflow accepts a JSON workflow package file from the workflow list.
 - The UI calls `preview_workflow_package` before import and shows package workflow name, Flow availability, Settings sections, and sanitized omitted fields.
-- Import calls `import_workflow_package` with the selected Flow and Settings sections.
+- Import calls `import_workflow_package` with the selected Flow, Settings
+  sections, and selected project id.
 - Import validates selected Flow, referenced subflows, and Settings first, then
   transactionally creates a new workflow named `<package workflow name>
-  (imported)`, recreates referenced subflows in the target project, remaps Call
-  Subflow ids in the imported Flow, saves selected Flow to the new workflow id,
-  saves selected Settings after remapping `workflow_id`, refreshes the list,
-  and opens the imported workflow.
+  (imported)` in the target project, recreates referenced subflows in that
+  project, remaps Call Subflow ids in the imported Flow, saves selected Flow to
+  the new workflow id, saves selected Settings after remapping `workflow_id`,
+  refreshes the list, and opens the imported workflow.
+- Importing the Browser Launch settings section creates a private imported
+  workflow session for the new workflow before saving the sanitized package
+  Browser Launch values. Imports that omit Browser Launch use the target
+  project's saved session without mutating it.
 - Import does not overwrite or merge into an existing workflow.
 - Failed import validation or persistence rolls back without leaving a partial workflow.
 

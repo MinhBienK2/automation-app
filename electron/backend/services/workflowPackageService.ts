@@ -13,10 +13,14 @@ import type {
   WorkflowSummary,
   Subflow,
 } from "../../../src/types/workflow.js";
+import type { WorkflowGraphValidationOptions } from "../graph/validateGraph.js";
 
 type WorkflowPackageServiceDependencies = {
   migrateGraph: (graph: WorkflowGraph) => WorkflowGraph;
-  validateGraph: (graph: WorkflowGraph) => GraphValidationIssue[];
+  validateGraph: (
+    graph: WorkflowGraph,
+    options?: WorkflowGraphValidationOptions,
+  ) => GraphValidationIssue[];
   validateSettings: (settings: WorkflowSettings) => SettingsValidationIssue[];
   defaultSettings: (
     workflow: Pick<WorkflowSummary, "id" | "name" | "created_at" | "updated_at"> &
@@ -93,15 +97,60 @@ export class WorkflowPackageService {
     now?: Date;
   }) {
     validateWorkflowPackage(packageValue);
+    const subflows = validatePackageSubflows(
+      packageValue,
+      this.dependencies.migrateGraph,
+    );
+    const subflowById = new Map(subflows.map((subflow) => [subflow.id, subflow]));
     const flow = packageValue.flow
       ? this.dependencies.migrateGraph(packageValue.flow)
       : null;
+    for (const subflow of subflows) {
+      const subflowError = this.dependencies
+        .validateGraph(subflow.graph, { graphKind: "subflow" })
+        .find((issue) => issue.level === "error");
+      if (subflowError) {
+        throw commandError(
+          "Referenced subflow has blocking validation errors",
+          "package.subflows",
+        );
+      }
+    }
     if (options.include_flow && flow) {
-      const flowError = this.dependencies.validateGraph(flow).find(
-        (issue) => issue.level === "error" && !isImportableDraftFlowIssue(issue.message),
+      const missingSubflowId = callSubflowIds(flow).find(
+        (subflowId) => !subflowById.has(subflowId),
       );
+      if (missingSubflowId) {
+        throw commandError(
+          "Workflow package is missing a referenced subflow",
+          "package.subflows",
+        );
+      }
+      const flowError = this.dependencies
+        .validateGraph(flow, {
+          projectId: "__workflow_package__",
+          resolveSubflow(subflowId) {
+            const subflow = subflowById.get(subflowId);
+            return subflow
+              ? {
+                  id: subflow.id,
+                  project_id: "__workflow_package__",
+                  graph: subflow.graph,
+                }
+              : null;
+          },
+        })
+        .find(
+          (issue) =>
+            issue.level === "error" && !isImportableDraftFlowIssue(issue.message),
+        );
       if (flowError) {
-        throw commandError(flowError.message, "package.flow");
+        throw commandError(
+          flowError.message,
+          flowError.message === "Referenced subflow has blocking validation errors"
+            ? "package.subflows"
+            : "package.flow",
+        );
       }
     }
 
@@ -131,7 +180,7 @@ export class WorkflowPackageService {
     return {
       importedName,
       flow,
-      subflows: packageValue.subflows ?? [],
+      subflows,
       candidateSettings,
     };
   }
@@ -248,6 +297,65 @@ function validateWorkflowPackage(packageValue: WorkflowPackage) {
   if (!Array.isArray(packageValue.included_sections)) {
     throw commandError("Workflow package sections are required", "package.included_sections");
   }
+  if (packageValue.subflows != null && !Array.isArray(packageValue.subflows)) {
+    throw commandError("Workflow package subflows must be an array", "package.subflows");
+  }
+}
+
+function validatePackageSubflows(
+  packageValue: WorkflowPackage,
+  migrateGraph: (graph: WorkflowGraph) => WorkflowGraph,
+): Subflow[] {
+  const packageSubflows = packageValue.subflows ?? [];
+  const seenIds = new Set<string>();
+
+  return packageSubflows.map((subflow, index) => {
+    const record = objectRecord(subflow);
+    const id = typeof record.id === "string" ? record.id.trim() : "";
+    const name = typeof record.name === "string" ? record.name.trim() : "";
+    if (!id) {
+      throw commandError("Workflow package subflow id is required", `package.subflows.${index}.id`);
+    }
+    if (seenIds.has(id)) {
+      throw commandError("Workflow package subflow ids must be unique", "package.subflows");
+    }
+    seenIds.add(id);
+    if (!name) {
+      throw commandError("Workflow package subflow name is required", `package.subflows.${index}.name`);
+    }
+    if (!record.graph || typeof record.graph !== "object") {
+      throw commandError("Workflow package subflow graph is required", `package.subflows.${index}.graph`);
+    }
+    return {
+      id,
+      project_id: typeof record.project_id === "string" ? record.project_id : "",
+      name,
+      description: typeof record.description === "string" ? record.description : "",
+      tags: Array.isArray(record.tags)
+        ? record.tags.filter((tag): tag is string => typeof tag === "string")
+        : [],
+      graph: migrateGraph(record.graph as WorkflowGraph),
+      created_at: typeof record.created_at === "string" ? record.created_at : "",
+      updated_at: typeof record.updated_at === "string" ? record.updated_at : "",
+    };
+  });
+}
+
+function callSubflowIds(graph: WorkflowGraph): string[] {
+  return [
+    ...new Set(
+      graph.nodes
+        .filter((node) => node.node_type === "call_subflow")
+        .map((node) => objectRecord(node.config).subflow_id)
+        .filter((subflowId): subflowId is string =>
+          typeof subflowId === "string" && subflowId.trim().length > 0
+        ),
+    ),
+  ];
+}
+
+function objectRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? value as Record<string, unknown> : {};
 }
 
 function packageSettingsSections(

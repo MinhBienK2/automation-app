@@ -33,6 +33,12 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("updateProject", projectId, input),
   duplicateProject: (projectId) =>
     invokeWorkflow("duplicateProject", projectId),
+  exportProjectPackage: (projectId) =>
+    invokeWorkflow("exportProjectPackage", projectId),
+  previewProjectPackage: (packageValue) =>
+    invokeWorkflow("previewProjectPackage", packageValue),
+  importProjectPackage: (packageValue) =>
+    invokeWorkflow("importProjectPackage", packageValue),
   deleteProject: (projectId) => invokeWorkflow("deleteProject", projectId),
   listProjectEnvironments: (projectId) =>
     invokeWorkflow("listProjectEnvironments", projectId),
@@ -187,6 +193,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("dryRunValidateConfig", config),
   saveWorkflowPackageFile: (packageValue) =>
     invokeWorkflow("saveWorkflowPackageFile", packageValue),
+  saveProjectPackageFile: (packageValue) =>
+    invokeWorkflow("saveProjectPackageFile", packageValue),
 };
 
 contextBridge.exposeInMainWorld("workflowApi", workflowApi);

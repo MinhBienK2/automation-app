@@ -15,7 +15,11 @@ Preserve these unless the task explicitly changes them.
 - Workflow list row actions are icon-only controls with accessible labels for View Details, Run `<workflow name>`, Edit, Duplicate, Export, and Delete. Duplicate creates a separate copy named `Copy of <name>`, preserves the saved graph and non-storage copied settings without package-export sanitization, creates a fresh browser identity/profile/fingerprint, and disables Run from selected for the copy.
 - Workflow deletion uses an in-app confirmation dialog that asks whether to keep or delete the workflow's private browser profile data. Delete private browser profile data is checked by default, and keeping profile data requires unchecking it. Deleting profile data removes only unshared inactive profile directories. Backend deletion rejects while the workflow is actively running, while its persistent profile is used by an active run, or while a retained browser session still owns the workflow/profile.
 - Workflow list Run executes the saved graph and saved Workflow Settings without opening the detail page or saving detail-page drafts. List Run is disabled only for a workflow that already has an active run, row status and Stop are scoped to that workflow's run id, and list-started runs keep polling run snapshots until terminal status. Duplicate, Export, and Delete are disabled for the active workflow row until that run reaches a terminal state.
-- Workflow list exposes Import Workflow. Import rejects workflow package files larger than 5 MB before reading JSON, shows a preview, and always creates a new workflow on success; it never overwrites an existing workflow or leaves a partial workflow after failed validation.
+- Workflow list exposes Import Workflow. Import rejects workflow package files
+  larger than 5 MB before reading JSON, shows a preview, and always creates a
+  new workflow in the selected project on success; it never overwrites an
+  existing workflow, mutates the selected project's saved session, or leaves a
+  partial workflow after failed validation.
 - Browser recording never exposes captured password or secret-like text field values to the renderer. Top-level page navigations can become recorded `navigate` steps, but embedded frame navigations such as ad/user-sync iframes must not become workflow nodes. Text entry must preserve literal whitespace and clearing, contenteditable edits must capture visible editor text, and text-composition, edit-hotkey, deletion-key, or modifier-only keydown noise must not create workflow nodes or split one text entry into multiple Fill Field steps. Clipboard paste into non-sensitive targets records replayable Set Clipboard plus Paste steps and suppresses the duplicate input event caused by the paste; sensitive pasted values are redacted and excluded until reviewed. Generic clicks that only precede a checkbox/radio/select/upload control event must not create duplicate click nodes. A tab opened by a recorded click should replay as click plus tab switch; a tab created without a preceding click should replay as Open New Tab. Those generated input steps are excluded by default with a review warning until the operator supplies a safe literal or variable. Stopping a recorder drains buffered fallback events before review draft generation. Generated recording graphs preserve positive captured gaps between included steps as fixed edge delays and wrap long recordings into readable rows instead of one horizontal line. The workflow detail header does not expose Record Replacement. Saving a recording draft only honors reviewed labels, inclusion flags, supported captured value edits, and backend-held timing metadata against the backend-held draft steps; renderer-supplied action type, locator replacement, or timing replacement is ignored. Discarding a recording session and successfully saving a recording draft consume the backend in-memory recorder state instead of leaving reusable draft/session handles.
 - Schedules is a separate sidebar page for creating and auditing workflow schedules across workflows. A workflow can have multiple schedules.
 - Overview is the default Mission Control entry point. It shows backend-owned
@@ -31,14 +35,23 @@ Preserve these unless the task explicitly changes them.
   to Workflows, and the project identity controls live in the
   selected project's Settings collection. The auto-created default project is
   named `Main`. Creating a project automatically creates a workflow named
-  `Main` inside that project using its project saved session. Project Settings shows a `Project identity` heading, a
+  `Main` inside that project using its project saved session. The Projects
+  workspace header exposes Import project next to Create Project because import
+  creates a separate project rather than mutating the selected one. Project
+  Settings shows a `Project identity` heading, a
   `Project details` group with editable Project name, Save project name,
   Duplicate project, and Delete project, plus a `Browser fingerprint` group,
   editable Fingerprint seed, read-only Identity, Save fingerprint seed, and
   Regenerate identity without exposing a full Browser Launch editor. Duplicate
   project creates and selects an independent project copy with copied workflows
   and subflows, remapped Call Subflow references, and fresh browser
-  identities/profiles. Delete project opens an in-app confirmation warning that
+  identities/profiles. Project Settings exposes Export project for the selected
+  project. Export writes a `.project.json` package through the native Save
+  dialog with sensitive/local Browser Launch fields sanitized. Import previews
+  the package, creates and selects a new project, remaps workflow/subflow/session
+  ids, and gives imported sessions fresh
+  identities/profiles without importing runs, evidence, schedules, app settings,
+  or browser profile storage. Delete project opens an in-app confirmation warning that
   workflows, subflows, and saved browser sessions inside the project will be
   deleted; Cancel keeps the project, and confirmation removes the selected
   project after backend active-run/retained-session guards pass. Regenerate
@@ -68,7 +81,10 @@ Preserve these unless the task explicitly changes them.
   Export sanitizes machine-local or sensitive settings fields by default,
   including proxy passwords, credentials embedded in proxy URLs, and local
   fingerprint font directories. Package import recreates referenced subflows
-  and remaps Call Subflow ids before saving the imported workflow graph.
+  in the selected project and remaps Call Subflow ids before saving the
+  imported workflow graph. Importing Browser Launch creates a private imported
+  session for the new workflow instead of rewriting the selected project's
+  saved session.
 - Workflow detail collapses the app sidebar into the icon rail when opened and
   exposes a compact header command bar. Settings, Validate, and Save are
   accessible icon controls with tooltips; Settings opens Workflow Settings at

@@ -97,6 +97,11 @@ Users can:
 - Create, select, rename, duplicate, and delete projects. Newly created
   projects automatically contain a project saved session and a draft workflow
   named `Main`.
+- Export and import project packages containing project metadata, saved-session
+  launch posture, private workflow sessions, workflows, saved graphs/settings,
+  and subflows. Import creates a new project with fresh browser
+  identities/profiles and does not import runs, evidence, schedules, app
+  settings, or browser profile storage.
 - Create, rename, open, and delete workflows inside a selected project.
 - Create workflows in the default `Main` project by reusing the project saved
   session, or by creating a new private workflow session.
@@ -129,7 +134,8 @@ Users can:
 - Configure Workflow Settings from the workflow list Edit action or the workflow detail Settings action.
 - Export workflow packages containing Flow, selected Workflow Settings
   sections, and referenced subflows.
-- Import workflow packages as new workflows without overwriting existing workflows.
+- Import workflow packages as new workflows in the selected project without
+  overwriting existing workflows or the selected project's saved session.
 - Duplicate workflows locally while preserving the saved graph and non-storage local settings, while creating a fresh browser identity/profile/fingerprint so the copy starts with a new session.
 - Configure owned workflow pacing through explicit waits, retry blocks, and run policy controls; these do not bypass CAPTCHA, anti-bot, spam, or third-party account controls.
 - Create, enable, disable, edit, delete, and audit workflow schedules from the Schedules page. Schedules can be one-time, interval-based, or friendly calendar presets and can coexist per workflow.
