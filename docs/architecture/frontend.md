@@ -21,17 +21,18 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   selected-project state, the project-list Workflows/Subflows/Settings
   collection menu, and project creation.
 - `src/features/projects/components/ProjectEnvironmentSettings.tsx`: selected
-  project Project Environment list/create/edit surface, including Browser
-  Launch settings reuse.
+  project saved-session summary surface showing the default fingerprint seed,
+  identity id, and persistent browser profile reuse state without exposing a
+  duplicate full Browser Launch editor.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, environment readiness diagnostics, guarded maintenance commands,
   and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
 - `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen
-  with environment-aware create flow, selected-environment display, icon-only
-  row actions, direct Run for saved workflow state, and the Record Workflow
-  entry point.
+  with browser-session create choices, selected session/environment display,
+  icon-only row actions, direct Run for saved workflow state, and the Record
+  Workflow entry point.
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
 - `src/features/workflows/pages/SubflowListPage.tsx`: subflow list,
   create, open, duplicate, delete, and usage-count presentation.
@@ -88,8 +89,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Projects is the sidebar entry for project-scoped authoring inventory. The
   Projects workspace owns selected-project state and routes its Workflows,
   Subflows, and Settings collection menu to the existing workflow list, subflow
-  list, and Project Environment settings surfaces. Its project list sidebar and
-  selected collection content are independent scroll regions inside the
+  list, and project saved-session settings surface. Its project list sidebar
+  and selected collection content are independent scroll regions inside the
   Projects workspace viewport.
 - The app shell no longer renders a top command/search header or Alerts
   shortcut. Cross-workspace movement stays in the sidebar and explicit in-page
@@ -102,8 +103,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   Identity Lab as a read-only historical target carrying workflow, run, and
   evidence context.
 - Workflow list create, direct Run, delete, duplicate, and Workflow Package
-  import/export interaction. Create chooses project default, existing, or
-  isolated environment options. List Run calls the existing `runWorkflow`
+  import/export interaction. Create chooses either the project saved session or
+  a new private workflow session. List Run calls the existing `runWorkflow`
   command against saved workflow state and leaves the user on the list while
   run snapshot polling continues. Active row status, row Run disabling, and row
   Stop are scoped to that workflow's run id. Delete opens an in-app
@@ -158,8 +159,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   autosave, diagnostics refresh, CloakBrowser install/check, and orphaned
   inactive profile cleanup command state. App Settings displays environment
   readiness from sanitized diagnostics and does not expose raw
-  binary/cache/profile/font paths. Project Environment list/create/edit state
-  belongs to the selected project's Settings collection.
+  binary/cache/profile/font paths. Project saved-session summary state belongs
+  to the selected project's Settings collection.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
   state, and Overview/Runs-to-Evidence handoff state.

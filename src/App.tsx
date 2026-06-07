@@ -19,7 +19,6 @@ import {
   closeIdentityRetainedSession,
   cleanupOrphanedBrowserProfiles,
   createProject as createProjectCommand,
-  createProjectEnvironment as createProjectEnvironmentCommand,
   createSubflow as createSubflowCommand,
   createWorkflow as createWorkflowCommand,
   createSchedule,
@@ -657,22 +656,6 @@ function App() {
       return [];
     } finally {
       setSubflowsLoading(false);
-    }
-  }
-
-  async function createProjectEnvironment(input: { name: string; description?: string | null }) {
-    setAppError("");
-    const projectId = await ensureProjectId();
-    if (!projectId) {
-      setAppError("Project not found");
-      return;
-    }
-    try {
-      await createProjectEnvironmentCommand(projectId, input);
-      const environments = await listProjectEnvironments(projectId);
-      setProjectEnvironments(environments);
-    } catch (error) {
-      setAppError(commandMessage(error));
     }
   }
 
@@ -2208,7 +2191,6 @@ function App() {
             <ProjectEnvironmentSettings
               projectEnvironments={selectedProjectEnvironments}
               error={appError}
-              onCreateProjectEnvironment={createProjectEnvironment}
               onUpdateProjectEnvironment={updateProjectEnvironment}
             />
           ) : (
@@ -2217,7 +2199,6 @@ function App() {
               workflowDialogMode={workflowDialogMode}
               workflowNameDraft={workflowNameDraft}
               workflowEnvironmentDraft={workflowEnvironmentDraft}
-              projectEnvironments={selectedProjectEnvironments}
               appError={appError}
               runState={runState}
               runSnapshots={runSnapshots}

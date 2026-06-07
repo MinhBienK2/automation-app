@@ -7,13 +7,15 @@ Mission Control is an Electron desktop app for building and running browser auto
 ## Core Concepts
 
 - A workflow is a named automation definition whose product authoring source is the saved visual graph.
-- A project groups workflows, reusable subflows, and reusable browser launch
-  environments. The current MVP creates and uses a default project for existing
+- A project groups workflows, reusable subflows, and one project saved browser
+  session. The current MVP creates and uses a default project for existing
   local data.
-- A Project Environment is a named reusable Browser Launch configuration inside
-  one project. Workflows select one environment for launch/session identity;
-  Workflow Settings still owns per-workflow run policy, graph defaults, and
-  initial variables.
+- A project saved session is the project-owned default fingerprint identity and
+  persistent browser profile. It stores the stable fingerprint seed plus the
+  profile directory that preserves cookies, localStorage, sessionStorage, and
+  login state across browser restarts. The persisted table/DTO is still named
+  `project_environments` for compatibility, but the product UI exposes it as a
+  single saved session instead of a full environment list.
 - A subflow is a reusable non-runnable graph fragment inside one project.
   Workflows call subflows through `call_subflow` graph nodes; subflows run in
   the caller's browser context and do not create independent runs or browser
@@ -57,12 +59,13 @@ Mission Control is an Electron desktop app for building and running browser auto
 - Merge graph nodes explicitly let multiple branch paths continue into one shared path without adding parallel or wait-for-all semantics. Router graph nodes evaluate stable-id cases in priority order and run the first matching branch before continuing through `done`.
 - Graph autosave is an app-level editing preference controlled from App Settings.
 - Workflow Settings is the per-workflow configuration aggregate for run policy,
-  graph authoring defaults, selected-environment browser launch overlay, and
-  initial environment variables.
-- The Browser Launch section is identity-oriented. New Project Environments
-  automatically get a browser identity with a stable `identity_id`, editable
-  display name, stable `profile_dir`, fixed CloakBrowser fingerprint seed, and
-  a stored persona selected from `src/lib/personaCatalog.ts`. The persona binds
+  graph authoring defaults, browser launch/session selection, and initial
+  environment variables.
+- The Browser Launch section is identity-oriented. New project saved sessions
+  and private workflow sessions automatically get a browser identity with a
+  stable `identity_id`, editable display name, stable `profile_dir`, fixed
+  CloakBrowser fingerprint seed, and a stored persona selected from
+  `src/lib/personaCatalog.ts`. The persona binds
   the OS/browser bucket, viewport/window dimensions, timezone/locale metadata,
   proxy/geo policy, WebRTC mode, font bundle metadata, and behavior timing
   profile so the identity is explainable and less clustered than one fixed
@@ -70,7 +73,7 @@ Mission Control is an Electron desktop app for building and running browser auto
   not rotate the fingerprint identity. The section also owns proxy
   server/credentials/bypass, timezone/locale/GeoIP, supported WebRTC IP policy
   values, the humanize toggle and `default`/`careful` preset, and
-  headed/headless policy. New project environments enable GeoIP by default so
+  headed/headless policy. New project saved sessions enable GeoIP by default so
   blank timezone/locale fields are resolved from the current public or proxy
   exit IP; blank legacy location settings normalize back to GeoIP, while
   operators who need GeoIP off should set explicit timezone and locale.
@@ -88,10 +91,10 @@ Users can:
 
 - Create and select projects.
 - Create, rename, open, and delete workflows inside a selected project.
-- Create workflows in the default project with the project default environment,
-  an existing project environment, or a new isolated environment.
-- Create and inspect Project Environments from the selected project's Settings
-  collection.
+- Create workflows in the default project by reusing the project saved session,
+  or by creating a new private workflow session.
+- Inspect the selected project's saved session from the selected project's
+  Settings collection.
 - Create workflows with a `Start -> New node` draft graph. `New node` is an unconfigured action draft that can be connected and saved before an action type is chosen.
 - Turn graph autosave on or off from App Settings.
 - Run a full workflow.

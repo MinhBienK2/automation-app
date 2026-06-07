@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Persistence stores projects, project environments, workflows, reusable subflows,
+Persistence stores projects, project saved-session rows (in the compatibility
+`project_environments` table), workflows, reusable subflows,
 versioned workflow graph authoring data, per-workflow settings, schedules,
 schedule events, runs, run steps, and operational attention events in SQLite.
 Electron/Node now owns the production persistence layer.
@@ -23,9 +24,9 @@ Electron/Node now owns the production persistence layer.
   document-shaped `workflows`, reusable `subflows`, queryable `runs` and
   `run_steps`, `workflow_schedules`, `workflow_schedule_events`, and
   `operational_attention_events`.
-- A default project and default project environment are created for existing
+- A default project and default project saved session are created for existing
   local data. Workflows store `project_id` and selected `environment_id`;
-  subflows and project environments store `project_id`.
+  subflows and compatibility project-environment/session rows store `project_id`.
 - `runs.source` stores durable run provenance as `manual` or `schedule`.
   Existing local rows are migrated by marking rows referenced by started
   schedule events as `schedule`; all other legacy rows become `manual`.
@@ -46,8 +47,8 @@ Electron/Node now owns the production persistence layer.
 - Workflow graph authoring data is stored in `workflows.graph_json`.
 - Workflow Settings are stored in `workflows.settings_json`.
 - Subflow graph authoring data is stored in `subflows.graph_json`.
-- Project Environment Browser Launch settings are stored in
-  `project_environments.browser_launch_json`.
+- Project saved-session and private workflow-session Browser Launch settings
+  are stored in `project_environments.browser_launch_json`.
 - Workflows without saved settings return lazy defaults based on workflow metadata.
 - Saving Workflow Settings touches the parent workflow `updated_at`; saving General also updates the workflow name used by summaries.
 - Saving graph JSON touches the parent workflow `updated_at`.
@@ -89,7 +90,8 @@ Electron/Node now owns the production persistence layer.
 - Serialization/deserialization of stored action config JSON.
 - Serialization/deserialization of stored workflow graph JSON.
 - Persistence of Workflow Settings rows.
-- Persistence of project rows, project environment rows, and subflow rows.
+- Persistence of project rows, project saved-session rows, compatibility
+  project-environment rows, and subflow rows.
 - Persistence of workflow schedule rows and schedule event rows.
 - Persistence of operational attention rows and bounded operations read queries.
 - Persistence of durable run source and bounded evidence read queries.

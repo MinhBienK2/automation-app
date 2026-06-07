@@ -112,11 +112,14 @@ string map.
 - `saveRecordingDraft`
 - `dryRunValidateConfig`
 
-Project commands expose default-project and project-environment management to
-the renderer. `createWorkflow(name, options?)` accepts optional project and
-environment selection; omitted options use the legacy isolated-default path for
-compatibility. Subflow commands expose project-scoped reusable graphs, usage
-queries, guarded deletion, and graph save/load.
+Project commands expose default-project and compatibility project-session
+management to the renderer. `createWorkflow(name, options?)` accepts optional
+project and session/environment selection; omitted options use the project saved
+session by default. The renderer's create dialog exposes only reuse project
+saved session or create new workflow session, while older `existing`
+environment selections remain accepted at the command boundary for compatibility.
+Subflow commands expose project-scoped reusable graphs, usage queries, guarded
+deletion, and graph save/load.
 
 `deleteWorkflow` accepts an optional `{ deleteBrowserProfile?: boolean }`
 payload. The default is to keep browser profile data; when true, the backend
@@ -133,8 +136,8 @@ profile is active or a retained session still owns the profile.
 
 `runWorkflow` and `runWorkflowFromNode` return a `WorkflowRunSnapshot` with the
 new `run_id`, workflow metadata, source, start time, and nested run state.
-Both commands resolve the workflow's selected Project Environment before
-browser launch or retained-session checks.
+Both commands resolve the workflow's selected project saved session or private
+workflow session before browser launch or retained-session checks.
 `stopRun` accepts an optional run id and returns the stopped snapshot; omitting
 the run id is valid only when exactly one workflow run is active. `listRunStates`
 returns the current app-session run snapshots for multi-run monitoring.

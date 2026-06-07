@@ -481,6 +481,23 @@
   max-width: 1180px;
 }
 
+.settings-project-environments-panel .field strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.project-session-code {
+  font-family:
+    "Source Code Pro",
+    "Office Code Pro",
+    Menlo,
+    Consolas,
+    monospace;
+}
+
 .settings-environment-workspace {
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);

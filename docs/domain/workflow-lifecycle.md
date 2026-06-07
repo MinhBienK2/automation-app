@@ -5,13 +5,13 @@
 - UI calls `create_workflow` through `src/lib/workflowApi.ts`.
 - Electron backend commands validate a non-blank workflow name before persistence.
 - Repository trims and stores the workflow with timestamps, associates it with
-  the default project, selects a Project Environment according to the create
-  options, creates a `Start -> New node` draft graph, and persists default
-  Workflow Settings over the selected environment. `New node` is an
-  unconfigured action node with `config: null`.
-- The workflow list Create dialog can use the project default environment,
-  create an isolated environment for the new workflow, or attach an existing
-  non-default project environment.
+  the default project, selects either the project saved session or a new private
+  workflow session according to the create options, creates a `Start -> New
+  node` draft graph, and persists default Workflow Settings over the selected
+  session. `New node` is an unconfigured action node with `config: null`.
+- The workflow list Create dialog can reuse the project saved session or create
+  a new workflow session. Omitted backend create options also use the project
+  saved session by default.
 - UI refreshes list and opens the created workflow.
 - The workflow list exposes icon-only row actions for view, run, edit settings, duplicate, export, and delete. List Run calls `run_workflow` for the saved workflow without opening the detail page or saving any visible detail-page draft. While a workflow has an active run, the row disables Run, Duplicate, Export, and Delete and exposes Stop for the active run id. Duplicate calls the graph-first `duplicate_workflow` command, which creates `Copy of <name>`, copies the saved graph JSON, copies non-storage Workflow Settings without package-export sanitization, creates a fresh backend-generated browser identity/profile/fingerprint for the copy, disables Run from selected, and refreshes the list.
 - If a manual full-run launch from Graph Builder or the workflow list is
@@ -96,9 +96,9 @@
 
 - `run_workflow` loads the saved graph, validates and compiles it, then sends generated action steps to the Electron runner.
 - The UI saves the visible graph and dirty Workflow Settings sections before invoking `run_workflow`; if either save fails, execution does not start.
-- `run_workflow` loads and validates saved Workflow Settings, overlays the
-  workflow's selected Project Environment Browser Launch settings before launch
-  including profile directory, fixed fingerprint seed, fingerprint fonts
+- `run_workflow` loads and validates saved Workflow Settings, resolves the
+  workflow's selected project saved session or private workflow session before
+  launch including profile directory, fixed fingerprint seed, fingerprint fonts
   directory, proxy, explicit or detected local timezone/locale, supported
   WebRTC policy values, humanize toggle/preset, and headless mode, prepends
   Environment initial variables before the first graph step, compiles edge

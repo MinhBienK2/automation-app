@@ -146,7 +146,7 @@ function defaultProjectEnvironments() {
     {
       id: "environment-1",
       project_id: "project-1",
-      name: "Project Default Environment",
+      name: "Project saved session",
       description: "",
       is_default: true,
       browser_launch: null,

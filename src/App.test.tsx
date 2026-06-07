@@ -98,7 +98,7 @@ describe("App settings and graph autosave", () => {
     await userEvent.click(await screen.findByRole("button", { name: "App Settings" }));
 
     expect(await screen.findByRole("heading", { name: "App Settings" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Project environments" }))
+    expect(screen.queryByRole("heading", { name: "Project saved session" }))
       .not.toBeInTheDocument();
     const autosaveToggle = screen.getByRole("switch", {
       name: "Autosave graph changes",
@@ -117,7 +117,7 @@ describe("App settings and graph autosave", () => {
     ).toHaveAttribute("aria-checked", "false");
   });
 
-  test("shows project environments in the project settings tab and creates one", async () => {
+  test("shows the project saved session in the project settings tab", async () => {
     const project = {
       id: "project-1",
       name: "Default Project",
@@ -125,13 +125,19 @@ describe("App settings and graph autosave", () => {
       created_at: "1",
       updated_at: "1",
     };
+    const browserLaunch = defaultWorkflowSettings({
+      workflowId: "environment-default",
+      workflowName: "Project saved session",
+      createdAt: "1",
+      updatedAt: "1",
+    }).browser_launch;
     const defaultEnvironment = {
       id: "environment-default",
       project_id: project.id,
-      name: "Project Default Environment",
-      description: "Default browser posture",
+      name: "Project saved session",
+      description: "Default saved browser session",
       is_default: true,
-      browser_launch: null,
+      browser_launch: browserLaunch,
       created_at: "1",
       updated_at: "1",
     };
@@ -139,38 +145,21 @@ describe("App settings and graph autosave", () => {
       ...listWorkflowScenario([workflow]),
       list_projects: [project],
       list_project_environments: [defaultEnvironment],
-      create_project_environment: {
-        ...defaultEnvironment,
-        id: "environment-staging",
-        name: "Staging Chrome",
-        description: "",
-        is_default: false,
-      },
     });
 
     renderApp();
 
     await openProjectTab("Settings");
 
-    expect(await screen.findByRole("heading", { name: "Project environments" }))
+    expect(await screen.findByRole("heading", { name: "Project saved session" }))
       .toBeInTheDocument();
-    expect(screen.getAllByText("Project Default Environment").length).toBeGreaterThan(0);
-    expect(screen.getByText("Default")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Create Environment" }));
-    const dialog = await screen.findByRole("dialog", { name: "Create Environment" });
-    await userEvent.type(within(dialog).getByLabelText("Environment name"), "Staging Chrome");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
-
-    await waitFor(() => {
-      expect(workflowBridgeMock.createProjectEnvironment).toHaveBeenCalledWith(
-        project.id,
-        {
-          name: "Staging Chrome",
-          description: null,
-        },
-      );
-    });
+    expect(screen.getByText(browserLaunch.fingerprint_seed)).toBeInTheDocument();
+    expect(screen.getByText(browserLaunch.identity_id)).toBeInTheDocument();
+    expect(screen.getByText("Persistent browser profile")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create Environment" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Headless browser" }))
+      .not.toBeInTheDocument();
   });
 
   test("renders project collections in the project list sidebar instead of the detail header", async () => {
@@ -193,7 +182,7 @@ describe("App settings and graph autosave", () => {
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
   });
 
-  test("edits Project Environment browser launch posture from the project settings tab", async () => {
+  test("marks the project saved session as default from the project settings tab", async () => {
     const project = {
       id: "project-1",
       name: "Default Project",
@@ -203,20 +192,17 @@ describe("App settings and graph autosave", () => {
     };
     const browserLaunch = defaultWorkflowSettings({
       workflowId: "environment-staging",
-      workflowName: "Staging Chrome",
+      workflowName: "Project saved session",
       createdAt: "1",
       updatedAt: "1",
     }).browser_launch;
     const stagingEnvironment = {
       id: "environment-staging",
       project_id: project.id,
-      name: "Staging Chrome",
-      description: "Shared staging posture",
+      name: "Project saved session",
+      description: "Shared saved browser session",
       is_default: false,
-      browser_launch: {
-        ...browserLaunch,
-        headless: false,
-      },
+      browser_launch: browserLaunch,
       created_at: "1",
       updated_at: "1",
     };
@@ -237,20 +223,14 @@ describe("App settings and graph autosave", () => {
 
     await openProjectTab("Settings");
     await userEvent.click(await screen.findByRole("button", {
-      name: "Open Staging Chrome environment",
+      name: "Make project saved session default",
     }));
-    await userEvent.click(screen.getByRole("switch", { name: "Headless browser" }));
-    await userEvent.click(screen.getByRole("button", { name: "Save Environment" }));
 
     await waitFor(() => {
       expect(workflowBridgeMock.updateProjectEnvironment).toHaveBeenCalledWith(
         "environment-staging",
         expect.objectContaining({
-          name: "Staging Chrome",
-          description: "Shared staging posture",
-          browser_launch: expect.objectContaining({
-            headless: true,
-          }),
+          is_default: true,
         }),
       );
     });

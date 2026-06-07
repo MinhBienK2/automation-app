@@ -79,7 +79,7 @@ describe("Workflow list integration", () => {
       {
         id: "environment-default",
         project_id: project.id,
-        name: "Project Default Environment",
+        name: "Project saved session",
         description: "",
         is_default: true,
         browser_launch: null,
@@ -118,12 +118,12 @@ describe("Workflow list integration", () => {
     const dialog = await screen.findByRole("dialog", { name: "Create Workflow" });
 
     await userEvent.type(within(dialog).getByLabelText("New workflow name"), "Login flow");
-    expect(within(dialog).getByText("Project default environment")).toBeInTheDocument();
-    expect(within(dialog).getByText("Create isolated environment")).toBeInTheDocument();
-    expect(within(dialog).getByText("Existing: Staging Chrome")).toBeInTheDocument();
+    expect(within(dialog).getByText("Use project saved session")).toBeInTheDocument();
+    expect(within(dialog).getByText("Create new workflow session")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Existing: Staging Chrome")).not.toBeInTheDocument();
     await userEvent.selectOptions(
-      within(dialog).getByLabelText("Workflow environment"),
-      "existing:environment-staging",
+      within(dialog).getByLabelText("Browser session"),
+      "isolated",
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
@@ -133,8 +133,7 @@ describe("Workflow list integration", () => {
         {
           project_id: project.id,
           environment: {
-            mode: "existing",
-            environment_id: "environment-staging",
+            mode: "isolated",
           },
         },
       );

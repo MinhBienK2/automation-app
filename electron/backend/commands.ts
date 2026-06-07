@@ -238,9 +238,9 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const existing = repository.getDefaultProjectEnvironment(project.id);
     if (existing) return existing;
     return repository.createProjectEnvironment(project.id, {
-      name: "Project Default Environment",
-      description: "Default project-owned browser identity and launch posture",
-      browser_launch: defaultEnvironmentBrowserLaunch("Project Default Environment"),
+      name: "Project saved session",
+      description: "Default project-owned fingerprint and persistent browser profile",
+      browser_launch: defaultEnvironmentBrowserLaunch("Project saved session"),
       is_default: true,
     });
   }
@@ -835,7 +835,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     const environment = resolveWorkflowCreationEnvironment({
       project,
       workflowName: normalized,
-      selection: options.environment ?? { mode: "isolated" },
+      selection: options.environment ?? { mode: "project_default" },
       defaultBrowserLaunch: defaultSettings.browser_launch,
     });
     repository.assignWorkflowProjectEnvironment(workflow.id, project.id, environment.id);
@@ -1252,10 +1252,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     duplicateWorkflow(workflowId: string, name: string): WorkflowDetail {
-      requireWorkflow(workflowId);
+      const sourceWorkflow = requireWorkflow(workflowId);
       context.database.exec("BEGIN IMMEDIATE");
       try {
-        const created = createWorkflow(name);
+        const created = createWorkflow(name, {
+          project_id: sourceWorkflow.project_id,
+          environment: { mode: "isolated" },
+        });
         const graph = repository.getWorkflowGraph(workflowId);
         if (graph) repository.saveWorkflowGraph(created.id, graph);
         const settings = repository.getWorkflowSettings(workflowId);

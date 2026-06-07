@@ -26,8 +26,8 @@
   steps share the caller's run id, browser context, output store, evidence path,
   domain policy, cancellation, and terminal browser retention. They do not
   launch a new browser, create a nested run row, or override the caller's
-  Project Environment. Nested Call Subflow nodes inside subflows are rejected in
-  the MVP.
+  saved/private browser session. Nested Call Subflow nodes inside subflows are
+  rejected in the MVP.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
@@ -47,14 +47,15 @@
   validation happen before browser launch.
 - Environment initial variables from Workflow Settings compile into setup
   actions before graph actions. Browser Launch settings are resolved from the
-  selected Project Environment before the runner launches the browser.
+  selected project saved session or private workflow session before the runner
+  launches the browser.
 - Graph settings affect authoring only; the runner executes the edge delays already saved on the graph.
 - Domain allowlist graph nodes are promoted into a run-scope `domain_policy`. The runner enforces that policy after template rendering and before `navigate` or `open_new_tab` can call the browser navigation API. Runtime `domain_allowlist` nodes remain available as in-flow assertions.
 - Run Policy `max_workflow_duration_ms` starts a run-level timer in the background service. When it expires, the run is canceled through `RunnerCancellation` and finishes as `failed` with a clear workflow timeout reason.
 - Run Policy `browser_retention` is the default terminal browser policy. Terminal graph nodes that explicitly request close still close the session; otherwise `retain` keeps the session for inspection and `close` closes it after outputs are captured.
 - Run Policy `execute_js_enabled` defaults to enabled. When disabled, `execute_js` fails before script evaluation with a clear Run Policy error so lower-risk profiles can reject direct DOM scripting while keeping the action available for authorized workflows.
 - `run_workflow_from_node` requires Run Policy `run_from_selected_enabled`,
-  selected-environment Browser Launch `persistent_profile`, Run Policy browser
+  selected-session Browser Launch `persistent_profile`, Run Policy browser
   retention `retain`, and a retained session owned by the same workflow/profile
   directory. Temporary retained sessions are not eligible.
 - `set_variable` writes one or more named variables into the browser output store. Values are rendered as templates first, then parsed as text, JSON, number, or boolean according to each row's `value_type`. Object values are flattened into dotted variable names and array values remain arrays.
@@ -113,13 +114,14 @@
   guarded command. This releases only the retained in-memory browser context;
   it does not remove the persistent profile directory, saved identity settings,
   cookies/login state, evidence files, or historical run rows.
-- The selected Project Environment Browser Launch resolves the browser identity
-  before the browser starts. `BrowserSessionManager` maps persistent versus
+- The selected project saved session or private workflow session resolves the
+  browser identity before the browser starts. `BrowserSessionManager` maps persistent versus
   temporary storage, stable profile directory, fingerprint seed, fingerprint
   fonts directory, proxy server/bypass/credentials, explicit timezone/locale or
   local machine timezone/locale, GeoIP, supported WebRTC policy values,
   humanize toggle/preset, and headless mode into CloakBrowser launch options.
-  New project environments enable GeoIP by default, and blank legacy location
+  New project saved sessions and private workflow sessions enable GeoIP by
+  default, and blank legacy location
   settings normalize back to GeoIP, so CloakBrowser resolves blank
   timezone/locale fields from the current public or proxy exit IP. Running with
   GeoIP off requires explicit timezone and locale values. It also applies the

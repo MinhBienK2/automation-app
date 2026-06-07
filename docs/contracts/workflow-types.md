@@ -17,9 +17,11 @@
 Frontend and backend must agree on:
 
 - `Project`: `id`, `name`, optional description, default flag, timestamps.
-- `ProjectEnvironment`: project-scoped reusable Browser Launch settings with
-  `id`, `project_id`, `name`, optional description, `is_default`,
-  `browser_launch`, and timestamps.
+- `ProjectEnvironment`: compatibility DTO for project saved sessions and
+  private workflow sessions with `id`, `project_id`, `name`, optional
+  description, `is_default`, `browser_launch`, and timestamps. The renderer
+  exposes the default row as a single project saved session rather than a full
+  Project Environment editor.
 - `WorkflowSummary`: `id`, `project_id`, `environment_id`, optional
   `environment_name`, `name`, `step_count`, `created_at`, `updated_at`.
 - `Workflow`: `id`, `project_id`, `environment_id`, `name`, `created_at`,
@@ -102,9 +104,9 @@ Frontend and backend must agree on:
 ## Workflow Settings Shape
 
 Workflow Settings are persisted separately from graph JSON. Browser Launch
-inside Workflow Settings is the saved selected-environment overlay returned to
+inside Workflow Settings is the saved selected-session overlay returned to
 legacy callers; workflow execution resolves Browser Launch from the workflow's
-selected Project Environment:
+selected project saved session or private workflow session:
 
 ```text
 {

@@ -73,20 +73,22 @@ Node/Electron backend.
   diagnostics, rotation history, and retained-session close guards stay in the
   backend.
 - Workflow graph load, save, validate, compile, and run command logic.
-- Project, Project Environment, and Subflow CRUD command logic. Environment
-  Browser Launch settings are backend-owned, and subflow delete is guarded by
-  workflow usage.
+- Project, compatibility Project Environment/session, and Subflow CRUD command
+  logic. Browser Launch settings for project saved sessions and private
+  workflow sessions are backend-owned, and subflow delete is guarded by workflow
+  usage. The renderer exposes a single project saved-session summary instead of
+  a full Project Environment list/create/editor.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
 - Workflow-to-workflow nesting and subflow-to-subflow nesting are not part of
   the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the
-  saved workflow graph with saved Workflow Settings plus the selected Project
-  Environment Browser Launch settings as the run baseline. The UI saves the
-  current graph and dirty settings sections before invoking it. Call Subflow
-  nodes resolve same-project subflows and compile them into the caller's run
-  plan.
+  saved workflow graph with saved Workflow Settings plus the selected project
+  saved session or private workflow-session Browser Launch settings as the run
+  baseline. The UI saves the current graph and dirty settings sections before
+  invoking it. Call Subflow nodes resolve same-project subflows and compile
+  them into the caller's run plan.
 - Manual full-run launch attempts blocked by graph/settings validation before a
   run row exists write one sanitized `launch_blocked` operational attention
   row. Manual validation alone does not write attention.

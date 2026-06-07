@@ -1,24 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "../../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../../components/ui/dialog";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import { SettingsFieldGroup } from "../../../components/ui/settings-field-group";
-import { SwitchField } from "../../../components/ui/switch";
-import { BrowserLaunchSettingsSection } from "../../workflows/components/WorkflowSettingsDialog";
 import type { ProjectEnvironment } from "../../../types/workflow";
 
 type ProjectEnvironmentSettingsProps = {
   projectEnvironments: ProjectEnvironment[];
   error: string;
-  onCreateProjectEnvironment: (input: { name: string; description?: string | null }) => Promise<void>;
   onUpdateProjectEnvironment: (
     environmentId: string,
     input: {
@@ -30,112 +16,52 @@ type ProjectEnvironmentSettingsProps = {
   ) => Promise<void>;
 };
 
-type EnvironmentEditDraft = {
-  name: string;
-  description: string;
-  is_default: boolean;
-  browser_launch: ProjectEnvironment["browser_launch"] | null;
-};
-
 export function ProjectEnvironmentSettings({
   projectEnvironments,
   error,
-  onCreateProjectEnvironment,
   onUpdateProjectEnvironment,
 }: ProjectEnvironmentSettingsProps) {
-  const [environmentDialogOpen, setEnvironmentDialogOpen] = useState(false);
-  const [environmentNameDraft, setEnvironmentNameDraft] = useState("");
-  const [environmentDescriptionDraft, setEnvironmentDescriptionDraft] = useState("");
-  const [environmentError, setEnvironmentError] = useState("");
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | null>(null);
-  const [selectedEnvironmentDraft, setSelectedEnvironmentDraft] =
-    useState<EnvironmentEditDraft | null>(null);
-  const selectedEnvironment =
-    projectEnvironments.find((environment) => environment.id === selectedEnvironmentId) ??
+  const projectSession =
+    projectEnvironments.find((environment) => environment.is_default) ??
     projectEnvironments[0] ??
     null;
+  const browserLaunch = projectSession?.browser_launch ?? null;
+  const storageLabel =
+    browserLaunch?.session_mode === "persistent_profile"
+      ? "Persistent browser profile"
+      : "Temporary browser storage";
 
-  useEffect(() => {
-    if (projectEnvironments.length === 0) {
-      setSelectedEnvironmentId(null);
-      setSelectedEnvironmentDraft(null);
-      return;
-    }
-    if (!selectedEnvironmentId || !projectEnvironments.some((item) => item.id === selectedEnvironmentId)) {
-      setSelectedEnvironmentId(projectEnvironments[0].id);
-    }
-  }, [projectEnvironments, selectedEnvironmentId]);
-
-  useEffect(() => {
-    if (!selectedEnvironment) {
-      setSelectedEnvironmentDraft(null);
-      return;
-    }
-    setSelectedEnvironmentDraft({
-      name: selectedEnvironment.name,
-      description: selectedEnvironment.description,
-      is_default: selectedEnvironment.is_default,
-      browser_launch: selectedEnvironment.browser_launch ?? null,
-    });
-  }, [selectedEnvironment?.id, selectedEnvironment?.updated_at]);
-
-  async function submitEnvironment(event: FormEvent) {
-    event.preventDefault();
-    const name = environmentNameDraft.trim();
-    if (!name) {
-      setEnvironmentError("Environment name is required");
-      return;
-    }
-    await onCreateProjectEnvironment({
-      name,
-      description: environmentDescriptionDraft.trim() || null,
-    });
-    setEnvironmentDialogOpen(false);
-    setEnvironmentNameDraft("");
-    setEnvironmentDescriptionDraft("");
-    setEnvironmentError("");
-  }
-
-  function closeEnvironmentDialog() {
-    setEnvironmentDialogOpen(false);
-    setEnvironmentNameDraft("");
-    setEnvironmentDescriptionDraft("");
-    setEnvironmentError("");
-  }
-
-  async function saveSelectedEnvironment() {
-    if (!selectedEnvironment || !selectedEnvironmentDraft) return;
-    const name = selectedEnvironmentDraft.name.trim();
-    if (!name) {
-      setEnvironmentError("Environment name is required");
-      return;
-    }
-    setEnvironmentError("");
-    await onUpdateProjectEnvironment(selectedEnvironment.id, {
-      name,
-      description: selectedEnvironmentDraft.description.trim() || null,
-      is_default: selectedEnvironmentDraft.is_default,
-      browser_launch: selectedEnvironmentDraft.browser_launch,
+  async function makeDefaultSession() {
+    if (!projectSession) return;
+    await onUpdateProjectEnvironment(projectSession.id, {
+      name: projectSession.name,
+      description: projectSession.description,
+      is_default: true,
+      browser_launch: projectSession.browser_launch,
     });
   }
 
   return (
     <section
       className="panel settings-panel settings-project-environments-panel"
-      aria-label="Project environments"
+      aria-label="Project saved session"
     >
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Project Settings</p>
-          <h2>Project environments</h2>
+          <h2>Project saved session</h2>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => setEnvironmentDialogOpen(true)}
-        >
-          Create Environment
-        </Button>
+        {projectSession && !projectSession.is_default ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              void makeDefaultSession();
+            }}
+          >
+            Make project saved session default
+          </Button>
+        ) : null}
       </div>
       {error ? (
         <p className="field-error" role="alert">
@@ -143,162 +69,83 @@ export function ProjectEnvironmentSettings({
         </p>
       ) : null}
 
-      {projectEnvironments.length === 0 ? (
-        <p className="muted">No project environments are available.</p>
+      {!projectSession ? (
+        <p className="muted">No project saved session is available.</p>
       ) : (
-        <div className="settings-environment-workspace">
-          <div className="settings-environment-list">
-            {projectEnvironments.map((environment) => (
-              <div
-                className="settings-environment-row"
-                data-active={selectedEnvironment?.id === environment.id ? "true" : "false"}
-                key={environment.id}
-              >
-                <div>
-                  <h3>{environment.name}</h3>
-                  {environment.description ? (
-                    <p className="muted">{environment.description}</p>
-                  ) : null}
-                </div>
-                <div className="settings-environment-row-actions">
-                  {environment.is_default ? (
-                    <span className="settings-environment-badge">Default</span>
-                  ) : null}
-                  <Button
-                    aria-label={`Open ${environment.name} environment`}
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setSelectedEnvironmentId(environment.id)}
-                  >
-                    Open
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          {selectedEnvironment && selectedEnvironmentDraft ? (
-            <section
-              className="settings-environment-detail"
-              aria-label="Selected Project Environment"
-            >
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">Selected Environment</p>
-                  <h3>{selectedEnvironment.name}</h3>
-                </div>
-                <Button type="button" onClick={() => void saveSelectedEnvironment()}>
-                  Save Environment
-                </Button>
-              </div>
-              {environmentError ? (
-                <p className="field-error" role="alert">
-                  {environmentError}
-                </p>
-              ) : null}
+        <div className="settings-form-grid">
+          <SettingsFieldGroup
+            title="Reuse choice"
+            description="New workflows can reuse this project session or create a private workflow session."
+          >
+            <ProjectSessionValue label="Session name" value={projectSession.name} />
+            <ProjectSessionValue
+              label="Workflow create option"
+              value="Use project saved session"
+            />
+            <ProjectSessionValue
+              label="Default for project"
+              value={projectSession.is_default ? "Yes" : "Not yet"}
+            />
+          </SettingsFieldGroup>
+
+          {browserLaunch ? (
+            <>
               <SettingsFieldGroup
-                title="General"
-                description="Project-scoped metadata and default selection for workflow creation."
+                title="Fingerprint identity"
+                description="Stable project-owned identity values reused by workflows that choose the project session."
               >
-                <label className="field">
-                  <span>Environment name</span>
-                  <Input
-                    value={selectedEnvironmentDraft.name}
-                    onChange={(event) =>
-                      setSelectedEnvironmentDraft({
-                        ...selectedEnvironmentDraft,
-                        name: event.currentTarget.value,
-                      })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span>Description</span>
-                  <Input
-                    value={selectedEnvironmentDraft.description}
-                    onChange={(event) =>
-                      setSelectedEnvironmentDraft({
-                        ...selectedEnvironmentDraft,
-                        description: event.currentTarget.value,
-                      })
-                    }
-                  />
-                </label>
-                <SwitchField
-                  checked={selectedEnvironmentDraft.is_default}
-                  label="Project default environment"
-                  description="Use this environment when workflows choose the project default."
-                  onCheckedChange={(checked) =>
-                    setSelectedEnvironmentDraft({
-                      ...selectedEnvironmentDraft,
-                      is_default: checked,
-                    })
+                <ProjectSessionValue
+                  label="Fingerprint seed"
+                  value={browserLaunch.fingerprint_seed}
+                />
+                <ProjectSessionValue
+                  label="Identity id"
+                  value={browserLaunch.identity_id}
+                  monospace
+                />
+                <ProjectSessionValue
+                  label="Display name"
+                  value={browserLaunch.display_name}
+                />
+              </SettingsFieldGroup>
+
+              <SettingsFieldGroup
+                title="Saved browser data"
+                description="Cookie, localStorage, sessionStorage, and login state persist through the profile when persistent storage is enabled."
+              >
+                <ProjectSessionValue label="Storage mode" value={storageLabel} />
+                <ProjectSessionValue
+                  label="Session reuse"
+                  value={
+                    browserLaunch.profile_name
+                      ? "Available for reused project workflows"
+                      : "Disabled until persistent storage is enabled"
                   }
                 />
               </SettingsFieldGroup>
-              {selectedEnvironmentDraft.browser_launch ? (
-                <BrowserLaunchSettingsSection
-                  value={selectedEnvironmentDraft.browser_launch}
-                  onChange={(browserLaunch) =>
-                    setSelectedEnvironmentDraft({
-                      ...selectedEnvironmentDraft,
-                      browser_launch: browserLaunch,
-                    })
-                  }
-                />
-              ) : (
-                <p className="muted">
-                  Browser launch settings are unavailable for this environment.
-                </p>
-              )}
-            </section>
-          ) : null}
+            </>
+          ) : (
+            <p className="muted">Project saved session identity is unavailable.</p>
+          )}
         </div>
       )}
-
-      <Dialog
-        open={environmentDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) closeEnvironmentDialog();
-        }}
-      >
-        <DialogContent className="workflow-dialog">
-          <DialogHeader>
-            <p className="eyebrow">Project Environment</p>
-            <DialogTitle>Create Environment</DialogTitle>
-            <DialogDescription>
-              Create a reusable browser launch environment for this project.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="workflow-dialog-form" onSubmit={submitEnvironment}>
-            <Label htmlFor="environment-name">Environment name</Label>
-            <Input
-              autoFocus
-              id="environment-name"
-              value={environmentNameDraft}
-              onChange={(event) => setEnvironmentNameDraft(event.currentTarget.value)}
-              placeholder="Staging Chrome"
-            />
-            <Label htmlFor="environment-description">Description</Label>
-            <Input
-              id="environment-description"
-              value={environmentDescriptionDraft}
-              onChange={(event) =>
-                setEnvironmentDescriptionDraft(event.currentTarget.value)
-              }
-              placeholder="Shared staging posture"
-            />
-            {environmentError ? <p className="field-error">{environmentError}</p> : null}
-            <DialogFooter className="form-actions">
-              <Button shape="pill" type="submit">
-                Create
-              </Button>
-              <Button variant="secondary" type="button" onClick={closeEnvironmentDialog}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </section>
+  );
+}
+
+function ProjectSessionValue({
+  label,
+  monospace = false,
+  value,
+}: {
+  label: string;
+  monospace?: boolean;
+  value: string;
+}) {
+  return (
+    <div className="field">
+      <span>{label}</span>
+      <strong className={monospace ? "project-session-code" : undefined}>{value}</strong>
+    </div>
   );
 }

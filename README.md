@@ -163,15 +163,15 @@ run `npm run cloakbrowser:fonts:setup`; it downloads and extracts the
 CloakBrowser-recommended Ubuntu font packages into the gitignored repo-local
 directory `.local/cloakbrowser-fonts/linux`, refreshes fontconfig for that
 directory when `fc-cache` is available, and prints the absolute path. New or
-lazy-created Project Environment Browser Launch settings auto-fill that
-repo-local path when the directory exists and is readable; operators can still
-edit or clear Browser Launch -> Fingerprint fonts directory for the selected
-environment. The generated font files and downloaded `.deb` packages are local
+lazy-created project saved sessions and private workflow sessions auto-fill
+that repo-local path when the directory exists and is readable; operators can
+still edit or clear Browser Launch -> Fingerprint fonts directory for the
+selected session. The generated font files and downloaded `.deb` packages are local
 machine output and should not be committed. GeoIP mode uses the installed
 `mmdb-lib` package and may download its GeoIP database on first use. New project
-environments enable GeoIP by default so blank timezone/locale fields resolve
-from the current public or proxy exit IP; blank legacy location settings
-normalize back to GeoIP. Prefer explicit timezone/locale only when proxy
+sessions enable GeoIP by default so blank timezone/locale fields resolve from
+the current public or proxy exit IP; blank legacy location settings normalize
+back to GeoIP. Prefer explicit timezone/locale only when proxy
 inventory already supplies region metadata. Settings validation warns when an
 enabled proxy has no explicit timezone/locale and GeoIP is off, or when a
 shared `fingerprint_fonts_dir` can create a stable font hash.
@@ -228,14 +228,14 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 1. Confirm the app shell has no top command/search header or Alerts shortcut, and that sidebar plus in-page navigation links still open Overview, Projects, Runs, Evidence, Schedules, Identities, and App Settings through typed targets without showing raw outputs, cookies, tokens, proxy credentials, absolute local paths, or browser storage.
 1. Open Evidence from the sidebar, confirm screenshot/download/browser identity/action trace/evidence manifest items from completed runs are searchable and filterable, screenshot preview and Reveal in Folder work only through validated evidence actions, downloads show metadata without in-app preview, Export Selection creates a manifest bundle without absolute original paths, and Overview Recent Evidence plus Runs selected details navigate into Evidence.
 1. Open Identities from the sidebar, confirm current managed identities show workflow owner, session/profile reuse, retained-session state, configured posture, latest observed browser identity evidence, diagnostics, rotation history, Open Evidence, Open Last Run, and Open Workflow Settings. Confirm Close Retained Session clears only the retained in-memory browser session, Reset Identity is confirmed and blocked while a retained session or active run owns the profile, and old identity ids from evidence/rotation history open read-only historical references.
-2. Open Projects, confirm the selected project shows Workflows, Subflows, and Settings as a collection menu inside the project list sidebar, create a workflow using the project default environment, then create another workflow with an isolated environment and confirm workflow list cards show the selected environment.
+2. Open Projects, confirm the selected project shows Workflows, Subflows, and Settings as a collection menu inside the project list sidebar, create a workflow using the project saved session, then create another workflow with a new workflow session and confirm workflow list cards show the selected session/environment.
 2. In Projects -> Subflows collection, create a subflow, add and save graph nodes, duplicate it, delete the unused duplicate, and confirm a subflow referenced by a workflow shows usage warnings and cannot be deleted until the caller reference is removed.
 2. Confirm the new workflow graph starts with `Start -> New node`, the workflow
    detail sidebar is collapsed to the icon rail, the graph inspector is closed
    until a node or link is selected, selecting `New node` opens the inspector as
    a right-side drawer over the canvas, and Close inspector clears the
    selection.
-3. In Projects -> Settings, create a Project Environment and confirm the Project Environment list shows the default badge where applicable. Open App Settings from the sidebar, confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status; run Install CloakBrowser Binary and Cleanup Orphaned Profiles from Maintenance; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
+3. In Projects -> Settings, confirm Project saved session shows one reusable fingerprint seed, identity id, and persistent browser profile reuse state without a full Browser Launch environment editor. Open App Settings from the sidebar, confirm Environment readiness shows sanitized CloakBrowser, GeoIP, headed display, font, profile-count, and smoke status; run Install CloakBrowser Binary and Cleanup Orphaned Profiles from Maintenance; turn graph autosave off and on, and confirm the workflow detail save status changes between autosave off, unsaved changes, saving, and saved.
 4. Add Navigate, Wait, Random Wait, Fill Field, Click, Find Element, and Scroll action nodes. Confirm related fields are grouped by target/content/output/mode where applicable, targetable single-target actions can target a Find Element ref, Find Element exposes target/output/viewport/rank groups, Scroll shows Page Scroll style/Direction/Pixels fields, Scroll To Element supports locator or Find Element ref with Timeout ms defaulting to 60000, and Scroll Until Element Visible uses locator target/timeout plus Direction/Pixels fields without low-level target constraint controls.
 5. Add Extract Text, Extract Attribute, Extract Field Value, Extract List, Extract Table, and Take Screenshot action nodes.
 6. Add Go Back, Go Forward, Reload, Open New Tab, Switch Tab, Close Tab, Accept Dialog, Dismiss Dialog, and Wait For Download action nodes.
@@ -260,7 +260,7 @@ Use a simple page with an input, button, iframe, dialog trigger, download link, 
 21. Confirm download actions save a new file under the current run evidence directory and store its app-local path plus `__evidence` metadata in outputs.
 22. Confirm `{{variable}}` templates interpolate into action text, template fields can insert variables from the picker and highlight tokens, Set Variables supports multiple typed rows, Set JSON Variables stores object keys, Repeat For Each can use literal items and a variable array, Router takes the first matching case or default branch, Merge converges routed branches, and control-flow blocks run nested actions.
 23. Confirm persistent identity profile state survives a browser restart through Workflow Settings, Reuse login session can be disabled without rotating identity id/profile directory/fingerprint seed, and cookies can be set/cleared.
-24. Confirm selected Project Environment Browser Launch identity profile, fingerprint fonts directory, proxy, GeoIP or explicit timezone/locale, WebRTC, humanize toggle/preset, and headless defaults apply before browser launch; Workflow Settings Environment initial variables apply before graph actions run; saved graph edge waits run before their target nodes; Call Subflow nodes run in the caller's browser context; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
+24. Confirm selected project saved session or private workflow session Browser Launch identity profile, fingerprint fonts directory, proxy, GeoIP or explicit timezone/locale, WebRTC, humanize toggle/preset, and headless defaults apply before browser launch; Workflow Settings Environment initial variables apply before graph actions run; saved graph edge waits run before their target nodes; Call Subflow nodes run in the caller's browser context; graph nodes for geolocation, permissions, headers, cookies, and storage apply from the graph when used; and outputs include sanitized `browser_identity` evidence.
 27. Confirm batch run results account for each executed row, separate success from failure, use saved graph steps, apply batch headless defaults, reject concurrency above 1, and stop after the first failed row when configured.
 28. Confirm terminal workflow and batch row runs create SQLite `runs` and `run_steps` evidence with outputs, action traces, nested branch/body run-step rows, failed-step errors, and failure screenshot paths when failures occur.
 28. Confirm Run JavaScript stores output when Run Policy allows it, fails clearly before script evaluation when Allow Run JavaScript is off, storage actions set browser storage, network wait sees the request/response, block request rejects fetch, and mock response returns controlled body/status.

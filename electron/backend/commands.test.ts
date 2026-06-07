@@ -128,7 +128,7 @@ describe("Electron workflow command handlers", () => {
       browser_launch: {
         session_mode: "persistent_profile",
         identity_id: expect.stringMatching(/^bi_/),
-        display_name: "Login flow identity",
+        display_name: "Project saved session identity",
         persona_id: expect.any(String),
         persona: expect.objectContaining({
           behavioral_timing_profile: expect.any(String),
@@ -172,7 +172,7 @@ describe("Electron workflow command handlers", () => {
 
     const settings = handlers.getWorkflowSettings(created.id);
     expect(settings.browser_launch.profile_name).toBe(settings.browser_launch.profile_dir);
-    expect(settings.browser_launch.display_name).toBe("Login flow identity");
+    expect(settings.browser_launch.display_name).toBe("Project saved session identity");
     const initialSeed = settings.browser_launch.fingerprint_seed;
     const saved = handlers.saveWorkflowSettings(created.id, {
       ...settings,
@@ -190,7 +190,7 @@ describe("Electron workflow command handlers", () => {
 
     expect(saved.general.name).toBe("Renamed flow");
     expect(saved.browser_launch.fingerprint_seed).toBe(initialSeed);
-    expect(saved.browser_launch.display_name).toBe("Login flow identity");
+    expect(saved.browser_launch.display_name).toBe("Project saved session identity");
     expect(saved.browser_launch.humanize).toBe(false);
     expect(saved.browser_launch.human_preset).toBe("careful");
     expect(handlers.listWorkflows()[0]).toMatchObject({
@@ -216,7 +216,7 @@ describe("Electron workflow command handlers", () => {
     expect(handlers.getWorkflow(created.id)).toBeNull();
   });
 
-  test("creates a default project and project environment for new workflows", async () => {
+  test("creates a default project saved session and uses it for new workflows by default", async () => {
     const { handlers } = await createTestHandlers();
     const projectHandlers = handlers as typeof handlers & ProjectWorkflowTestHandlers;
 
@@ -232,7 +232,7 @@ describe("Electron workflow command handlers", () => {
     expect(environments).toEqual([
       expect.objectContaining({
         project_id: project.id,
-        name: "Project Default Environment",
+        name: "Project saved session",
         is_default: true,
       }),
     ]);
@@ -242,14 +242,19 @@ describe("Electron workflow command handlers", () => {
 
     expect(workflow).toMatchObject({
       project_id: project.id,
-      environment_id: expect.any(String),
+      environment_id: environments[0].id,
     });
-    expect(workflow.environment_id).not.toBe(environments[0].id);
     expect(listRow).toMatchObject({
       project_id: project.id,
       environment_id: workflow.environment_id,
-      environment_name: "Environment-aware workflow isolated environment",
+      environment_name: "Project saved session",
     });
+
+    const isolated = handlers.createWorkflow("Private session workflow", {
+      project_id: project.id,
+      environment: { mode: "isolated" },
+    });
+    expect(isolated.environment_id).not.toBe(environments[0].id);
   });
 
   test("runs workflows with the selected project environment browser launch settings", async () => {
@@ -1114,9 +1119,15 @@ describe("Electron workflow command handlers", () => {
 
   test("reports missing and shared fingerprint font directories as actionable diagnostics", async () => {
     const { handlers, database } = await createTestHandlers();
-    const owner = handlers.createWorkflow("Font owner");
-    const shared = handlers.createWorkflow("Font shared");
-    const missing = handlers.createWorkflow("Font missing");
+    const owner = handlers.createWorkflow("Font owner", {
+      environment: { mode: "isolated" },
+    });
+    const shared = handlers.createWorkflow("Font shared", {
+      environment: { mode: "isolated" },
+    });
+    const missing = handlers.createWorkflow("Font missing", {
+      environment: { mode: "isolated" },
+    });
     const fontsDir = await fs.mkdtemp(path.join(os.tmpdir(), "shared-fonts-"));
     tempRoots.push(fontsDir);
     await fs.writeFile(path.join(fontsDir, "Arial-Regular.ttf"), "arial");
@@ -4704,11 +4715,17 @@ describe("Electron workflow schedule commands", () => {
         },
       },
     });
-    const runningWorkflow = handlers.createWorkflow("Running workflow");
+    const runningWorkflow = handlers.createWorkflow("Running workflow", {
+      environment: { mode: "isolated" },
+    });
     handlers.saveWorkflowGraph(runningWorkflow.id, runnableGraph());
-    const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow");
+    const scheduledWorkflow = handlers.createWorkflow("Scheduled workflow", {
+      environment: { mode: "isolated" },
+    });
     handlers.saveWorkflowGraph(scheduledWorkflow.id, runnableGraph());
-    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow");
+    const isolatedWorkflow = handlers.createWorkflow("Isolated workflow", {
+      environment: { mode: "isolated" },
+    });
     handlers.saveWorkflowGraph(isolatedWorkflow.id, runnableGraph());
     const schedule = handlers.createSchedule({
       workflow_id: scheduledWorkflow.id,
