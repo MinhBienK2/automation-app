@@ -373,6 +373,10 @@
   background: #0b1016;
   color: #e7eef5;
   text-align: left;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 .project-row svg {
@@ -410,29 +414,79 @@
 }
 
 .project-row[data-active="true"] {
-  border-color: rgba(50, 211, 230, 0.58);
-  background: #0e151d;
+  border-color: rgba(50, 211, 230, 0.48);
+  background: linear-gradient(135deg, rgba(23, 36, 49, 0.96), rgba(14, 21, 29, 0.96));
 }
 
 .project-collection-menu {
+  position: relative;
   display: grid;
-  gap: 6px;
-  padding-left: 28px;
+  gap: 4px;
+  margin-left: 14px;
+  padding: 8px 0 2px 18px;
+}
+
+.project-collection-menu::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 8px;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(50, 211, 230, 0.62), rgba(49, 71, 88, 0.22));
 }
 
 .project-collection-item {
+  position: relative;
   width: 100%;
-  min-height: 32px;
+  min-width: 0;
+  min-height: 34px;
   justify-content: flex-start;
-  padding: 0 10px;
+  overflow: hidden;
+  padding: 0 12px 0 14px;
   border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
   color: #9aaebd;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.project-collection-item::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.project-collection-item:hover:not([data-active="true"]) {
+  border-color: rgba(49, 71, 88, 0.76);
+  background: rgba(23, 36, 49, 0.46);
+  color: #e7eef5;
+}
+
+.project-collection-item:focus-visible {
+  border-color: rgba(50, 211, 230, 0.68);
+  box-shadow: 0 0 0 2px rgba(50, 211, 230, 0.18);
 }
 
 .project-collection-item[data-active="true"] {
-  border-color: rgba(50, 211, 230, 0.58);
-  background: #0e151d;
-  color: #32d3e6;
+  border-color: rgba(50, 211, 230, 0.44);
+  background: linear-gradient(90deg, rgba(50, 211, 230, 0.15), rgba(23, 36, 49, 0.72));
+  color: #e7eef5;
+}
+
+.project-collection-item[data-active="true"]::before {
+  background: #32d3e6;
 }
 
 .projects-detail-panel {
