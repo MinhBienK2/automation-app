@@ -86,7 +86,8 @@ Preserve these unless the task explicitly changes them.
   session for the new workflow instead of rewriting the selected project's
   saved session.
 - Workflow detail collapses the app sidebar into the icon rail when opened and
-  exposes a compact header command bar. Settings, Validate, and Save are
+  exposes a compact header command bar with the owning project name in header
+  metadata. Settings, Validate, and Save are
   accessible icon controls with tooltips; Settings opens Workflow Settings at
   Browser Launch. `Launch Run` is the primary text action, Stop appears only
   while running, and Run from selected appears only when its workflow setting
@@ -159,7 +160,8 @@ Preserve these unless the task explicitly changes them.
 - Subflows are reusable graph fragments, not standalone runnable scenarios.
   They are reachable from the selected project's Subflows collection, can be
   created, opened, saved, duplicated, and deleted, and show usage warnings when
-  referenced by workflows. Deleting a referenced subflow is blocked.
+  referenced by workflows. Opening a subflow detail shows the owning project
+  name in header metadata. Deleting a referenced subflow is blocked.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP
   subflows cannot call other subflows.

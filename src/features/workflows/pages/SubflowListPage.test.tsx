@@ -101,9 +101,10 @@ describe("Subflow list integration", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Login Subflow" })).toBeInTheDocument();
+    const header = screen.getByRole("region", { name: "Subflow detail header" });
+    expect(within(header).getByText("Project: Main")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("region", { name: "Subflow detail header" }))
-        .getByRole("button", { name: "Subflows" }),
+      within(header).getByRole("button", { name: "Subflows" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Used by 1 workflow")).toBeInTheDocument();
     expect(screen.getByText("Checkout E2E")).toBeInTheDocument();

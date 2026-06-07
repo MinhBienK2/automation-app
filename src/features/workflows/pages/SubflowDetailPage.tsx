@@ -11,6 +11,7 @@ import { WorkflowGraphEditor } from "../components/WorkflowGraphEditor";
 
 type SubflowDetailPageProps = {
   subflow: Subflow;
+  projectName?: string | null;
   usage: SubflowUsage[];
   graph: WorkflowGraph | null;
   graphSaveStatus: string;
@@ -24,6 +25,7 @@ type SubflowDetailPageProps = {
 
 export function SubflowDetailPage({
   subflow,
+  projectName = null,
   usage,
   graph,
   graphSaveStatus,
@@ -45,7 +47,11 @@ export function SubflowDetailPage({
         backLabel="Back to Subflows"
         breadcrumbLabel="Subflows"
         eyebrow="Subflow"
-        meta={[graphSaveStatus, `Usage: ${usageLabel}`]}
+        meta={[
+          graphSaveStatus,
+          ...(projectName ? [`Project: ${projectName}`] : []),
+          `Usage: ${usageLabel}`,
+        ]}
         title={subflow.name}
         onBack={onBack}
         actions={

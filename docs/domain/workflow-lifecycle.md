@@ -74,7 +74,7 @@
 - UI calls `get_workflow_graph`.
 - UI calls `get_workflow_settings` for the workflow-level settings aggregate.
 - Saved graph JSON is loaded as the workflow authoring source.
-- The workflow detail header exposes a Settings action that opens Workflow Settings at Browser Launch.
+- The workflow detail header shows the owning project name and exposes a Settings action that opens Workflow Settings at Browser Launch.
 - The workflow list Edit action opens Workflow Settings at General.
 - Opening workflow detail collapses the app sidebar to the icon rail and leaves
   the graph with no node or link selected.
@@ -131,7 +131,8 @@
   project with description, usage count, open, duplicate, and delete actions.
 - Creating a subflow persists a saved graph fragment with a start node and the
   same graph DTO shape as workflows.
-- Opening a subflow loads its graph and usage list. The editor has Save,
+- Opening a subflow loads its graph and usage list, and the detail header shows
+  the owning project name. The editor has Save,
   Duplicate, and Delete actions, but no Launch Run action because subflows are
   reusable implementation units rather than product scenarios.
 - When a subflow is used by workflows, the detail page warns that saving changes

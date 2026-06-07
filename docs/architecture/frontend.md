@@ -35,11 +35,13 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   with browser-session create choices, selected session/environment display,
   icon-only row actions, direct Run for saved workflow state, and the Record
   Workflow entry point.
-- `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow workspace.
+- `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow
+  workspace with owning-project metadata in the detail header.
 - `src/features/workflows/pages/SubflowListPage.tsx`: subflow list,
   create, open, duplicate, delete, and usage-count presentation.
 - `src/features/workflows/pages/SubflowDetailPage.tsx`: reusable subflow graph
-  editor with usage warnings and save/duplicate/delete actions.
+  editor with owning-project header metadata, usage warnings, and
+  save/duplicate/delete actions.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.

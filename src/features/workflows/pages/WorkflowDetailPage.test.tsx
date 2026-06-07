@@ -115,6 +115,7 @@ describe("Workflow detail integration", () => {
     expect(within(titleRow).getByText("Workflow Detail")).toBeInTheDocument();
     expect(within(controlsRow).queryByText("Graph workspace")).not.toBeInTheDocument();
     expect(within(controlsRow).queryByText("Updated 1")).not.toBeInTheDocument();
+    expect(within(controlsRow).getByText("Project: Main")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Status")).toBeInTheDocument();
     expect(within(controlsRow).getByText("Idle")).toHaveAttribute(
       "data-slot",

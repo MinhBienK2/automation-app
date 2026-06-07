@@ -2154,6 +2154,14 @@ function App() {
     projects.find((project) => project.id === selectedProjectId) ??
     projects[0] ??
     null;
+  const projectNameForId = (projectId?: string | null) =>
+    projectId ? projects.find((project) => project.id === projectId)?.name ?? null : null;
+  const detailProjectName = detail
+    ? projectNameForId(detail.workflow.project_id) ?? selectedProject?.name ?? null
+    : null;
+  const selectedSubflowProjectName = selectedSubflow
+    ? projectNameForId(selectedSubflow.project_id) ?? selectedProject?.name ?? null
+    : null;
   const selectedProjectWorkflows = selectedProject
     ? workflows.filter(
         (workflow) =>
@@ -2347,6 +2355,7 @@ function App() {
       ) : screen === "subflow-detail" && selectedSubflow ? (
         <SubflowDetailPage
           subflow={selectedSubflow}
+          projectName={selectedSubflowProjectName}
           usage={selectedSubflowUsage}
           graph={selectedSubflowGraph}
           graphSaveStatus={graphSaveStatusLabel(subflowGraphSaveStatus)}
@@ -2364,6 +2373,7 @@ function App() {
           <WorkflowDetailPage
             detail={detail}
             environmentName={detailEnvironmentName}
+            projectName={detailProjectName}
             isRunning={isRunning}
             appError={appError}
             graphSaveStatus={graphSaveStatusLabel(graphSaveStatus)}
