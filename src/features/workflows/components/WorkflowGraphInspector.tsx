@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardCopy, X } from "lucide-react";
+import { ClipboardCopy, ExternalLink, X } from "lucide-react";
 import type {
   GraphEdge,
   GraphNode,
@@ -13,7 +13,7 @@ import { Badge } from "../../../components/ui/badge";
 import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
-import { graphNodeLabel } from "../lib/workflowGraph";
+import { callSubflowIdFromNode, graphNodeLabel } from "../lib/workflowGraph";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import type { ActionConfig } from "../../../types/workflow";
 import type { VariableOption } from "./TemplateTextField";
@@ -40,6 +40,7 @@ type WorkflowGraphInspectorProps = {
   onDuplicateSelection: () => void;
   onFocusSelectedNode: () => void;
   onOpenSelectedNodeHelp: () => void;
+  onOpenSubflowDetail?: (subflowId: string) => void;
   onClose: () => void;
   onUpdateEdge: (edge: GraphEdge) => void;
   onUpdateNode: (node: GraphNode) => void;
@@ -62,6 +63,7 @@ export function WorkflowGraphInspector({
   onDuplicateSelection,
   onFocusSelectedNode,
   onOpenSelectedNodeHelp,
+  onOpenSubflowDetail,
   onClose,
   onUpdateEdge,
   onUpdateNode,
@@ -72,6 +74,11 @@ export function WorkflowGraphInspector({
     selectedNode && runState.error?.step_id === selectedNode.id
       ? runState.error
       : null;
+  const selectedSubflowId = callSubflowIdFromNode(selectedNode);
+  const selectedSubflow = selectedSubflowId
+    ? subflowOptions.find((subflow) => subflow.id === selectedSubflowId) ?? null
+    : null;
+  const selectedSubflowName = selectedSubflow?.name ?? selectedNode?.label ?? "selected subflow";
 
   return (
     <div className="graph-inspector" aria-label="Graph inspector">
@@ -214,17 +221,30 @@ export function WorkflowGraphInspector({
             subflowOptions={subflowOptions}
             variableOptions={variableOptions}
           />
-          <Button type="button" variant="secondary" onClick={onFocusSelectedNode}>
-            Focus
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={onDeleteSelectedNode}
-            disabled={selectedNode.node_type === "start"}
-          >
-            Delete Node
-          </Button>
+          <div className="graph-inspector-actions" aria-label="Selected node actions">
+            {selectedSubflowId && onOpenSubflowDetail ? (
+              <Button
+                type="button"
+                variant="secondary"
+                aria-label={`Open subflow ${selectedSubflowName}`}
+                onClick={() => onOpenSubflowDetail(selectedSubflowId)}
+              >
+                <ExternalLink aria-hidden="true" />
+                Open subflow
+              </Button>
+            ) : null}
+            <Button type="button" variant="secondary" onClick={onFocusSelectedNode}>
+              Focus
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={onDeleteSelectedNode}
+              disabled={selectedNode.node_type === "start"}
+            >
+              Delete Node
+            </Button>
+          </div>
         </>
       ) : !selectionSummary && !selectedEdge ? (
         <p className="muted">Select a graph node.</p>

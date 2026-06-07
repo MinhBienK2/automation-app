@@ -150,7 +150,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   plus list/detail state, create/duplicate/delete command state, graph save
   status, usage-warning presentation, and workflow-graph selection extraction
   into a new project subflow. Subflow graph editors run in subflow mode, which
-  hides Add Subflow and does not expose run controls.
+  hides Add Subflow and does not expose run controls. Workflow Call Subflow
+  nodes can open their referenced subflow detail from the node inspector or
+  node context menu; `App.tsx` owns the subflow detail back target so opening
+  from Projects returns to Subflows, while opening from a workflow node returns
+  to that workflow detail.
 - Selected-node label editing stays in the inspector. Connections and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing belongs in node Help and graph port hover tooltips, not a separate inspector panel.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter
   so the canvas component renders stable primary name, secondary kind, compact

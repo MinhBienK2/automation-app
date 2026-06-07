@@ -109,6 +109,18 @@
   min-width: 0;
 }
 
+.graph-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.graph-inspector-actions > button {
+  flex: 1 1 120px;
+}
+
 .graph-canvas-wrap {
   display: grid;
   grid-template-rows: auto auto;

@@ -148,6 +148,9 @@ import type {
 import "./App.css";
 
 type AppScreen = "overview" | "projects" | "detail" | "subflow-detail" | "settings" | "schedules" | "evidence" | "identities";
+type SubflowBackTarget =
+  | { type: "subflows" }
+  | { type: "workflow-detail"; workflowId: string; workflowName: string };
 type WorkflowDialogMode = "create" | "edit" | null;
 type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
 type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
@@ -407,6 +410,9 @@ function App() {
   const [selectedSubflowGraph, setSelectedSubflowGraph] =
     useState<WorkflowGraph | null>(null);
   const [selectedSubflowUsage, setSelectedSubflowUsage] = useState<SubflowUsage[]>([]);
+  const [subflowBackTarget, setSubflowBackTarget] = useState<SubflowBackTarget>({
+    type: "subflows",
+  });
   const [subflowGraphSaveStatus, setSubflowGraphSaveStatus] =
     useState<GraphSaveStatus>("saved");
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
@@ -1292,7 +1298,10 @@ function App() {
     }
   }
 
-  async function openSubflowDetail(subflowId: string) {
+  async function openSubflowDetail(
+    subflowId: string,
+    backTarget: SubflowBackTarget = { type: "subflows" },
+  ) {
     setAppError("");
     try {
       const loadedSubflow = await getSubflow(subflowId);
@@ -1309,6 +1318,7 @@ function App() {
       setSelectedSubflow(loadedSubflow);
       setSelectedSubflowGraph(graph);
       setSelectedSubflowUsage(usage);
+      setSubflowBackTarget(backTarget);
       setSubflowGraphSaveStatus("saved");
       setSidebarCollapsed(true);
       setScreen("subflow-detail");
@@ -1786,10 +1796,22 @@ function App() {
     void loadSchedules();
   }
 
-  function backToSubflows() {
+  function backFromSubflowDetail() {
+    const target = subflowBackTarget;
     setSelectedSubflow(null);
     setSelectedSubflowGraph(null);
     setSelectedSubflowUsage([]);
+    setSubflowBackTarget({ type: "subflows" });
+    if (target.type === "workflow-detail") {
+      setAppError("");
+      if (detail?.workflow.id === target.workflowId) {
+        setSidebarCollapsed(true);
+        setScreen("detail");
+        return;
+      }
+      void openWorkflow(target.workflowId);
+      return;
+    }
     openProjects("subflows");
   }
 
@@ -2351,7 +2373,17 @@ function App() {
           graph={selectedSubflowGraph}
           graphSaveStatus={graphSaveStatusLabel(subflowGraphSaveStatus)}
           appError={appError}
-          onBack={backToSubflows}
+          backLabel={
+            subflowBackTarget.type === "workflow-detail"
+              ? "Back to Workflow"
+              : "Back to Subflows"
+          }
+          breadcrumbLabel={
+            subflowBackTarget.type === "workflow-detail"
+              ? subflowBackTarget.workflowName
+              : "Subflows"
+          }
+          onBack={backFromSubflowDetail}
           onGraphChange={changeSubflowGraph}
           onSaveGraph={() => {
             void saveCurrentSubflowGraph();
@@ -2379,6 +2411,13 @@ function App() {
             onOpenWorkflowSettings={() => openDetailWorkflowSettings("browser_launch")}
             onStopRun={() => stopRun(detailRunSnapshot?.run_id ?? null)}
             onCreateSubflowFromSelection={createWorkflowSelectionSubflow}
+            onOpenSubflowDetail={(subflowId) => {
+              void openSubflowDetail(subflowId, {
+                type: "workflow-detail",
+                workflowId: detail.workflow.id,
+                workflowName: detail.workflow.name,
+              });
+            }}
             onGraphChange={changeWorkflowGraph}
             onRunGraph={runGraph}
             onRunGraphFromSelected={runGraphFromSelectedNode}

@@ -666,6 +666,14 @@ export function graphCanvasNodeKindLabel(node: GraphNode) {
   return actionConfig ? actionLabels[actionConfig.type] : graphNodeLabel(node.node_type);
 }
 
+export function callSubflowIdFromNode(node: GraphNode | null | undefined) {
+  if (!node || node.node_type !== "call_subflow") return null;
+  const config = objectConfig(node.config);
+  return typeof config.subflow_id === "string" && config.subflow_id.trim()
+    ? config.subflow_id.trim()
+    : null;
+}
+
 function graphCanvasNodeMetaLabel(node: GraphNode) {
   if (node.node_type === "action") {
     return actionMetaLabel(actionConfigOrNull(node.config));

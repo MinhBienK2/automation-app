@@ -7,7 +7,12 @@ import { workflowCommandCallMock, mockWorkflowBridgeCommands, resetWorkflowBridg
 import { sleepStep } from "../../../tests/mocks/workflowFixtures";
 import { workflowDetailScenario } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
-import type { GraphNodeType, GraphPort } from "../../../types/workflow";
+import type {
+  GraphNodeType,
+  GraphPort,
+  SubflowSummary,
+  WorkflowGraph,
+} from "../../../types/workflow";
 import { nodePorts } from "../lib/workflowGraph";
 
 const workflowGraphEditorSource = readFileSync(
@@ -75,6 +80,59 @@ describe("Workflow graph editor integration", () => {
     });
     await within(collections).findByRole("button", { name: "Workflows" });
     await userEvent.click(await screen.findByRole("button", { name: "View Details" }));
+  }
+
+  function loginSubflowSummary(): SubflowSummary {
+    return {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "Reusable login path",
+      tags: [],
+      used_by_count: 1,
+      created_at: "2026-05-27T00:00:00.000Z",
+      updated_at: "2026-05-27T00:00:00.000Z",
+    };
+  }
+
+  function callSubflowGraph(): WorkflowGraph {
+    return {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: null,
+          ports: nodePorts("start"),
+          group_id: null,
+        },
+        {
+          id: "call-login",
+          node_type: "call_subflow",
+          label: "Login Subflow",
+          position: { x: 220, y: 0 },
+          config: {
+            subflow_id: "subflow-login",
+            input_mapping: [],
+            output_prefix: null,
+          },
+          ports: nodePorts("call_subflow"),
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "edge-start-call-login",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "call-login",
+          target_port: "in",
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
   }
 
   test("adds selects deletes and saves logic nodes through the grouped React Flow workspace", async () => {
@@ -247,6 +305,86 @@ describe("Workflow graph editor integration", () => {
           }),
         }),
       );
+    });
+  });
+
+  test("opens the called subflow detail from the inspector and returns to workflow detail", async () => {
+    const subflow = loginSubflowSummary();
+    const subflowGraph = workflowDetailScenario([sleepStep]).get_workflow_graph as WorkflowGraph;
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: callSubflowGraph(),
+      list_subflows: [subflow],
+      get_subflow: { ...subflow, graph: subflowGraph },
+      get_subflow_graph: subflowGraph,
+      get_subflow_usage: [
+        {
+          workflow_id: "workflow-1",
+          workflow_name: "Login flow",
+        },
+      ],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Graph canvas node call-login" }),
+    );
+
+    const inspectorDrawer = within(editor).getByRole("complementary", {
+      name: "Graph inspector drawer",
+    });
+    await userEvent.click(
+      within(inspectorDrawer).getByRole("button", {
+        name: "Open subflow Login Subflow",
+      }),
+    );
+
+    expect(await screen.findByRole("heading", { name: "Login Subflow" })).toBeInTheDocument();
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow", {
+      subflowId: "subflow-login",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Back to Workflow" }));
+
+    const workflowHeader = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    expect(within(workflowHeader).getByText("Login flow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Launch Run" })).toBeInTheDocument();
+  });
+
+  test("opens the called subflow detail from the node context menu", async () => {
+    const subflow = loginSubflowSummary();
+    const subflowGraph = workflowDetailScenario([sleepStep]).get_workflow_graph as WorkflowGraph;
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: callSubflowGraph(),
+      list_subflows: [subflow],
+      get_subflow: { ...subflow, graph: subflowGraph },
+      get_subflow_graph: subflowGraph,
+      get_subflow_usage: [],
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    fireEvent.contextMenu(
+      within(editor).getByRole("button", { name: "Graph canvas node call-login" }),
+    );
+
+    const menu = await within(editor).findByRole("menu", { name: "Node actions" });
+    await userEvent.click(
+      within(menu).getByRole("menuitem", { name: "Open subflow Login Subflow" }),
+    );
+
+    expect(await screen.findByRole("heading", { name: "Login Subflow" })).toBeInTheDocument();
+    expect(workflowCommandCallMock).toHaveBeenCalledWith("get_subflow", {
+      subflowId: "subflow-login",
     });
   });
 

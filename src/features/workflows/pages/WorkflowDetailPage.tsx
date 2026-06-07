@@ -41,6 +41,7 @@ type WorkflowDetailPageProps = {
     name: string;
     graph: WorkflowGraph;
   }) => Promise<{ id: string; name: string }>;
+  onOpenSubflowDetail?: (subflowId: string) => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onRunGraph: () => void;
   onRunGraphFromSelected: () => void;
@@ -70,6 +71,7 @@ export function WorkflowDetailPage({
   onOpenWorkflowSettings,
   onStopRun,
   onCreateSubflowFromSelection,
+  onOpenSubflowDetail,
   onGraphChange,
   onRunGraph,
   onRunGraphFromSelected,
@@ -280,6 +282,7 @@ export function WorkflowDetailPage({
             defaultEdgeDelay={defaultEdgeDelay}
             onCreateSubflowFromSelection={onCreateSubflowFromSelection}
             onChange={onGraphChange}
+            onOpenSubflowDetail={onOpenSubflowDetail}
             onRunGraph={onRunGraph}
             onSelectedNodeChange={onSelectedGraphNodeChange}
             onSaveGraph={onSaveGraph}

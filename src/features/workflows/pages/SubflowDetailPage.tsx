@@ -15,6 +15,8 @@ type SubflowDetailPageProps = {
   graph: WorkflowGraph | null;
   graphSaveStatus: string;
   appError: string;
+  backLabel?: string;
+  breadcrumbLabel?: string;
   onBack: () => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onSaveGraph: () => void;
@@ -28,6 +30,8 @@ export function SubflowDetailPage({
   graph,
   graphSaveStatus,
   appError,
+  backLabel = "Back to Subflows",
+  breadcrumbLabel = "Subflows",
   onBack,
   onGraphChange,
   onSaveGraph,
@@ -42,8 +46,8 @@ export function SubflowDetailPage({
       <h1 className="sr-only">{subflow.name}</h1>
       <PageHeader
         ariaLabel="Subflow detail header"
-        backLabel="Back to Subflows"
-        breadcrumbLabel="Subflows"
+        backLabel={backLabel}
+        breadcrumbLabel={breadcrumbLabel}
         eyebrow="Subflow"
         meta={[graphSaveStatus, `Usage: ${usageLabel}`]}
         title={subflow.name}

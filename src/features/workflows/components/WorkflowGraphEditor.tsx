@@ -34,6 +34,7 @@ import type {
 } from "../../../types/workflow";
 import {
   createDefaultGraphNode,
+  callSubflowIdFromNode,
   defaultActionConfig,
   fromReactFlowGraph,
   graphIssuesByNode,
@@ -95,6 +96,7 @@ type WorkflowGraphEditorProps = {
   }) => Promise<Pick<Subflow, "id" | "name">>;
   onRunGraph?: () => void;
   onSelectedNodeChange?: (nodeId: string | null) => void;
+  onOpenSubflowDetail?: (subflowId: string) => void;
   onSaveGraph?: () => void;
   onValidateGraph?: () => void;
   defaultEdgeDelay?: GraphEdgeDelay | null;
@@ -566,6 +568,7 @@ export function WorkflowGraphEditor({
   onCreateSubflowFromSelection,
   onRunGraph,
   onSelectedNodeChange,
+  onOpenSubflowDetail,
   onSaveGraph,
   onValidateGraph,
 }: WorkflowGraphEditorProps) {
@@ -640,6 +643,15 @@ export function WorkflowGraphEditor({
       : null;
   const selectedNode = selectedNodeId
     ? graph.nodes.find((node) => node.id === selectedNodeId) ?? null
+    : null;
+  const contextMenuNode = contextMenu
+    ? graph.nodes.find((node) => node.id === contextMenu.nodeId) ?? null
+    : null;
+  const contextMenuSubflowId = callSubflowIdFromNode(contextMenuNode);
+  const contextMenuSubflowName = contextMenuSubflowId
+    ? subflowOptions.find((subflow) => subflow.id === contextMenuSubflowId)?.name ??
+      contextMenuNode?.label ??
+      null
     : null;
   const showGraphMiniMap = graph.nodes.length <= graphMiniMapNodeLimit;
 
@@ -1523,7 +1535,8 @@ export function WorkflowGraphEditor({
             </ReactFlow>
             {contextMenu ? (
               <NodeContextMenu
-                node={graph.nodes.find((node) => node.id === contextMenu.nodeId) ?? null}
+                node={contextMenuNode}
+                calledSubflowName={contextMenuSubflowName}
                 x={contextMenu.x}
                 y={contextMenu.y}
                 onClose={() => setContextMenu(null)}
@@ -1537,6 +1550,14 @@ export function WorkflowGraphEditor({
                 }}
                 onDuplicate={() => duplicateNode(contextMenu.nodeId)}
                 onHelp={() => openNodeHelp(contextMenu.nodeId)}
+                onOpenSubflowDetail={
+                  contextMenuSubflowId && onOpenSubflowDetail
+                    ? () => {
+                        onOpenSubflowDetail(contextMenuSubflowId);
+                        setContextMenu(null);
+                      }
+                    : undefined
+                }
                 onDelete={() => {
                   deleteNode(contextMenu.nodeId);
                   setContextMenu(null);
@@ -1590,6 +1611,7 @@ export function WorkflowGraphEditor({
               onDuplicateSelection={duplicateSelection}
               onFocusSelectedNode={focusSelectedNode}
               onOpenSelectedNodeHelp={() => setHelpNode(selectedNode)}
+              onOpenSubflowDetail={onOpenSubflowDetail}
               onClose={closeInspector}
               onUpdateEdge={updateEdge}
               onUpdateNode={updateNode}

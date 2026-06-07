@@ -163,6 +163,10 @@ Preserve these unless the task explicitly changes them.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP
   subflows cannot call other subflows.
+- A configured Call Subflow node exposes Open subflow from both the selected
+  node inspector actions and the node context menu. The action opens the
+  referenced subflow detail without saving or mutating the workflow draft, and
+  Back from that subflow detail returns to the originating workflow detail.
 - The Wait action group includes fixed Wait and Random Wait actions. Random Wait requires minimum and maximum milliseconds, with maximum greater than or equal to minimum. Link waits use the same duration constraints but stay scoped to the edge transition.
 - Graph canvas nodes show the saved node label as the primary text, keep the
   underlying action or graph-node kind visible as secondary text, and expose a

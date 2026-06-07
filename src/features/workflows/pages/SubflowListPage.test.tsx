@@ -126,5 +126,9 @@ describe("Subflow list integration", () => {
         }),
       );
     });
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Subflows" }));
+    expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
+    expect(screen.getByText("Login Subflow")).toBeInTheDocument();
   });
 });
