@@ -1,11 +1,19 @@
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
+import electronPath from "electron";
+import { createElectronWatchOutputHandler } from "./electron-dev-utils.mjs";
 
 const processes = [];
 let electronProcess = null;
 let restartingElectron = false;
-let electronWatchReady = false;
 let restartTimeout = null;
+const electronWatchOutput = createElectronWatchOutputHandler({
+  onSuccessfulRebuild: () => {
+    if (electronProcess) {
+      scheduleElectronRestart();
+    }
+  },
+});
 
 function start(command, args, options = {}) {
   const child = spawn(command, args, {
@@ -19,14 +27,8 @@ function start(command, args, options = {}) {
 
 function pipeOutput(child) {
   child.stdout?.on("data", (chunk) => {
-    const text = chunk.toString();
-    process.stdout.write(text);
-    if (text.includes("Found 0 errors. Watching for file changes.")) {
-      if (electronWatchReady && electronProcess) {
-        scheduleElectronRestart();
-      }
-      electronWatchReady = true;
-    }
+    process.stdout.write(chunk);
+    electronWatchOutput.handleStdoutChunk(chunk);
   });
   child.stderr?.on("data", (chunk) => {
     process.stderr.write(chunk);
@@ -57,7 +59,8 @@ function stopAll() {
 }
 
 function startElectron(rendererUrl) {
-  electronProcess = start("npx", ["electron", "."], {
+  electronProcess = start(electronPath, ["."], {
+    shell: false,
     env: {
       ...process.env,
       VITE_DEV_SERVER_URL: rendererUrl,

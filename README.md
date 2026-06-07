@@ -18,6 +18,13 @@ Run the desktop app in development:
 npm run electron:dev
 ```
 
+The dev command starts Vite for renderer HMR and watches Electron
+main/preload/backend TypeScript. Renderer edits update in place; successful
+Electron rebuilds automatically restart the desktop process so backend logic
+changes are picked up without stopping the command. Dev restarts launch the
+Electron binary directly and replace the current desktop process instead of
+opening another app instance through an `npx` wrapper.
+
 Build the renderer and Electron main/preload:
 
 ```bash
