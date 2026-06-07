@@ -219,10 +219,6 @@ export function getOperationsOverview(request: OperationsOverviewRequest) {
   return bridge().getOperationsOverview(request);
 }
 
-export function getOperationalRunDetail(runId: string) {
-  return bridge().getOperationalRunDetail(runId);
-}
-
 export function listEvidenceItems(request: EvidenceListRequest = {}) {
   return bridge().listEvidenceItems(request);
 }

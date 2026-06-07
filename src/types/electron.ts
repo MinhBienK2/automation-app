@@ -11,7 +11,6 @@ import type {
   RecordingEvent,
   RecordingSession,
   RecordingWorkflowDraft,
-  OperationalRunDetail,
   OperationsOverview,
   OperationsOverviewRequest,
   EvidenceBundleExportRequest,
@@ -123,7 +122,6 @@ export type WorkflowElectronBridge = {
   getOperationsOverview(
     request: OperationsOverviewRequest,
   ): Promise<OperationsOverview>;
-  getOperationalRunDetail(runId: string): Promise<OperationalRunDetail>;
   listEvidenceItems(request?: EvidenceListRequest): Promise<EvidencePage>;
   getEvidenceDetail(evidenceId: string): Promise<EvidenceDetail>;
   getEvidenceScreenshotPreview(

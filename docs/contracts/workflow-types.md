@@ -38,7 +38,7 @@ Frontend and backend must agree on:
 - `RunState.retained_session`: optional retained browser session availability metadata used by debug run-from-selected UI.
 - `WorkflowRunSnapshot`: run-id scoped status wrapper with `run_id`, `workflow_id`, `workflow_name`, `source` (`manual` or `schedule`), `started_at`, and nested `state: RunState`, plus mirrored top-level run-state fields for compatibility.
 - `MissionControlTarget`: renderer-only typed navigation target for Overview,
-  Workflow, Run, Evidence, Identity Lab, Schedule, and graph issue focus.
+  Workflow, Evidence, Identity Lab, Schedule, and graph issue focus.
 - `OperationsOverviewRequest`: local-day UTC range capped at 48 hours plus
   optional bounded list limits and attention filters for the Overview read
   model.
@@ -47,10 +47,6 @@ Frontend and backend must agree on:
   schedules, and data warnings. Recent evidence result pages remain bounded
   after the backend has matched persisted evidence metadata; newer output-only
   run rows must not hide older evidence items.
-- `OperationalRunDetail`: bounded selected-run summary for Overview-to-Runs
-  navigation, including workflow reference, optional identity reference from
-  the run settings snapshot, sanitized error text, capped step summaries, and
-  safe evidence metadata.
 - `EvidenceListRequest`: evidence filters for search, type, run status,
   durable source, workflow, run, historical identity, time range, cursor, limit,
   and optional focused evidence id. Result pages remain bounded, but matching

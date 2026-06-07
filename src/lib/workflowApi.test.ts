@@ -31,7 +31,6 @@ import {
   listSchedules,
   listRecordingEvents,
   getCloakBrowserDiagnostics,
-  getOperationalRunDetail,
   getOperationsOverview,
   listEvidenceItems,
   listProjects,
@@ -116,7 +115,6 @@ describe("workflow API phase ten commands", () => {
     workflowBridgeMock.getRecordingDraft.mockResolvedValue(undefined);
     workflowBridgeMock.saveRecordingDraft.mockResolvedValue(undefined);
     workflowBridgeMock.getOperationsOverview.mockResolvedValue(undefined);
-    workflowBridgeMock.getOperationalRunDetail.mockResolvedValue(undefined);
     workflowBridgeMock.listEvidenceItems.mockResolvedValue(undefined);
     workflowBridgeMock.getEvidenceDetail.mockResolvedValue(undefined);
     workflowBridgeMock.getEvidenceScreenshotPreview.mockResolvedValue(undefined);
@@ -211,7 +209,6 @@ describe("workflow API phase ten commands", () => {
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
     });
-    await getOperationalRunDetail("run-1");
     await listEvidenceItems({
       types: ["screenshot"],
       sources: ["manual"],
@@ -332,7 +329,6 @@ describe("workflow API phase ten commands", () => {
       day_end_utc: "2026-05-28T00:00:00.000Z",
       timezone_label: "UTC",
     });
-    expect(workflowBridgeMock.getOperationalRunDetail).toHaveBeenCalledWith("run-1");
     expect(workflowBridgeMock.listEvidenceItems).toHaveBeenCalledWith({
       types: ["screenshot"],
       sources: ["manual"],

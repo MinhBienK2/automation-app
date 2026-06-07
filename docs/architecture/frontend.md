@@ -16,7 +16,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/identities/pages/IdentityLabPage.tsx`: current managed browser
   identity workspace with list/detail posture, latest observed evidence,
   sanitized diagnostics, historical identity references, retained-session close,
-  guarded reset, and navigation to Evidence/Runs/Workflow Settings.
+  guarded reset, and navigation to Evidence/Workflow Settings.
 - `src/features/projects/pages/ProjectsPage.tsx`: project workspace shell with
   selected-project state, the project-list Workflows/Subflows/Settings
   collection menu, and project creation.
@@ -27,7 +27,6 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   autosave, environment readiness diagnostics, guarded maintenance commands,
   and graph shortcut guidance.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
-- `src/features/runs/pages/RunCenterPage.tsx`: user-facing Runs session monitor for active and recent workflow run snapshots, selected durable run detail, missing-run target state, and run-to-workflow/identity/evidence links.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen
   with environment-aware create flow, selected-environment display, icon-only
   row actions, direct Run for saved workflow state, and the Record Workflow
@@ -75,9 +74,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Browser Launch Reset identity uses an in-app confirmation dialog and delegates generation/persistence to `resetWorkflowBrowserIdentity`; the renderer does not create identity ids or fingerprint seeds.
 - Overview is the default app screen. It calls `getOperationsOverview` with
   the operator local-day UTC range, displays backend-owned aggregate data,
-  supports manual refresh, and navigates returned workflow/run/schedule
-  references into existing Projects/Workflows, Runs, Schedules, and focused
-  Evidence destinations.
+  supports manual refresh, and navigates returned workflow/schedule/evidence
+  references into existing Projects/Workflows, Schedules, and focused Evidence
+  destinations. Live and failed run references open the owning workflow.
 - The app shell owns a typed in-memory Mission Control navigation target
   router. Sidebar navigation, Overview cards, Evidence links, Identity links,
   schedule history links, and selected run details route through that contract
@@ -127,7 +126,6 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Run issue summaries that route graph-backed issues back to the affected node or link. Runtime and system errors use a compact header summary with raw error details collapsed behind an explicit details control to keep the graph workspace dense.
 - Workflow detail run monitoring uses a right-side Run Monitor drawer when saved Graph settings enable Live Run. The header Monitor command opens or hides the drawer, and active runs open it automatically unless the operator closed it for the current workflow session. The drawer derives labels from the loaded graph plus `current_step_id`, `current_step_number`, `completed_step_ids`, and `error.step_id`, and renders a chronological node-activity log without a separate current-node summary section. Each node occurrence is one row whose status is running, completed, or failed; repeated ids create additional rows when a loop/retry body runs the same graph node more than once. Future pending graph nodes are not rendered in the log, and timeline rows do not receive separate current/active selection styling when the graph highlights the current node. Clicking a timeline row can select/focus its graph node. The saved Follow current setting controls automatic graph selection/centering outside the drawer; the drawer does not expose a separate Follow current toggle. Graph nodes remain highlighted by current/completed/failed state even when the drawer is closed. The drawer does not invent branch, loop, retry, timestamps, or skipped-node events beyond the current run-state contract.
 - Run polling consumes `list_run_states` while any workflow run snapshot is running, whether the run started from the list, detail workspace, or scheduler. `get_run_state` remains a legacy/latest-state fallback. The backend updates `current_step_id`, `current_step_number`, and `completed_step_ids` on the matching snapshot from runner progress callbacks so graph nodes can show active/completed/failed state without a frontend-specific execution model.
-- Runs owns the cross-workflow session monitor. It lists run snapshots, shows source/status/current step/error context, calls `stopRun(runId)` for selected active runs, and can render one bounded persisted-run detail loaded from an Overview navigation target.
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
 - Subflows navigation state inside the selected project's Subflows collection,
   plus list/detail state, create/duplicate/delete command state, graph save
@@ -162,13 +160,12 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   belongs to the selected project's Settings collection.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.
 - Evidence navigation state in the app shell/sidebar, Evidence query/detail
-  state, and Overview/Runs-to-Evidence handoff state.
+  state, and Overview-to-Evidence handoff state.
 - Identity Lab navigation state in the app shell/sidebar, managed/historical
   identity selection state, read-model refresh state, and Evidence-to-Identity
   handoff state. Identity actions call typed backend commands; the renderer
   does not derive identity posture from raw run outputs or diagnostics.
 - Schedules navigation state in the app shell/sidebar, plus schedule create/edit form state and schedule event history presentation.
-- Runs navigation state in the app shell/sidebar.
 - Shared switch, segmented-control, and tooltip-backed icon button presentation for user-facing settings, help language controls, editor modes, and icon-only commands. Workflow detail header commands keep Settings, Validate, and Save icon-only while Run, Stop, and Run from selected remain text commands.
 
 ## Does Not Belong Here

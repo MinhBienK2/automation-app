@@ -20,8 +20,8 @@ Preserve these unless the task explicitly changes them.
 - Overview is the default Mission Control entry point. It shows backend-owned
   durable metrics, live operations, attention, activity, recent evidence
   metadata, and upcoming schedules for the operator's local day.
-- Mission Control sidebar order is Overview, Projects, Runs, Evidence,
-  Schedules, Identities, App Settings. Overview is the default first screen.
+- Mission Control sidebar order is Overview, Projects, Evidence, Schedules,
+  Identities, App Settings. Overview is the default first screen.
 - Projects is the only sidebar entry for workflow authoring inventory. The
   selected project shows Workflows, Subflows, and Settings as a collection menu
   inside the project list sidebar. Workflows and subflows shown there are
@@ -30,10 +30,9 @@ Preserve these unless the task explicitly changes them.
 - The app shell does not render a top command/search header or Alerts shortcut.
   Sidebar navigation and in-page links are the user-facing cross-workspace
   navigation surfaces.
-- Evidence is a separate sidebar page between Runs and Schedules. It is the
+- Evidence is a separate sidebar page between Projects and Schedules. It is the
   only broad historical evidence browser; Overview recent evidence opens
-  Evidence focused on the selected evidence id, and Runs selected run details
-  can open Evidence filtered to that run.
+  Evidence focused on the selected evidence id.
 - Identities is a separate sidebar page after Schedules and before App Settings.
   It lists workflow-owned current browser identities, shows managed identity
   posture/diagnostics/run context, and opens read-only historical references
@@ -43,8 +42,7 @@ Preserve these unless the task explicitly changes them.
 - If a schedule fires while the same workflow is active, the same persistent browser profile is active, or a batch run is active, that occurrence is skipped with reason `active_workflow`, `active_profile`, or `active_batch`; one-time schedules are disabled after the skipped opportunity. Isolated schedules can start concurrently.
 - Enabled schedules must have valid schedule config and a currently runnable saved workflow. Disabled draft schedules can point at workflows that are still being authored.
 - Schedule event history records started, skipped, missed, failed-to-start, and disabled decisions independently from run evidence rows.
-- Schedule history entries with run ids can open the matching Runs target, and
-  all schedule history entries can open the owning Workflow target. A stale or
+- Schedule history entries can open the owning Workflow target. A stale or
   deleted schedule target renders an unavailable target message.
 - Workflow package export can include Flow, selected Workflow Settings
   sections, and subflows referenced by Call Subflow nodes. Export opens the
@@ -152,11 +150,6 @@ Preserve these unless the task explicitly changes them.
 - Icon-only workflow and graph controls keep accessible labels and expose visible tooltip text on hover/focus through the shared icon button primitive.
 - App Settings is a separate app screen reachable from the sidebar.
 - Schedules is a separate app screen reachable from the sidebar.
-- Runs is a separate app screen reachable from the sidebar for monitoring all current app-session workflow run snapshots and stopping a selected active run.
-- Runs can render one selected persisted run detail opened from Overview or
-  shell navigation. Selected run details can open related Evidence, Workflow,
-  and Identity targets, and stale run targets render an unavailable target
-  message.
 - Evidence is a separate app screen reachable from the sidebar. It lists only
   typed persisted evidence summaries and bounded typed details for screenshot,
   download, browser identity, action trace, and evidence manifest items. It

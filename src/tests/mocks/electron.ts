@@ -50,7 +50,6 @@ const methodNames: BridgeMethodName[] = [
   "getRunState",
   "listRunStates",
   "getOperationsOverview",
-  "getOperationalRunDetail",
   "listEvidenceItems",
   "getEvidenceDetail",
   "getEvidenceScreenshotPreview",
@@ -109,7 +108,6 @@ function resolveCommand(commands: CommandMap, command: string, args: unknown) {
     if (command === "list_subflows") return [];
     if (command === "get_subflow_usage") return [];
     if (command === "get_operations_overview") return defaultOperationsOverview();
-    if (command === "get_operational_run_detail") return null;
     if (command === "list_evidence_items") return defaultEvidencePage();
     if (command === "get_evidence_detail") return null;
     if (command === "get_evidence_screenshot_preview") {
@@ -351,9 +349,6 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getOperationsOverview.mockImplementation((request: unknown) =>
     resolveCommand(commands, "get_operations_overview", { request }),
-  );
-  workflowBridgeMock.getOperationalRunDetail.mockImplementation((runId: string) =>
-    resolveCommand(commands, "get_operational_run_detail", { runId }),
   );
   workflowBridgeMock.listEvidenceItems.mockImplementation((request: unknown) =>
     resolveCommand(commands, "list_evidence_items", { request }),

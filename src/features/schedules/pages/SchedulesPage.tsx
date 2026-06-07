@@ -52,7 +52,6 @@ type SchedulesPageProps = {
   onDeleteSchedule: (scheduleId: string) => Promise<unknown> | void;
   onToggleSchedule: (scheduleId: string, enabled: boolean) => Promise<unknown> | void;
   onLoadEvents: (scheduleId: string) => Promise<unknown> | void;
-  onOpenRun?: (runId: string) => void;
   onOpenWorkflow?: (workflowId: string) => void;
 };
 
@@ -78,7 +77,6 @@ export function SchedulesPage({
   onDeleteSchedule,
   onToggleSchedule,
   onLoadEvents,
-  onOpenRun,
   onOpenWorkflow,
 }: SchedulesPageProps) {
   const [dialogMode, setDialogMode] = useState<ScheduleDialogMode>(null);
@@ -482,16 +480,6 @@ export function SchedulesPage({
                     <span>{formatDateTime(event.scheduled_for)}</span>
                     {event.reason ? <small>{event.reason}</small> : null}
                     <div className="schedule-history-actions">
-                      {event.run_id && onOpenRun ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => onOpenRun(event.run_id ?? "")}
-                        >
-                          Open Run
-                        </Button>
-                      ) : null}
                       {onOpenWorkflow ? (
                         <Button
                           type="button"

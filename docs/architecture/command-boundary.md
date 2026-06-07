@@ -60,9 +60,9 @@ Node/Electron backend.
   ignored. Successful save consumes the in-memory draft/session; discarding a
   session also removes any drafts generated from that session.
 - Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
-- Operations aggregate reads through `getOperationsOverview` and
-  `getOperationalRunDetail`; metric meanings, attention dedupe, evidence
-  metadata filtering, and bounded limits stay in the backend.
+- Operations aggregate reads through `getOperationsOverview`; metric meanings,
+  attention dedupe, evidence metadata filtering, and bounded limits stay in the
+  backend.
 - Evidence reads and artifact operations through `listEvidenceItems`,
   `getEvidenceDetail`, `getEvidenceScreenshotPreview`,
   `revealEvidenceArtifact`, and `exportEvidenceBundle`; evidence extraction,

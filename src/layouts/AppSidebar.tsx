@@ -1,7 +1,7 @@
 import { Button } from "../components/ui/button";
-import { Activity, CalendarClock, Files, Fingerprint, Folder, Gauge, Settings } from "lucide-react";
+import { CalendarClock, Files, Fingerprint, Folder, Gauge, Settings } from "lucide-react";
 
-type AppSidebarActiveItem = "overview" | "projects" | "runs" | "evidence" | "schedules" | "identities" | "settings";
+type AppSidebarActiveItem = "overview" | "projects" | "evidence" | "schedules" | "identities" | "settings";
 
 type AppSidebarProps = {
   activeItem: AppSidebarActiveItem;
@@ -10,7 +10,6 @@ type AppSidebarProps = {
   onOpenEvidence: () => void;
   onOpenIdentities: () => void;
   onOpenProjects: () => void;
-  onOpenRunCenter: () => void;
   onOpenSchedules: () => void;
   onOpenSettings: () => void;
   onToggle: () => void;
@@ -57,7 +56,6 @@ export function AppSidebar({
   onOpenEvidence,
   onOpenIdentities,
   onOpenProjects,
-  onOpenRunCenter,
   onOpenSchedules,
   onOpenSettings,
   onToggle,
@@ -94,19 +92,6 @@ export function AppSidebar({
         >
           <Folder aria-hidden="true" className="sidebar-item-icon" />
           <span>Projects</span>
-        </Button>
-        <Button
-          className={
-            activeItem === "runs"
-              ? "sidebar-nav-item sidebar-nav-item-active"
-              : "sidebar-nav-item"
-          }
-          variant="secondary"
-          type="button"
-          onClick={onOpenRunCenter}
-        >
-          <Activity aria-hidden="true" className="sidebar-item-icon" />
-          <span>Runs</span>
         </Button>
         <Button
           className={

@@ -299,7 +299,7 @@ export class EvidenceRepository {
       },
       workflow: { id: row.workflow_id, name: row.workflow_name },
       identity,
-      navigation_targets: { run: true, workflow: true },
+      navigation_targets: { workflow: true },
     };
     const items: EvidenceListItem[] = [];
     const seenArtifacts = new Set<string>();

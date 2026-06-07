@@ -23,7 +23,6 @@ type IdentityLabPageProps = {
   onRefresh: () => void;
   onSelect: (workflowId: string, identityId: string) => void;
   onOpenEvidence: (workflowId: string, identityId: string) => void;
-  onOpenRun: (runId: string) => void;
   onOpenWorkflow: (workflowId: string) => void;
   onOpenWorkflowSettings: (workflowId: string) => void;
   onCloseRetainedSession: (workflowId: string, profileName: string) => void;
@@ -39,7 +38,6 @@ export function IdentityLabPage({
   onRefresh,
   onSelect,
   onOpenEvidence,
-  onOpenRun,
   onOpenWorkflow,
   onOpenWorkflowSettings,
   onCloseRetainedSession,
@@ -115,11 +113,6 @@ export function IdentityLabPage({
                 <Button type="button" variant="secondary" onClick={() => onOpenEvidence(detail.workflow_ref.id, detail.identity_ref.id)}>
                   Open Evidence
                 </Button>
-                {detail.last_run ? (
-                  <Button type="button" variant="secondary" onClick={() => onOpenRun(detail.last_run?.run_id ?? "")}>
-                    Open Last Run
-                  </Button>
-                ) : null}
                 <Button type="button" variant="secondary" onClick={() => onOpenWorkflowSettings(detail.workflow_ref.id)}>
                   Open Workflow Settings
                 </Button>
@@ -220,15 +213,6 @@ export function IdentityLabPage({
                 This identity is read-only and is no longer attached to current workflow settings.
               </p>
               <div className="identity-actions">
-                {historicalDetail.run_id ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => onOpenRun(historicalDetail.run_id ?? "")}
-                  >
-                    Open Related Run
-                  </Button>
-                ) : null}
                 {historicalDetail.workflow_ref ? (
                   <Button
                     type="button"
