@@ -1296,6 +1296,36 @@ describe("BrowserWorkflowRunner", () => {
     expect(context.closed).toBe(true);
   });
 
+  test("reports the compiled label for failed inlined subflow steps", async () => {
+    const runner = new BrowserWorkflowRunner({
+      appPaths: await createTempAppPaths(),
+      driver: createFakeDriver(new FakeContext()),
+    });
+
+    const result = await runner.run({
+      graph: {
+        steps: [
+          step("call-login::assert-email", "Login subflow > Assert email", {
+            type: "assert_output",
+            config: { name: "email", match_mode: "equals", value: "ready" },
+          }),
+        ],
+      },
+      settings: makeSettings(),
+      mode: "run_workflow",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toEqual(
+      expect.objectContaining({
+        step_id: "call-login::assert-email",
+        step_name: "Login subflow > Assert email",
+        action_type: "assert_output",
+        reason: "Output email did not equal ready",
+      }),
+    );
+  });
+
   test("retains temporary browser sessions when run policy and terminal node do not request closure", async () => {
     const context = new FakeContext();
     const runner = new BrowserWorkflowRunner({

@@ -764,6 +764,23 @@ describe("Electron workflow command handlers", () => {
         message: "Referenced subflow has blocking validation errors",
       }),
     );
+
+    const emptySubflow = projectHandlers.createSubflow(firstWorkflow.project_id, {
+      name: "Empty Login",
+    });
+    projectHandlers.saveSubflowGraph(emptySubflow.id, startToEndSuccessGraph());
+    handlers.saveWorkflowGraph(
+      firstWorkflow.id,
+      workflowGraphCallingSubflowThenAfter(emptySubflow.id),
+    );
+    expect(handlers.validateWorkflowRun(firstWorkflow.id)).toContainEqual(
+      expect.objectContaining({
+        source: "graph",
+        node_id: "call-login",
+        level: "error",
+        message: "Referenced subflow has no executable steps",
+      }),
+    );
   });
 
   test("defaults new workflow browser launch fonts from the detected repo-local CloakBrowser bundle", async () => {
@@ -5361,6 +5378,38 @@ function workflowGraphCallingSubflow(subflowId: string): WorkflowGraph {
   };
 }
 
+function workflowGraphCallingSubflowThenAfter(subflowId: string): WorkflowGraph {
+  const graph = workflowGraphCallingSubflow(subflowId);
+  return {
+    version: 2,
+    nodes: [
+      ...graph.nodes,
+      {
+        id: "after",
+        node_type: "action",
+        label: "After Login",
+        position: { x: 420, y: 0 },
+        config: { type: "wait", config: { condition: "duration", duration_ms: 1 } },
+        ports: [
+          { id: "in", label: "In", direction: "input" },
+          { id: "out", label: "Out", direction: "output" },
+        ],
+      },
+    ],
+    edges: [
+      ...graph.edges,
+      {
+        id: "call-login-after",
+        source_node_id: "call-login",
+        source_port: "out",
+        target_node_id: "after",
+        target_port: "in",
+      },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
 function subflowGraphWithAction(nodeId: string, label: string): WorkflowGraph {
   return {
     version: 2,
@@ -5421,6 +5470,40 @@ function startOnlyGraph(): WorkflowGraph {
       },
     ],
     edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function startToEndSuccessGraph(): WorkflowGraph {
+  return {
+    version: 2,
+    nodes: [
+      {
+        id: "start",
+        node_type: "start",
+        label: "Start",
+        position: { x: 0, y: 0 },
+        config: null,
+        ports: [{ id: "out", label: "Out", direction: "output" }],
+      },
+      {
+        id: "done",
+        node_type: "end_success",
+        label: "Done",
+        position: { x: 220, y: 0 },
+        config: { close_browser: false },
+        ports: [{ id: "in", label: "In", direction: "input" }],
+      },
+    ],
+    edges: [
+      {
+        id: "start-done",
+        source_node_id: "start",
+        source_port: "out",
+        target_node_id: "done",
+        target_port: "in",
+      },
+    ],
     viewport: { x: 0, y: 0, zoom: 1 },
   };
 }

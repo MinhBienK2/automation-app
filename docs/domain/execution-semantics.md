@@ -27,7 +27,9 @@
   domain policy, cancellation, and terminal browser retention. They do not
   launch a new browser, create a nested run row, or override the caller's
   saved/private browser session. Nested Call Subflow nodes inside subflows are
-  rejected in the MVP.
+  rejected in the MVP. A referenced subflow that compiles to no executable
+  steps is a blocking graph error on the Call Subflow node, not a no-op that
+  silently continues to the next workflow node.
 - Missing optional branches compile as empty nested steps. Missing continuation ports end the current path successfully. Missing required body ports such as loop body, retry try, try/catch try, and fallback primary are validation errors before compile/run.
 - Graphs with no executable compiled steps are rejected before the runner starts.
 - The TypeScript compiler emits the runner-facing `CompiledWorkflowGraph` and command handlers use it for `validate_workflow_graph` and `compile_workflow_graph`.
@@ -88,7 +90,10 @@
   persisted outputs and run steps. Screenshot preview, artifact reveal, and
   evidence-bundle export are backend commands that revalidate run-scoped
   artifact paths under the app evidence directory before touching files.
-- Failures carry step id, step number, step name, action type, and reason when available.
+- Failures carry step id, step number, compiled step name, action type, and
+  reason when available. Inlined Call Subflow failures keep the nested compiled
+  label, such as `<subflow> > <node>`, so the failure text identifies the
+  failing subflow node.
 - Terminal graph nodes can request browser closure. Outputs are captured before the browser is closed; otherwise the session is retained after terminal outcomes.
 
 ## Batch Execution

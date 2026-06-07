@@ -13,6 +13,7 @@ import {
   workflowDetailScenario,
 } from "../../../tests/mocks/workflowScenarios";
 import { renderApp } from "../../../tests/utils/renderApp";
+import { nodePorts } from "../lib/workflowGraph";
 
 describe("Workflow detail integration", () => {
   const scrollIntoViewMock = vi.fn();
@@ -961,6 +962,103 @@ describe("Workflow detail integration", () => {
     expect(within(panel).getByText("XPath not found")).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Select failed node" }))
       .toBeInTheDocument();
+  });
+
+  test("maps nested subflow runtime failures back to the Call Subflow node", async () => {
+    const graph: WorkflowGraph = {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: {},
+          ports: nodePorts("start"),
+          group_id: null,
+        },
+        {
+          id: "call-login",
+          node_type: "call_subflow",
+          label: "Login subflow",
+          position: { x: 220, y: 0 },
+          config: { subflow_id: "subflow-login", input_mapping: [] },
+          ports: nodePorts("call_subflow"),
+          group_id: null,
+        },
+        {
+          id: "after-login",
+          node_type: "action",
+          label: "After login",
+          position: { x: 440, y: 0 },
+          config: { type: "wait", config: { condition: "duration", duration_ms: 1 } },
+          ports: nodePorts("action"),
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "start-call-login",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "call-login",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+        {
+          id: "call-login-after-login",
+          source_node_id: "call-login",
+          source_port: "out",
+          target_node_id: "after-login",
+          target_port: "in",
+          label: "next",
+          condition: null,
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: graph,
+      save_workflow_graph: undefined,
+      run_workflow: {
+        ...idleRunState,
+        status: "failed",
+        error: {
+          step_id: "call-login::assert-email",
+          step_number: 1,
+          step_name: "Login subflow > Assert email",
+          action_type: "assert_output",
+          reason: "Output email did not equal ready",
+        },
+      },
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const header = await screen.findByRole("region", {
+      name: "Workflow detail header",
+    });
+    const controlsRow = within(header).getByRole("group", {
+      name: "Workflow controls row",
+    });
+    await launchRun(controlsRow);
+
+    const panel = await screen.findByRole("region", { name: "Run issues" });
+    expect(
+      within(panel).getByText("Run failed at step 1: Login subflow > Assert email"),
+    ).toBeInTheDocument();
+
+    const editor = screen.getByRole("region", { name: "Visual Graph" });
+    const callSubflowButton = within(editor).getByRole("button", {
+      name: "Graph canvas node call-login",
+    });
+    expect(callSubflowButton.closest(".graph-node")).toHaveClass("graph-node-failed");
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Select failed node" }));
+    expect(callSubflowButton.closest(".graph-node")).toHaveClass("graph-node-selected");
   });
 
   test("keeps detail run controls scoped to the opened workflow", async () => {

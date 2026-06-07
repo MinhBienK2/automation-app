@@ -48,7 +48,9 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Compiled run plans may include `domain_policy`; the runner enforces it before navigation-like actions call Playwright.
 - Variable actions write to the browser session output store. `set_variable` accepts typed rows, renders templates before parsing values, flattens object fields into dotted output keys, and keeps array values whole. `set_json_variables` renders and parses a JSON object before storing flattened keys.
 - `repeat_for_each` can iterate a manual item list or a variable-backed array from the output store. Object items expose dotted `item_name.field` variables inside the loop body, and loop outputs are retained for later steps.
-- Action failures produce failed outcomes with optional run-scoped failure screenshots.
+- Action failures produce failed outcomes with compiled step labels and optional
+  run-scoped failure screenshots. Inlined Call Subflow failures therefore keep
+  the nested subflow/node label in `RunState.error.step_name`.
 - Runner infrastructure errors fail the run without a retained session.
 - Browser sessions are retained through `BrowserSessionManager` after terminal outcomes unless Workflow Settings Run Policy browser retention is `close` or a compiled terminal Stop Workflow config requests browser closure. Captured `window.__wamOutputs` values are copied into run state before retention or closure.
 - Retained-session metadata is keyed by workflow/profile inside `BrowserSessionManager` and shared across isolated runner instances so retained browsers remain discoverable after the run-specific runner finishes. Run-from-selected checks the matching metadata before execution and refuses stale, closed, missing, or mismatched sessions.

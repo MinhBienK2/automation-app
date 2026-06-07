@@ -88,6 +88,9 @@ Node/Electron backend.
 - Native file dialogs and file writes needed by command flows, such as workflow package export.
 - Graph commands must keep invalid advanced node execution explicit: return a serializable command error before starting a run instead of compiling invalid nodes to no-ops.
 - Graph runs reject graphs with no executable compiled steps before starting the runner.
+  Call Subflow references that compile to no executable subflow steps are
+  command-facing graph errors on the Call Subflow node, so the run cannot skip
+  the reusable block and continue downstream.
 - Workflow-to-workflow nesting and subflow-to-subflow nesting are not part of
   the current workflow contract.
 - Product-facing workflow execution goes through `runWorkflow`, which runs the

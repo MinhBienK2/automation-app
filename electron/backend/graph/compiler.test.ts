@@ -452,6 +452,44 @@ describe("TypeScript graph compiler parity", () => {
     expect(afterPlan.steps.map((step) => step.node_id)).toEqual(["after"]);
   });
 
+  test("rejects Call Subflow references that compile to no executable steps", () => {
+    const emptySubflowGraph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("done", "end_success"),
+      ],
+      [edge("start", "out", "done", "in")],
+    );
+    const graph = graphOf(
+      [
+        graphNode("start", "start"),
+        graphNode("call-login", "call_subflow", {
+          config: { subflow_id: "subflow-empty", input_mapping: [] },
+        }),
+        graphNode("after", "action", { config: clickAction("//continue") }),
+      ],
+      [
+        edge("start", "out", "call-login", "in"),
+        edge("call-login", "out", "after", "in"),
+      ],
+    );
+
+    expect(() =>
+      compileWorkflowRunPlan(graph, workflowSettings(), {
+        projectId: "project-1",
+        resolveSubflow: (subflowId: string) =>
+          subflowId === "subflow-empty"
+            ? {
+                id: "subflow-empty",
+                project_id: "project-1",
+                name: "Empty Login",
+                graph: emptySubflowGraph,
+              }
+            : null,
+      }),
+    ).toThrow("Referenced subflow has no executable steps");
+  });
+
   test("rejects selected nodes inside nested branch bodies", () => {
     const graph = graphOf(
       [

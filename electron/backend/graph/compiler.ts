@@ -559,6 +559,9 @@ function compileCallSubflow(
     nodeIdPrefix: `${prefixedNodeId(node, options)}::`,
     labelPrefix: callSubflowLabelPrefix(options, subflow),
   });
+  if (compiled.steps.length === 0) {
+    throw validationError("subflow_id", "Referenced subflow has no executable steps");
+  }
   steps.push(...compiled.steps);
 }
 

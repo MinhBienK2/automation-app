@@ -82,6 +82,7 @@ type Runtime = {
   clipboard: string;
   currentStepId: string | null;
   currentStepNumber: number | null;
+  currentStepName: string | null;
   currentActionType: string | null;
   liveState: RunState;
   onProgress?: (state: Partial<RunState>) => void;
@@ -314,6 +315,7 @@ export class BrowserWorkflowRunner {
       clipboard: "",
       currentStepId: null,
       currentStepNumber: null,
+      currentStepName: null,
       currentActionType: null,
       liveState: state,
       onProgress: request.onProgress,
@@ -334,6 +336,7 @@ export class BrowserWorkflowRunner {
         this.throwIfCancelled(runtime.signal);
         runtime.currentStepId = step.node_id;
         runtime.currentStepNumber = stepNumber;
+        runtime.currentStepName = step.label;
         runtime.currentActionType = step.config.type;
         state.current_step_id = step.node_id;
         state.current_step_number = stepNumber;
@@ -357,7 +360,7 @@ export class BrowserWorkflowRunner {
           state.error = {
             step_id: state.current_step_id,
             step_number: state.current_step_number ?? 0,
-            step_name: null,
+            step_name: runtime.currentStepName,
             action_type: "stop_workflow",
             reason: error.message,
           };
@@ -369,7 +372,7 @@ export class BrowserWorkflowRunner {
         state.error = {
           step_id: state.current_step_id,
           step_number: state.current_step_number ?? 0,
-          step_name: null,
+          step_name: runtime.currentStepName,
           action_type: runtime.currentActionType ?? "unknown",
           reason: error instanceof Error ? error.message : String(error),
         };
@@ -1009,10 +1012,12 @@ export class BrowserWorkflowRunner {
       const previous = {
         runtimeStepId: runtime.currentStepId,
         runtimeActionType: runtime.currentActionType,
+        runtimeStepName: runtime.currentStepName,
         stateStepId: runtime.liveState.current_step_id,
       };
       runtime.currentStepId = action.graph_node_id;
       runtime.currentActionType = action.type;
+      runtime.currentStepName = action.graph_label ?? action.graph_node_id;
       runtime.liveState.current_step_id = action.graph_node_id;
       try {
         this.reportProgress(runtime);
@@ -1022,6 +1027,7 @@ export class BrowserWorkflowRunner {
       } finally {
         runtime.currentStepId = previous.runtimeStepId;
         runtime.currentActionType = previous.runtimeActionType;
+        runtime.currentStepName = previous.runtimeStepName;
         runtime.liveState.current_step_id = previous.stateStepId;
       }
     }

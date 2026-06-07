@@ -103,7 +103,7 @@ source vocabulary for Overview, workflow row status, and Evidence filtering.
 - Workflow list rows display the active snapshot for their workflow, disable only the affected row Run action, and expose row-level Stop for that run id.
 - Workflow detail renders `Run from selected` only when the Workflow Settings Run Policy toggle is enabled, then enables it only when run state reports a matching retained session and exactly one supported main-path node is selected. Call Subflow nodes are supported selected starts; Merge is not a supported selected start because it compiles to an internal no-op graph marker.
 - Run issue presentation is derived from run state, command errors, and graph validation issues without changing the persisted run-state shape.
-- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation.
+- Graph runs reuse this shape. `WorkflowGraphEditor` renders current/completed/failed graph node state when `current_step_id`, `completed_step_ids`, or `error.step_id` match compiled graph node ids, including nested branch/body node ids preserved by graph compilation. Workflow detail maps inlined Call Subflow ids of the form `<call-node>::<subflow-node>` back to `<call-node>` before selecting or highlighting the main graph, while preserving the nested compiled label in the run issue text.
 
 ## Change Checklist
 

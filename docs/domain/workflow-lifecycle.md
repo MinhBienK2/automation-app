@@ -123,7 +123,10 @@
 - `validate_workflow_graph` returns node/edge issues for selected-node issue display without persisting.
 - Validation/run issue results remain visible after graph edits so users do not lose the diagnostic context while fixing a workflow. After an edit, the issue panel marks those results as needing recheck until Validate or Run refreshes them.
 - `run_workflow` loads the saved graph, compiles graph nodes into executable action configs, rejects same-workflow/profile/batch conflicts, creates a run-id scoped SQLite run record, and starts the Electron CloakBrowser runner.
-- Canvas node status maps current/completed/failed run ids from `RunState` back to graph nodes when node ids are used as compiled step ids.
+- Canvas node status maps current/completed/failed run ids from `RunState` back
+  to graph nodes when node ids are used as compiled step ids. Inlined Call
+  Subflow ids map back to the caller node for main-workflow focus/highlight,
+  while the failure text keeps the nested subflow label.
 
 ## Subflow Authoring
 

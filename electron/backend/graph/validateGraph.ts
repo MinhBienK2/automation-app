@@ -384,6 +384,10 @@ function pushCallSubflowIssues(
   });
   if (subflowIssues.some((issue) => issue.level === "error")) {
     issues.push(error(node.id, null, "Referenced subflow has blocking validation errors"));
+    return;
+  }
+  if (!graphHasExecutableSteps(subflow.graph)) {
+    issues.push(error(node.id, null, "Referenced subflow has no executable steps"));
   }
 }
 
@@ -583,6 +587,22 @@ function reachableNodeIds(graph: WorkflowGraph): Set<string> {
     }
   }
   return reachable;
+}
+
+function graphHasExecutableSteps(graph: WorkflowGraph): boolean {
+  const normalizedGraph = migrateWorkflowGraph(graph);
+  const reachable = reachableNodeIds(normalizedGraph);
+  return normalizedGraph.nodes.some(
+    (node) => reachable.has(node.id) && nodeProducesCompiledStep(node),
+  );
+}
+
+function nodeProducesCompiledStep(node: GraphNode): boolean {
+  if (node.node_type === "start") return false;
+  if (node.node_type === "end_success") {
+    return asRecord(node.config).close_browser === true;
+  }
+  return true;
 }
 
 function unsupportedCycleNodeIds(graph: WorkflowGraph): Set<string> {

@@ -162,7 +162,9 @@ Preserve these unless the task explicitly changes them.
   referenced by workflows. Deleting a referenced subflow is blocked.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP
-  subflows cannot call other subflows.
+  subflows cannot call other subflows. If the referenced subflow has no
+  executable compiled work, validation/run must stop at the Call Subflow node
+  instead of skipping to the next connected workflow node.
 - A configured Call Subflow node exposes Open subflow from both the selected
   node inspector actions and the node context menu. The action opens the
   referenced subflow detail without saving or mutating the workflow draft, and
@@ -228,6 +230,9 @@ Preserve these unless the task explicitly changes them.
   does not create attention.
 - Running a graph shows status in the page header, displays a live run navigator with a chronological node-activity log timeline, and reflects graph progress through canvas node state. Each node occurrence is one timeline row whose status changes from running to completed or failed; future pending graph nodes do not appear in the log, and timeline rows do not visually activate just because the graph current node is active. Follow current is configured in Workflow Settings and can automatically select and center the current graph node, while timeline row selection performs graph focus on demand.
 - Run issues distinguish blocking graph validation issues, runtime failures, and system/startup errors. Issues with graph context can select the affected node or link.
+- Runtime failures from inlined Call Subflow steps show the nested compiled
+  subflow label in the failure text and focus/highlight the calling subflow node
+  on the main workflow graph.
 - Runtime and system run issues keep the long raw error collapsed behind Details, expose Copy details, and show only a short contained summary by default. The graph inspector drawer mirrors the selected node's last run error with the same collapsed-details behavior so long Playwright/CloakBrowser messages do not overflow the workspace.
 - Run issues remain visible while users interact with or edit the graph. When an edit may have made the issue results stale, the issue panel must say the issues need recheck instead of disappearing silently.
 - Graph run colors are semantic: green is reserved for completed/successful paths, cyan/blue indicate selection or active execution, amber indicates validation issues, and red indicates failure. The currently running node uses a prominent cyan border, tinted fill, ring, and glow so active execution remains visible on large dark graphs.

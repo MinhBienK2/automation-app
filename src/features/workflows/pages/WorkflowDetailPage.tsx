@@ -88,15 +88,19 @@ export function WorkflowDetailPage({
   const [monitorOpen, setMonitorOpen] = useState(false);
   const selectionRequestIdRef = useRef(0);
   const monitorManuallyClosedRef = useRef(false);
+  const graphRunState = useMemo(
+    () => mapRunStateToMainGraph(runState, workflowGraph),
+    [runState, workflowGraph],
+  );
   const runIssues = useMemo(
     () =>
       buildRunIssues({
         appError,
         graphIssues,
         graphIssuesNeedRecheck,
-        runState,
+        runState: graphRunState,
       }),
-    [appError, graphIssues, graphIssuesNeedRecheck, runState],
+    [appError, graphIssues, graphIssuesNeedRecheck, graphRunState],
   );
   const totalBlockingIssues = graphIssues.filter((issue) => issue.level === "error").length;
   const hasBlockingIssues = totalBlockingIssues > 0;
@@ -117,10 +121,10 @@ export function WorkflowDetailPage({
     });
   };
   const currentRunNodeId =
-    runState.status === "failed"
-      ? runState.error?.step_id ?? null
-      : runState.status === "running"
-        ? runState.current_step_id
+    graphRunState.status === "failed"
+      ? graphRunState.error?.step_id ?? null
+      : graphRunState.status === "running"
+        ? graphRunState.current_step_id
         : null;
 
   useEffect(() => {
@@ -268,14 +272,14 @@ export function WorkflowDetailPage({
           {liveRunEnabled && monitorOpen ? (
             <RunMonitorDrawer
               graph={workflowGraph}
-              runState={runState}
+              runState={graphRunState}
               onFocusNode={requestNodeSelection}
               onClose={closeMonitor}
             />
           ) : null}
           <WorkflowGraphEditor
             graph={workflowGraph}
-            runState={runState}
+            runState={graphRunState}
             validationIssues={graphIssues}
             subflowOptions={subflowOptions}
             selectionRequest={selectionRequest}
@@ -293,4 +297,35 @@ export function WorkflowDetailPage({
 
     </section>
   );
+}
+
+function mapRunStateToMainGraph(runState: RunState, graph: WorkflowGraph | null): RunState {
+  if (!graph) return runState;
+  const graphNodeIds = new Set(graph.nodes.map((node) => node.id));
+  return {
+    ...runState,
+    current_step_id: resolveMainGraphNodeId(runState.current_step_id, graphNodeIds),
+    completed_step_ids: runState.completed_step_ids.map((nodeId) =>
+      resolveMainGraphNodeId(nodeId, graphNodeIds) ?? nodeId,
+    ),
+    error: runState.error
+      ? {
+          ...runState.error,
+          step_id: resolveMainGraphNodeId(runState.error.step_id, graphNodeIds),
+        }
+      : null,
+  };
+}
+
+function resolveMainGraphNodeId(
+  nodeId: string | null | undefined,
+  graphNodeIds: Set<string>,
+) {
+  if (!nodeId) return nodeId ?? null;
+  if (graphNodeIds.has(nodeId)) return nodeId;
+  const subflowCallerNodeId = nodeId.split("::", 1)[0];
+  if (subflowCallerNodeId && graphNodeIds.has(subflowCallerNodeId)) {
+    return subflowCallerNodeId;
+  }
+  return nodeId;
 }
