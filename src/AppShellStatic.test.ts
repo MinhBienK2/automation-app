@@ -36,6 +36,10 @@ describe("app shell static assets", () => {
 
   test("keeps workflow package option controls out of App orchestration", () => {
     const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
+    const dialogsSource = readFileSync(
+      join(process.cwd(), "src/AppPackageDialogs.tsx"),
+      "utf8",
+    );
 
     expect(
       existsSync(
@@ -45,7 +49,8 @@ describe("app shell static assets", () => {
         ),
       ),
     ).toBe(true);
-    expect(appSource).toContain("WorkflowPackageOptions");
+    expect(dialogsSource).toContain("WorkflowPackageOptions");
+    expect(appSource).not.toContain("WorkflowPackageOptions");
     expect(appSource).not.toContain("function PackageFlowCheckbox");
     expect(appSource).not.toContain("function PackageSectionPicker");
   });

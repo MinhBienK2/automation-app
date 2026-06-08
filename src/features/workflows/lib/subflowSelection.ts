@@ -147,6 +147,20 @@ export function replaceSelectionWithSubflowNode(
         "Replace supports selections with at most one incoming link and one outgoing link.",
     };
   }
+  const internalOutgoingNodeIds = new Set(
+    plan.internalEdges.map((edge) => edge.source_node_id),
+  );
+  if (
+    plan.externalOutgoingEdges.some((edge) =>
+      internalOutgoingNodeIds.has(edge.source_node_id),
+    )
+  ) {
+    return {
+      ok: false,
+      message:
+        "Replace cannot safely rewire selections where a selected node has both internal links and links to the outside graph.",
+    };
+  }
 
   const selectedNodeIdSet = new Set(plan.selectedNodes.map((node) => node.id));
   const existingNodeIds = new Set(graph.nodes.map((node) => node.id));

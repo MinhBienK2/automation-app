@@ -156,6 +156,51 @@ describe("subflow selection planning", () => {
     );
   });
 
+  test("rejects replacement when a selected branch also exits the selection", () => {
+    const branchingGraph: WorkflowGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        {
+          id: "side-exit",
+          node_type: "action",
+          label: "Side Exit",
+          position: { x: 440, y: 180 },
+          config: { type: "click", config: {} },
+          ports: [
+            { id: "in", label: "In", direction: "input" },
+            { id: "out", label: "Out", direction: "output" },
+          ],
+          group_id: null,
+        },
+      ],
+      edges: [
+        ...graph.edges.filter((edge) => edge.id !== "edge-step-2-after"),
+        {
+          id: "edge-step-1-side-exit",
+          source_node_id: "step-1",
+          source_port: "out",
+          target_node_id: "side-exit",
+          target_port: "in",
+          label: "side branch",
+          condition: null,
+        },
+      ],
+    };
+
+    expect(
+      replaceSelectionWithSubflowNode(
+        branchingGraph,
+        { nodeIds: ["step-1", "step-2"], edgeIds: [] },
+        { id: "subflow-login", name: "Login" },
+      ),
+    ).toEqual({
+      ok: false,
+      message:
+        "Replace cannot safely rewire selections where a selected node has both internal links and links to the outside graph.",
+    });
+  });
+
   test("rejects selections that include start", () => {
     expect(
       buildSelectedSubflowPlan(graph, {

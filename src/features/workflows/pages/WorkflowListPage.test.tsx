@@ -921,8 +921,9 @@ describe("Workflow list integration", () => {
     });
     await launchRun(controlsRow);
 
-    expect(await screen.findByText("Failed at step 1: XPath not found"))
+    expect(await screen.findByText("Run failed at step 1: Wait for page"))
       .toBeInTheDocument();
+    expect(screen.getByText("XPath not found")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Back to Workflows" }));
     await userEvent.click(await screen.findByRole("button", { name: "Create Workflow" }));
@@ -934,7 +935,9 @@ describe("Workflow list integration", () => {
       "aria-current",
       "page",
     );
-    expect(screen.queryByText("Failed at step 1: XPath not found"))
+    expect(screen.queryByText("Run failed at step 1: Wait for page"))
+      .not.toBeInTheDocument();
+    expect(screen.queryByText("XPath not found"))
       .not.toBeInTheDocument();
   });
 });

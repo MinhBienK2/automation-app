@@ -84,6 +84,58 @@ describe("runBatchWorkflowRows", () => {
       },
     });
   });
+
+  test("finalizes the current row run when runner infrastructure rejects", async () => {
+    const manager = new FakeBatchWorkflowRunManager();
+    const runner: Pick<RunnerCommandPort, "run"> = {
+      async run() {
+        throw new Error("Browser launch failed");
+      },
+    };
+
+    await expect(
+      runBatchWorkflowRows({
+        workflowId: "workflow-1",
+        request: {
+          rows: [{ name: "A" }],
+        },
+        settings: workflowSettings({ stopOnFirstFailedRow: true }),
+        graphSnapshot: workflowGraph(),
+        compiledGraph: compiledGraph(),
+        runner,
+        runManager: manager,
+      }),
+    ).rejects.toThrow("Browser launch failed");
+
+    expect(manager.runRecordWorkflowIds).toEqual(["workflow-1"]);
+    expect(manager.currentRunIds).toEqual(["run-1", null]);
+    expect(manager.finishedRuns).toEqual([
+      expect.objectContaining({
+        runId: "run-1",
+        state: expect.objectContaining({
+          status: "failed",
+          mode: "run_workflow",
+          error: expect.objectContaining({
+            action_type: "workflow",
+            reason: "Browser launch failed",
+          }),
+        }),
+      }),
+    ]);
+    expect(manager.state).toMatchObject({
+      status: "failed",
+      outputs: {
+        batch_total: 1,
+        batch_succeeded: 0,
+        batch_failed: 1,
+      },
+      error: {
+        action_type: "workflow",
+        reason: "Browser launch failed",
+      },
+    });
+    expect(manager.cleared).toBe(true);
+  });
 });
 
 class FakeBatchWorkflowRunManager implements BatchWorkflowRunManager {
@@ -92,6 +144,11 @@ class FakeBatchWorkflowRunManager implements BatchWorkflowRunManager {
   runRecordWorkflowIds: string[] = [];
   currentRunIds: Array<string | null> = [];
   finishedRunIds: string[] = [];
+  finishedRuns: Array<{
+    runId: string | null;
+    graph: CompiledWorkflowGraph;
+    state: RunState;
+  }> = [];
   private runRecordCount = 0;
 
   beginBatchRun(totalRows: number) {
@@ -127,8 +184,9 @@ class FakeBatchWorkflowRunManager implements BatchWorkflowRunManager {
     this.currentRunIds.push(runId);
   }
 
-  finishRun(runId: string | null) {
+  finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState) {
     if (runId) this.finishedRunIds.push(runId);
+    this.finishedRuns.push({ runId, graph, state });
   }
 
   clearBatchRun() {

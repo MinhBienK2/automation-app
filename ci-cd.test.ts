@@ -343,7 +343,12 @@ describe("desktop CI/CD", () => {
     const topLevelFiles = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
     const topLevelDirectories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
 
-    expect(topLevelFiles).toEqual(["commands.test.ts", "commands.ts"]);
+    expect(topLevelFiles).toEqual([
+      "commandHelpers.test.ts",
+      "commandHelpers.ts",
+      "commands.test.ts",
+      "commands.ts",
+    ]);
     expect(topLevelDirectories).toEqual(
       expect.arrayContaining(["actions", "browser", "evidence", "graph", "persistence", "runtime", "scheduling", "services"]),
     );

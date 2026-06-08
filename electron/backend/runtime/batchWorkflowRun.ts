@@ -54,6 +54,9 @@ export async function runBatchWorkflowRows({
   const results: BatchRunSummary["results"] = [];
   let succeeded = 0;
   let failed = 0;
+  let activeRowRunId: string | null = null;
+  let activeRowGraph: CompiledWorkflowGraph | null = null;
+  let activeRowIndex: number | null = null;
   const abortController = runManager.beginBatchRun(request.rows.length);
   try {
     for (const [rowIndex, row] of request.rows.entries()) {
@@ -71,6 +74,9 @@ export async function runBatchWorkflowRows({
       });
       const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
       const runId = runManager.beginRunRecord(workflowId, batchSettings, graphSnapshot);
+      activeRowRunId = runId;
+      activeRowGraph = rowGraph;
+      activeRowIndex = rowIndex;
       runManager.setCurrentBatchRunId(runId);
       let result = await runner.run({
         runId,
@@ -105,6 +111,9 @@ export async function runBatchWorkflowRows({
         };
       }
       runManager.finishRun(runId, rowGraph, result);
+      activeRowRunId = null;
+      activeRowGraph = null;
+      activeRowIndex = null;
       runManager.setCurrentBatchRunId(null);
       if (result.status === "success") {
         succeeded += 1;
@@ -151,6 +160,36 @@ export async function runBatchWorkflowRows({
     }
   } catch (error) {
     const batchState = runManager.getBatchRunState();
+    const reason = error instanceof Error ? error.message : String(error);
+    let failedCount = failed;
+    if (activeRowRunId && activeRowGraph) {
+      failedCount += 1;
+      failed = failedCount;
+      const failedState: RunState = {
+        ...idleRunState,
+        status: "failed",
+        mode: "run_workflow",
+        completed_step_ids: batchState?.completed_step_ids ?? [],
+        retained_session: batchState?.retained_session ?? idleRunState.retained_session,
+        error: {
+          step_id: batchState?.current_step_id,
+          step_number: batchState?.current_step_number ?? 0,
+          step_name: null,
+          action_type: "workflow",
+          reason,
+        },
+      };
+      runManager.finishRun(activeRowRunId, activeRowGraph, failedState);
+      runManager.setCurrentBatchRunId(null);
+      results.push({
+        row_index: activeRowIndex ?? results.length,
+        status: "failed",
+        error: reason,
+      });
+      activeRowRunId = null;
+      activeRowGraph = null;
+      activeRowIndex = null;
+    }
     runManager.setBatchRunState({
       ...idleRunState,
       status: "failed",
@@ -158,14 +197,14 @@ export async function runBatchWorkflowRows({
       outputs: {
         batch_total: request.rows.length,
         batch_succeeded: succeeded,
-        batch_failed: failed,
+        batch_failed: failedCount,
       },
       error: {
         step_id: batchState?.current_step_id,
         step_number: batchState?.current_step_number ?? 0,
         step_name: null,
         action_type: "workflow",
-        reason: error instanceof Error ? error.message : String(error),
+        reason,
       },
     });
     throw error;
