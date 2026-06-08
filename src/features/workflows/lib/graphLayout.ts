@@ -6,6 +6,7 @@ import type {
   GraphPosition,
   WorkflowGraph,
 } from "../../../types/workflow";
+import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
 
 export type WorkflowGraphEdgeKind =
   | "main"
@@ -23,8 +24,6 @@ export type GraphLayoutResult = {
   edgeKinds: Map<string, WorkflowGraphEdgeKind>;
 };
 
-const graphNodeWidth = 160;
-const graphNodeHeight = 64;
 const layoutColumnGap = 260;
 const layoutRowGap = 120;
 const layoutLaneGap = 180;
@@ -224,7 +223,7 @@ function toElkGraph(graph: WorkflowGraph, selectedNodeIds?: Set<string>): ElkNod
     children: nodes.map((node) => ({
       id: node.id,
       width: graphNodeWidth,
-      height: Math.max(graphNodeHeight, 32 + node.ports.length * 20),
+      height: graphNodeHeightForPorts(node.ports),
       ports: node.ports.map((port) => ({
         id: elkPortId(node.id, port.id),
         width: 8,

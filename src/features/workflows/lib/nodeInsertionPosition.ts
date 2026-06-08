@@ -1,4 +1,5 @@
 import type { GraphPosition } from "../../../types/workflow";
+import { graphNodeMinHeight, graphNodeWidth } from "./graphNodeDimensions";
 
 type ScreenToFlowPosition = {
   screenToFlowPosition: (
@@ -8,8 +9,8 @@ type ScreenToFlowPosition = {
 };
 
 const graphNodeDimensions = {
-  width: 160,
-  height: 82,
+  width: graphNodeWidth,
+  height: graphNodeMinHeight,
 };
 
 const visibleNodeStagger = {

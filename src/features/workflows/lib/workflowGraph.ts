@@ -20,6 +20,7 @@ import {
   type WorkflowGraphEdgeKind,
 } from "./graphLayout";
 import { objectConfig } from "./configUtils";
+import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
 
 const graphIssueKey = "__graph__";
 
@@ -180,8 +181,8 @@ export function toReactFlowGraph(
       id: node.id,
       type: "workflow",
       position: node.position,
-      initialHeight: 82,
-      initialWidth: 160,
+      initialHeight: graphNodeHeightForPorts(node.ports),
+      initialWidth: graphNodeWidth,
       selected: state.selectedNodeIds?.has(node.id) ?? state.selectedNodeId === node.id,
       data: {
         label: node.label,
@@ -412,14 +413,23 @@ export function mergeReactFlowNodeRuntimeState(
   return nextNodes.map((node) => {
     const previousNode = previousById.get(node.id);
     if (!previousNode) return node;
+    const canPreserveMeasuredDimensions =
+      node.initialHeight === previousNode.initialHeight &&
+      node.initialWidth === previousNode.initialWidth;
 
     return {
       ...node,
       dragging: previousNode.dragging ?? node.dragging,
-      height: node.height ?? previousNode.height,
-      measured: node.measured ?? previousNode.measured,
+      height: canPreserveMeasuredDimensions
+        ? node.height ?? previousNode.height
+        : node.height,
+      measured: canPreserveMeasuredDimensions
+        ? node.measured ?? previousNode.measured
+        : node.measured,
       resizing: previousNode.resizing ?? node.resizing,
-      width: node.width ?? previousNode.width,
+      width: canPreserveMeasuredDimensions
+        ? node.width ?? previousNode.width
+        : node.width,
     };
   });
 }

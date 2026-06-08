@@ -687,6 +687,55 @@ describe("workflow graph helpers", () => {
       }),
     );
   });
+
+  test("drops stale measured node dimensions when port counts change", () => {
+    const graph = linearGraphFromSteps([waitStep]);
+    const firstFlow = toReactFlowGraph(graph);
+    const measuredNodes = firstFlow.nodes.map((node) =>
+      node.id === "step-wait"
+        ? {
+            ...node,
+            measured: { width: 172, height: 74 },
+            width: 172,
+            height: 74,
+          }
+        : node,
+    );
+    const nextGraph: WorkflowGraph = {
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === "step-wait"
+          ? {
+              ...node,
+              ports: [
+                { id: "in", label: "In", direction: "input" },
+                ...Array.from({ length: 7 }, (_, index) => ({
+                  id: `choice_${index + 1}`,
+                  label: `Choice ${index + 1}`,
+                  direction: "output" as const,
+                })),
+              ],
+            }
+          : node,
+      ),
+    };
+
+    const nextFlow = toReactFlowGraph(nextGraph);
+    const mergedNodes = mergeReactFlowNodeRuntimeState(
+      nextFlow.nodes,
+      measuredNodes,
+    );
+    const mergedNode = mergedNodes.find((node) => node.id === "step-wait");
+
+    expect(mergedNode).toEqual(
+      expect.objectContaining({
+        initialHeight: 196,
+        initialWidth: 160,
+      }),
+    );
+    expect(mergedNode?.height).toBeUndefined();
+    expect(mergedNode?.measured).toBeUndefined();
+  });
 });
 
 function largeLinearGraph(actionCount: number): WorkflowGraph {

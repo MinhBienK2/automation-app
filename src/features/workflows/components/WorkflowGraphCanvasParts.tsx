@@ -17,6 +17,7 @@ import {
   type WorkflowFlowNode,
   type WorkflowFlowNodeStatus,
 } from "../lib/workflowGraph";
+import { graphNodeHeightForPorts } from "../lib/graphNodeDimensions";
 
 type WorkflowGraphNodeProps = NodeProps<WorkflowFlowNode> & {
   onNodeSelect: (
@@ -43,10 +44,11 @@ export function WorkflowGraphNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const inputPorts = portsByDirection(data.ports, "input");
   const outputPorts = portsByDirection(data.ports, "output");
+  const nodeHeight = graphNodeHeightForPorts(data.ports);
 
   useEffect(() => {
     updateNodeInternals(id);
-  }, [id, data.ports, updateNodeInternals]);
+  }, [id, data.ports, nodeHeight, updateNodeInternals]);
 
   return (
     <div
@@ -57,6 +59,7 @@ export function WorkflowGraphNode({
         data.hasIssue ? "graph-node-has-issue" : "",
         graphStatusClass(data.status),
       ].filter(Boolean).join(" ")}
+      style={{ height: nodeHeight, minHeight: nodeHeight }}
     >
       <span className="graph-node-type-badge">{graphNodeCategoryLabel(data.nodeType)}</span>
       <button

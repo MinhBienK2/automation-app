@@ -96,6 +96,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/lib/graphEditorEdges.ts`: pure graph editor edge replacement rules, edge-kind classification, and stale-port pruning helpers.
 - `src/features/workflows/lib/subflowSelection.ts`: pure selected-node block analysis and replacement planning for Create subflow from selection.
 - `src/features/workflows/lib/graphNodeConfig.ts`: pure graph-native node config normalization, dynamic port generation, and stable case/choice id helpers.
+- `src/features/workflows/lib/graphNodeDimensions.ts`: shared graph node width
+  and port-aware height calculation used by the React Flow adapter, canvas
+  rendering, node insertion, and graph layout.
 - `src/features/workflows/lib/nodeInsertionPosition.ts`: visible-canvas node insertion positioning and deterministic fallback placement for graph toolbar additions.
 - `src/features/workflows/lib/runFromSelected.ts`: Run from selected eligibility rules for retained browser sessions and main-path graph nodes.
 - `src/features/workflows/lib/configUtils.ts`: shared safe readers for unknown graph/action config objects used by workflow components and graph libs.
@@ -225,8 +228,8 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Selected-node label editing stays in the inspector. Connections and port guidance for required body ports, optional no-op branches, explicit Merge fan-in, Router case/default/done ports, Random Choice choice/done ports, implicit successful continuation endings, and recovery branches that preserve failure behavior when missing belongs in node Help and graph port hover tooltips, not a separate inspector panel.
 - Canvas node display metadata is derived in the graph DTO-to-React-Flow adapter
   so the canvas component renders stable primary name, secondary kind, compact
-  meta strings, top-right category badges, and category color classes without
-  parsing action configs itself.
+  meta strings, top-right category badges, port-aware node dimensions, and
+  category color classes without parsing action configs itself.
 - Canvas port tooltip copy for every graph node type. Tooltip text explains input vs output direction plus branch, continuation, terminal, retry, merge, loop, random-choice, and recovery semantics before users create a link. Port handles use custom canvas tooltip rendering without native `title` tooltips, delay display by 1 second, and raise the hovered React Flow node wrapper so the tooltip stays above neighboring nodes.
 - Selected-node help from the graph inspector drawer and node context menu. Configured action nodes reuse the action guide popup with collapsible parent sections, ports and flow, minimum setup, grouped field and option references, output guidance, workflow examples, and safety notes; graph-native nodes use port semantics before minimum setup, grouped field references, related nodes, and workflow examples with the same nested collapsible modal structure. Individual fields, options, outputs, examples, and related-node items are collapsible. Mistake guidance belongs inside field or option detail blocks, not as a standalone top-level section.
 - DTO-to-React-Flow and React-Flow-to-DTO adapter state, execution-order edge labels, selected-link delay editing in the inspector drawer, edge delay metadata, ELK-backed auto-arrange layout, arrange-selection layout, and workflow-specific edge-kind rendering, while keeping persisted `WorkflowGraph` as source of truth. Long graphs use left-to-right row-wrapped auto-arrange lanes, optimized non-recursive traversal helpers, React Flow visible-element rendering above the large-graph threshold, and a minimap guard so run progress and graph edits stay responsive with many nodes.

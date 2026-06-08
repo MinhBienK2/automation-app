@@ -13,6 +13,7 @@ import type {
   SubflowSummary,
   WorkflowGraph,
 } from "../../../types/workflow";
+import { randomChoicePortsForChoices } from "../lib/graphNodeConfig";
 import { nodePorts } from "../lib/workflowGraph";
 
 const workflowGraphEditorSource = readFileSync(
@@ -132,6 +133,51 @@ describe("Workflow graph editor integration", () => {
           source_node_id: "start",
           source_port: "out",
           target_node_id: "call-login",
+          target_port: "in",
+        },
+      ],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+  }
+
+  function randomChoiceGraph(choiceCount: number): WorkflowGraph {
+    const choices = Array.from({ length: choiceCount }, (_, index) => ({
+      id: String(index + 1),
+      label: `Choice ${index + 1}`,
+      weight: 1,
+    }));
+
+    return {
+      version: 2,
+      nodes: [
+        {
+          id: "start",
+          node_type: "start",
+          label: "Start",
+          position: { x: 0, y: 0 },
+          config: null,
+          ports: nodePorts("start"),
+          group_id: null,
+        },
+        {
+          id: "random-many",
+          node_type: "random_choice",
+          label: "Random Choice",
+          position: { x: 220, y: 0 },
+          config: {
+            choices,
+            output_name: "random_choice",
+          },
+          ports: randomChoicePortsForChoices(choices),
+          group_id: null,
+        },
+      ],
+      edges: [
+        {
+          id: "edge-start-random-many",
+          source_node_id: "start",
+          source_port: "out",
+          target_node_id: "random-many",
           target_port: "in",
         },
       ],
@@ -548,6 +594,29 @@ describe("Workflow graph editor integration", () => {
       "data-tooltip",
       expect.stringContaining("flow chính"),
     );
+  });
+
+  test("expands graph nodes with many ports so branch handles stay separated", async () => {
+    mockWorkflowBridgeCommands({
+      ...workflowDetailScenario([]),
+      get_workflow_graph: randomChoiceGraph(6),
+      save_workflow_graph: undefined,
+    });
+
+    renderApp();
+
+    await openWorkflowDetails();
+    const editor = await screen.findByRole("region", { name: "Visual Graph" });
+    const randomChoiceButton = within(editor).getByRole("button", {
+      name: "Graph canvas node random-many",
+    });
+    const randomChoiceNode = randomChoiceButton.closest(".graph-node");
+
+    expect(randomChoiceNode).toHaveStyle({ height: "196px", minHeight: "196px" });
+    expect(within(editor).getByLabelText("Random Choice Choice 6 port"))
+      .toBeInTheDocument();
+    expect(within(editor).getByLabelText("Random Choice Done port"))
+      .toBeInTheDocument();
   });
 
   test("calculates toolbar node positions from the current visible canvas center", async () => {
