@@ -40,7 +40,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   `App.tsx`.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, environment readiness diagnostics, guarded maintenance commands,
-  and graph shortcut guidance.
+  orphaned-profile cleanup confirmation, and graph shortcut guidance.
 - `src/features/settings/useSettingsDiagnostics.ts`: app settings diagnostics
   and maintenance command state for CloakBrowser readiness, install checks, and
   orphaned profile cleanup.
@@ -68,7 +68,7 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/AppPackageDialogs.tsx`: app-level workflow/project import-export package dialogs and delete-workflow confirmation dialog rendered by `App.tsx`.
 - `src/styles/workflows.css` owns base workflow list/package/import/action-palette styles; `src/styles/workflow-panels.css` owns run monitor, Workflow Settings, unsaved-change, toast, and run-issue panel styles; `src/styles/mission-workspaces.css` owns Overview, focused run, Evidence, and Identity Lab workspace styles.
 - `src/styles/workflow-graph.css` owns core graph workspace/canvas/node/inspector styling, while `src/styles/workflow-graph-overlays.css` owns graph-adjacent popovers, variable/template editors, action-type dropdowns, context menus, and issue chips.
-- `src/features/workflows/lib/workflowSettings.ts`: public Workflow Settings entry point, section metadata, and bilingual settings help catalog.
+- `src/features/workflows/lib/workflowSettings.ts`: public Workflow Settings entry point, section metadata, settings-default merge helper, and bilingual settings help catalog.
 - `src/features/workflows/lib/workflowSettingsDefaults.ts`: frontend Workflow Settings defaults, tag parsing, and generated browser profile naming helpers.
 - `src/features/workflows/lib/workflowSettingsVariables.ts`: Environment initial-variable JSON/row conversion helpers.
 - `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, runtime failure, and system/startup issue presentation with readable failure context including subflow step/node context, plus copyable collapsed raw details for long errors and diagnostics.
@@ -132,7 +132,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   the operator local-day UTC range, displays backend-owned aggregate data,
   supports manual refresh, and navigates returned workflow/schedule/evidence
   references into existing Projects/Workflows, Schedules, and focused Evidence
-  destinations. Live and failed run references open the owning workflow.
+  destinations. Workflow targets can request detail/list/settings mode. Settings
+  targets resolve a stale workflow list cache by loading the workflow by id
+  before opening Workflow Settings.
 - The app shell owns a typed in-memory Mission Control navigation target
   router. Sidebar navigation, Overview cards, Evidence links, Identity links,
   schedule history links, and selected run details route through that contract
@@ -241,8 +243,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - UI-only labels, summaries, grouping, and failure suggestions.
 - App Settings navigation state in the app shell/sidebar, plus app-level graph
   autosave, diagnostics refresh, CloakBrowser install/check, and orphaned
-  inactive profile cleanup command state. App Settings displays environment
-  readiness from sanitized diagnostics and does not expose raw
+  inactive profile cleanup command state. Orphaned inactive profile cleanup uses
+  a destructive in-app confirmation before invoking the backend command. App
+  Settings displays environment readiness from sanitized diagnostics and does not expose raw
   binary/cache/profile/font paths. Project identity control state belongs to
   the selected project's Settings collection.
 - Overview navigation state in the app shell/sidebar and Overview refresh state.

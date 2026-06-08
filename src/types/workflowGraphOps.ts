@@ -225,7 +225,11 @@ export type WorkflowScheduleEventFilter = {
 };
 
 export type OperationsNavigationTarget =
-  | { type: "workflow"; workflow_id: string }
+  | {
+      type: "workflow";
+      workflow_id: string;
+      mode?: "list" | "detail" | "graph" | "settings";
+    }
   | { type: "schedule"; schedule_id: string }
   | { type: "evidence"; evidence_id: string };
 

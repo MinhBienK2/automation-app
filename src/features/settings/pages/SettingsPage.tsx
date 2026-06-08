@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { GraphShortcutGuide } from "../../workflows/components/GraphShortcutGuide";
 import { Button } from "../../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
 import { SwitchField } from "../../../components/ui/switch";
 import type { CloakBrowserDiagnostics } from "../../../types/workflow";
 
@@ -26,6 +35,19 @@ export function SettingsPage({
   onInstallBinary,
   onCleanupProfiles,
 }: SettingsPageProps) {
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
+  const [cleanupPending, setCleanupPending] = useState(false);
+
+  async function confirmCleanupProfiles() {
+    setCleanupPending(true);
+    try {
+      await onCleanupProfiles();
+      setCleanupDialogOpen(false);
+    } finally {
+      setCleanupPending(false);
+    }
+  }
+
   return (
     <section className="app-screen settings-screen" aria-label="Settings">
       <header className="app-header">
@@ -141,7 +163,7 @@ export function SettingsPage({
             type="button"
             variant="secondary"
             onClick={() => {
-              void onCleanupProfiles();
+              setCleanupDialogOpen(true);
             }}
           >
             Cleanup Orphaned Profiles
@@ -153,6 +175,44 @@ export function SettingsPage({
         </p>
         {maintenanceMessage ? <p role="status">{maintenanceMessage}</p> : null}
       </section>
+
+      <Dialog
+        open={cleanupDialogOpen}
+        onOpenChange={(open) => {
+          if (!cleanupPending) setCleanupDialogOpen(open);
+        }}
+      >
+        <DialogContent className="workflow-dialog">
+          <DialogHeader>
+            <p className="eyebrow">Maintenance</p>
+            <DialogTitle>Cleanup orphaned profiles</DialogTitle>
+            <DialogDescription>
+              This deletes local inactive browser profile directories that are no
+              longer referenced by a workflow or project saved session.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="form-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={cleanupPending}
+              onClick={() => setCleanupDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={cleanupPending}
+              onClick={() => {
+                void confirmCleanupProfiles();
+              }}
+            >
+              Cleanup Profiles
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="panel settings-panel" aria-label="Graph shortcuts">
         <div className="panel-heading">

@@ -65,7 +65,10 @@ import {
   normalizeRunSnapshot,
   normalizeRunState,
 } from "./lib/workflowUi";
-import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
+import {
+  defaultWorkflowSettings,
+  withWorkflowSettingsDefaults,
+} from "./features/workflows/lib/workflowSettings";
 import {
   cloneWorkflowSettings,
   graphEditableContentKey,
@@ -78,7 +81,6 @@ import {
   operationsTargetToMissionTarget,
   readGraphAutosaveEnabled,
   settingsSaveStatuses,
-  withWorkflowSettingsDefaults,
   writeGraphAutosaveEnabled,
   type GraphSaveStatus,
   type WorkflowSettingsSaveStatus,
@@ -1398,13 +1400,45 @@ function App() {
     openEvidence({ workflow_id: workflowId, identity_id: identityId });
   }
 
-  async function openIdentityWorkflowSettings(workflowId: string) {
-    const workflow = workflows.find((item) => item.id === workflowId);
-    if (!workflow) {
-      setAppError("Workflow not found");
-      return;
+  async function resolveWorkflowSummary(workflowId: string) {
+    const cachedWorkflow = workflows.find((item) => item.id === workflowId);
+    if (cachedWorkflow) return cachedWorkflow;
+
+    const loaded = await getWorkflow(workflowId);
+    if (!loaded) return null;
+    const loadedWorkflow: WorkflowSummary = {
+      id: loaded.workflow.id,
+      name: loaded.workflow.name,
+      step_count: loaded.steps.length,
+      project_id: loaded.workflow.project_id ?? null,
+      environment_id: loaded.workflow.environment_id ?? null,
+      created_at: loaded.workflow.created_at,
+      updated_at: loaded.workflow.updated_at,
+    };
+    setWorkflows((current) =>
+      current.some((item) => item.id === loadedWorkflow.id)
+        ? current.map((item) => item.id === loadedWorkflow.id ? loadedWorkflow : item)
+        : [...current, loadedWorkflow],
+    );
+    return loadedWorkflow;
+  }
+
+  async function openWorkflowSettingsById(workflowId: string, missingMessage: string) {
+    setAppError("");
+    try {
+      const workflow = await resolveWorkflowSummary(workflowId);
+      if (!workflow) {
+        setAppError(missingMessage);
+        return;
+      }
+      await openWorkflowSettings(workflow, "browser_launch");
+    } catch (error) {
+      setAppError(commandMessage(error));
     }
-    await openWorkflowSettings(workflow, "browser_launch");
+  }
+
+  async function openIdentityWorkflowSettings(workflowId: string) {
+    await openWorkflowSettingsById(workflowId, "Workflow not found");
   }
 
   async function openScheduleTarget(
@@ -1444,12 +1478,10 @@ function App() {
         return;
       }
       if (target.mode === "settings") {
-        const workflow = workflows.find((item) => item.id === target.workflow_id);
-        if (!workflow) {
-          setAppError(`Workflow target is no longer available: ${target.workflow_id}`);
-          return;
-        }
-        await openWorkflowSettings(workflow, "browser_launch");
+        await openWorkflowSettingsById(
+          target.workflow_id,
+          `Workflow target is no longer available: ${target.workflow_id}`,
+        );
         return;
       }
       await performOpenWorkflow(target.workflow_id);
@@ -1768,7 +1800,7 @@ function App() {
           projects={projects}
           selectedProject={selectedProject}
           activeCollection={projectCollection}
-          error=""
+          error={selectedProject ? "" : appError}
           onSelectProject={(projectId) => {
             void selectProject(projectId);
           }}

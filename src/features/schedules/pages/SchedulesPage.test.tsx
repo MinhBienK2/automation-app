@@ -20,6 +20,32 @@ describe("SchedulesPage", () => {
     expect(source).not.toMatch(/setForm\(\([^)]*\) =>[\s\S]{0,180}event\.currentTarget\.value/);
   });
 
+  test("formats unexpected schedule command failures through the shared command formatter", async () => {
+    const onCreateSchedule = vi.fn().mockRejectedValue("scheduler unavailable");
+    render(
+      <SchedulesPage
+        schedules={[]}
+        workflows={[workflow()]}
+        events={[]}
+        loading={false}
+        error=""
+        onCreateSchedule={onCreateSchedule}
+        onUpdateSchedule={vi.fn()}
+        onDeleteSchedule={vi.fn()}
+        onToggleSchedule={vi.fn()}
+        onLoadEvents={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "New schedule" }));
+    const dialog = await screen.findByRole("dialog", { name: "New Schedule" });
+    await userEvent.type(within(dialog).getByLabelText("Schedule name"), "Broken schedule");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create Schedule" }));
+
+    expect(await within(dialog).findByText("Unexpected error")).toBeInTheDocument();
+    expect(within(dialog).queryByText("scheduler unavailable")).not.toBeInTheDocument();
+  });
+
   test("renders schedules with actions and event history", async () => {
     const onToggleSchedule = vi.fn();
     const onOpenWorkflow = vi.fn();

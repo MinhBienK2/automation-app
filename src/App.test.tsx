@@ -18,6 +18,7 @@ import { renderApp } from "./tests/utils/renderApp";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
 import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
 import type {
+  OperationsNavigationTarget,
   ProjectEnvironmentInput,
   ProjectPackage,
   SubflowSummary,
@@ -186,6 +187,21 @@ describe("App settings and graph autosave", () => {
       .not.toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "Headless browser" }))
       .not.toBeInTheDocument();
+  });
+
+  test("shows project load errors when no project is selected", async () => {
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      list_projects: () => {
+        throw new Error("projects offline");
+      },
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Projects" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("projects offline");
   });
 
   test("renames, duplicates, and confirms project deletion from project settings", async () => {
@@ -865,6 +881,48 @@ describe("App settings and graph autosave", () => {
     });
   });
 
+  test("opens workflow settings from stale Overview workflow targets by loading the workflow by id", async () => {
+    const scenario = workflowDetailScenario([]);
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      get_workflow: scenario.get_workflow,
+      get_workflow_settings: scenario.get_workflow_settings,
+      get_workflow_graph: scenario.get_workflow_graph,
+      get_operations_overview: () => ({
+        ...emptyOperationsOverview(),
+        attention: {
+          items: [
+            {
+              id: "attention-settings",
+              source_kind: "launch_blocked",
+              severity: "failure",
+              occurred_at: "2026-05-27T00:00:00.000Z",
+              title: "Launch blocked",
+              summary: "Browser settings need review",
+              workflow: { id: workflow.id, name: workflow.name },
+              navigation_target: {
+                type: "workflow",
+                workflow_id: workflow.id,
+                mode: "settings",
+              } as unknown as OperationsNavigationTarget,
+            },
+          ],
+          total: 1,
+          has_more: false,
+        },
+      }),
+    });
+
+    renderApp();
+
+    const attentionQueue = await screen.findByRole("region", { name: "Attention Queue" });
+    await userEvent.click(within(attentionQueue).getByRole("button", { name: /Launch blocked/i }));
+
+    const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
+    expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
+      .toHaveAttribute("aria-selected", "true");
+  });
+
   test("clears Overview load errors after a successful retry", async () => {
     let overviewCalls = 0;
     mockWorkflowBridgeCommands({
@@ -1182,6 +1240,67 @@ describe("App settings and graph autosave", () => {
     });
   });
 
+  test("opens workflow settings from Identity Lab when the workflow list cache is stale", async () => {
+    const scenario = workflowDetailScenario([]);
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([]),
+      get_workflow: scenario.get_workflow,
+      get_workflow_settings: scenario.get_workflow_settings,
+      get_workflow_graph: scenario.get_workflow_graph,
+      get_identity_lab_overview: () => ({
+        generated_at: "2026-05-27T10:00:00.000Z",
+        counts: {
+          managed_identities: 1,
+          active_retained_sessions: 0,
+          identities_with_warnings: 0,
+          identities_with_recent_failures: 0,
+        },
+        items: [],
+        selected: {
+          kind: "managed",
+          workflow_ref: { id: workflow.id, name: workflow.name },
+          identity_ref: { id: "bi_123", display_name: "QA identity" },
+          session: {
+            active: false,
+            profile_name: "bi_123",
+            reset_blocked_reason: null,
+          },
+          configured_posture: [{ label: "Proxy", value: "Disabled" }],
+          latest_observed: null,
+          last_run: null,
+          recent_failures_24h: 0,
+          evidence_summary: { total: 0 },
+          rotation_history: [],
+          diagnostics: {
+            binary_installed: true,
+            wrapper_version: "1.0.0",
+            geoip_available: true,
+            headed_display_available: true,
+            profile: { approximate_size_bytes: 0, active_session: false },
+            font_status: "ok",
+          },
+          actions: {
+            can_close_retained_session: false,
+            can_reset_identity: true,
+            reset_disabled_reason: null,
+          },
+        },
+        data_warnings: [],
+      }),
+    });
+
+    renderApp();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Identities" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Open Workflow Settings" }));
+
+    const settingsDialog = await screen.findByRole("dialog", { name: "Workflow Settings" });
+    expect(within(settingsDialog).getByRole("tab", { name: "Browser Launch" }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(within(settingsDialog).getByLabelText("Identity display name"))
+      .toHaveValue(`${workflow.name} identity`);
+  });
+
   test("does not render the removed shell search header or Alerts shortcut", async () => {
     mockWorkflowBridgeCommands({
       ...listWorkflowScenario([workflow]),
@@ -1245,6 +1364,18 @@ describe("App settings and graph autosave", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Install CloakBrowser Binary" }));
     await userEvent.click(screen.getByRole("button", { name: "Cleanup Orphaned Profiles" }));
+    expect(cleanup).not.toHaveBeenCalled();
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: "Cleanup orphaned profiles",
+    });
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Cancel" }));
+    expect(cleanup).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cleanup Orphaned Profiles" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog", { name: "Cleanup orphaned profiles" }))
+        .getByRole("button", { name: "Cleanup Profiles" }),
+    );
 
     await waitFor(() => {
       expect(install).toHaveBeenCalledTimes(1);

@@ -84,6 +84,11 @@ source vocabulary for Overview, workflow row status, and Evidence filtering.
 - `__evidence_model` has `schema_version: 1`, the canonical evidence categories (`operator_input`, `browser_identity`, `network_posture`, `action_trace`, `page_observation`, `generated_output`, `sensitive_redacted`), and per-output manifest entries with key, category, approximate serialized byte size, redaction flag, and truncation flag. Arbitrary page-observation outputs are recursively redacted by sensitive key pattern and limited for large strings/arrays/objects. Structured backend evidence such as `browser_identity`, `__action_traces`, and `__evidence` is intentionally structured; Evidence Explorer still recursively filters sensitive keys from nested action-trace details before renderer display.
 - Batch runs create one run record per executed row. Each row prepends row values as `set_variable` actions before the compiled graph, runs sequentially, returns per-row status/error summary, and records skipped/stopped rows in batch outputs.
 - `list_run_states` returns run snapshots for the current app session, sorted by start time, so the renderer can present multiple active runs and recent terminal states.
+- On command handler startup, durable run rows that still have `status:
+  "running"` and no `finished_at` are treated as interrupted by a previous app
+  shutdown. Startup recovery marks them `failed`, sets `finished_at`, records
+  empty outputs, and stores a workflow-level error reason of `App exited before
+  the run completed`.
 
 ## UI Expectations
 

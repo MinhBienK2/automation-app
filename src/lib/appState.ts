@@ -1,4 +1,3 @@
-import { defaultWorkflowSettings } from "../features/workflows/lib/workflowSettings";
 import type {
   MissionControlTarget,
   OperationsNavigationTarget,
@@ -87,7 +86,11 @@ export function operationsTargetToMissionTarget(
   target: OperationsNavigationTarget,
 ): MissionControlTarget {
   if (target.type === "workflow") {
-    return { type: "workflow", workflow_id: target.workflow_id };
+    return {
+      type: "workflow",
+      workflow_id: target.workflow_id,
+      ...(target.mode ? { mode: target.mode } : {}),
+    };
   }
   if (target.type === "schedule") {
     return { type: "schedule", schedule_id: target.schedule_id };
@@ -128,27 +131,6 @@ export function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
 
 export function cloneWorkflowSettings(settings: WorkflowSettings) {
   return JSON.parse(JSON.stringify(settings)) as WorkflowSettings;
-}
-
-export function withWorkflowSettingsDefaults(
-  settings: WorkflowSettings,
-  workflow: {
-    workflowId: string;
-    workflowName: string;
-    createdAt?: string | null;
-    updatedAt?: string | null;
-  },
-) {
-  const defaults = defaultWorkflowSettings(workflow);
-  return {
-    ...defaults,
-    ...settings,
-    general: { ...defaults.general, ...settings.general },
-    run_policy: { ...defaults.run_policy, ...settings.run_policy },
-    browser_launch: { ...defaults.browser_launch, ...settings.browser_launch },
-    graph_defaults: { ...defaults.graph_defaults, ...settings.graph_defaults },
-    environment: { ...defaults.environment, ...settings.environment },
-  };
 }
 
 export function isWorkflowSettings(value: unknown): value is WorkflowSettings {

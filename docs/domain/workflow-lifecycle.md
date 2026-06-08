@@ -90,8 +90,9 @@
 - The workflow Add Subflow picker lists same-project subflows by name,
   description, and usage count, then creates a configured Call Subflow node whose
   canvas label starts as the subflow name. The workflow Add Logic palette
-  exposes Branching (If, Switch), Loops (Repeat Times, Repeat For Each, While,
-  Repeat Until, Break Loop, Continue Loop), and Recovery (Retry). The subflow
+  exposes Branching (If, Switch, Router, Random Choice, Merge), Loops (Repeat
+  Times, Repeat For Each, While, Repeat Until, Break Loop, Continue Loop), and
+  Recovery (Retry). The subflow
   editor uses the same graph editor in subflow mode and hides Add Subflow so MVP
   subflows cannot call other subflows.
 - The action picker uses semantic groups from `docs/domain/action-taxonomy.md`, filters choices through the action capability registry, hides graph-internal actions from the main picker, and displays intent-focused labels such as Fill Field for `input_text`.

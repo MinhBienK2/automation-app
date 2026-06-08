@@ -58,6 +58,14 @@ export const idleRunState: RunState = {
   error: null,
 };
 
+const interruptedRunError = {
+  step_id: null,
+  step_number: 0,
+  step_name: null,
+  action_type: "workflow",
+  reason: "App exited before the run completed",
+} satisfies NonNullable<RunState["error"]>;
+
 export class RunManager {
   private readonly runEntries = new Map<string, RunEntry>();
   private readonly sessionRunSnapshots = new Map<string, WorkflowRunSnapshot>();
@@ -73,7 +81,9 @@ export class RunManager {
       database: DatabaseSync;
       runner: RunnerCommandPort;
     },
-  ) {}
+  ) {
+    this.recoverInterruptedRuns();
+  }
 
   activeRunConflict(workflowId: string, settings: WorkflowSettings): RunConflict | null {
     if (this.currentBatchAbortController) {
@@ -432,6 +442,24 @@ export class RunManager {
     source: WorkflowRunSource = "manual",
   ) {
     return beginRun(this.options.database, workflowId, settings, graph, source);
+  }
+
+  private recoverInterruptedRuns() {
+    this.options.database
+      .prepare(
+        `UPDATE runs
+         SET status = 'failed',
+             finished_at = ?,
+             outputs_json = COALESCE(outputs_json, ?),
+             error_json = ?
+         WHERE status = 'running'
+           AND finished_at IS NULL`,
+      )
+      .run(
+        new Date().toISOString(),
+        JSON.stringify({}),
+        JSON.stringify(interruptedRunError),
+      );
   }
 
   finishRun(runId: string | null, graph: CompiledWorkflowGraph, state: RunState) {

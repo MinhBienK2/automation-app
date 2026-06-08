@@ -74,6 +74,9 @@ Electron/Node now owns the production persistence layer.
   imported project-environment/session row when Browser Launch is selected
   inside one SQLite transaction. Failed validation or save errors roll back the
   whole import.
+- Legacy workflow import writes the new workflow and optional imported settings
+  inside one SQLite transaction. Failed settings validation or save errors roll
+  back the new workflow row.
 - Project package import validates packaged sessions, subflows, workflows,
   graphs, and Workflow Settings before persistence. It writes the imported
   project row, recreated project-environment/session rows with fresh browser

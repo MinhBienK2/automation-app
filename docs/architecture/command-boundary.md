@@ -125,6 +125,9 @@ Node/Electron backend.
   any imported session writes in a SQLite transaction. Export sanitization
   removes proxy secrets, proxy URL credentials, and local fingerprint font
   directories.
+- Legacy `import_workflow` also wraps workflow creation and optional settings
+  save in one SQLite transaction so invalid imported settings cannot leave an
+  orphan workflow row.
 - Project package import/export delegates preview/import preparation,
   package-local session/subflow/workflow validation, Call Subflow id remapping
   preparation, and export sanitization to `ProjectPackageService`; command

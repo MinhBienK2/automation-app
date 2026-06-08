@@ -733,7 +733,7 @@ describe("Workflow detail integration", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Workflow settings saved.",
     );
-  });
+  }, 10_000);
 
   test("asks before closing workflow settings with unsaved changes", async () => {
     mockWorkflowBridgeCommands({

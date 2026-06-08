@@ -45,6 +45,10 @@ Frontend and backend must agree on:
 - `WorkflowRunSnapshot`: run-id scoped status wrapper with `run_id`, `workflow_id`, `workflow_name`, `source` (`manual` or `schedule`), `started_at`, and nested `state: RunState`, plus mirrored top-level run-state fields for compatibility.
 - `MissionControlTarget`: renderer-only typed navigation target for Overview,
   Workflow, Evidence, Identity Lab, Schedule, and graph issue focus.
+- `OperationsNavigationTarget`: Overview/Evidence traceability target for
+  workflow, schedule, or evidence destinations. Workflow targets may include a
+  mode (`list`, `detail`, `graph`, or `settings`) that the renderer preserves
+  when routing to the corresponding Mission Control target.
 - `OperationsOverviewRequest`: local-day UTC range capped at 48 hours plus
   optional bounded list limits and attention filters for the Overview read
   model.

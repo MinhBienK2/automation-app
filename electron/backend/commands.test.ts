@@ -21,6 +21,7 @@ import type {
   GraphNodeType,
   ProjectPackage,
   RunState,
+  WorkflowExport,
   WorkflowGraph,
   WorkflowPackage,
   WorkflowSettings,
@@ -2437,6 +2438,40 @@ describe("Electron workflow command handlers", () => {
       field: "package.subflows",
     }));
     expect(handlers.listWorkflows()).toHaveLength(initialCount);
+  });
+
+  test("rejects invalid legacy workflow imports without creating orphan workflows", async () => {
+    const { handlers } = await createTestHandlers();
+    const existing = handlers.createWorkflow("Existing");
+    const baseSettings = handlers.getWorkflowSettings(existing.id);
+    const initialCount = handlers.listWorkflows().length;
+    const invalidLegacyExport: WorkflowExport = {
+      version: 1,
+      workflow: {
+        id: "legacy-import",
+        name: "Bad legacy import",
+        created_at: "2026-05-27T00:00:00.000Z",
+        updated_at: "2026-05-27T00:00:00.000Z",
+      },
+      steps: [],
+      settings: {
+        ...baseSettings,
+        browser_launch: {
+          ...baseSettings.browser_launch,
+          proxy_enabled: true,
+          proxy_server: null,
+        },
+      },
+    };
+
+    expect(() => handlers.importWorkflow(invalidLegacyExport)).toThrow(
+      expect.objectContaining({
+        field: "browser_launch.proxy_server",
+      }),
+    );
+    expect(handlers.listWorkflows()).toHaveLength(initialCount);
+    expect(handlers.listWorkflows().some((item) => item.name === "Bad legacy import"))
+      .toBe(false);
   });
 
   test("rejects workflow graph updates with unknown nested action discriminants", async () => {

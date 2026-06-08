@@ -23,6 +23,74 @@ afterEach(async () => {
 });
 
 describe("RunManager", () => {
+  test("marks durable running rows from a previous app process as failed on startup", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
+    tempRoots.push(tempRoot);
+    const database = initializeDatabase(createAppPaths(tempRoot));
+    const workflow = workflowSummary("workflow-1", "Interrupted workflow");
+    const graph = workflowGraph();
+    const settings = workflowSettings(workflow.id, "profile-1");
+    database
+      .prepare(
+        `INSERT INTO workflows (
+          id, name, description, tags_json, graph_json, settings_json, created_at, updated_at
+        ) VALUES (?, ?, '', '[]', ?, ?, ?, ?)`,
+      )
+      .run(
+        workflow.id,
+        workflow.name,
+        JSON.stringify(graph),
+        JSON.stringify(settings),
+        workflow.created_at,
+        workflow.updated_at,
+      );
+    database
+      .prepare(
+        `INSERT INTO runs (
+          id, workflow_id, source, status, started_at, settings_snapshot_json, graph_snapshot_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "run-interrupted",
+        workflow.id,
+        "manual",
+        "running",
+        "2026-05-27T10:00:00.000Z",
+        JSON.stringify(settings),
+        JSON.stringify(graph),
+      );
+
+    new RunManager({
+      database,
+      runner: {
+        run: vi.fn(),
+        getRetainedSessionState: vi.fn(() => idleRunState.retained_session),
+      },
+    });
+
+    const row = database
+      .prepare(
+        `SELECT status, finished_at, outputs_json, error_json
+         FROM runs
+         WHERE id = ?`,
+      )
+      .get("run-interrupted") as {
+        status: string;
+        finished_at: string | null;
+        outputs_json: string | null;
+        error_json: string | null;
+      };
+
+    expect(row.status).toBe("failed");
+    expect(row.finished_at).toEqual(expect.any(String));
+    expect(row.outputs_json).toBe(JSON.stringify({}));
+    expect(JSON.parse(row.error_json ?? "{}")).toMatchObject({
+      action_type: "workflow",
+      reason: "App exited before the run completed",
+    });
+    database.close();
+  });
+
   test("tracks active workflow/profile locks and releases them after final persistence", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "run-manager-"));
     tempRoots.push(tempRoot);

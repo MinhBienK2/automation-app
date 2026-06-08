@@ -130,7 +130,8 @@ Preserve these unless the task explicitly changes them.
   graph shortcut guidance. It does not manage the project saved session and
   does not introduce notification or theme systems. Diagnostics display CloakBrowser,
   GeoIP, headed display, font, profile-count, and smoke readiness without raw
-  binary/cache/profile/font paths.
+  binary/cache/profile/font paths. Cleanup Orphaned Profiles opens an in-app
+  confirmation before deleting local inactive orphan profile directories.
 - When graph autosave is enabled, graph edits save after changes. When disabled, users save graph edits manually.
 - Leaving workflow detail or subflow detail with unsaved graph edits asks
   whether to Save and close, Discard changes, or Keep editing. Workflow detail

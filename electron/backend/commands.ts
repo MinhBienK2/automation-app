@@ -1249,18 +1249,25 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     importWorkflow(exported: WorkflowExport): WorkflowDetail {
-      const workflow = createWorkflow(exported.workflow.name);
-      if (exported.settings) {
-        saveSettings(workflow.id, {
-          ...exported.settings,
-          workflow_id: workflow.id,
-          general: {
-            ...exported.settings.general,
-            name: workflow.name,
-          },
-        });
+      context.database.exec("BEGIN IMMEDIATE");
+      try {
+        const workflow = createWorkflow(exported.workflow.name);
+        if (exported.settings) {
+          saveSettings(workflow.id, {
+            ...exported.settings,
+            workflow_id: workflow.id,
+            general: {
+              ...exported.settings.general,
+              name: workflow.name,
+            },
+          });
+        }
+        context.database.exec("COMMIT");
+        return { workflow, steps: [] };
+      } catch (error) {
+        context.database.exec("ROLLBACK");
+        throw error;
       }
-      return { workflow, steps: [] };
     },
 
     exportWorkflowPackage(

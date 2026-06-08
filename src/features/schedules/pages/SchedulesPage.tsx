@@ -15,6 +15,7 @@ import { Label } from "../../../components/ui/label";
 import { Select } from "../../../components/ui/select";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { SwitchField } from "../../../components/ui/switch";
+import { commandMessage } from "../../../lib/workflowUi";
 import type {
   WorkflowSchedule,
   WorkflowScheduleEvent,
@@ -651,11 +652,4 @@ function parseDatetimeLocal(value: string) {
     throw new Error("Use a valid date and time");
   }
   return date.toISOString();
-}
-
-function commandMessage(error: unknown) {
-  if (error && typeof error === "object" && "message" in error) {
-    return String((error as { message: unknown }).message);
-  }
-  return error instanceof Error ? error.message : String(error);
 }

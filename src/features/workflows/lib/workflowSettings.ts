@@ -1,4 +1,8 @@
-import type { WorkflowSettingsSectionId } from "../../../types/workflow";
+import type {
+  WorkflowSettings,
+  WorkflowSettingsSectionId,
+} from "../../../types/workflow";
+import { defaultWorkflowSettings } from "./workflowSettingsDefaults";
 
 export {
   createDefaultBrowserProfileName,
@@ -67,6 +71,27 @@ export const workflowSettingsSections: WorkflowSettingsSection[] = [
   { id: "browser_launch", label: "Browser Launch" },
   { id: "environment", label: "Environment" },
 ];
+
+export function withWorkflowSettingsDefaults(
+  settings: WorkflowSettings,
+  workflow: {
+    workflowId: string;
+    workflowName: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  },
+) {
+  const defaults = defaultWorkflowSettings(workflow);
+  return {
+    ...defaults,
+    ...settings,
+    general: { ...defaults.general, ...settings.general },
+    run_policy: { ...defaults.run_policy, ...settings.run_policy },
+    browser_launch: { ...defaults.browser_launch, ...settings.browser_launch },
+    graph_defaults: { ...defaults.graph_defaults, ...settings.graph_defaults },
+    environment: { ...defaults.environment, ...settings.environment },
+  };
+}
 
 const enLabels = {
   bestFor: "Use it when",
