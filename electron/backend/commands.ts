@@ -1,25 +1,20 @@
 import fs from "node:fs/promises";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   ActionConfig,
   BatchRunRequest,
   BrowserProfileCleanupResult,
-  BrowserProfileDiagnostics,
   CloakBrowserDiagnostics,
   CompiledWorkflowGraph,
   GraphValidationIssue,
-  OrchestrationSchedule,
   RecordingGenerateDraftOptions,
-  RecordingSaveDraftInput,
   RecorderStartSessionInput,
   RecordingEvent,
   RecordingSession,
   RecordingWorkflowDraft,
-  ReviewedRecordingStep,
   EvidenceBundleExportRequest,
   EvidenceListRequest,
   IdentityLabOverviewRequest,
@@ -31,7 +26,6 @@ import type {
   ProjectPackage,
   ProjectPackagePreview,
   RunValidationIssue,
-  ScheduleValidationIssue,
   SettingsValidationIssue,
   Subflow,
   SubflowSummary,
@@ -49,11 +43,6 @@ import type {
   WorkflowPackagePreview,
   WorkflowRunSnapshot,
   WorkflowRunSource,
-  WorkflowSchedule,
-  WorkflowScheduleEvent,
-  WorkflowScheduleEventFilter,
-  WorkflowScheduleInput,
-  WorkflowScheduleUpdate,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
@@ -67,20 +56,17 @@ import {
   validateWorkflowGraph as validateGraph,
 } from "./graph/compiler.js";
 import { BrowserWorkflowRunner } from "./runtime/runner.js";
-import {
-  calculateNextRunAt,
-  processDueSchedules,
-  validateScheduleInput,
-} from "./scheduling/scheduler.js";
+import { createScheduleCommandHandlers } from "./scheduling/scheduleCommands.js";
 import {
   browserProfileKey,
-  idleRunState,
   RunManager,
   type RunnerCommandPort,
 } from "./runtime/runManager.js";
+import { runBatchWorkflowRows } from "./runtime/batchWorkflowRun.js";
 import { sanitizePathSegment } from "./evidence/artifacts.js";
 import { EvidenceRepository } from "./evidence/evidenceRepository.js";
 import { IdentityRepository } from "./identity/identityRepository.js";
+import { createProjectCommandCascades } from "./projects/projectCommandCascades.js";
 import { migrateWorkflowGraph } from "./graph/migration.js";
 import { ProjectPackageService } from "./services/projectPackageService.js";
 import { WorkflowPackageService } from "./services/workflowPackageService.js";
@@ -100,30 +86,27 @@ import {
   RecorderSessionInputError,
   RecorderSessionManager,
 } from "./recording/recorderSessionManager.js";
-import { generateRecordingGraph } from "./recording/graphGenerator.js";
-import { normalizeRecordingEvents } from "./recording/timelineNormalizer.js";
+import { createRecordingDraftCommands } from "./recording/recordingDraftCommands.js";
+import {
+  buildCloakBrowserDiagnostics,
+  directoryReadable,
+  isOptionalModuleAvailable,
+  loadCloakBrowserDiagnosticsModule,
+  resolveDefaultFingerprintFontsDir,
+} from "./diagnostics/cloakBrowserDiagnostics.js";
+import {
+  asRecord,
+  commandError,
+  createDraftGraph,
+  isCommandError,
+  summaryToWorkflow,
+  type CommandError,
+} from "./commandHelpers.js";
 
 export { finishRun } from "./runtime/runManager.js";
 export { defaultWorkflowSettings, deriveFingerprintSeedFromIdentityId } from "./services/workflowSettingsService.js";
 
-const nodeRequire = createRequire(import.meta.url);
-
-type CloakBrowserDiagnosticsModule = {
-  binaryInfo: () => {
-    version?: string;
-    platform?: string;
-    binaryPath?: string;
-    installed?: boolean;
-    cacheDir?: string;
-    downloadUrl?: string;
-  };
-  ensureBinary: () => Promise<string>;
-};
-
-export type CommandError = {
-  message: string;
-  field?: string | null;
-};
+export type { CommandError } from "./commandHelpers.js";
 
 export type WorkflowCommandHandlers = ReturnType<typeof createWorkflowCommandHandlers>;
 
@@ -209,7 +192,32 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       });
     },
   });
-  const recordingDrafts = new Map<string, RecordingWorkflowDraft>();
+  const recordingDraftCommands = createRecordingDraftCommands({
+    database: context.database,
+    recorderSessions: recorderSessionManager,
+    createWorkflow,
+    saveWorkflowGraph: (workflowId, graph) => repository.saveWorkflowGraph(workflowId, graph),
+    saveWorkflowSettings: saveSettings,
+    getWorkflowDetail: (workflowId) => repository.getWorkflow(workflowId),
+    requireWorkflow,
+  });
+  const projectCascades = createProjectCommandCascades({
+    database: context.database,
+    browserProfilesDir: context.appPaths.browserProfilesDir,
+    repository,
+    projectPackageService,
+    requireProject,
+    requireProjectEnvironment,
+    ensureDefaultProjectEnvironment,
+    createWorkflow,
+    getSettings,
+    saveSettings,
+    assertWorkflowDeletionAllowed,
+    activeRunConflict,
+    retainedSessionActiveFor: (workflowId, profileName) =>
+      runManager.retainedSessionActiveFor(workflowId, profileName),
+    remapCallSubflowIds,
+  });
 
   ensureProjectModelReady();
 
@@ -441,64 +449,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     );
   }
 
-  function usedProjectEnvironmentFingerprintSeeds() {
-    const seeds = usedFingerprintSeeds();
-    for (const project of repository.listProjects()) {
-      for (const environment of repository.listProjectEnvironments(project.id)) {
-        const seed = environment.browser_launch?.fingerprint_seed;
-        if (seed) seeds.add(seed);
-      }
-    }
-    return seeds;
-  }
-
-  function projectEnvironmentProfileKey(environment: ProjectEnvironment) {
-    if (environment.browser_launch.session_mode !== "persistent_profile") return null;
-    return (
-      environment.browser_launch.profile_dir?.trim() ||
-      environment.browser_launch.profile_name?.trim() ||
-      null
-    );
-  }
-
-  function duplicateProjectBrowserLaunch(
-    browserLaunch: WorkflowSettings["browser_launch"],
-  ): WorkflowSettings["browser_launch"] {
-    const identityId = createHighEntropyBrowserIdentityId();
-    return {
-      ...browserLaunch,
-      identity_id: identityId,
-      profile_dir: identityId,
-      profile_name:
-        browserLaunch.session_mode === "persistent_profile" ? identityId : null,
-      fingerprint_seed: deriveFingerprintSeedFromIdentityId(
-        identityId,
-        usedProjectEnvironmentFingerprintSeeds(),
-      ),
-    };
-  }
-
-  function assertCanResetProjectEnvironmentBrowserIdentity(
-    environment: ProjectEnvironment,
-  ) {
-    for (const workflow of repository.listWorkflows()) {
-      if (workflow.environment_id !== environment.id) continue;
-      const settings = {
-        ...getSettings(workflow.id),
-        browser_launch: environment.browser_launch,
-      };
-      const conflict = activeRunConflict(workflow.id, settings);
-      if (conflict) throw commandError(conflict.message, conflict.field);
-      const profileName = browserProfileKey(settings);
-      if (profileName && runManager.retainedSessionActiveFor(workflow.id, profileName)) {
-        throw commandError(
-          "Close the retained browser session before resetting this project identity",
-          "browser_launch.profile_dir",
-        );
-      }
-    }
-  }
-
   function rotateBrowserIdentity(workflowId: string): WorkflowSettings {
     const settings = getSettings(workflowId);
     assertCanResetBrowserIdentity(workflowId, settings);
@@ -535,222 +485,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     });
   }
 
-  function rotateProjectEnvironmentBrowserIdentity(
-    environmentId: string,
-  ): ProjectEnvironment {
-    const environment = requireProjectEnvironment(environmentId);
-    assertCanResetProjectEnvironmentBrowserIdentity(environment);
-    const oldProfileDir = projectEnvironmentProfileKey(environment);
-    const identityId = createHighEntropyBrowserIdentityId();
-    const fingerprintSeed = deriveFingerprintSeedFromIdentityId(
-      identityId,
-      usedProjectEnvironmentFingerprintSeeds(),
-    );
-    const updated = repository.updateProjectEnvironment(environment.id, {
-      browser_launch: {
-        ...environment.browser_launch,
-        identity_id: identityId,
-        profile_dir: identityId,
-        profile_name:
-          environment.browser_launch.session_mode === "persistent_profile"
-            ? identityId
-            : null,
-        fingerprint_seed: fingerprintSeed,
-      },
-    });
-    if (!updated) throw commandError("Project environment not found", "environmentId");
-    deleteProjectEnvironmentProfileDirectoryIfPrivate(
-      environment.id,
-      oldProfileDir,
-      projectEnvironmentProfileKey(updated),
-    );
-    return updated;
-  }
-
-  function duplicateProjectWorkflowSettings(
-    sourceSettings: WorkflowSettings,
-    created: Workflow,
-    browserLaunch: WorkflowSettings["browser_launch"],
-  ): WorkflowSettings {
-    const copied = structuredClone(sourceSettings);
-    return {
-      ...copied,
-      workflow_id: created.id,
-      general: {
-        ...copied.general,
-        name: created.name,
-        created_at: created.created_at,
-        updated_at: created.updated_at,
-      },
-      run_policy: {
-        ...copied.run_policy,
-        run_from_selected_enabled: false,
-      },
-      browser_launch: browserLaunch,
-      created_at: created.created_at,
-      updated_at: created.updated_at,
-    };
-  }
-
-  function duplicateProjectCascade(projectId: string): Project {
-    const sourceProject = requireProject(projectId);
-    const sourceEnvironments = repository.listProjectEnvironments(sourceProject.id);
-    const sourceSubflows = repository
-      .listSubflows(sourceProject.id)
-      .map((subflow) => repository.getSubflow(subflow.id))
-      .filter((subflow): subflow is Subflow => Boolean(subflow));
-    const sourceWorkflows = repository
-      .listWorkflows()
-      .filter((workflow) => workflow.project_id === sourceProject.id);
-
-    context.database.exec("BEGIN IMMEDIATE");
-    try {
-      const createdProject = repository.createProject(
-        `Copy of ${sourceProject.name}`,
-        sourceProject.description,
-      );
-      const environmentIdMap = new Map<string, string>();
-      for (const environment of sourceEnvironments) {
-        const copiedEnvironment = repository.createProjectEnvironment(createdProject.id, {
-          name: environment.name,
-          description: environment.description,
-          is_default: environment.is_default,
-          browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
-        });
-        environmentIdMap.set(environment.id, copiedEnvironment.id);
-      }
-      const defaultEnvironment =
-        repository.getDefaultProjectEnvironment(createdProject.id) ??
-        ensureDefaultProjectEnvironment(createdProject);
-
-      const subflowIdMap = new Map<string, string>();
-      for (const subflow of sourceSubflows) {
-        const copiedSubflow = repository.createSubflow(
-          createdProject.id,
-          subflow.name,
-          subflow.description,
-          subflow.graph,
-        );
-        subflowIdMap.set(subflow.id, copiedSubflow.id);
-      }
-
-      for (const workflow of sourceWorkflows) {
-        const copiedEnvironmentId = workflow.environment_id
-          ? environmentIdMap.get(workflow.environment_id) ?? defaultEnvironment.id
-          : defaultEnvironment.id;
-        const copiedWorkflow = createWorkflow(workflow.name, {
-          project_id: createdProject.id,
-          environment: { mode: "existing", environment_id: copiedEnvironmentId },
-        });
-        const graph = repository.getWorkflowGraph(workflow.id);
-        if (graph) {
-          repository.saveWorkflowGraph(
-            copiedWorkflow.id,
-            remapCallSubflowIds(graph, subflowIdMap),
-          );
-        }
-        const settings = repository.getWorkflowSettings(workflow.id);
-        if (settings) {
-          const copiedEnvironment = requireProjectEnvironment(copiedEnvironmentId);
-          saveSettings(
-            copiedWorkflow.id,
-            duplicateProjectWorkflowSettings(
-              settings,
-              copiedWorkflow,
-              copiedEnvironment.browser_launch,
-            ),
-          );
-        }
-      }
-
-      context.database.exec("COMMIT");
-      return createdProject;
-    } catch (error) {
-      context.database.exec("ROLLBACK");
-      throw error;
-    }
-  }
-
-  function importProjectPackageCascade(packageValue: ProjectPackage): Project {
-    const preparedImport = projectPackageService.prepareImport({ packageValue });
-    context.database.exec("BEGIN IMMEDIATE");
-    try {
-      const createdProject = repository.createProject(
-        preparedImport.importedName,
-        preparedImport.description,
-      );
-      const environmentIdMap = new Map<string, string>();
-      for (const environment of preparedImport.environments) {
-        const createdEnvironment = repository.createProjectEnvironment(createdProject.id, {
-          name: environment.name,
-          description: environment.description,
-          is_default: environment.is_default,
-          browser_launch: duplicateProjectBrowserLaunch(environment.browser_launch),
-        });
-        environmentIdMap.set(environment.id, createdEnvironment.id);
-      }
-      const defaultEnvironment =
-        repository.getDefaultProjectEnvironment(createdProject.id) ??
-        ensureDefaultProjectEnvironment(createdProject);
-
-      const subflowIdMap = new Map<string, string>();
-      for (const subflow of preparedImport.subflows) {
-        const createdSubflow = repository.createSubflow(
-          createdProject.id,
-          subflow.name,
-          subflow.description,
-          migrateWorkflowGraph(subflow.graph),
-        );
-        subflowIdMap.set(subflow.id, createdSubflow.id);
-      }
-
-      for (const packagedWorkflow of preparedImport.workflows) {
-        const createdEnvironmentId = packagedWorkflow.environment_id
-          ? environmentIdMap.get(packagedWorkflow.environment_id) ?? defaultEnvironment.id
-          : defaultEnvironment.id;
-        const createdWorkflow = createWorkflow(packagedWorkflow.name, {
-          project_id: createdProject.id,
-          environment: {
-            mode: "existing",
-            environment_id: createdEnvironmentId,
-          },
-        });
-        if (packagedWorkflow.flow) {
-          repository.saveWorkflowGraph(
-            createdWorkflow.id,
-            remapCallSubflowIds(packagedWorkflow.flow, subflowIdMap),
-          );
-        }
-        if (packagedWorkflow.settings) {
-          const createdEnvironment = requireProjectEnvironment(createdEnvironmentId);
-          saveSettings(createdWorkflow.id, {
-            ...packagedWorkflow.settings,
-            workflow_id: createdWorkflow.id,
-            general: {
-              ...packagedWorkflow.settings.general,
-              name: createdWorkflow.name,
-              created_at: createdWorkflow.created_at,
-              updated_at: createdWorkflow.updated_at,
-            },
-            run_policy: {
-              ...packagedWorkflow.settings.run_policy,
-              run_from_selected_enabled: false,
-            },
-            browser_launch: createdEnvironment.browser_launch,
-            created_at: createdWorkflow.created_at,
-            updated_at: createdWorkflow.updated_at,
-          });
-        }
-      }
-
-      context.database.exec("COMMIT");
-      return createdProject;
-    } catch (error) {
-      context.database.exec("ROLLBACK");
-      throw error;
-    }
-  }
-
   function assertNoUnsupportedGraphDiscriminants(graph: WorkflowGraph) {
     const issue = validateGraph(graph).find(
       (candidate) =>
@@ -782,101 +516,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         if (workflow.id === workflowId) return false;
         return browserProfileKey(getSettings(workflow.id)) === profileDir;
       });
-  }
-
-  function deleteProjectEnvironmentProfileDirectoryIfPrivate(
-    environmentId: string,
-    profileDir: string | null,
-    nextProfileDir: string | null,
-  ) {
-    if (
-      !profileDir ||
-      profileDir === nextProfileDir ||
-      isProfileReferencedOutsideProjectEnvironment(environmentId, profileDir)
-    ) {
-      return;
-    }
-    nodeFs.rmSync(path.join(context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
-      recursive: true,
-      force: true,
-    });
-  }
-
-  function isProfileReferencedOutsideProjectEnvironment(
-    environmentId: string,
-    profileDir: string,
-  ) {
-    for (const project of repository.listProjects()) {
-      for (const environment of repository.listProjectEnvironments(project.id)) {
-        if (environment.id === environmentId) continue;
-        if (projectEnvironmentProfileKey(environment) === profileDir) return true;
-      }
-    }
-    return repository
-      .listWorkflows()
-      .some((workflow) => {
-        if (workflow.environment_id === environmentId) return false;
-        return browserProfileKey(getSettings(workflow.id)) === profileDir;
-      });
-  }
-
-  function isProfileReferencedOutsideProject(
-    projectId: string,
-    workflowIds: Set<string>,
-    profileDir: string,
-  ) {
-    for (const project of repository.listProjects()) {
-      if (project.id === projectId) continue;
-      for (const environment of repository.listProjectEnvironments(project.id)) {
-        if (projectEnvironmentProfileKey(environment) === profileDir) return true;
-      }
-    }
-    return repository
-      .listWorkflows()
-      .some((workflow) => {
-        if (workflowIds.has(workflow.id)) return false;
-        return browserProfileKey(getSettings(workflow.id)) === profileDir;
-      });
-  }
-
-  function deleteProjectCascade(projectId: string) {
-    const project = requireProject(projectId);
-    const workflows = repository
-      .listWorkflows()
-      .filter((workflow) => workflow.project_id === project.id);
-    const workflowIds = new Set(workflows.map((workflow) => workflow.id));
-    for (const workflow of workflows) {
-      assertWorkflowDeletionAllowed(workflow.id, getSettings(workflow.id));
-    }
-
-    const profileDirs = new Set<string>();
-    for (const environment of repository.listProjectEnvironments(project.id)) {
-      const profileDir = projectEnvironmentProfileKey(environment);
-      if (profileDir) profileDirs.add(profileDir);
-    }
-    for (const workflow of workflows) {
-      const profileDir = browserProfileKey(getSettings(workflow.id));
-      if (profileDir) profileDirs.add(profileDir);
-    }
-    const deletableProfileDirs = [...profileDirs].filter(
-      (profileDir) => !isProfileReferencedOutsideProject(project.id, workflowIds, profileDir),
-    );
-
-    context.database.exec("BEGIN IMMEDIATE");
-    try {
-      repository.deleteProject(project.id);
-      context.database.exec("COMMIT");
-    } catch (error) {
-      context.database.exec("ROLLBACK");
-      throw error;
-    }
-
-    for (const profileDir of deletableProfileDirs) {
-      nodeFs.rmSync(path.join(context.appPaths.browserProfilesDir, sanitizePathSegment(profileDir)), {
-        recursive: true,
-        force: true,
-      });
-    }
   }
 
   function saveSettings(workflowId: string, settings: WorkflowSettings) {
@@ -940,258 +579,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       throw commandError(message, field);
     }
     return value;
-  }
-
-  function createRecordingDraft(
-    sessionId: string,
-    options: RecordingGenerateDraftOptions,
-  ): RecordingWorkflowDraft {
-    const session = requireRecordingResult(recorderSessionManager.getSession(sessionId));
-    if (session.status !== "stopped") {
-      throw commandError("Stop recording before generating a draft", "sessionId");
-    }
-    const includeEventIds = new Set(options.include_event_ids ?? []);
-    const events = requireRecordingResult(recorderSessionManager.listEvents(sessionId))
-      .filter((event) => !includeEventIds.size || includeEventIds.has(event.id));
-    const steps = normalizeRecordingEvents(events);
-    if (!steps.some((step) => step.included)) {
-      throw commandError("No meaningful actions recorded", "events");
-    }
-    const graph = generateRecordingGraph(steps, {
-      addTerminalSuccess: options.add_terminal_success,
-    });
-    const validationIssues = validateGraph(graph);
-    const draft: RecordingWorkflowDraft = {
-      id: `draft_${randomUUID().replace(/-/g, "")}`,
-      session_id: session.id,
-      workflow_id: session.workflow_id,
-      mode: session.mode,
-      status: "draft",
-      generated_at: new Date().toISOString(),
-      workflow_settings_snapshot: session.workflow_settings_snapshot,
-      steps,
-      graph,
-      validation_issues: validationIssues,
-      warnings: [
-        ...session.warnings,
-        ...steps.flatMap((step) => step.warnings),
-      ],
-    };
-    recordingDrafts.set(draft.id, draft);
-    return draft;
-  }
-
-  function reconcileReviewedRecordingSteps(
-    draftSteps: ReviewedRecordingStep[],
-    reviewedInput: unknown,
-  ): ReviewedRecordingStep[] {
-    const reviewedById = new Map(
-      reviewedStepRecords(reviewedInput).map((step) => [step.id, step]),
-    );
-    return draftSteps.map((draftStep) => {
-      const reviewed = reviewedById.get(draftStep.id);
-      if (!reviewed) return draftStep;
-      return {
-        ...draftStep,
-        label: typeof reviewed.label === "string" ? reviewed.label : draftStep.label,
-        included:
-          typeof reviewed.included === "boolean"
-            ? reviewed.included
-            : draftStep.included,
-        action: mergeReviewedRecordingAction(draftStep.action, reviewed.action),
-      };
-    });
-  }
-
-  function mergeReviewedRecordingAction(
-    draftAction: ActionConfig,
-    reviewedActionInput: unknown,
-  ): ActionConfig {
-    const reviewedAction = actionConfigOrNull(reviewedActionInput);
-    if (!reviewedAction) return draftAction;
-    if (draftAction.type !== reviewedAction.type) return draftAction;
-    switch (draftAction.type) {
-      case "navigate":
-        if (reviewedAction.type !== "navigate") return draftAction;
-        return {
-          type: "navigate",
-          config: {
-            ...draftAction.config,
-            url: stringReviewValue(reviewedAction.config.url, draftAction.config.url),
-          },
-        };
-      case "input_text":
-        if (reviewedAction.type !== "input_text") return draftAction;
-        return {
-          type: "input_text",
-          config: {
-            ...draftAction.config,
-            text: stringReviewValue(reviewedAction.config.text, draftAction.config.text),
-          },
-        };
-      case "select_option":
-        if (reviewedAction.type !== "select_option") return draftAction;
-        return {
-          type: "select_option",
-          config: {
-            ...draftAction.config,
-            value: stringReviewValue(reviewedAction.config.value, draftAction.config.value),
-          },
-        };
-      case "scroll":
-        if (reviewedAction.type !== "scroll") return draftAction;
-        return {
-          type: "scroll",
-          config: {
-            ...draftAction.config,
-            pixels: finiteReviewNumber(reviewedAction.config.pixels, draftAction.config.pixels),
-          },
-        };
-      case "upload_file":
-        if (reviewedAction.type !== "upload_file") return draftAction;
-        return {
-          type: "upload_file",
-          config: {
-            ...draftAction.config,
-            files: stringArrayReviewValue(reviewedAction.config.files),
-          },
-        };
-      case "set_clipboard":
-        if (reviewedAction.type !== "set_clipboard") return draftAction;
-        return {
-          type: "set_clipboard",
-          config: {
-            ...draftAction.config,
-            text: stringReviewValue(reviewedAction.config.text, draftAction.config.text),
-          },
-        };
-      default:
-        return draftAction;
-    }
-  }
-
-  function stringReviewValue(value: unknown, fallback: string) {
-    return typeof value === "string" ? value : fallback;
-  }
-
-  function finiteReviewNumber(value: unknown, fallback: number | undefined) {
-    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-  }
-
-  function stringArrayReviewValue(value: unknown) {
-    return Array.isArray(value)
-      ? value.filter((entry): entry is string =>
-          typeof entry === "string" && entry.trim().length > 0
-        )
-      : [];
-  }
-
-  function reviewedStepRecords(value: unknown): ReviewedRecordingStep[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter((entry): entry is ReviewedRecordingStep =>
-      Boolean(
-        entry &&
-          typeof entry === "object" &&
-          typeof (entry as { id?: unknown }).id === "string",
-      )
-    );
-  }
-
-  function actionConfigOrNull(value: unknown): ActionConfig | null {
-    if (!value || typeof value !== "object") return null;
-    const candidate = value as { type?: unknown; config?: unknown };
-    return typeof candidate.type === "string" && "config" in candidate
-      ? value as ActionConfig
-      : null;
-  }
-
-  function saveRecordingDraft(
-    draftId: string,
-    input: RecordingSaveDraftInput,
-  ): WorkflowDetail {
-    const draft = requireRecordingResult(
-      recordingDrafts.get(draftId) ?? null,
-      "draftId",
-      "Recording draft not found",
-    );
-    if (draft.status !== "draft") {
-      throw commandError("Recording draft has already been saved", "draftId");
-    }
-    const reviewedSteps = reconcileReviewedRecordingSteps(draft.steps, input.reviewed_steps ?? []);
-    if (!reviewedSteps.some((step) => step.included)) {
-      throw commandError("At least one recorded step must be included", "reviewed_steps");
-    }
-    const graph = generateRecordingGraph(reviewedSteps, {
-      addTerminalSuccess: input.add_terminal_success,
-    });
-    const validationIssues = validateGraph(graph);
-    const firstError = validationIssues.find((issue) => issue.level === "error");
-    if (firstError) {
-      throw commandError(firstError.message, firstError.node_id ?? firstError.edge_id ?? "reviewed_steps");
-    }
-
-    const normalizedName = input.workflow_name.trim();
-    if (input.save_mode === "create_new" && !normalizedName) {
-      throw commandError("Workflow name is required", "workflow_name");
-    }
-    if (input.save_mode === "replace_graph" && !draft.workflow_id) {
-      throw commandError("Recording draft is not linked to a workflow", "draftId");
-    }
-
-    context.database.exec("BEGIN IMMEDIATE");
-    try {
-      const detail =
-        input.save_mode === "create_new"
-          ? saveRecordingAsNewWorkflow(draft, graph, normalizedName)
-          : replaceRecordingWorkflowGraph(draft, graph);
-      context.database.exec("COMMIT");
-      recordingDrafts.delete(draft.id);
-      recorderSessionManager.deleteSession(draft.session_id);
-      return detail;
-    } catch (error) {
-      context.database.exec("ROLLBACK");
-      throw error;
-    }
-  }
-
-  function saveRecordingAsNewWorkflow(
-    draft: RecordingWorkflowDraft,
-    graph: WorkflowGraph,
-    workflowName: string,
-  ): WorkflowDetail {
-    const workflow = createWorkflow(workflowName);
-    repository.saveWorkflowGraph(workflow.id, graph);
-    const settingsSnapshot =
-      recorderSessionManager.getInternalSettingsSnapshot(draft.session_id) ??
-      draft.workflow_settings_snapshot;
-    saveSettings(workflow.id, {
-      ...settingsSnapshot,
-      workflow_id: workflow.id,
-      general: {
-        ...settingsSnapshot.general,
-        name: workflowName,
-        created_at: workflow.created_at,
-        updated_at: workflow.updated_at,
-      },
-      created_at: workflow.created_at,
-      updated_at: workflow.updated_at,
-    });
-    return repository.getWorkflow(workflow.id) ?? { workflow, steps: [] };
-  }
-
-  function replaceRecordingWorkflowGraph(
-    draft: RecordingWorkflowDraft,
-    graph: WorkflowGraph,
-  ): WorkflowDetail {
-    const workflowId = draft.workflow_id;
-    if (!workflowId) {
-      throw commandError("Recording draft is not linked to a workflow", "draftId");
-    }
-    requireWorkflow(workflowId);
-    repository.saveWorkflowGraph(workflowId, graph);
-    const detail = repository.getWorkflow(workflowId);
-    if (!detail) throw commandError("Workflow not found", "workflowId");
-    return detail;
   }
 
   function createWorkflow(name: string, options: WorkflowCreateOptions = {}): Workflow {
@@ -1332,33 +719,6 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     });
   }
 
-  function scheduleInputWithNextRun(input: WorkflowScheduleInput): WorkflowScheduleInput & {
-    next_run_at: string | null;
-  } {
-    const issues = validateScheduleInput(input);
-    const firstError = issues.find((issue) => issue.level === "error");
-    if (firstError) {
-      throw commandError(firstError.message, firstError.field);
-    }
-    if (input.enabled) {
-      const workflowIssues = validateWorkflowRun(input.workflow_id);
-      const firstWorkflowError = workflowIssues.find((issue) => issue.level === "error");
-      if (firstWorkflowError) {
-        throw commandError(
-          firstWorkflowError.message,
-          firstWorkflowError.field ?? firstWorkflowError.node_id ?? "workflow_id",
-        );
-      }
-    } else {
-      requireWorkflow(input.workflow_id);
-    }
-    return {
-      ...input,
-      name: input.name.trim(),
-      next_run_at: input.enabled ? calculateNextRunAt(input.kind, new Date()) : null,
-    };
-  }
-
   return {
     listProjects(): Project[] {
       return repository.listProjects();
@@ -1404,7 +764,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     duplicateProject(projectId: string): Project {
-      return duplicateProjectCascade(projectId);
+      return projectCascades.duplicateProjectCascade(projectId);
     },
 
     exportProjectPackage(projectId: string): ProjectPackage {
@@ -1435,11 +795,11 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     importProjectPackage(packageValue: ProjectPackage): Project {
-      return importProjectPackageCascade(packageValue);
+      return projectCascades.importProjectPackageCascade(packageValue);
     },
 
     deleteProject(projectId: string) {
-      deleteProjectCascade(projectId);
+      projectCascades.deleteProjectCascade(projectId);
     },
 
     listProjectEnvironments(projectId: string): ProjectEnvironment[] {
@@ -1484,7 +844,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
     },
 
     resetProjectEnvironmentBrowserIdentity(environmentId: string): ProjectEnvironment {
-      return rotateProjectEnvironmentBrowserIdentity(environmentId);
+      return projectCascades.rotateProjectEnvironmentBrowserIdentity(environmentId);
     },
 
     setWorkflowEnvironment(workflowId: string, environmentId: string): Workflow {
@@ -1870,98 +1230,13 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       await runner.closeRetainedSession(workflowId, profileName);
     },
 
-    listSchedules(): WorkflowSchedule[] {
-      return scheduleRepository.listSchedules();
-    },
-
-    getSchedule(scheduleId: string): WorkflowSchedule {
-      const schedule = scheduleRepository.getSchedule(scheduleId);
-      if (!schedule) {
-        throw commandError("Schedule not found", "scheduleId");
-      }
-      return schedule;
-    },
-
-    createSchedule(input: WorkflowScheduleInput): WorkflowSchedule {
-      return scheduleRepository.createSchedule(scheduleInputWithNextRun(input));
-    },
-
-    updateSchedule(
-      scheduleId: string,
-      patch: WorkflowScheduleUpdate,
-    ): WorkflowSchedule {
-      const current = scheduleRepository.getSchedule(scheduleId);
-      if (!current) {
-        throw commandError("Schedule not found", "scheduleId");
-      }
-      return scheduleRepository.updateSchedule(
-        scheduleId,
-        scheduleInputWithNextRun({
-          workflow_id: patch.workflow_id ?? current.workflow_id,
-          name: patch.name ?? current.name,
-          enabled: patch.enabled ?? current.enabled,
-          kind: patch.kind ?? current.kind,
-        }),
-      );
-    },
-
-    deleteSchedule(scheduleId: string) {
-      if (!scheduleRepository.getSchedule(scheduleId)) {
-        throw commandError("Schedule not found", "scheduleId");
-      }
-      scheduleRepository.deleteSchedule(scheduleId);
-    },
-
-    enableSchedule(scheduleId: string): WorkflowSchedule {
-      const current = scheduleRepository.getSchedule(scheduleId);
-      if (!current) {
-        throw commandError("Schedule not found", "scheduleId");
-      }
-      return scheduleRepository.updateSchedule(
-        scheduleId,
-        scheduleInputWithNextRun({
-          workflow_id: current.workflow_id,
-          name: current.name,
-          enabled: true,
-          kind: current.kind,
-        }),
-      );
-    },
-
-    disableSchedule(scheduleId: string): WorkflowSchedule {
-      const current = scheduleRepository.getSchedule(scheduleId);
-      if (!current) {
-        throw commandError("Schedule not found", "scheduleId");
-      }
-      return scheduleRepository.updateSchedule(scheduleId, {
-        workflow_id: current.workflow_id,
-        name: current.name,
-        enabled: false,
-        kind: current.kind,
-        next_run_at: null,
-      });
-    },
-
-    listScheduleEvents(filter: WorkflowScheduleEventFilter = {}): WorkflowScheduleEvent[] {
-      return scheduleRepository.listEvents(filter);
-    },
-
-    validateSchedule(schedule: OrchestrationSchedule): ScheduleValidationIssue[] {
-      return validateScheduleInput(schedule);
-    },
-
-    async runSchedulerTick(now = new Date()) {
-      await processDueSchedules({
-        now,
-        repository: scheduleRepository,
-        getRunConflict: schedulerConflictReason,
-        validateWorkflow: validateWorkflowRun,
-        startWorkflow: async (workflowId) => {
-          const result = await startWorkflowRun(workflowId, "schedule");
-          return { runId: result.run_id };
-        },
-      });
-    },
+    ...createScheduleCommandHandlers({
+      scheduleRepository,
+      requireWorkflow,
+      validateWorkflowRun,
+      schedulerConflictReason,
+      startWorkflowRun,
+    }),
 
     exportWorkflow(workflowId: string): WorkflowExport {
       const workflow = requireWorkflow(workflowId);
@@ -2093,144 +1368,15 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
         throw commandError("Workflow graph has no executable steps", "graph");
       }
       const compiledGraph = compileWorkflowRunPlan(graph, settings, graphContext);
-      const batchSettings: WorkflowSettings = {
-        ...settings,
-        run_policy: {
-          ...settings.run_policy,
-          browser_retention: "close",
-        },
-        browser_launch: {
-          ...settings.browser_launch,
-          headless: request.headless ?? settings.run_policy.batch_headless,
-        },
-      };
-      const results = [];
-      let succeeded = 0;
-      let failed = 0;
-      const abortController = runManager.beginBatchRun(request.rows.length);
-      try {
-        for (const [rowIndex, row] of request.rows.entries()) {
-          if (abortController.signal.aborted) break;
-          runManager.setBatchRunState({
-            ...(runManager.getBatchRunState() ?? idleRunState),
-            status: "running",
-            outputs: {
-              ...(runManager.getBatchRunState()?.outputs ?? {}),
-              batch_total: request.rows.length,
-              batch_current_row_index: rowIndex,
-              batch_succeeded: succeeded,
-              batch_failed: failed,
-            },
-          });
-          const rowGraph = prependBatchRowVariables(compiledGraph, rowIndex, row);
-          const runId = runManager.beginRunRecord(workflowId, batchSettings, graph);
-          runManager.setCurrentBatchRunId(runId);
-          let result = await runner.run({
-            runId,
-            graph: rowGraph,
-            settings: batchSettings,
-            mode: "run_workflow",
-            signal: abortController.signal,
-            onProgress(progress) {
-              if (abortController.signal.aborted && runManager.getBatchRunState()?.status === "stopped") {
-                return;
-              }
-              runManager.setBatchRunState({
-                ...(runManager.getBatchRunState() ?? idleRunState),
-                ...progress,
-                status: "running",
-                mode: "run_workflow",
-                outputs: {
-                  ...(runManager.getBatchRunState()?.outputs ?? {}),
-                  batch_total: request.rows.length,
-                  batch_current_row_index: rowIndex,
-                  batch_succeeded: succeeded,
-                  batch_failed: failed,
-                },
-              });
-            },
-          });
-          if (abortController.signal.aborted && runManager.getBatchRunState()?.status === "stopped") {
-            result = {
-              ...result,
-              status: "stopped",
-              error: null,
-            };
-          }
-          runManager.finishRun(runId, rowGraph, result);
-          runManager.setCurrentBatchRunId(null);
-          if (result.status === "success") {
-            succeeded += 1;
-          } else if (result.status === "failed") {
-            failed += 1;
-          }
-          results.push({
-            row_index: rowIndex,
-            status: result.status,
-            error: result.error?.reason ?? null,
-          });
-          runManager.setBatchRunState({
-            ...(runManager.getBatchRunState() ?? idleRunState),
-            status: result.status === "stopped" ? "stopped" : "running",
-            current_step_id: null,
-            current_step_number: null,
-            outputs: {
-              ...(runManager.getBatchRunState()?.outputs ?? {}),
-              batch_total: request.rows.length,
-              batch_current_row_index: rowIndex,
-              batch_succeeded: succeeded,
-              batch_failed: failed,
-            },
-            error: result.status === "failed" ? result.error : null,
-          });
-          if (result.status === "stopped") break;
-          if (result.status !== "success" && settings.run_policy.batch_stop_on_first_failed_row) {
-            break;
-          }
-        }
-        if (runManager.getBatchRunState()?.status !== "stopped") {
-          runManager.setBatchRunState({
-            ...(runManager.getBatchRunState() ?? idleRunState),
-            status: failed > 0 ? "failed" : "success",
-            current_step_id: null,
-            current_step_number: null,
-            outputs: {
-              ...(runManager.getBatchRunState()?.outputs ?? {}),
-              batch_total: request.rows.length,
-              batch_succeeded: succeeded,
-              batch_failed: failed,
-            },
-          });
-        }
-      } catch (error) {
-        const batchState = runManager.getBatchRunState();
-        runManager.setBatchRunState({
-          ...idleRunState,
-          status: "failed",
-          mode: "run_workflow",
-          outputs: {
-            batch_total: request.rows.length,
-            batch_succeeded: succeeded,
-            batch_failed: failed,
-          },
-          error: {
-            step_id: batchState?.current_step_id,
-            step_number: batchState?.current_step_number ?? 0,
-            step_name: null,
-            action_type: "workflow",
-            reason: error instanceof Error ? error.message : String(error),
-          },
-        });
-        throw error;
-      } finally {
-        runManager.clearBatchRun(abortController);
-      }
-      return {
-        total: request.rows.length,
-        succeeded,
-        failed,
-        results,
-      };
+      return runBatchWorkflowRows({
+        workflowId,
+        request,
+        settings,
+        graphSnapshot: graph,
+        compiledGraph,
+        runner,
+        runManager,
+      });
     },
 
     async startRecordingSession(input: RecorderStartSessionInput): Promise<RecordingSession> {
@@ -2258,11 +1404,7 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
 
     async discardRecordingSession(sessionId: string): Promise<RecordingSession> {
       const discarded = requireRecordingResult(await recorderSessionManager.discardSession(sessionId));
-      for (const [draftId, draft] of recordingDrafts) {
-        if (draft.session_id === sessionId) {
-          recordingDrafts.delete(draftId);
-        }
-      }
+      recordingDraftCommands.discardRecordingDraftsForSession(sessionId);
       return discarded;
     },
 
@@ -2270,18 +1412,14 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       sessionId: string,
       options: RecordingGenerateDraftOptions,
     ): RecordingWorkflowDraft {
-      return createRecordingDraft(sessionId, options);
+      return recordingDraftCommands.createRecordingDraft(sessionId, options);
     },
 
     getRecordingDraft(draftId: string): RecordingWorkflowDraft {
-      return requireRecordingResult(
-        recordingDrafts.get(draftId) ?? null,
-        "draftId",
-        "Recording draft not found",
-      );
+      return recordingDraftCommands.getRecordingDraft(draftId);
     },
 
-    saveRecordingDraft,
+    saveRecordingDraft: recordingDraftCommands.saveRecordingDraft,
 
     dryRunValidateConfig(config: ActionConfig) {
       const validation = validateActionConfig(config);
@@ -2310,466 +1448,10 @@ export function serializeCommandError(error: unknown): CommandError {
   return { message: "Unexpected command error" };
 }
 
-function isOptionalModuleAvailable(name: string) {
-  try {
-    nodeRequire.resolve(name);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function directoryReadable(value: string) {
-  try {
-    const stat = nodeFs.statSync(value);
-    if (!stat.isDirectory()) return false;
-    nodeFs.accessSync(value, nodeFs.constants.R_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function resolveDefaultFingerprintFontsDir(
-  override: CommandContext["defaultFingerprintFontsDir"],
-) {
-  if (typeof override === "function") return override();
-  if (override !== undefined) return override;
-  const candidate = path.join(process.cwd(), ".local", "cloakbrowser-fonts", "linux");
-  return directoryReadable(candidate) ? candidate : null;
-}
-
-async function buildCloakBrowserDiagnostics({
-  appPaths,
-  workflows,
-  settingsForWorkflow,
-  lastRunAtForWorkflow,
-  retainedProfileNames,
-}: {
-  appPaths: AppPaths;
-  workflows: WorkflowSummary[];
-  settingsForWorkflow: (workflowId: string) => WorkflowSettings;
-  lastRunAtForWorkflow: (workflowId: string) => string | null;
-  retainedProfileNames: Set<string>;
-}): Promise<CloakBrowserDiagnostics> {
-  const binary = await cloakBinaryInfo();
-  const identityByProfileDir = new Map<
-    string,
-    Pick<
-      BrowserProfileDiagnostics,
-      "identity_id" | "display_name" | "workflow_id" | "workflow_name" | "last_run_at"
-    >
-  >();
-  const fontDirectoryWorkflows = new Map<
-    string,
-    Array<{ workflow_id: string; workflow_name: string; identity_id: string }>
-  >();
-  for (const workflow of workflows) {
-    const settings = settingsForWorkflow(workflow.id);
-    const profileDir = settings.browser_launch.profile_dir?.trim();
-    if (!profileDir) continue;
-    identityByProfileDir.set(profileDir, {
-      identity_id: settings.browser_launch.identity_id,
-      display_name: settings.browser_launch.display_name,
-      workflow_id: workflow.id,
-      workflow_name: workflow.name,
-      last_run_at: lastRunAtForWorkflow(workflow.id),
-    });
-    const fontsDir = settings.browser_launch.fingerprint_fonts_dir?.trim();
-    if (fontsDir) {
-      const existing = fontDirectoryWorkflows.get(fontsDir) ?? [];
-      existing.push({
-        workflow_id: workflow.id,
-        workflow_name: workflow.name,
-        identity_id: settings.browser_launch.identity_id,
-      });
-      fontDirectoryWorkflows.set(fontsDir, existing);
-    }
-  }
-
-  return {
-    wrapper_version: await cloakWrapperVersion(),
-    binary,
-    auto_update_enabled: process.env.CLOAKBROWSER_AUTO_UPDATE !== "false",
-    checksum_skip_enabled: process.env.CLOAKBROWSER_SKIP_CHECKSUM === "true",
-    geoip_available: isOptionalModuleAvailable("mmdb-lib"),
-    profile_root: appPaths.browserProfilesDir,
-    font_checklist: fingerprintFontChecklist(fontDirectoryWorkflows),
-    last_smoke_result: {
-      status: "not_recorded",
-      reason: "Smoke tests are recorded by the npm run test:smoke command output",
-    },
-    headed_display: headedDisplayAvailability(),
-    profiles: await browserProfileDiagnostics(
-      appPaths.browserProfilesDir,
-      identityByProfileDir,
-      retainedProfileNames,
-    ),
-  };
-}
-
-const expectedFontFamilies = [
-  { id: "arial", label: "arial" },
-  { id: "courier", label: "courier" },
-  { id: "notosans", label: "noto" },
-];
-
-function fingerprintFontChecklist(
-  fontDirectoryWorkflows: Map<
-    string,
-    Array<{ workflow_id: string; workflow_name: string; identity_id: string }>
-  >,
-): CloakBrowserDiagnostics["font_checklist"] {
-  if (fontDirectoryWorkflows.size === 0) {
-    return {
-      status: "not_configured",
-      reason: "No workflow has a fingerprint fonts directory configured",
-      directories: [],
-    };
-  }
-  const directories = [...fontDirectoryWorkflows.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([fontPath, workflows]) => inspectFingerprintFontDirectory(fontPath, workflows));
-  const status = directories.some((directory) => directory.status === "missing")
-    ? "error"
-    : directories.some((directory) => directory.status === "warning")
-      ? "warning"
-      : "ok";
-  const reason = status === "ok"
-    ? null
-    : directories
-        .filter((directory) => directory.reason)
-        .map((directory) => `${directory.path}: ${directory.reason}`)
-        .join("; ");
-  return { status, reason, directories };
-}
-
-function inspectFingerprintFontDirectory(
-  fontPath: string,
-  workflows: Array<{ workflow_id: string; workflow_name: string; identity_id: string }>,
-): CloakBrowserDiagnostics["font_checklist"]["directories"][number] {
-  const base = {
-    path: fontPath,
-    file_count: 0,
-    total_size_bytes: 0,
-    normalized_hash: null,
-    expected_families_present: [] as string[],
-    missing_expected_families: expectedFontFamilies.map((family) => family.label),
-    workflow_ids: workflows.map((workflow) => workflow.workflow_id).sort(),
-    workflow_names: workflows.map((workflow) => workflow.workflow_name).sort(),
-  };
-  if (!directoryReadable(fontPath)) {
-    return {
-      ...base,
-      status: "missing",
-      reason: "Font directory is missing or not readable",
-    };
-  }
-
-  const files = listFingerprintFontFiles(fontPath);
-  const normalizedHash = createHash("sha256");
-  let totalSize = 0;
-  const normalizedNames = files.map((file) => normalizeFontFileName(file.relativePath));
-  for (const file of files) {
-    totalSize += file.size;
-    normalizedHash.update(file.relativePath.toLowerCase());
-    normalizedHash.update("\0");
-    normalizedHash.update(file.contentHash);
-    normalizedHash.update("\0");
-  }
-  const present = expectedFontFamilies
-    .filter((family) => normalizedNames.some((name) => name.includes(family.id)))
-    .map((family) => family.label);
-  const missing = expectedFontFamilies
-    .filter((family) => !present.includes(family.label))
-    .map((family) => family.label);
-  const reasons = [
-    workflows.length > 1 ? "Font directory is shared by multiple workflow identities" : null,
-    files.length === 0 ? "No font files were found" : null,
-    missing.length > 0 ? `Missing expected font families: ${missing.join(", ")}` : null,
-  ].filter((reason): reason is string => Boolean(reason));
-  return {
-    ...base,
-    status: reasons.length > 0 ? "warning" : "ok",
-    reason: reasons.join("; ") || null,
-    file_count: files.length,
-    total_size_bytes: totalSize,
-    normalized_hash: normalizedHash.digest("hex"),
-    expected_families_present: present,
-    missing_expected_families: missing,
-  };
-}
-
-function listFingerprintFontFiles(rootDir: string) {
-  const files: Array<{ relativePath: string; size: number; contentHash: string }> = [];
-  const visit = (currentDir: string) => {
-    for (const entry of nodeFs.readdirSync(currentDir, { withFileTypes: true })) {
-      const absolutePath = path.join(currentDir, entry.name);
-      if (entry.isDirectory()) {
-        visit(absolutePath);
-        continue;
-      }
-      if (!entry.isFile() || !isFontFile(entry.name)) continue;
-      const stat = nodeFs.statSync(absolutePath);
-      const content = nodeFs.readFileSync(absolutePath);
-      files.push({
-        relativePath: path.relative(rootDir, absolutePath).split(path.sep).join("/"),
-        size: stat.size,
-        contentHash: createHash("sha256").update(content).digest("hex"),
-      });
-    }
-  };
-  visit(rootDir);
-  return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
-}
-
-function isFontFile(name: string) {
-  return /\.(ttf|otf|woff|woff2)$/i.test(name);
-}
-
-function normalizeFontFileName(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-async function cloakBinaryInfo(): Promise<CloakBrowserDiagnostics["binary"]> {
-  try {
-    const cloakbrowser = await loadCloakBrowserDiagnosticsModule();
-    const info = cloakbrowser.binaryInfo();
-    return {
-      version: info.version ?? null,
-      platform: info.platform ?? null,
-      installed: Boolean(info.installed),
-      binary_path: info.binaryPath ?? null,
-      cache_dir: info.cacheDir ?? null,
-      download_url: info.downloadUrl ?? null,
-    };
-  } catch {
-    return {
-      version: null,
-      platform: process.platform,
-      installed: false,
-      binary_path: process.env.CLOAKBROWSER_BINARY_PATH ?? null,
-      cache_dir: process.env.CLOAKBROWSER_CACHE_DIR ?? null,
-      download_url: process.env.CLOAKBROWSER_DOWNLOAD_URL ?? null,
-    };
-  }
-}
-
-async function loadCloakBrowserDiagnosticsModule(): Promise<CloakBrowserDiagnosticsModule> {
-  return (await import("cloakbrowser")) as unknown as CloakBrowserDiagnosticsModule;
-}
-
-async function cloakWrapperVersion() {
-  let currentDir = process.cwd();
-  while (true) {
-    try {
-      const packageJson = await fs.readFile(
-        path.join(currentDir, "node_modules", "cloakbrowser", "package.json"),
-        "utf8",
-      );
-      const parsed = JSON.parse(packageJson) as { version?: unknown };
-      return typeof parsed.version === "string" ? parsed.version : null;
-    } catch {
-      const parentDir = path.dirname(currentDir);
-      if (parentDir === currentDir) return null;
-      currentDir = parentDir;
-    }
-  }
-}
-
-function headedDisplayAvailability(): CloakBrowserDiagnostics["headed_display"] {
-  if (process.platform !== "linux") {
-    return { available: true, reason: null };
-  }
-  if (process.env.DISPLAY || process.env.WAYLAND_DISPLAY) {
-    return { available: true, reason: null };
-  }
-  return {
-    available: false,
-    reason: "No DISPLAY or WAYLAND_DISPLAY is configured for headed Linux runs",
-  };
-}
-
-async function browserProfileDiagnostics(
-  profileRoot: string,
-  identityByProfileDir: Map<
-    string,
-    Pick<
-      BrowserProfileDiagnostics,
-      "identity_id" | "display_name" | "workflow_id" | "workflow_name" | "last_run_at"
-    >
-  >,
-  retainedProfileNames: Set<string>,
-): Promise<BrowserProfileDiagnostics[]> {
-  let entries: Array<{ name: string; isDirectory(): boolean }>;
-  try {
-    entries = await fs.readdir(profileRoot, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const profiles: BrowserProfileDiagnostics[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const profileDir = entry.name;
-    const fullPath = path.join(profileRoot, profileDir);
-    const stat = await fs.stat(fullPath).catch(() => null);
-    const identity = identityByProfileDir.get(profileDir);
-    profiles.push({
-      profile_dir: profileDir,
-      identity_id: identity?.identity_id ?? null,
-      display_name: identity?.display_name ?? null,
-      workflow_id: identity?.workflow_id ?? null,
-      workflow_name: identity?.workflow_name ?? null,
-      approximate_size_bytes: await directorySize(fullPath),
-      last_modified_at: stat?.mtime ? stat.mtime.toISOString() : null,
-      last_run_at: identity?.last_run_at ?? null,
-      active_session: retainedProfileNames.has(profileDir),
-    });
-  }
-  return profiles.sort((left, right) => left.profile_dir.localeCompare(right.profile_dir));
-}
-
-type DirectorySizeLimits = {
-  maxEntries: number;
-  maxDepth: number;
-  maxMillis: number;
-};
-
-function profileDiagnosticsSizeLimits(): DirectorySizeLimits {
-  return {
-    maxEntries: positiveEnvInteger("WAM_PROFILE_DIAGNOSTICS_MAX_ENTRIES", 5000),
-    maxDepth: positiveEnvInteger("WAM_PROFILE_DIAGNOSTICS_MAX_DEPTH", 8),
-    maxMillis: positiveEnvInteger("WAM_PROFILE_DIAGNOSTICS_MAX_MS", 100),
-  };
-}
-
-function positiveEnvInteger(name: string, fallback: number) {
-  const parsed = Number.parseInt(process.env[name] ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-async function directorySize(directory: string): Promise<number> {
-  const limits = profileDiagnosticsSizeLimits();
-  const startedAt = Date.now();
-  let total = 0;
-  let visitedEntries = 0;
-
-  const timedOut = () => Date.now() - startedAt >= limits.maxMillis;
-  const visit = async (currentDirectory: string, depth: number): Promise<void> => {
-    if (depth > limits.maxDepth || visitedEntries >= limits.maxEntries || timedOut()) return;
-    const entries = await fs.readdir(currentDirectory, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries) {
-      if (visitedEntries >= limits.maxEntries || timedOut()) break;
-      visitedEntries += 1;
-      const childPath = path.join(currentDirectory, entry.name);
-      if (entry.isDirectory()) {
-        await visit(childPath, depth + 1);
-      } else if (entry.isFile()) {
-        total += (await fs.stat(childPath).catch(() => ({ size: 0 }))).size;
-      }
-    }
-  };
-
-  await visit(directory, 0);
-  return total;
-}
-
 function isUnsupportedGraphDiscriminantMessage(message: string) {
   return (
     message.startsWith("Unsupported graph node type: ") ||
     message.startsWith("Unsupported condition kind: ") ||
     message.includes("Unsupported action type: ")
   );
-}
-
-function commandError(message: string, field?: string): CommandError {
-  return { message, field };
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
-}
-
-function isCommandError(error: unknown): error is CommandError {
-  return Boolean(
-    error &&
-      typeof error === "object" &&
-      "message" in error &&
-      typeof (error as { message?: unknown }).message === "string",
-  );
-}
-
-function summaryToWorkflow(summary: WorkflowSummary): Workflow {
-  return {
-    id: summary.id,
-    name: summary.name,
-    created_at: summary.created_at,
-    updated_at: summary.updated_at,
-  };
-}
-
-function createDraftGraph(): WorkflowGraph {
-  return {
-    version: 2,
-    nodes: [
-      {
-        id: "start",
-        node_type: "start",
-        label: "Start",
-        position: { x: 0, y: 0 },
-        config: null,
-        ports: [{ id: "out", label: "Out", direction: "output" }],
-      },
-      {
-        id: "new-node",
-        node_type: "action",
-        label: "New node",
-        position: { x: 240, y: 0 },
-        config: null,
-        ports: [
-          { id: "in", label: "In", direction: "input" },
-          { id: "out", label: "Out", direction: "output" },
-        ],
-      },
-    ],
-    edges: [
-      {
-        id: "start-to-new-node",
-        source_node_id: "start",
-        source_port: "out",
-        target_node_id: "new-node",
-        target_port: "in",
-      },
-    ],
-    viewport: { x: 0, y: 0, zoom: 1 },
-    migration_notes: [],
-  };
-}
-
-function prependBatchRowVariables(
-  graph: CompiledWorkflowGraph,
-  rowIndex: number,
-  row: Record<string, string>,
-): CompiledWorkflowGraph {
-  return {
-    steps: [
-      {
-        node_id: `batch-row-${rowIndex}`,
-        label: `Batch row ${rowIndex + 1}`,
-        config: {
-          type: "set_variable",
-          config: {
-            variables: Object.entries(row).map(([name, value]) => ({
-              name,
-              value_type: "text",
-              value,
-            })),
-          },
-        },
-      },
-      ...graph.steps,
-    ],
-  };
 }

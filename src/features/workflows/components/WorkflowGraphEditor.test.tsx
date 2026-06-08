@@ -27,6 +27,10 @@ const workflowGraphInspectorSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/WorkflowGraphInspector.tsx"),
   "utf8",
 );
+const workflowGraphShortcutsSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/useWorkflowGraphShortcuts.ts"),
+  "utf8",
+);
 const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
 const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   start: true,
@@ -454,7 +458,7 @@ describe("Workflow graph editor integration", () => {
     expect(workflowGraphEditorSource).toContain("selectionOnDrag={!isPanMode}");
     expect(workflowGraphEditorSource).toContain("panOnDrag={isPanMode}");
     expect(workflowGraphEditorSource).toContain("graph-canvas-pan-mode");
-    expect(workflowGraphEditorSource).toContain("event.code === \"Space\"");
+    expect(workflowGraphShortcutsSource).toContain("event.code === \"Space\"");
     expect(workflowGraphCanvasPartsSource).toContain("isConnectable={isConnectable}");
     expect(workflowGraphCanvasPartsSource).toContain("useUpdateNodeInternals");
     expect(workflowGraphCanvasPartsSource).toContain("updateNodeInternals(id)");
@@ -556,21 +560,9 @@ describe("Workflow graph editor integration", () => {
       "x: 120 + currentGraph.nodes.length * 48",
     );
 
-    const graphEditorModule = await import("./WorkflowGraphEditor");
-    expect(graphEditorModule).toHaveProperty("getVisibleNodeInsertionPosition");
-
-    const getVisibleNodeInsertionPosition = graphEditorModule[
-      "getVisibleNodeInsertionPosition"
-    ] as (
-      nodeCount: number,
-      reactFlowInstance: {
-        screenToFlowPosition: (
-          position: { x: number; y: number },
-          options?: { snapToGrid?: boolean },
-        ) => { x: number; y: number };
-      } | null,
-      canvasElement: { getBoundingClientRect: () => DOMRect },
-    ) => { x: number; y: number };
+    const { getVisibleNodeInsertionPosition } = await import(
+      "../lib/nodeInsertionPosition"
+    );
     const screenToFlowPosition = vi.fn(({ x, y }: { x: number; y: number }) => ({
       x: x + 1000,
       y: y + 2000,
@@ -595,8 +587,7 @@ describe("Workflow graph editor integration", () => {
   });
 
   test("preserves multiple incoming links only for Merge inputs", async () => {
-    const graphEditorModule = await import("./WorkflowGraphEditor");
-    const replacePortEdge = graphEditorModule["replacePortEdge"] as typeof import("./WorkflowGraphEditor").replacePortEdge;
+    const { replacePortEdge } = await import("../lib/graphEditorEdges");
     const sourceNode = (id: string) => ({
       id,
       type: "workflow" as const,

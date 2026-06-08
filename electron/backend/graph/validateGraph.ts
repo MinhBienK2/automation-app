@@ -14,11 +14,15 @@ import type {
 } from "../../../src/types/workflow.js";
 import { validateActionConfig } from "../actions/validation.js";
 import { migrateWorkflowGraph } from "./migration.js";
+import {
+  arrayField,
+  asRecord,
+  stringField,
+  validationError,
+  type ValidationErrorLike,
+} from "../shared/records.js";
 
-type ValidationError = {
-  field: string;
-  message: string;
-};
+type ValidationError = ValidationErrorLike;
 
 export type WorkflowGraphValidationOptions = {
   graphKind?: "workflow" | "subflow";
@@ -922,11 +926,6 @@ function setVariableActionConfig(node: GraphNode): ActionConfig {
   };
 }
 
-function stringField(config: unknown, field: string): string | null {
-  const value = asRecord(config)[field];
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
 function numberField(config: unknown, field: string): number | null {
   const value = asRecord(config)[field];
   return typeof value === "number" ? value : null;
@@ -945,17 +944,8 @@ function stringArrayOrNull(config: unknown, field: string): string[] | null {
   return values.length > 0 ? values : null;
 }
 
-function arrayField(config: unknown, field: string): unknown[] {
-  const value = asRecord(config)[field];
-  return Array.isArray(value) ? value : [];
-}
-
 function positive(value: number | null | undefined) {
   return value != null && value > 0;
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
 function error(
@@ -972,10 +962,6 @@ function warning(
   message: string,
 ): GraphValidationIssue {
   return { level: "warning", node_id, edge_id, message };
-}
-
-function validationError(field: string, message: string): ValidationError {
-  return { field, message };
 }
 
 function serializeValidationError(error: unknown): ValidationError {

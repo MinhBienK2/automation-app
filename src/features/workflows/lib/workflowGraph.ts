@@ -19,6 +19,7 @@ import {
   classifyWorkflowGraphEdge,
   type WorkflowGraphEdgeKind,
 } from "./graphLayout";
+import { objectConfig } from "./configUtils";
 
 const graphIssueKey = "__graph__";
 
@@ -774,10 +775,6 @@ function compactDurationLabel(durationMs: number) {
 
 function compactText(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
-}
-
-function objectConfig(config: unknown): Record<string, unknown> {
-  return isRecord(config) ? config : {};
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

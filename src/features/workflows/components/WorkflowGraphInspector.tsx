@@ -14,6 +14,7 @@ import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { callSubflowIdFromNode, graphNodeLabel } from "../lib/workflowGraph";
+import { objectConfig } from "../lib/configUtils";
 import { NodeConfigFields } from "./WorkflowGraphInspectorFields";
 import type { ActionConfig } from "../../../types/workflow";
 import type { VariableOption } from "./TemplateTextField";
@@ -454,10 +455,4 @@ function isActionConfig(config: unknown): config is ActionConfig {
       "type" in config &&
       "config" in config,
   );
-}
-
-function objectConfig(config: unknown): Record<string, unknown> {
-  return config && typeof config === "object" && !Array.isArray(config)
-    ? (config as Record<string, unknown>)
-    : {};
 }

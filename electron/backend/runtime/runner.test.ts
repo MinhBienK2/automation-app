@@ -39,7 +39,8 @@ describe("BrowserWorkflowRunner", () => {
     expect(existsSync(path.join(process.cwd(), "electron/backend/evidence/artifacts.ts"))).toBe(
       true,
     );
-    expect(runnerSource).toContain("../evidence/artifacts.js");
+    expect(runnerSource).toContain("./runnerEvidence.js");
+    expect(runnerSource).not.toContain("../evidence/artifacts.js");
     expect(runnerSource).not.toContain("function resolveEvidenceArtifact");
     expect(runnerSource).not.toContain("function safeArtifactName");
   });

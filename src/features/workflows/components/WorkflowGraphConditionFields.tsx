@@ -3,6 +3,7 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { SegmentedControl } from "../../../components/ui/segmented-control";
 import { Select } from "../../../components/ui/select";
+import { objectConfig } from "../lib/configUtils";
 
 type ConditionFieldsProps = {
   condition: WorkflowCondition;
@@ -146,10 +147,4 @@ function isWorkflowCondition(value: unknown): value is WorkflowCondition {
     "url_contains",
     "element_visible",
   ].includes(String((value as { kind: unknown }).kind));
-}
-
-function objectConfig(config: unknown): Record<string, unknown> {
-  return config && typeof config === "object" && !Array.isArray(config)
-    ? (config as Record<string, unknown>)
-    : {};
 }

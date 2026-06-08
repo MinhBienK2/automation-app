@@ -19,14 +19,16 @@ import {
   type WorkflowGraphValidationOptions,
 } from "./validateGraph.js";
 import { migrateWorkflowGraph } from "./migration.js";
+import {
+  arrayField,
+  asRecord,
+  numberField,
+  stringField,
+  validationError,
+} from "../shared/records.js";
 
 export { validateActionConfig } from "../actions/validation.js";
 export { validateWorkflowGraph } from "./validateGraph.js";
-
-type ValidationError = {
-  field: string;
-  message: string;
-};
 
 type CompileSubflowReference = {
   id: string;
@@ -833,16 +835,6 @@ function requiredString(config: unknown, field: string, message: string) {
   return value;
 }
 
-function stringField(config: unknown, field: string): string | null {
-  const value = asRecord(config)[field];
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function numberField(config: unknown, field: string): number | null {
-  const value = asRecord(config)[field];
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function positiveInteger(config: unknown, field: string, message: string): number {
   const value = numberField(config, field);
   if (value == null || value <= 0 || !Number.isFinite(value)) {
@@ -874,11 +866,6 @@ function stringArrayOrNull(config: unknown, field: string): string[] | null {
   return values.length > 0 ? values : null;
 }
 
-function arrayField(config: unknown, field: string): unknown[] {
-  const value = asRecord(config)[field];
-  return Array.isArray(value) ? value : [];
-}
-
 function closeBrowserConfig(config: unknown): boolean {
   return asRecord(config).close_browser === true;
 }
@@ -892,14 +879,6 @@ function isActionConfig(value: unknown): value is ActionConfig {
   );
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
 function asMutableRecord(value: unknown): Record<string, unknown> {
   return asRecord(value);
-}
-
-function validationError(field: string, message: string): ValidationError {
-  return { field, message };
 }

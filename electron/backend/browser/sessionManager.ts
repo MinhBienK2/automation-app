@@ -9,6 +9,7 @@ import type {
 } from "../../../src/types/workflow.js";
 import type { AppPaths } from "../persistence/database.js";
 import { sanitizePathSegment } from "../evidence/artifacts.js";
+import { isPlainRecord } from "../shared/records.js";
 import { localBrowserLocale, localBrowserTimezone } from "./localEnvironment.js";
 
 type CloakBrowserModule = {
@@ -680,10 +681,6 @@ function closeBrowserWithContext(
       return typeof value === "function" ? value.bind(target) : value;
     },
   }) as BrowserDriverContext;
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function activeAdvancedFingerprintOverrides(browser: WorkflowSettings["browser_launch"]) {

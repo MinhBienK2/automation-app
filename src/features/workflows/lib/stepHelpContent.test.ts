@@ -10,6 +10,10 @@ const stepHelpContentSource = readFileSync(
   join(process.cwd(), "src/features/workflows/lib/stepHelpContent.ts"),
   "utf8",
 );
+const stepHelpEnrichmentSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/lib/stepHelpEnrichment.ts"),
+  "utf8",
+);
 const stepHelpModalSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/StepHelpModal.tsx"),
   "utf8",
@@ -30,7 +34,8 @@ describe("step help content", () => {
   test("keeps field guidance data outside the generated action catalog", () => {
     expect(stepHelpContentSource).not.toContain("const specificFieldOptions");
     expect(stepHelpContentSource).not.toContain("const specificFieldDetails");
-    expect(stepHelpContentSource).toContain("./stepHelpFieldGuidance");
+    expect(stepHelpContentSource).toContain("./stepHelpEnrichment");
+    expect(stepHelpEnrichmentSource).toContain("./stepHelpFieldGuidance");
   });
 
   test("covers every action type in Vietnamese and English", () => {

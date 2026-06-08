@@ -9,6 +9,11 @@ import {
   unsupportedActionTypeMessage,
   type ActionType,
 } from "./registry.js";
+import {
+  asRecord,
+  stringField,
+  validationError,
+} from "../shared/records.js";
 
 export type ActionValidationError = {
   field: string;
@@ -909,11 +914,6 @@ function conditionKindLabel(kind: unknown) {
   return typeof kind === "string" && kind ? kind : "unknown";
 }
 
-function stringField(config: unknown, field: string): string | null {
-  const value = asRecord(config)[field];
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
 function hasElementTargetField(
   config: unknown,
   xpathField = "xpath",
@@ -961,14 +961,6 @@ function isActionConfig(value: unknown): value is ActionConfig {
       "type" in value &&
       "config" in value,
   );
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
-function validationError(field: string, message: string): ActionValidationError {
-  return { field, message };
 }
 
 function serializeValidationError(error: unknown): ActionValidationError {

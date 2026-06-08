@@ -2,7 +2,11 @@
 
 ## Source Files
 
-- TypeScript: `src/types/workflow.ts`
+- TypeScript public barrel: `src/types/workflow.ts`
+- Core/settings/action DTOs: `src/types/workflowCore.ts`
+- Graph/schedule/operations DTOs: `src/types/workflowGraphOps.ts`
+- Evidence/identity/package/recording/run DTOs:
+  `src/types/workflowEvidenceRecording.ts`
 - Shared persona catalog: `src/lib/personaCatalog.ts`
 - Electron bridge: `src/types/electron.ts`
 - Node command handlers: `electron/backend/commands.ts`

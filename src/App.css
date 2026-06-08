@@ -2,7 +2,10 @@
 @import "./styles/base.css";
 @import "./styles/layout.css";
 @import "./styles/workflows.css";
+@import "./styles/workflow-panels.css";
+@import "./styles/mission-workspaces.css";
 @import "./styles/schedules.css";
 @import "./styles/workflow-graph.css";
+@import "./styles/workflow-graph-overlays.css";
 @import "./styles/modals.css";
 @import "./styles/responsive.css";

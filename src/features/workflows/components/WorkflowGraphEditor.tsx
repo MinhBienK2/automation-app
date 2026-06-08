@@ -24,7 +24,6 @@ import type {
   GraphEdgeDelay,
   GraphNode,
   GraphNodeType,
-  GraphPosition,
   GraphPort,
   GraphValidationIssue,
   RunState,
@@ -34,12 +33,9 @@ import type {
 } from "../../../types/workflow";
 import {
   createDefaultGraphNode,
-  callSubflowIdFromNode,
   defaultActionConfig,
   fromReactFlowGraph,
-  graphIssuesByNode,
   mergeReactFlowNodeRuntimeState,
-  nodePorts,
   type WorkflowFlowEdge,
   toReactFlowGraph,
   type WorkflowFlowNode,
@@ -56,22 +52,22 @@ import {
   type GraphHistoryState,
   type GraphSelection,
 } from "../lib/graphEditorCommands";
-import { layoutWorkflowGraph, type WorkflowGraphEdgeKind } from "../lib/graphLayout";
+import { layoutWorkflowGraph } from "../lib/graphLayout";
 import type { GraphNodeHelpLanguage } from "../lib/graphNodeHelpContent";
-import { actionLabels } from "../../../lib/workflowUi";
+import { cloneGraphEdgeDelay } from "../lib/subflowSelection";
+import { getVisibleNodeInsertionPosition } from "../lib/nodeInsertionPosition";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../../components/ui/dialog";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import { GraphShortcutGuide } from "./GraphShortcutGuide";
+  edgeKindForFlowSource,
+  edgePortsExist,
+  replacePortEdge,
+} from "../lib/graphEditorEdges";
+import { actionLabels } from "../../../lib/workflowUi";
 import { WorkflowGraphEdge, WorkflowGraphNode } from "./WorkflowGraphCanvasParts";
 import { WorkflowGraphInspector } from "./WorkflowGraphInspector";
+import { WorkflowGraphEditorDialogs } from "./WorkflowGraphEditorDialogs";
+import { useWorkflowGraphShortcuts } from "./useWorkflowGraphShortcuts";
+import { useSelectionSubflowCreator } from "./useSelectionSubflowCreator";
+import { useWorkflowGraphDerivedState } from "./useWorkflowGraphDerivedState";
 import {
   ActionNodePalette,
   GraphNodePalette,
@@ -114,447 +110,7 @@ type ActivePortConnection = {
   direction: GraphPort["direction"];
 } | null;
 
-type ScreenToFlowPosition = Pick<
-  ReactFlowInstance<WorkflowFlowNode, WorkflowFlowEdge>,
-  "screenToFlowPosition"
->;
-
-type SelectionSubflowMode = "create_only" | "create_and_replace";
-
-type SelectionSubflowPlan =
-  | {
-      ok: true;
-      entryNode: GraphNode;
-      selectedNodes: GraphNode[];
-      internalEdges: WorkflowGraph["edges"];
-      externalIncomingEdges: WorkflowGraph["edges"];
-      externalOutgoingEdges: WorkflowGraph["edges"];
-      subflowGraph: WorkflowGraph;
-      replacementPosition: GraphPosition;
-    }
-  | { ok: false; message: string };
-
-type ReplaceSelectionPlan =
-  | { ok: true; graph: WorkflowGraph; selection: GraphSelection }
-  | { ok: false; message: string };
-
-const graphNodeDimensions = {
-  width: 160,
-  height: 82,
-};
-const visibleNodeStagger = {
-  step: 24,
-  cycle: 5,
-};
 const graphMiniMapNodeLimit = 300;
-
-export function replacePortEdge(
-  edges: WorkflowFlowEdge[],
-  nextEdge: WorkflowFlowEdge,
-  nodes: WorkflowFlowNode[],
-): WorkflowFlowEdge[] {
-  const sourceHandle = nextEdge.sourceHandle ?? "out";
-  const targetHandle = nextEdge.targetHandle ?? "in";
-  const targetNode = nodes.find((node) => node.id === nextEdge.target);
-  const allowsMultipleIncoming =
-    targetNode?.data.nodeType === "merge" && targetHandle === "in";
-
-  return [
-    ...edges.filter((edge) => {
-      const sameOutput =
-        edge.source === nextEdge.source &&
-        (edge.sourceHandle ?? "out") === sourceHandle;
-      const sameInput =
-        edge.target === nextEdge.target &&
-        (edge.targetHandle ?? "in") === targetHandle;
-      return edge.id !== nextEdge.id && !sameOutput && (allowsMultipleIncoming || !sameInput);
-    }),
-    nextEdge,
-  ];
-}
-
-function edgeKindForFlowSource(
-  nodes: WorkflowFlowNode[],
-  sourceNodeId: string,
-  sourcePortId: string,
-): WorkflowGraphEdgeKind {
-  const sourceNodeType = nodes.find((node) => node.id === sourceNodeId)?.data.nodeType;
-  if (!sourceNodeType) return "main";
-  if (
-    ["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(sourceNodeType) &&
-    sourcePortId === "loop"
-  ) {
-    return "loop";
-  }
-  if (
-    (sourceNodeType === "retry" && (sourcePortId === "try" || sourcePortId === "failed")) ||
-    (sourceNodeType === "try_catch" &&
-      ["try", "error", "finally"].includes(sourcePortId)) ||
-    (sourceNodeType === "fallback" && sourcePortId === "fallback") ||
-    (sourceNodeType === "repeat_until" && sourcePortId === "timeout")
-  ) {
-    return "recovery";
-  }
-  if (
-    (["if", "switch", "router", "random_choice", "try_catch", "fallback"].includes(sourceNodeType) &&
-      sourcePortId === "done") ||
-    (["repeat_times", "repeat_for_each", "while", "repeat_until"].includes(sourceNodeType) &&
-      sourcePortId === "done") ||
-    (sourceNodeType === "retry" && sourcePortId === "success")
-  ) {
-    return "continuation";
-  }
-  if (
-    (sourceNodeType === "if" && (sourcePortId === "true" || sourcePortId === "false")) ||
-    ((sourceNodeType === "switch" || sourceNodeType === "router") &&
-      (sourcePortId === "default" || sourcePortId.startsWith("case_"))) ||
-    (sourceNodeType === "random_choice" && sourcePortId.startsWith("choice_")) ||
-    (sourceNodeType === "fallback" && sourcePortId === "primary")
-  ) {
-    return "branch";
-  }
-  return "main";
-}
-
-function edgePortsExist(graph: WorkflowGraph, edge: WorkflowGraph["edges"][number]) {
-  const source = graph.nodes.find((node) => node.id === edge.source_node_id);
-  const target = graph.nodes.find((node) => node.id === edge.target_node_id);
-  return Boolean(
-    source?.ports.some((port) => port.direction === "output" && port.id === edge.source_port) &&
-      target?.ports.some((port) => port.direction === "input" && port.id === edge.target_port),
-  );
-}
-
-function shouldIgnoreGraphShortcut(event: KeyboardEvent) {
-  const target = event.target;
-  if (!(target instanceof Element)) return false;
-
-  const tagName = target.tagName.toLowerCase();
-  if (
-    tagName === "input" ||
-    tagName === "textarea" ||
-    tagName === "select" ||
-    target.getAttribute("contenteditable") === "true"
-  ) {
-    return true;
-  }
-
-  return Boolean(target.closest('[role="dialog"], .action-type-popover'));
-}
-
-function fallbackNodeInsertionPosition(nodeCount: number): GraphPosition {
-  return {
-    x: 120 + nodeCount * 48,
-    y: 120 + nodeCount * 16,
-  };
-}
-
-export function getVisibleNodeInsertionPosition(
-  nodeCount: number,
-  reactFlowInstance: ScreenToFlowPosition | null,
-  canvasElement: Pick<HTMLElement, "getBoundingClientRect"> | null,
-): GraphPosition {
-  const fallbackPosition = fallbackNodeInsertionPosition(nodeCount);
-  if (!reactFlowInstance || !canvasElement) return fallbackPosition;
-
-  const canvasBounds = canvasElement.getBoundingClientRect();
-  if (canvasBounds.width <= 0 || canvasBounds.height <= 0) {
-    return fallbackPosition;
-  }
-
-  const visibleCenter = reactFlowInstance.screenToFlowPosition(
-    {
-      x: canvasBounds.left + canvasBounds.width / 2,
-      y: canvasBounds.top + canvasBounds.height / 2,
-    },
-    { snapToGrid: false },
-  );
-  const stagger = (nodeCount % visibleNodeStagger.cycle) * visibleNodeStagger.step;
-
-  return {
-    x: Math.round(visibleCenter.x - graphNodeDimensions.width / 2 + stagger),
-    y: Math.round(visibleCenter.y - graphNodeDimensions.height / 2 + stagger),
-  };
-}
-
-export function buildSelectedSubflowPlan(
-  graph: WorkflowGraph,
-  selection: GraphSelection,
-): SelectionSubflowPlan {
-  const selectedNodeIdSet = new Set(selection.nodeIds);
-  const selectedNodes = graph.nodes.filter((node) => selectedNodeIdSet.has(node.id));
-
-  if (selectedNodes.length === 0) {
-    return { ok: false, message: "Select at least one node to create a subflow." };
-  }
-  if (selectedNodes.some((node) => node.node_type === "start")) {
-    return { ok: false, message: "Start cannot be included in a reusable subflow." };
-  }
-  if (selectedNodes.some((node) => node.node_type === "call_subflow")) {
-    return {
-      ok: false,
-      message: "Call Subflow nodes cannot be nested inside MVP subflows.",
-    };
-  }
-
-  const internalEdges = graph.edges.filter(
-    (edge) =>
-      selectedNodeIdSet.has(edge.source_node_id) &&
-      selectedNodeIdSet.has(edge.target_node_id),
-  );
-  const externalIncomingEdges = graph.edges.filter(
-    (edge) =>
-      !selectedNodeIdSet.has(edge.source_node_id) &&
-      selectedNodeIdSet.has(edge.target_node_id),
-  );
-  const externalOutgoingEdges = graph.edges.filter(
-    (edge) =>
-      selectedNodeIdSet.has(edge.source_node_id) &&
-      !selectedNodeIdSet.has(edge.target_node_id),
-  );
-
-  const entryNode = selectedSubflowEntryNode(selectedNodes, internalEdges, externalIncomingEdges);
-  if (!entryNode) {
-    return {
-      ok: false,
-      message: "Selection needs one clear first node before it can become a subflow.",
-    };
-  }
-  const reachableNodeIds = reachableSelectedNodeIds(entryNode.id, internalEdges);
-  if (selectedNodes.some((node) => !reachableNodeIds.has(node.id))) {
-    return {
-      ok: false,
-      message: "Selection must form one connected block from its first node.",
-    };
-  }
-
-  const minX = Math.min(...selectedNodes.map((node) => node.position.x));
-  const minY = Math.min(...selectedNodes.map((node) => node.position.y));
-  const replacementPosition = selectedNodesReplacementPosition(selectedNodes);
-  const copiedNodes = selectedNodes.map((node) => ({
-    ...cloneGraphNode(node),
-    position: {
-      x: Math.round(node.position.x - minX + 220),
-      y: Math.round(node.position.y - minY),
-    },
-  }));
-  const startNode: GraphNode = {
-    id: "start",
-    node_type: "start",
-    label: "Start",
-    position: { x: 0, y: 0 },
-    config: {},
-    ports: nodePorts("start"),
-    group_id: null,
-  };
-  const startEdge = {
-    id: uniqueGraphEdgeId(
-      `edge-start-${entryNode.id}`,
-      new Set(internalEdges.map((edge) => edge.id)),
-    ),
-    source_node_id: "start",
-    source_port: "out",
-    target_node_id: entryNode.id,
-    target_port: firstInputPort(entryNode),
-    label: "next",
-    condition: null,
-  };
-
-  return {
-    ok: true,
-    entryNode,
-    selectedNodes,
-    internalEdges,
-    externalIncomingEdges,
-    externalOutgoingEdges,
-    replacementPosition,
-    subflowGraph: {
-      version: graph.version,
-      nodes: [startNode, ...copiedNodes],
-      edges: [startEdge, ...internalEdges.map(cloneGraphEdge)],
-      viewport: { x: 0, y: 0, zoom: 1 },
-    },
-  };
-}
-
-export function replaceSelectionWithSubflowNode(
-  graph: WorkflowGraph,
-  selection: GraphSelection,
-  subflow: Pick<Subflow, "id" | "name">,
-): ReplaceSelectionPlan {
-  const plan = buildSelectedSubflowPlan(graph, selection);
-  if (!plan.ok) return plan;
-  if (plan.externalIncomingEdges.length > 1 || plan.externalOutgoingEdges.length > 1) {
-    return {
-      ok: false,
-      message:
-        "Replace supports selections with at most one incoming link and one outgoing link.",
-    };
-  }
-
-  const selectedNodeIdSet = new Set(plan.selectedNodes.map((node) => node.id));
-  const existingNodeIds = new Set(graph.nodes.map((node) => node.id));
-  const replacementNode = {
-    ...createDefaultGraphNode("call_subflow", plan.replacementPosition),
-    label: subflow.name,
-    config: {
-      subflow_id: subflow.id,
-      input_mapping: [],
-      output_prefix: null,
-    },
-  };
-  replacementNode.id = uniqueGraphNodeId(replacementNode.id, existingNodeIds);
-
-  const nextEdges = graph.edges.filter(
-    (edge) =>
-      !selectedNodeIdSet.has(edge.source_node_id) &&
-      !selectedNodeIdSet.has(edge.target_node_id),
-  );
-  const edgeIds = new Set(nextEdges.map((edge) => edge.id));
-  const incomingEdge = plan.externalIncomingEdges[0];
-  if (incomingEdge) {
-    const edge = {
-      ...cloneGraphEdge(incomingEdge),
-      id: uniqueGraphEdgeId(
-        `edge-${incomingEdge.source_node_id}-${incomingEdge.source_port}-${replacementNode.id}-in`,
-        edgeIds,
-      ),
-      target_node_id: replacementNode.id,
-      target_port: "in",
-    };
-    edgeIds.add(edge.id);
-    nextEdges.push(edge);
-  }
-  const outgoingEdge = plan.externalOutgoingEdges[0];
-  if (outgoingEdge) {
-    const edge = {
-      ...cloneGraphEdge(outgoingEdge),
-      id: uniqueGraphEdgeId(
-        `edge-${replacementNode.id}-out-${outgoingEdge.target_node_id}-${outgoingEdge.target_port}`,
-        edgeIds,
-      ),
-      source_node_id: replacementNode.id,
-      source_port: "out",
-    };
-    edgeIds.add(edge.id);
-    nextEdges.push(edge);
-  }
-
-  return {
-    ok: true,
-    graph: {
-      ...graph,
-      nodes: [
-        ...graph.nodes.filter((node) => !selectedNodeIdSet.has(node.id)),
-        replacementNode,
-      ],
-      edges: nextEdges,
-    },
-    selection: { nodeIds: [replacementNode.id], edgeIds: [] },
-  };
-}
-
-function selectedSubflowEntryNode(
-  selectedNodes: GraphNode[],
-  internalEdges: WorkflowGraph["edges"],
-  externalIncomingEdges: WorkflowGraph["edges"],
-) {
-  const externalIncomingTargetIds = new Set(
-    externalIncomingEdges.map((edge) => edge.target_node_id),
-  );
-  if (externalIncomingTargetIds.size === 1) {
-    return selectedNodes.find((node) => externalIncomingTargetIds.has(node.id)) ?? null;
-  }
-  if (externalIncomingTargetIds.size > 1) return null;
-
-  const internalTargetIds = new Set(internalEdges.map((edge) => edge.target_node_id));
-  const roots = selectedNodes.filter((node) => !internalTargetIds.has(node.id));
-  if (roots.length !== 1) return null;
-  return roots[0];
-}
-
-function reachableSelectedNodeIds(entryNodeId: string, internalEdges: WorkflowGraph["edges"]) {
-  const reachable = new Set([entryNodeId]);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const edge of internalEdges) {
-      if (reachable.has(edge.source_node_id) && !reachable.has(edge.target_node_id)) {
-        reachable.add(edge.target_node_id);
-        changed = true;
-      }
-    }
-  }
-  return reachable;
-}
-
-function selectedNodesReplacementPosition(nodes: GraphNode[]): GraphPosition {
-  const minX = Math.min(...nodes.map((node) => node.position.x));
-  const minY = Math.min(...nodes.map((node) => node.position.y));
-  const maxX = Math.max(...nodes.map((node) => node.position.x + graphNodeDimensions.width));
-  const maxY = Math.max(...nodes.map((node) => node.position.y + graphNodeDimensions.height));
-  return {
-    x: Math.round((minX + maxX) / 2 - graphNodeDimensions.width / 2),
-    y: Math.round((minY + maxY) / 2 - graphNodeDimensions.height / 2),
-  };
-}
-
-function firstInputPort(node: GraphNode) {
-  return node.ports.find((port) => port.direction === "input")?.id ?? "in";
-}
-
-function cloneGraphNode(node: GraphNode): GraphNode {
-  return {
-    ...node,
-    position: { ...node.position },
-    ports: node.ports.map((port) => ({ ...port })),
-    config: cloneStructuredValue(node.config),
-  };
-}
-
-function cloneGraphEdge(edge: WorkflowGraph["edges"][number]): WorkflowGraph["edges"][number] {
-  return {
-    ...edge,
-    condition: edge.condition ? cloneStructuredValue(edge.condition) : null,
-    delay: cloneGraphEdgeDelay(edge.delay ?? null),
-  };
-}
-
-function cloneStructuredValue<T>(value: T): T {
-  if (typeof value === "undefined") return value;
-  if (typeof structuredClone === "function") return structuredClone(value);
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function uniqueGraphNodeId(baseId: string, existingIds: Set<string>) {
-  if (!existingIds.has(baseId)) return baseId;
-  let index = 2;
-  let nextId = `${baseId}-${index}`;
-  while (existingIds.has(nextId)) {
-    index += 1;
-    nextId = `${baseId}-${index}`;
-  }
-  return nextId;
-}
-
-function uniqueGraphEdgeId(baseId: string, existingIds: Set<string>) {
-  if (!existingIds.has(baseId)) return baseId;
-  let index = 2;
-  let nextId = `${baseId}-${index}`;
-  while (existingIds.has(nextId)) {
-    index += 1;
-    nextId = `${baseId}-${index}`;
-  }
-  return nextId;
-}
-
-function graphEditorCommandMessage(error: unknown) {
-  if (error && typeof error === "object" && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string" && message.trim()) return message;
-  }
-  return "Could not create subflow from the selected nodes.";
-}
 
 export function WorkflowGraphEditor({
   graph,
@@ -598,10 +154,6 @@ export function WorkflowGraphEditor({
   const [helpNode, setHelpNode] = useState<GraphNode | null>(null);
   const [helpLanguage, setHelpLanguage] = useState<GraphNodeHelpLanguage>("vi");
   const [isShortcutGuideOpen, setIsShortcutGuideOpen] = useState(false);
-  const [isSelectionSubflowDialogOpen, setIsSelectionSubflowDialogOpen] = useState(false);
-  const [selectionSubflowName, setSelectionSubflowName] = useState("");
-  const [selectionSubflowError, setSelectionSubflowError] = useState<string | null>(null);
-  const [isCreatingSelectionSubflow, setIsCreatingSelectionSubflow] = useState(false);
   const [isArrangingGraph, setIsArrangingGraph] = useState(false);
   const [arrangeError, setArrangeError] = useState<string | null>(null);
   const [isToolbarPanMode, setIsToolbarPanMode] = useState(false);
@@ -625,95 +177,48 @@ export function WorkflowGraphEditor({
   const flowGraphRef = useRef<ReturnType<typeof toReactFlowGraph> | null>(null);
   const reactFlowNodesRef = useRef<WorkflowFlowNode[]>([]);
   const reactFlowEdgesRef = useRef<WorkflowFlowEdge[]>([]);
-  const selectionCount = selection.nodeIds.length + selection.edgeIds.length;
-  const selectionSummary =
-    selectionCount > 1
-      ? {
-          nodeCount: selection.nodeIds.length,
-          edgeCount: selection.edgeIds.length,
-        }
-      : null;
-  const selectedNodeId =
-    !selectionSummary && selection.nodeIds.length === 1 && selection.edgeIds.length === 0
-      ? selection.nodeIds[0]
-      : null;
-  const selectedEdgeId =
-    !selectionSummary && selection.edgeIds.length === 1 && selection.nodeIds.length === 0
-      ? selection.edgeIds[0]
-      : null;
-  const selectedNode = selectedNodeId
-    ? graph.nodes.find((node) => node.id === selectedNodeId) ?? null
-    : null;
-  const contextMenuNode = contextMenu
-    ? graph.nodes.find((node) => node.id === contextMenu.nodeId) ?? null
-    : null;
-  const contextMenuSubflowId = callSubflowIdFromNode(contextMenuNode);
-  const contextMenuSubflowName = contextMenuSubflowId
-    ? subflowOptions.find((subflow) => subflow.id === contextMenuSubflowId)?.name ??
-      contextMenuNode?.label ??
-      null
-    : null;
+  const {
+    isSelectionSubflowDialogOpen,
+    selectionSubflowName,
+    selectionSubflowError,
+    isCreatingSelectionSubflow,
+    setIsSelectionSubflowDialogOpen,
+    setSelectionSubflowName,
+    resetSelectionSubflowDialog,
+    openSelectionSubflowDialog,
+    createSubflowFromSelection,
+  } = useSelectionSubflowCreator({
+    graphKind,
+    graphRef,
+    selectionRef,
+    onCreateSubflowFromSelection,
+    onCommitGraphChange: commitGraphChange,
+  });
+  const {
+    selectionSummary,
+    selectedNodeId,
+    selectedNode,
+    selectedEdge,
+    contextMenuNode,
+    contextMenuSubflowId,
+    contextMenuSubflowName,
+    inspectorOpen,
+    nodeLabels,
+    issueGroups,
+    flowGraph,
+  } = useWorkflowGraphDerivedState({
+    graph,
+    selection,
+    contextMenu,
+    subflowOptions,
+    runState,
+    validationIssues,
+  });
   const showGraphMiniMap = graph.nodes.length <= graphMiniMapNodeLimit;
 
   useEffect(() => {
     onSelectedNodeChange?.(selectedNodeId);
   }, [onSelectedNodeChange, selectedNodeId]);
-  const selectedEdge = selectedEdgeId
-    ? graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null
-    : null;
-  const inspectorOpen = Boolean(selectionSummary || selectedEdge || selectedNode);
-  const nodeLabels = useMemo(
-    () => new Map(graph.nodes.map((node) => [node.id, node.label])),
-    [graph.nodes],
-  );
-  const completedNodeIds = useMemo(
-    () => new Set(runState.completed_step_ids),
-    [runState.completed_step_ids],
-  );
-  const issueGroups = useMemo(
-    () => graphIssuesByNode(validationIssues),
-    [validationIssues],
-  );
-  const issueNodeIds = useMemo(
-    () =>
-      new Set(
-        validationIssues
-          .map((issue) => issue.node_id)
-          .filter((nodeId): nodeId is string => Boolean(nodeId)),
-      ),
-    [validationIssues],
-  );
-  const issueEdgeIds = useMemo(
-    () =>
-      new Set(
-        validationIssues
-          .map((issue) => issue.edge_id)
-          .filter((edgeId): edgeId is string => Boolean(edgeId)),
-      ),
-    [validationIssues],
-  );
-  const flowGraph = useMemo(
-    () =>
-      toReactFlowGraph(graph, {
-        selectedNodeIds: new Set(selection.nodeIds),
-        runningNodeId: runState.current_step_id,
-        completedNodeIds,
-        failedNodeId: runState.error?.step_id ?? null,
-        issueNodeIds,
-        issueEdgeIds,
-        selectedEdgeIds: new Set(selection.edgeIds),
-      }),
-    [
-      graph,
-      selection.edgeIds,
-      selection.nodeIds,
-      runState.current_step_id,
-      completedNodeIds,
-      runState.error?.step_id,
-      issueNodeIds,
-      issueEdgeIds,
-    ],
-  );
   const [reactFlowNodes, setReactFlowNodes] = useState<WorkflowFlowNode[]>(
     () => flowGraph.nodes,
   );
@@ -855,136 +360,27 @@ export function WorkflowGraphEditor({
     [],
   );
 
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      isGraphShortcutActiveRef.current =
-        target instanceof Node && Boolean(editorRef.current?.contains(target));
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (!isGraphShortcutActiveRef.current) return;
-      if (shouldIgnoreGraphShortcut(event)) return;
-
-      if (event.code === "Space") {
-        event.preventDefault();
-        setIsSpacePanActive(true);
-        return;
-      }
-
-      const usesModifier = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
-      const isEditingDisabled = runState.status === "running";
-
-      if (!usesModifier && (event.key === "Delete" || event.key === "Backspace")) {
-        if (isEditingDisabled) return;
-        event.preventDefault();
-        deleteSelection();
-        return;
-      }
-
-      if (usesModifier && key === "z" && !event.shiftKey) {
-        if (isEditingDisabled) return;
-        event.preventDefault();
-        undoGraphEdit();
-        return;
-      }
-
-      if (
-        usesModifier &&
-        ((key === "z" && event.shiftKey) || key === "y")
-      ) {
-        if (isEditingDisabled) return;
-        event.preventDefault();
-        redoGraphEdit();
-        return;
-      }
-
-      if (usesModifier && key === "c") {
-        if (isEditingDisabled) return;
-        event.preventDefault();
-        copySelection();
-        return;
-      }
-
-      if (usesModifier && key === "v") {
-        if (isEditingDisabled) return;
-        event.preventDefault();
-        pasteClipboard();
-        return;
-      }
-
-      if (usesModifier && key === "d") {
-        if (isEditingDisabled) return;
-        event.preventDefault();
-        duplicateSelection();
-        return;
-      }
-
-      if (usesModifier && key === "s" && onSaveGraph) {
-        event.preventDefault();
-        onSaveGraph();
-        return;
-      }
-
-      if (usesModifier && event.key === "Enter" && event.shiftKey && onValidateGraph) {
-        event.preventDefault();
-        onValidateGraph();
-        return;
-      }
-
-      if (
-        usesModifier &&
-        event.key === "Enter" &&
-        !event.shiftKey &&
-        !isEditingDisabled &&
-        onRunGraph
-      ) {
-        event.preventDefault();
-        onRunGraph();
-        return;
-      }
-
-      if (
-        (!usesModifier && key === "f") ||
-        (usesModifier && event.key === "0")
-      ) {
-        event.preventDefault();
-        reactFlowInstance?.fitView();
-        return;
-      }
-
-      if (!usesModifier && event.key === "Escape") {
-        event.preventDefault();
-        setContextMenu(null);
-        setLinkContextMenu(null);
-        setIsShortcutGuideOpen(false);
-        setSelection({ nodeIds: [], edgeIds: [] });
-      }
-    }
-
-    function handleKeyUp(event: KeyboardEvent) {
-      if (!isGraphShortcutActiveRef.current) return;
-      if (event.code === "Space") {
-        event.preventDefault();
-        setIsSpacePanActive(false);
-      }
-    }
-
-    function stopPanMode() {
-      setIsSpacePanActive(false);
-    }
-
-    window.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", stopPanMode);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", stopPanMode);
-    };
+  useWorkflowGraphShortcuts({
+    editorRef,
+    isGraphShortcutActiveRef,
+    isEditingDisabled: runState.status === "running",
+    onSetSpacePanActive: setIsSpacePanActive,
+    onDeleteSelection: deleteSelection,
+    onUndo: undoGraphEdit,
+    onRedo: redoGraphEdit,
+    onCopy: copySelection,
+    onPaste: pasteClipboard,
+    onDuplicate: duplicateSelection,
+    onSave: onSaveGraph,
+    onValidate: onValidateGraph,
+    onRun: onRunGraph,
+    onFitView: () => reactFlowInstance?.fitView(),
+    onEscape: () => {
+      setContextMenu(null);
+      setLinkContextMenu(null);
+      setIsShortcutGuideOpen(false);
+      setSelection({ nodeIds: [], edgeIds: [] });
+    },
   });
 
   function addNode(nodeType: GraphNodeType) {
@@ -1068,67 +464,6 @@ export function WorkflowGraphEditor({
       { nodeIds: [node.id], edgeIds: [] },
     );
     setIsSubflowPaletteOpen(false);
-  }
-
-  function openSelectionSubflowDialog() {
-    if (!onCreateSubflowFromSelection || graphKind !== "workflow") return;
-    setSelectionSubflowName("");
-    setSelectionSubflowError(null);
-    setIsSelectionSubflowDialogOpen(true);
-  }
-
-  async function createSubflowFromSelection(mode: SelectionSubflowMode) {
-    if (!onCreateSubflowFromSelection || isCreatingSelectionSubflow) return;
-    const name = selectionSubflowName.trim();
-    if (!name) {
-      setSelectionSubflowError("Subflow name is required.");
-      return;
-    }
-
-    const sourceGraph = graphRef.current;
-    const sourceSelection = selectionRef.current;
-    const plan = buildSelectedSubflowPlan(sourceGraph, sourceSelection);
-    if (!plan.ok) {
-      setSelectionSubflowError(plan.message);
-      return;
-    }
-    if (
-      mode === "create_and_replace" &&
-      (plan.externalIncomingEdges.length > 1 || plan.externalOutgoingEdges.length > 1)
-    ) {
-      setSelectionSubflowError(
-        "Replace supports selections with at most one incoming link and one outgoing link.",
-      );
-      return;
-    }
-
-    setIsCreatingSelectionSubflow(true);
-    setSelectionSubflowError(null);
-    try {
-      const createdSubflow = await onCreateSubflowFromSelection({
-        name,
-        graph: plan.subflowGraph,
-      });
-      if (mode === "create_and_replace") {
-        const replacement = replaceSelectionWithSubflowNode(
-          sourceGraph,
-          sourceSelection,
-          createdSubflow,
-        );
-        if (!replacement.ok) {
-          setSelectionSubflowError(replacement.message);
-          return;
-        }
-        commitGraphChange(replacement.graph, replacement.selection);
-      }
-      setIsSelectionSubflowDialogOpen(false);
-      setSelectionSubflowName("");
-      setSelectionSubflowError(null);
-    } catch (error) {
-      setSelectionSubflowError(graphEditorCommandMessage(error));
-    } finally {
-      setIsCreatingSelectionSubflow(false);
-    }
   }
 
   function updateNode(nextNode: GraphNode) {
@@ -1644,94 +979,20 @@ export function WorkflowGraphEditor({
         onOpenChange={(open) => !open && setHelpNode(null)}
         onLanguageChange={setHelpLanguage}
       />
-      <Dialog open={isShortcutGuideOpen} onOpenChange={setIsShortcutGuideOpen}>
-        <DialogContent className="graph-shortcuts-dialog">
-          <DialogHeader className="modal-header">
-            <div>
-              <p className="eyebrow">Visual Graph</p>
-              <DialogTitle>Graph Shortcuts</DialogTitle>
-              <DialogDescription>
-                Mouse and keyboard controls for selecting, moving, editing, and running graph workflows.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <GraphShortcutGuide />
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={isSelectionSubflowDialogOpen}
-        onOpenChange={(open) => {
-          if (isCreatingSelectionSubflow) return;
-          setIsSelectionSubflowDialogOpen(open);
-          if (!open) {
-            setSelectionSubflowName("");
-            setSelectionSubflowError(null);
-          }
+      <WorkflowGraphEditorDialogs
+        isShortcutGuideOpen={isShortcutGuideOpen}
+        isSelectionSubflowDialogOpen={isSelectionSubflowDialogOpen}
+        isCreatingSelectionSubflow={isCreatingSelectionSubflow}
+        selectionSubflowName={selectionSubflowName}
+        selectionSubflowError={selectionSubflowError}
+        onShortcutGuideOpenChange={setIsShortcutGuideOpen}
+        onSelectionSubflowDialogOpenChange={setIsSelectionSubflowDialogOpen}
+        onSelectionSubflowNameChange={setSelectionSubflowName}
+        onResetSelectionSubflowDialog={resetSelectionSubflowDialog}
+        onCreateSubflowFromSelection={(mode) => {
+          void createSubflowFromSelection(mode);
         }}
-      >
-        <DialogContent>
-          <DialogHeader className="modal-header">
-            <div>
-              <p className="eyebrow">Reusable block</p>
-              <DialogTitle>Create subflow from selection</DialogTitle>
-              <DialogDescription>
-                Create a reusable subflow from the selected graph nodes.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <label className="field">
-            <span>Subflow name</span>
-            <Input
-              autoFocus
-              value={selectionSubflowName}
-              onChange={(event) => setSelectionSubflowName(event.currentTarget.value)}
-              placeholder="Login block"
-            />
-          </label>
-          {selectionSubflowError ? (
-            <p className="graph-subflow-create-error" role="alert">
-              {selectionSubflowError}
-            </p>
-          ) : null}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={isCreatingSelectionSubflow}
-              onClick={() => {
-                setIsSelectionSubflowDialogOpen(false);
-                setSelectionSubflowName("");
-                setSelectionSubflowError(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={isCreatingSelectionSubflow}
-              onClick={() => {
-                void createSubflowFromSelection("create_only");
-              }}
-            >
-              Chỉ tạo
-            </Button>
-            <Button
-              type="button"
-              disabled={isCreatingSelectionSubflow}
-              onClick={() => {
-                void createSubflowFromSelection("create_and_replace");
-              }}
-            >
-              Tạo và thay thế
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
     </section>
   );
-}
-
-export function cloneGraphEdgeDelay(delay: GraphEdgeDelay | null): GraphEdgeDelay | null {
-  return delay ? { ...delay } : null;
 }

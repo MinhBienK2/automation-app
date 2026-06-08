@@ -1,3 +1,5 @@
+import { isPlainRecord } from "../shared/records.js";
+
 export type EvidenceCategory =
   | "operator_input"
   | "browser_identity"
@@ -178,8 +180,4 @@ function jsonSize(value: unknown) {
   } catch {
     return 0;
   }
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

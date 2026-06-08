@@ -1,134 +1,109 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SettingsPage } from "./features/settings/pages/SettingsPage";
+import { useSettingsDiagnostics } from "./features/settings/useSettingsDiagnostics";
 import { EvidenceExplorerPage } from "./features/evidence/pages/EvidenceExplorerPage";
 import { IdentityLabPage } from "./features/identities/pages/IdentityLabPage";
 import { OperationsOverviewPage } from "./features/overview/pages/OperationsOverviewPage";
+import { useOperationsOverviewWorkspace } from "./features/overview/useOperationsOverviewWorkspace";
 import { ProjectEnvironmentSettings } from "./features/projects/components/ProjectEnvironmentSettings";
+import { useProjectEnvironmentActions } from "./features/projects/useProjectEnvironmentActions";
+import { useIdentityLabWorkspace } from "./features/identities/useIdentityLabWorkspace";
 import {
   ProjectsPage,
   type ProjectCollection,
 } from "./features/projects/pages/ProjectsPage";
 import { SchedulesPage } from "./features/schedules/pages/SchedulesPage";
+import { useSchedulesWorkspace } from "./features/schedules/useSchedulesWorkspace";
 import { WorkflowDetailPage } from "./features/workflows/pages/WorkflowDetailPage";
 import { WorkflowListPage } from "./features/workflows/pages/WorkflowListPage";
 import { SubflowListPage } from "./features/workflows/pages/SubflowListPage";
 import { SubflowDetailPage } from "./features/workflows/pages/SubflowDetailPage";
 import { AppShell } from "./layouts/AppShell";
 import {
-  closeIdentityRetainedSession,
-  cleanupOrphanedBrowserProfiles,
   createProject as createProjectCommand,
   createSubflow as createSubflowCommand,
   createWorkflow as createWorkflowCommand,
-  createSchedule,
   deleteSubflow as deleteSubflowCommand,
   deleteProject as deleteProjectCommand,
   deleteWorkflow as deleteWorkflowCommand,
-  deleteSchedule,
   discardRecordingSession,
-  disableSchedule,
   duplicateSubflow as duplicateSubflowCommand,
   duplicateProject as duplicateProjectCommand,
   duplicateWorkflow as duplicateWorkflowCommand,
-  enableSchedule,
-  exportProjectPackage,
-  exportWorkflowPackage,
   generateRecordingDraft,
-  exportEvidenceBundle,
-  getEvidenceDetail,
-  getEvidenceScreenshotPreview,
-  getIdentityLabOverview,
-  getCloakBrowserDiagnostics,
   getSubflow,
   getSubflowGraph,
   getSubflowUsage,
   getWorkflowGraph,
-  getOperationsOverview,
   getRunState,
   getWorkflow,
   getWorkflowSettings,
-  importProjectPackage,
-  importWorkflowPackage,
-  installCloakBrowserBinary,
-  listEvidenceItems,
   listProjectEnvironments,
   listProjects,
   listRunStates,
-  listScheduleEvents,
-  listSchedules,
   listSubflows,
   listWorkflows,
-  previewProjectPackage,
-  previewWorkflowPackage,
   resetWorkflowBrowserIdentity as resetWorkflowBrowserIdentityCommand,
   renameWorkflow as renameWorkflowCommand,
   runWorkflow as runWorkflowCommand,
   runWorkflowFromNode as runWorkflowFromNodeCommand,
   saveRecordingDraft,
   saveSubflowGraph,
-  saveProjectPackageFile,
-  saveWorkflowPackageFile,
   saveWorkflowGraph,
   saveWorkflowSettingsSection,
-  revealEvidenceArtifact,
   startRecordingSession,
   stopRecordingSession,
   stopRun as stopRunCommand,
-  resetProjectEnvironmentBrowserIdentity as resetProjectEnvironmentBrowserIdentityCommand,
   updateProject as updateProjectCommand,
-  updateProjectEnvironment as updateProjectEnvironmentCommand,
-  updateSchedule,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
+import { runFromSelectedState } from "./features/workflows/lib/runFromSelected";
 import {
   commandMessage,
   initialRunState,
   normalizeRunSnapshot,
   normalizeRunState,
 } from "./lib/workflowUi";
+import { defaultWorkflowSettings } from "./features/workflows/lib/workflowSettings";
 import {
-  defaultWorkflowSettings,
-} from "./features/workflows/lib/workflowSettings";
+  cloneWorkflowSettings,
+  graphEditableContentKey,
+  graphSaveStatusLabel,
+  idleRunStateWithRetainedSession,
+  isWorkflowSettings,
+  latestRunForWorkflow,
+  latestRunSnapshot,
+  legacyRunId,
+  operationsTargetToMissionTarget,
+  readGraphAutosaveEnabled,
+  settingsSaveStatuses,
+  withWorkflowSettingsDefaults,
+  writeGraphAutosaveEnabled,
+  type GraphSaveStatus,
+  type WorkflowSettingsSaveStatus,
+} from "./lib/appState";
+import { useGraphExitNavigation } from "./lib/useGraphExitNavigation";
 import { RecordingReviewDialog } from "./features/workflows/components/RecordingReviewDialog";
 import { WorkflowSettingsDialog } from "./features/workflows/components/WorkflowSettingsDialog";
 import { UnsavedChangesDialog } from "./components/ui/unsaved-changes-dialog";
-import { Button } from "./components/ui/button";
+import { AppPackageDialogs } from "./AppPackageDialogs";
+import { useEvidenceWorkspace } from "./features/evidence/useEvidenceWorkspace";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./components/ui/dialog";
-import {
-  PackageFlowCheckbox,
-  PackageSectionPicker,
-  sectionLabel,
-} from "./features/workflows/components/WorkflowPackageOptions";
+  useAppPackageDialogs,
+  workflowPackageSections,
+} from "./lib/useAppPackageDialogs";
 import type {
-  CloakBrowserDiagnostics,
   GraphValidationIssue,
-  GraphNodeType,
   Project,
   ProjectEnvironment,
-  ProjectEnvironmentInput,
-  ProjectPackage,
-  ProjectPackagePreview,
   RecordingSession,
   RecordingWorkflowDraft,
   ReviewedRecordingStep,
-  EvidenceBundleExportResult,
-  EvidenceDetail,
   EvidenceListRequest,
-  EvidencePage,
-  EvidenceScreenshotPreview,
-  IdentityLabOverview,
   IdentityLabTarget,
   MissionControlTarget,
   OperationsNavigationTarget,
-  OperationsOverview,
   RunState,
   Subflow,
   SubflowSummary,
@@ -136,12 +111,7 @@ import type {
   WorkflowCreateOptions,
   WorkflowGraph,
   WorkflowDetail,
-  WorkflowPackage,
-  WorkflowPackagePreview,
   WorkflowRunSnapshot,
-  WorkflowSchedule,
-  WorkflowScheduleEvent,
-  WorkflowScheduleInput,
   WorkflowSettings,
   WorkflowSettingsSectionId,
   WorkflowSummary,
@@ -153,259 +123,7 @@ type SubflowBackTarget =
   | { type: "subflows" }
   | { type: "workflow-detail"; workflowId: string; workflowName: string };
 type WorkflowDialogMode = "create" | "edit" | null;
-type GraphSaveStatus = "saved" | "unsaved" | "saving" | "failed" | "off";
-type WorkflowSettingsSaveStatus = "saved" | "unsaved" | "saving" | "failed";
 type OverviewFocus = NonNullable<Extract<MissionControlTarget, { type: "overview" }>["focus"]>;
-type GraphExitNavigation = () => void | Promise<void>;
-
-const appSettingsStorageKey = "workflow-manager:settings:v1";
-const workflowPackageSections: WorkflowSettingsSectionId[] = [
-  "general",
-  "run_policy",
-  "browser_launch",
-  "graph_defaults",
-  "environment",
-];
-const workflowPackageFileSizeLimitBytes = 5 * 1024 * 1024;
-const projectPackageFileSizeLimitBytes = 20 * 1024 * 1024;
-
-function readGraphAutosaveEnabled() {
-  try {
-    const stored = window.localStorage.getItem(appSettingsStorageKey);
-    if (!stored) return true;
-    const parsed = JSON.parse(stored) as { graphAutosaveEnabled?: unknown };
-    return typeof parsed.graphAutosaveEnabled === "boolean"
-      ? parsed.graphAutosaveEnabled
-      : true;
-  } catch {
-    return true;
-  }
-}
-
-function writeGraphAutosaveEnabled(enabled: boolean) {
-  window.localStorage.setItem(
-    appSettingsStorageKey,
-    JSON.stringify({ graphAutosaveEnabled: enabled }),
-  );
-}
-
-function runFromSelectedState({
-  graph,
-  selectedNodeId,
-  settings,
-  runState,
-  isRunning,
-}: {
-  graph: WorkflowGraph;
-  selectedNodeId: string | null;
-  settings: WorkflowSettings | null;
-  runState: RunState;
-  isRunning: boolean;
-}) {
-  if (!settings) {
-    return {
-      enabled: false,
-      reason: "Workflow settings are not loaded.",
-      visible: false,
-    };
-  }
-  if (!settings.run_policy?.run_from_selected_enabled) {
-    return {
-      enabled: false,
-      reason: "Enable Run from selected in Workflow Settings Run Policy first.",
-      visible: false,
-    };
-  }
-  if (isRunning) return { enabled: false, reason: "A workflow run is already active.", visible: true };
-  if (!selectedNodeId) return { enabled: false, reason: "Select one main-path node to run from.", visible: true };
-  const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId);
-  if (!selectedNode || selectedNode.node_type === "start") {
-    return { enabled: false, reason: "Select an executable graph node.", visible: true };
-  }
-  if (!mainPathNodeIds(graph).has(selectedNodeId)) {
-    return {
-      enabled: false,
-      reason: "Run from selected only supports main-path nodes in this version.",
-      visible: true,
-    };
-  }
-  const retainedProfileKey = workflowBrowserProfileKey(settings);
-  if (!retainedProfileKey) {
-    return {
-      enabled: false,
-      reason: "Enable Reuse login session in Workflow Settings first.",
-      visible: true,
-    };
-  }
-  if (settings.run_policy?.browser_retention !== "retain") {
-    return {
-      enabled: false,
-      reason: "Set Browser retention to retain before using Run from selected.",
-      visible: true,
-    };
-  }
-  if (
-    !runState.retained_session?.available ||
-    runState.retained_session.workflow_id !== settings.workflow_id ||
-    runState.retained_session.profile_name !== retainedProfileKey
-  ) {
-    return {
-      enabled: false,
-      reason: "Browser session was closed. Run the workflow again to create a reusable session.",
-      visible: true,
-    };
-  }
-  return {
-    enabled: true,
-    reason:
-      settings.run_policy.run_from_selected_mode === "selected_only"
-        ? "Run only the selected node using the retained browser session."
-        : "Run from the selected node using the retained browser session.",
-    visible: true,
-  };
-}
-
-function workflowBrowserProfileKey(settings: WorkflowSettings) {
-  if (settings.browser_launch?.session_mode !== "persistent_profile") return null;
-  return (
-    settings.browser_launch.profile_dir?.trim() ||
-    settings.browser_launch.profile_name?.trim() ||
-    null
-  );
-}
-
-function mainPathNodeIds(graph: WorkflowGraph) {
-  const ids = new Set<string>();
-  let node = graph.nodes.find((candidate) => candidate.node_type === "start") ?? null;
-  const visited = new Set<string>();
-
-  while (node && !visited.has(node.id)) {
-    ids.add(node.id);
-    visited.add(node.id);
-    const nextPort = mainContinuationPort(node.node_type);
-    if (!nextPort) break;
-    const currentNodeId = node.id;
-    const nextId = graph.edges
-      .filter((edge) => edge.source_node_id === currentNodeId && edge.source_port === nextPort)
-      .sort((left, right) => left.id.localeCompare(right.id))[0]?.target_node_id;
-    node = nextId
-      ? graph.nodes.find((candidate) => candidate.id === nextId) ?? null
-      : null;
-  }
-
-  return ids;
-}
-
-function mainContinuationPort(nodeType: GraphNodeType) {
-  switch (nodeType) {
-    case "start":
-    case "action":
-    case "set_variable":
-    case "set_json_variables":
-    case "transform_variable":
-    case "assert_output":
-    case "domain_allowlist":
-    case "call_subflow":
-    case "merge":
-      return "out";
-    case "if":
-    case "switch":
-    case "router":
-    case "random_choice":
-    case "repeat_times":
-    case "repeat_for_each":
-    case "while":
-    case "repeat_until":
-    case "try_catch":
-    case "fallback":
-      return "done";
-    case "retry":
-      return "success";
-    default:
-      return null;
-  }
-}
-
-function graphSaveStatusLabel(status: GraphSaveStatus) {
-  switch (status) {
-    case "saved":
-      return "Saved";
-    case "unsaved":
-      return "Unsaved changes";
-    case "saving":
-      return "Saving...";
-    case "failed":
-      return "Autosave failed";
-    case "off":
-      return "Autosave off";
-  }
-}
-
-function graphEditableContentKey(graph: WorkflowGraph | null) {
-  if (!graph) return "";
-  return JSON.stringify({
-    version: graph.version,
-    nodes: graph.nodes,
-    edges: graph.edges,
-    migration_notes: graph.migration_notes ?? [],
-  });
-}
-
-function latestRunSnapshot(snapshots: WorkflowRunSnapshot[]) {
-  return [...snapshots].sort((left, right) =>
-    right.started_at.localeCompare(left.started_at),
-  )[0] ?? null;
-}
-
-function latestRunForWorkflow(
-  snapshots: WorkflowRunSnapshot[],
-  workflowId: string,
-) {
-  return latestRunSnapshot(
-    snapshots.filter((snapshot) => snapshot.workflow_id === workflowId),
-  );
-}
-
-function idleRunStateWithRetainedSession(state: RunState): RunState {
-  return { ...initialRunState, retained_session: state.retained_session };
-}
-
-function legacyRunId(workflowId: string | null) {
-  return `legacy-${workflowId ?? "run"}`;
-}
-
-function operationsTargetToMissionTarget(
-  target: OperationsNavigationTarget,
-): MissionControlTarget {
-  if (target.type === "workflow") {
-    return { type: "workflow", workflow_id: target.workflow_id };
-  }
-  if (target.type === "schedule") {
-    return { type: "schedule", schedule_id: target.schedule_id };
-  }
-  return { type: "evidence", evidence_id: target.evidence_id };
-}
-
-function formatMaintenanceBytes(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  const kib = bytes / 1024;
-  if (kib < 1024) return `${kib.toFixed(1)} KiB`;
-  return `${(kib / 1024).toFixed(1)} MiB`;
-}
-
-function todayOperationsRange() {
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return {
-    day_start_utc: start.toISOString(),
-    day_end_utc: end.toISOString(),
-    timezone_label: Intl.DateTimeFormat().resolvedOptions().timeZone || "Local",
-  };
-}
 
 function App() {
   const [screen, setScreen] = useState<AppScreen>("overview");
@@ -427,29 +145,7 @@ function App() {
   });
   const [subflowGraphSaveStatus, setSubflowGraphSaveStatus] =
     useState<GraphSaveStatus>("saved");
-  const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
-  const [scheduleEvents, setScheduleEvents] = useState<WorkflowScheduleEvent[]>([]);
-  const [focusedScheduleId, setFocusedScheduleId] = useState<string | null>(null);
-  const [schedulesLoading, setSchedulesLoading] = useState(false);
-  const [operationsOverview, setOperationsOverview] =
-    useState<OperationsOverview | null>(null);
-  const [operationsOverviewLoading, setOperationsOverviewLoading] = useState(false);
   const [overviewFocus, setOverviewFocus] = useState<OverviewFocus | null>(null);
-  const [evidencePage, setEvidencePage] = useState<EvidencePage | null>(null);
-  const [evidenceQuery, setEvidenceQuery] = useState<EvidenceListRequest>({});
-  const [evidenceLoading, setEvidenceLoading] = useState(false);
-  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
-  const [evidenceDetail, setEvidenceDetail] = useState<EvidenceDetail | null>(null);
-  const [evidenceDetailLoading, setEvidenceDetailLoading] = useState(false);
-  const [evidenceDetailError, setEvidenceDetailError] = useState("");
-  const [evidencePreview, setEvidencePreview] = useState<EvidenceScreenshotPreview | null>(null);
-  const [evidenceExportResult, setEvidenceExportResult] =
-    useState<EvidenceBundleExportResult>(null);
-  const [identityLabOverview, setIdentityLabOverview] =
-    useState<IdentityLabOverview | null>(null);
-  const [identityLabTarget, setIdentityLabTarget] =
-    useState<IdentityLabTarget | null>(null);
-  const [identityLabLoading, setIdentityLabLoading] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
   );
@@ -470,11 +166,6 @@ function App() {
   const [graphAutosaveEnabled, setGraphAutosaveEnabled] = useState(
     readGraphAutosaveEnabled,
   );
-  const [settingsDiagnostics, setSettingsDiagnostics] =
-    useState<CloakBrowserDiagnostics | null>(null);
-  const [settingsDiagnosticsLoading, setSettingsDiagnosticsLoading] = useState(false);
-  const [settingsDiagnosticsError, setSettingsDiagnosticsError] = useState("");
-  const [settingsMaintenanceMessage, setSettingsMaintenanceMessage] = useState("");
   const [graphSaveStatus, setGraphSaveStatus] = useState<GraphSaveStatus>(
     graphAutosaveEnabled ? "saved" : "off",
   );
@@ -503,27 +194,149 @@ function App() {
   const [deleteWorkflowCandidate, setDeleteWorkflowCandidate] =
     useState<WorkflowSummary | null>(null);
   const [deleteBrowserProfileData, setDeleteBrowserProfileData] = useState(false);
-  const [exportPackageWorkflow, setExportPackageWorkflow] =
-    useState<WorkflowSummary | null>(null);
-  const [exportPackageIncludeFlow, setExportPackageIncludeFlow] = useState(true);
-  const [exportPackageSections, setExportPackageSections] =
-    useState<WorkflowSettingsSectionId[]>(workflowPackageSections);
-  const [importPackage, setImportPackage] = useState<WorkflowPackage | null>(null);
-  const [importPackagePreview, setImportPackagePreview] =
-    useState<WorkflowPackagePreview | null>(null);
-  const [importPackageIncludeFlow, setImportPackageIncludeFlow] = useState(true);
-  const [importPackageSections, setImportPackageSections] =
-    useState<WorkflowSettingsSectionId[]>([]);
-  const [importProjectPackageValue, setImportProjectPackageValue] =
-    useState<ProjectPackage | null>(null);
-  const [importProjectPackagePreview, setImportProjectPackagePreview] =
-    useState<ProjectPackagePreview | null>(null);
   const [appError, setAppError] = useState("");
+  const {
+    page: evidencePage,
+    query: evidenceQuery,
+    loading: evidenceLoading,
+    selectedEvidenceId,
+    detail: evidenceDetail,
+    detailLoading: evidenceDetailLoading,
+    detailError: evidenceDetailError,
+    preview: evidencePreview,
+    exportResult: evidenceExportResult,
+    loadEvidencePage,
+    updateEvidenceQuery,
+    selectEvidence,
+    previewEvidenceScreenshot,
+    revealEvidence,
+    exportSelectedEvidence,
+    setDetailError: setEvidenceDetailError,
+  } = useEvidenceWorkspace({ setAppError });
+  const {
+    overview: operationsOverview,
+    loading: operationsOverviewLoading,
+    loadOperationsOverview,
+  } = useOperationsOverviewWorkspace({ setAppError });
   const [toastMessage, setToastMessage] = useState("");
-  const [graphExitDialogOpen, setGraphExitDialogOpen] = useState(false);
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    window.setTimeout(() => setToastMessage(""), 2200);
+  }, []);
+  const {
+    schedules,
+    scheduleEvents,
+    focusedScheduleId,
+    loading: schedulesLoading,
+    setFocusedScheduleId,
+    loadSchedules,
+    submitCreateSchedule,
+    submitUpdateSchedule,
+    removeSchedule,
+    toggleSchedule,
+    loadScheduleHistory,
+  } = useSchedulesWorkspace({ setAppError });
+  const {
+    diagnostics: settingsDiagnostics,
+    diagnosticsLoading: settingsDiagnosticsLoading,
+    diagnosticsError: settingsDiagnosticsError,
+    maintenanceMessage: settingsMaintenanceMessage,
+    loadSettingsDiagnostics,
+    installSettingsBrowserBinary,
+    cleanupSettingsBrowserProfiles,
+  } = useSettingsDiagnostics();
+  const {
+    updateProjectEnvironment,
+    resetProjectEnvironmentBrowserIdentity,
+  } = useProjectEnvironmentActions({
+    setAppError,
+    setProjectEnvironments,
+    showToast,
+  });
+  const {
+    exportPackageWorkflow,
+    exportPackageIncludeFlow,
+    exportPackageSections,
+    setExportPackageIncludeFlow,
+    setExportPackageSections,
+    importPackagePreview,
+    importPackageIncludeFlow,
+    importPackageSections,
+    setImportPackageIncludeFlow,
+    setImportPackageSections,
+    importProjectPackagePreview,
+    isImportProjectPackageOpen,
+    openExportPackageDialog,
+    closeExportPackageDialog,
+    submitExportPackage,
+    importWorkflowPackageFile,
+    closeImportPackageDialog,
+    submitImportPackage,
+    exportProjectPackageFile,
+    importProjectPackageFile,
+    closeImportProjectPackageDialog,
+    submitImportProjectPackage,
+  } = useAppPackageDialogs({
+    currentProjectId,
+    setAppError,
+    setToastMessage,
+    async onProjectImported(project) {
+      setSelectedProjectId(project.id);
+      setProjectCollection("workflows");
+      setProjects(await listProjects());
+      setProjectEnvironments(await listProjectEnvironments(project.id));
+      setSubflows(await listSubflows(project.id));
+      await loadWorkflows();
+    },
+    async onWorkflowImported(workflowId) {
+      await loadWorkflows();
+      await openWorkflow(workflowId);
+    },
+  });
+  const {
+    overview: identityLabOverview,
+    target: identityLabTarget,
+    loading: identityLabLoading,
+    setTarget: setIdentityLabTarget,
+    loadIdentityLabOverview,
+    closeIdentitySession,
+    resetIdentityFromLab,
+  } = useIdentityLabWorkspace({
+    setAppError,
+    setToastMessage,
+    onIdentityReset: loadWorkflows,
+  });
   const graphRevisionRef = useRef(graphRevision);
   const savedGraphRevisionRef = useRef(savedGraphRevision);
-  const pendingGraphExitNavigationRef = useRef<GraphExitNavigation | null>(null);
+  const {
+    graphExitDialogOpen,
+    requestGraphExitNavigation,
+    clearGraphExitNavigation,
+    discardGraphExitChangesAndNavigate,
+    saveGraphExitChangesAndNavigate,
+  } = useGraphExitNavigation({
+    workflow: {
+      active: screen === "detail" && Boolean(detail && workflowGraph),
+      graphAutosaveEnabled,
+      graphSaveStatus,
+      graphRevision,
+      savedGraphRevision,
+      persistCurrentGraph,
+      discardWorkflowGraph({ savedGraphRevision, graphSaveStatus }) {
+        savedGraphRevisionRef.current = savedGraphRevision;
+        setSavedGraphRevision(savedGraphRevision);
+        setGraphSaveStatus(graphSaveStatus);
+      },
+    },
+    subflow: {
+      active: screen === "subflow-detail" && Boolean(selectedSubflow && selectedSubflowGraph),
+      graphSaveStatus: subflowGraphSaveStatus,
+      saveCurrentSubflowGraph,
+      discardSubflowGraph() {
+        setSubflowGraphSaveStatus("saved");
+      },
+    },
+  });
 
   useEffect(() => {
     graphRevisionRef.current = graphRevision;
@@ -592,79 +405,6 @@ function App() {
     savedGraphRevision,
     workflowGraph,
   ]);
-
-  function hasPendingWorkflowGraphChanges() {
-    if (screen !== "detail" || !detail || !workflowGraph) return false;
-    if (graphAutosaveEnabled) return graphSaveStatus === "failed";
-    return graphRevisionRef.current !== savedGraphRevisionRef.current;
-  }
-
-  function hasPendingSubflowGraphChanges() {
-    return (
-      screen === "subflow-detail" &&
-      Boolean(selectedSubflow && selectedSubflowGraph) &&
-      subflowGraphSaveStatus !== "saved"
-    );
-  }
-
-  function shouldConfirmGraphExit() {
-    return hasPendingWorkflowGraphChanges() || hasPendingSubflowGraphChanges();
-  }
-
-  async function requestGraphExitNavigation(navigation: GraphExitNavigation) {
-    if (shouldConfirmGraphExit()) {
-      pendingGraphExitNavigationRef.current = navigation;
-      setGraphExitDialogOpen(true);
-      return false;
-    }
-
-    await navigation();
-    return true;
-  }
-
-  function clearGraphExitNavigation() {
-    pendingGraphExitNavigationRef.current = null;
-    setGraphExitDialogOpen(false);
-  }
-
-  function discardGraphExitChanges() {
-    if (hasPendingWorkflowGraphChanges()) {
-      savedGraphRevisionRef.current = graphRevisionRef.current;
-      setSavedGraphRevision(graphRevisionRef.current);
-      setGraphSaveStatus(graphAutosaveEnabled ? "saved" : "off");
-    }
-    if (hasPendingSubflowGraphChanges()) {
-      setSubflowGraphSaveStatus("saved");
-    }
-  }
-
-  async function runPendingGraphExitNavigation() {
-    const navigation = pendingGraphExitNavigationRef.current;
-    clearGraphExitNavigation();
-    await navigation?.();
-  }
-
-  async function saveGraphExitChanges() {
-    if (hasPendingWorkflowGraphChanges()) {
-      return Boolean(await persistCurrentGraph());
-    }
-    if (hasPendingSubflowGraphChanges()) {
-      return Boolean(await saveCurrentSubflowGraph());
-    }
-    return true;
-  }
-
-  async function saveGraphExitChangesAndNavigate() {
-    const saved = await saveGraphExitChanges();
-    if (!saved) return false;
-    await runPendingGraphExitNavigation();
-    return true;
-  }
-
-  function discardGraphExitChangesAndNavigate() {
-    discardGraphExitChanges();
-    void runPendingGraphExitNavigation();
-  }
 
   async function loadWorkflows() {
     const items = await listWorkflows();
@@ -758,33 +498,6 @@ function App() {
     }
   }
 
-  async function updateProjectEnvironment(
-    environmentId: string,
-    input: Partial<ProjectEnvironmentInput>,
-  ) {
-    setAppError("");
-    try {
-      const updated = await updateProjectEnvironmentCommand(environmentId, input);
-      setProjectEnvironments(await listProjectEnvironments(updated.project_id));
-      setToastMessage("Fingerprint seed saved.");
-      window.setTimeout(() => setToastMessage(""), 2200);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function resetProjectEnvironmentBrowserIdentity(environmentId: string) {
-    setAppError("");
-    try {
-      const updated = await resetProjectEnvironmentBrowserIdentityCommand(environmentId);
-      setProjectEnvironments(await listProjectEnvironments(updated.project_id));
-      setToastMessage("Project identity regenerated.");
-      window.setTimeout(() => setToastMessage(""), 2200);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
   async function selectProject(projectId: string) {
     setAppError("");
     if (projectId !== selectedProjectId) {
@@ -824,8 +537,7 @@ function App() {
       const project = await updateProjectCommand(projectId, input);
       setSelectedProjectId(project.id);
       setProjects(await listProjects());
-      setToastMessage("Project updated.");
-      window.setTimeout(() => setToastMessage(""), 2200);
+      showToast("Project updated.");
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -841,66 +553,7 @@ function App() {
       setProjectEnvironments(await listProjectEnvironments(project.id));
       setSubflows(await listSubflows(project.id));
       await loadWorkflows();
-      setToastMessage("Project duplicated.");
-      window.setTimeout(() => setToastMessage(""), 2200);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function exportProjectPackageFile(projectId: string) {
-    setAppError("");
-    try {
-      const packageValue = await exportProjectPackage(projectId);
-      const filePath = await saveProjectPackageFile(packageValue);
-      if (!filePath) return;
-      setToastMessage("Project exported.");
-      window.setTimeout(() => setToastMessage(""), 2200);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function importProjectPackageFile(file: File | null) {
-    if (!file) return;
-    setAppError("");
-    if (file.size > projectPackageFileSizeLimitBytes) {
-      setAppError("Project package file must be 20 MB or smaller");
-      return;
-    }
-
-    try {
-      const packageValue = JSON.parse(await file.text()) as ProjectPackage;
-      const preview = await previewProjectPackage(packageValue);
-      setImportProjectPackageValue(packageValue);
-      setImportProjectPackagePreview(preview);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  function closeImportProjectPackageDialog() {
-    setImportProjectPackageValue(null);
-    setImportProjectPackagePreview(null);
-    setAppError("");
-  }
-
-  async function submitImportProjectPackage(event: React.FormEvent) {
-    event.preventDefault();
-    if (!importProjectPackageValue) return;
-    setAppError("");
-
-    try {
-      const project = await importProjectPackage(importProjectPackageValue);
-      closeImportProjectPackageDialog();
-      setSelectedProjectId(project.id);
-      setProjectCollection("workflows");
-      setProjects(await listProjects());
-      setProjectEnvironments(await listProjectEnvironments(project.id));
-      setSubflows(await listSubflows(project.id));
-      await loadWorkflows();
-      setToastMessage("Project imported.");
-      window.setTimeout(() => setToastMessage(""), 2200);
+      showToast("Project duplicated.");
     } catch (error) {
       setAppError(commandMessage(error));
     }
@@ -922,146 +575,9 @@ function App() {
         setSubflows([]);
       }
       await loadWorkflows();
-      setToastMessage("Project deleted.");
-      window.setTimeout(() => setToastMessage(""), 2200);
+      showToast("Project deleted.");
     } catch (error) {
       setAppError(commandMessage(error));
-    }
-  }
-
-  async function loadSchedules() {
-    setSchedulesLoading(true);
-    try {
-      const items = await listSchedules();
-      setSchedules(items);
-      return items;
-    } catch (error) {
-      setAppError(commandMessage(error));
-      return [];
-    } finally {
-      setSchedulesLoading(false);
-    }
-  }
-
-  async function loadOperationsOverview() {
-    setOperationsOverviewLoading(true);
-    try {
-      setOperationsOverview(await getOperationsOverview(todayOperationsRange()));
-      setAppError("");
-    } catch (error) {
-      setAppError(commandMessage(error));
-    } finally {
-      setOperationsOverviewLoading(false);
-    }
-  }
-
-  async function loadSettingsDiagnostics() {
-    setSettingsDiagnosticsLoading(true);
-    try {
-      setSettingsDiagnostics(await getCloakBrowserDiagnostics());
-      setSettingsDiagnosticsError("");
-    } catch (error) {
-      setSettingsDiagnosticsError(commandMessage(error));
-    } finally {
-      setSettingsDiagnosticsLoading(false);
-    }
-  }
-
-  async function installSettingsBrowserBinary() {
-    setSettingsMaintenanceMessage("");
-    try {
-      setSettingsDiagnostics(await installCloakBrowserBinary());
-      setSettingsDiagnosticsError("");
-      setSettingsMaintenanceMessage("CloakBrowser binary install check completed.");
-    } catch (error) {
-      setSettingsDiagnosticsError(commandMessage(error));
-    }
-  }
-
-  async function cleanupSettingsBrowserProfiles() {
-    setSettingsMaintenanceMessage("");
-    try {
-      const result = await cleanupOrphanedBrowserProfiles();
-      setSettingsMaintenanceMessage(
-        `Deleted ${result.deleted_profiles.length} orphaned profile${
-          result.deleted_profiles.length === 1 ? "" : "s"
-        }; reclaimed ${formatMaintenanceBytes(result.reclaimed_bytes)}.`,
-      );
-      await loadSettingsDiagnostics();
-    } catch (error) {
-      setSettingsDiagnosticsError(commandMessage(error));
-    }
-  }
-
-  async function loadEvidencePage(nextQuery: EvidenceListRequest = evidenceQuery) {
-    setEvidenceLoading(true);
-    try {
-      const page = await listEvidenceItems(nextQuery);
-      setEvidencePage(page);
-      setEvidenceQuery(nextQuery);
-      setAppError("");
-      const nextSelected =
-        nextQuery.focus_evidence_id ??
-        (selectedEvidenceId && page.items.some((item) => item.evidence_id === selectedEvidenceId)
-          ? selectedEvidenceId
-          : page.items[0]?.evidence_id ?? null);
-      setSelectedEvidenceId(nextSelected);
-      if (nextSelected) {
-        await loadEvidenceDetail(nextSelected);
-      } else {
-        setEvidenceDetail(null);
-        setEvidencePreview(null);
-      }
-    } catch (error) {
-      setAppError(commandMessage(error));
-    } finally {
-      setEvidenceLoading(false);
-    }
-  }
-
-  async function loadEvidenceDetail(evidenceId: string) {
-    setEvidenceDetailLoading(true);
-    setEvidenceDetailError("");
-    try {
-      setEvidenceDetail(await getEvidenceDetail(evidenceId));
-      setEvidencePreview(null);
-    } catch (error) {
-      setEvidenceDetail(null);
-      setEvidenceDetailError(commandMessage(error));
-    } finally {
-      setEvidenceDetailLoading(false);
-    }
-  }
-
-  async function loadIdentityLabOverview(nextTarget: IdentityLabTarget | null = identityLabTarget) {
-    setIdentityLabLoading(true);
-    try {
-      const overview = await getIdentityLabOverview(
-        nextTarget ? { selected_target: nextTarget } : {},
-      );
-      setIdentityLabOverview(overview);
-      if (overview.selected?.kind === "managed") {
-        setIdentityLabTarget({
-          type: "managed",
-          workflow_id: overview.selected.workflow_ref.id,
-          identity_id: overview.selected.identity_ref.id,
-        });
-      } else if (overview.selected?.kind === "historical") {
-        setIdentityLabTarget({
-          type: "historical",
-          identity_id: overview.selected.identity_ref.id,
-          workflow_id: overview.selected.workflow_ref?.id ?? null,
-          run_id: overview.selected.run_id ?? null,
-          evidence_id: overview.selected.evidence_id ?? null,
-        });
-      } else {
-        setIdentityLabTarget(nextTarget);
-      }
-      setAppError("");
-    } catch (error) {
-      setAppError(commandMessage(error));
-    } finally {
-      setIdentityLabLoading(false);
     }
   }
 
@@ -1552,95 +1068,6 @@ function App() {
     }
   }
 
-  function openExportPackageDialog(workflow: WorkflowSummary) {
-    setAppError("");
-    setExportPackageWorkflow(workflow);
-    setExportPackageIncludeFlow(true);
-    setExportPackageSections(workflowPackageSections);
-  }
-
-  function closeExportPackageDialog() {
-    setExportPackageWorkflow(null);
-    setExportPackageIncludeFlow(true);
-    setExportPackageSections(workflowPackageSections);
-    setAppError("");
-  }
-
-  async function submitExportPackage(event: React.FormEvent) {
-    event.preventDefault();
-    if (!exportPackageWorkflow) return;
-    if (!exportPackageIncludeFlow && exportPackageSections.length === 0) {
-      setAppError("Select at least Flow or one Settings section");
-      return;
-    }
-
-    setAppError("");
-
-    try {
-      const packageValue = await exportWorkflowPackage(exportPackageWorkflow.id, {
-        include_flow: exportPackageIncludeFlow,
-        settings_sections: exportPackageSections,
-      });
-      const filePath = await saveWorkflowPackageFile(packageValue);
-      if (!filePath) return;
-      closeExportPackageDialog();
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function importWorkflowPackageFile(file: File | null) {
-    if (!file) return;
-    setAppError("");
-    if (file.size > workflowPackageFileSizeLimitBytes) {
-      setAppError("Workflow package file must be 5 MB or smaller");
-      return;
-    }
-
-    try {
-      const packageValue = JSON.parse(await file.text()) as WorkflowPackage;
-      const preview = await previewWorkflowPackage(packageValue);
-      setImportPackage(packageValue);
-      setImportPackagePreview(preview);
-      setImportPackageIncludeFlow(preview.includes_flow);
-      setImportPackageSections(preview.settings_sections);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  function closeImportPackageDialog() {
-    setImportPackage(null);
-    setImportPackagePreview(null);
-    setImportPackageIncludeFlow(true);
-    setImportPackageSections([]);
-    setAppError("");
-  }
-
-  async function submitImportPackage(event: React.FormEvent) {
-    event.preventDefault();
-    if (!importPackage) return;
-    if (!importPackageIncludeFlow && importPackageSections.length === 0) {
-      setAppError("Select at least Flow or one Settings section");
-      return;
-    }
-
-    setAppError("");
-
-    try {
-      const imported = await importWorkflowPackage(importPackage, {
-        include_flow: importPackageIncludeFlow,
-        settings_sections: importPackageSections,
-        target_project_id: currentProjectId(),
-      });
-      closeImportPackageDialog();
-      await loadWorkflows();
-      await openWorkflow(imported.workflow.id);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
   async function persistCurrentGraph() {
     if (!detail || !workflowGraph) return;
     setAppError("");
@@ -1717,8 +1144,7 @@ function App() {
     if (workflowSettings) {
       setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(workflowSettings));
     }
-    setToastMessage("Workflow settings saved.");
-    window.setTimeout(() => setToastMessage(""), 2200);
+    showToast("Workflow settings saved.");
     return true;
   }
 
@@ -1732,8 +1158,7 @@ function App() {
       setWorkflowSettings(rotated);
       setWorkflowSettingsSavedSnapshot(cloneWorkflowSettings(rotated));
       setWorkflowSettingsSaveStatuses(settingsSaveStatuses("saved"));
-      setToastMessage("Browser identity reset.");
-      window.setTimeout(() => setToastMessage(""), 2200);
+      showToast("Browser identity reset.");
       await loadWorkflows();
     } catch (error) {
       setAppError(commandMessage(error));
@@ -1982,72 +1407,6 @@ function App() {
     await openWorkflowSettings(workflow, "browser_launch");
   }
 
-  async function closeIdentitySession(workflowId: string, profileName: string) {
-    setAppError("");
-    try {
-      await closeIdentityRetainedSession(workflowId, profileName);
-      await loadIdentityLabOverview(identityLabTarget);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function resetIdentityFromLab(workflowId: string) {
-    setAppError("");
-    try {
-      const rotated = await resetWorkflowBrowserIdentityCommand(workflowId);
-      const nextTarget: IdentityLabTarget = {
-        type: "managed",
-        workflow_id: workflowId,
-        identity_id: rotated.browser_launch.identity_id,
-      };
-      await loadWorkflows();
-      await loadIdentityLabOverview(nextTarget);
-      setToastMessage("Browser identity reset.");
-      window.setTimeout(() => setToastMessage(""), 2200);
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  function updateEvidenceQuery(nextQuery: EvidenceListRequest) {
-    setEvidenceQuery(nextQuery);
-    void loadEvidencePage(nextQuery);
-  }
-
-  function selectEvidence(evidenceId: string) {
-    setSelectedEvidenceId(evidenceId);
-    void loadEvidenceDetail(evidenceId);
-  }
-
-  async function previewEvidenceScreenshot(evidenceId: string) {
-    setEvidenceDetailError("");
-    try {
-      setEvidencePreview(await getEvidenceScreenshotPreview(evidenceId));
-    } catch (error) {
-      setEvidencePreview(null);
-      setEvidenceDetailError(commandMessage(error));
-    }
-  }
-
-  async function revealEvidence(evidenceId: string) {
-    setEvidenceDetailError("");
-    try {
-      await revealEvidenceArtifact(evidenceId);
-    } catch (error) {
-      setEvidenceDetailError(commandMessage(error));
-    }
-  }
-
-  async function exportSelectedEvidence(evidenceIds: string[]) {
-    setEvidenceDetailError("");
-    try {
-      setEvidenceExportResult(await exportEvidenceBundle({ evidence_ids: evidenceIds }));
-    } catch (error) {
-      setEvidenceDetailError(commandMessage(error));
-    }
-  }
-
   async function openScheduleTarget(
     scheduleId?: string | null,
     scheduleEventId?: string | null,
@@ -2119,53 +1478,6 @@ function App() {
 
   function navigateFromOverview(target: OperationsNavigationTarget) {
     void navigateToMissionControlTarget(operationsTargetToMissionTarget(target));
-  }
-
-  async function submitCreateSchedule(input: WorkflowScheduleInput) {
-    await createSchedule(input);
-    await loadSchedules();
-  }
-
-  async function submitUpdateSchedule(
-    scheduleId: string,
-    input: WorkflowScheduleInput,
-  ) {
-    await updateSchedule(scheduleId, input);
-    await loadSchedules();
-  }
-
-  async function removeSchedule(scheduleId: string) {
-    setAppError("");
-    try {
-      await deleteSchedule(scheduleId);
-      await loadSchedules();
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
-  }
-
-  async function toggleSchedule(scheduleId: string, enabled: boolean) {
-    setAppError("");
-    try {
-      if (enabled) {
-        await enableSchedule(scheduleId);
-      } else {
-        await disableSchedule(scheduleId);
-      }
-      await loadSchedules();
-    } catch (error) {
-      setAppError(commandMessage(error));
-      throw error;
-    }
-  }
-
-  async function loadScheduleHistory(scheduleId: string) {
-    setAppError("");
-    try {
-      setScheduleEvents(await listScheduleEvents({ schedule_id: scheduleId }));
-    } catch (error) {
-      setAppError(commandMessage(error));
-    }
   }
 
   function updateGraphAutosaveEnabled(enabled: boolean) {
@@ -2642,278 +1954,39 @@ function App() {
           {toastMessage}
         </div>
       ) : null}
-      <Dialog
-        open={Boolean(exportPackageWorkflow)}
-        onOpenChange={(open) => {
-          if (!open) closeExportPackageDialog();
+      <AppPackageDialogs
+        appError={appError}
+        workflowPackageSections={workflowPackageSections}
+        exportPackageWorkflow={exportPackageWorkflow}
+        exportPackageIncludeFlow={exportPackageIncludeFlow}
+        exportPackageSections={exportPackageSections}
+        onCloseExportPackageDialog={closeExportPackageDialog}
+        onSubmitExportPackage={submitExportPackage}
+        onExportPackageIncludeFlowChange={setExportPackageIncludeFlow}
+        onExportPackageSectionsChange={setExportPackageSections}
+        importPackagePreview={importPackagePreview}
+        importPackageIncludeFlow={importPackageIncludeFlow}
+        importPackageSections={importPackageSections}
+        onCloseImportPackageDialog={closeImportPackageDialog}
+        onSubmitImportPackage={submitImportPackage}
+        onImportPackageIncludeFlowChange={setImportPackageIncludeFlow}
+        onImportPackageSectionsChange={setImportPackageSections}
+        isImportProjectPackageOpen={isImportProjectPackageOpen}
+        importProjectPackagePreview={importProjectPackagePreview}
+        onCloseImportProjectPackageDialog={closeImportProjectPackageDialog}
+        onSubmitImportProjectPackage={submitImportProjectPackage}
+        deleteWorkflowCandidate={deleteWorkflowCandidate}
+        deleteBrowserProfileData={deleteBrowserProfileData}
+        onDeleteBrowserProfileDataChange={setDeleteBrowserProfileData}
+        onConfirmDeleteWorkflow={() => {
+          void confirmDeleteWorkflow();
         }}
-      >
-        {exportPackageWorkflow ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Package</p>
-              <DialogTitle>Export Workflow</DialogTitle>
-              <DialogDescription>
-                Choose the workflow parts to include in the JSON package.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="workflow-dialog-form" onSubmit={submitExportPackage}>
-              <PackageFlowCheckbox
-                checked={exportPackageIncludeFlow}
-                label="Flow"
-                onChange={setExportPackageIncludeFlow}
-              />
-              <PackageSectionPicker
-                availableSections={workflowPackageSections}
-                selectedSections={exportPackageSections}
-                onSelectedSectionsChange={setExportPackageSections}
-              />
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  Export
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={closeExportPackageDialog}
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
-      </Dialog>
-      <Dialog
-        open={Boolean(importPackage && importPackagePreview)}
-        onOpenChange={(open) => {
-          if (!open) closeImportPackageDialog();
+        onCancelDeleteWorkflow={() => {
+          setDeleteWorkflowCandidate(null);
+          setDeleteBrowserProfileData(false);
         }}
-      >
-        {importPackagePreview ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Package</p>
-              <DialogTitle>Import Workflow</DialogTitle>
-              <DialogDescription>
-                Import creates a new workflow and never overwrites an existing one.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="workflow-dialog-form" onSubmit={submitImportPackage}>
-              <dl className="package-preview-list">
-                <div>
-                  <dt>Name</dt>
-                  <dd>{importPackagePreview.workflow_name}</dd>
-                </div>
-                <div>
-                  <dt>Included</dt>
-                  <dd>
-                    {[
-                      importPackagePreview.includes_flow ? "Flow" : null,
-                      ...importPackagePreview.settings_sections.map(sectionLabel),
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </dd>
-                </div>
-              </dl>
-              <PackageFlowCheckbox
-                checked={importPackageIncludeFlow}
-                disabled={!importPackagePreview.includes_flow}
-                label="Flow"
-                onChange={setImportPackageIncludeFlow}
-              />
-              <PackageSectionPicker
-                availableSections={importPackagePreview.settings_sections}
-                selectedSections={importPackageSections}
-                onSelectedSectionsChange={setImportPackageSections}
-              />
-              {importPackagePreview.omitted_fields.length > 0 ? (
-                <p className="muted">
-                  Sanitized fields: {importPackagePreview.omitted_fields.join(", ")}
-                </p>
-              ) : null}
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  Import
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={closeImportPackageDialog}
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
-      </Dialog>
-      <Dialog
-        open={Boolean(importProjectPackageValue && importProjectPackagePreview)}
-        onOpenChange={(open) => {
-          if (!open) closeImportProjectPackageDialog();
-        }}
-      >
-        {importProjectPackagePreview ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Package</p>
-              <DialogTitle>Import Project</DialogTitle>
-              <DialogDescription>
-                Import creates a new project and never overwrites an existing one.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="workflow-dialog-form" onSubmit={submitImportProjectPackage}>
-              <dl className="package-preview-list">
-                <div>
-                  <dt>Name</dt>
-                  <dd>{importProjectPackagePreview.project_name}</dd>
-                </div>
-                <div>
-                  <dt>Workflows</dt>
-                  <dd>
-                    {importProjectPackagePreview.workflows.length > 0
-                      ? importProjectPackagePreview.workflows
-                          .map((workflow) => workflow.name)
-                          .join(", ")
-                      : "None"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Subflows</dt>
-                  <dd>{importProjectPackagePreview.subflows.length}</dd>
-                </div>
-                <div>
-                  <dt>Sessions</dt>
-                  <dd>{importProjectPackagePreview.environments.length}</dd>
-                </div>
-              </dl>
-              {importProjectPackagePreview.omitted_fields.length > 0 ? (
-                <p className="muted">
-                  Sanitized fields: {importProjectPackagePreview.omitted_fields.join(", ")}
-                </p>
-              ) : null}
-              {appError ? <p className="field-error">{appError}</p> : null}
-              <DialogFooter className="form-actions">
-                <Button shape="pill" type="submit">
-                  Import
-                </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={closeImportProjectPackageDialog}
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        ) : null}
-      </Dialog>
-      <Dialog
-        open={Boolean(deleteWorkflowCandidate)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteWorkflowCandidate(null);
-            setDeleteBrowserProfileData(false);
-          }
-        }}
-      >
-        {deleteWorkflowCandidate ? (
-          <DialogContent className="workflow-dialog">
-            <DialogHeader>
-              <p className="eyebrow">Workflow</p>
-              <DialogTitle>Delete Workflow</DialogTitle>
-              <DialogDescription>
-                This removes {deleteWorkflowCandidate.name} from the app. This
-                action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="package-section-list">
-              <PackageFlowCheckbox
-                checked={deleteBrowserProfileData}
-                label="Delete private browser profile data"
-                onChange={setDeleteBrowserProfileData}
-              />
-              <p className="muted">
-                Uncheck it when you want retained login state available for
-                manual recovery or a later profile cleanup.
-              </p>
-            </div>
-            {appError ? <p className="field-error">{appError}</p> : null}
-            <DialogFooter className="form-actions">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  void confirmDeleteWorkflow();
-                }}
-              >
-                Delete Workflow
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setDeleteWorkflowCandidate(null);
-                  setDeleteBrowserProfileData(false);
-                }}
-              >
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        ) : null}
-      </Dialog>
+      />
     </AppShell>
-  );
-}
-
-function settingsSaveStatuses(status: WorkflowSettingsSaveStatus) {
-  return {
-    general: status,
-    run_policy: status,
-    browser_launch: status,
-    graph_defaults: status,
-    environment: status,
-  };
-}
-
-function cloneWorkflowSettings(settings: WorkflowSettings) {
-  return JSON.parse(JSON.stringify(settings)) as WorkflowSettings;
-}
-
-function withWorkflowSettingsDefaults(
-  settings: WorkflowSettings,
-  workflow: {
-    workflowId: string;
-    workflowName: string;
-    createdAt?: string | null;
-    updatedAt?: string | null;
-  },
-) {
-  const defaults = defaultWorkflowSettings(workflow);
-  return {
-    ...defaults,
-    ...settings,
-    general: { ...defaults.general, ...settings.general },
-    run_policy: { ...defaults.run_policy, ...settings.run_policy },
-    browser_launch: { ...defaults.browser_launch, ...settings.browser_launch },
-    graph_defaults: { ...defaults.graph_defaults, ...settings.graph_defaults },
-    environment: { ...defaults.environment, ...settings.environment },
-  };
-}
-
-function isWorkflowSettings(value: unknown): value is WorkflowSettings {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      "workflow_id" in value &&
-      "general" in value &&
-      "browser_launch" in value,
   );
 }
 

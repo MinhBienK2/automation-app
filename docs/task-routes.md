@@ -35,7 +35,7 @@ Update docs: action taxonomy, action config contract, workflow types, runner doc
 
 Read: `domain/workflow-lifecycle.md`, `domain/user-visible-invariants.md`, `architecture/frontend.md`, `contracts/run-state.md` when run/test UI changes
 
-Verify: `src/App.tsx`, `src/features/settings/`, `src/features/workflows/pages/`, `src/features/workflows/components/`, `src/features/workflows/lib/workflowSettings.ts`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`
+Verify: `src/App.tsx`, `src/features/settings/`, `src/features/workflows/pages/`, `src/features/workflows/components/`, `src/features/workflows/lib/configUtils.ts`, `src/features/workflows/lib/graphEditorEdges.ts`, `src/features/workflows/lib/graphNodeConfig.ts`, `src/features/workflows/lib/nodeInsertionPosition.ts`, `src/features/workflows/lib/runFromSelected.ts`, `src/features/workflows/lib/stepHelpContent.ts`, `src/features/workflows/lib/stepHelpEnrichment.ts`, `src/features/workflows/lib/subflowSelection.ts`, `src/features/workflows/lib/workflowSettings.ts`, `src/features/workflows/lib/workflowSettingsDefaults.ts`, `src/features/workflows/lib/workflowSettingsVariables.ts`, `src/lib/workflowApi.ts`, `src/lib/workflowUi.ts`
 
 Checks: focused page/component test; `npx tsc --noEmit` when types or props change.
 
@@ -119,7 +119,7 @@ Update docs: product model, workflow lifecycle, user-visible invariants, fronten
 
 Read: `architecture/domain.md`, `contracts/action-configs.md`, `domain/user-visible-invariants.md`
 
-Verify: `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/actions/validation.ts`, `electron/backend/commands.ts`, `electron/backend/services/workflowSettingsService.ts`, `electron/backend/services/workflowPackageService.ts`, `electron/backend/graph/validateGraph.test.ts`, `electron/backend/graph/compiler.test.ts`, affected UI error display.
+Verify: `electron/backend/graph/validateGraph.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/actions/validation.ts`, `electron/backend/shared/records.ts`, `electron/backend/commands.ts`, `electron/backend/services/workflowSettingsService.ts`, `electron/backend/services/workflowPackageService.ts`, `electron/backend/graph/validateGraph.test.ts`, `electron/backend/graph/compiler.test.ts`, affected UI error display.
 
 Checks: `npm test -- electron/backend/graph/validateGraph.test.ts electron/backend/graph/compiler.test.ts`; add `npm test -- electron/backend/commands.test.ts` when command-facing errors change; run `npm run build:electron` when backend types change.
 
@@ -235,7 +235,7 @@ ownership or checks change.
 
 Read: `domain/execution-semantics.md`, `domain/cross-feature-impact-map.md`, `architecture/runner.md`, `contracts/run-state.md`
 
-Verify: `src/lib/personaCatalog.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/runtime/runner.ts`, `electron/backend/browser/sessionManager.ts`, `electron/backend/runtime/runManager.ts`, Electron runner/session-manager tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
+Verify: `src/lib/personaCatalog.ts`, `electron/backend/graph/compiler.ts`, `electron/backend/runtime/runner.ts`, `electron/backend/runtime/domainPolicy.ts`, `electron/backend/runtime/variables.ts`, `electron/backend/browser/sessionManager.ts`, `electron/backend/runtime/runManager.ts`, Electron runner/session-manager tests, command tests, `src/features/workflows/components/WorkflowGraphEditor.tsx`.
 
 Checks: focused Electron runner/compiler/session-manager tests, `npm run test:fingerprint` for browser identity evidence changes, `npm test -- electron/backend/commands.test.ts`, `npm run build:electron`; run `npm run test:smoke` only for real CloakBrowser smoke changes.
 

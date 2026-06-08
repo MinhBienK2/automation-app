@@ -7,6 +7,17 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 ## Key Files
 
 - `electron/backend/runtime/runner.ts`
+- `electron/backend/runtime/actionTrace.ts`
+- `electron/backend/runtime/targetResolver.ts`
+- `electron/backend/runtime/interactionPrimitives.ts`
+- `electron/backend/runtime/interactionActions.ts`
+- `electron/backend/runtime/runtimeHelpers.ts`
+- `electron/backend/runtime/runnerActionExecutors.ts`
+- `electron/backend/runtime/conditions.ts`
+- `electron/backend/runtime/runnerEvidence.ts`
+- `electron/backend/runtime/batchWorkflowRun.ts`
+- `electron/backend/runtime/domainPolicy.ts`
+- `electron/backend/runtime/variables.ts`
 - `electron/backend/browser/sessionManager.ts`
 - `electron/backend/evidence/artifacts.ts`
 - `electron/backend/evidence/model.ts`
@@ -90,7 +101,12 @@ The Electron runner executes compiled action configs through CloakBrowser's Play
 - Graph settings are not runner-facing settings. The runner only receives edge waits after the graph compiler has emitted them as ordinary fixed or random wait steps.
 - Default action timeouts and interaction fidelity settings are not part of the runner-facing settings contract.
 - Cancellation is checked between actions and inside long waits through an `AbortSignal`. Stop returns a stopped run state and closes temporary contexts according to retention policy.
-- Batch execution compiles the saved graph, prepends row variables, applies settings defaults for headless and concurrency when the request omits them, runs rows sequentially, persists one run per executed row, and stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency above 1 is rejected until row isolation is implemented.
+- Batch execution preflight compiles the saved graph and rejects unsupported
+  concurrency in the command layer; `batchWorkflowRun.ts` then prepends row
+  variables, applies the headless/default close-retention batch settings, runs
+  rows sequentially, persists one run per executed row through `RunManager`, and
+  stops early when `batch_stop_on_first_failed_row` is enabled. Concurrency
+  above 1 is rejected until row isolation is implemented.
 - `BrowserWorkflowRunner` records compact action traces into outputs under `__action_traces`, classifying actions by trace mode and status. Failed traces include a compact action summary when available, and failed run state includes diagnostics with compiled step id, label path, optional Call Subflow parent/subflow ids, subflow step number/count, and action summary. Nested branch/body actions that retain `graph_node_id` emit trace entries with `parent_node_id`, monotonic `trace_sequence`, started/finished timestamps, and compact output/evidence summaries before the parent control node records its final trace.
 - Runner output finalization emits `__evidence_model`, which classifies outputs into operator input, browser identity, network posture, action trace, page observation, generated output, and sensitive/redacted categories. Arbitrary page-observation outputs are recursively redacted by sensitive key pattern and limited for large strings/arrays/objects; structured backend evidence and action traces are preserved so nested execution evidence remains usable.
 - `execute_js` is gated by Run Policy `execute_js_enabled`; disabled workflows fail the step before evaluating script text. When allowed, traces include explicit audit tags `direct_dom_script` and `requires_review`, and script output values pass through the shared evidence output limits/redaction before final run state is returned or persisted.
@@ -128,6 +144,16 @@ handler map makes missing execution coverage explicit when an action is added.
 - Target resolution: structured target bundles map to Playwright locators, including ordered locator fallback, role/label/placeholder/text/CSS/XPath/attribute kinds, constraints, and iframe targeting; XPath strings remain supported. Find Element evaluates candidate locators, can filter to elements intersecting the current viewport, ranks by first match, nearest viewport center, or largest visible area, and stores a run-local ref for targetable later actions without modifying page DOM.
 - Data capture: text, attribute, input value, list/table, screenshot, download, and JavaScript outputs. Extract Table reads table rows and `th`/`td` cells through locator-side DOM evaluation. Execute JavaScript treats the script text as a browser-side function body, so `return ...` scripts can store values through `output_name`. Screenshot and download artifacts are run-scoped.
 - Variables/control flow: variable mutation, loops, branches, router first-match cases, weighted random-choice branches, retries, try/catch, fallback, Merge no-op, stop, output assertions, and domain allowlists. Browser-backed `element_visible` logic conditions resolve `target_ref` from Find Element before falling back to structured target or XPath visibility checks.
+- Runtime variable/template helpers live in `electron/backend/runtime/variables.ts`; the runner imports them for Set Variables, Set JSON Variables, Repeat For Each item binding, transform expressions, and template rendering inside browser actions.
+- Domain allowlist hostname normalization and current-page hostname helpers live in `electron/backend/runtime/domainPolicy.ts`; the runner imports them for navigation policy checks, Domain Allowlist nodes, and cookie defaults.
+- Runtime diagnostics, compact action summaries, action trace mode/evidence tags, output/evidence deltas, and nested subflow trace fields live in `electron/backend/runtime/actionTrace.ts`; the runner imports them around action execution and failed-run reporting.
+- Element target resolution, iframe root selection, target constraint checks, Find Element candidate ranking, and runtime element refs live in `electron/backend/runtime/targetResolver.ts`; the runner imports them before dispatching targetable browser actions.
+- Deterministic interaction math and timing helpers for drag points, scroll planning, wheel pulse generation, and key/mouse delay ranges live in `electron/backend/runtime/interactionPrimitives.ts`; the runner imports them from page scroll, targeted scroll, drag/drop, right-click, and keyboard paths.
+- Async browser interaction helpers for submit/radio fallbacks, page and targeted scroll dispatch, CloakBrowser human scroll delegation, pointer scroll-into-view, clipboard writing, paste shortcuts, and custom right-click live in `electron/backend/runtime/interactionActions.ts`; the runner imports them from targetable action executors.
+- Generic runtime helpers for enum guards, locator state assertions, required locator methods, web storage writes, wait-state mapping, abort-aware sleep, weighted random choices, JavaScript execution wrapping, action timeouts, and list/table extraction live in `electron/backend/runtime/runtimeHelpers.ts`.
+- The full registered action executor map lives in `electron/backend/runtime/runnerActionExecutors.ts`; `BrowserWorkflowRunner` passes runner-specific callbacks for navigation policy, target lookup, nested execution, loop control, evidence recording, downloads, dialogs, and retained runtime state.
+- Workflow condition evaluation for graph branches, routers, loops, repeat-until, and element-visible checks lives in `electron/backend/runtime/conditions.ts`.
+- Output finalization, failure screenshots, download persistence, and evidence record mutation live in `electron/backend/runtime/runnerEvidence.ts`.
 
 ## Does Not Belong Here
 

@@ -82,7 +82,7 @@ or exposing raw backend payloads.
 - `electron/preload.cts` exposes the narrow sandbox-compatible bridge, derives IPC channel strings from typed bridge method names, and unwraps serializable command errors.
 - Electron main owns app lifecycle, app data paths, native dialogs, and IPC registration.
 - Node backend commands own validation before persistence or execution.
-- `electron/backend/commands.ts` remains the backend command adapter; other backend files are grouped by ownership under `actions/`, `browser/`, `evidence/`, `graph/`, `persistence/`, `runtime/`, `scheduling/`, and `services/`.
+- `electron/backend/commands.ts` remains the backend command adapter; `electron/backend/commandHelpers.ts` owns shared command error, draft graph, summary conversion, and batch-row graph helpers. `electron/backend/diagnostics/cloakBrowserDiagnostics.ts` owns CloakBrowser binary, GeoIP/font/display, and bounded profile diagnostics. Other backend files are grouped by ownership under `actions/`, `browser/`, `evidence/`, `graph/`, `persistence/`, `runtime/`, `scheduling/`, `services/`, and low-level `shared/` helpers.
 - Run manager code owns active run/profile locks, run snapshots, stop handling,
   batch run state, run timeouts, and final run persistence.
 - Browser session manager code owns CloakBrowser launch option mapping,

@@ -10,13 +10,21 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/overview/pages/OperationsOverviewPage.tsx`: default Mission
   Control operations dashboard with durable metrics, live runs, attention,
   activity, recent evidence metadata, and upcoming schedules.
+- `src/features/overview/useOperationsOverviewWorkspace.ts`: Overview loading
+  state and local-day operations command handling used by `App.tsx`.
 - `src/features/evidence/pages/EvidenceExplorerPage.tsx`: durable evidence
   workspace with filters, list/grid results, selection, typed detail payloads,
   screenshot preview, artifact reveal, and bundle export actions.
+- `src/features/evidence/useEvidenceWorkspace.ts`: Evidence workspace page,
+  detail, preview, selection, and export state plus typed evidence command
+  loading/error handling.
 - `src/features/identities/pages/IdentityLabPage.tsx`: current managed browser
   identity workspace with list/detail posture, latest observed evidence,
   sanitized diagnostics, historical identity references, retained-session close,
   guarded reset, and navigation to Evidence/Workflow Settings.
+- `src/features/identities/useIdentityLabWorkspace.ts`: Identity Lab overview,
+  selected target, loading, retained-session close, and identity reset state
+  plus typed backend command/error handling.
 - `src/features/projects/pages/ProjectsPage.tsx`: project workspace shell with
   selected-project state, project search/selection, fixed
   Workflows/Subflows/Settings collection tabs in the detail panel, and project
@@ -27,10 +35,19 @@ The frontend renders workflow management UI, owns interaction state, and calls t
   controls for editing the saved-session fingerprint seed and confirming
   backend-owned identity regeneration/profile deletion without exposing a
   duplicate full Browser Launch editor.
+- `src/features/projects/useProjectEnvironmentActions.ts`: project saved-session
+  update/reset command handling and environment-list refresh callbacks used by
+  `App.tsx`.
 - `src/features/settings/pages/SettingsPage.tsx`: app-level settings, graph
   autosave, environment readiness diagnostics, guarded maintenance commands,
   and graph shortcut guidance.
+- `src/features/settings/useSettingsDiagnostics.ts`: app settings diagnostics
+  and maintenance command state for CloakBrowser readiness, install checks, and
+  orphaned profile cleanup.
 - `src/features/schedules/pages/SchedulesPage.tsx`: cross-workflow schedule list, create/edit dialog, enable/disable actions, focused schedule target state, and event history view with run/workflow traceability.
+- `src/features/schedules/useSchedulesWorkspace.ts`: schedule list/history
+  state and create/update/delete/enable/disable command handling used by
+  `App.tsx`.
 - `src/features/workflows/pages/WorkflowListPage.tsx`: workflow list screen
   with browser-session create choices, selected session/environment display,
   icon-only row actions, direct Run for saved workflow state, and the Record
@@ -42,13 +59,18 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/pages/SubflowDetailPage.tsx`: reusable subflow graph
   editor with owning-project header metadata, usage warnings, and
   save/duplicate/delete actions.
-- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules.
+- `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, selected-block subflow planning, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules and focused workflow graph libs.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
 - `src/features/workflows/components/WorkflowPackageOptions.tsx`: shared Workflow Package Flow/Settings section checkbox controls used by import/export dialogs.
 - `src/components/ui/unsaved-changes-dialog.tsx`: shared confirmation dialog for editable popups that should protect unsaved changes before close.
 - `src/components/ui/switch.tsx`, `src/components/ui/segmented-control.tsx`, and `src/components/ui/icon-button.tsx`: shared interaction primitives for on/off settings, compact mutually exclusive choices, and icon-only actions with tooltip text.
-- `src/features/workflows/lib/workflowSettings.ts`: frontend defaults, section metadata, tag parsing, browser profile naming, variable JSON helpers, and bilingual settings help content.
+- `src/AppPackageDialogs.tsx`: app-level workflow/project import-export package dialogs and delete-workflow confirmation dialog rendered by `App.tsx`.
+- `src/styles/workflows.css` owns base workflow list/package/import/action-palette styles; `src/styles/workflow-panels.css` owns run monitor, Workflow Settings, unsaved-change, toast, and run-issue panel styles; `src/styles/mission-workspaces.css` owns Overview, focused run, Evidence, and Identity Lab workspace styles.
+- `src/styles/workflow-graph.css` owns core graph workspace/canvas/node/inspector styling, while `src/styles/workflow-graph-overlays.css` owns graph-adjacent popovers, variable/template editors, action-type dropdowns, context menus, and issue chips.
+- `src/features/workflows/lib/workflowSettings.ts`: public Workflow Settings entry point, section metadata, and bilingual settings help catalog.
+- `src/features/workflows/lib/workflowSettingsDefaults.ts`: frontend Workflow Settings defaults, tag parsing, and generated browser profile naming helpers.
+- `src/features/workflows/lib/workflowSettingsVariables.ts`: Environment initial-variable JSON/row conversion helpers.
 - `src/features/workflows/components/RunIssuePanel.tsx`: compact blocking validation, runtime failure, and system/startup issue presentation with readable failure context including subflow step/node context, plus copyable collapsed raw details for long errors and diagnostics.
 - `src/features/workflows/components/RunMonitorDrawer.tsx`: workflow-detail Run Monitor drawer derived from the shared run-state fields. It is available only when saved Graph settings enable Live Run, opens automatically for active runs unless the operator closed it for the current workflow session, and shows runtime failure location/subflow step/action context, a chronological node-activity log timeline, plus timeline row graph-focus controls.
 - `src/features/workflows/components/GraphShortcutGuide.tsx`: shared graph mouse and keyboard shortcut guide rendered in Settings and the graph toolbar dialog.
@@ -56,19 +78,39 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/components/HelpDisclosure.tsx`: shared native disclosure wrapper for collapsible workflow help sections and nested help groups.
 - `src/features/workflows/components/TemplateTextField.tsx`: template-aware textarea with token preview/highlighting and variable insertion from known graph variables.
 - `src/features/workflows/components/VariableConfigFields.tsx`: shared Set Variables row editor used by action config and graph-node config surfaces.
+- `src/features/workflows/components/WorkflowGraphEditorDialogs.tsx`: graph editor shortcut and Create subflow from selection dialogs.
+- `src/features/workflows/components/useWorkflowGraphShortcuts.ts`: scoped graph keyboard shortcut and temporary pan-mode hook for the visual editor.
+- `src/features/workflows/components/useSelectionSubflowCreator.ts`: selected-node subflow dialog state, validation, creation, and replace-with-call-subflow commit flow.
+- `src/features/workflows/components/useWorkflowGraphDerivedState.ts`: memoized selected entity, context menu, issue grouping, and React Flow runtime projection state for the visual editor.
 - `src/features/workflows/components/WorkflowGraphInspectorFields.tsx`: structured graph node config fields used by the graph inspector drawer.
-- `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed decision-guide action and graph-node help content rendered in shared modal layouts from the graph inspector and node context menu. These catalogs own detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
+- `src/features/workflows/components/WorkflowGraphActionTypeDropdown.tsx`: action-node type picker, action search matching, and compatibility display for graph-internal action payloads.
+- `src/features/workflows/lib/stepHelpContent.ts` and `src/features/workflows/lib/graphNodeHelpContent.ts`: bilingual schema-backed action and graph-node help catalogs rendered in shared modal layouts from the graph inspector and node context menu.
+- `src/features/workflows/lib/stepHelpEnrichment.ts`: action-help enrichment that derives detailed field references, required/optional/advanced grouping metadata, value guidance, field-level mistake guidance, port semantics, and select-option explanations for the help popups.
 - `src/features/workflows/lib/stepHelpTypes.ts`: shared action-help field/reference types consumed by help catalogs, palettes, and modal rendering so the generated action catalog does not own cross-component type contracts.
 - `src/features/workflows/lib/stepHelpFieldGuidance.ts`: shared action-help field details, option references, and locator-field helpers used by action help generation.
 - `src/features/workflows/lib/graphEditorCommands.ts`: pure graph editor commands for bulk delete, duplicate, copy/paste fragments, and bounded undo/redo history.
-- `src/features/workflows/lib/graphLayout.ts`: ELK-backed graph layout adapter and editor-only edge-kind classification for auto arrange, arrange selection, and workflow link routing hints.
+- `src/features/workflows/lib/graphEditorEdges.ts`: pure graph editor edge replacement rules, edge-kind classification, and stale-port pruning helpers.
+- `src/features/workflows/lib/subflowSelection.ts`: pure selected-node block analysis and replacement planning for Create subflow from selection.
+- `src/features/workflows/lib/graphNodeConfig.ts`: pure graph-native node config normalization, dynamic port generation, and stable case/choice id helpers.
+- `src/features/workflows/lib/nodeInsertionPosition.ts`: visible-canvas node insertion positioning and deterministic fallback placement for graph toolbar additions.
+- `src/features/workflows/lib/runFromSelected.ts`: Run from selected eligibility rules for retained browser sessions and main-path graph nodes.
+- `src/features/workflows/lib/configUtils.ts`: shared safe readers for unknown graph/action config objects used by workflow components and graph libs.
+- `src/features/workflows/lib/graphLayout.ts`: ELK-backed graph layout adapter for auto arrange, arrange selection, and workflow link routing hints.
 - `src/features/workflows/lib/workflowActionDefaults.ts`: frontend default action config catalog used by graph node creation and re-exported through `workflowGraph.ts`.
 - `src/features/workflows/components/RunStatusBar.tsx`: compact run status
   signal; detailed runtime/startup errors live in `RunIssuePanel`.
 - `src/lib/workflowApi.ts`: Electron bridge wrappers.
 - `src/types/electron.ts`: renderer-visible bridge contract.
+- `src/lib/appState.ts`: app-level UI state helpers for graph autosave storage, graph/save labels, run snapshot selection, operations ranges, and workflow settings snapshots.
+- `src/lib/useGraphExitNavigation.ts`: app-level unsaved graph navigation
+  guard for workflow/subflow detail exits and the shared confirmation dialog.
+- `src/lib/useAppPackageDialogs.ts`: app-level workflow/project package
+  import-export dialog state, file-size validation, bridge command calls, and
+  post-import refresh callbacks.
 - `src/lib/workflowUi.ts`: pure UI helpers, labels, summaries, run-state normalization.
-- `src/types/workflow.ts`: DTO and action config types.
+- `src/types/workflow.ts`: public DTO/action-config barrel; concrete contract
+  slices live in `src/types/workflowCore.ts`, `src/types/workflowGraphOps.ts`,
+  and `src/types/workflowEvidenceRecording.ts`.
 
 ## Belongs Here
 
@@ -223,7 +265,9 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 
 ## Change Checklist
 
-- Keep props and DTO shapes aligned with `src/types/workflow.ts`.
+- Keep props and DTO shapes aligned with the `src/types/workflow.ts` public
+  barrel and its `workflowCore`, `workflowGraphOps`, and
+  `workflowEvidenceRecording` contract slices.
 - Update focused component/page tests.
 - Read `DESIGN.md` before layout or styling changes.
 - Keep command names centralized in `workflowApi.ts`.

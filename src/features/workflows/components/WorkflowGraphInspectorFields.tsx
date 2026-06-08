@@ -1,13 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import type {
-  ActionConfig,
   ActionType,
   GraphNode,
-  GraphPort,
-  RouterGraphCase,
   RouterGraphConfig,
   SubflowSummary,
-  WorkflowCondition,
 } from "../../../types/workflow";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -19,10 +14,11 @@ import { actionLabels } from "../../../lib/workflowUi";
 import { defaultActionConfig } from "../lib/workflowGraph";
 import { ActionConfigEditor } from "./ActionConfigEditor";
 import {
-  actionDescriptions,
-  actionPickerGroups,
-  actionPickerOptions,
-} from "./WorkflowGraphPalettes";
+  ActionTypeDropdown,
+  GraphInternalActionConfigPanel,
+  actionTypeFromConfig,
+  isActionConfig,
+} from "./WorkflowGraphActionTypeDropdown";
 import {
   ConditionFields,
   conditionFromConfig,
@@ -30,58 +26,24 @@ import {
 import { ActionConfigFieldGroup } from "./ActionConfigFieldGroup";
 import { SetVariablesConfigFields } from "./VariableConfigFields";
 import type { VariableOption } from "./TemplateTextField";
-
-function switchPortsForCases(cases: string[]): GraphPort[] {
-  return [
-    { id: "in", label: "In", direction: "input" },
-    ...cases.map((_, index) => ({
-      id: `case_${index + 1}`,
-      label: `Case ${index + 1}`,
-      direction: "output" as const,
-    })),
-    { id: "default", label: "Default", direction: "output" },
-    { id: "done", label: "Done", direction: "output" },
-  ];
-}
-
-function routerPortsForCases(
-  cases: RouterGraphCase[],
-  defaultLabel = "Default",
-): GraphPort[] {
-  return [
-    { id: "in", label: "In", direction: "input" },
-    ...cases.map((caseValue) => ({
-      id: `case_${caseValue.id}`,
-      label: caseValue.label.trim() || "Case",
-      direction: "output" as const,
-    })),
-    { id: "default", label: defaultLabel.trim() || "Default", direction: "output" },
-    { id: "done", label: "Done", direction: "output" },
-  ];
-}
-
-type RandomChoiceOption = {
-  id: string;
-  label: string;
-  weight: number;
-};
-
-type RandomChoiceGraphConfig = {
-  choices: RandomChoiceOption[];
-  output_name?: string | null;
-};
-
-function randomChoicePortsForChoices(choices: RandomChoiceOption[]): GraphPort[] {
-  return [
-    { id: "in", label: "In", direction: "input" },
-    ...choices.map((choice) => ({
-      id: `choice_${choice.id}`,
-      label: choice.label.trim() || "Choice",
-      direction: "output" as const,
-    })),
-    { id: "done", label: "Done", direction: "output" },
-  ];
-}
+import {
+  arrayConfig,
+  booleanConfig,
+  numberConfig,
+  objectConfig,
+  stringConfig,
+} from "../lib/configUtils";
+import {
+  defaultCondition,
+  nextRandomChoiceId,
+  nextRouterCaseId,
+  randomChoiceConfig,
+  randomChoicePortsForChoices,
+  routerConfig,
+  routerPortsForCases,
+  switchPortsForCases,
+  type RandomChoiceGraphConfig,
+} from "../lib/graphNodeConfig";
 
 type NodeConfigFieldsProps = {
   node: GraphNode;
@@ -897,13 +859,12 @@ export function NodeConfigFields({
       );
     case "action": {
       const actionConfig = isActionConfig(node.config) ? node.config : null;
-      const isCompatibilityAction = actionConfig
-        ? !actionPickerOptions.includes(actionConfig.type as ActionType)
-        : false;
+      const selectedActionType = actionTypeFromConfig(actionConfig);
+      const isCompatibilityAction = Boolean(actionConfig && !selectedActionType);
       return (
         <div className="graph-config-fields">
           <ActionTypeDropdown
-            value={actionTypeFromConfig(actionConfig)}
+            value={selectedActionType}
             onChange={updateActionType}
           />
           {actionConfig && isCompatibilityAction ? (
@@ -969,250 +930,6 @@ function parseSubflowInputMapping(value: string) {
         },
       ];
     });
-}
-
-function actionTypeFromConfig(config: ActionConfig | null): ActionType | null {
-  if (!config) {
-    return null;
-  }
-  return actionPickerOptions.includes(config.type as ActionType)
-    ? (config.type as ActionType)
-    : null;
-}
-
-function ActionTypeDropdown({
-  value,
-  onChange,
-}: {
-  value: ActionType | null;
-  onChange: (actionType: ActionType) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const searchRef = useRef<HTMLInputElement | null>(null);
-  const normalizedQuery = query.trim().toLowerCase();
-  const visibleActions = normalizedQuery
-    ? actionPickerOptions.filter((actionType) =>
-        matchesActionSearch(actionType, normalizedQuery),
-      )
-    : actionPickerOptions;
-
-  function choose(actionType: ActionType) {
-    onChange(actionType);
-    setQuery("");
-    setOpen(false);
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    searchRef.current?.focus();
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (
-        target instanceof Node &&
-        containerRef.current &&
-        !containerRef.current.contains(target)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [open]);
-
-  return (
-    <div className="action-type-dropdown" ref={containerRef}>
-      <Label>Action type</Label>
-      <Button
-        aria-expanded={open}
-        aria-label="Action type"
-        className="action-type-trigger"
-        role="combobox"
-        type="button"
-        variant="secondary"
-        onClick={() => setOpen((current) => !current)}
-      >
-        {value ? actionLabels[value] : "Choose action type"}
-      </Button>
-      {open ? (
-        <div className="action-type-popover" role="listbox" aria-label="Action type options">
-          <Input
-            ref={searchRef}
-            aria-label="Search action types"
-            placeholder="Search actions..."
-            value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-          />
-          {actionPickerGroups.map((group) => {
-            const groupActions = group.actions.filter((actionType) =>
-              visibleActions.includes(actionType),
-            );
-            if (groupActions.length === 0) return null;
-
-            return (
-              <div className="action-type-group" key={group.label}>
-                <p className="eyebrow">{group.label}</p>
-                {groupActions.map((actionType) => (
-                  <button
-                    aria-label={actionLabels[actionType]}
-                    aria-selected={value === actionType}
-                    className="action-type-option"
-                    key={actionType}
-                    role="option"
-                    type="button"
-                    onClick={() => choose(actionType)}
-                  >
-                    <span>{actionLabels[actionType]}</span>
-                    <small>{actionDescriptions[actionType]}</small>
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-          {visibleActions.length === 0 ? <p className="muted">No matching actions</p> : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function GraphInternalActionConfigPanel({ config }: { config: ActionConfig }) {
-  const actionLabel = actionLabels[config.type] ?? config.type;
-
-  return (
-    <div className="graph-internal-action">
-      <p className="eyebrow">Graph-internal action</p>
-      <h3>{actionLabel}</h3>
-      <p className="muted">
-        Replace this action-node payload with a supported user action, or use
-        the graph-native node for this control-flow behavior.
-      </p>
-      <pre aria-label="Graph-internal action JSON">
-        {JSON.stringify(config, null, 2)}
-      </pre>
-    </div>
-  );
-}
-
-function matchesActionSearch(actionType: ActionType, query: string) {
-  const haystack = `${actionLabels[actionType]} ${actionDescriptions[actionType]}`.toLowerCase();
-  return query
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((term) => haystack.includes(term));
-}
-
-function isActionConfig(config: unknown): config is ActionConfig {
-  return Boolean(
-    config &&
-      typeof config === "object" &&
-      "type" in config &&
-      "config" in config,
-  );
-}
-
-function objectConfig(config: unknown): Record<string, unknown> {
-  return config && typeof config === "object" && !Array.isArray(config)
-    ? (config as Record<string, unknown>)
-    : {};
-}
-
-function stringConfig(config: unknown, key: string, fallback: string) {
-  const value = objectConfig(config)[key];
-  return typeof value === "string" ? value : fallback;
-}
-
-function numberConfig(config: unknown, key: string, fallback: number) {
-  const value = objectConfig(config)[key];
-  return typeof value === "number" ? value : fallback;
-}
-
-function booleanConfig(config: unknown, key: string, fallback: boolean) {
-  const value = objectConfig(config)[key];
-  return typeof value === "boolean" ? value : fallback;
-}
-
-function arrayConfig(config: unknown, key: string) {
-  const value = objectConfig(config)[key];
-  return Array.isArray(value) ? value.map(String) : [];
-}
-
-function routerConfig(config: unknown): RouterGraphConfig {
-  const record = objectConfig(config);
-  const rawCases = Array.isArray(record.cases) ? record.cases : [];
-  const cases = rawCases
-    .map((item, index): RouterGraphCase => {
-      const caseRecord = objectConfig(item);
-      return {
-        id: stringValue(caseRecord.id) || String(index + 1),
-        label: stringValue(caseRecord.label) || `Case ${index + 1}`,
-        condition: isWorkflowCondition(caseRecord.condition)
-          ? caseRecord.condition
-          : defaultCondition(),
-      };
-    });
-  return {
-    mode: "first_match",
-    cases: cases.length ? cases : [{ id: "1", label: "Case 1", condition: defaultCondition() }],
-    default_label: stringValue(record.default_label) || "Default",
-  };
-}
-
-function randomChoiceConfig(config: unknown): RandomChoiceGraphConfig {
-  const record = objectConfig(config);
-  const rawChoices = Array.isArray(record.choices) ? record.choices : [];
-  const choices = rawChoices.map((item, index): RandomChoiceOption => {
-    const choiceRecord = objectConfig(item);
-    return {
-      id: stringValue(choiceRecord.id) || String(index + 1),
-      label: stringValue(choiceRecord.label) || `Choice ${index + 1}`,
-      weight: positiveNumberValue(choiceRecord.weight) ?? 1,
-    };
-  });
-  return {
-    choices: choices.length
-      ? choices
-      : [
-          { id: "1", label: "Choice 1", weight: 1 },
-          { id: "2", label: "Choice 2", weight: 1 },
-        ],
-    output_name: stringValue(record.output_name) || "random_choice",
-  };
-}
-
-function stringValue(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
-
-function positiveNumberValue(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function defaultCondition(): WorkflowCondition {
-  return { kind: "output_equals", name: "name", value: "" };
-}
-
-function isWorkflowCondition(value: unknown): value is WorkflowCondition {
-  return Boolean(value && typeof value === "object" && "kind" in value);
-}
-
-function nextRouterCaseId(cases: RouterGraphCase[]) {
-  const numericIds = cases
-    .map((caseValue) => Number(caseValue.id))
-    .filter((value) => Number.isInteger(value) && value > 0);
-  if (numericIds.length > 0) return String(Math.max(...numericIds) + 1);
-  return `case_${Date.now()}`;
-}
-
-function nextRandomChoiceId(choices: RandomChoiceOption[]) {
-  const numericIds = choices
-    .map((choice) => Number(choice.id))
-    .filter((value) => Number.isInteger(value) && value > 0);
-  if (numericIds.length > 0) return String(Math.max(...numericIds) + 1);
-  return `choice_${Date.now()}`;
 }
 
 function CloseBrowserField({

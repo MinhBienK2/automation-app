@@ -14,15 +14,21 @@ Node/Electron backend.
 - Electron IPC channels: `electron/ipc.ts`
 - Electron main registration: `electron/main.ts`
 - Node command handlers: `electron/backend/commands.ts`
+- CloakBrowser diagnostics helpers: `electron/backend/diagnostics/cloakBrowserDiagnostics.ts`
 - Run lifecycle manager: `electron/backend/runtime/runManager.ts`
+- Batch row execution helper: `electron/backend/runtime/batchWorkflowRun.ts`
+- Schedule command orchestration: `electron/backend/scheduling/scheduleCommands.ts`
 - Workflow settings service: `electron/backend/services/workflowSettingsService.ts`
 - Workflow package service: `electron/backend/services/workflowPackageService.ts`
 - Project package service: `electron/backend/services/projectPackageService.ts`
+- Project cascade commands: `electron/backend/projects/projectCommandCascades.ts`
 - Electron SQLite bootstrap: `electron/backend/persistence/database.ts`
 - Electron repository: `electron/backend/persistence/workflowRepository.ts`
 - Operations read model: `electron/backend/operations/operationsRepository.ts`
 - Evidence read model: `electron/backend/evidence/evidenceRepository.ts`
 - Identity read model: `electron/backend/identity/identityRepository.ts`
+- Recorder draft command orchestration: `electron/backend/recording/recordingDraftCommands.ts`
+- Recorder review reconciliation: `electron/backend/recording/reviewReconciliation.ts`
 - Command contract: `docs/contracts/electron-ipc.md`
 
 ## Belongs Here
@@ -49,18 +55,21 @@ Node/Electron backend.
   active workflow/profile/batch conflicts as workflow runs before launching.
   Stopping a session drains buffered page-side fallback events before closing
   the recorder context.
-- Browser recorder draft commands. Draft generation normalizes recorded events,
-  builds a review-only workflow graph, validates it, and returns/stores the
-  draft in backend memory without persistence. Clipboard paste normalizes to
+- Browser recorder draft commands go through `recordingDraftCommands.ts`.
+  Draft generation normalizes recorded events, builds a review-only workflow
+  graph, validates it, and returns/stores the draft in backend memory without
+  persistence. Clipboard paste normalizes to
   Set Clipboard plus Paste Clipboard and suppresses the duplicate input caused
-  by the paste. `saveRecordingDraft` consumes
-  reviewed labels, inclusion flags, and supported value edits by reconciling
-  renderer input against the backend-held draft steps, regenerates and validates
-  the graph, and is the only recorder path that creates a workflow or replaces a
-  linked workflow graph. Renderer-supplied action type or locator replacement is
+  by the paste. `saveRecordingDraft` delegates review merging to
+  `reviewReconciliation.ts`, which consumes reviewed labels, inclusion flags,
+  and supported value edits by reconciling renderer input against the
+  backend-held draft steps. The command then regenerates and validates the graph
+  and is the only recorder path that creates a workflow or replaces a linked
+  workflow graph. Renderer-supplied action type or locator replacement is
   ignored. Successful save consumes the in-memory draft/session; discarding a
   session also removes any drafts generated from that session.
-- Schedule CRUD, enable/disable validation, schedule event listing, and in-app scheduler tick logic.
+- Schedule CRUD, enable/disable validation, schedule event listing, and in-app
+  scheduler tick command orchestration through `scheduleCommands.ts`.
 - Operations aggregate reads through `getOperationsOverview`; metric meanings,
   attention dedupe, evidence metadata filtering, and bounded limits stay in the
   backend.
@@ -102,7 +111,11 @@ Node/Electron backend.
 - Manual full-run launch attempts blocked by graph/settings validation before a
   run row exists write one sanitized `launch_blocked` operational attention
   row. Manual validation alone does not write attention.
-- Product-facing batch execution remains globally exclusive with normal workflow execution, shares run-manager stop handling and persisted run records, and rejects starts while any normal run is active.
+- Product-facing batch execution remains globally exclusive with normal
+  workflow execution, shares run-manager stop handling and persisted run
+  records, and rejects starts while any normal run is active. The command layer
+  owns saved-graph/settings preflight and delegates row execution/accounting to
+  `batchWorkflowRun.ts`.
 - Product-facing scheduled execution uses the same saved-workflow run path as manual `runWorkflow`, uses run-manager workflow/profile/batch conflict checks instead of a global normal-run lock, and records skipped/missed/failed scheduler decisions in schedule events.
 - Workflow package import delegates preview/import preparation, selected-section
   validation, referenced packaged-subflow validation, Call Subflow id remapping,
@@ -125,7 +138,9 @@ Node/Electron backend.
   project row, project environments, subflows, workflows, graphs, and
   non-storage settings, remaps copied Call Subflow references, creates fresh
   browser identity/profile/fingerprint values for copied sessions, and disables
-  copied workflows' Run from selected state.
+  copied workflows' Run from selected state. Project duplicate/import/delete
+  transactions and project saved-session identity reset/profile cleanup live in
+  `projectCommandCascades.ts`.
 - Product-facing project deletion goes through `deleteProject`. It rejects while
   any workflow in that project has an active run, active profile, or retained
   session, deletes workflows before deleting the project row so no workflow is
