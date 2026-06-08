@@ -76,6 +76,7 @@ import {
   deleteSubflow,
   updateProjectEnvironment,
   updateProject,
+  updateSubflow,
   resetProjectEnvironmentBrowserIdentity,
   saveProjectPackageFile,
 } from "./workflowApi";
@@ -468,6 +469,17 @@ describe("workflow API phase ten commands", () => {
         target_project_id: "project-1",
       },
     );
+  });
+
+  test("invokes subflow update command with frontend-safe payloads", async () => {
+    resetWorkflowBridge();
+    workflowBridgeMock.updateSubflow.mockResolvedValue(undefined);
+
+    await updateSubflow("subflow-1", { name: "Login v2" });
+
+    expect(workflowBridgeMock.updateSubflow).toHaveBeenCalledWith("subflow-1", {
+      name: "Login v2",
+    });
   });
 });
 

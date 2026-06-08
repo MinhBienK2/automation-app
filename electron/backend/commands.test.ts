@@ -107,6 +107,10 @@ type ProjectWorkflowTestHandlers = {
   saveProjectPackageFile(packageValue: ProjectPackage): Promise<string | null>;
   setWorkflowEnvironment(workflowId: string, environmentId: string): ProjectWorkflow;
   createSubflow(projectId: string, input: { name: string; description?: string | null }): TestSubflow;
+  updateSubflow(
+    subflowId: string,
+    input: { name?: string; description?: string | null },
+  ): TestSubflow;
   listSubflows(projectId: string): Array<TestSubflow & { used_by_count: number }>;
   getSubflowGraph(subflowId: string): WorkflowGraph;
   saveSubflowGraph(subflowId: string, graph: WorkflowGraph): void;
@@ -621,6 +625,17 @@ describe("Electron workflow command handlers", () => {
       name: "Login",
       description: "Reusable login fragment",
     });
+    const renamed = projectHandlers.updateSubflow(subflow.id, {
+      name: "Login v2",
+    });
+    expect(renamed).toMatchObject({
+      id: subflow.id,
+      project_id: workflow.project_id,
+      name: "Login v2",
+      description: "Reusable login fragment",
+    });
+    expect(() => projectHandlers.updateSubflow(subflow.id, { name: "   " }))
+      .toThrow("Subflow name is required");
     const subflowGraph = subflowGraphWithAction("fill-username", "Fill username");
 
     projectHandlers.saveSubflowGraph(subflow.id, subflowGraph);
@@ -630,7 +645,7 @@ describe("Electron workflow command handlers", () => {
       expect.objectContaining({
         id: subflow.id,
         project_id: workflow.project_id,
-        name: "Login",
+        name: "Login v2",
         used_by_count: 1,
       }),
     ]);

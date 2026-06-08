@@ -55,10 +55,14 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - `src/features/workflows/pages/WorkflowDetailPage.tsx`: graph-only workflow
   workspace with owning-project metadata in the detail header.
 - `src/features/workflows/pages/SubflowListPage.tsx`: subflow list,
-  create, open, duplicate, delete, and usage-count presentation.
+  create, open, settings rename, duplicate, delete, and usage-count
+  presentation.
 - `src/features/workflows/pages/SubflowDetailPage.tsx`: reusable subflow graph
-  editor with owning-project header metadata, usage warnings, and
-  save/duplicate/delete actions.
+  editor with owning-project header metadata, usage warnings, settings rename,
+  and graph save action.
+- `src/features/workflows/components/SubflowSettingsDialog.tsx`: compact
+  Subflow Settings dialog shared by the list and detail header for renaming a
+  reusable subflow.
 - `src/features/workflows/components/WorkflowGraphEditor.tsx`: React Flow visual graph workspace and graph orchestration state; canvas parts, toolbar, palettes, selected-block subflow planning, and the right-side inspector drawer are split into sibling `WorkflowGraph*` component modules and focused workflow graph libs.
 - `src/features/workflows/components/WorkflowSettingsDialog.tsx`: per-workflow settings dialog with General, Graph, Run Policy, Browser Launch, Environment, grouped fieldsets for related controls, and section help. Graph exposes Live Run visibility, the Follow current default when Live Run is enabled, and the new link wait default. Run Policy exposes run lifecycle controls including Allow Run JavaScript and a grouped Run from selected enablement/scope control, while batch defaults stay paused and disabled until Batch Run UI is ready.
 - `src/features/workflows/components/RecordingReviewDialog.tsx`: browser recorder status and review dialog for generated recording drafts.
@@ -209,10 +213,11 @@ The frontend renders workflow management UI, owns interaction state, and calls t
 - Workflow detail exposes `Run from selected` only when enabled in Workflow Settings Run Policy. It is enabled only for one selected main-path node when saved settings use Reuse login session, browser retention is `retain`, and run state reports a matching retained browser session. Run Policy scope decides whether the action runs only the selected node or continues from that node through the downstream main path.
 - Subflows navigation state inside the selected project's Subflows collection,
   plus list/detail state, list-scoped create/duplicate/delete command state,
-  graph save status, usage-warning presentation, and workflow-graph selection
-  extraction into a new project subflow. Subflow detail exposes Save only in its
-  header and keeps duplicate/delete on the list. Subflow graph editors run in
-  subflow mode, which hides Add Subflow and does not expose run controls.
+  settings rename command state, graph save status, usage-warning presentation,
+  and workflow-graph selection extraction into a new project subflow. Subflow
+  detail exposes Settings and Save in its header and keeps duplicate/delete on
+  the list. Subflow graph editors run in subflow mode, which hides Add Subflow
+  and does not expose run controls.
   Workflow Call Subflow nodes can open their referenced subflow detail from the
   node inspector or node context menu; `App.tsx` owns the subflow detail back
   target so opening from Projects returns to Subflows, while opening from a

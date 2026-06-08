@@ -1,4 +1,4 @@
-import { Copy, Eye, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Eye, Plus, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
@@ -14,12 +14,17 @@ import { IconButton } from "../../../components/ui/icon-button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import type { SubflowSummary } from "../../../types/workflow";
+import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
 
 type SubflowListPageProps = {
   subflows: SubflowSummary[];
   loading: boolean;
   error: string;
   onCreateSubflow: (input: { name: string; description?: string | null }) => Promise<void>;
+  onUpdateSubflow: (
+    subflow: SubflowSummary,
+    input: { name: string },
+  ) => Promise<void>;
   onDuplicateSubflow: (subflow: SubflowSummary) => Promise<void>;
   onDeleteSubflow: (subflow: SubflowSummary) => Promise<void>;
   onOpenSubflow: (subflowId: string) => void;
@@ -31,6 +36,7 @@ export function SubflowListPage({
   loading,
   error,
   onCreateSubflow,
+  onUpdateSubflow,
   onDuplicateSubflow,
   onDeleteSubflow,
   onOpenSubflow,
@@ -39,6 +45,7 @@ export function SubflowListPage({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [settingsSubflow, setSettingsSubflow] = useState<SubflowSummary | null>(null);
   const [localError, setLocalError] = useState("");
 
   async function submitCreateSubflow(event: React.FormEvent) {
@@ -132,6 +139,14 @@ export function SubflowListPage({
                   <Eye aria-hidden="true" />
                 </IconButton>
                 <IconButton
+                  label={`Settings ${subflow.name}`}
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setSettingsSubflow(subflow)}
+                >
+                  <Settings aria-hidden="true" />
+                </IconButton>
+                <IconButton
                   label={`Duplicate ${subflow.name}`}
                   type="button"
                   variant="secondary"
@@ -203,6 +218,16 @@ export function SubflowListPage({
           </form>
         </DialogContent>
       </Dialog>
+      <SubflowSettingsDialog
+        subflow={settingsSubflow}
+        onOpenChange={(open) => {
+          if (!open) setSettingsSubflow(null);
+        }}
+        onSave={async (input) => {
+          if (!settingsSubflow) return;
+          await onUpdateSubflow(settingsSubflow, input);
+        }}
+      />
     </section>
   );
 }

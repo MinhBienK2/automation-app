@@ -56,6 +56,8 @@ const workflowApi: WorkflowElectronBridge = {
     invokeWorkflow("listSubflows", projectId),
   getSubflow: (subflowId) =>
     invokeWorkflow("getSubflow", subflowId),
+  updateSubflow: (subflowId, input) =>
+    invokeWorkflow("updateSubflow", subflowId, input),
   getSubflowGraph: (subflowId) =>
     invokeWorkflow("getSubflowGraph", subflowId),
   saveSubflowGraph: (subflowId, graph) =>

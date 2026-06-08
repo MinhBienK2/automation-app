@@ -84,10 +84,11 @@ Node/Electron backend.
   backend.
 - Workflow graph load, save, validate, compile, and run command logic.
 - Project, compatibility Project Environment/session, and Subflow CRUD command
-  logic. Browser Launch settings for project saved sessions and private
-  workflow sessions are backend-owned, and subflow delete is guarded by workflow
-  usage. The renderer exposes grouped project identity controls instead of a
-  full Project Environment list/create/editor. Project creation stays
+  logic. `updateSubflow` owns subflow metadata rename validation, Browser Launch
+  settings for project saved sessions and private workflow sessions are
+  backend-owned, and subflow delete is guarded by workflow usage. The renderer
+  exposes grouped project identity controls instead of a full Project
+  Environment list/create/editor. Project creation stays
   backend-owned through `createProject`, which creates the project, default
   saved session, and initial `Main` workflow transactionally. Project
   rename/duplicate/export-package/import-package/delete stays backend-owned

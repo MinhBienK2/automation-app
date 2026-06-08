@@ -92,6 +92,10 @@ export type WorkflowElectronBridge = {
   ): Promise<Subflow>;
   listSubflows(projectId: string): Promise<SubflowSummary[]>;
   getSubflow(subflowId: string): Promise<Subflow>;
+  updateSubflow(
+    subflowId: string,
+    input: { name?: string; description?: string | null },
+  ): Promise<Subflow>;
   getSubflowGraph(subflowId: string): Promise<WorkflowGraph>;
   saveSubflowGraph(subflowId: string, graph: WorkflowGraph): Promise<void>;
   duplicateSubflow(subflowId: string, name: string): Promise<Subflow>;

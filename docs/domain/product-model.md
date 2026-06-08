@@ -121,9 +121,9 @@ Users can:
   graph run controls.
 - Use browser/session/network/orchestration actions when building complex automation.
 - Load, edit, save, validate, compile, and run supported visual workflow graphs.
-- Create, open, save, duplicate, and delete reusable subflows from the selected
-  project's Subflows collection. Deletion is blocked when a subflow is
-  referenced by workflows.
+- Create, open, rename through Subflow Settings, save, duplicate, and delete
+  reusable subflows from the selected project's Subflows collection. Deletion is
+  blocked when a subflow is referenced by workflows.
 - Add reusable subflows to workflow graphs from the dedicated Add Subflow
   toolbar picker, map inputs into the subflow, and inspect usage warnings before
   saving subflow changes.

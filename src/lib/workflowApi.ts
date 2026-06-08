@@ -115,6 +115,13 @@ export function getSubflow(subflowId: string) {
   return bridge().getSubflow(subflowId);
 }
 
+export function updateSubflow(
+  subflowId: string,
+  input: { name?: string; description?: string | null },
+) {
+  return bridge().updateSubflow(subflowId, input);
+}
+
 export function getSubflowGraph(subflowId: string) {
   return bridge().getSubflowGraph(subflowId);
 }

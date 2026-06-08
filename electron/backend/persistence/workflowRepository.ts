@@ -448,6 +448,28 @@ export class WorkflowRepository {
     return row ? parseJson<WorkflowGraph>(row.graph_json) : null;
   }
 
+  updateSubflow(
+    subflowId: string,
+    input: { name?: string; description?: string | null },
+    now = new Date(),
+  ): Subflow | null {
+    const subflow = this.getSubflow(subflowId);
+    if (!subflow) return null;
+    const timestamp = now.toISOString();
+    const name = input.name ?? subflow.name;
+    const description =
+      input.description === undefined ? subflow.description : input.description ?? "";
+    this.database
+      .prepare("UPDATE subflows SET name = ?, description = ?, updated_at = ? WHERE id = ?")
+      .run(name, description, timestamp, subflowId);
+    return {
+      ...subflow,
+      name,
+      description,
+      updated_at: timestamp,
+    };
+  }
+
   saveSubflowGraph(subflowId: string, graph: WorkflowGraph, now = new Date()) {
     this.database
       .prepare("UPDATE subflows SET graph_json = ?, updated_at = ? WHERE id = ?")

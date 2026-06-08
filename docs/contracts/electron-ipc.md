@@ -53,6 +53,7 @@ string map.
 - `createSubflow`
 - `listSubflows`
 - `getSubflow`
+- `updateSubflow`
 - `getSubflowGraph`
 - `saveSubflowGraph`
 - `duplicateSubflow`
@@ -140,7 +141,8 @@ returns the updated project session after backend-generating a new identity id,
 profile fields, and deterministic fingerprint seed while preserving non-storage
 Browser Launch preferences and deleting the old unshared local project profile
 directory after UI confirmation. Subflow commands expose project-scoped
-reusable graphs, usage queries, guarded deletion, and graph save/load.
+reusable graphs, metadata rename through `updateSubflow`, usage queries,
+guarded deletion, and graph save/load.
 
 `importWorkflowPackage(packageValue, options)` accepts the selected Flow and
 Settings sections plus optional `target_project_id`. When present, the backend

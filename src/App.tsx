@@ -55,6 +55,7 @@ import {
   stopRecordingSession,
   stopRun as stopRunCommand,
   updateProject as updateProjectCommand,
+  updateSubflow as updateSubflowCommand,
   validateWorkflowGraph,
 } from "./lib/workflowApi";
 import { linearGraphFromSteps } from "./features/workflows/lib/workflowGraph";
@@ -887,6 +888,24 @@ function App() {
       await loadSubflowsForProject(subflow.project_id);
     } catch (error) {
       setAppError(commandMessage(error));
+    }
+  }
+
+  async function updateProjectSubflow(
+    subflow: SubflowSummary | Subflow,
+    input: { name: string },
+  ) {
+    setAppError("");
+    try {
+      const updated = await updateSubflowCommand(subflow.id, input);
+      if (selectedSubflow?.id === updated.id) {
+        setSelectedSubflow(updated);
+      }
+      await loadSubflowsForProject(updated.project_id);
+    } catch (error) {
+      const message = commandMessage(error);
+      setAppError(message);
+      throw new Error(message);
     }
   }
 
@@ -1814,6 +1833,7 @@ function App() {
               loading={subflowsLoading}
               error={appError}
               onCreateSubflow={createProjectSubflow}
+              onUpdateSubflow={updateProjectSubflow}
               onDuplicateSubflow={duplicateProjectSubflow}
               onDeleteSubflow={deleteProjectSubflow}
               onOpenSubflow={(subflowId) => {
@@ -1889,6 +1909,9 @@ function App() {
           onGraphChange={changeSubflowGraph}
           onSaveGraph={() => {
             void saveCurrentSubflowGraph();
+          }}
+          onUpdateSubflow={async (input) => {
+            await updateProjectSubflow(selectedSubflow, input);
           }}
         />
       ) : screen === "detail" && detail ? (

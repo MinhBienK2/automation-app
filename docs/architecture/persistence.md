@@ -59,6 +59,9 @@ Electron/Node now owns the production persistence layer.
 - Workflow graph authoring data is stored in `workflows.graph_json`.
 - Workflow Settings are stored in `workflows.settings_json`.
 - Subflow graph authoring data is stored in `subflows.graph_json`.
+- Updating subflow metadata, such as the name changed through Subflow Settings,
+  updates the `subflows` row and touches `updated_at` without rewriting the
+  graph JSON.
 - Project saved-session and private workflow-session Browser Launch settings
   are stored in `project_environments.browser_launch_json`. Project Settings can
   edit the saved fingerprint seed or ask the backend to regenerate the

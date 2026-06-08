@@ -137,12 +137,15 @@
 ## Subflow Authoring
 
 - The selected project's Subflows collection lists reusable subflows for that
-  project with description, usage count, open, duplicate, and delete actions.
+  project with description, usage count, open, settings, duplicate, and delete
+  actions. Settings opens Subflow Settings so the subflow name can be changed
+  without opening the graph editor.
 - Creating a subflow persists a saved graph fragment with a start node and the
   same graph DTO shape as workflows.
 - Opening a subflow loads its graph and usage list, and the detail header shows
-  the owning project name. The editor header has Save only, disabled until the
-  subflow graph has content changes. Duplicate and Delete stay on the Subflows
+  the owning project name. The editor header has Settings and Save; Settings
+  opens Subflow Settings for renaming, while Save is disabled until the subflow
+  graph has content changes. Duplicate and Delete stay on the Subflows
   collection list, and subflow detail has no Launch Run action because subflows
   are reusable implementation units rather than product scenarios.
 - Leaving subflow detail with unsaved graph changes opens the same unsaved

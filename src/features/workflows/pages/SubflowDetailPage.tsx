@@ -1,4 +1,5 @@
-import { Save } from "lucide-react";
+import { Save, Settings } from "lucide-react";
+import { useState } from "react";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { IconButton } from "../../../components/ui/icon-button";
 import { initialRunState } from "../../../lib/workflowUi";
@@ -7,6 +8,7 @@ import type {
   SubflowUsage,
   WorkflowGraph,
 } from "../../../types/workflow";
+import { SubflowSettingsDialog } from "../components/SubflowSettingsDialog";
 import { WorkflowGraphEditor } from "../components/WorkflowGraphEditor";
 
 type SubflowDetailPageProps = {
@@ -22,6 +24,7 @@ type SubflowDetailPageProps = {
   onBack: () => void;
   onGraphChange: (graph: WorkflowGraph) => void;
   onSaveGraph: () => void;
+  onUpdateSubflow: (input: { name: string }) => Promise<void>;
 };
 
 export function SubflowDetailPage({
@@ -37,7 +40,9 @@ export function SubflowDetailPage({
   onBack,
   onGraphChange,
   onSaveGraph,
+  onUpdateSubflow,
 }: SubflowDetailPageProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const usageCount = usage.length;
   const usageLabel = `${usageCount} ${usageCount === 1 ? "workflow" : "workflows"}`;
 
@@ -62,6 +67,15 @@ export function SubflowDetailPage({
               className="workflow-command-icon"
               variant="secondary"
               type="button"
+              label="Settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              className="workflow-command-icon"
+              variant="secondary"
+              type="button"
               label="Save"
               onClick={onSaveGraph}
               disabled={!canSaveGraph}
@@ -70,6 +84,11 @@ export function SubflowDetailPage({
             </IconButton>
           </div>
         }
+      />
+      <SubflowSettingsDialog
+        subflow={settingsOpen ? subflow : null}
+        onOpenChange={(open) => setSettingsOpen(open)}
+        onSave={onUpdateSubflow}
       />
 
       {appError ? (

@@ -25,6 +25,7 @@ const methodNames: BridgeMethodName[] = [
   "createSubflow",
   "listSubflows",
   "getSubflow",
+  "updateSubflow",
   "getSubflowGraph",
   "saveSubflowGraph",
   "duplicateSubflow",
@@ -326,6 +327,9 @@ export function mockWorkflowBridgeCommands(commands: CommandMap) {
   );
   workflowBridgeMock.getSubflow.mockImplementation((subflowId: string) =>
     resolveCommand(commands, "get_subflow", { subflowId }),
+  );
+  workflowBridgeMock.updateSubflow.mockImplementation((subflowId: string, input: unknown) =>
+    resolveCommand(commands, "update_subflow", { subflowId, input }),
   );
   workflowBridgeMock.getSubflowGraph.mockImplementation((subflowId: string) =>
     resolveCommand(commands, "get_subflow_graph", { subflowId }),

@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   mockWorkflowBridgeCommands,
   resetWorkflowBridge,
@@ -64,6 +64,55 @@ describe("Subflow list integration", () => {
         "Copy of Login Subflow",
       );
     });
+  });
+
+  test("opens subflow settings from the list and saves a renamed subflow", async () => {
+    let currentSubflow: SubflowSummary = {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "Reusable login path",
+      tags: [],
+      used_by_count: 0,
+      created_at: "1",
+      updated_at: "1",
+    };
+    const updateSubflow = vi.fn(({ input }: { input: { name?: string } }) => {
+      currentSubflow = {
+        ...currentSubflow,
+        name: input.name ?? currentSubflow.name,
+        updated_at: "2",
+      };
+      return { ...currentSubflow, graph: linearGraphFromSteps([]) };
+    });
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_subflows: () => [currentSubflow],
+      update_subflow: updateSubflow,
+    });
+
+    renderApp();
+
+    await openSubflows();
+    const row = (await screen.findByText("Login Subflow")).closest("[data-slot='card']");
+    await userEvent.click(
+      within(row as HTMLElement).getByRole("button", { name: "Settings Login Subflow" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Subflow Settings" });
+    const nameInput = within(dialog).getByLabelText("Subflow name");
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Session Prep");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Settings" }));
+
+    await waitFor(() => {
+      expect(updateSubflow).toHaveBeenCalledWith({
+        subflowId: "subflow-login",
+        input: { name: "Session Prep" },
+      });
+    });
+    expect(await screen.findByText("Session Prep")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Subflow Settings" })).not.toBeInTheDocument();
   });
 
   test("opens a subflow editor with usage warning and no nested Call Subflow palette", async () => {
@@ -139,5 +188,59 @@ describe("Subflow list integration", () => {
     await userEvent.click(screen.getByRole("button", { name: "Back to Subflows" }));
     expect(await screen.findByRole("heading", { name: "Subflows" })).toBeInTheDocument();
     expect(screen.getByText("Login Subflow")).toBeInTheDocument();
+  });
+
+  test("opens subflow settings from detail and updates the detail title", async () => {
+    const graph = linearGraphFromSteps([sleepStep]);
+    let currentSubflow: SubflowSummary = {
+      id: "subflow-login",
+      project_id: "project-1",
+      name: "Login Subflow",
+      description: "Reusable login path",
+      tags: [],
+      used_by_count: 0,
+      created_at: "1",
+      updated_at: "1",
+    };
+    const updateSubflow = vi.fn(({ input }: { input: { name?: string } }) => {
+      currentSubflow = {
+        ...currentSubflow,
+        name: input.name ?? currentSubflow.name,
+        updated_at: "2",
+      };
+      return { ...currentSubflow, graph };
+    });
+    mockWorkflowBridgeCommands({
+      ...listWorkflowScenario([workflow]),
+      list_subflows: () => [currentSubflow],
+      get_subflow: () => ({ ...currentSubflow, graph }),
+      get_subflow_graph: graph,
+      get_subflow_usage: [],
+      update_subflow: updateSubflow,
+    });
+
+    renderApp();
+
+    await openSubflows();
+    const row = (await screen.findByText("Login Subflow")).closest("[data-slot='card']");
+    await userEvent.click(
+      within(row as HTMLElement).getByRole("button", { name: "Open Login Subflow" }),
+    );
+
+    const header = await screen.findByRole("region", { name: "Subflow detail header" });
+    await userEvent.click(within(header).getByRole("button", { name: "Settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Subflow Settings" });
+    const nameInput = within(dialog).getByLabelText("Subflow name");
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Session Prep");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save Settings" }));
+
+    await waitFor(() => {
+      expect(updateSubflow).toHaveBeenCalledWith({
+        subflowId: "subflow-login",
+        input: { name: "Session Prep" },
+      });
+    });
+    expect(await screen.findByRole("heading", { name: "Session Prep" })).toBeInTheDocument();
   });
 });

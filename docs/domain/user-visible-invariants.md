@@ -175,11 +175,14 @@ Preserve these unless the task explicitly changes them.
   represented as in-run action nodes in the current workflow contract.
 - Subflows are reusable graph fragments, not standalone runnable scenarios.
   They are reachable from the selected project's Subflows collection, can be
-  created, opened, saved, duplicated, and deleted, and show usage warnings when
-  referenced by workflows. Opening a subflow detail shows the owning project
-  name in header metadata. The subflow detail header exposes Save only, disabled
-  until graph content changes; duplicate and delete actions stay on the Subflows
-  collection list. Deleting a referenced subflow is blocked.
+  created, opened, renamed through Subflow Settings, saved, duplicated, and
+  deleted, and show usage warnings when referenced by workflows. The Subflows
+  collection list exposes a Settings action for each row. Opening a subflow
+  detail shows the owning project name in header metadata. The subflow detail
+  header exposes Settings and Save; Settings opens Subflow Settings for
+  renaming, Save is disabled until graph content changes, and duplicate/delete
+  actions stay on the Subflows collection list. Deleting a referenced subflow is
+  blocked.
 - Call Subflow nodes run a same-project subflow inside the caller's existing
   run, browser context, output store, evidence path, and retention policy. MVP
   subflows cannot call other subflows. If the referenced subflow has no

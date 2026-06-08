@@ -34,7 +34,8 @@ Frontend and backend must agree on:
 - `WorkflowSettings`: per-workflow aggregate loaded through `get_workflow_settings`, with `general`, `run_policy`, `browser_launch`, `graph_defaults`, and `environment` sections.
 - `WorkflowGraph`: `version`, `nodes`, `edges`, `viewport`.
 - `Subflow`: project-scoped reusable graph fragment with `id`, `project_id`,
-  `name`, optional description, `graph`, and timestamps.
+  `name`, optional description, `graph`, and timestamps. `updateSubflow`
+  changes metadata such as `name` without changing the graph shape.
 - `SubflowSummary`: subflow list DTO with `used_by_count`.
 - `SubflowUsage`: workflows that reference a subflow through Call Subflow
   nodes.

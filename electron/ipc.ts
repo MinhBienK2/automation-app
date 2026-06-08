@@ -16,6 +16,7 @@ export const workflowIpcChannels = {
   createSubflow: "workflow:createSubflow",
   listSubflows: "workflow:listSubflows",
   getSubflow: "workflow:getSubflow",
+  updateSubflow: "workflow:updateSubflow",
   getSubflowGraph: "workflow:getSubflowGraph",
   saveSubflowGraph: "workflow:saveSubflowGraph",
   duplicateSubflow: "workflow:duplicateSubflow",

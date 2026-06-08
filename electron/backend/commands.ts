@@ -892,6 +892,24 @@ export function createWorkflowCommandHandlers(context: CommandContext) {
       return subflow;
     },
 
+    updateSubflow(
+      subflowId: string,
+      input: { name?: string; description?: string | null },
+    ): Subflow {
+      const patch: { name?: string; description?: string | null } = {};
+      if (input.name !== undefined) {
+        const name = input.name.trim();
+        if (!name) throw commandError("Subflow name is required", "name");
+        patch.name = name;
+      }
+      if (input.description !== undefined) {
+        patch.description = input.description?.trim() ?? "";
+      }
+      const updated = repository.updateSubflow(subflowId, patch);
+      if (!updated) throw commandError("Subflow not found", "subflowId");
+      return updated;
+    },
+
     getSubflowGraph(subflowId: string): WorkflowGraph {
       const graph = repository.getSubflowGraph(subflowId);
       if (!graph) throw commandError("Subflow not found", "subflowId");
