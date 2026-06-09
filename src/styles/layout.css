@@ -577,6 +577,114 @@
   padding: 18px;
 }
 
+.xpath-cookbook-panel {
+  max-width: 960px;
+}
+
+.xpath-cookbook-search {
+  display: grid;
+  gap: 8px;
+}
+
+.xpath-cookbook-search label {
+  color: var(--app-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.xpath-cookbook-search p {
+  margin: 0;
+}
+
+.xpath-recipe-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.xpath-recipe {
+  align-content: start;
+  min-width: 0;
+  background: #0b1016;
+}
+
+.xpath-recipe-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.xpath-recipe-title > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xpath-recipe-title > span:last-child {
+  padding: 2px 8px;
+  border: 1px solid rgba(50, 211, 230, 0.28);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.xpath-recipe p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.xpath-recipe-examples {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.xpath-recipe code {
+  display: block;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: #121c26;
+  color: var(--app-text);
+  font-family:
+    "Source Code Pro",
+    "Office Code Pro",
+    Menlo,
+    Consolas,
+    monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.xpath-recipe-block {
+  display: grid;
+  gap: 6px;
+}
+
+.xpath-recipe-block strong {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.xpath-recipe-block ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .settings-project-environments-panel {
   width: 100%;
   max-width: none;

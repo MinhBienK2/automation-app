@@ -126,9 +126,12 @@ Preserve these unless the task explicitly changes them.
 - Closing Workflow Settings with unsaved edits asks whether to save and close, discard changes, or keep editing.
 - Graph autosave is an app-level setting. It is enabled by default and can be changed from App Settings.
 - App Settings includes current app-level graph autosave preferences,
-  environment readiness diagnostics, guarded local maintenance commands, and
-  graph shortcut guidance. It does not manage the project saved session and
-  does not introduce notification or theme systems. Diagnostics display CloakBrowser,
+  a searchable XPath cookbook, environment readiness diagnostics, guarded local
+  maintenance commands, and graph shortcut guidance. The XPath cookbook groups
+  locator recipes for text, attributes, forms, scoped buttons, tables/lists,
+  dialogs, menus, state, parent/child targeting, SVG, iframe targets, fallbacks,
+  and debugging. It does not manage the project saved session and does not
+  introduce notification or theme systems. Diagnostics display CloakBrowser,
   GeoIP, headed display, font, profile-count, and smoke readiness without raw
   binary/cache/profile/font paths. Cleanup Orphaned Profiles opens an in-app
   confirmation before deleting local inactive orphan profile directories.
@@ -243,7 +246,7 @@ Preserve these unless the task explicitly changes them.
   sanitized Identity Lab DTOs and does not expose raw profile paths, browser
   storage, cookies, tokens, proxy credentials, absolute local font/binary paths,
   or raw arbitrary run outputs.
-- App Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls.
+- App Settings includes graph shortcut guidance for navigation, selection, editing, run, and save controls, plus searchable XPath cookbook help for selecting page elements.
 - On/off settings use the shared switch treatment. Compact exclusive choices such as Help language and Variables Rows/JSON use the shared segmented-control treatment with a clear active state.
 - User-facing layout and styling changes follow `DESIGN.md`.
 - Mission Control must remain usable at compact desktop widths such as

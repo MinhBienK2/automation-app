@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { GraphShortcutGuide } from "../../workflows/components/GraphShortcutGuide";
 import { Button } from "../../../components/ui/button";
+import { XPathCookbook } from "../components/XPathCookbook";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,8 @@ export function SettingsPage({
           onCheckedChange={onGraphAutosaveEnabledChange}
         />
       </section>
+
+      <XPathCookbook />
 
       <section className="panel settings-panel" aria-label="Environment readiness">
         <div className="panel-heading">
