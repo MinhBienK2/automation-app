@@ -10,7 +10,7 @@ describe("workflow graph layout", () => {
   test("wraps long main paths into deterministic left-to-right rows", async () => {
     const graph = linearWorkflowGraph(18);
 
-    const result = await layoutWorkflowGraph(graph, { type: "full" });
+    const result = await layoutWorkflowGraph(graph);
     const positions = positionsByNode(result.graph);
 
     expect(positions.get("start")).toEqual({ x: 0, y: 0 });
@@ -25,7 +25,7 @@ describe("workflow graph layout", () => {
   test("keeps branch and continuation work on separate lanes", async () => {
     const graph = ifMergeWorkflowGraph();
 
-    const result = await layoutWorkflowGraph(graph, { type: "full" });
+    const result = await layoutWorkflowGraph(graph);
     const positions = positionsByNode(result.graph);
 
     expect(positions.get("if-1")?.x).toBeGreaterThan(positions.get("start")?.x ?? 0);
@@ -39,7 +39,7 @@ describe("workflow graph layout", () => {
   test("orders output targets top-to-bottom by source port order", async () => {
     const graph = switchFanoutWorkflowGraph();
 
-    const result = await layoutWorkflowGraph(graph, { type: "full" });
+    const result = await layoutWorkflowGraph(graph);
     const positions = positionsByNode(result.graph);
 
     expect(positions.get("case-1")?.y).toBeLessThan(positions.get("case-2")?.y ?? 0);
@@ -49,30 +49,12 @@ describe("workflow graph layout", () => {
   test("orders input sources top-to-bottom by target port order", async () => {
     const graph = multiInputWorkflowGraph();
 
-    const result = await layoutWorkflowGraph(graph, { type: "full" });
+    const result = await layoutWorkflowGraph(graph);
     const positions = positionsByNode(result.graph);
 
     expect(positions.get("source-first")?.y).toBeLessThan(
       positions.get("source-second")?.y ?? 0,
     );
-  });
-
-  test("selection layout moves only selected nodes", async () => {
-    const graph = linearWorkflowGraph(5);
-
-    const result = await layoutWorkflowGraph(graph, {
-      type: "selection",
-      nodeIds: ["node-2", "node-3", "node-4"],
-    });
-    const original = positionsByNode(graph);
-    const next = positionsByNode(result.graph);
-
-    expect(next.get("start")).toEqual(original.get("start"));
-    expect(next.get("node-1")).toEqual(original.get("node-1"));
-    expect(next.get("node-5")).toEqual(original.get("node-5"));
-    expect(next.get("node-2")).not.toEqual(original.get("node-2"));
-    expect(next.get("node-3")).not.toEqual(original.get("node-3"));
-    expect(next.get("node-4")).not.toEqual(original.get("node-4"));
   });
 
   test("classifies edge intent without persisting layout metadata", () => {

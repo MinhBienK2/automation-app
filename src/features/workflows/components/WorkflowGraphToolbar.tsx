@@ -1,5 +1,4 @@
 import {
-  AlignHorizontalDistributeCenter,
   Blocks,
   Hand,
   Keyboard,
@@ -22,13 +21,11 @@ type NodePaletteGroups = Array<{ label: string; nodes: GraphNodeType[] }>;
 
 type WorkflowGraphToolbarProps = {
   graphKind?: "workflow" | "subflow";
-  isArrangeSelectionDisabled: boolean;
   isArranging: boolean;
   isPanMode: boolean;
   onAddAction: () => void;
   onAddNewNode: () => void;
   onAddSubflow: () => void;
-  onArrangeSelection: () => void;
   onAutoArrange: () => void;
   onFitView: () => void;
   onOpenShortcuts: () => void;
@@ -46,13 +43,11 @@ type WorkflowGraphToolbarProps = {
 
 export function WorkflowGraphToolbar({
   graphKind = "workflow",
-  isArrangeSelectionDisabled,
   isArranging,
   isPanMode,
   onAddAction,
   onAddNewNode,
   onAddSubflow,
-  onArrangeSelection,
   onAutoArrange,
   onFitView,
   onOpenShortcuts,
@@ -125,15 +120,6 @@ export function WorkflowGraphToolbar({
           onClick={onAutoArrange}
         >
           <Workflow aria-hidden="true" />
-        </IconButton>
-        <IconButton
-          label="Arrange selection"
-          disabled={isArrangeSelectionDisabled || isArranging}
-          type="button"
-          variant="ghost"
-          onClick={onArrangeSelection}
-        >
-          <AlignHorizontalDistributeCenter aria-hidden="true" />
         </IconButton>
       </div>
       <Button type="button" variant="secondary" onClick={onAddNewNode}>

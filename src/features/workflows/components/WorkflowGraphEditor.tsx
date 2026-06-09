@@ -689,38 +689,16 @@ export function WorkflowGraphEditor({
 
   async function autoArrangeGraph() {
     if (runState.status === "running" || isArrangingGraph) return;
-    await arrangeGraph({ type: "full" });
+    await arrangeGraph();
     reactFlowInstance?.fitView({ duration: 240, padding: 0.18 });
   }
 
-  async function arrangeSelection() {
-    if (
-      runState.status === "running" ||
-      isArrangingGraph ||
-      selectionRef.current.nodeIds.length < 2
-    ) {
-      return;
-    }
-    await arrangeGraph({
-      type: "selection",
-      nodeIds: selectionRef.current.nodeIds,
-    });
-    const arrangedNodes = graphRef.current.nodes.filter((node) =>
-      selectionRef.current.nodeIds.includes(node.id),
-    );
-    if (arrangedNodes.length === 1) {
-      focusNode(arrangedNodes[0]);
-    }
-  }
-
-  async function arrangeGraph(
-    mode: { type: "full" } | { type: "selection"; nodeIds: string[] },
-  ) {
+  async function arrangeGraph() {
     setIsArrangingGraph(true);
     setArrangeError(null);
     const layoutSource = graphRef.current;
     try {
-      const result = await layoutWorkflowGraph(layoutSource, mode);
+      const result = await layoutWorkflowGraph(layoutSource);
       if (graphRef.current !== layoutSource) return;
       commitGraphChange(result.graph, selectionRef.current);
     } catch {
@@ -825,15 +803,11 @@ export function WorkflowGraphEditor({
     >
       <WorkflowGraphToolbar
         graphKind={graphKind}
-        isArrangeSelectionDisabled={
-          runState.status === "running" || selection.nodeIds.length < 2
-        }
         isArranging={isArrangingGraph}
         isPanMode={isToolbarPanMode}
         onAddAction={() => setIsActionPaletteOpen(true)}
         onAddNewNode={addNewNode}
         onAddSubflow={() => setIsSubflowPaletteOpen(true)}
-        onArrangeSelection={arrangeSelection}
         onAutoArrange={autoArrangeGraph}
         onFitView={() => reactFlowInstance?.fitView()}
         onOpenShortcuts={() => setIsShortcutGuideOpen(true)}

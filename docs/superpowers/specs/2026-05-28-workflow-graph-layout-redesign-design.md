@@ -175,16 +175,10 @@ The graph toolbar keeps the existing icon-first command style.
 Commands:
 
 - `Auto arrange graph`: arrange all nodes.
-- `Arrange selection`: arrange only the selected nodes when at least two nodes
-  are selected.
 - `Fit view`: unchanged.
 - `Undo` and `Redo`: include arrange operations.
 
-`Arrange selection` appears as an icon-only toolbar action with tooltip text and
-an accessible label. It is disabled when fewer than two nodes are selected or
-while a run is active.
-
-When auto-arrange is running, the arrange controls show a disabled busy state.
+When auto-arrange is running, the command shows a disabled busy state.
 The canvas remains stable until the new layout is ready, then positions update
 in one committed graph change.
 
@@ -343,17 +337,13 @@ Responsibilities:
 - Classify edges by workflow intent.
 - Apply layered layout options.
 - Convert ELK output positions back to `WorkflowGraph` node positions.
-- Support whole-graph and selected-subgraph layout modes.
+- Support whole-graph layout.
 - Return metadata needed by edge styling, if that metadata can be derived
   without changing persisted graph shape.
 
 Public API:
 
 ```ts
-export type GraphLayoutMode =
-  | { type: "full" }
-  | { type: "selection"; nodeIds: string[] };
-
 export type GraphLayoutResult = {
   graph: WorkflowGraph;
   edgeKinds: Map<string, WorkflowGraphEdgeKind>;
@@ -361,7 +351,6 @@ export type GraphLayoutResult = {
 
 export async function layoutWorkflowGraph(
   graph: WorkflowGraph,
-  mode: GraphLayoutMode,
 ): Promise<GraphLayoutResult>;
 ```
 
@@ -629,10 +618,9 @@ Update existing tests:
 
 Add or update tests for:
 
-- Toolbar exposes `Auto arrange graph` and `Arrange selection`.
-- `Arrange selection` is disabled until at least two nodes are selected.
-- Arrange controls are disabled while graph layout is pending.
-- Arrange controls are disabled while a workflow run is active.
+- Toolbar exposes `Auto arrange graph`.
+- The auto-arrange command is disabled while graph layout is pending.
+- The auto-arrange command is disabled while a workflow run is active.
 - Layout errors are contained and do not overwrite positions.
 - Custom edge component renders labels, marker, selection class, issue class,
   running/completed/failed classes, and click/context-menu selection.
@@ -657,7 +645,6 @@ graph workflow. Manual smoke should include:
 - Arrange a graph with `If -> true/false -> Merge -> Continue`.
 - Arrange a Router with at least three cases and default.
 - Arrange a loop graph.
-- Select a subset of nodes and arrange only that selection.
 - Undo and redo an arrange.
 - Save, reopen, and confirm positions persist.
 
@@ -671,9 +658,8 @@ The feature is complete when all of the following are true:
 - Main path, branch path, continuation path, loop path, and recovery path are
   visually distinguishable without relying only on color.
 - Links avoid passing through node bodies in common graph shapes.
-- Auto arrange and arrange selection are both part of undo/redo history.
+- Auto arrange is part of undo/redo history.
 - Auto arrange preserves graph data except node positions.
-- Arrange selection preserves non-selected node positions.
 - Layout failure leaves positions unchanged and shows a contained message.
 - Existing saved workflows load without migration.
 - Graph validation, compilation, run progress, selected-link editing, edge
@@ -700,11 +686,10 @@ Phase 2: Workflow edge rendering
 - Add CSS classes for main/branch/continuation/loop/recovery styling.
 - Preserve edge selection, labels, markers, context menu, and runtime state.
 
-Phase 3: Selection arrange
+Phase 3: Reserved
 
-- Add `Arrange selection` toolbar action.
-- Implement selected-subgraph layout with external anchors.
-- Add tests for selected-only movement and undo/redo.
+- Keep the layout API focused on whole-graph arrange unless a future workflow
+  requirement reintroduces a scoped layout command.
 
 Phase 4: Polish and guardrails
 
@@ -748,20 +733,17 @@ Web Worker in a follow-up without changing persisted graph data.
 - The custom edge path can use React Flow `getSmoothStepPath` first; if it
   still crosses node bodies too often, replace it with a stricter orthogonal
   route generator.
-- Whether `Arrange selection` should be visible disabled or hidden until
-  multi-selection. Recommendation: visible disabled for discoverability.
 
 ## Documentation Impact
 
 When implemented, update:
 
 - `docs/domain/user-visible-invariants.md`: describe ELK-backed deterministic
-  layout, arrange selection, and workflow edge kinds if they become part of the
-  product contract.
+  layout and workflow edge kinds if they become part of the product contract.
 - `docs/architecture/frontend.md`: document `graphLayout.ts` and custom edge
   ownership.
-- `README.md`: update the desktop smoke checklist for arrange selection and
-  branch-heavy layout verification.
+- `README.md`: update the desktop smoke checklist for branch-heavy layout
+  verification.
 
 No backend docs should change unless implementation changes persisted graph
 contracts, validation, compilation, or run behavior.

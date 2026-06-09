@@ -32,6 +32,14 @@ const workflowGraphShortcutsSource = readFileSync(
   join(process.cwd(), "src/features/workflows/components/useWorkflowGraphShortcuts.ts"),
   "utf8",
 );
+const workflowGraphToolbarSource = readFileSync(
+  join(process.cwd(), "src/features/workflows/components/WorkflowGraphToolbar.tsx"),
+  "utf8",
+);
+const removedSelectionLayoutLabel = ["Arrange", "selection"].join(" ");
+const removedSelectionLayoutDisabledProp = ["isArrange", "SelectionDisabled"].join("");
+const removedSelectionLayoutCallbackProp = ["onArrange", "Selection"].join("");
+const removedSelectionLayoutFunction = ["function arrange", "Selection"].join("");
 const appSource = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
 const graphNodeTypeCoverage: Record<GraphNodeType, true> = {
   start: true,
@@ -1691,14 +1699,17 @@ describe("Workflow graph editor integration", () => {
       "Pan canvas mode",
       "Fit graph view",
       "Auto arrange graph",
-      "Arrange selection",
     ].forEach(
       (name) => {
         expect(within(toolbar).getByRole("button", { name })).toBeInTheDocument();
       },
     );
-    expect(within(toolbar).getByRole("button", { name: "Arrange selection" }))
-      .toBeDisabled();
+    expect(within(toolbar).queryByRole("button", { name: removedSelectionLayoutLabel }))
+      .not.toBeInTheDocument();
+    expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutLabel);
+    expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutDisabledProp);
+    expect(workflowGraphToolbarSource).not.toContain(removedSelectionLayoutCallbackProp);
+    expect(workflowGraphEditorSource).not.toContain(removedSelectionLayoutFunction);
 
     await userEvent.click(within(toolbar).getByRole("button", { name: "Pan canvas mode" }));
     expect(within(toolbar).getByRole("button", { name: "Pan canvas mode" }))

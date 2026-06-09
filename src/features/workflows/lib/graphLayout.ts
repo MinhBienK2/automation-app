@@ -15,10 +15,6 @@ export type WorkflowGraphEdgeKind =
   | "loop"
   | "recovery";
 
-export type GraphLayoutMode =
-  | { type: "full" }
-  | { type: "selection"; nodeIds: string[] };
-
 export type GraphLayoutResult = {
   graph: WorkflowGraph;
   edgeKinds: Map<string, WorkflowGraphEdgeKind>;
@@ -28,7 +24,6 @@ const layoutColumnGap = 260;
 const layoutRowGap = 120;
 const layoutLaneGap = 180;
 const layoutColumnsPerRow = 8;
-const selectionColumnGap = 220;
 
 const elk = new ELK({
   defaultLayoutOptions: {
@@ -44,19 +39,10 @@ const elk = new ELK({
 
 export async function layoutWorkflowGraph(
   graph: WorkflowGraph,
-  mode: GraphLayoutMode,
 ): Promise<GraphLayoutResult> {
   const edgeKinds = new Map(
     graph.edges.map((edge) => [edge.id, classifyWorkflowGraphEdge(graph, edge)]),
   );
-
-  if (mode.type === "selection") {
-    const elkPositions = await runElkLayoutForGraph(graph, new Set(mode.nodeIds));
-    return {
-      graph: layoutSelectedNodes(graph, mode.nodeIds, elkPositions),
-      edgeKinds,
-    };
-  }
 
   const elkPositions = await runElkLayoutForGraph(graph);
   const positionsBeforePortOrder = usesWrappedMainRows(graph)
@@ -94,53 +80,6 @@ export function classifyWorkflowGraphEdgeFromSource(
   if (isContinuationPort(source, edge.source_port)) return "continuation";
   if (isBranchPort(source, edge.source_port)) return "branch";
   return "main";
-}
-
-function layoutSelectedNodes(
-  graph: WorkflowGraph,
-  nodeIds: string[],
-  elkPositions: Map<string, GraphPosition>,
-): WorkflowGraph {
-  const selected = new Set(nodeIds);
-  const selectedNodes = graph.nodes.filter((node) => selected.has(node.id));
-  if (selectedNodes.length === 0) return graph;
-
-  const minX = Math.min(...selectedNodes.map((node) => node.position.x));
-  const minY = Math.min(...selectedNodes.map((node) => node.position.y));
-  const selectedGraph: WorkflowGraph = {
-    ...graph,
-    nodes: selectedNodes,
-    edges: graph.edges.filter(
-      (edge) => selected.has(edge.source_node_id) && selected.has(edge.target_node_id),
-    ),
-  };
-  const selectedPositionsBeforePortOrder = usesWrappedMainRows(selectedGraph)
-    ? fullGraphPositions(selectedGraph)
-    : normalizeElkPositions(elkPositions);
-  const selectedPositions = applyPortOrderToPositions(
-    selectedGraph,
-    selectedPositionsBeforePortOrder,
-  );
-  const selectedPositionValues = [...selectedPositions.values()];
-  const selectedMinX = Math.min(...selectedPositionValues.map((position) => position.x));
-  const selectedMinY = Math.min(...selectedPositionValues.map((position) => position.y));
-  const positions = new Map(
-    [...selectedPositions].map(([nodeId, position]) => [
-      nodeId,
-      {
-        x: Math.round(minX + position.x - selectedMinX + selectionColumnGap),
-        y: Math.round(minY + position.y - selectedMinY),
-      },
-    ]),
-  );
-
-  return {
-    ...graph,
-    nodes: graph.nodes.map((node) => ({
-      ...node,
-      position: positions.get(node.id) ?? node.position,
-    })),
-  };
 }
 
 function fullGraphPositions(graph: WorkflowGraph) {
