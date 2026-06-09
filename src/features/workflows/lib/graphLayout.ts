@@ -54,9 +54,14 @@ export async function layoutWorkflowGraph(
   const positionsBeforePortOrder = usesWrappedMainRows(graph)
     ? fullGraphPositions(graph)
     : normalizeElkPositions(elkPositions);
-  const positions = alignBranchLanePositions(
+  const positionsAfterPortOrder = applyPortOrderToPositions(
     graph,
-    applyPortOrderToPositions(graph, positionsBeforePortOrder),
+    positionsBeforePortOrder,
+  );
+  const positions = applyPortOrderToPositions(
+    graph,
+    alignBranchLanePositions(graph, positionsAfterPortOrder),
+    { includeBranchLaneConstraints: false },
   );
   return {
     graph: {
@@ -208,8 +213,9 @@ function normalizeElkPositions(positions: Map<string, GraphPosition>) {
 function applyPortOrderToPositions(
   graph: WorkflowGraph,
   positions: Map<string, GraphPosition>,
+  options: { includeBranchLaneConstraints?: boolean } = {},
 ) {
-  const constraints = portOrderConstraintsByColumn(graph, positions);
+  const constraints = portOrderConstraintsByColumn(graph, positions, options);
   if (constraints.size === 0) return positions;
 
   const nextPositions = new Map(positions);
@@ -353,6 +359,7 @@ function linearLaneOutputEdges(
 function portOrderConstraintsByColumn(
   graph: WorkflowGraph,
   positions: Map<string, GraphPosition>,
+  options: { includeBranchLaneConstraints?: boolean } = {},
 ) {
   const constraints = new Map<string, Array<[string, string]>>();
   const edgesBySourcePort = new Map<string, GraphEdge[]>();
@@ -381,14 +388,16 @@ function portOrderConstraintsByColumn(
     );
     addColumnConstraints(outputTargets, positions, constraints);
 
-    const inputSources = orderedInputPortIds(node).flatMap((portId) =>
+    const inputSourceGroups = orderedInputPortIds(node).map((portId) =>
       (edgesByTargetPort.get(edgeTargetPortKey(node.id, portId)) ?? [])
         .map((edge) => edge.source_node_id),
     );
-    addColumnConstraints(inputSources, positions, constraints);
+    addColumnGroupConstraints(inputSourceGroups, positions, constraints);
   }
 
-  addBranchLaneConstraints(graph, positions, constraints, edgesBySourcePort);
+  if (options.includeBranchLaneConstraints !== false) {
+    addBranchLaneConstraints(graph, positions, constraints, edgesBySourcePort);
+  }
 
   return constraints;
 }
@@ -483,11 +492,45 @@ function addColumnConstraints(
     const above = uniqueNodeIds[index];
     const below = uniqueNodeIds[index + 1];
     if (!above || !below) continue;
-    const aboveColumn = columnKey(positions.get(above));
-    const belowColumn = columnKey(positions.get(below));
-    if (!aboveColumn || aboveColumn !== belowColumn) continue;
-    constraints.set(aboveColumn, [...(constraints.get(aboveColumn) ?? []), [above, below]]);
+    addColumnConstraint(above, below, positions, constraints);
   }
+}
+
+function addColumnGroupConstraints(
+  orderedNodeIdGroups: string[][],
+  positions: Map<string, GraphPosition>,
+  constraints: Map<string, Array<[string, string]>>,
+) {
+  const uniqueGroups = orderedNodeIdGroups
+    .map((nodeIds) => [...new Set(nodeIds)])
+    .filter((nodeIds) => nodeIds.length > 0);
+
+  for (let leftIndex = 0; leftIndex < uniqueGroups.length - 1; leftIndex += 1) {
+    const aboveGroup = uniqueGroups[leftIndex];
+    if (!aboveGroup) continue;
+    for (let rightIndex = leftIndex + 1; rightIndex < uniqueGroups.length; rightIndex += 1) {
+      const belowGroup = uniqueGroups[rightIndex];
+      if (!belowGroup) continue;
+      for (const above of aboveGroup) {
+        for (const below of belowGroup) {
+          addColumnConstraint(above, below, positions, constraints);
+        }
+      }
+    }
+  }
+}
+
+function addColumnConstraint(
+  above: string,
+  below: string,
+  positions: Map<string, GraphPosition>,
+  constraints: Map<string, Array<[string, string]>>,
+) {
+  if (above === below) return;
+  const aboveColumn = columnKey(positions.get(above));
+  const belowColumn = columnKey(positions.get(below));
+  if (!aboveColumn || aboveColumn !== belowColumn) return;
+  constraints.set(aboveColumn, [...(constraints.get(aboveColumn) ?? []), [above, below]]);
 }
 
 function topologicalPortOrder(
