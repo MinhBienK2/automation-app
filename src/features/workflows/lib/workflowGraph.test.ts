@@ -10,6 +10,7 @@ import {
   nodePorts,
   toReactFlowGraph,
 } from "./workflowGraph";
+import { graphNodeHeightForPorts } from "./graphNodeDimensions";
 
 const waitStep: WorkflowStep = {
   id: "step-wait",
@@ -324,6 +325,52 @@ describe("workflow graph helpers", () => {
       ]),
     );
     expect(flow.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  test("keeps loaded port-heavy graph nodes from covering lower same-column nodes", () => {
+    const randomPorts = [
+      { id: "in", label: "In", direction: "input" as const },
+      ...Array.from({ length: 9 }, (_, index) => ({
+        id: `choice_${index + 1}`,
+        label: `Choice ${index + 1}`,
+        direction: "output" as const,
+      })),
+      { id: "done", label: "Done", direction: "output" as const },
+    ];
+    const graph: WorkflowGraph = {
+      version: 2,
+      viewport: { x: 82, y: 88, zoom: 0.5 },
+      nodes: [
+        {
+          id: "choose-behavior",
+          node_type: "random_choice",
+          label: "Random TikTok behavior",
+          position: { x: 1184, y: 193 },
+          config: {},
+          ports: randomPorts,
+          group_id: null,
+        },
+        {
+          id: "end_success",
+          node_type: "end_success",
+          label: "End Success",
+          position: { x: 1184, y: 355 },
+          config: {},
+          ports: nodePorts("end_success"),
+          group_id: null,
+        },
+      ],
+      edges: [],
+    };
+
+    const flow = toReactFlowGraph(graph);
+    const randomNode = flow.nodes.find((node) => node.id === "choose-behavior");
+    const endNode = flow.nodes.find((node) => node.id === "end_success");
+
+    expect(randomNode?.position).toEqual({ x: 1184, y: 193 });
+    expect(endNode?.position.y).toBeGreaterThanOrEqual(
+      (randomNode?.position.y ?? 0) + graphNodeHeightForPorts(randomPorts) + 24,
+    );
   });
 
   test("orders graph edge labels by execution port traversal instead of edge array order", () => {

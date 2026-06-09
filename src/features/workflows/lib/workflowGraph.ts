@@ -24,6 +24,7 @@ import { objectConfig } from "./configUtils";
 import { graphNodeHeightForPorts, graphNodeWidth } from "./graphNodeDimensions";
 
 const graphIssueKey = "__graph__";
+const graphNodeCollisionClearance = 24;
 
 export type WorkflowFlowNodeStatus = "idle" | "running" | "completed" | "failed";
 
@@ -177,12 +178,13 @@ export function toReactFlowGraph(
   const edgeOrders = graphEdgeOrders(graph);
   const nodeLabels = new Map(graph.nodes.map((node) => [node.id, node.label]));
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const nodePositions = displayPositionsForGraphNodes(graph.nodes);
 
   const baseFlowGraph: WorkflowReactFlowGraph = {
     nodes: graph.nodes.map((node) => ({
       id: node.id,
       type: "workflow",
-      position: node.position,
+      position: nodePositions.get(node.id) ?? node.position,
       initialHeight: graphNodeHeightForPorts(node.ports),
       initialWidth: graphNodeWidth,
       selected: false,
@@ -288,6 +290,53 @@ export function applyReactFlowGraphState(
     nodes,
     edges,
   };
+}
+
+function displayPositionsForGraphNodes(nodes: GraphNode[]) {
+  const positions = new Map<string, GraphPosition>();
+  const placedNodes: Array<{
+    id: string;
+    x: number;
+    y: number;
+    height: number;
+  }> = [];
+  const orderedNodes = [...nodes].sort((left, right) => {
+    const yDiff = left.position.y - right.position.y;
+    if (yDiff !== 0) return yDiff;
+    const xDiff = left.position.x - right.position.x;
+    if (xDiff !== 0) return xDiff;
+    return left.id.localeCompare(right.id);
+  });
+
+  for (const node of orderedNodes) {
+    const height = graphNodeHeightForPorts(node.ports);
+    let y = node.position.y;
+
+    for (const placedNode of placedNodes) {
+      if (!nodeColumnsOverlap(node.position.x, placedNode.x)) continue;
+      y = Math.max(
+        y,
+        placedNode.y + placedNode.height + graphNodeCollisionClearance,
+      );
+    }
+
+    positions.set(
+      node.id,
+      y === node.position.y ? node.position : { ...node.position, y },
+    );
+    placedNodes.push({
+      id: node.id,
+      x: node.position.x,
+      y,
+      height,
+    });
+  }
+
+  return positions;
+}
+
+function nodeColumnsOverlap(leftX: number, rightX: number) {
+  return leftX < rightX + graphNodeWidth && rightX < leftX + graphNodeWidth;
 }
 
 function applyReactFlowEdgeState(
